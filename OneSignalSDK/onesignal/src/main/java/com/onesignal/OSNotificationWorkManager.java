@@ -140,7 +140,7 @@ class OSNotificationWorkManager {
                                  Context context, int androidNotificationId, JSONObject jsonPayload,
                                  boolean isRestoring, Long timestamp) {
         OSNotification notification = new OSNotification(null, jsonPayload, androidNotificationId);
-        OSNotificationController controller = new OSNotificationController(completer, context, jsonPayload, isRestoring, true, timestamp);
+        OSNotificationController controller = new OSNotificationController(completer, context, notification, jsonPayload, isRestoring, true, timestamp);
         OSNotificationReceivedEvent notificationReceived = new OSNotificationReceivedEvent(controller, notification);
 
         if (OneSignal.remoteNotificationReceivedHandler != null)

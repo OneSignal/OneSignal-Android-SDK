@@ -59,12 +59,12 @@ public class OSNotificationController {
    }
 
    OSNotificationController(CallbackToFutureAdapter.Completer<ListenableWorker.Result> callbackCompleter,
-                            Context context, JSONObject jsonPayload, boolean restoring, boolean fromBackgroundLogic, Long timestamp) {
+                            Context context, OSNotification notification, JSONObject jsonPayload, boolean restoring, boolean fromBackgroundLogic, Long timestamp) {
       this.callbackCompleter = callbackCompleter;
       this.restoring = restoring;
       this.fromBackgroundLogic = fromBackgroundLogic;
 
-      notificationJob = createNotificationJobFromCurrent(context, jsonPayload, timestamp);
+      notificationJob = createNotificationJobFromCurrent(context, notification, jsonPayload, timestamp);
    }
 
    /**
@@ -73,11 +73,12 @@ public class OSNotificationController {
     * <br/><br/>
     * @see OSNotificationGenerationJob
     */
-   private OSNotificationGenerationJob createNotificationJobFromCurrent(Context context, JSONObject jsonPayload, Long timestamp) {
+   private OSNotificationGenerationJob createNotificationJobFromCurrent(Context context, OSNotification notification, JSONObject jsonPayload, Long timestamp) {
       OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(callbackCompleter, context);
       notificationJob.setJsonPayload(jsonPayload);
       notificationJob.setShownTimeStamp(timestamp);
       notificationJob.setRestoring(restoring);
+      notificationJob.setNotification(notification);
       return notificationJob;
    }
 
@@ -92,8 +93,8 @@ public class OSNotificationController {
    void processNotification(OSNotification originalNotification, @Nullable OSNotification notification) {
       if (notification != null) {
          boolean display = isStringNotEmpty(notification.getBody());
-         boolean ttl = isNotificationWithinTTL();
-         if (display && ttl) {
+         boolean withinTtl = isNotificationWithinTTL();
+         if (display && withinTtl) {
             // Set modified notification
             notificationJob.setNotification(notification);
             NotificationBundleProcessor.processJobForDisplay(this, fromBackgroundLogic);
@@ -130,23 +131,10 @@ public class OSNotificationController {
       if (!useTtl)
          return true;
 
-      JSONObject jsonPayload = notificationJob.getJsonPayload();
-      long currentTime = OneSignal.getTime().getCurrentThreadTimeMillis();
-      long currentTimeInSeconds = currentTime / 1_000;
-      long sentTime;
+      long currentTimeInSeconds = OneSignal.getTime().getCurrentThreadTimeMillis() / 1_000;
+      long sentTime = notificationJob.getNotification().getSentTime();
       // If available TTL times comes in seconds, by default is 3 days in seconds
-      int ttl;
-
-      if (jsonPayload.has(GOOGLE_TTL_KEY)) {
-         sentTime = jsonPayload.optLong(GOOGLE_SENT_TIME_KEY, currentTime) / 1_000;
-         ttl = jsonPayload.optInt(GOOGLE_TTL_KEY, OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
-      } else if (jsonPayload.has(HMS_TTL_KEY)) {
-         sentTime = jsonPayload.optLong(HMS_SENT_TIME_KEY, currentTime) / 1_000;
-         ttl = jsonPayload.optInt(HMS_TTL_KEY, OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
-      } else {
-         // If no TTL provided display notification
-         return true;
-      }
+      int ttl = notificationJob.getNotification().getTtl();
 
       return sentTime + ttl > currentTimeInSeconds;
    }

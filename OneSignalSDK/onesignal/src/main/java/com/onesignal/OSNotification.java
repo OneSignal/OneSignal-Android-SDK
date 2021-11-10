@@ -40,6 +40,10 @@ import java.util.List;
 
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
 import static com.onesignal.NotificationBundleProcessor.PUSH_ADDITIONAL_DATA_KEY;
+import static com.onesignal.OSNotificationController.GOOGLE_SENT_TIME_KEY;
+import static com.onesignal.OSNotificationController.GOOGLE_TTL_KEY;
+import static com.onesignal.OneSignalHmsEventBridge.HMS_SENT_TIME_KEY;
+import static com.onesignal.OneSignalHmsEventBridge.HMS_TTL_KEY;
 
 /**
  * The notification the user received
@@ -87,19 +91,14 @@ public class OSNotification {
    private int priority;
    private String rawPayload;
 
+   private long sentTime;
+   private int ttl;
+
    protected OSNotification() {
    }
 
    OSNotification(@NonNull JSONObject payload) {
       this(null, payload, 0);
-   }
-
-   OSNotification(@NonNull JSONObject payload, int androidNotificationId) {
-      this(null, payload, androidNotificationId);
-   }
-
-   OSNotification(@Nullable List<OSNotification> groupedNotifications, @NonNull JSONObject payload) {
-      this(groupedNotifications, payload, 0);
    }
 
    OSNotification(@Nullable List<OSNotification> groupedNotifications, @NonNull JSONObject jsonPayload, int androidNotificationId) {
@@ -142,6 +141,18 @@ public class OSNotification {
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error assigning OSNotificationReceivedEvent payload values!", t);
          return;
+      }
+
+      long currentTime = OneSignal.getTime().getCurrentThreadTimeMillis();
+      if (currentJsonPayload.has(GOOGLE_TTL_KEY)) {
+         sentTime = currentJsonPayload.optLong(GOOGLE_SENT_TIME_KEY, currentTime) / 1_000;
+         ttl = currentJsonPayload.optInt(GOOGLE_TTL_KEY, OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
+      } else if (currentJsonPayload.has(HMS_TTL_KEY)) {
+         sentTime = currentJsonPayload.optLong(HMS_SENT_TIME_KEY, currentTime) / 1_000;
+         ttl = currentJsonPayload.optInt(HMS_TTL_KEY, OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
+      } else {
+         sentTime = currentTime / 1_000;
+         ttl = OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD;
       }
 
       notificationId = customJson.optString("i");
@@ -243,6 +254,8 @@ public class OSNotification {
               .setCollapseId(collapseId)
               .setPriority(priority)
               .setRawPayload(rawPayload)
+              .setSenttime(sentTime)
+              .setTTL(ttl)
               .build();
    }
 
@@ -451,6 +464,22 @@ public class OSNotification {
       this.rawPayload = rawPayload;
    }
 
+   public long getSentTime() {
+      return sentTime;
+   }
+
+   private void setSentTime(long sentTime) {
+      this.sentTime = sentTime;
+   }
+
+   public int getTtl() {
+      return ttl;
+   }
+
+   private void setTtl(int ttl) {
+      this.ttl = ttl;
+   }
+
    public JSONObject toJSONObject() {
       JSONObject mainObj = new JSONObject();
 
@@ -631,6 +660,9 @@ public class OSNotification {
       private int priority;
       private String rawPayload;
 
+      private long sentTime;
+      private int ttl;
+
       public OSNotificationBuilder() {
       }
 
@@ -759,6 +791,16 @@ public class OSNotification {
          return this;
       }
 
+      public OSNotificationBuilder setSenttime(long sentTime) {
+         this.sentTime = sentTime;
+         return this;
+      }
+
+      public OSNotificationBuilder setTTL(int ttl) {
+         this.ttl = ttl;
+         return this;
+      }
+
       public OSNotification build() {
          OSNotification payload = new OSNotification();
          payload.setNotificationExtender(notificationExtender);
@@ -786,6 +828,8 @@ public class OSNotification {
          payload.setCollapseId(collapseId);
          payload.setPriority(priority);
          payload.setRawPayload(rawPayload);
+         payload.setSentTime(sentTime);
+         payload.setTtl(ttl);
          return payload;
       }
    }
