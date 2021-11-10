@@ -40,6 +40,10 @@ import java.util.List;
 
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
 import static com.onesignal.NotificationBundleProcessor.PUSH_ADDITIONAL_DATA_KEY;
+import static com.onesignal.OSNotificationController.GOOGLE_SENT_TIME_KEY;
+import static com.onesignal.OSNotificationController.GOOGLE_TTL_KEY;
+import static com.onesignal.OneSignalHmsEventBridge.HMS_SENT_TIME_KEY;
+import static com.onesignal.OneSignalHmsEventBridge.HMS_TTL_KEY;
 
 /**
  * The notification the user received
@@ -86,6 +90,9 @@ public class OSNotification {
    private String collapseId;
    private int priority;
    private String rawPayload;
+
+   private long sentTime;
+   private int ttl;
 
    protected OSNotification() {
    }
@@ -142,6 +149,18 @@ public class OSNotification {
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error assigning OSNotificationReceivedEvent payload values!", t);
          return;
+      }
+
+      long currentTime = OneSignal.getTime().getCurrentThreadTimeMillis();
+      if (customJson.has(GOOGLE_TTL_KEY)) {
+         sentTime = customJson.optLong(GOOGLE_SENT_TIME_KEY, currentTime) / 1_000;
+         ttl = customJson.optInt(GOOGLE_TTL_KEY, OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
+      } else if (customJson.has(HMS_TTL_KEY)) {
+         sentTime = customJson.optLong(HMS_SENT_TIME_KEY, currentTime) / 1_000;
+         ttl = customJson.optInt(HMS_TTL_KEY, OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
+      } else {
+         sentTime = currentTime / 1_000;
+         ttl = OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD;
       }
 
       notificationId = customJson.optString("i");
@@ -449,6 +468,14 @@ public class OSNotification {
 
    void setRawPayload(String rawPayload) {
       this.rawPayload = rawPayload;
+   }
+
+   public long getSentTime() {
+      return sentTime;
+   }
+
+   public int getTtl() {
+      return ttl;
    }
 
    public JSONObject toJSONObject() {
