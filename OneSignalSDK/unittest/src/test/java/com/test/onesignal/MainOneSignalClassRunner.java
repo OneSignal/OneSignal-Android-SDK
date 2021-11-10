@@ -1226,40 +1226,6 @@ public class MainOneSignalClassRunner {
       assertNotEquals("notifications/UUID/report_received", ShadowOneSignalRestClient.lastUrl);
    }
 
-   @Test
-   @Config(shadows = { ShadowGenerateNotification.class })
-   public void testNotificationReceivedNoSendReceivedRequest_Delay() throws Exception {
-      int delay = 2;
-      MockDelayTaskController mockDelayTaskController = new MockDelayTaskController(new MockOSLog());
-      mockDelayTaskController.setMockedRandomValue(delay);
-      mockDelayTaskController.setRunOnSameThread(false);
-      OneSignal_setDelayTaskController(mockDelayTaskController);
-
-      ShadowOneSignalRestClient.setRemoteParamsReceiveReceiptsEnable(true);
-      // First init run for appId to be saved
-      // At least OneSignal was init once for user to be subscribed
-      // If this doesn't' happen, notifications will not arrive
-      OneSignal.setAppId(ONESIGNAL_APP_ID);
-      OneSignal.initWithContext(blankActivity);
-      threadAndTaskWait();
-
-      long calledTime = System.currentTimeMillis();
-
-      // 1. Receive a notification in background
-      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
-      threadAndTaskWait();
-
-      // 2. Check that report_received where sent
-      Awaitility.await()
-              .atMost(new Duration(3, TimeUnit.SECONDS))
-              .pollInterval(new Duration(1, TimeUnit.SECONDS))
-              .untilAsserted(() -> {
-                 assertEquals(3, ShadowOneSignalRestClient.requests.size());
-                 assertEquals("notifications/UUID/report_received", ShadowOneSignalRestClient.lastUrl);
-                 assertTrue(System.currentTimeMillis() - calledTime >= delay * 1000);
-              });
-   }
-
    /**
     * @see #testNotificationReceivedNoSendReceivedRequest_WhenNotificationNotDisplayed
     */
