@@ -321,10 +321,15 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     private void updateSafeAreaInsets() {
-        int[] insets = OSViewUtils.getCutoutAndStatusBarInsets(activity);
-        String safeAreaInsetsObject = String.format(OSJavaScriptInterface.SAFE_AREA_JS_OBJECT, insets[0], insets[1], insets[2], insets[3]);
-        String safeAreaInsetsFunction = String.format(OSJavaScriptInterface.SET_SAFE_AREA_INSETS_JS_FUNCTION, safeAreaInsetsObject);
-        webView.evaluateJavascript(safeAreaInsetsFunction, null);
+        OSUtils.runOnMainUIThread(new Runnable() {
+            @Override
+            public void run() {
+                int[] insets = OSViewUtils.getCutoutAndStatusBarInsets(activity);
+                String safeAreaInsetsObject = String.format(OSJavaScriptInterface.SAFE_AREA_JS_OBJECT, insets[0], insets[1], insets[2], insets[3]);
+                String safeAreaInsetsFunction = String.format(OSJavaScriptInterface.SET_SAFE_AREA_INSETS_JS_FUNCTION, safeAreaInsetsObject);
+                webView.evaluateJavascript(safeAreaInsetsFunction, null);
+            }
+        });
     }
 
     // Every time an Activity is shown we update the height of the WebView since the available
@@ -513,8 +518,6 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     private int getWebViewMaxSizeX(Activity activity) {
         if (messageContent.isFullBleed()) {
             return getFullbleedWindowWidth(activity);
-        } else {
-
         }
         int margin = (MARGIN_PX_SIZE * 2);
         return OSViewUtils.getWindowWidth(activity) - margin;
