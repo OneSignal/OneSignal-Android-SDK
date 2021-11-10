@@ -74,6 +74,8 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     private boolean dismissFired = false;
     // closing prevents IAM being redisplayed when the activity changes during an actionHandler
     private boolean closing = false;
+    // Currently only true for Carousel IAMs
+    private boolean dragToDismissDisabled = false;
 
     interface OneSignalGenericCallback {
         void onComplete();
@@ -185,6 +187,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         static final String JS_OBJ_NAME = "OSAndroid";
         static final String GET_PAGE_META_DATA_JS_FUNCTION = "getPageMetaData()";
         static final String SET_SAFE_AREA_INSETS_JS_FUNCTION = "setSafeAreaInsets(%s)";
+        static final String SETUP_CAROUSEL_PAGES_JS_FUNCTION = "setupCarouselPages()";
         static final String SAFE_AREA_JS_OBJECT = "{\n" +
                 "   top: %d,\n" +
                 "   bottom: %d,\n" +
@@ -238,15 +241,27 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
 
         private void handleResize() {
+            if ((messageView.getDisplayPosition() == Position.FULL_SCREEN) && dragToDismissDisabled) {
+                setupCarouselPages();
+            }
             if (messageContent.isFullBleed()) {
                 updateSafeAreaInsets();
             }
         }
 
+        private void setupCarouselPages() {
+            OSUtils.runOnMainUIThread(new Runnable() {
+                @Override
+                public void run() {
+                    webView.evaluateJavascript(OSJavaScriptInterface.SETUP_CAROUSEL_PAGES_JS_FUNCTION, null);
+                }
+            });
+        }
+
         private void handleRenderComplete(JSONObject jsonObject) {
             Position displayType = getDisplayLocation(jsonObject);
             int pageHeight = displayType == Position.FULL_SCREEN ? -1 : getPageHeightData(jsonObject);
-            boolean dragToDismissDisabled = getDragToDismissDisabled(jsonObject);
+            dragToDismissDisabled = getDragToDismissDisabled(jsonObject);
             messageContent.setDisplayLocation(displayType);
             messageContent.setPageHeight(pageHeight);
             createNewInAppMessageView(dragToDismissDisabled);
