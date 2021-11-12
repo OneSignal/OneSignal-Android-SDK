@@ -224,7 +224,6 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                             handleActionTaken(jsonObject);
                         break;
                     case EVENT_TYPE_RESIZE:
-                        handleResize();
                         break;
                     case EVENT_TYPE_PAGE_CHANGE:
                         handlePageChange(jsonObject);
@@ -234,12 +233,6 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                 }
             } catch (JSONException e) {
                 e.printStackTrace();
-            }
-        }
-
-        private void handleResize() {
-            if (messageContent.isFullBleed()) {
-                updateSafeAreaInsets();
             }
         }
 
