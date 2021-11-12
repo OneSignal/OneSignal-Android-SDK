@@ -23,11 +23,7 @@ class OSRemoteParamController {
                 OneSignalPrefs.PREFS_GT_FIREBASE_TRACKING_ENABLED,
                 remoteParams.firebaseAnalytics
         );
-        OneSignalPrefs.saveBool(
-                OneSignalPrefs.PREFS_ONESIGNAL,
-                OneSignalPrefs.PREFS_OS_RESTORE_TTL_FILTER,
-                remoteParams.restoreTTLFilter
-        );
+        saveRestoreTTLFilter(remoteParams.restoreTTLFilter);
         OneSignalPrefs.saveBool(
                 OneSignalPrefs.PREFS_ONESIGNAL,
                 OneSignalPrefs.PREFS_OS_CLEAR_GROUP_SUMMARY_CLICK,
@@ -80,6 +76,18 @@ class OSRemoteParamController {
 
     void clearRemoteParams() {
         remoteParams = null;
+    }
+
+    private void saveRestoreTTLFilter(boolean restoreTTLFilter) {
+        OneSignalPrefs.saveBool(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_RESTORE_TTL_FILTER,
+                remoteParams.restoreTTLFilter
+        );
+    }
+
+    boolean isRestoreTTLFilterActive() {
+        return OneSignalPrefs.getBool(OneSignalPrefs.PREFS_ONESIGNAL, OneSignalPrefs.PREFS_OS_RESTORE_TTL_FILTER, true);
     }
 
     private void saveReceiveReceiptEnabled(boolean receiveReceiptEnabled) {

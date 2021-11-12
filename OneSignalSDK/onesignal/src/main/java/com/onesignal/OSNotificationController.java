@@ -27,6 +27,10 @@
 
 package com.onesignal;
 
+import static com.onesignal.OSUtils.isStringNotEmpty;
+import static com.onesignal.OneSignalHmsEventBridge.HMS_SENT_TIME_KEY;
+import static com.onesignal.OneSignalHmsEventBridge.HMS_TTL_KEY;
+
 import android.content.Context;
 
 import androidx.annotation.Nullable;
@@ -35,12 +39,12 @@ import androidx.work.ListenableWorker;
 
 import org.json.JSONObject;
 
-import static com.onesignal.OSUtils.isStringNotEmpty;
-
 public class OSNotificationController {
 
    // The extension service app AndroidManifest.xml meta data tag key name
    private static final String EXTENSION_SERVICE_META_DATA_TAG_NAME = "com.onesignal.NotificationServiceExtension";
+   static final String GOOGLE_SENT_TIME_KEY = "google.sent_time";
+   static final String GOOGLE_TTL_KEY = "google.ttl";
 
    private final CallbackToFutureAdapter.Completer<ListenableWorker.Result> callbackCompleter;
    private final OSNotificationGenerationJob notificationJob;
@@ -55,12 +59,12 @@ public class OSNotificationController {
    }
 
    OSNotificationController(CallbackToFutureAdapter.Completer<ListenableWorker.Result> callbackCompleter,
-                            Context context, JSONObject jsonPayload, boolean restoring, boolean fromBackgroundLogic, Long timestamp) {
+                            Context context, OSNotification notification, JSONObject jsonPayload, boolean restoring, boolean fromBackgroundLogic, Long timestamp) {
       this.callbackCompleter = callbackCompleter;
       this.restoring = restoring;
       this.fromBackgroundLogic = fromBackgroundLogic;
 
-      notificationJob = createNotificationJobFromCurrent(context, jsonPayload, timestamp);
+      notificationJob = createNotificationJobFromCurrent(context, notification, jsonPayload, timestamp);
    }
 
    /**
@@ -69,11 +73,12 @@ public class OSNotificationController {
     * <br/><br/>
     * @see OSNotificationGenerationJob
     */
-   private OSNotificationGenerationJob createNotificationJobFromCurrent(Context context, JSONObject jsonPayload, Long timestamp) {
+   private OSNotificationGenerationJob createNotificationJobFromCurrent(Context context, OSNotification notification, JSONObject jsonPayload, Long timestamp) {
       OSNotificationGenerationJob notificationJob = new OSNotificationGenerationJob(callbackCompleter, context);
       notificationJob.setJsonPayload(jsonPayload);
       notificationJob.setShownTimeStamp(timestamp);
       notificationJob.setRestoring(restoring);
+      notificationJob.setNotification(notification);
       return notificationJob;
    }
 
@@ -88,13 +93,14 @@ public class OSNotificationController {
    void processNotification(OSNotification originalNotification, @Nullable OSNotification notification) {
       if (notification != null) {
          boolean display = isStringNotEmpty(notification.getBody());
-         if (!display) {
-            // Save as processed to prevent possible duplicate calls from canonical ids
-            notDisplayNotificationLogic(originalNotification);
-         } else {
+         boolean withinTtl = isNotificationWithinTTL();
+         if (display && withinTtl) {
             // Set modified notification
             notificationJob.setNotification(notification);
             NotificationBundleProcessor.processJobForDisplay(this, fromBackgroundLogic);
+         } else {
+            // Save as processed to prevent possible duplicate calls from canonical ids
+            notDisplayNotificationLogic(originalNotification);
          }
          // Delay to prevent CPU spikes
          // Normally more than one notification is restored at a time
@@ -118,6 +124,19 @@ public class OSNotificationController {
          NotificationBundleProcessor.processNotification(notificationJob, true, false);
          OneSignal.handleNotificationReceived(notificationJob);
       }
+   }
+
+   public boolean isNotificationWithinTTL() {
+      boolean useTtl = OneSignal.getRemoteParamController().isRestoreTTLFilterActive();
+      if (!useTtl)
+         return true;
+
+      long currentTimeInSeconds = OneSignal.getTime().getCurrentThreadTimeMillis() / 1_000;
+      long sentTime = notificationJob.getNotification().getSentTime();
+      // If available TTL times comes in seconds, by default is 3 days in seconds
+      int ttl = notificationJob.getNotification().getTtl();
+
+      return sentTime + ttl > currentTimeInSeconds;
    }
 
    public OSNotificationGenerationJob getNotificationJob() {
