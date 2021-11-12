@@ -21,6 +21,7 @@ import org.json.JSONObject;
 import java.io.UnsupportedEncodingException;
 
 import static com.onesignal.OSViewUtils.dpToPx;
+import static com.onesignal.OSViewUtils.getFullbleedWindowWidth;
 
 // Manages WebView instances by pre-loading them, displaying them, and closing them when dismissed.
 //   Includes a static map for pre-loading, showing, and dismissed so these events can't be duplicated.
@@ -132,7 +133,20 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
-    private static void initInAppMessage(@NonNull final Activity currentActivity, @NonNull OSInAppMessageInternal message, @NonNull OSInAppMessageContent content) {
+    private static void setContentSafeAreaInsets(OSInAppMessageContent content, @NonNull final Activity activity) {
+        String html = content.getContentHtml();
+        String safeAreaInsetsScript = OSJavaScriptInterface.SET_SAFE_AREA_INSETS_SCRIPT;
+        int[] insets = OSViewUtils.getCutoutAndStatusBarInsets(activity);
+        String safeAreaJSObject = String.format(OSJavaScriptInterface.SAFE_AREA_JS_OBJECT, insets[0] ,insets[1],insets[2],insets[3]);
+        safeAreaInsetsScript = String.format(safeAreaInsetsScript, safeAreaJSObject);
+        html += safeAreaInsetsScript;
+        content.setContentHtml(html);
+    }
+
+    private static void initInAppMessage(@NonNull final Activity currentActivity, @NonNull OSInAppMessageInternal message, @NonNull final OSInAppMessageContent content) {
+        if (content.isFullBleed()) {
+            setContentSafeAreaInsets(content, currentActivity);
+        }
         try {
             final String base64Str = Base64.encodeToString(
                     content.getContentHtml().getBytes("UTF-8"),
@@ -148,7 +162,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                 public void run() {
                     // Handles exception "MissingWebViewPackageException: Failed to load WebView provider: No WebView installed"
                     try {
-                        webViewManager.setupWebView(currentActivity, base64Str);
+                        webViewManager.setupWebView(currentActivity, base64Str, content.isFullBleed());
                     } catch (Exception e) {
                         // Need to check error message to only catch MissingWebViewPackageException as it isn't public
                         if (e.getMessage() != null && e.getMessage().contains("No WebView installed")) {
@@ -170,9 +184,21 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
         static final String JS_OBJ_NAME = "OSAndroid";
         static final String GET_PAGE_META_DATA_JS_FUNCTION = "getPageMetaData()";
+        static final String SET_SAFE_AREA_INSETS_JS_FUNCTION = "setSafeAreaInsets(%s)";
+        static final String SAFE_AREA_JS_OBJECT = "{\n" +
+                "   top: %d,\n" +
+                "   bottom: %d,\n" +
+                "   right: %d,\n" +
+                "   left: %d,\n" +
+                "}";
+        static final String SET_SAFE_AREA_INSETS_SCRIPT = "\n\n" +
+                "<script>\n" +
+                "    setSafeAreaInsets(%s);\n" +
+                "</script>";
 
         static final String EVENT_TYPE_KEY = "type";
         static final String EVENT_TYPE_RENDERING_COMPLETE = "rendering_complete";
+        static final String EVENT_TYPE_RESIZE = "resize";
         static final String EVENT_TYPE_ACTION_TAKEN = "action_taken";
         static final String EVENT_TYPE_PAGE_CHANGE = "page_change";
 
@@ -197,6 +223,8 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                         if (!messageView.isDragging())
                             handleActionTaken(jsonObject);
                         break;
+                    case EVENT_TYPE_RESIZE:
+                        break;
                     case EVENT_TYPE_PAGE_CHANGE:
                         handlePageChange(jsonObject);
                         break;
@@ -219,7 +247,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
         private int getPageHeightData(JSONObject jsonObject) {
             try {
-                return WebViewManager.pageRectToViewHeight(activity, jsonObject.getJSONObject(IAM_PAGE_META_DATA_KEY));
+                return pageRectToViewHeight(activity, jsonObject.getJSONObject(IAM_PAGE_META_DATA_KEY));
             } catch (JSONException e) {
                 return -1;
             }
@@ -266,7 +294,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
-    private static int pageRectToViewHeight(final @NonNull Activity activity, @NonNull JSONObject jsonObject) {
+    private int pageRectToViewHeight(final @NonNull Activity activity, @NonNull JSONObject jsonObject) {
         try {
             int pageHeight = jsonObject.getJSONObject("rect").getInt("height");
             int pxHeight = OSViewUtils.dpToPx(pageHeight);
@@ -285,14 +313,26 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
+    private void updateSafeAreaInsets() {
+        OSUtils.runOnMainUIThread(new Runnable() {
+            @Override
+            public void run() {
+                int[] insets = OSViewUtils.getCutoutAndStatusBarInsets(activity);
+                String safeAreaInsetsObject = String.format(OSJavaScriptInterface.SAFE_AREA_JS_OBJECT, insets[0], insets[1], insets[2], insets[3]);
+                String safeAreaInsetsFunction = String.format(OSJavaScriptInterface.SET_SAFE_AREA_INSETS_JS_FUNCTION, safeAreaInsetsObject);
+                webView.evaluateJavascript(safeAreaInsetsFunction, null);
+            }
+        });
+    }
+
     // Every time an Activity is shown we update the height of the WebView since the available
     //   screen size may have changed. (Expect for Fullscreen)
     private void calculateHeightAndShowWebViewAfterNewActivity() {
         if (messageView == null)
             return;
 
-        // Don't need a CSS / HTML height update for fullscreen
-        if (messageView.getDisplayPosition() == Position.FULL_SCREEN) {
+        // Don't need a CSS / HTML height update for fullscreen unless its fullbleed
+        if (messageView.getDisplayPosition() == Position.FULL_SCREEN && !messageContent.isFullBleed()) {
             showMessageView(null);
             return;
         }
@@ -306,6 +346,10 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
                 // At time point the webView isn't attached to a view
                 // Set the WebView to the max screen size then run JS to evaluate the height.
                 setWebViewToMaxSize(activity);
+                if (messageContent.isFullBleed()) {
+                    updateSafeAreaInsets();
+                }
+
                 webView.evaluateJavascript(OSJavaScriptInterface.GET_PAGE_META_DATA_JS_FUNCTION, new ValueCallback<String>() {
                     @Override
                     public void onReceiveValue(final String value) {
@@ -373,7 +417,7 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
     }
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
-    private void setupWebView(@NonNull final Activity currentActivity, final @NonNull String base64Message) {
+    private void setupWebView(@NonNull final Activity currentActivity, final @NonNull String base64Message, final boolean isFullScreen) {
        enableWebViewRemoteDebugging();
 
        webView = new OSWebView(currentActivity);
@@ -385,7 +429,14 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
 
        // Setup receiver for page events / data from JS
        webView.addJavascriptInterface(new OSJavaScriptInterface(), OSJavaScriptInterface.JS_OBJ_NAME);
-
+       if (isFullScreen) {
+           webView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                   View.SYSTEM_UI_FLAG_IMMERSIVE |
+                   View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+           if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+               webView.setFitsSystemWindows(false);
+           }
+       }
        blurryRenderingWebViewForKitKatWorkAround(webView);
 
        OSViewUtils.decorViewReady(currentActivity, new Runnable() {
@@ -457,12 +508,17 @@ class WebViewManager extends ActivityLifecycleHandler.ActivityAvailableListener 
         }
     }
 
-    private static int getWebViewMaxSizeX(Activity activity) {
-        return OSViewUtils.getWindowWidth(activity) - (MARGIN_PX_SIZE * 2);
+    private int getWebViewMaxSizeX(Activity activity) {
+        if (messageContent.isFullBleed()) {
+            return getFullbleedWindowWidth(activity);
+        }
+        int margin = (MARGIN_PX_SIZE * 2);
+        return OSViewUtils.getWindowWidth(activity) - margin;
     }
 
-    private static int getWebViewMaxSizeY(Activity activity) {
-       return OSViewUtils.getWindowHeight(activity) - (MARGIN_PX_SIZE * 2);
+    private int getWebViewMaxSizeY(Activity activity) {
+        int margin = messageContent.isFullBleed() ? 0 : (MARGIN_PX_SIZE * 2);
+       return OSViewUtils.getWindowHeight(activity) - margin;
     }
 
     private void removeActivityListener() {

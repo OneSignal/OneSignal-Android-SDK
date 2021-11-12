@@ -9,6 +9,7 @@ import android.graphics.Rect;
 import android.os.Build;
 import androidx.annotation.NonNull;
 import android.util.DisplayMetrics;
+import android.view.DisplayCutout;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowInsets;
@@ -74,6 +75,35 @@ class OSViewUtils {
        activity.getWindow().getDecorView().getWindowVisibleDisplayFrame(rect);
        return rect;
     }
+
+    static int[] getCutoutAndStatusBarInsets(@NonNull Activity activity) {
+        Rect frame = getWindowVisibleDisplayFrame(activity);
+        View contentView = activity.getWindow().findViewById(Window.ID_ANDROID_CONTENT);
+        float rightInset = 0;
+        float leftInset = 0;
+        float topInset = (frame.top - contentView.getTop()) / Resources.getSystem().getDisplayMetrics().density;
+        float bottomInset = (contentView.getBottom() - frame.bottom) / Resources.getSystem().getDisplayMetrics().density;
+        // API 29 is the only version where the IAM bleeds under cutouts in immersize mode
+        // All other versions will not need left and right insets.
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
+            DisplayCutout cutout = activity.getWindowManager().getDefaultDisplay().getCutout();
+            if (cutout != null) {
+                rightInset = cutout.getSafeInsetRight() / Resources.getSystem().getDisplayMetrics().density;
+                leftInset = cutout.getSafeInsetLeft() / Resources.getSystem().getDisplayMetrics().density;
+            }
+        }
+        return new int[]{Math.round(topInset), Math.round(bottomInset), Math.round(rightInset), Math.round(leftInset)};
+    }
+
+    static int getFullbleedWindowWidth (@NonNull Activity activity) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            View decorView = activity.getWindow().getDecorView();
+            return decorView.getWidth();
+        } else {
+            return getWindowWidth(activity);
+        }
+    }
+
 
     static int getWindowWidth(@NonNull Activity activity) {
         return getWindowVisibleDisplayFrame(activity).width();

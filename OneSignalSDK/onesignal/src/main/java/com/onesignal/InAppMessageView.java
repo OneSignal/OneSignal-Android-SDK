@@ -1,5 +1,7 @@
 package com.onesignal;
 
+
+
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
@@ -76,6 +78,7 @@ class InAppMessageView {
     private boolean shouldDismissWhenActive = false;
     private boolean isDragging = false;
     private boolean disableDragDismiss = false;
+    private OSInAppMessageContent messageContent;
     @NonNull private WebViewManager.Position displayLocation;
     private WebView webView;
     private RelativeLayout parentRelativeLayout;
@@ -91,6 +94,7 @@ class InAppMessageView {
         this.displayDuration = content.getDisplayDuration() == null ? 0 : content.getDisplayDuration();
         this.hasBackground = !displayLocation.isBanner();
         this.disableDragDismiss = disableDragDismiss;
+        this.messageContent = content;
         setMarginsFromContent(content);
     }
 
@@ -274,13 +278,18 @@ class InAppMessageView {
      * @param parentRelativeLayout root layout to attach to the pop up window
      */
     private void createPopupWindow(@NonNull RelativeLayout parentRelativeLayout) {
+
         popupWindow = new PopupWindow(
                 parentRelativeLayout,
                 hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : pageWidth,
-                hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : WindowManager.LayoutParams.WRAP_CONTENT
+                hasBackground ? WindowManager.LayoutParams.MATCH_PARENT : WindowManager.LayoutParams.WRAP_CONTENT,
+                true
         );
+
         popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         popupWindow.setTouchable(true);
+        // NOTE: This is required for getting fullscreen under notches working in portrait mode
+        popupWindow.setClippingEnabled(false);
 
         int gravity = 0;
         if (!hasBackground) {
@@ -298,11 +307,14 @@ class InAppMessageView {
             }
         }
 
-        // Using this instead of TYPE_APPLICATION_PANEL so the layout background does not get
-        //  cut off in immersive mode.
+        // Using panel for fullbleed IAMs and dialog for non-fullbleed. The attached dialog type
+        // does not allow content to bleed under notches but panel does.
+        int displayType = this.messageContent.isFullBleed() ?
+                WindowManager.LayoutParams.TYPE_APPLICATION_PANEL :
+                WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG;
         PopupWindowCompat.setWindowLayoutType(
                 popupWindow,
-                WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
+                displayType
         );
 
         popupWindow.showAtLocation(
