@@ -109,6 +109,7 @@ import com.onesignal.ShadowOSViewUtils;
 import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
+import com.onesignal.ShadowReceiveReceiptController;
 import com.onesignal.ShadowResources;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.ShadowRoboNotificationManager.PostedNotification;
@@ -1360,7 +1361,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
-   @Config(shadows = { ShadowGenerateNotification.class })
+   @Config(shadows = { ShadowGenerateNotification.class, ShadowReceiveReceiptController.class })
    public void shouldSendReceivedReceiptWhenEnabled() throws Exception {
       ShadowOneSignalRestClient.setRemoteParamsReceiveReceiptsEnable(true);
 
