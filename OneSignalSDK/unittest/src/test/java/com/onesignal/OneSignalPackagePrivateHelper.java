@@ -8,8 +8,6 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.concurrent.futures.CallbackToFutureAdapter;
-import androidx.work.ListenableWorker;
 
 import com.huawei.hms.push.RemoteMessage;
 import com.onesignal.influence.data.OSTrackerFactory;
@@ -125,10 +123,6 @@ public class OneSignalPackagePrivateHelper {
 
    public static void OneSignal_setTrackerFactory(OSTrackerFactory trackerFactory) {
       OneSignal.setTrackerFactory(trackerFactory);
-   }
-
-   public static void OneSignal_setDelayTaskController(OSDelayTaskController delayTaskController) {
-      OneSignal.setDelayTaskController(delayTaskController);
    }
 
    public static JSONObject bundleAsJSONObject(Bundle bundle) {
@@ -301,7 +295,6 @@ public class OneSignalPackagePrivateHelper {
    public static void OneSignal_OSTaskController_ShutdownNow() {
       OneSignal.getTaskRemoteController().shutdownNow();
       OneSignal.getTaskController().shutdownNow();
-      OneSignal.getDelayTaskController().shutdownNow();
    }
 
    public static boolean OneSignal_requiresUserPrivacyConsent() {

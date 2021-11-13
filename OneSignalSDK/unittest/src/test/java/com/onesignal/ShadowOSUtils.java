@@ -2,6 +2,7 @@ package com.onesignal;
 
 import android.content.Context;
 
+import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
 
 @Implements(OSUtils.class)
@@ -92,5 +93,11 @@ public class ShadowOSUtils {
 
    int initializationChecker(Context context, String oneSignalAppId) {
       return subscribableStatus;
+   }
+
+   @Implementation
+   public static int getRandomDelay(int minDelay, int maxDelay) {
+      // unit tests fail when ReceiveReceiptWorker runs with a delay so make no delay for unit tests
+      return 0;
    }
 }

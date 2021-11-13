@@ -146,7 +146,7 @@ class NotificationSummaryManager {
              null
          );
 
-         OSNotificationRestoreWorkManager.showNotificationsFromCursor(context, cursor, 0, true);
+         OSNotificationRestoreWorkManager.showNotificationsFromCursor(context, cursor, 0);
       } catch (Throwable t) {
          OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error restoring notification records! ", t);
       } finally {
