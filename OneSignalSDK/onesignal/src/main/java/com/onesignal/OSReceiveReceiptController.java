@@ -72,9 +72,7 @@ class OSReceiveReceiptController {
                 .putString(OS_NOTIFICATION_ID, osNotificationId)
                 .build();
 
-        Constraints constraints = new Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
-                .build();
+        Constraints constraints = buildConstraints();
 
         OneTimeWorkRequest workRequest = new OneTimeWorkRequest.Builder(ReceiveReceiptWorker.class)
                 .setConstraints(constraints)
@@ -86,7 +84,12 @@ class OSReceiveReceiptController {
 
         WorkManager.getInstance(context)
                 .enqueueUniqueWork(osNotificationId + "_receive_receipt", ExistingWorkPolicy.KEEP, workRequest);
+    }
 
+    Constraints buildConstraints() {
+        return new Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build();
     }
 
     public static class ReceiveReceiptWorker extends Worker {

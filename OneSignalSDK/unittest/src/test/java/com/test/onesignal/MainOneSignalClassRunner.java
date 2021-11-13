@@ -86,6 +86,7 @@ import com.onesignal.ShadowOneSignalNotificationManager;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorADM;
 import com.onesignal.ShadowPushRegistratorFCM;
+import com.onesignal.ShadowReceiveReceiptController;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.SyncJobService;
@@ -1109,7 +1110,7 @@ public class MainOneSignalClassRunner {
    // Start Received Request tests (report_received)
 
    @Test
-   @Config(shadows = { ShadowGenerateNotification.class })
+   @Config(shadows = { ShadowGenerateNotification.class, ShadowReceiveReceiptController.class })
    public void testNotificationReceivedSendReceivedRequest_WhenAppInBackground() throws Exception {
       // First init run for appId to be saved
       // At least OneSignal was init once for user to be subscribed
@@ -1132,7 +1133,7 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   @Config(shadows = { ShadowGenerateNotification.class })
+   @Config(shadows = { ShadowGenerateNotification.class, ShadowReceiveReceiptController.class })
    public void testNotificationReceivedSendReceivedRequest_WhenAppInForeground() throws Exception {
       ShadowOneSignalRestClient.setRemoteParamsReceiveReceiptsEnable(true);
       // First init run for appId to be saved
@@ -1152,7 +1153,7 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   @Config(shadows = { ShadowGenerateNotification.class })
+   @Config(shadows = { ShadowGenerateNotification.class, ShadowReceiveReceiptController.class })
    public void testNotificationReceivedNoSendReceivedRequest_WhenDisabled() throws Exception {
       ShadowOneSignalRestClient.setRemoteParamsReceiveReceiptsEnable(false);
       // First init run for appId to be saved
@@ -1172,7 +1173,7 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   @Config(shadows = { ShadowGenerateNotification.class })
+   @Config(shadows = { ShadowGenerateNotification.class, ShadowReceiveReceiptController.class })
    public void testNotificationReceivedNoSendReceivedRequest_WhenNotificationNotDisplayed() throws Exception {
       // 1. Setup correct notification extension service class
       startRemoteNotificationReceivedHandlerService("com.test.onesignal.MainOneSignalClassRunner$" +
@@ -1199,7 +1200,7 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
-   @Config(sdk = 26, shadows = { ShadowGenerateNotification.class, ShadowOneSignalNotificationManager.class })
+   @Config(sdk = 26, shadows = { ShadowGenerateNotification.class, ShadowOneSignalNotificationManager.class, ShadowReceiveReceiptController.class })
    public void testNotificationReceivedNoSendReceivedRequest_WhenNotificationNotDisplayed_DisabledByChannel() throws Exception {
       // 1. Setup correct notification extension service class
       startRemoteNotificationReceivedHandlerService("com.test.onesignal.MainOneSignalClassRunner$" +
