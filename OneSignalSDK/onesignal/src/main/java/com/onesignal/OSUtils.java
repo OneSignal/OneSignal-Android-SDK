@@ -42,6 +42,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+
+import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationManagerCompat;
@@ -136,23 +138,36 @@ class OSUtils {
       return subscribableStatus;
    }
 
-   // The the following is done to ensure Proguard compatibility with class existent detection
-   // 1. Using Class instead of Strings as class renames would result incorrectly not finding the class
-   // 2. class.getName() is called as if no method is called then the try-catch would be removed.
-   //    - Only an issue when using Proguard (NOT R8) and using getDefaultProguardFile('proguard-android-optimize.txt')
-   static boolean hasFCMLibrary() {
+   // Interim method that prevents proguard from making a wrong assumption that NoClassDefFoundError
+   // catches are not needed when rules include "-assumenosideeffects" with getName().
+   // -assumenosideeffects public final class java.lang.Class {
+   //    public java.lang.String getName();
+   // }
+   // Using Class instead of String as class renames would result incorrectly not finding the class
+   // Using class.getName() as if no method is called then the try-catch would be removed.
+   // This @Keep annotation is also key so this method does not get inlined
+   @Keep
+   private static boolean hasClass(Class<?> clazz) {
       try {
-         com.google.firebase.messaging.FirebaseMessaging.class.getName();
+         clazz.getName();
          return true;
       } catch (NoClassDefFoundError e) {
          return false;
       }
    }
 
+   static boolean hasFCMLibrary() {
+      try {
+         return hasClass(com.google.firebase.messaging.FirebaseMessaging.class);
+      } catch (NoClassDefFoundError e) {
+         return false;
+      }
+   }
+
+   @Keep
    static boolean hasGMSLocationLibrary() {
       try {
-         com.google.android.gms.location.LocationListener.class.getName();
-         return true;
+         return hasClass(com.google.android.gms.location.LocationListener.class);
       } catch (NoClassDefFoundError e) {
          return false;
       }
@@ -160,8 +175,7 @@ class OSUtils {
 
    private static boolean hasHMSAvailabilityLibrary() {
       try {
-         com.huawei.hms.api.HuaweiApiAvailability.class.getName();
-         return true;
+         return hasClass(com.huawei.hms.api.HuaweiApiAvailability.class);
       } catch (NoClassDefFoundError e) {
          return false;
       }
@@ -169,8 +183,7 @@ class OSUtils {
 
    private static boolean hasHMSPushKitLibrary() {
       try {
-         com.huawei.hms.aaid.HmsInstanceId.class.getName();
-         return true;
+         return hasClass(com.huawei.hms.aaid.HmsInstanceId.class);
       } catch (NoClassDefFoundError e) {
          return false;
       }
@@ -178,8 +191,7 @@ class OSUtils {
 
    private static boolean hasHMSAGConnectLibrary() {
       try {
-         com.huawei.agconnect.config.AGConnectServicesConfig.class.getName();
-         return true;
+         return hasClass(com.huawei.agconnect.config.AGConnectServicesConfig.class);
       } catch (NoClassDefFoundError e) {
          return false;
       }
@@ -187,8 +199,7 @@ class OSUtils {
 
    static boolean hasHMSLocationLibrary() {
       try {
-         com.huawei.hms.location.LocationCallback.class.getName();
-         return true;
+         return hasClass(com.huawei.hms.location.LocationCallback.class);
       } catch (NoClassDefFoundError e) {
          return false;
       }
