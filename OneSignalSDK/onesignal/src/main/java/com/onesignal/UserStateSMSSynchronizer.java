@@ -5,7 +5,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
-public class UserStateSMSSynchronizer extends UserStateSecondaryChannelSynchronizer {
+class UserStateSMSSynchronizer extends UserStateSecondaryChannelSynchronizer {
 
     UserStateSMSSynchronizer() {
         super(OneSignalStateSynchronizer.UserStateSynchronizerType.SMS);
