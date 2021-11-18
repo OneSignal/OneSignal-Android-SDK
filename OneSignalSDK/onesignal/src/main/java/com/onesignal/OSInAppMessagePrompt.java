@@ -1,6 +1,6 @@
 package com.onesignal;
 
-abstract class OSInAppMessagePrompt {
+public abstract class OSInAppMessagePrompt {
 
     private boolean prompted = false;
 
