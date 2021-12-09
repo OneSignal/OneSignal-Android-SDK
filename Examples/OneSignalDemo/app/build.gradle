@@ -63,15 +63,12 @@ dependencies {
     implementation 'com.google.android.gms:play-services-location:18.0.0'
 
     implementation 'com.github.bumptech.glide:glide:4.12.0'
-    // Test public release OneSignal SDK
-    // This will not work until 4.0.0 is publicly released because of manifest placeholders causing
-    //  manifest merger conflicts
-//    implementation 'com.onesignal:OneSignal:3.12.6'
 
+    /** START - Google Play Builds **/
     gmsImplementation('com.onesignal:OneSignal:4.6.3')
+    /** END - Google Play Builds **/
 
-    huaweiImplementation 'com.huawei.hms:push:5.3.0.304'
-    huaweiImplementation 'com.huawei.hms:location:4.0.0.300'
+    /** START - Huawei Builds **/
     // Omit Google / Firebase libraries for Huawei builds.
     huaweiImplementation('com.onesignal:OneSignal:4.6.3') {
         exclude group: 'com.google.android.gms', module: 'play-services-gcm'
@@ -79,4 +76,9 @@ dependencies {
         exclude group: 'com.google.android.gms', module: 'play-services-location'
         exclude group: 'com.google.firebase', module: 'firebase-messaging'
     }
+    // Add HMS Push library
+    huaweiImplementation 'com.huawei.hms:push:5.3.0.304'
+    // Optionally add HMS location
+    huaweiImplementation 'com.huawei.hms:location:4.0.0.300'
+    /** END - Huawei Builds **/
 }
