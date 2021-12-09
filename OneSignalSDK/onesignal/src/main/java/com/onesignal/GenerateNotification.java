@@ -767,9 +767,13 @@ class GenerateNotification {
    // Keep 'throws Throwable' as 'onesignal_bgimage_notif_layout' may not be available
    //    This maybe the case if a jar is used instead of an aar.
    private static void addBackgroundImage(JSONObject fcmJson, NotificationCompat.Builder notifBuilder) throws Throwable {
-      // Required to right align image
-      if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN)
+      // Not adding Background Images to API Versions < 16 or >= 31
+      if (android.os.Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN ||
+          android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+         OneSignal.Log(OneSignal.LOG_LEVEL.VERBOSE,
+              "Cannot use background images in notifications for device on version: " + android.os.Build.VERSION.SDK_INT);
          return;
+      }
 
       Bitmap bg_image = null;
       JSONObject jsonBgImage = null;
