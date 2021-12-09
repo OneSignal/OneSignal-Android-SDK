@@ -43,6 +43,8 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.net.ssl.HttpsURLConnection;
+
 class OneSignalRestClient {
    static abstract class ResponseHandler {
       void onSuccess(String response) {}
@@ -142,6 +144,13 @@ class OneSignalRestClient {
       try {
          OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignalRestClient: Making request to: " + BASE_URL + url);
          con = newHttpURLConnection(url);
+
+         // https://github.com/OneSignal/OneSignal-Android-SDK/issues/1465
+         // Android 4.4 and older devices fail to register to onesignal.com to due it's TLS1.2+ requirement
+         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP_MR1 && con instanceof HttpsURLConnection) {
+            HttpsURLConnection conHttps = (HttpsURLConnection) con;
+            conHttps.setSSLSocketFactory(new TLS12SocketFactory(conHttps.getSSLSocketFactory()));
+         }
 
          con.setUseCaches(false);
          con.setConnectTimeout(timeout);
