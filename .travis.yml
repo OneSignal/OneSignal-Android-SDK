@@ -1,6 +1,6 @@
 language: android
 sudo: false
-jdk: oraclejdk8
+jdk: oraclejdk11
 dist: trusty
 
 android:
@@ -10,14 +10,14 @@ android:
             # https://github.com/travis-ci/travis-ci/issues/6193
             # Required to get the newest platform-tools.
     - platform-tools
-    - build-tools-29.0.3
-    - android-29
+    - build-tools-31.0.0
+    - android-31
   licenses:
     - '.+'
     - 'android-sdk-license-.+'
 before_install:
-    - yes | sdkmanager "platforms;android-29"
-    - yes | sdkmanager "build-tools;29.0.3"
+    - yes | sdkmanager "platforms;android-31"
+    - yes | sdkmanager "build-tools;31.0.0"
     - pwd
     - ls -la
     - cd OneSignalSDK
