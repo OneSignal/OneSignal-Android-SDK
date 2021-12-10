@@ -16,6 +16,8 @@ android:
     - '.+'
     - 'android-sdk-license-.+'
 before_install:
+    - ls -lah /etc/ssl/certs/java/cacerts
+    - curl https://developer.huawei.com/repo/com/huawei/agconnect/agconnect-crash-symbol-lib/1.6.2.300/agconnect-crash-symbol-lib-1.6.2.300.pom
     - yes | sdkmanager "platforms;android-29"
     - yes | sdkmanager "build-tools;29.0.3"
     - pwd
