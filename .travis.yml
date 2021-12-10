@@ -5,6 +5,7 @@ dist: trusty
 
 env:
   global:
+    - JAVA_TOOL_OPTIONS=-Dhttps.protocols=TLSv1.2
     - ANDROID_HOME=/usr/local/android-sdk
     - ANDROID_TOOLS=${ANDROID_HOME}/cmdline-tools/latest
     - PATH=${ANDROID_HOME}:${ANDROID_HOME}/emulator:${ANDROID_TOOLS}:${ANDROID_TOOLS}/bin:${ANDROID_HOME}/platform-tools:${PATH}
