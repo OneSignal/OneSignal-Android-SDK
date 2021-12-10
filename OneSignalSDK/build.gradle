@@ -7,13 +7,13 @@ buildscript {
                 compileSdkVersion: 31,
                 targetSdkVersion: 31
         ]
-        androidGradlePluginVersion = '3.6.2'
-        googleServicesGradlePluginVersion = '4.3.2'
+        androidGradlePluginVersion = '7.0.4'
+        googleServicesGradlePluginVersion = '4.3.10'
         huaweiAgconnectVersion = '1.2.1.301'
         huaweiHMSPushVersion = '5.3.0.304'
         huaweiHMSLocationVersion = '4.0.0.300'
         kotlinVersion = '1.4.32'
-        onesignalGradlePluginVersion = '[0.12.6, 0.99.99]'
+        onesignalGradlePluginVersion = '[0.14.0, 0.99.99]'
     }
 
     repositories {
