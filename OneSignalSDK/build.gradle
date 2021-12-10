@@ -9,8 +9,8 @@ buildscript {
         ]
         androidGradlePluginVersion = '7.0.4'
         googleServicesGradlePluginVersion = '4.3.10'
-        huaweiAgconnectVersion = '1.2.1.301'
-        huaweiHMSPushVersion = '5.3.0.304'
+        huaweiAgconnectVersion = '1.6.2.300'
+        huaweiHMSPushVersion = '6.1.0.300'
         huaweiHMSLocationVersion = '4.0.0.300'
         kotlinVersion = '1.4.32'
         onesignalGradlePluginVersion = '[0.14.0, 0.99.99]'
