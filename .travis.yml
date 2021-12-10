@@ -3,6 +3,12 @@ sudo: false
 jdk: oraclejdk11
 dist: trusty
 
+env:
+  global:
+    - ANDROID_HOME=/usr/local/android-sdk
+    - ANDROID_TOOLS=${ANDROID_HOME}/cmdline-tools/latest
+    - PATH=${ANDROID_HOME}:${ANDROID_HOME}/emulator:${ANDROID_TOOLS}:${ANDROID_TOOLS}/bin:${ANDROID_HOME}/platform-tools:${PATH}
+
 android:
   components:
     - tools
@@ -16,8 +22,13 @@ android:
     - '.+'
     - 'android-sdk-license-.+'
 before_install:
-    - yes | sdkmanager "platforms;android-31"
-    - yes | sdkmanager "build-tools;31.0.0"
+    # Download newer Android tools that are compatible with Java 11
+    - wget -q "https://dl.google.com/android/repository/commandlinetools-linux-7583922_latest.zip" -O android-commandline-tools-linux.zip
+    - mkdir -p ${ANDROID_HOME}/cmdline-tools
+    - unzip -q android-commandline-tools-linux.zip -d ${ANDROID_HOME}/cmdline-tools
+    - mv ${ANDROID_HOME}/cmdline-tools/cmdline-tools ${ANDROID_HOME}/cmdline-tools/latest
+    - yes | ${ANDROID_TOOLS}/bin/sdkmanager "platforms;android-31"
+    - yes | ${ANDROID_TOOLS}/bin/sdkmanager "build-tools;31.0.0"
     - pwd
     - ls -la
     - cd OneSignalSDK
