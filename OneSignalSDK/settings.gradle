@@ -1,2 +1,14 @@
 include ':app', ':onesignal', ':unittest'
 project(':app').projectDir = new File(settingsDir, '../examples/OneSignalDemo/app')
+
+// Allows running the :app project above with the local source for development of the SDK.
+// This means we can keep the example app as-is so it stays as a real world example.
+gradle.rootProject {
+    allprojects {
+        configurations.all {
+            resolutionStrategy.dependencySubstitution {
+                substitute(module('com.onesignal:OneSignal')).using(project(':onesignal'))
+            }
+        }
+    }
+}
