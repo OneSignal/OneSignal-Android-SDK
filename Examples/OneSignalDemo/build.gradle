@@ -3,14 +3,16 @@
 buildscript {
     repositories {
         google()
-        jcenter()
-        maven { url 'https://plugins.gradle.org/m2/'}
-        
+        mavenCentral()
+        gradlePluginPortal()
+        // Huawei maven
+        maven { url 'https://developer.huawei.com/repo/' }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.5.0'
-        classpath 'com.google.gms:google-services:4.2.0'
-        classpath 'gradle.plugin.com.onesignal:onesignal-gradle-plugin:[0.11.0, 0.99.99]'
+        classpath 'com.android.tools.build:gradle:7.0.4'
+        classpath 'com.google.gms:google-services:4.3.10'
+        classpath 'gradle.plugin.com.onesignal:onesignal-gradle-plugin:[0.14.0, 0.99.99]'
+        classpath 'com.huawei.agconnect:agcp:1.2.1.301'
         
         // TODO: Do not place your application dependencies here; they belong
         //  in the individual module build.gradle files
@@ -20,9 +22,9 @@ buildscript {
 allprojects {
     repositories {
         google()
-        jcenter()
-        maven { url 'https://maven.google.com' }
-        
+        mavenCentral()
+        // Huawei maven
+        maven { url 'https://developer.huawei.com/repo/' }
     }
 }
 

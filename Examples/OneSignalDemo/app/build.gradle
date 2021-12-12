@@ -53,35 +53,32 @@ android {
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-
     implementation 'com.android.support:multidex:1.0.3'
-    implementation 'com.google.android.material:material:[1.0.0, 1.4.99]'
+    implementation 'com.google.android.material:material:1.4.0'
+    implementation 'androidx.cardview:cardview:1.0.0'
+    implementation 'androidx.appcompat:appcompat:1.4.0'
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'androidx.vectordrawable:vectordrawable:1.1.0'
 
-    implementation 'androidx.cardview:cardview:[1.0.0, 1.99.99]'
-    implementation 'androidx.appcompat:appcompat:[1.0.0, 1.99.99]'
-    implementation 'androidx.legacy:legacy-support-v4:[1.0.0, 1.99.99]'
-    implementation 'androidx.vectordrawable:vectordrawable:[1.0.0, 1.99.99]'
-    // Test public release OneSignal SDK
-    // This will not work until 4.0.0 is publicly released because of manifest placeholders causing
-    //  manifest merger conflicts
-//    implementation 'com.onesignal:OneSignal:3.12.6'
+    implementation 'com.google.android.gms:play-services-location:18.0.0'
 
-    implementation 'com.google.android.gms:play-services-location:[17.0.0, 17.99.99]'
-    // glide:4.9.0 is the last version before going to AndroidX
-    // glide:4.10.0 is the first version using AndroidX
-    implementation 'com.github.bumptech.glide:glide:[4.10.0, 4.99.99]'
-    
-    // Test local OneSignal SDK
-    gmsImplementation(project(':onesignal'))
+    implementation 'com.github.bumptech.glide:glide:4.12.0'
 
-    huaweiImplementation 'com.huawei.hms:push:5.3.0.304'
-    huaweiImplementation 'com.huawei.hms:location:4.0.0.300'
+    /** START - Google Play Builds **/
+    gmsImplementation('com.onesignal:OneSignal:4.6.3')
+    /** END - Google Play Builds **/
+
+    /** START - Huawei Builds **/
     // Omit Google / Firebase libraries for Huawei builds.
-    huaweiImplementation(project(':onesignal')) {
+    huaweiImplementation('com.onesignal:OneSignal:4.6.3') {
         exclude group: 'com.google.android.gms', module: 'play-services-gcm'
         exclude group: 'com.google.android.gms', module: 'play-services-analytics'
         exclude group: 'com.google.android.gms', module: 'play-services-location'
         exclude group: 'com.google.firebase', module: 'firebase-messaging'
     }
+    // Add HMS Push library
+    huaweiImplementation 'com.huawei.hms:push:5.3.0.304'
+    // Optionally add HMS location
+    huaweiImplementation 'com.huawei.hms:location:4.0.0.300'
+    /** END - Huawei Builds **/
 }
