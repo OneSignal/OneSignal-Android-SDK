@@ -7,27 +7,27 @@ buildscript {
                 compileSdkVersion: 31,
                 targetSdkVersion: 31
         ]
-        androidGradlePluginVersion = '3.6.2'
-        googleServicesGradlePluginVersion = '4.3.2'
-        huaweiAgconnectVersion = '1.2.1.301'
-        huaweiHMSPushVersion = '5.3.0.304'
+        androidGradlePluginVersion = '7.0.4'
+        googleServicesGradlePluginVersion = '4.3.10'
+        huaweiAgconnectVersion = '1.6.2.300'
+        huaweiHMSPushVersion = '6.1.0.300'
         huaweiHMSLocationVersion = '4.0.0.300'
         kotlinVersion = '1.4.32'
-        onesignalGradlePluginVersion = '[0.12.6, 0.99.99]'
+        onesignalGradlePluginVersion = '[0.14.0, 0.99.99]'
     }
 
     repositories {
         google()
-        jcenter()
-        maven { url 'https://maven.google.com' }
+        mavenCentral()
 
         // OneSignal-Gradle-Plugin - Local testing
         // maven { url uri('../../repo') }
 
         // OneSignal-Gradle-Plugin - Public version
-        maven { url 'https://plugins.gradle.org/m2/' }
+        gradlePluginPortal()
+
         // Huawei maven
-        maven { url 'http://developer.huawei.com/repo/' }
+        maven { url 'https://developer.huawei.com/repo/' }
     }
     dependencies {
         classpath "com.android.tools.build:gradle:$androidGradlePluginVersion"
@@ -46,12 +46,11 @@ buildscript {
 allprojects {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
         flatDir {
             dirs 'libs'
         }
-        maven { url 'https://maven.google.com' }
         // Huawei maven
-        maven { url 'http://developer.huawei.com/repo/' }
+        maven { url 'https://developer.huawei.com/repo/' }
     }
 }

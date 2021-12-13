@@ -26,6 +26,12 @@ android {
             minifyEnabled false
         }
     }
+
+    // Forced downgrade to Java 8 so SDK is backwards compatible in consuming projects
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
 }
 
 // api || implementation = compile and runtime
