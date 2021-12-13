@@ -42,6 +42,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+
+import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationManagerCompat;
@@ -136,14 +138,21 @@ class OSUtils {
       return subscribableStatus;
    }
 
-   // The the following is done to ensure Proguard compatibility with class existent detection
-   // 1. Using Class instead of Strings as class renames would result incorrectly not finding the class
-   // 2. class.getName() is called as if no method is called then the try-catch would be removed.
-   //    - Only an issue when using Proguard (NOT R8) and using getDefaultProguardFile('proguard-android-optimize.txt')
+   // Interim method that works around Proguard's overly aggressive assumenosideeffects which
+   // ignores keep rules.
+   // This is specifically designed to address Proguard removing catches for NoClassDefFoundError
+   // when the config has "-assumenosideeffects" with
+   // java.lang.Class.getName() & java.lang.Object.getClass().
+   // This @Keep annotation is key so this method does not get removed / inlined.
+   // Addresses issue https://github.com/OneSignal/OneSignal-Android-SDK/issues/1423
+   @Keep
+   private static boolean opaqueHasClass(Class<?> _class) {
+      return true;
+   }
+
    static boolean hasFCMLibrary() {
       try {
-         com.google.firebase.messaging.FirebaseMessaging.class.getName();
-         return true;
+         return opaqueHasClass(com.google.firebase.messaging.FirebaseMessaging.class);
       } catch (NoClassDefFoundError e) {
          return false;
       }
@@ -151,8 +160,7 @@ class OSUtils {
 
    static boolean hasGMSLocationLibrary() {
       try {
-         com.google.android.gms.location.LocationListener.class.getName();
-         return true;
+         return opaqueHasClass(com.google.android.gms.location.LocationListener.class);
       } catch (NoClassDefFoundError e) {
          return false;
       }
@@ -160,8 +168,7 @@ class OSUtils {
 
    private static boolean hasHMSAvailabilityLibrary() {
       try {
-         com.huawei.hms.api.HuaweiApiAvailability.class.getName();
-         return true;
+         return opaqueHasClass(com.huawei.hms.api.HuaweiApiAvailability.class);
       } catch (NoClassDefFoundError e) {
          return false;
       }
@@ -169,8 +176,7 @@ class OSUtils {
 
    private static boolean hasHMSPushKitLibrary() {
       try {
-         com.huawei.hms.aaid.HmsInstanceId.class.getName();
-         return true;
+         return opaqueHasClass(com.huawei.hms.aaid.HmsInstanceId.class);
       } catch (NoClassDefFoundError e) {
          return false;
       }
@@ -178,8 +184,7 @@ class OSUtils {
 
    private static boolean hasHMSAGConnectLibrary() {
       try {
-         com.huawei.agconnect.config.AGConnectServicesConfig.class.getName();
-         return true;
+         return opaqueHasClass(com.huawei.agconnect.config.AGConnectServicesConfig.class);
       } catch (NoClassDefFoundError e) {
          return false;
       }
@@ -187,8 +192,7 @@ class OSUtils {
 
    static boolean hasHMSLocationLibrary() {
       try {
-         com.huawei.hms.location.LocationCallback.class.getName();
-         return true;
+         return opaqueHasClass(com.huawei.hms.location.LocationCallback.class);
       } catch (NoClassDefFoundError e) {
          return false;
       }
