@@ -109,6 +109,6 @@ afterEvaluate {
 
     signing {
         required { true }
-        sign configurations.archives
+        sign publishing.publications.release
     }
 }
