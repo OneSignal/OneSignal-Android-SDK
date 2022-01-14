@@ -17,6 +17,7 @@ import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
+import com.onesignal.ShadowFocusHandler;
 import com.onesignal.ShadowGMSLocationController;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
@@ -70,7 +71,8 @@ import static org.junit.Assert.assertNotEquals;
                 ShadowOneSignalRestClient.class,
                 ShadowOSUtils.class,
                 ShadowCustomTabsClient.class,
-                ShadowCustomTabsSession.class
+                ShadowCustomTabsSession.class,
+                ShadowFocusHandler.class
         },
         sdk = 21
 )

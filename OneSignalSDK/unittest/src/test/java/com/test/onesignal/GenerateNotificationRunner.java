@@ -101,6 +101,7 @@ import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowFCMBroadcastReceiver;
+import com.onesignal.ShadowFocusHandler;
 import com.onesignal.ShadowGenerateNotification;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowNotificationReceivedEvent;
@@ -152,6 +153,7 @@ import java.util.concurrent.TimeUnit;
             ShadowOSUtils.class,
             ShadowOSViewUtils.class,
             ShadowCustomTabsClient.class,
+            ShadowFocusHandler.class,
             ShadowCustomTabsSession.class,
             OneSignalShadowPackageManager.class
         },

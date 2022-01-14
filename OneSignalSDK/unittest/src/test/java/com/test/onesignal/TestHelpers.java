@@ -17,7 +17,6 @@ import androidx.work.Configuration;
 import androidx.work.testing.SynchronousExecutor;
 import androidx.work.testing.WorkManagerTestInitHelper;
 
-import com.onesignal.FocusDelaySyncJobService;
 import com.onesignal.MockOSTimeImpl;
 import com.onesignal.OneSignalDb;
 import com.onesignal.OneSignalPackagePrivateHelper;
@@ -558,7 +557,6 @@ public class TestHelpers {
       }
    }
 
-
    public static void assertNumberOfServicesAvailable(int quantity) {
       JobScheduler jobScheduler =
               (JobScheduler)ApplicationProvider.getApplicationContext().getSystemService(Context.JOB_SCHEDULER_SERVICE);
@@ -588,16 +586,13 @@ public class TestHelpers {
    public static void pauseActivity(ActivityController activityController) throws Exception {
       activityController.pause();
       threadAndTaskWait();
-
-      TestHelpers.assertAndRunNextJob(FocusDelaySyncJobService.class);
-      threadAndTaskWait(); // Kicks off the Job service's background thread.
    }
 
    public static void assertAndRunSyncService() throws Exception {
-      // There should be FocusDelaySyncJobService + SyncJobService services schedules
-      assertNumberOfServicesAvailable(2);
+      // There should be a SyncJobService service scheduled
+      assertNumberOfServicesAvailable(1);
       // A sync job should have been schedule, lets run it to ensure on_focus is called.
-      TestHelpers.assertAndRunJobAtIndex(SyncJobService.class, 1);
+      TestHelpers.assertAndRunJobAtIndex(SyncJobService.class, 0);
       threadAndTaskWait();
    }
 
