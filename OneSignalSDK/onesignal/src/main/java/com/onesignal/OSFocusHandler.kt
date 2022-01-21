@@ -41,9 +41,9 @@ class OSFocusHandler {
         backgrounded = false
     }
 
-    fun startOnFocusWorker(tag: String, delay: Long, context: Context)  {
+    fun startOnLostFocusWorker(tag: String, delay: Long, context: Context)  {
         val constraints = buildConstraints()
-        val workRequest = OneTimeWorkRequest.Builder(OnFocusWorker::class.java)
+        val workRequest = OneTimeWorkRequest.Builder(OnLostFocusWorker::class.java)
             .setConstraints(constraints)
             .setInitialDelay(delay, TimeUnit.MILLISECONDS)
             .addTag(tag)
@@ -56,7 +56,7 @@ class OSFocusHandler {
             )
     }
 
-    fun cancelOnFocusWorker(tag: String, context: Context) {
+    fun cancelOnLostFocusWorker(tag: String, context: Context) {
         WorkManager.getInstance(context).cancelAllWorkByTag(tag)
     }
 
@@ -66,10 +66,10 @@ class OSFocusHandler {
             .build()
     }
 
-    class OnFocusWorker(context: Context, workerParams: WorkerParameters) :
+    class OnLostFocusWorker(context: Context, workerParams: WorkerParameters) :
         Worker(context, workerParams) {
         override fun doWork(): Result {
-            onFocusDoWork()
+            onLostFocusDoWork()
             return Result.success()
         }
     }
@@ -78,7 +78,7 @@ class OSFocusHandler {
         private var backgrounded = false
         private var completed = false
 
-        fun onFocusDoWork() {
+        fun onLostFocusDoWork() {
             val activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler()
             if (activityLifecycleHandler == null || activityLifecycleHandler.curActivity == null) {
                 OneSignal.setInForeground(false)

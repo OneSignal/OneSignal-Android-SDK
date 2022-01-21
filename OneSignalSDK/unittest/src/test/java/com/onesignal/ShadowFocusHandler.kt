@@ -32,7 +32,7 @@
 package com.onesignal
 
 import android.content.Context
-import com.onesignal.OSFocusHandler.Companion.onFocusDoWork
+import com.onesignal.OSFocusHandler.Companion.onLostFocusDoWork
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
 
@@ -40,6 +40,6 @@ import org.robolectric.annotation.Implements
 class ShadowFocusHandler {
     @Implementation
     fun startOnFocusWorker(tag: String, delay: Long, context: Context) {
-        onFocusDoWork()
+        onLostFocusDoWork()
     }
 }

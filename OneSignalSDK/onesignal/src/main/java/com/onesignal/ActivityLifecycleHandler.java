@@ -176,7 +176,7 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
             return;
 
         OneSignal.getFocusTimeController().appStopped();
-        focusHandler.startOnFocusWorker(FOCUS_LOST_WORKER_TAG, SYNC_AFTER_BG_DELAY_MS, OneSignal.appContext);
+        focusHandler.startOnLostFocusWorker(FOCUS_LOST_WORKER_TAG, SYNC_AFTER_BG_DELAY_MS, OneSignal.appContext);
     }
 
     private void handleFocus() {
@@ -188,7 +188,7 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
             OneSignal.onAppFocus();
         } else {
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "ActivityLifecycleHandler cancel background lost focus worker");
-            focusHandler.cancelOnFocusWorker(FOCUS_LOST_WORKER_TAG, OneSignal.appContext);
+            focusHandler.cancelOnLostFocusWorker(FOCUS_LOST_WORKER_TAG, OneSignal.appContext);
         }
     }
 
