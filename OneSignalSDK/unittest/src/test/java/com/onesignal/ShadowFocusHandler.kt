@@ -39,7 +39,7 @@ import org.robolectric.annotation.Implements
 @Implements(OSFocusHandler::class)
 class ShadowFocusHandler {
     @Implementation
-    fun startOnFocusWorker(tag: String, delay: Long, context: Context) {
+    fun startOnLostFocusWorker(tag: String, delay: Long, context: Context) {
         onLostFocusDoWork()
     }
 }
