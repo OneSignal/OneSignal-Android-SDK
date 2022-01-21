@@ -153,6 +153,13 @@ class InAppMessageView {
                 }
 
                 ViewGroup.LayoutParams layoutParams = webView.getLayoutParams();
+                if (layoutParams == null) {
+                    OneSignal.onesignalLog(
+                        OneSignal.LOG_LEVEL.WARN,
+                        "WebView height update skipped because of null layoutParams, new height will be used once it is displayed.");
+                    return;
+                }
+
                 layoutParams.height = pageHeight;
                 // We only need to update the WebView size since it's parent layouts are set to
                 //   WRAP_CONTENT to always match the height of the WebView. (Expect for fullscreen)
