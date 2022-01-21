@@ -85,6 +85,7 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
     }
 
     void onActivityStarted(Activity activity) {
+        focusHandler.startOnStartFocusWork();
     }
 
     void onActivityResumed(Activity activity) {
@@ -106,6 +107,7 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
 
     void onActivityStopped(Activity activity) {
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "onActivityStopped: " + activity);
+        focusHandler.startOnStopFocusWork();
 
         if (activity == curActivity) {
             curActivity = null;
@@ -184,8 +186,7 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
         if (focusHandler.hasBackgrounded() || nextResumeIsFirstActivity) {
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "ActivityLifecycleHandler reset background state, call app focus");
             nextResumeIsFirstActivity = false;
-            focusHandler.resetBackgroundState();
-            OneSignal.onAppFocus();
+            focusHandler.startOnFocusWork();
         } else {
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "ActivityLifecycleHandler cancel background lost focus worker");
             focusHandler.cancelOnLostFocusWorker(FOCUS_LOST_WORKER_TAG, OneSignal.appContext);

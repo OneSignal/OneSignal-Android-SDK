@@ -161,6 +161,7 @@ import static com.test.onesignal.TestHelpers.getNextJob;
 import static com.test.onesignal.TestHelpers.pauseActivity;
 import static com.test.onesignal.TestHelpers.restartAppAndElapseTimeToNextSession;
 import static com.test.onesignal.TestHelpers.startRemoteNotificationReceivedHandlerService;
+import static com.test.onesignal.TestHelpers.stopActivity;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertFalse;
@@ -682,6 +683,20 @@ public class MainOneSignalClassRunner {
       pauseActivity(blankActivityController);
 
       assertRestCalls(4);
+   }
+
+   @Test
+   public void testAppStartFocus() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      assertTrue(ShadowOneSignalRestClient.lastUrl.matches("players"));
+
+      stopActivity(blankActivityController);
+      assertTrue(ShadowFocusHandler.Companion.getHasStopped());
+
+      blankActivityController.resume();
+      assertFalse(ShadowFocusHandler.Companion.getHasStopped());
    }
 
    private void setOneSignalContextOpenAppThenBackgroundAndResume() throws Exception {
@@ -3194,22 +3209,18 @@ public class MainOneSignalClassRunner {
       OneSignalInit();
       threadAndTaskWait();
 
-      OSPermissionObserver permissionObserver = new OSPermissionObserver() {
-         @Override
-         public void onOSPermissionChanged(OSPermissionStateChanges stateChanges) {
-            lastPermissionStateChanges = stateChanges;
-            currentPermission = stateChanges.getTo().areNotificationsEnabled();
-         }
+      OSPermissionObserver permissionObserver = stateChanges -> {
+         lastPermissionStateChanges = stateChanges;
+         currentPermission = stateChanges.getTo().areNotificationsEnabled();
       };
       OneSignal.addPermissionObserver(permissionObserver);
       lastPermissionStateChanges = null;
       // Make sure garbage collection doesn't nuke any observers.
       Runtime.getRuntime().gc();
 
-      pauseActivity(blankActivityController);
+      stopActivity(blankActivityController);
       ShadowNotificationManagerCompat.enabled = false;
       blankActivityController.resume();
-      threadAndTaskWait();
 
       assertTrue(lastPermissionStateChanges.getFrom().areNotificationsEnabled());
       assertFalse(lastPermissionStateChanges.getTo().areNotificationsEnabled());
