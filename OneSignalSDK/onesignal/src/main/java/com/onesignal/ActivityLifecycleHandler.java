@@ -107,7 +107,6 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
 
     void onActivityStopped(Activity activity) {
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "onActivityStopped: " + activity);
-        focusHandler.startOnStopFocusWork();
 
         if (activity == curActivity) {
             curActivity = null;
@@ -119,6 +118,9 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
         }
 
         logCurActivity();
+
+        if (curActivity == null)
+            focusHandler.startOnStopFocusWork();
     }
 
     void onActivityDestroyed(Activity activity) {

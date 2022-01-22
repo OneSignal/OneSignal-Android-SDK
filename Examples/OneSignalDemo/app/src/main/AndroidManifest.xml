@@ -84,6 +84,9 @@
 
         <activity android:name=".activity.MainActivity"/>
 
+        <activity
+          android:name=".activity.SecondaryActivity"
+          android:exported="false" />
     </application>
 
 </manifest>

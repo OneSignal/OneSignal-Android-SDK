@@ -9,6 +9,8 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.appcompat.widget.Toolbar;
+
+import android.content.Intent;
 import android.util.Pair;
 import android.view.View;
 import android.view.ViewTreeObserver;
@@ -25,6 +27,7 @@ import com.onesignal.OSPermissionStateChanges;
 import com.onesignal.OSSubscriptionStateChanges;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
+import com.onesignal.sdktest.activity.SecondaryActivity;
 import com.onesignal.sdktest.adapter.InAppMessageRecyclerViewAdapter;
 import com.onesignal.sdktest.adapter.NotificationRecyclerViewAdapter;
 import com.onesignal.sdktest.adapter.PairRecyclerViewAdapter;
@@ -244,6 +247,10 @@ public class MainActivityViewModel implements ActivityViewModel {
         pauseInAppMessagesSwitch = getActivity().findViewById(R.id.main_activity_settings_pause_in_app_messages_switch);
         revokeConsentButton = getActivity().findViewById(R.id.main_activity_settings_revoke_consent_button);
 
+        Button navigateNextActivity = getActivity().findViewById(R.id.main_activity_navigate_button);
+        navigateNextActivity.setOnClickListener(v -> {
+            getActivity().startActivity(new Intent(getActivity(), SecondaryActivity.class));
+        });
         tagSet = new HashMap<>();
         tagArrayList = new ArrayList<>();
 
