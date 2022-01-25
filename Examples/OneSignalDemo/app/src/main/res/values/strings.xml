@@ -52,6 +52,8 @@
     <string name="allow">Allow</string>
     <string name="revoke_consent">Revoke Consent</string>
 
+    <string name="navigate_next_activity">Next activity</string>
+
     <string name="onesignal_app_id">0ba9731b-33bd-43f4-8b59-61172e27447d</string>
 
 </resources>
