@@ -10,7 +10,6 @@ import android.location.Location;
 import androidx.test.core.app.ApplicationProvider;
 
 import com.huawei.hms.location.HWLocation;
-import com.onesignal.FocusDelaySyncService;
 import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOSTimeImpl;
@@ -20,6 +19,7 @@ import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
+import com.onesignal.ShadowFocusHandler;
 import com.onesignal.ShadowFusedLocationApiWrapper;
 import com.onesignal.ShadowGMSLocationController;
 import com.onesignal.ShadowGMSLocationUpdateListener;
@@ -52,7 +52,6 @@ import org.robolectric.RuntimeEnvironment;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.annotation.LooperMode;
-import org.robolectric.annotation.LooperMode;
 import org.robolectric.shadows.ShadowLog;
 
 import java.lang.reflect.Method;
@@ -79,6 +78,7 @@ import static org.robolectric.Shadows.shadowOf;
                 ShadowCustomTabsClient.class,
                 ShadowCustomTabsSession.class,
                 ShadowHmsInstanceId.class,
+                ShadowFocusHandler.class
         },
         sdk = 21
 )
@@ -237,8 +237,6 @@ public class LocationIntegrationTests {
         // Testing loc_bg
         blankActivityController.pause();
         threadAndTaskWait();
-        Robolectric.buildService(FocusDelaySyncService.class, intent).startCommand(0, 0);
-        threadAndTaskWait();
         fakeLocation.setTime(12347L);
         ShadowGMSLocationUpdateListener.provideFakeLocation(fakeLocation);
         Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
@@ -279,8 +277,7 @@ public class LocationIntegrationTests {
 
         blankActivityController.pause();
         threadAndTaskWait();
-        Robolectric.buildService(FocusDelaySyncService.class, new Intent()).startCommand(0, 0);
-        threadAndTaskWait();
+
         Robolectric.buildService(SyncService.class, new Intent()).startCommand(0, 0);
         threadAndTaskWait();
 
@@ -450,8 +447,6 @@ public class LocationIntegrationTests {
 
         // Testing loc_bg
         blankActivityController.pause();
-        threadAndTaskWait();
-        Robolectric.buildService(FocusDelaySyncService.class, intent).startCommand(0, 0);
         threadAndTaskWait();
 
         fakeLocation.setTime(12347L);

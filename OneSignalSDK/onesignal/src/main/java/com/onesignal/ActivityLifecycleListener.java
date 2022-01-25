@@ -53,7 +53,7 @@ class ActivityLifecycleListener implements Application.ActivityLifecycleCallback
       }
 
       if (activityLifecycleHandler == null) {
-         activityLifecycleHandler = new ActivityLifecycleHandler();
+         activityLifecycleHandler = new ActivityLifecycleHandler(new OSFocusHandler());
       }
 
       // Configuration change listener setup

@@ -18,6 +18,7 @@ import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalShadowPackageManager;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
+import com.onesignal.ShadowFocusHandler;
 import com.onesignal.ShadowGMSLocationController;
 import com.onesignal.ShadowGenerateNotification;
 import com.onesignal.ShadowJobService;
@@ -92,7 +93,8 @@ import static junit.framework.Assert.assertTrue;
                 ShadowCustomTabsClient.class,
                 ShadowCustomTabsSession.class,
                 ShadowNotificationManagerCompat.class,
-                ShadowJobService.class
+                ShadowJobService.class,
+                ShadowFocusHandler.class
         },
         sdk = 26)
 @RunWith(RobolectricTestRunner.class)

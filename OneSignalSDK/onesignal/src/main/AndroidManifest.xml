@@ -91,18 +91,10 @@
             android:exported="false" />
 
         <service
-          android:name="com.onesignal.FocusDelaySyncService"
-          android:stopWithTask="true"
-          android:exported="false"/>
-        <service
-          android:name="com.onesignal.FocusDelaySyncJobService"
-          android:permission="android.permission.BIND_JOB_SERVICE"
-          android:exported="false" />
-
-        <service
           android:name="com.onesignal.SyncService"
           android:stopWithTask="true"
           android:exported="false" />
+
         <service
           android:name="com.onesignal.SyncJobService"
           android:permission="android.permission.BIND_JOB_SERVICE"

@@ -38,13 +38,9 @@ import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
-import android.util.Log;
 
-import androidx.annotation.Nullable;
 import androidx.test.core.app.ApplicationProvider;
 
-import com.onesignal.FocusDelaySyncJobService;
-import com.onesignal.FocusDelaySyncService;
 import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOSTimeImpl;
@@ -72,6 +68,7 @@ import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowFirebaseAnalytics;
+import com.onesignal.ShadowFocusHandler;
 import com.onesignal.ShadowFusedLocationApiWrapper;
 import com.onesignal.ShadowGMSLocationController;
 import com.onesignal.ShadowGenerateNotification;
@@ -186,6 +183,7 @@ import static org.robolectric.Shadows.shadowOf;
             ShadowNotificationManagerCompat.class,
             ShadowJobService.class,
             ShadowHmsInstanceId.class,
+            ShadowFocusHandler.class,
             OneSignalShadowPackageManager.class
         },
         sdk = 21
@@ -593,7 +591,7 @@ public class MainOneSignalClassRunner {
       // Background app for 31 seconds
       pauseActivity(blankActivityController);
       // Non on_focus call scheduled
-      assertNumberOfServicesAvailable(1);
+      assertNumberOfServicesAvailable(0);
       time.advanceSystemTimeBy(31);
 
       // Click notification
@@ -613,8 +611,7 @@ public class MainOneSignalClassRunner {
       // Background app
       pauseActivity(blankActivityController);
       assertAndRunSyncService();
-      // FocusDelaySyncJobService + SyncJobService
-      assertNumberOfServicesAvailable(2);
+      assertNumberOfServicesAvailable(1);
 
       // Make sure no direct flag or notifications are added into the on_focus
       assertOnFocusAtIndexDoesNotHaveKeys(4, Arrays.asList("notification_ids", "direct"));
@@ -2126,10 +2123,8 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       OneSignal.sendTag("key", "value");
-      // Pause Activity and trigger delayed runnable that will trigger out of focus logic
+      // Pause Activity
       blankActivityController.pause();
-      TestHelpers.assertAndRunNextJob(FocusDelaySyncJobService.class);
-      // Do not run threadAndWaitThread to avoid running NetworkThread
 
       // Network call for android params and player create should have been made.
       assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
@@ -2153,7 +2148,6 @@ public class MainOneSignalClassRunner {
 
       // App is swiped away
       blankActivityController.pause();
-      Robolectric.buildService(FocusDelaySyncService.class, new Intent()).startCommand(0, 0);
 
       assertEquals(2, ShadowOneSignalRestClient.networkCallCount);
       fastColdRestartApp();
@@ -2162,8 +2156,8 @@ public class MainOneSignalClassRunner {
       // Tags did not get synced so SyncService should be scheduled
       AlarmManager alarmManager = (AlarmManager)ApplicationProvider.getApplicationContext().getSystemService(Context.ALARM_SERVICE);
       ShadowAlarmManager shadowAlarmManager = shadowOf(alarmManager);
-      assertEquals(2, shadowAlarmManager.getScheduledAlarms().size());
-      assertEquals(SyncService.class, shadowOf(shadowOf(shadowAlarmManager.getScheduledAlarms().get(1).operation).getSavedIntent()).getIntentClass());
+      assertEquals(1, shadowAlarmManager.getScheduledAlarms().size());
+      assertEquals(SyncService.class, shadowOf(shadowOf(shadowAlarmManager.getNextScheduledAlarm().operation).getSavedIntent()).getIntentClass());
       shadowAlarmManager.getScheduledAlarms().clear();
 
       // Test running the service
@@ -2181,11 +2175,9 @@ public class MainOneSignalClassRunner {
       // App is swiped away
       blankActivityController.pause();
       threadAndTaskWait();
-      Robolectric.buildService(FocusDelaySyncService.class, new Intent()).startCommand(0, 0);
-      threadAndTaskWait();
 
-      // Only FocusDelaySyncService should be scheduled
-      assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
+      // No Focus service should be scheduled
+      assertEquals(0, shadowOf(alarmManager).getScheduledAlarms().size());
       assertEquals(4, ShadowOneSignalRestClient.networkCallCount);
    }
 
@@ -2233,14 +2225,9 @@ public class MainOneSignalClassRunner {
    @Test
    public void ensureSchedulingOfSyncJobServiceOnActivityPause() throws Exception {
       sendTagsAndImmediatelyBackgroundApp();
-      // Not call threadAndTaskWait to avoid running NetworkThread
-      TestHelpers.assertAndRunNextJob(FocusDelaySyncJobService.class);
 
-      // A future job should be scheduled to finish the sync.
+      // There should be a SyncJobService service scheduled
       assertNumberOfServicesAvailable(1);
-      threadAndTaskWait();
-      // There should be FocusDelaySyncJobService + SyncJobService services schedules
-      assertNumberOfServicesAvailable(2);
       assertAndRunSyncService();
    }
 
@@ -2318,11 +2305,11 @@ public class MainOneSignalClassRunner {
    public void ensureSchedulingOfSyncJobServiceOnActivityPause_forPendingActiveTime() throws Exception {
       useAppFor2minThenBackground();
 
-      // There should be FocusDelaySyncJobService + SyncJobService services schedules
-      assertNumberOfServicesAvailable(2);
+      // There should be a SyncJobService service scheduled
+      assertNumberOfServicesAvailable(1);
       // A future job should be scheduled to finish the sync in case the process is killed
       //   for the on_focus call can be made.
-      assertNextJob(SyncJobService.class, 1);
+      assertNextJob(SyncJobService.class, 0);
 
       // FIXME: Cleanup for upcoming unit test
       //  This is a one off scenario where a unit test fails after this one is run
