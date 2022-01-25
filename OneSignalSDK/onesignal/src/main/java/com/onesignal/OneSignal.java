@@ -1296,7 +1296,7 @@ public class OneSignal {
       Log(LOG_LEVEL.WARN, "HTTP code: " + statusCode + " " + errorString + jsonError, throwable);
    }
 
-   // Returns true if there is active time that is unsynced.
+   // Returns true if there is active time that is non synced.
    @WorkerThread
    static void onAppLostFocus() {
       Log(LOG_LEVEL.DEBUG, "Application lost focus initDone: " + initDone);
@@ -1373,6 +1373,10 @@ public class OneSignal {
       }
 
       onAppFocusLogic();
+   }
+
+   static void onAppStartFocusLogic() {
+      getCurrentPermissionState(appContext).refreshAsTo();
    }
 
    private static void onAppFocusLogic() {

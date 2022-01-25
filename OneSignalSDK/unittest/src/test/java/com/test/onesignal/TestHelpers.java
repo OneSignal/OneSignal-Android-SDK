@@ -29,6 +29,7 @@ import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowDynamicTimer;
 import com.onesignal.ShadowFCMBroadcastReceiver;
 import com.onesignal.ShadowFirebaseAnalytics;
+import com.onesignal.ShadowFocusHandler;
 import com.onesignal.ShadowFusedLocationApiWrapper;
 import com.onesignal.ShadowGenerateNotification;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
@@ -129,6 +130,7 @@ public class TestHelpers {
       ShadowNotificationReceivedEvent.resetStatics();
       ShadowOneSignalNotificationManager.resetStatics();
       ShadowBadgeCountUpdater.resetStatics();
+      ShadowFocusHandler.Companion.resetStatics();
 
       lastException = null;
    }
@@ -585,6 +587,11 @@ public class TestHelpers {
 
    public static void pauseActivity(ActivityController activityController) throws Exception {
       activityController.pause();
+      threadAndTaskWait();
+   }
+
+   public static void stopActivity(ActivityController activityController) throws Exception {
+      activityController.stop();
       threadAndTaskWait();
    }
 
