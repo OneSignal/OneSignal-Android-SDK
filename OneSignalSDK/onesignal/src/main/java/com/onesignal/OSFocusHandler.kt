@@ -28,17 +28,38 @@
 package com.onesignal
 
 import android.content.Context
+import android.os.Handler
 import androidx.work.*
 import java.util.concurrent.TimeUnit
 
 class OSFocusHandler {
 
+    private var stopRunnable: Runnable? = null
+
     fun hasBackgrounded() = backgrounded
 
     fun hasCompleted() = completed
 
-    fun resetBackgroundState() {
-        backgrounded = false
+    fun startOnFocusWork() {
+        resetBackgroundState()
+        OneSignal.onAppFocus()
+    }
+
+    fun startOnStartFocusWork() {
+        if (stopped) {
+            stopped = false
+            OSTimeoutHandler.getTimeoutHandler().destroyTimeout(stopRunnable)
+            stopRunnable = null
+            OneSignal.onAppStartFocusLogic()
+        }
+    }
+
+    fun startOnStopFocusWork() {
+        stopRunnable = Runnable {
+            stopped = true
+        }.also {
+            OSTimeoutHandler.getTimeoutHandler().startTimeout(stopDelay, it)
+        }
     }
 
     fun startOnLostFocusWorker(tag: String, delay: Long, context: Context)  {
@@ -60,6 +81,10 @@ class OSFocusHandler {
         WorkManager.getInstance(context).cancelAllWorkByTag(tag)
     }
 
+    private fun resetBackgroundState() {
+        backgrounded = false
+    }
+
     private fun buildConstraints(): Constraints {
         return Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -75,6 +100,8 @@ class OSFocusHandler {
     }
 
     companion object {
+        private const val stopDelay = 1500L
+        private var stopped = false
         private var backgrounded = false
         private var completed = false
 
