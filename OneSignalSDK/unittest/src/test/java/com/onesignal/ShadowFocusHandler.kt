@@ -35,11 +35,32 @@ import android.content.Context
 import com.onesignal.OSFocusHandler.Companion.onLostFocusDoWork
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
+import org.robolectric.annotation.RealObject
 
 @Implements(OSFocusHandler::class)
 class ShadowFocusHandler {
+
+    @Implementation
+    fun startOnStartFocusWork() {
+        hasStopped = false
+        OneSignal.onAppStartFocusLogic()
+    }
+
+    @Implementation
+    fun startOnStopFocusWork() {
+        hasStopped = true
+    }
+
     @Implementation
     fun startOnLostFocusWorker(tag: String, delay: Long, context: Context) {
         onLostFocusDoWork()
+    }
+
+    companion object {
+        var hasStopped = false
+
+        fun resetStatics() {
+            hasStopped = false
+        }
     }
 }
