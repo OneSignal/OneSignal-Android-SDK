@@ -42,21 +42,34 @@ class OSFocusHandler {
 
     fun startOnFocusWork() {
         resetBackgroundState()
+        OneSignal.onesignalLog(
+            OneSignal.LOG_LEVEL.DEBUG,
+            "OSFocusHandler running onAppFocus"
+        )
         OneSignal.onAppFocus()
     }
 
     fun startOnStartFocusWork() {
         if (stopped) {
             stopped = false
-            OSTimeoutHandler.getTimeoutHandler().destroyTimeout(stopRunnable)
             stopRunnable = null
+            OneSignal.onesignalLog(
+                OneSignal.LOG_LEVEL.DEBUG,
+                "OSFocusHandler running onAppStartFocusLogic"
+            )
             OneSignal.onAppStartFocusLogic()
+        } else {
+            resetStopState()
         }
     }
 
     fun startOnStopFocusWork() {
         stopRunnable = Runnable {
             stopped = true
+            OneSignal.onesignalLog(
+                OneSignal.LOG_LEVEL.DEBUG,
+                "OSFocusHandler setting stop state: true"
+            )
         }.also {
             OSTimeoutHandler.getTimeoutHandler().startTimeout(stopDelay, it)
         }
@@ -81,7 +94,15 @@ class OSFocusHandler {
         WorkManager.getInstance(context).cancelAllWorkByTag(tag)
     }
 
+    private fun resetStopState() {
+        stopped = false
+        stopRunnable?.let {
+            OSTimeoutHandler.getTimeoutHandler().destroyTimeout(it)
+        }
+    }
+
     private fun resetBackgroundState() {
+        resetStopState()
         backgrounded = false
     }
 
