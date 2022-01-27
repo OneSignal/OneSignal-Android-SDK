@@ -824,4 +824,18 @@ public class OneSignalPackagePrivateHelper {
          }
       }
    }
+
+   public static class OSObservable<ObserverType, StateType> extends com.onesignal.OSObservable<ObserverType, StateType> {
+      public OSObservable(String methodName, boolean fireOnMainThread) {
+         super(methodName, fireOnMainThread);
+      }
+
+      public void addObserver(ObserverType observer) {
+         super.addObserver(observer);
+      }
+
+      public void removeObserver(ObserverType observer) {
+         super.removeObserver(observer);
+      }
+   }
 }
