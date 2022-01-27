@@ -113,6 +113,7 @@ import org.robolectric.shadows.ShadowAlarmManager;
 import org.robolectric.shadows.ShadowConnectivityManager;
 import org.robolectric.shadows.ShadowLog;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -136,6 +137,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setSessionMa
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_taskQueueWaitingForInit;
+import static com.onesignal.OneSignalPackagePrivateHelper.OSObservable;
 import static com.onesignal.ShadowOneSignalRestClient.EMAIL_USER_ID;
 import static com.onesignal.ShadowOneSignalRestClient.PUSH_USER_ID;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
@@ -3453,6 +3455,15 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       assertNull(lastSMSSubscriptionStateChanges);
+   }
+
+   @Test
+   public void shouldNotThrowWhenRemovingWeakReferenceObservableThatHasBeenGarbageCollected() {
+      OSObservable<Object, Object> observer = new OSObservable<>("", false);
+      WeakReference<Object> weakObject = new WeakReference<>(new Object());
+      observer.addObserver(weakObject.get());
+      Runtime.getRuntime().gc(); // Force cleaning up WeakReference above
+      observer.removeObserver(weakObject.get());
    }
 
    @Test
