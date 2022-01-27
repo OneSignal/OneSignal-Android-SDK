@@ -1376,10 +1376,6 @@ public class OneSignal {
    }
 
    static void onAppStartFocusLogic() {
-      // Make sure without privacy consent, onAppStopFocusLogic returns early
-      if (shouldLogUserPrivacyConsentErrorMessageForMethodName("onAppStartFocusLogic"))
-         return;
-
       getCurrentPermissionState(appContext).refreshAsTo();
    }
 
