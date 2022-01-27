@@ -55,6 +55,7 @@ class OSObservable<ObserverType, StateType> {
    void removeObserver(ObserverType observer) {
       for(int i = 0; i < observers.size(); i++) {
          Object anObserver = ((WeakReference)observers.get(i)).get();
+         if (anObserver == null) continue;
          if (anObserver.equals(observer)) {
             observers.remove(i);
             break;
