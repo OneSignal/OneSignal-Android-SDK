@@ -65,7 +65,15 @@ class TrackAmazonPurchase {
       try {
          // 2.0.1
          Class<?> listenerHandlerClass = Class.forName("com.amazon.device.iap.internal.d");
-         listenerHandlerObject = listenerHandlerClass.getMethod("d").invoke(null);
+
+         try {
+            //iap v2.x
+            listenerHandlerObject = listenerHandlerClass.getMethod("d").invoke(null);
+         } catch(NullPointerException e) {
+            //appstore v3.x
+            listenerHandlerObject = listenerHandlerClass.getMethod("e").invoke(null);
+         }
+
          listenerHandlerField = listenerHandlerClass.getDeclaredField("f");
          listenerHandlerField.setAccessible(true);
 
