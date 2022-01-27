@@ -40,9 +40,6 @@ import org.robolectric.annotation.RealObject
 @Implements(OSFocusHandler::class)
 class ShadowFocusHandler {
 
-    @RealObject
-    private val realFocusHandler: OSFocusHandler? = null
-
     @Implementation
     fun startOnStartFocusWork() {
         hasStopped = false
