@@ -359,6 +359,8 @@ public class OneSignal {
    @Nullable
    static Activity getCurrentActivity() {
       ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
+      OneSignal.nanLog("OneSignal getCurrentActivity activityLifecycleHandler : " + activityLifecycleHandler);
+
       return activityLifecycleHandler != null ? activityLifecycleHandler.getCurActivity() : null;
    }
 
@@ -3361,5 +3363,9 @@ public class OneSignal {
       PERMISSION_DENIED,
       LOCATION_PERMISSIONS_MISSING_MANIFEST,
       ERROR;
+   }
+
+   public static void nanLog(String msg) {
+      logger.error("\uD83D\uDC9B\uD83D\uDC9B\uD83D\uDC9B" + msg);
    }
 }

@@ -230,6 +230,7 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
     }
 
     public Activity getCurActivity() {
+        OneSignal.nanLog("ActivityLifecycleHandler getCurActivity: " + curActivity);
         return curActivity;
     }
 
