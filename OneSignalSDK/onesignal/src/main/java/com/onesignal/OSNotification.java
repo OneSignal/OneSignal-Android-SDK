@@ -117,6 +117,7 @@ public class OSNotification {
       this.title = notification.title;
       this.body = notification.body;
       this.additionalData = notification.additionalData;
+      this.smallIcon = notification.smallIcon;
       this.largeIcon = notification.largeIcon;
       this.bigPicture = notification.bigPicture;
       this.smallIconAccentColor = notification.smallIconAccentColor;
@@ -132,6 +133,8 @@ public class OSNotification {
       this.collapseId = notification.collapseId;
       this.priority = notification.priority;
       this.rawPayload = notification.rawPayload;
+      this.sentTime = notification.sentTime;
+      this.ttl = notification.ttl;
    }
 
    private void initPayloadData(JSONObject currentJsonPayload) {
