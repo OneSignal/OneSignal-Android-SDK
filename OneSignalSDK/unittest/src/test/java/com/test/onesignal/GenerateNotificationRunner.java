@@ -1985,6 +1985,64 @@ public class GenerateNotificationRunner {
 
    @Test
    @Config(shadows = { ShadowGenerateNotification.class })
+   public void testNotificationProcessingAndForegroundHandler_callCompleteWithMutableNotification_displays() throws Exception {
+      // 1. Setup correct notification extension service class
+      startRemoteNotificationReceivedHandlerService(
+              RemoteNotificationReceivedHandler_notificationReceivedCallCompleteWithMutableNotification
+                      .class
+                      .getName()
+      );
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.initWithContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
+         lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
+
+         // Call complete to end without waiting default 30 second timeout
+         notificationReceivedEvent.complete(notificationReceivedEvent.getNotification());
+      });
+      threadAndTaskWait();
+
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // 3. Receive a notification in foreground
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 4. Make sure service was called
+      assertNotNull(lastServiceNotificationReceivedEvent);
+
+      // 5. Make sure foreground handler was called
+      assertNotNull(lastForegroundNotificationReceivedEvent);
+
+      // 6. Make sure running on main thread check is called, this is only called for showing the notification
+      assertTrue(ShadowGenerateNotification.isRunningOnMainThreadCheckCalled());
+
+      // 7. Check badge count to represent the notification is displayed
+      assertEquals(1, ShadowBadgeCountUpdater.lastCount);
+   }
+
+   /**
+    * @see #testNotificationProcessingAndForegroundHandler_callCompleteWithMutableNotification_displays
+    */
+   public static class RemoteNotificationReceivedHandler_notificationReceivedCallCompleteWithMutableNotification implements OneSignal.OSRemoteNotificationReceivedHandler {
+
+      @Override
+      public void remoteNotificationReceived(final Context context, OSNotificationReceivedEvent receivedEvent) {
+         lastServiceNotificationReceivedEvent = receivedEvent;
+
+         OSNotification notification = receivedEvent.getNotification();
+         OSMutableNotification mutableNotification = notification.mutableCopy();
+
+         // Complete is called to end NotificationProcessingHandler
+         receivedEvent.complete(mutableNotification);
+      }
+   }
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
    public void testNotificationWillShowInForegroundHandlerIsCallWhenReceivingNotificationInForeground() throws Exception {
       // 1. Init OneSignal
       OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
