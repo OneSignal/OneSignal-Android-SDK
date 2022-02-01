@@ -883,7 +883,7 @@ public class OneSignal {
 
          // Read the current privacy consent setting from AndroidManifest.xml
          String requireSetting = bundle.getString("com.onesignal.PrivacyConsent");
-         if (requireSetting!=null)
+         if (requireSetting != null)
             setRequiresUserPrivacyConsent("ENABLE".equalsIgnoreCase(requireSetting));
       } catch (Throwable t) {
          t.printStackTrace();
