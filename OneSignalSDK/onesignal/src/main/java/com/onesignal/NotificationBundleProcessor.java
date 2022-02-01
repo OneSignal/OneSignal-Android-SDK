@@ -236,7 +236,7 @@ class NotificationBundleProcessor {
             values.put(NotificationTable.COLUMN_NAME_MESSAGE, notificationJob.getBody().toString());
 
          // Set expire_time
-         long sentTime = jsonPayload.optLong(OSNotificationController.GOOGLE_SENT_TIME_KEY, OneSignal.getTime().getCurrentThreadTimeMillis()) / 1_000L;
+         long sentTime = jsonPayload.optLong(OSNotificationController.GOOGLE_SENT_TIME_KEY, OneSignal.getTime().getCurrentTimeMillis()) / 1_000L;
          int ttl = jsonPayload.optInt(OSNotificationController.GOOGLE_TTL_KEY, OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
          long expireTime = sentTime + ttl;
          values.put(NotificationTable.COLUMN_NAME_EXPIRE_TIME, expireTime);
