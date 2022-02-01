@@ -125,7 +125,7 @@ public class OSNotificationController {
       if (!useTtl)
          return true;
 
-      long currentTimeInSeconds = OneSignal.getTime().getCurrentThreadTimeMillis() / 1_000;
+      long currentTimeInSeconds = OneSignal.getTime().getCurrentTimeMillis() / 1_000;
       long sentTime = notificationJob.getNotification().getSentTime();
       // If available TTL times comes in seconds, by default is 3 days in seconds
       int ttl = notificationJob.getNotification().getTtl();

@@ -146,7 +146,7 @@ public class OSNotification {
          return;
       }
 
-      long currentTime = OneSignal.getTime().getCurrentThreadTimeMillis();
+      long currentTime = OneSignal.getTime().getCurrentTimeMillis();
       if (currentJsonPayload.has(GOOGLE_TTL_KEY)) {
          sentTime = currentJsonPayload.optLong(GOOGLE_SENT_TIME_KEY, currentTime) / 1_000;
          ttl = currentJsonPayload.optInt(GOOGLE_TTL_KEY, OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
