@@ -1252,7 +1252,7 @@ public class GenerateNotificationRunner {
    @Test
    @Config (sdk = 23, shadows = { ShadowGenerateNotification.class })
    public void notShowNotificationPastTTL() throws Exception {
-      long sentTime = time.getCurrentThreadTimeMillis();
+      long sentTime = time.getCurrentTimeMillis();
       long ttl = 60L;
 
       Bundle bundle = getBaseNotifBundle();
@@ -1260,7 +1260,7 @@ public class GenerateNotificationRunner {
       bundle.putLong(OneSignalPackagePrivateHelper.GOOGLE_TTL_KEY, ttl);
 
       // Go forward just past the TTL of the notification
-      time.advanceThreadTimeBy(ttl + 1);
+      time.advanceSystemTimeBy(ttl + 1);
 
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
       threadAndTaskWait();
@@ -1275,7 +1275,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       long expireTime = (Long)TestHelpers.getAllNotificationRecords(dbHelper).get(0).get(NotificationTable.COLUMN_NAME_EXPIRE_TIME);
-      assertEquals((SystemClock.currentThreadTimeMillis() / 1_000L) + 259_200, expireTime);
+      assertEquals((System.currentTimeMillis() / 1_000L) + 259_200, expireTime);
    }
 
    // TODO: Once we figure out the correct way to process notifications with high priority using the WorkManager
