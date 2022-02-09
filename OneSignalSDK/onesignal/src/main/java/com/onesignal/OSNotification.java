@@ -117,6 +117,7 @@ public class OSNotification {
       this.title = notification.title;
       this.body = notification.body;
       this.additionalData = notification.additionalData;
+      this.smallIcon = notification.smallIcon;
       this.largeIcon = notification.largeIcon;
       this.bigPicture = notification.bigPicture;
       this.smallIconAccentColor = notification.smallIconAccentColor;
@@ -132,6 +133,8 @@ public class OSNotification {
       this.collapseId = notification.collapseId;
       this.priority = notification.priority;
       this.rawPayload = notification.rawPayload;
+      this.sentTime = notification.sentTime;
+      this.ttl = notification.ttl;
    }
 
    private void initPayloadData(JSONObject currentJsonPayload) {
@@ -143,7 +146,7 @@ public class OSNotification {
          return;
       }
 
-      long currentTime = OneSignal.getTime().getCurrentThreadTimeMillis();
+      long currentTime = OneSignal.getTime().getCurrentTimeMillis();
       if (currentJsonPayload.has(GOOGLE_TTL_KEY)) {
          sentTime = currentJsonPayload.optLong(GOOGLE_SENT_TIME_KEY, currentTime) / 1_000;
          ttl = currentJsonPayload.optInt(GOOGLE_TTL_KEY, OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);

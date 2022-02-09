@@ -1252,7 +1252,7 @@ public class GenerateNotificationRunner {
    @Test
    @Config (sdk = 23, shadows = { ShadowGenerateNotification.class })
    public void notShowNotificationPastTTL() throws Exception {
-      long sentTime = time.getCurrentThreadTimeMillis();
+      long sentTime = time.getCurrentTimeMillis();
       long ttl = 60L;
 
       Bundle bundle = getBaseNotifBundle();
@@ -1260,7 +1260,7 @@ public class GenerateNotificationRunner {
       bundle.putLong(OneSignalPackagePrivateHelper.GOOGLE_TTL_KEY, ttl);
 
       // Go forward just past the TTL of the notification
-      time.advanceThreadTimeBy(ttl + 1);
+      time.advanceSystemTimeBy(ttl + 1);
 
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
       threadAndTaskWait();
@@ -1275,7 +1275,7 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       long expireTime = (Long)TestHelpers.getAllNotificationRecords(dbHelper).get(0).get(NotificationTable.COLUMN_NAME_EXPIRE_TIME);
-      assertEquals((SystemClock.currentThreadTimeMillis() / 1_000L) + 259_200, expireTime);
+      assertEquals((System.currentTimeMillis() / 1_000L) + 259_200, expireTime);
    }
 
    // TODO: Once we figure out the correct way to process notifications with high priority using the WorkManager
@@ -1980,6 +1980,64 @@ public class GenerateNotificationRunner {
 
          OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "RemoteNotificationReceivedHandler_notificationReceivedCompleteNotCalled remoteNotificationReceived called");
          // Complete not called to end NotificationProcessingHandler, depend on timeout to finish
+      }
+   }
+
+   @Test
+   @Config(shadows = { ShadowGenerateNotification.class })
+   public void testNotificationProcessingAndForegroundHandler_callCompleteWithMutableNotification_displays() throws Exception {
+      // 1. Setup correct notification extension service class
+      startRemoteNotificationReceivedHandlerService(
+              RemoteNotificationReceivedHandler_notificationReceivedCallCompleteWithMutableNotification
+                      .class
+                      .getName()
+      );
+
+      // 2. Init OneSignal
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.initWithContext(blankActivity);
+      OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
+         lastForegroundNotificationReceivedEvent = notificationReceivedEvent;
+
+         // Call complete to end without waiting default 30 second timeout
+         notificationReceivedEvent.complete(notificationReceivedEvent.getNotification());
+      });
+      threadAndTaskWait();
+
+      blankActivityController.resume();
+      threadAndTaskWait();
+
+      // 3. Receive a notification in foreground
+      FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
+
+      // 4. Make sure service was called
+      assertNotNull(lastServiceNotificationReceivedEvent);
+
+      // 5. Make sure foreground handler was called
+      assertNotNull(lastForegroundNotificationReceivedEvent);
+
+      // 6. Make sure running on main thread check is called, this is only called for showing the notification
+      assertTrue(ShadowGenerateNotification.isRunningOnMainThreadCheckCalled());
+
+      // 7. Check badge count to represent the notification is displayed
+      assertEquals(1, ShadowBadgeCountUpdater.lastCount);
+   }
+
+   /**
+    * @see #testNotificationProcessingAndForegroundHandler_callCompleteWithMutableNotification_displays
+    */
+   public static class RemoteNotificationReceivedHandler_notificationReceivedCallCompleteWithMutableNotification implements OneSignal.OSRemoteNotificationReceivedHandler {
+
+      @Override
+      public void remoteNotificationReceived(final Context context, OSNotificationReceivedEvent receivedEvent) {
+         lastServiceNotificationReceivedEvent = receivedEvent;
+
+         OSNotification notification = receivedEvent.getNotification();
+         OSMutableNotification mutableNotification = notification.mutableCopy();
+
+         // Complete is called to end NotificationProcessingHandler
+         receivedEvent.complete(mutableNotification);
       }
    }
 
