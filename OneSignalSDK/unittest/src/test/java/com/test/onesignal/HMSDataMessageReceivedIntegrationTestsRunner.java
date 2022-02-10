@@ -3,12 +3,16 @@ package com.test.onesignal;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.huawei.hms.push.RemoteMessage;
 import com.onesignal.MockOSTimeImpl;
+import com.onesignal.OneSignal;
+import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalPackagePrivateHelper.NotificationPayloadProcessorHMS;
 import com.onesignal.ShadowBadgeCountUpdater;
 import com.onesignal.ShadowGenerateNotification;
+import com.onesignal.ShadowHmsNotificationPayloadProcessor;
 import com.onesignal.ShadowHmsRemoteMessage;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
@@ -33,6 +37,8 @@ import org.robolectric.shadows.ShadowLog;
 
 import java.util.UUID;
 
+import static com.onesignal.OneSignalHmsEventBridge.HMS_SENT_TIME_KEY;
+import static com.onesignal.OneSignalHmsEventBridge.HMS_TTL_KEY;
 import static com.onesignal.OneSignalPackagePrivateHelper.HMSEventBridge_onMessageReceive;
 import static com.onesignal.OneSignalPackagePrivateHelper.HMSProcessor_processDataMessageReceived;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSNotificationFormatHelper.PAYLOAD_OS_NOTIFICATION_ID;
@@ -136,6 +142,28 @@ public class HMSDataMessageReceivedIntegrationTestsRunner {
         threadAndTaskWait();
 
         assertEquals(0, ShadowBadgeCountUpdater.lastCount);
+    }
+
+    @Test
+    @Config(shadows = { ShadowGenerateNotification.class, ShadowHmsRemoteMessage.class, ShadowBadgeCountUpdater.class, ShadowHmsNotificationPayloadProcessor.class })
+    public void ttl_shouldDisplayNotificationWithNoTTLandSentTime() throws Exception {
+        blankActivityController.pause();
+
+        long sentTime = 1_635_971_895_940L;
+
+        time.setMockedTime(sentTime * 1_000);
+        long setSentTime = time.getCurrentTimeMillis();
+
+        ShadowHmsRemoteMessage.data = helperBasicOSPayload();
+
+        HMSEventBridge_onMessageReceive(blankActivity, new RemoteMessage(new Bundle()));
+        threadAndTaskWait();
+
+        String messageData = ShadowHmsNotificationPayloadProcessor.getMessageData();
+        JSONObject jsonObject = new JSONObject(messageData);
+
+        assertEquals(OneSignalPackagePrivateHelper.OSNotificationRestoreWorkManager.getDEFAULT_TTL_IF_NOT_IN_PAYLOAD(), jsonObject.getInt(HMS_TTL_KEY));
+        assertEquals(setSentTime, jsonObject.getLong(HMS_SENT_TIME_KEY));
     }
 
     // NOTE: More tests can be added but they would be duplicated with GenerateNotificationRunner
