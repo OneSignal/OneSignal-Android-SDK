@@ -12,9 +12,4 @@ public class OSTimeImpl implements OSTime {
     public long getElapsedRealtime() {
         return SystemClock.elapsedRealtime();
     }
-
-    @Override
-    public long getCurrentThreadTimeMillis() {
-        return SystemClock.currentThreadTimeMillis();
-    }
 }

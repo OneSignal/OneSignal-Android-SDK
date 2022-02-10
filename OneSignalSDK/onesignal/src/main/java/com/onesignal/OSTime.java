@@ -4,6 +4,4 @@ public interface OSTime {
     long getCurrentTimeMillis();
 
     long getElapsedRealtime();
-
-    long getCurrentThreadTimeMillis();
 }
