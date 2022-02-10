@@ -53,8 +53,14 @@ public class OneSignalHmsEventBridge {
         String data = message.getData();
         try {
             JSONObject messageDataJSON = new JSONObject(message.getData());
-            messageDataJSON.put(HMS_TTL_KEY, message.getTtl());
-            messageDataJSON.put(HMS_SENT_TIME_KEY, message.getSentTime());
+            if (message.getTtl() == 0)
+                messageDataJSON.put(HMS_TTL_KEY, OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
+            else
+                messageDataJSON.put(HMS_TTL_KEY, message.getTtl());
+            if (message.getSentTime() == 0)
+                messageDataJSON.put(HMS_SENT_TIME_KEY, OneSignal.getTime().getCurrentTimeMillis());
+            else
+                messageDataJSON.put(HMS_SENT_TIME_KEY, message.getSentTime());
             data = messageDataJSON.toString();
         } catch (JSONException e) {
             OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "OneSignalHmsEventBridge error when trying to create RemoteMessage data JSON");
