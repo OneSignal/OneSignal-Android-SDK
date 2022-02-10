@@ -126,7 +126,7 @@ public class HMSDataMessageReceivedIntegrationTestsRunner {
         long sentTime = 1_635_971_895_940L;
         int ttl = 60;
 
-        time.setMockedCurrentThreadTimeMillis(sentTime * 1_000);
+        time.setMockedTime(sentTime * 1_000);
 
         ShadowHmsRemoteMessage.data = helperBasicOSPayload();
         ShadowHmsRemoteMessage.ttl = ttl;
