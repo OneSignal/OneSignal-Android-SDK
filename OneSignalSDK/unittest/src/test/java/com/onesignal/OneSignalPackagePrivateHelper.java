@@ -225,6 +225,9 @@ public class OneSignalPackagePrivateHelper {
    }
 
    public static class OSNotificationRestoreWorkManager extends com.onesignal.OSNotificationRestoreWorkManager {
+      public static int getDEFAULT_TTL_IF_NOT_IN_PAYLOAD() {
+         return DEFAULT_TTL_IF_NOT_IN_PAYLOAD;
+      }
    }
 
    public static class OSNotificationGenerationJob extends com.onesignal.OSNotificationGenerationJob {
