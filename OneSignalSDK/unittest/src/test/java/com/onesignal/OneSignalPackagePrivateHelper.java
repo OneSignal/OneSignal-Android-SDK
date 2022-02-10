@@ -129,8 +129,8 @@ public class OneSignalPackagePrivateHelper {
       return NotificationBundleProcessor.bundleAsJSONObject(bundle);
    }
 
-   public static void OneSignal_handleNotificationOpen(Activity context, final JSONArray data, final boolean fromAlert, final String notificationId) {
-      OneSignal.handleNotificationOpen(context, data, fromAlert, notificationId);
+   public static void OneSignal_handleNotificationOpen(Activity context, final JSONArray data, final boolean fromHMSMessage, final String notificationId) {
+      OneSignal.handleNotificationOpen(context, data, fromHMSMessage, notificationId);
    }
 
    public static BigInteger OneSignal_getAccentColor(JSONObject fcmJson) {

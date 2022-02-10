@@ -68,7 +68,7 @@ class NotificationPayloadProcessorHMS {
         OneSignal.handleNotificationOpen(
             activity,
             new JSONArray().put(jsonData),
-            false,
+            true,
             OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonData)
         );
     }
