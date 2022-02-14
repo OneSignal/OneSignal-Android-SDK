@@ -222,10 +222,10 @@ class OneSignalStateSynchronizer {
       OneSignal.setLastSessionTime(-60 * 61);
    }
 
-   static void updateDeviceInfo(JSONObject deviceInfo) {
-      getPushStateSynchronizer().updateDeviceInfo(deviceInfo);
-      getEmailStateSynchronizer().updateDeviceInfo(deviceInfo);
-      getSMSStateSynchronizer().updateDeviceInfo(deviceInfo);
+   static void updateDeviceInfo(JSONObject deviceInfo, OneSignal.OSDeviceInfoCompletionHandler handler) {
+      getPushStateSynchronizer().updateDeviceInfo(deviceInfo, handler);
+      getEmailStateSynchronizer().updateDeviceInfo(deviceInfo, handler);
+      getSMSStateSynchronizer().updateDeviceInfo(deviceInfo, handler);
    }
 
    static void updatePushState(JSONObject pushState) {
