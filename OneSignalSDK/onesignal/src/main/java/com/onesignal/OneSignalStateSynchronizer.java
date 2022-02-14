@@ -183,6 +183,10 @@ class OneSignalStateSynchronizer {
    static boolean getUserSubscribePreference() {
       return getPushStateSynchronizer().getUserSubscribePreference();
    }
+
+   static String getLanguage() {
+      return getPushStateSynchronizer().getLanguage();
+   }
    
    static void setPermission(boolean enable) {
       getPushStateSynchronizer().setPermission(enable);
