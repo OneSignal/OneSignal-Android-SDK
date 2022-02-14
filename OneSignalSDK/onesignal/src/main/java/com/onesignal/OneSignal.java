@@ -229,6 +229,25 @@ public class OneSignal {
       public String getMessage() { return message; }
    }
 
+   public static class OSDeviceInfoError {
+      private int errorCode;
+      private String message;
+
+      OSDeviceInfoError(int errorCode, String message) {
+         this.errorCode = errorCode;
+         this.message = message;
+      }
+
+      public int getCode() { return errorCode; }
+
+      public String getMessage() { return message; }
+   }
+
+   public interface OSDeviceInfoCompletionHandler {
+      void onSuccess(String results);
+      void onFailure(OSDeviceInfoError error);
+   }
+
    public enum ExternalIdErrorType {
       REQUIRES_EXTERNAL_ID_AUTH, INVALID_OPERATION, NETWORK
    }
