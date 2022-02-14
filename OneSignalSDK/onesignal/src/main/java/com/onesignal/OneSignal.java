@@ -1490,7 +1490,7 @@ public class OneSignal {
       deviceInfo.put("carrier", osUtils.getCarrierName());
       deviceInfo.put("rooted", RootToolsInternalMethods.isRooted());
 
-      OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo);
+      OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo, null);
 
       JSONObject pushState = new JSONObject();
       pushState.put("identifier", lastRegistrationId);
@@ -1716,6 +1716,10 @@ public class OneSignal {
    }
 
    public static void setLanguage(@NonNull final String language) {
+      setLanguage(language, null);
+   }
+
+   public static void setLanguage(@NonNull final String language, @Nullable final OSDeviceInfoCompletionHandler completionCallback) {
       if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SET_LANGUAGE)) {
          logger.error("Waiting for remote params. " +
                  "Moving " + OSTaskRemoteController.SET_LANGUAGE + " operation to a pending task queue.");
@@ -1723,7 +1727,7 @@ public class OneSignal {
             @Override
             public void run() {
                logger.debug("Running " + OSTaskRemoteController.SET_LANGUAGE + " operation from pending task queue.");
-               setLanguage(language);
+               setLanguage(language, completionCallback);
             }
          });
          return;
@@ -1739,7 +1743,7 @@ public class OneSignal {
       try {
          JSONObject deviceInfo = new JSONObject();
          deviceInfo.put("language", languageContext.getLanguage());
-         OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo);
+         OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo, completionCallback);
       } catch (JSONException exception) {
          exception.printStackTrace();
       }
