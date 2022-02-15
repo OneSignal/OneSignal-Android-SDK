@@ -2336,7 +2336,7 @@ public class OneSignal {
    /**
     * Method called when opening a notification
     */
-   static void handleNotificationOpen(final Activity context, final JSONArray data, final boolean fromHMSMessage, @Nullable final String notificationId) {
+   static void handleNotificationOpen(final Activity context, final JSONArray data, final boolean startLauncherActivity, @Nullable final String notificationId) {
       // Delay call until remote params are set
       if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.HANDLE_NOTIFICATION_OPEN)) {
          logger.error("Waiting for remote params. " +
@@ -2346,7 +2346,7 @@ public class OneSignal {
             public void run() {
                if (appContext != null) {
                   logger.debug("Running " + OSTaskRemoteController.HANDLE_NOTIFICATION_OPEN + " operation from pending queue.");
-                  handleNotificationOpen(context, data, fromHMSMessage, notificationId);
+                  handleNotificationOpen(context, data, startLauncherActivity, notificationId);
                }
             }
          });
@@ -2365,11 +2365,7 @@ public class OneSignal {
       if (shouldInitDirectSessionFromNotificationOpen(context, data)) {
          applicationOpenedByNotification(notificationId);
 
-         // HMS notification with Message Type being Message won't trigger Activity reverse trampolining logic
-         // for this case OneSignal rely on NotificationOpenedActivityHMS activity
-         // Last EMUI (12 to the date) is based on Android 10, so no
-         // Activity trampolining restriction exist for HMS devices
-         if (OSUtils.isHuaweiDeviceType() && fromHMSMessage) {
+         if (startLauncherActivity) {
             // Start activity with an activity trampolining
             startOrResumeApp(context);
          }
@@ -2378,6 +2374,8 @@ public class OneSignal {
       runNotificationOpenedCallback(data);
    }
 
+   // Reverse activity trampolining is used for most notifications.
+   // This method is only used if the push provider does support it.
    // This opens the app in the same way an Android home screen launcher does.
    // This means we expect the following behavior:
    //    1. Starts the Activity defined in the app's AndroidManifest.xml as "android.intent.action.MAIN"

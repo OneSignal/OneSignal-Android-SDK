@@ -73,6 +73,10 @@ class NotificationPayloadProcessorHMS {
         );
     }
 
+    // HMS notification with Message Type being Message won't trigger Activity reverse trampolining logic
+    // for this case OneSignal rely on NotificationOpenedActivityHMS activity
+    // Last EMUI (12 to the date) is based on Android 10, so no
+    // Activity trampolining restriction exist for HMS devices
     public static void processDataMessageReceived(@NonNull final Context context, @Nullable String data) {
         OneSignal.initWithContext(context);
         if (data == null)
