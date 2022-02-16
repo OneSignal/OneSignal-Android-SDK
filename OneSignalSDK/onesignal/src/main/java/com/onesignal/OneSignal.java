@@ -2336,7 +2336,7 @@ public class OneSignal {
    /**
     * Method called when opening a notification
     */
-   static void handleNotificationOpen(final Activity context, final JSONArray data, final boolean fromAlert, @Nullable final String notificationId) {
+   static void handleNotificationOpen(final Activity context, final JSONArray data, final boolean startLauncherActivity, @Nullable final String notificationId) {
       // Delay call until remote params are set
       if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.HANDLE_NOTIFICATION_OPEN)) {
          logger.error("Waiting for remote params. " +
@@ -2346,7 +2346,7 @@ public class OneSignal {
             public void run() {
                if (appContext != null) {
                   logger.debug("Running " + OSTaskRemoteController.HANDLE_NOTIFICATION_OPEN + " operation from pending queue.");
-                  handleNotificationOpen(context, data, fromAlert, notificationId);
+                  handleNotificationOpen(context, data, startLauncherActivity, notificationId);
                }
             }
          });
@@ -2364,9 +2364,39 @@ public class OneSignal {
 
       if (shouldInitDirectSessionFromNotificationOpen(context, data)) {
          applicationOpenedByNotification(notificationId);
+
+         if (startLauncherActivity) {
+            // Start activity with an activity trampolining
+            startOrResumeApp(context);
+         }
       }
 
       runNotificationOpenedCallback(data);
+   }
+
+   // Reverse activity trampolining is used for most notifications.
+   // This method is only used if the push provider does support it.
+   // This opens the app in the same way an Android home screen launcher does.
+   // This means we expect the following behavior:
+   //    1. Starts the Activity defined in the app's AndroidManifest.xml as "android.intent.action.MAIN"
+   //    2. If the app is already running, instead the last activity will be resumed
+   //    3. If the app is not running (due to being push out of memory), the last activity will be resumed
+   //    4. If the app is no longer in the recent apps list, it is not resumed, same as #1 above.
+   //        - App is removed from the recent app's list if it is swiped away or "clear all" is pressed.
+   static boolean startOrResumeApp(@NonNull Activity activity) {
+      Intent launchIntent = activity.getPackageManager().getLaunchIntentForPackage(activity.getPackageName());
+      logger.debug("startOrResumeApp from context: " + activity + " isRoot: " + activity.isTaskRoot() + " with launchIntent: " + launchIntent);
+
+      // Not all apps have a launcher intent, such as one that only provides a homescreen widget
+      if (launchIntent == null)
+         return false;
+      // Removing package from the intent, this treats the app as if it was started externally.
+      // This gives us the resume app behavior noted above.
+      // Android 11 no longer requires nulling this out to get this behavior.
+      launchIntent.setPackage(null);
+
+      activity.startActivity(launchIntent);
+      return true;
    }
 
    private static boolean shouldInitDirectSessionFromNotificationOpen(Activity context, final JSONArray data) {
