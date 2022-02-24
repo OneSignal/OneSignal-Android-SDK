@@ -65,6 +65,8 @@ import com.onesignal.OSSubscriptionObserver;
 import com.onesignal.OSSubscriptionStateChanges;
 import com.onesignal.OneSignal;
 import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
+import com.onesignal.OneSignal.OSSetLanguageCompletionHandler;
+import com.onesignal.OneSignal.OSLanguageError;
 import com.onesignal.OneSignalPackagePrivateHelper;
 import com.onesignal.OneSignalShadowPackageManager;
 import com.onesignal.PermissionsActivity;
@@ -2773,6 +2775,68 @@ public class MainOneSignalClassRunner {
 
       ShadowOneSignalRestClient.Request lastRequest = ShadowOneSignalRestClient.requests.get(3);
       assertEquals("fr", lastRequest.payload.getString("language"));
+   }
+
+   private static class TestSetLanguageHandler implements OSSetLanguageCompletionHandler {
+      private AtomicBoolean succeeded = new AtomicBoolean(false);
+      private AtomicBoolean failed = new AtomicBoolean(false);
+
+      @Override
+      public void onSuccess(String results) { succeeded.set(true); }
+
+      @Override
+      public void onFailure(OSLanguageError error) { failed.set(true); }
+
+      boolean getSucceeded() { return  succeeded.get(); }
+
+      boolean getFailed() { return failed.get(); }
+   }
+
+   // Tests to make sure the onSuccess handler works
+   @Test
+   public void shouldSetLanguageWithResponse() throws Exception {
+      OneSignalInit();
+      threadAndTaskWait();
+
+      TestSetLanguageHandler handler = new TestSetLanguageHandler();
+
+      OneSignal.setLanguage("fr", handler);
+
+      threadAndTaskWait();
+
+      assertTrue(handler.getSucceeded());
+
+      // now test to make sure the handler still fires for a call to
+      // setLanguage() that doesn't modify existing language (no JSON delta)
+
+      handler = new TestSetLanguageHandler();
+
+      OneSignal.setLanguage("es", handler);
+
+      threadAndTaskWait();
+
+      assertTrue(handler.getSucceeded());
+   }
+
+   // Tests to make sure that the onFailure callback works
+   @Test
+   public void shouldFailToSetLanguageWithResponse() throws Exception {
+      TestSetLanguageHandler handler = new TestSetLanguageHandler();
+
+      OneSignalInit();
+      threadAndTaskWait();
+
+      ShadowOneSignalRestClient.failMethod = "players";
+      ShadowOneSignalRestClient.failHttpCode = 403;
+      ShadowOneSignalRestClient.setNextFailureJSONResponse(new JSONObject() {{
+         put("tags", "error");
+      }});
+
+      // Should fail because players call failed with tags
+      OneSignal.setLanguage("fr", handler);
+      threadAndTaskWait();
+
+      assertTrue(handler.getFailed());
    }
 
    /**
