@@ -229,7 +229,7 @@ public class OneSignal {
       public String getMessage() { return message; }
    }
 
-   public static class OSDeviceInfoError {
+   static class OSDeviceInfoError {
       private int errorCode;
       private String message;
 
@@ -243,9 +243,28 @@ public class OneSignal {
       public String getMessage() { return message; }
    }
 
-   public interface OSDeviceInfoCompletionHandler {
+   interface OSDeviceInfoCompletionHandler {
       void onSuccess(String results);
       void onFailure(OSDeviceInfoError error);
+   }
+
+   public static class OSLanguageError {
+      private int errorCode;
+      private String message;
+
+      OSLanguageError(int errorCode, String message) {
+         this.errorCode = errorCode;
+         this.message = message;
+      }
+
+      public int getCode() { return errorCode; }
+
+      public String getMessage() { return message; }
+   }
+
+   public interface OSSetLanguageCompletionHandler {
+      void onSuccess(String results);
+      void onFailure(OSLanguageError error);
    }
 
    public enum ExternalIdErrorType {
@@ -1719,7 +1738,7 @@ public class OneSignal {
       setLanguage(language, null);
    }
 
-   public static void setLanguage(@NonNull final String language, @Nullable final OSDeviceInfoCompletionHandler completionCallback) {
+   public static void setLanguage(@NonNull final String language, @Nullable final OSSetLanguageCompletionHandler completionCallback) {
       if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SET_LANGUAGE)) {
          logger.error("Waiting for remote params. " +
                  "Moving " + OSTaskRemoteController.SET_LANGUAGE + " operation to a pending task queue.");
@@ -1733,6 +1752,23 @@ public class OneSignal {
          return;
       }
 
+      OSDeviceInfoCompletionHandler deviceInfoCompletionHandler = null;
+
+      if(completionCallback != null) {
+         deviceInfoCompletionHandler = new OSDeviceInfoCompletionHandler() {
+            @Override
+            public void onSuccess(String results) {
+               completionCallback.onSuccess(results);
+            }
+
+            @Override
+            public void onFailure(OSDeviceInfoError error) {
+               OSLanguageError languageError = new OSLanguageError(error.errorCode, error.message);
+               completionCallback.onFailure(languageError);
+            }
+         };
+      }
+
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskRemoteController.SET_LANGUAGE))
          return;
 
@@ -1743,7 +1779,7 @@ public class OneSignal {
       try {
          JSONObject deviceInfo = new JSONObject();
          deviceInfo.put("language", languageContext.getLanguage());
-         OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo, completionCallback);
+         OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo, deviceInfoCompletionHandler);
       } catch (JSONException exception) {
          exception.printStackTrace();
       }
