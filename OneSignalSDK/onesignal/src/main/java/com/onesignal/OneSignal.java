@@ -49,6 +49,8 @@ import com.onesignal.influence.data.OSTrackerFactory;
 import com.onesignal.influence.domain.OSInfluence;
 import com.onesignal.language.LanguageContext;
 import com.onesignal.language.LanguageProviderAppDefined;
+import com.onesignal.OneSignalStateSynchronizer.OSDeviceInfoError;
+import com.onesignal.OneSignalStateSynchronizer.OSDeviceInfoCompletionHandler;
 import com.onesignal.outcomes.data.OSOutcomeEventsFactory;
 
 import org.json.JSONArray;
@@ -227,25 +229,6 @@ public class OneSignal {
 
       public int getCode() { return code; }
       public String getMessage() { return message; }
-   }
-
-   static class OSDeviceInfoError {
-      private int errorCode;
-      private String message;
-
-      OSDeviceInfoError(int errorCode, String message) {
-         this.errorCode = errorCode;
-         this.message = message;
-      }
-
-      public int getCode() { return errorCode; }
-
-      public String getMessage() { return message; }
-   }
-
-   interface OSDeviceInfoCompletionHandler {
-      void onSuccess(String results);
-      void onFailure(OSDeviceInfoError error);
    }
 
    public static class OSLanguageError {

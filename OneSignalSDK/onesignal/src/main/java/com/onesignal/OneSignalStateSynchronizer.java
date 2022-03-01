@@ -60,6 +60,25 @@ class OneSignalStateSynchronizer {
       }
    }
 
+   static class OSDeviceInfoError {
+      public int errorCode;
+      public String message;
+
+      OSDeviceInfoError(int errorCode, String message) {
+         this.errorCode = errorCode;
+         this.message = message;
+      }
+
+      public int getCode() { return errorCode; }
+
+      public String getMessage() { return message; }
+   }
+
+   interface OSDeviceInfoCompletionHandler {
+      void onSuccess(String results);
+      void onFailure(OSDeviceInfoError error);
+   }
+
    // Each class abstracts from UserStateSynchronizer and this will allow us to handle different channels for specific method calls and requests
    // Each time we create a new UserStateSynchronizer we should add it to the userStateSynchronizers HashMap
    // Currently we have 2 channels:
@@ -222,7 +241,7 @@ class OneSignalStateSynchronizer {
       OneSignal.setLastSessionTime(-60 * 61);
    }
 
-   static void updateDeviceInfo(JSONObject deviceInfo, OneSignal.OSDeviceInfoCompletionHandler handler) {
+   static void updateDeviceInfo(JSONObject deviceInfo, OSDeviceInfoCompletionHandler handler) {
       getPushStateSynchronizer().updateDeviceInfo(deviceInfo, handler);
       getEmailStateSynchronizer().updateDeviceInfo(deviceInfo, handler);
       getSMSStateSynchronizer().updateDeviceInfo(deviceInfo, handler);

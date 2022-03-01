@@ -8,8 +8,8 @@ import androidx.annotation.Nullable;
 import com.onesignal.OneSignal.ChangeTagsUpdateHandler;
 import com.onesignal.OneSignal.SendTagsError;
 import com.onesignal.OneSignalStateSynchronizer.UserStateSynchronizerType;
-import com.onesignal.OneSignal.OSDeviceInfoCompletionHandler;
-import com.onesignal.OneSignal.OSDeviceInfoError;
+import com.onesignal.OneSignalStateSynchronizer.OSDeviceInfoCompletionHandler;
+import com.onesignal.OneSignalStateSynchronizer.OSDeviceInfoError;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -95,7 +95,7 @@ abstract class UserStateSynchronizer {
     //    sendTags() multiple times it will call each callback
     final private Queue<ChangeTagsUpdateHandler> sendTagsHandlers = new ConcurrentLinkedQueue<>();
     final private Queue<OneSignal.OSInternalExternalUserIdUpdateCompletionHandler> externalUserIdUpdateHandlers = new ConcurrentLinkedQueue<>();
-    final private Queue<OneSignal.OSDeviceInfoCompletionHandler> deviceInfoCompletionHandler = new ConcurrentLinkedQueue<>();
+    final private Queue<OSDeviceInfoCompletionHandler> deviceInfoCompletionHandler = new ConcurrentLinkedQueue<>();
 
     boolean hasQueuedHandlers() {
         return externalUserIdUpdateHandlers.size() > 0;
@@ -626,14 +626,14 @@ abstract class UserStateSynchronizer {
 
     private void deviceInfoHandlersPerformOnSuccess() {
         String language = OneSignalStateSynchronizer.getLanguage();
-        OneSignal.OSDeviceInfoCompletionHandler handler;
+        OSDeviceInfoCompletionHandler handler;
         while ((handler = deviceInfoCompletionHandler.poll()) != null) {
             handler.onSuccess(language);
         }
     }
 
     private void deviceInfoHandlersPerformOnFailure(OSDeviceInfoError error) {
-        OneSignal.OSDeviceInfoCompletionHandler handler;
+        OSDeviceInfoCompletionHandler handler;
         while((handler = deviceInfoCompletionHandler.poll()) != null) {
             handler.onFailure(error);
         }
