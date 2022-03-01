@@ -158,6 +158,10 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
         return getToSyncUserState().getDependValues().optBoolean(USER_SUBSCRIBE_PREF, true);
     }
 
+    public String getLanguage() {
+        return  getToSyncUserState().getDependValues().optString(LANGUAGE, null);
+    }
+
     @Override
     public void setPermission(boolean enable) {
         try {

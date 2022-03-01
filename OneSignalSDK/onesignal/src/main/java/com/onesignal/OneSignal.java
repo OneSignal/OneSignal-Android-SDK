@@ -49,6 +49,8 @@ import com.onesignal.influence.data.OSTrackerFactory;
 import com.onesignal.influence.domain.OSInfluence;
 import com.onesignal.language.LanguageContext;
 import com.onesignal.language.LanguageProviderAppDefined;
+import com.onesignal.OneSignalStateSynchronizer.OSDeviceInfoError;
+import com.onesignal.OneSignalStateSynchronizer.OSDeviceInfoCompletionHandler;
 import com.onesignal.outcomes.data.OSOutcomeEventsFactory;
 
 import org.json.JSONArray;
@@ -227,6 +229,25 @@ public class OneSignal {
 
       public int getCode() { return code; }
       public String getMessage() { return message; }
+   }
+
+   public static class OSLanguageError {
+      private int errorCode;
+      private String message;
+
+      OSLanguageError(int errorCode, String message) {
+         this.errorCode = errorCode;
+         this.message = message;
+      }
+
+      public int getCode() { return errorCode; }
+
+      public String getMessage() { return message; }
+   }
+
+   public interface OSSetLanguageCompletionHandler {
+      void onSuccess(String results);
+      void onFailure(OSLanguageError error);
    }
 
    public enum ExternalIdErrorType {
@@ -1476,7 +1497,7 @@ public class OneSignal {
       deviceInfo.put("carrier", osUtils.getCarrierName());
       deviceInfo.put("rooted", RootToolsInternalMethods.isRooted());
 
-      OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo);
+      OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo, null);
 
       JSONObject pushState = new JSONObject();
       pushState.put("identifier", lastRegistrationId);
@@ -1702,6 +1723,10 @@ public class OneSignal {
    }
 
    public static void setLanguage(@NonNull final String language) {
+      setLanguage(language, null);
+   }
+
+   public static void setLanguage(@NonNull final String language, @Nullable final OSSetLanguageCompletionHandler completionCallback) {
       if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.SET_LANGUAGE)) {
          logger.error("Waiting for remote params. " +
                  "Moving " + OSTaskRemoteController.SET_LANGUAGE + " operation to a pending task queue.");
@@ -1709,10 +1734,27 @@ public class OneSignal {
             @Override
             public void run() {
                logger.debug("Running " + OSTaskRemoteController.SET_LANGUAGE + " operation from pending task queue.");
-               setLanguage(language);
+               setLanguage(language, completionCallback);
             }
          });
          return;
+      }
+
+      OSDeviceInfoCompletionHandler deviceInfoCompletionHandler = null;
+
+      if(completionCallback != null) {
+         deviceInfoCompletionHandler = new OSDeviceInfoCompletionHandler() {
+            @Override
+            public void onSuccess(String results) {
+               completionCallback.onSuccess(results);
+            }
+
+            @Override
+            public void onFailure(OSDeviceInfoError error) {
+               OSLanguageError languageError = new OSLanguageError(error.errorCode, error.message);
+               completionCallback.onFailure(languageError);
+            }
+         };
       }
 
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName(OSTaskRemoteController.SET_LANGUAGE))
@@ -1725,7 +1767,7 @@ public class OneSignal {
       try {
          JSONObject deviceInfo = new JSONObject();
          deviceInfo.put("language", languageContext.getLanguage());
-         OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo);
+         OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo, deviceInfoCompletionHandler);
       } catch (JSONException exception) {
          exception.printStackTrace();
       }
