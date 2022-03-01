@@ -2807,7 +2807,7 @@ public class MainOneSignalClassRunner {
       assertTrue(handler.getSucceeded());
 
       // now test to make sure the handler still fires for a call to
-      // setLanguage() that doesn't modify existing language (no JSON delta)
+      // setLanguage() that modifies existing language
 
       handler = new TestSetLanguageHandler();
 
