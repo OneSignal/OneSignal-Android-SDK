@@ -370,7 +370,8 @@ public class OneSignal {
    private static String smsId = null;
    private static int subscribableStatus = Integer.MAX_VALUE;
 
-   private static LanguageContext languageContext = null;
+   // changed from private to package-private for unit test access
+   static LanguageContext languageContext = null;
 
    static OSRemoteNotificationReceivedHandler remoteNotificationReceivedHandler;
    static OSNotificationWillShowInForegroundHandler notificationWillShowInForegroundHandler;
