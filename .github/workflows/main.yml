@@ -34,31 +34,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Setup Gradle
+
+    # Check the code with ktlint
+    - name: Run Kotlin Linter
       uses: gradle/gradle-build-action@v2
       with:
         gradle-version: current
         build-root-directory: Examples/OneSignalDemo
-
-    # Check the code with ktlint
-    - name: Run Kotlin Linter
-      run: ./gradlew ktlintStagingDebugCheck
+        arguments: ktlintStagingDebugCheck
 
     # Check the code with Android linter
     - name: Run Android Linter
-      run: ./gradlew lintStagingDebug
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-version: current
+        build-root-directory: Examples/OneSignalDemo
+        arguments: lintStagingDebug
 
     # Run unit tests
     - name: Run Unit Tests
-      run: ./gradlew testStagingDebugUnitTest
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-version: current
+        build-root-directory: Examples/OneSignalDemo
+        arguments: testStagingDebugUnitTest
 
     # Assemble debug apk
     - name: Assemble Debug APK
-      run: ./gradlew assembleStagingDebug
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-version: current
+        build-root-directory: Examples/OneSignalDemo
+        arguments: assembleStagingDebug
 
     # Assemble debug test apk
     - name: Assemble Debug Test APK
-      run: ./gradlew assembleStagingDebugAndroidTest
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-version: current
+        build-root-directory: Examples/OneSignalDemo
+        arguments: assembleStagingDebugAndroidTest
 
   distribute:
     needs: build
