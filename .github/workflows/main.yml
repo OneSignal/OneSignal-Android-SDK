@@ -10,10 +10,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  gradle:
+  build:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
@@ -29,21 +29,39 @@ jobs:
         arguments: build
         build-root-directory: Examples/OneSignalDemo
 
-    - name: Run Kotlin Linter
+  lint_and_test:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Setup Gradle
       uses: gradle/gradle-build-action@v2
       with:
         gradle-version: current
-        arguments: ktlintStagingDebugCheck
         build-root-directory: Examples/OneSignalDemo
 
+    # Check the code with ktlint
+    - name: Run Kotlin Linter
+      run: ./gradlew ktlintStagingDebugCheck
+
+    # Check the code with Android linter
+    - name: Run Android Linter
+      run: ./gradlew lintStagingDebug
+
+    # Run unit tests
     - name: Run Unit Tests
-      uses: gradle/gradle-build-action@v2
-      with:
-        gradle-version: current
-        arguments: testStagingDebugUnitTest
-        build-root-directory: Examples/OneSignalDemo
+      run: ./gradlew testStagingDebugUnitTest
+
+    # Assemble debug apk
+    - name: Assemble Debug APK
+      run: ./gradlew assembleStagingDebug
+
+    # Assemble debug test apk
+    - name: Assemble Debug Test APK
+      run: ./gradlew assembleStagingDebugAndroidTest
 
   distribute:
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Setup NPM
