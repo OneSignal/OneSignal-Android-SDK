@@ -31,18 +31,21 @@ jobs:
 
     - uses: actions/upload-artifact@v3
       with:
-        name: build-artifact
-        path: Examples/OneSignalDemo
+        path: app
 
   lint_and_test:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-java@v2
+      with:
+        distribution: temurin
+        java-version: 11
+
     # Download build-artifacts
     - uses: actions/download-artifact@v3
-      with:
-        path: Examples/OneSignalDemo
 
     # Check the code with ktlint
     - name: Run Kotlin Linter
@@ -88,6 +91,16 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-java@v2
+        with:
+          distribution: temurin
+          java-version: 11
+
+      # Download build-artifacts
+      - uses: actions/download-artifact@v3
+
       - name: Setup NPM
         uses: actions/setup-node@v2
         with:
