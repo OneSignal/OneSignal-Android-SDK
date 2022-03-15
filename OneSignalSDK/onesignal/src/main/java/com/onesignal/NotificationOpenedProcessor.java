@@ -74,7 +74,13 @@ class NotificationOpenedProcessor {
       // Pressed an action button, need to clear the notification and close the notification area manually.
       if (intent.getBooleanExtra("action_button", false)) {
          NotificationManagerCompat.from(context).cancel(intent.getIntExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0));
-         context.sendBroadcast(new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
+
+         //Close notification drawer user override targetSdkVersion to  be lower than Android 11
+         // See https://developer.android.com/about/versions/12/behavior-changes-all#close-system-dialogs
+         int targetSdkVersion = context.getApplicationContext().getApplicationInfo().targetSdkVersion;
+         if (targetSdkVersion < Build.VERSION_CODES.S ) {
+            context.sendBroadcast(new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
+         }
       }
    }
 
