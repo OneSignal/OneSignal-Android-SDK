@@ -22,7 +22,7 @@ import com.onesignal.ShadowGMSLocationController;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.example.BlankActivity;
+import com.onesignal.sdktest.BlankActivity;
 import com.onesignal.influence.data.OSTrackerFactory;
 
 import org.json.JSONObject;
@@ -66,7 +66,7 @@ import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.assertTrue;
 import static org.junit.Assert.assertNotEquals;
 
-@Config(packageName = "com.onesignal.example",
+@Config(packageName = "com.onesignal.sdktest",
         shadows = {
                 ShadowOneSignalRestClient.class,
                 ShadowOSUtils.class,

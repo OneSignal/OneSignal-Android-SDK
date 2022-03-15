@@ -25,7 +25,7 @@
  * THE SOFTWARE.
  */
 
-package com.onesignal.example;
+package com.onesignal.sdktest;
 
 import android.app.Activity;
 import android.content.Intent;

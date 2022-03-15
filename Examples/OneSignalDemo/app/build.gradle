@@ -13,6 +13,10 @@ android {
         flavorDimensions "default"
     }
 
+    lintOptions {
+                abortOnError false
+            }
+
     buildTypes {
         release {
             minifyEnabled false
@@ -28,7 +32,7 @@ android {
         huawei {
             dimension "default"
             minSdkVersion 17
-            applicationId "com.onesignal.example"
+            applicationId "com.onesignal.sdktest"
         }
     }
 

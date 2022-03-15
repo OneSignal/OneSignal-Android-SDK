@@ -50,7 +50,7 @@ import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertNotNull;
 import static junit.framework.Assert.assertTrue;
 
-@Config(packageName = "com.onesignal.example",
+@Config(packageName = "com.onesignal.sdktest",
         shadows = {
             ShadowOneSignalRestClientWithMockConnection.class
         },

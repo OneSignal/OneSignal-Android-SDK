@@ -18,7 +18,7 @@ import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.example.BlankActivity;
+import com.onesignal.sdktest.BlankActivity;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.json.JSONException;
@@ -48,7 +48,7 @@ import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertEquals;
 
 @Config(
-    packageName = "com.onesignal.example",
+    packageName = "com.onesignal.sdktest",
     shadows = {
         ShadowRoboNotificationManager.class,
         ShadowNotificationManagerCompat.class

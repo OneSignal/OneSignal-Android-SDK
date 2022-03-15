@@ -110,7 +110,7 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
          // W/GCM: broadcast intent callback: result=CANCELLED forIntent {
          //    act=com.google.android.c2dm.intent.RECEIVE
          //    flg=0x10000000
-         //    pkg=com.onesignal.example (has extras)
+         //    pkg=com.onesignal.sdktest (has extras)
          // }
 
          setResultCode(Activity.RESULT_OK);

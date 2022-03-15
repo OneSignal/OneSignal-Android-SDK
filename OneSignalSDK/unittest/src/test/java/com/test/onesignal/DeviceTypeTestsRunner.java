@@ -23,7 +23,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.getDeviceType;
 import static org.junit.Assert.assertEquals;
 
 @Config(
-    packageName = "com.onesignal.example",
+    packageName = "com.onesignal.sdktest",
     shadows = {
         ShadowOSUtils.class
     },

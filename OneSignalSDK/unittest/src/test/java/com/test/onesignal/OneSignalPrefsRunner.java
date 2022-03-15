@@ -9,7 +9,7 @@ import com.onesignal.OneSignalPackagePrivateHelper.TestOneSignalPrefs;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.example.BlankActivity;
+import com.onesignal.sdktest.BlankActivity;
 
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -27,7 +27,7 @@ import static com.onesignal.ShadowOneSignalRestClient.setRemoteParamsGetHtmlResp
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static org.junit.Assert.assertEquals;
 
-@Config(packageName = "com.onesignal.example",
+@Config(packageName = "com.onesignal.sdktest",
         shadows = {
                 ShadowOneSignalRestClient.class,
                 ShadowOSUtils.class

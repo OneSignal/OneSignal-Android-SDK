@@ -90,8 +90,8 @@ import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.SyncJobService;
 import com.onesignal.SyncService;
-import com.onesignal.example.BlankActivity;
-import com.onesignal.example.MainActivity;
+import com.onesignal.sdktest.BlankActivity;
+import com.onesignal.sdktest.MainActivity;
 import com.onesignal.influence.data.OSTrackerFactory;
 
 import org.awaitility.Awaitility;
@@ -177,7 +177,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertThat;
 import static org.robolectric.Shadows.shadowOf;
 
-@Config(packageName = "com.onesignal.example",
+@Config(packageName = "com.onesignal.sdktest",
         shadows = {
             ShadowOneSignalRestClient.class,
             ShadowPushRegistratorADM.class,
@@ -3995,11 +3995,11 @@ public class MainOneSignalClassRunner {
    //    Also it seems it has to be done in the test itself instead of the setup process.
    private static void AddLauncherIntentFilter() {
       Intent launchIntent = new Intent(Intent.ACTION_MAIN);
-      launchIntent.setPackage("com.onesignal.example");
+      launchIntent.setPackage("com.onesignal.sdktest");
       launchIntent.addCategory(Intent.CATEGORY_LAUNCHER);
       ResolveInfo resolveInfo = new ResolveInfo();
       resolveInfo.activityInfo = new ActivityInfo();
-      resolveInfo.activityInfo.packageName = "com.onesignal.example";
+      resolveInfo.activityInfo.packageName = "com.onesignal.sdktest";
       resolveInfo.activityInfo.name = "MainActivity";
 
       shadowOf(blankActivity.getPackageManager()).addResolveInfoForIntent(launchIntent, resolveInfo);

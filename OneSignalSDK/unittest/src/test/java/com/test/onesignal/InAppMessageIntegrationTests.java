@@ -29,7 +29,7 @@ import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.example.BlankActivity;
+import com.onesignal.sdktest.BlankActivity;
 import com.onesignal.influence.data.OSTrackerFactory;
 
 import org.awaitility.Awaitility;
@@ -77,7 +77,7 @@ import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-@Config(packageName = "com.onesignal.example",
+@Config(packageName = "com.onesignal.sdktest",
         shadows = {
                 ShadowOneSignalRestClient.class,
                 ShadowPushRegistratorFCM.class,

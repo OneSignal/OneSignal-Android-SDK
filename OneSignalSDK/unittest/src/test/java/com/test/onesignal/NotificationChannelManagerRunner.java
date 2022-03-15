@@ -10,7 +10,7 @@ import com.onesignal.OneSignal;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowRoboNotificationManager;
-import com.onesignal.example.BlankActivity;
+import com.onesignal.sdktest.BlankActivity;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -37,7 +37,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
-@Config(packageName = "com.onesignal.example",
+@Config(packageName = "com.onesignal.sdktest",
         shadows = {
             ShadowOSUtils.class,
             ShadowRoboNotificationManager.class},

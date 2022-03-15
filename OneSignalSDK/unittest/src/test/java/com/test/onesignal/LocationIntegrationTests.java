@@ -36,7 +36,7 @@ import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.SyncJobService;
 import com.onesignal.SyncService;
-import com.onesignal.example.BlankActivity;
+import com.onesignal.sdktest.BlankActivity;
 import com.onesignal.influence.data.OSTrackerFactory;
 
 import org.json.JSONObject;
@@ -70,7 +70,7 @@ import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertNull;
 import static org.robolectric.Shadows.shadowOf;
 
-@Config(packageName = "com.onesignal.example",
+@Config(packageName = "com.onesignal.sdktest",
         shadows = {
                 ShadowOneSignalRestClient.class,
                 ShadowPushRegistratorFCM.class,

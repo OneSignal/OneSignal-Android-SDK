@@ -54,7 +54,7 @@ import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
-@Config(packageName = "com.onesignal.example",
+@Config(packageName = "com.onesignal.sdktest",
         sdk = 21)
 @RunWith(RobolectricTestRunner.class)
 public class TrackerUnitTests {

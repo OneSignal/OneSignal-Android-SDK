@@ -20,7 +20,7 @@ apply plugin: 'kotlin-android'
 android {
     compileSdkVersion rootProject.buildVersions.compileSdkVersion
     defaultConfig {
-        applicationId 'com.onesignal.example'
+        applicationId 'com.onesignal.sdktest'
         targetSdkVersion rootProject.buildVersions.targetSdkVersion
         minSdkVersion buildVersions.minSdkVersion
         versionCode buildVersions.versionCode

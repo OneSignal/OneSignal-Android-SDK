@@ -116,7 +116,7 @@ import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.ShadowRoboNotificationManager.PostedNotification;
 import com.onesignal.ShadowTimeoutHandler;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.example.BlankActivity;
+import com.onesignal.sdktest.BlankActivity;
 
 import org.awaitility.Awaitility;
 import org.awaitility.Duration;
@@ -144,7 +144,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-@Config(packageName = "com.onesignal.example",
+@Config(packageName = "com.onesignal.sdktest",
         shadows = {
             ShadowRoboNotificationManager.class,
             ShadowOneSignalRestClient.class,

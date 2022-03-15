@@ -64,7 +64,7 @@ import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 
-@Config(packageName = "com.onesignal.example",
+@Config(packageName = "com.onesignal.sdktest",
         shadows = {
             ShadowOSUtils.class,
         },
