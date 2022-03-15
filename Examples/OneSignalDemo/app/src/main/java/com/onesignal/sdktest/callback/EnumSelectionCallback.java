@@ -1,4 +1,4 @@
-package com.onesignal.sdktest.callback;
+package com.onesignal.test.android.callback;
 
 public interface EnumSelectionCallback {
 

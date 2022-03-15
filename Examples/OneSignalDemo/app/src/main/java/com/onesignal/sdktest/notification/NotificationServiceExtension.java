@@ -1,4 +1,4 @@
-package com.onesignal.sdktest.notification;
+package com.onesignal.test.android.notification;
 
 import android.content.Context;
 
@@ -7,7 +7,7 @@ import com.onesignal.OSNotification;
 import com.onesignal.OSNotificationOpenedResult;
 import com.onesignal.OSNotificationReceivedEvent;
 import com.onesignal.OneSignal;
-import com.onesignal.sdktest.R;
+import com.onesignal.test.android.R;
 
 public class NotificationServiceExtension implements
         OneSignal.OSRemoteNotificationReceivedHandler {

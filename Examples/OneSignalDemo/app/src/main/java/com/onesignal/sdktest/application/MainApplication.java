@@ -1,4 +1,4 @@
-package com.onesignal.sdktest.application;
+package com.onesignal.test.android.application;
 
 import android.util.Log;
 
@@ -8,10 +8,10 @@ import com.onesignal.OSInAppMessage;
 import com.onesignal.OSNotification;
 import com.onesignal.OSInAppMessageLifecycleHandler;
 import com.onesignal.OneSignal;
-import com.onesignal.sdktest.R;
-import com.onesignal.sdktest.constant.Tag;
-import com.onesignal.sdktest.constant.Text;
-import com.onesignal.sdktest.util.SharedPreferenceUtil;
+import com.onesignal.test.android.R;
+import com.onesignal.test.android.constant.Tag;
+import com.onesignal.test.android.constant.Text;
+import com.onesignal.test.android.util.SharedPreferenceUtil;
 
 import org.json.JSONObject;
 

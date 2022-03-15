@@ -14,7 +14,7 @@
         android:theme="@style/AppTheme.AppBarOverlay"
         android:clipChildren="false"
         android:clipToPadding="false"
-        app:layout_behavior="com.onesignal.sdktest.ui.FixAppBarLayoutBehavior">
+        app:layout_behavior="com.onesignal.test.android.ui.FixAppBarLayoutBehavior">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/main_activity_toolbar"

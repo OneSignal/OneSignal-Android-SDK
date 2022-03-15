@@ -1,6 +1,6 @@
-package com.onesignal.sdktest.type;
+package com.onesignal.test.android.type;
 
-import com.onesignal.sdktest.R;
+import com.onesignal.test.android.R;
 
 public enum ToastType {
 

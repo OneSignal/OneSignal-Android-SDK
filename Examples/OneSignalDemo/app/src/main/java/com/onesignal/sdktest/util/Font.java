@@ -1,4 +1,4 @@
-package com.onesignal.sdktest.util;
+package com.onesignal.test.android.util;
 
 import android.content.Context;
 import android.graphics.Typeface;

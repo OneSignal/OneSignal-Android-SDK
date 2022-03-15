@@ -1,10 +1,10 @@
-package com.onesignal.sdktest.activity;
+package com.onesignal.test.android.activity;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
 
-import com.onesignal.sdktest.R;
+import com.onesignal.test.android.R;
 
 public class SecondaryActivity extends AppCompatActivity {
 

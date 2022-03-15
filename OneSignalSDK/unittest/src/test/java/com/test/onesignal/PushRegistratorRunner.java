@@ -39,7 +39,7 @@ import com.onesignal.ShadowGooglePlayServicesUtil;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.example.BlankActivity;
+import com.onesignal.test.android.BlankActivity;
 
 import org.junit.After;
 import org.junit.Before;
@@ -56,7 +56,7 @@ import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 
 import static junit.framework.Assert.assertTrue;
 
-@Config(packageName = "com.onesignal.example",
+@Config(packageName = "com.onesignal.test.android",
         shadows = {
             ShadowGooglePlayServicesUtil.class,
             ShadowOSUtils.class,

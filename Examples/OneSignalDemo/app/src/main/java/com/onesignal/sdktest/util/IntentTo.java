@@ -1,4 +1,4 @@
-package com.onesignal.sdktest.util;
+package com.onesignal.test.android.util;
 
 import android.app.Activity;
 import android.content.ComponentName;
@@ -6,8 +6,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 
-import com.onesignal.sdktest.R;
-import com.onesignal.sdktest.activity.MainActivity;
+import com.onesignal.test.android.R;
+import com.onesignal.test.android.activity.MainActivity;
 
 public class IntentTo {
 

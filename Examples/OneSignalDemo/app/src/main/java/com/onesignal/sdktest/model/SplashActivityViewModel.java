@@ -1,4 +1,4 @@
-package com.onesignal.sdktest.model;
+package com.onesignal.test.android.model;
 
 import android.app.Activity;
 import android.content.Context;
@@ -11,12 +11,12 @@ import com.onesignal.OSEmailSubscriptionStateChanges;
 import com.onesignal.OSPermissionStateChanges;
 import com.onesignal.OSSubscriptionStateChanges;
 import com.onesignal.OneSignal;
-import com.onesignal.sdktest.callback.EmailUpdateCallback;
-import com.onesignal.sdktest.constant.Tag;
-import com.onesignal.sdktest.constant.Text;
-import com.onesignal.sdktest.user.CurrentUser;
-import com.onesignal.sdktest.util.IntentTo;
-import com.onesignal.sdktest.util.SharedPreferenceUtil;
+import com.onesignal.test.android.callback.EmailUpdateCallback;
+import com.onesignal.test.android.constant.Tag;
+import com.onesignal.test.android.constant.Text;
+import com.onesignal.test.android.user.CurrentUser;
+import com.onesignal.test.android.util.IntentTo;
+import com.onesignal.test.android.util.SharedPreferenceUtil;
 
 public class SplashActivityViewModel implements ActivityViewModel {
 

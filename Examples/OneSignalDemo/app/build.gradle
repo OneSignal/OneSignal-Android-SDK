@@ -13,22 +13,36 @@ android {
         flavorDimensions "default"
     }
 
+    signingConfigs {
+        release {
+            storeFile = file("keystore.jks")
+            storePassword System.getenv("KEYSTORE_PASSWORD")
+            keyAlias System.getenv("KEY_ALIAS")
+            keyPassword System.getenv("KEY_PASSWORD")
+        }
+    }
+
+    lintOptions {
+                abortOnError false
+            }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
 
     productFlavors {
         gms {
             dimension "default"
-            applicationId "com.onesignal.sdktest"
+            applicationId "com.onesignal.test.android"
         }
         huawei {
             dimension "default"
             minSdkVersion 17
-            applicationId "com.onesignal.example"
+            applicationId "com.onesignal.test.android"
         }
     }
 

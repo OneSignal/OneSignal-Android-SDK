@@ -1,12 +1,12 @@
-package com.onesignal.sdktest.activity;
+package com.onesignal.test.android.activity;
 
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.onesignal.OneSignal;
-import com.onesignal.sdktest.R;
-import com.onesignal.sdktest.model.MainActivityViewModel;
+import com.onesignal.test.android.R;
+import com.onesignal.test.android.model.MainActivityViewModel;
 
 public class MainActivity extends AppCompatActivity {
 

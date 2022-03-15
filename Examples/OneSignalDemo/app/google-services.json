@@ -10,7 +10,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:249481192614:android:9d39e24e24034b14",
         "android_client_info": {
-          "package_name": "com.onesignal.sdktest"
+          "package_name": "com.onesignal.test.android"
         }
       },
       "oauth_client": [],

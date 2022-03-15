@@ -1,4 +1,4 @@
-package com.onesignal.sdktest.adapter;
+package com.onesignal.test.android.adapter;
 
 import android.content.Context;
 
@@ -10,9 +10,9 @@ import android.view.ViewGroup;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-import com.onesignal.sdktest.R;
-import com.onesignal.sdktest.callback.EnumSelectionCallback;
-import com.onesignal.sdktest.util.Font;
+import com.onesignal.test.android.R;
+import com.onesignal.test.android.callback.EnumSelectionCallback;
+import com.onesignal.test.android.util.Font;
 
 public class EnumSelectionRecyclerViewAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 

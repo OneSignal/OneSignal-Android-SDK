@@ -1,4 +1,4 @@
-package com.onesignal.sdktest.adapter;
+package com.onesignal.test.android.adapter;
 
 import android.content.Context;
 import androidx.annotation.NonNull;
@@ -9,9 +9,9 @@ import android.view.ViewGroup;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-import com.onesignal.sdktest.R;
-import com.onesignal.sdktest.callback.PairItemActionCallback;
-import com.onesignal.sdktest.util.Util;
+import com.onesignal.test.android.R;
+import com.onesignal.test.android.callback.PairItemActionCallback;
+import com.onesignal.test.android.util.Util;
 
 import java.util.ArrayList;
 import java.util.Map;

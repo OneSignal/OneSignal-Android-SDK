@@ -1,4 +1,4 @@
-package com.onesignal.sdktest.ui;
+package com.onesignal.test.android.ui;
 
 import android.content.Context;
 import com.google.android.material.appbar.AppBarLayout;

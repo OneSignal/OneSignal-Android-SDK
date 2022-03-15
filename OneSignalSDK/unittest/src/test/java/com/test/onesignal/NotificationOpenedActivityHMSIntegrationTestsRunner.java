@@ -20,7 +20,7 @@ import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorHMS;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.example.BlankActivity;
+import com.onesignal.test.android.BlankActivity;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -53,7 +53,7 @@ import static junit.framework.Assert.assertNotNull;
 import static org.robolectric.Shadows.shadowOf;
 
 @Config(
-    packageName = "com.onesignal.example",
+    packageName = "com.onesignal.test.android",
     shadows = {
         ShadowOSUtils.class,
         ShadowPushRegistratorHMS.class,

@@ -36,7 +36,7 @@ import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.example.BlankActivity;
+import com.onesignal.test.android.BlankActivity;
 
 import org.json.JSONObject;
 import org.junit.After;
@@ -59,7 +59,7 @@ import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static junit.framework.Assert.assertFalse;
 import static junit.framework.Assert.assertTrue;
 
-@Config(packageName = "com.onesignal.example",
+@Config(packageName = "com.onesignal.test.android",
         shadows = {
                 ShadowOneSignalRestClient.class,
                 ShadowOSUtils.class,

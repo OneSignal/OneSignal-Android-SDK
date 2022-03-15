@@ -10,7 +10,7 @@ import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.StaticResetHelper;
-import com.onesignal.example.BlankActivity;
+import com.onesignal.test.android.BlankActivity;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -30,7 +30,7 @@ import static com.test.onesignal.RestClientAsserts.assertNumberOfOnSessions;
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 
 @Config(
-        packageName = "com.onesignal.example",
+        packageName = "com.onesignal.test.android",
         shadows = {
             ShadowOSUtils.class,
             ShadowOneSignalRestClient.class,

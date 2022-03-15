@@ -1,6 +1,6 @@
-package com.onesignal.sdktest.type;
+package com.onesignal.test.android.type;
 
-import com.onesignal.sdktest.notification.NotificationData;
+import com.onesignal.test.android.notification.NotificationData;
 
 public enum Notification {
 

@@ -1,14 +1,14 @@
-package com.onesignal.sdktest.user;
+package com.onesignal.test.android.user;
 
 import android.content.Context;
 import android.util.Log;
 
 import com.onesignal.OSDeviceState;
 import com.onesignal.OneSignal;
-import com.onesignal.sdktest.callback.EmailUpdateCallback;
-import com.onesignal.sdktest.callback.SMSUpdateCallback;
-import com.onesignal.sdktest.constant.Tag;
-import com.onesignal.sdktest.util.SharedPreferenceUtil;
+import com.onesignal.test.android.callback.EmailUpdateCallback;
+import com.onesignal.test.android.callback.SMSUpdateCallback;
+import com.onesignal.test.android.constant.Tag;
+import com.onesignal.test.android.util.SharedPreferenceUtil;
 
 import org.json.JSONObject;
 

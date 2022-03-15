@@ -1,11 +1,11 @@
-package com.onesignal.sdktest.notification;
+package com.onesignal.test.android.notification;
 
 import android.util.Log;
 
 import com.onesignal.OSDeviceState;
 import com.onesignal.OneSignal;
-import com.onesignal.sdktest.constant.Tag;
-import com.onesignal.sdktest.type.Notification;
+import com.onesignal.test.android.constant.Tag;
+import com.onesignal.test.android.type.Notification;
 
 import org.json.JSONException;
 import org.json.JSONObject;
