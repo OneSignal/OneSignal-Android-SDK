@@ -35,32 +35,14 @@ jobs:
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
 
-    - name: List build contents
-      run: ls -R Examples/OneSignalDemo/app
+    - name: Setup NPM
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
 
-    # - name: Setup Gradle and Build
-    #   uses: gradle/gradle-build-action@v2
-    #   with:
-    #     gradle-version: current
-    #     arguments: build
-    #     build-root-directory: Examples/OneSignalDemo
+    - name: Install App Center CLI
+      run: npm install -g appcenter-cli
 
-    # - uses: actions/upload-artifact@v3
-    #   with:
-    #     path: app
+    - name: Release to App Center
+      run: appcenter distribute release --app `Test Android (native)` --file Examples/OneSignalDemo/app/build/outputs/bundle/gmsRelease/app-gms-release.aab --token ${{secrets.APP_CENTER_TOKEN}}
 
-  # distribute:
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   steps:
-
-  #     # Download build-artifacts
-  #     - uses: actions/download-artifact@v3
-
-  #     - name: Setup NPM
-  #       uses: actions/setup-node@v2
-  #       with:
-  #         node-version: '14'
-
-  #     - name: Install App Center CLI
-  #       run: npm install -g appcenter-cli
