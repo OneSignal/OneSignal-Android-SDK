@@ -2,7 +2,7 @@ name: Run Gradle on PRs
 # Controls when the workflow will run
 on:
   push:
-    branches: [ hack-cicd ]
+    branches: [ try_signing_release ]
   pull_request:
     branches: [ main ]
 
@@ -11,32 +11,7 @@ on:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        os: [ubuntu-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-java@v2
-      with:
-        distribution: temurin
-        java-version: 11
-
-    - name: Setup Gradle and Build
-      uses: gradle/gradle-build-action@v2
-      with:
-        gradle-version: current
-        arguments: build
-        build-root-directory: Examples/OneSignalDemo
-
-    - uses: actions/upload-artifact@v3
-      with:
-        path: app
-
-  lint_and_test:
-    needs: build
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-java@v2
@@ -44,67 +19,48 @@ jobs:
         distribution: temurin
         java-version: 11
 
-    # Download build-artifacts
-    - uses: actions/download-artifact@v3
+    # Get the GitHub Actions repository keystore secret and add to project
+    - name: Setup Android signing
+      run: (echo ${{ secrets.KEYSTORE }} | base64 --decode) > ./Examples/OneSignalDemo/app/keystore.jks
 
-    # # Check the code with ktlint
-    # - name: Run Kotlin Linter
+    - name: Make gradlew executable
+      working-directory: Examples/OneSignalDemo
+      run: chmod +x ./gradlew
+
+    - name: build prod
+      run: ./gradlew app:bundleRelease
+      working-directory: Examples/OneSignalDemo
+      env:
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+
+    - name: List build contents
+      run: ls -R Examples/OneSignalDemo/app
+
+    # - name: Setup Gradle and Build
     #   uses: gradle/gradle-build-action@v2
     #   with:
     #     gradle-version: current
+    #     arguments: build
     #     build-root-directory: Examples/OneSignalDemo
-    #     arguments: ktlintStagingDebugCheck
 
-    # Check the code with Android linter
-    - name: Run Android Linter
-      uses: gradle/gradle-build-action@v2
-      with:
-        gradle-version: current
-        build-root-directory: Examples/OneSignalDemo
-        arguments: lintStagingDebug
+    # - uses: actions/upload-artifact@v3
+    #   with:
+    #     path: app
 
-    # Run unit tests
-    - name: Run Unit Tests
-      uses: gradle/gradle-build-action@v2
-      with:
-        gradle-version: current
-        build-root-directory: Examples/OneSignalDemo
-        arguments: testStagingDebugUnitTest
+  # distribute:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   steps:
 
-    # Assemble debug apk
-    - name: Assemble Debug APK
-      uses: gradle/gradle-build-action@v2
-      with:
-        gradle-version: current
-        build-root-directory: Examples/OneSignalDemo
-        arguments: assembleStagingDebug
+  #     # Download build-artifacts
+  #     - uses: actions/download-artifact@v3
 
-    # Assemble debug test apk
-    - name: Assemble Debug Test APK
-      uses: gradle/gradle-build-action@v2
-      with:
-        gradle-version: current
-        build-root-directory: Examples/OneSignalDemo
-        arguments: assembleStagingDebugAndroidTest
+  #     - name: Setup NPM
+  #       uses: actions/setup-node@v2
+  #       with:
+  #         node-version: '14'
 
-  distribute:
-    needs: lint_and_test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      - uses: actions/setup-java@v2
-        with:
-          distribution: temurin
-          java-version: 11
-
-      # Download build-artifacts
-      - uses: actions/download-artifact@v3
-
-      - name: Setup NPM
-        uses: actions/setup-node@v2
-        with:
-          node-version: '14'
-
-      - name: Install App Center CLI
-        run: npm install -g appcenter-cli
+  #     - name: Install App Center CLI
+  #       run: npm install -g appcenter-cli
