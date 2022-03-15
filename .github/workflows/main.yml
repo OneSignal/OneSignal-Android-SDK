@@ -47,13 +47,13 @@ jobs:
     # Download build-artifacts
     - uses: actions/download-artifact@v3
 
-    # Check the code with ktlint
-    - name: Run Kotlin Linter
-      uses: gradle/gradle-build-action@v2
-      with:
-        gradle-version: current
-        build-root-directory: Examples/OneSignalDemo
-        arguments: ktlintStagingDebugCheck
+    # # Check the code with ktlint
+    # - name: Run Kotlin Linter
+    #   uses: gradle/gradle-build-action@v2
+    #   with:
+    #     gradle-version: current
+    #     build-root-directory: Examples/OneSignalDemo
+    #     arguments: ktlintStagingDebugCheck
 
     # Check the code with Android linter
     - name: Run Android Linter
