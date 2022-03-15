@@ -29,11 +29,20 @@ jobs:
         arguments: build
         build-root-directory: Examples/OneSignalDemo
 
+    - uses: actions/upload-artifact@v3
+      with:
+        name: build-artifact
+        path: Examples/OneSignalDemo
+
   lint_and_test:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
+    # Download build-artifacts
+    - uses: actions/download-artifact@v3
+      with:
+        path: Examples/OneSignalDemo
 
     # Check the code with ktlint
     - name: Run Kotlin Linter
