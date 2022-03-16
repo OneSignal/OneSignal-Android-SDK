@@ -75,10 +75,9 @@ class NotificationOpenedProcessor {
       if (intent.getBooleanExtra("action_button", false)) {
          NotificationManagerCompat.from(context).cancel(intent.getIntExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0));
 
-         //Close notification drawer user override targetSdkVersion to  be lower than Android 11
+         // Only close the notifications shade on Android versions where it is allowed, Android 11 and lower.
          // See https://developer.android.com/about/versions/12/behavior-changes-all#close-system-dialogs
-         int targetSdkVersion = context.getApplicationContext().getApplicationInfo().targetSdkVersion;
-         if (targetSdkVersion < Build.VERSION_CODES.S ) {
+         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S)  {
             context.sendBroadcast(new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
          }
       }
