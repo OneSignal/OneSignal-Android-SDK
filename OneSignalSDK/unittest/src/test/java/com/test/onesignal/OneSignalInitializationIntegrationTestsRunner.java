@@ -7,6 +7,7 @@ import com.onesignal.OneSignal;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
 import com.onesignal.ShadowOSUtils;
+import com.onesignal.ShadowOneSignalWithMockSetupContextListeners;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.StaticResetHelper;
@@ -86,6 +87,19 @@ public class OneSignalInitializationIntegrationTestsRunner {
         threadAndTaskWait();
 
         RestClientAsserts.assertRemoteParamsWasTheOnlyNetworkCall();
+    }
+
+    // This test reproduces https://github.com/OneSignal/OneSignal-Android-SDK/issues/1514
+    @Test
+    @Config(shadows = { ShadowOneSignalWithMockSetupContextListeners.class })
+    public void initWithContext_setupContextListenersNotCompleted_doesNotProduceNPE() throws Exception {
+        OneSignal.setAppId(APP_ID);
+
+        // call initWithContext() but don't complete setupContextListeners() via the Shadow class
+        // this prevents the initialization of outcomeEventsController in setupContextListeners()
+        helper_OneSignal_initWithAppContext();
+        threadAndTaskWait();
+        // we implicitly test that no exception is thrown
     }
 
     @Test

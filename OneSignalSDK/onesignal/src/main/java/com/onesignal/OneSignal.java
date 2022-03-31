@@ -391,7 +391,8 @@ public class OneSignal {
    private static String smsId = null;
    private static int subscribableStatus = Integer.MAX_VALUE;
 
-   private static LanguageContext languageContext = null;
+   // changed from private to package-private for unit test access
+   static LanguageContext languageContext = null;
 
    static OSRemoteNotificationReceivedHandler remoteNotificationReceivedHandler;
    static OSNotificationWillShowInForegroundHandler notificationWillShowInForegroundHandler;
@@ -463,6 +464,22 @@ public class OneSignal {
    @Nullable private static OSOutcomeEventsController outcomeEventsController;
    @Nullable private static OSOutcomeEventsFactory outcomeEventsFactory;
    @Nullable private static OSNotificationDataController notificationDataController;
+   private static final Object outcomeEventsControllerSyncLock = new Object() {};
+
+   static OSOutcomeEventsController getOutcomeEventsController() {
+      if (outcomeEventsController == null) {
+         synchronized(outcomeEventsControllerSyncLock) {
+            if (outcomeEventsController == null) {
+               if (outcomeEventsFactory == null) {
+                  OneSignalDbHelper dbHelper = getDBHelperInstance();
+                  outcomeEventsFactory = new OSOutcomeEventsFactory(logger, apiClient, dbHelper, preferences);
+               }
+               outcomeEventsController = new OSOutcomeEventsController(sessionManager, outcomeEventsFactory);
+            }
+         }
+      }
+      return outcomeEventsController;
+   }
 
    @SuppressWarnings("WeakerAccess")
    public static String sdkType = "native";
@@ -855,7 +872,7 @@ public class OneSignal {
       initDone = true;
       OneSignal.Log(LOG_LEVEL.VERBOSE, "OneSignal SDK initialization done.");
 
-      outcomeEventsController.sendSavedOutcomes();
+      getOutcomeEventsController().sendSavedOutcomes();
 
       // Clean up any pending tasks that were queued up before initialization
       taskRemoteController.startPendingTasks();
@@ -892,8 +909,7 @@ public class OneSignal {
             outcomeEventsFactory = new OSOutcomeEventsFactory(logger, apiClient, dbHelper, preferences);
 
          sessionManager.initSessionFromCache();
-         outcomeEventsController = new OSOutcomeEventsController(sessionManager, outcomeEventsFactory);
-         outcomeEventsController.cleanCachedUniqueOutcomes();
+         getOutcomeEventsController().cleanCachedUniqueOutcomes();
       }
    }
 
@@ -971,7 +987,7 @@ public class OneSignal {
          logger.debug("Starting new session with appEntryState: " + getAppEntryState());
 
          OneSignalStateSynchronizer.setNewSession();
-         outcomeEventsController.cleanOutcomes();
+         getOutcomeEventsController().cleanOutcomes();
          sessionManager.restartSessionIfNeeded(getAppEntryState());
          getInAppMessageController().resetSessionLaunchTime();
          setLastSessionTime(time.getCurrentTimeMillis());
