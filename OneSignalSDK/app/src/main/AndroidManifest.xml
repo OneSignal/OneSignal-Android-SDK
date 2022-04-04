@@ -67,6 +67,7 @@
         <activity
             android:name=".BlankActivity"
             android:label="OneSignal Example"
+            android:exported="true"
             >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

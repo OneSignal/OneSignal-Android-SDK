@@ -72,7 +72,8 @@
         </service>
         
         <activity android:name="com.onesignal.NotificationOpenedActivityHMS"
-                  android:theme="@android:style/Theme.Translucent.NoTitleBar">
+                  android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
             </intent-filter>
@@ -98,13 +99,13 @@
 
         <service android:name="com.onesignal.NotificationRestoreService" />
 
-        <receiver android:name="com.onesignal.BootUpReceiver">
+        <receiver android:name="com.onesignal.BootUpReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
-        <receiver android:name="com.onesignal.UpgradeReceiver" >
+        <receiver android:name="com.onesignal.UpgradeReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
