@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.annotation.RequiresApi
+import androidx.core.app.TaskStackBuilder
 
 class GenerateNotificationOpenIntent(
     private val context: Context,
@@ -110,6 +111,12 @@ class GenerateNotificationOpenIntent(
             arrayOf(launchIntent, oneSignalIntent),
             flags
         )
+
+        // Attempting to fix by using TaskStackBuilder instead.
+//        return TaskStackBuilder.create(context)
+//            .addNextIntentWithParentStack(launchIntent)
+//            .addNextIntent(oneSignalIntent)
+//            .getPendingIntent(requestCode, flags)
     }
 
     // Return the provide intent if one was set, otherwise default to opening the app.

@@ -34,12 +34,14 @@ abstract class NotificationOpenedReceiverBase : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         NotificationOpenedProcessor.processFromContext(this, intent)
-        finish()
+//        OSUtils.sleep(5000);
+//        finish()
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         NotificationOpenedProcessor.processFromContext(this, getIntent())
-        finish()
+//        OSUtils.sleep(5000);
+//        finish()
     }
 }

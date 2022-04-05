@@ -791,7 +791,7 @@ public class OneSignal {
     * Called after setAppId and initWithContext, depending on which one is called last (order does not matter)
     */
    synchronized private static void init(Context context) {
-      logger.verbose("Starting OneSignal initialization!");
+      logger.verbose("Starting OneSignal initialization! LOCAL!!!!");
       OSNotificationController.setupNotificationServiceExtension(appContext);
 
       if (requiresUserPrivacyConsent() || !remoteParamController.isRemoteParamsCallDone()) {
