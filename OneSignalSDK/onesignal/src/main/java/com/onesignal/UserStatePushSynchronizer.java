@@ -229,19 +229,7 @@ class UserStatePushSynchronizer extends UserStateSynchronizer {
 
     @Override
     protected void onSuccessfulSync(JSONObject jsonFields) {
-        if (jsonFields.has(EMAIL_KEY))
-            OneSignal.fireEmailUpdateSuccess();
-
-        if (jsonFields.has(SMS_NUMBER_KEY)) {
-            JSONObject result = new JSONObject();
-            try {
-                result.put(SMS_NUMBER_KEY, jsonFields.get(SMS_NUMBER_KEY));
-                if (jsonFields.has(SMS_AUTH_HASH_KEY))
-                    result.put(SMS_AUTH_HASH_KEY, jsonFields.get(SMS_AUTH_HASH_KEY));
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-            OneSignal.fireSMSUpdateSuccess(result);
-        }
+        // Previously, the onSuccess callbacks for setEmail and setSMSNumber were triggered here if applicable.
+        // However, this is too early, and the UserStateSecondaryChannelSynchronizer will fire the successful callback.
     }
 }

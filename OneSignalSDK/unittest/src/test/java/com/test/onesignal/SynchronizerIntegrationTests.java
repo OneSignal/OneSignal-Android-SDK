@@ -544,6 +544,26 @@ public class SynchronizerIntegrationTests {
         }
     }
 
+    /**
+     * @see #shouldSetExternalUserId_inOnSuccessOfEmailUpdate
+     */
+    private class TestEmailUpdateHandler_onSuccess_callSetExternalUserId implements OneSignal.EmailUpdateHandler {
+        boolean emailFiredSuccess = false;
+        OneSignal.EmailUpdateError emailFiredFailure = null;
+        String testExternalId = "test_ext_id";
+
+        @Override
+        public void onSuccess() {
+            emailFiredSuccess = true;
+            OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateCompletionHandler());
+        }
+
+        @Override
+        public void onFailure(OneSignal.EmailUpdateError error) {
+            emailFiredFailure = error;
+        }
+    }
+
     private class TestSMSUpdateHandler implements OneSignal.OSSMSUpdateHandler {
         JSONObject smsResult = null;
         OneSignal.OSSMSUpdateError smsFiredFailure = null;
@@ -551,6 +571,26 @@ public class SynchronizerIntegrationTests {
         @Override
         public void onSuccess(JSONObject result) {
             smsResult = result;
+        }
+
+        @Override
+        public void onFailure(OneSignal.OSSMSUpdateError error) {
+            smsFiredFailure = error;
+        }
+    }
+
+    /**
+     * @see #shouldSetExternalUserId_inOnSuccessOfSMSUpdate
+     */
+    private class TestSMSUpdateHandler_onSuccess_callSetExternalUserId implements OneSignal.OSSMSUpdateHandler {
+        JSONObject smsResult = null;
+        OneSignal.OSSMSUpdateError smsFiredFailure = null;
+        String testExternalId = "test_ext_id";
+
+        @Override
+        public void onSuccess(JSONObject result) {
+            smsResult = result;
+            OneSignal.setExternalUserId(testExternalId, getExternalUserIdUpdateCompletionHandler());
         }
 
         @Override
@@ -2017,6 +2057,61 @@ public class SynchronizerIntegrationTests {
                         "}"
         );
         assertEquals(expectedExternalUserIdResponse.toString(), lastExternalUserIdResponse.toString());
+    }
+
+    /**
+     * This test calls setExternalUserId in the onSuccess callback of setEmail.
+     * By the time this callback is invoked, setting EUID should update the email player.
+     */
+    @Test
+    public void shouldSetExternalUserId_inOnSuccessOfEmailUpdate() throws Exception {
+        // 1. Init OneSignal
+        OneSignalInit();
+
+        // 2. Create an EmailUpdateHandler whose onSuccess callback calls setExternalUserId
+        TestEmailUpdateHandler_onSuccess_callSetExternalUserId testEmailUpdateHandler = new
+                TestEmailUpdateHandler_onSuccess_callSetExternalUserId();
+
+        // 3. Attempt to set email using this email update handler
+        OneSignal.setEmail(ONESIGNAL_EMAIL_ADDRESS, testEmailUpdateHandler);
+        threadAndTaskWait();
+
+        // 4. Check that the email callback is successful
+        assertTrue(testEmailUpdateHandler.emailFiredSuccess);
+        assertNull(testEmailUpdateHandler.emailFiredFailure);
+
+        // 5. Make sure that the external ID request is sent for email
+        ShadowOneSignalRestClient.Request setExternalIdOnEmailChannel = ShadowOneSignalRestClient.requests.get(3);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, setExternalIdOnEmailChannel.method);
+        assertEquals("players/" + ShadowOneSignalRestClient.emailUserId, setExternalIdOnEmailChannel.url);
+        assertEquals(testEmailUpdateHandler.testExternalId, setExternalIdOnEmailChannel.payload.get("external_user_id"));
+    }
+
+    /**
+     * This test calls setExternalUserId in the onSuccess callback of setSMSNumber.
+     * By the time this callback is invoked, setting EUID should update the SMS player.
+     */
+    @Test
+    public void shouldSetExternalUserId_inOnSuccessOfSMSUpdate() throws Exception {
+        // 1. Init OneSignal
+        OneSignalInit();
+
+        // 2. Create an SMSUpdateHandler whose onSuccess callback calls setExternalUserId
+        TestSMSUpdateHandler_onSuccess_callSetExternalUserId testSMSUpdateHandler = new
+                TestSMSUpdateHandler_onSuccess_callSetExternalUserId();
+
+        // 3. Attempt to set SMS using this SMS update handler
+        OneSignal.setSMSNumber(ONESIGNAL_SMS_NUMBER, testSMSUpdateHandler);
+        threadAndTaskWait();
+
+        // 4. Check that the sms callback is invoked
+        assertNotNull(testSMSUpdateHandler.smsResult);
+
+        // 5. Make sure that the external ID request is sent for sms
+        ShadowOneSignalRestClient.Request setExternalIdOnSMSChannel = ShadowOneSignalRestClient.requests.get(3);
+        assertEquals(ShadowOneSignalRestClient.REST_METHOD.PUT, setExternalIdOnSMSChannel.method);
+        assertEquals("players/" + ShadowOneSignalRestClient.smsUserId, setExternalIdOnSMSChannel.url);
+        assertEquals(testSMSUpdateHandler.testExternalId, setExternalIdOnSMSChannel.payload.get("external_user_id"));
     }
 
     @Test
