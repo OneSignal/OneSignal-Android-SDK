@@ -74,7 +74,12 @@ class NotificationOpenedProcessor {
       // Pressed an action button, need to clear the notification and close the notification area manually.
       if (intent.getBooleanExtra("action_button", false)) {
          NotificationManagerCompat.from(context).cancel(intent.getIntExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0));
-         context.sendBroadcast(new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
+
+         // Only close the notifications shade on Android versions where it is allowed, Android 11 and lower.
+         // See https://developer.android.com/about/versions/12/behavior-changes-all#close-system-dialogs
+         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S)  {
+            context.sendBroadcast(new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
+         }
       }
    }
 
