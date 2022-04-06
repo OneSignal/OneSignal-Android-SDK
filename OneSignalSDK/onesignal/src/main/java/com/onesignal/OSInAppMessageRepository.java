@@ -10,8 +10,12 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 class OSInAppMessageRepository {
@@ -445,6 +449,33 @@ class OSInAppMessageRepository {
                 OneSignalPrefs.PREFS_ONESIGNAL,
                 OneSignalPrefs.PREFS_OS_CACHED_IAMS,
                 inAppMessages);
+    }
+
+    void saveLastTimeInAppDismissed(Date lastTimeInAppDismissed) {
+        String lastTimeDismissedString = lastTimeInAppDismissed != null ?
+                lastTimeInAppDismissed.toString() : null;
+        sharedPreferences.saveString(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_LAST_TIME_IAM_DISMISSED,
+                lastTimeDismissedString);
+    }
+
+    @Nullable
+    Date getLastTimeInAppDismissed() {
+        String lastTimeDismissedString = sharedPreferences.getString(
+                OneSignalPrefs.PREFS_ONESIGNAL,
+                OneSignalPrefs.PREFS_OS_LAST_TIME_IAM_DISMISSED, null);
+        if (lastTimeDismissedString == null) {
+            return null;
+        }
+        // This pattern matches the pattern used by the Date class's toString() method
+        SimpleDateFormat format = new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", Locale.ENGLISH);
+        try {
+            return format.parse(lastTimeDismissedString);
+        } catch (ParseException exception) {
+            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, exception.getLocalizedMessage());
+            return null;
+        }
     }
 
     private void printHttpSuccessForInAppMessageRequest(String requestType, String response) {
