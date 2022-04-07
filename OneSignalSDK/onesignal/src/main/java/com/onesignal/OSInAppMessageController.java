@@ -121,6 +121,11 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         if (tempClickedMessageIdsSet != null)
             clickedClickIds.addAll(tempClickedMessageIdsSet);
 
+        Date tempLastTimeInAppDismissed = inAppMessageRepository.getLastTimeInAppDismissed();
+        if (tempLastTimeInAppDismissed != null) {
+            lastTimeInAppDismissed = tempLastTimeInAppDismissed;
+        }
+
         initRedisplayData();
     }
 
@@ -742,6 +747,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
                 super.run();
 
                 inAppMessageRepository.saveInAppMessage(message);
+                inAppMessageRepository.saveLastTimeInAppDismissed(lastTimeInAppDismissed);
             }
         };
         runRunnableOnThread(saveIAMOnDBRunnable, OS_IAM_DB_ACCESS);
