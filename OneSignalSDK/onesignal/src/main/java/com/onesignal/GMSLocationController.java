@@ -29,6 +29,7 @@ package com.onesignal;
 
 import android.location.Location;
 import android.os.Bundle;
+import android.os.Looper;
 
 import androidx.annotation.NonNull;
 
@@ -194,6 +195,8 @@ class GMSLocationController extends LocationController {
         static void requestLocationUpdates(GoogleApiClient googleApiClient, LocationRequest locationRequest, LocationListener locationListener) {
             try {
                 synchronized (GMSLocationController.syncLock) {
+                    if (Looper.myLooper() == null)
+                        Looper.prepare();
                     if (googleApiClient.isConnected())
                         LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, locationListener);
                 }
