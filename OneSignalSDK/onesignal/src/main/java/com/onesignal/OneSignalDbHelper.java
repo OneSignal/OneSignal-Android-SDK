@@ -168,13 +168,19 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
     */
    private SQLiteDatabase getSQLiteDatabaseWithRetries() {
       synchronized (LOCK) {
+         // Throw the first exception as this may give more insight into the root cause of issue:
+         // https://github.com/OneSignal/OneSignal-Android-SDK/issues/1432
+         SQLiteException firstSQLiteException = null;
          int count = 0;
          while (true) {
             try {
                return getSQLiteDatabase();
             } catch (SQLiteCantOpenDatabaseException | SQLiteDatabaseLockedException e) {
+               if (firstSQLiteException == null) {
+                  firstSQLiteException = e;
+               }
                if (++count >= DB_OPEN_RETRY_MAX)
-                  throw e;
+                  throw firstSQLiteException;
                SystemClock.sleep(count * DB_OPEN_RETRY_BACKOFF);
             }
          }
