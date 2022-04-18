@@ -311,28 +311,32 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
 
    @Override
    public void onCreate(SQLiteDatabase db) {
-      db.execSQL(SQL_CREATE_ENTRIES);
-      db.execSQL(SQL_CREATE_OUTCOME_ENTRIES_V3);
-      db.execSQL(SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2);
-      db.execSQL(SQL_CREATE_IN_APP_MESSAGE_ENTRIES);
-      for (String ind : SQL_INDEX_ENTRIES) {
-         db.execSQL(ind);
+      synchronized (LOCK) {
+         db.execSQL(SQL_CREATE_ENTRIES);
+         db.execSQL(SQL_CREATE_OUTCOME_ENTRIES_V3);
+         db.execSQL(SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2);
+         db.execSQL(SQL_CREATE_IN_APP_MESSAGE_ENTRIES);
+         for (String ind : SQL_INDEX_ENTRIES) {
+            db.execSQL(ind);
+         }
       }
    }
 
    @Override
    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
       OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OneSignal Database onUpgrade from: " + oldVersion + " to: " + newVersion);
-      try {
-         internalOnUpgrade(db, oldVersion);
-      } catch (SQLiteException e) {
-         // This could throw if rolling back then forward again.
-         //   However this shouldn't happen as we clearing the database on onDowngrade
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error in upgrade, migration may have already run! Skipping!" , e);
+      synchronized (LOCK) {
+         try {
+            internalOnUpgrade(db, oldVersion);
+         } catch (SQLiteException e) {
+            // This could throw if rolling back then forward again.
+            //   However this shouldn't happen as we clearing the database on onDowngrade
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error in upgrade, migration may have already run! Skipping!", e);
+         }
       }
    }
 
-   private synchronized void internalOnUpgrade(SQLiteDatabase db, int oldVersion) {
+   private void internalOnUpgrade(SQLiteDatabase db, int oldVersion) {
       if (oldVersion < 2)
          upgradeToV2(db);
 
@@ -404,7 +408,7 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
       safeExecSQL(db, SQL_CREATE_IN_APP_MESSAGE_ENTRIES);
    }
 
-   private synchronized void upgradeToV8(SQLiteDatabase db) {
+   private void upgradeToV8(SQLiteDatabase db) {
       outcomeTableProvider.upgradeOutcomeTableRevision2To3(db);
       outcomeTableProvider.upgradeCacheOutcomeTableRevision1To2(db);
    }
@@ -420,24 +424,25 @@ class OneSignalDbHelper extends SQLiteOpenHelper implements OneSignalDb {
    @Override
    public void onDowngrade(SQLiteDatabase db, int oldVersion, int newVersion) {
       OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "SDK version rolled back! Clearing " + DATABASE_NAME + " as it could be in an unexpected state.");
+      synchronized (LOCK) {
+         Cursor cursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table'", null);
+         try {
+            List<String> tables = new ArrayList<>(cursor.getCount());
 
-      Cursor cursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table'", null);
-      try {
-         List<String> tables = new ArrayList<>(cursor.getCount());
+            while (cursor.moveToNext())
+               tables.add(cursor.getString(0));
 
-         while (cursor.moveToNext())
-            tables.add(cursor.getString(0));
-
-         for (String table : tables) {
-            if (table.startsWith("sqlite_"))
-               continue;
-            db.execSQL("DROP TABLE IF EXISTS " + table);
+            for (String table : tables) {
+               if (table.startsWith("sqlite_"))
+                  continue;
+               db.execSQL("DROP TABLE IF EXISTS " + table);
+            }
+         } finally {
+            cursor.close();
          }
-      } finally {
-         cursor.close();
-      }
 
-      onCreate(db);
+         onCreate(db);
+      }
    }
 
    static StringBuilder recentUninteractedWithNotificationsWhere() {
