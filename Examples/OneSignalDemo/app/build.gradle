@@ -77,7 +77,7 @@ dependencies {
         exclude group: 'com.google.firebase', module: 'firebase-messaging'
     }
     // Add HMS Push library
-    huaweiImplementation 'com.huawei.hms:push:6.1.0.300'
+    huaweiImplementation 'com.huawei.hms:push:6.3.0.304'
     // Optionally add HMS location
     huaweiImplementation 'com.huawei.hms:location:4.0.0.300'
     /** END - Huawei Builds **/
