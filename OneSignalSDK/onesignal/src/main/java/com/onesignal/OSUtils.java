@@ -42,15 +42,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-
-import androidx.annotation.Keep;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.core.app.NotificationManagerCompat;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
-
-import androidx.legacy.content.WakefulBroadcastReceiver;
 
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.huawei.hms.api.HuaweiApiAvailability;
@@ -70,6 +63,11 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
+import androidx.annotation.Keep;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.app.NotificationManagerCompat;
+import androidx.legacy.content.WakefulBroadcastReceiver;
 import static com.onesignal.OneSignal.Log;
 
 class OSUtils {
@@ -275,7 +273,7 @@ class OSUtils {
          PackageManager pm = OneSignal.appContext.getPackageManager();
          PackageInfo info = pm.getPackageInfo(packageName, PackageManager.GET_META_DATA);
          return info.applicationInfo.enabled;
-      } catch (PackageManager.NameNotFoundException e) {
+      } catch (Exception e) {
          return false;
       }
    }

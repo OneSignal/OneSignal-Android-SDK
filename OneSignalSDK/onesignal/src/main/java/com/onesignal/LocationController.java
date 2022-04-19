@@ -260,7 +260,7 @@ class LocationController {
                   sendAndClearPromptHandlers(promptLocation, result);
                   fireFailedComplete();
                }
-            } catch (PackageManager.NameNotFoundException e) {
+            } catch (Exception e) {
                sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.ERROR);
                e.printStackTrace();
             }
@@ -295,7 +295,7 @@ class LocationController {
             sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.PERMISSION_GRANTED);
             startGetLocation();
          }
-      } catch (PackageManager.NameNotFoundException e) {
+      } catch (Exception e) {
          sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.ERROR);
          e.printStackTrace();
       }

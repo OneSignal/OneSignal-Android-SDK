@@ -20,7 +20,7 @@ class GooglePlayServicesUpgradePrompt {
          PackageInfo info = pm.getPackageInfo(GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE, PackageManager.GET_META_DATA);
          String label = (String) info.applicationInfo.loadLabel(pm);
          return (!label.equals("Market"));
-      } catch (PackageManager.NameNotFoundException e) {
+      } catch (Exception e) {
          // Google Play Store might not be installed, ignore exception if so
       }
 

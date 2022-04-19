@@ -40,17 +40,12 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.WorkerThread;
-import androidx.core.app.NotificationCompat;
-
+import com.onesignal.OneSignalStateSynchronizer.OSDeviceInfoCompletionHandler;
+import com.onesignal.OneSignalStateSynchronizer.OSDeviceInfoError;
 import com.onesignal.influence.data.OSTrackerFactory;
 import com.onesignal.influence.domain.OSInfluence;
 import com.onesignal.language.LanguageContext;
 import com.onesignal.language.LanguageProviderAppDefined;
-import com.onesignal.OneSignalStateSynchronizer.OSDeviceInfoError;
-import com.onesignal.OneSignalStateSynchronizer.OSDeviceInfoCompletionHandler;
 import com.onesignal.outcomes.data.OSOutcomeEventsFactory;
 
 import org.json.JSONArray;
@@ -72,6 +67,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
+import androidx.core.app.NotificationCompat;
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
 import static com.onesignal.NotificationBundleProcessor.newJsonArray;
@@ -1507,7 +1506,7 @@ public class OneSignal {
 
       try {
          deviceInfo.put("game_version", packageManager.getPackageInfo(packageName, 0).versionCode);
-      } catch (PackageManager.NameNotFoundException e) {}
+      } catch (Exception e) {}
 
       deviceInfo.put("net_type", osUtils.getNetType());
       deviceInfo.put("carrier", osUtils.getCarrierName());
