@@ -289,7 +289,12 @@ class OSUtils {
    private static final int HMS_AVAILABLE_SUCCESSFUL = 0;
    private static boolean isHMSCoreInstalledAndEnabled() {
       HuaweiApiAvailability availability = HuaweiApiAvailability.getInstance();
-      return availability.isHuaweiMobileServicesAvailable(OneSignal.appContext) == HMS_AVAILABLE_SUCCESSFUL;
+      try {
+         return availability.isHuaweiMobileServicesAvailable(OneSignal.appContext) == HMS_AVAILABLE_SUCCESSFUL;
+      } catch (Exception e) {
+         e.printStackTrace();
+      }
+      return false;
    }
 
    private static final String HMS_CORE_SERVICES_PACKAGE = "com.huawei.hwid"; // = HuaweiApiAvailability.SERVICES_PACKAGE
