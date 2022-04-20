@@ -62,7 +62,7 @@ class JSONUtils {
                         Object curValue = cur.get(key);
                         if (!value.equals(curValue)) {
                             // Work around for JSON serializer turning doubles/floats into ints since it drops ending 0's
-                            if (curValue instanceof Integer && !"".equals(value)) {
+                            if (curValue instanceof Number && value instanceof Number) {
                                 if ( ((Number)curValue).doubleValue() != ((Number)value).doubleValue())
                                     output.put(key, value);
                             }
