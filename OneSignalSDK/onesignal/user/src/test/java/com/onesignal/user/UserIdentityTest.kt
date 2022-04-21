@@ -1,9 +1,9 @@
 package com.onesignal.user
 
-import org.junit.jupiter.api.Assertions.*
-
 import org.spekframework.spek2.Spek
 import org.spekframework.spek2.style.specification.describe
+
+import kotlin.test.assertEquals
 
 class UserIdentityTest : Spek({
     describe("An UserAnonymous") {
