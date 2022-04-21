@@ -43,6 +43,8 @@ android {
 dependencies {
     compileOnly fileTree(dir: 'libs', include: ['*.jar'])
 
+    implementation project(":onesignal:user")
+
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
 
     // play-services-location:16.0.0 is the last version before going to AndroidX
