@@ -1,14 +1,12 @@
 package com.onesignal.user
 
-import org.spekframework.spek2.Spek
-import org.spekframework.spek2.style.specification.Suite
-import org.spekframework.spek2.style.specification.describe
 import kotlin.test.assertNotSame
-
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
-class UserManagerTest : Spek({
+import io.kotest.core.spec.style.DescribeSpec
+
+class UserManagerTest : DescribeSpec({
     describe("default UserManager") {
         val userManager = UserManager()
         val user = userManager.user

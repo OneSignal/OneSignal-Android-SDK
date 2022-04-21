@@ -1,11 +1,10 @@
 package com.onesignal.user
 
-import org.spekframework.spek2.Spek
-import org.spekframework.spek2.style.specification.describe
+import io.kotest.core.spec.style.DescribeSpec
 
 import kotlin.test.assertEquals
 
-class UserIdentityTest : Spek({
+class UserIdentityTest : DescribeSpec({
     describe("An UserAnonymous") {
         val user = UserAnonymous()
         context("identity") {

@@ -8,7 +8,7 @@ java {
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
-def spekVersion = '2.0.18'
+def kotestVersion = '5.2.3'
 
 dependencies {
     // some version of Kotlin
@@ -16,16 +16,12 @@ dependencies {
 
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
 
-    testImplementation "org.spekframework.spek2:spek-dsl-jvm:$spekVersion"
-    testRuntimeOnly "org.spekframework.spek2:spek-runner-junit5:$spekVersion"
-
-    // spek requires kotlin-reflect, can be omitted if already in the classpath
-    testRuntimeOnly "org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion"
+    testImplementation "io.kotest:kotest-runner-junit5:$kotestVersion"
+    testImplementation "io.kotest:kotest-assertions-core:$kotestVersion"
+    testImplementation "io.kotest:kotest-property:$kotestVersion"
 }
 
 // setup the test task
 test {
-    useJUnitPlatform {
-        includeEngines 'spek2'
-    }
+    useJUnitPlatform()
 }
