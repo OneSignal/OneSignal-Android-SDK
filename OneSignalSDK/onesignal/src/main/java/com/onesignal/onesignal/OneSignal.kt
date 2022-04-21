@@ -14,7 +14,8 @@ public object OneSignal : IOneSignal {
         OneSignalImp()
     }
 
-    override val user: User = oneSignal.user
+    override val user: User
+        get() = oneSignal.user
 
     override fun init(appId: String) {
         oneSignal.init(appId)
