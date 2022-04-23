@@ -4,7 +4,7 @@ import com.onesignal.onesignal.IOneSignal
 import com.onesignal.user.User
 import com.onesignal.user.UserAnonymous
 import com.onesignal.user.UserIdentified
-import com.onesignal.user.UserIdentity
+import com.onesignal.user.Identity
 
 class OneSignalImp : IOneSignal {
 
@@ -26,12 +26,12 @@ class OneSignalImp : IOneSignal {
         TODO()
     }
 
-    override fun switchUser(identityIdentified: UserIdentity.Identified): UserIdentified {
+    override fun switchUser(identityKnown: Identity.Known): UserIdentified {
         TODO("Not yet implemented")
     }
 
     // This accepts UserIdentity.Anonymous?, so therefore UserAnonymous? might be null
-    override fun switchUser(identityAnonymous: UserIdentity.Anonymous?): UserAnonymous? {
+    override fun switchUser(identityAnonymous: Identity.Anonymous?): UserAnonymous? {
         TODO("Not yet implemented")
     }
 }

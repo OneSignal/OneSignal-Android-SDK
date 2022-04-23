@@ -1,3 +1,3 @@
 package com.onesignal.user
 
-class UserIdentified(identity: UserIdentity) : User(identity)
+class UserIdentified(identity: Identity) : User(identity)

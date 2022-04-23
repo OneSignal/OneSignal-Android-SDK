@@ -4,12 +4,12 @@ import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 
-class UserIdentityTest : DescribeSpec({
+class IdentityTest : DescribeSpec({
     describe("An UserAnonymous") {
         val user = UserAnonymous()
         context("identity") {
-            it("is equal to a different UserIdentity.Anonymous instance") {
-                user.identity shouldNotBeSameInstanceAs UserIdentity.Anonymous()
+            it("is equal to a different Identity.Anonymous instance") {
+                user.identity shouldNotBeSameInstanceAs Identity.Anonymous()
             }
         }
     }
@@ -18,7 +18,7 @@ class UserIdentityTest : DescribeSpec({
         val myId = "myId"
 
         context("identity with ExternalIdWithoutAuth") {
-            val getNewIdentity = { UserIdentity.ExternalIdWithoutAuth(myId) }
+            val getNewIdentity = { Identity.ExternalId(myId) }
             it("is equal to ExternalIdWithoutAuth") {
                 val user = UserIdentified(getNewIdentity())
                 user.identity shouldBe getNewIdentity()
@@ -27,7 +27,7 @@ class UserIdentityTest : DescribeSpec({
 
         context("identity with ExternalIdWithAuthHash") {
             val mockHash = "mockHash"
-            val getNewIdentity = { UserIdentity.ExternalIdWithAuthHash(myId, mockHash) }
+            val getNewIdentity = { Identity.ExternalIdWithAuthHash(myId, mockHash) }
             it("is equal to ExternalIdWithAuthHash") {
                 val user = UserIdentified(getNewIdentity())
                 user.identity shouldBe getNewIdentity()

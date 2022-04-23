@@ -1,6 +1,6 @@
 package com.onesignal.onesignal
 
-import com.onesignal.user.UserIdentity
+import com.onesignal.user.Identity
 
 // This is just a quick example to test what the new API would like in Kotlin
 // (should be moved into it's own project)
@@ -16,11 +16,11 @@ class TestKotlinAPI {
 
         // Example User Login
         //    - Create an Identity with External user id (with auth hash)
-        val userIdentity = UserIdentity.ExternalIdWithoutAuth("myID")
-        OneSignal.switchUser(userIdentity)
+        val identity = Identity.ExternalId("myID")
+        OneSignal.switchUser(identity)
 
         // Example 1 of Logout, you get generic push
-        OneSignal.switchUser(UserIdentity.Anonymous())
+        OneSignal.switchUser(Identity.Anonymous())
 
         // Example 2 of Logout, device won't get an pushes there is no user.
         OneSignal.switchUser(null)

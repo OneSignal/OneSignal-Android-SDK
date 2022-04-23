@@ -1,7 +1,7 @@
 package com.onesignal.user
 
 open class User(
-    val identity: UserIdentity
+    val identity: Identity
 ) {
     val tags: Tags
         get() {

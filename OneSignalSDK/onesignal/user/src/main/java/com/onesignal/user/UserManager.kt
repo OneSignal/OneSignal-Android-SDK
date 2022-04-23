@@ -10,7 +10,7 @@ class UserManager {
     // TODO: Clearing users out of the RAM cache probably isn't something we need to optimize for.
     //       We probably be better to keep them in RAM as long as possible to save on disk reads
     //       and network calls instead.
-    private val userIdentityMap = WeakHashMap<UserIdentity.Identified, UserIdentified>()
+    private val identityMap = WeakHashMap<Identity.Known, UserIdentified>()
 
     // Following priority order is used until we have an instance
     //   1. _user - Already set internal instance
@@ -24,23 +24,24 @@ class UserManager {
             return user
         }
 
-    fun getUserBy(userIdentified: UserIdentity.Identified): UserIdentified {
-        return userIdentityMap[userIdentified] ?: UserIdentified(userIdentified)
+    fun getUserBy(identity: Identity.Known): UserIdentified {
+        return identityMap[identity] ?: UserIdentified(identity)
     }
 
-    fun getUserBy(userIdentified: UserIdentity.Anonymous): UserAnonymous {
+    fun getUserBy(identity: Identity.Anonymous): UserAnonymous {
         val currentUser = user
         if (currentUser is UserAnonymous) return currentUser
+        // TODO: Should give same instance
         return UserAnonymous()
     }
 
-    fun switchUser(identityIdentified: UserIdentity.Identified): UserIdentified {
+    fun switchUser(identityKnown: Identity.Known): UserIdentified {
         val originalUser = user
         if (originalUser is UserIdentified) {
-            if (originalUser.identity == identityIdentified) return originalUser
+            if (originalUser.identity == identityKnown) return originalUser
         }
 
-        val currentUser = getUserBy(identityIdentified)
+        val currentUser = getUserBy(identityKnown)
         _user = currentUser
         return currentUser
     }
@@ -53,7 +54,7 @@ class UserManager {
      *   * Pass a UserIdentity.Anonymous instance to switch to an Anonymous user
      *      - You will get the same UserAnonymous if the active User was already Anonymous
      */
-    fun switchUser(identityAnonymous: UserIdentity.Anonymous?): UserAnonymous? {
+    fun switchUser(identityAnonymous: Identity.Anonymous?): UserAnonymous? {
         // null was passed in so this means we don't want an Active User.
         if (identityAnonymous == null) {
             _user = null

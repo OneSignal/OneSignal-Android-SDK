@@ -1,3 +1,3 @@
 package com.onesignal.user
 
-class UserAnonymous : User(UserIdentity.Anonymous())
+class UserAnonymous : User(Identity.Anonymous())

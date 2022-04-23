@@ -21,13 +21,13 @@ class UserManagerTest : DescribeSpec({
         }
 
         context("getUserBy") {
-            it("gives same UserAnonymous - UserIdentity.Anonymous") {
-                userManager.getUserBy(UserIdentity.Anonymous()) shouldBeSameInstanceAs user
+            it("gives same UserAnonymous - Identity.Anonymous") {
+                userManager.getUserBy(Identity.Anonymous()) shouldBeSameInstanceAs user
             }
 
             context("Identified") {
                 val mockId = "mockId"
-                val userWithId = userManager.getUserBy(UserIdentity.ExternalIdWithoutAuth(mockId))
+                val userWithId = userManager.getUserBy(Identity.ExternalId(mockId))
                 it("gives UserIdentified with ExternalIdWithoutAuth") {
                     userWithId.shouldBeTypeOf<UserIdentified>()
                 }
