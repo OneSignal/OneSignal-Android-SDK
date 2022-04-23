@@ -14,11 +14,11 @@ package com.onesignal.user
 //          - (It's possible to drop the prefix, however the IDE never suggests
 //             the import that is required to do that)
 
-public interface UserIdentity {
-    public class Anonymous : UserIdentity {
+interface UserIdentity {
+    class Anonymous : UserIdentity {
         // All Anonymous identities are equal to each other
         override fun equals(other: Any?) = other is Anonymous
-        override fun hashCode(): Int = javaClass.hashCode()
+        override fun hashCode() = javaClass.hashCode()
     }
 
     // TODO: Naming of UserIdentity.Identified
@@ -27,7 +27,7 @@ public interface UserIdentity {
     //   Options:
     //   * UserIdentity.Known (++++)
     //       PRO: "Known" more concise than "Identified"
-    public interface Identified : UserIdentity
+    interface Identified : UserIdentity
 
     // TODO: Naming of ExternalIdWithAuthHash and ExternalIdWithoutAuth (--)
     //   Con: Long name.
@@ -41,11 +41,11 @@ public interface UserIdentity {
     //     * ExternalId and ExternalIdWithoutAuth (+)
     //        PRO: Sticks out more visually
     //        PRO: The shorter one is the recommended one.
-    public data class ExternalIdWithAuthHash(
+    data class ExternalIdWithAuthHash(
         val externalId: String,
         val authHash: String,
     ) : Identified
-    public data class ExternalIdWithoutAuth(
+    data class ExternalIdWithoutAuth(
         val externalId: String,
     ) : Identified
 }

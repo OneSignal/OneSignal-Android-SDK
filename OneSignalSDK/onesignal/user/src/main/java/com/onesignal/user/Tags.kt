@@ -1,5 +1,5 @@
 package com.onesignal.user
 
-public class Tags {
+class Tags {
     fun add(key: String, value: String) {}
 }
