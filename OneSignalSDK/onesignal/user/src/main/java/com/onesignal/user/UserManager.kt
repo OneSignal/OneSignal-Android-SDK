@@ -10,7 +10,7 @@ class UserManager {
     // TODO: Clearing users out of the RAM cache probably isn't something we need to optimize for.
     //       We probably be better to keep them in RAM as long as possible to save on disk reads
     //       and network calls instead.
-    private val identityMap = WeakHashMap<Identity.Known, UserIdentified>()
+    private val userMap = WeakHashMap<Identity.Known, UserIdentified>()
 
     // Following priority order is used until we have an instance
     //   1. _user - Already set internal instance
@@ -25,7 +25,7 @@ class UserManager {
         }
 
     fun getUserBy(identity: Identity.Known): UserIdentified {
-        return identityMap[identity] ?: UserIdentified(identity)
+        return userMap[identity] ?: UserIdentified(identity)
     }
 
     fun getUserBy(identity: Identity.Anonymous): UserAnonymous {
