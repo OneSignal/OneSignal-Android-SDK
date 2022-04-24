@@ -24,7 +24,67 @@ class UserManager {
             return user
         }
 
-    fun getUserBy(identity: Identity.Known): UserKnown {
+    // TODO: Could add as a helper method, to make implementations shorter
+    private fun assignUserInMap(knownUser: UserKnown): UserKnown {
+        userMap[knownUser.identity] = knownUser
+        return knownUser
+    }
+
+    fun getUserBy(identity: Identity.Known): UserKnown = getUserBy_WORKS_MaybeToCleverQuestionMark(identity)
+
+    fun getUserBy_WORKS_MaybeToCleverQuestionMark(identity: Identity.Known): UserKnown =
+        userMap[identity] ?:
+            UserKnown(identity).also { userMap[identity] = it }
+
+    fun getUserBy_WORKS_With_Let(identity: Identity.Known): UserKnown {
+        userMap[identity]?.let { return it }
+        val knownUser = UserKnown(identity)
+        userMap[identity] = knownUser
+        return knownUser
+    }
+
+    fun getUserBy_With_When(identity: Identity.Known): UserKnown =
+        when(userMap[identity]) {
+            // TODO: Can we make a NOT null case first instead?
+            null -> {
+                val userKnown = UserKnown(identity)
+                userMap[identity] = userKnown
+                userKnown
+            }
+            else -> {
+                userMap[identity]
+                UserKnown(identity)
+            }
+        }
+
+    fun getUserBy_WORKS_But_Always_Assigns_When_Not_Needed(identity: Identity.Known): UserKnown {
+        val knownUser = userMap[identity] ?: UserKnown(identity)
+        userMap[identity] = knownUser
+        return knownUser
+    }
+
+    // Bit easier to read than OptionB, since the found case returns early
+    fun getUserBy_WORKS_ButLotsOfCode_OptionA(identity: Identity.Known): UserKnown {
+        val knownUser = userMap[identity]
+        if (knownUser != null) {
+            return knownUser
+        }
+        val newUser = UserKnown(identity)
+        userMap[identity] = newUser
+        return newUser
+    }
+
+    fun getUserBy_WORKS_ButLotsOfCode_OptionB(identity: Identity.Known): UserKnown {
+        val userFromMap = userMap[identity]
+        if (userFromMap == null) {
+            val newUser = UserKnown(identity)
+            userMap[identity] = newUser
+            return newUser
+        }
+        return userFromMap
+    }
+
+    fun getUserBy_BUG_DoesNotReuse(identity: Identity.Known): UserKnown {
         return userMap[identity] ?: UserKnown(identity)
     }
 
