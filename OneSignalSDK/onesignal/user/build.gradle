@@ -1,14 +1,21 @@
+buildscript {
+    dependencies {
+        // Allows importing KotestEngineProperties
+        classpath "io.kotest:kotest-framework-api-jvm:$kotestVersion"
+    }
+}
+
 plugins {
     id 'java-library'
     id 'org.jetbrains.kotlin.jvm'
 }
 
+import io.kotest.core.internal.KotestEngineProperties
+
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
 }
-
-def kotestVersion = '5.2.3'
 
 dependencies {
     // some version of Kotlin
@@ -24,4 +31,12 @@ dependencies {
 // setup the test task
 test {
     useJUnitPlatform()
+    // Effects how many test classes (*Spec such as DescribeSpec) will run in
+    // parallel.
+    // If code blocks the thread (instead a coroutine suspend) it seems it takes
+    // about ~2x the number of slots.
+    // NOTE: Individual class times seem to be under reported when this is > 1.
+    //       Set to 1 temporarily if you need to evaluate which tests are
+    //       actually slow.
+    systemProperties[KotestEngineProperties.parallelism] = 8
 }
