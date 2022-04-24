@@ -1,3 +1,7 @@
 package com.onesignal.user
 
-class UserKnown(identity: Identity) : User(identity)
+class UserKnown(
+    identity: Identity.Known,
+) : User<Identity.Known>(
+    identity,
+)

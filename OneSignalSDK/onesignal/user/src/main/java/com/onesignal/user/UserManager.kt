@@ -5,7 +5,7 @@ import java.util.*
 class UserManager {
     // The Active User - If an event happens (such a new session)
     //   this is the User that will be used.
-    private var _user: User? = null
+    private var _user: User<out Identity>? = null
 
     // TODO: Clearing users out of the RAM cache probably isn't something we need to optimize for.
     //       We probably be better to keep them in RAM as long as possible to save on disk reads
@@ -16,7 +16,7 @@ class UserManager {
     //   1. _user - Already set internal instance
     //   2. From local storage - restore user from last time the app opened
     //   3. Create new - Create a brand new UserAnonymous
-    val user: User
+    val user: User<out Identity>
         get() {
             // TODO: This should check local storage to see if there was a user assign before
             val user = _user ?: UserAnonymous()
