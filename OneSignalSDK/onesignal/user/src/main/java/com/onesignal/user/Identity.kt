@@ -7,13 +7,15 @@ interface Identity {
         override fun hashCode() = javaClass.hashCode()
     }
 
-    interface Known : Identity
+    interface Known : Identity {
+        val externalId: String
+    }
 
-    data class ExternalIdWithAuthHash(
-        val externalId: String,
-        val authHash: String,
-    ) : Known
     data class ExternalId(
-        val externalId: String,
+        override val externalId: String,
+    ) : Known
+    data class ExternalIdWithAuthHash(
+        override val externalId: String,
+        val authHash: String,
     ) : Known
 }
