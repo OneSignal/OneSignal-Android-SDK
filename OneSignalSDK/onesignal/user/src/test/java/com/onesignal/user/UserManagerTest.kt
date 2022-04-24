@@ -1,39 +1,46 @@
 package com.onesignal.user
 
 import io.kotest.core.spec.style.DescribeSpec
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.matchers.types.shouldBeTypeOf
-import io.kotest.matchers.types.shouldNotBeSameInstanceAs
 
 class UserManagerTest : DescribeSpec({
-    describe("default UserManager") {
+    describe("UserManager") {
         val userManager = UserManager()
-        val user = userManager.user
 
-        context("get user") {
+        context("user getter") {
+            val user = userManager.user
+
             it("gives UserAnonymous") {
                 user.shouldBeTypeOf<UserAnonymous>()
             }
-
             it("gives same UserAnonymous instance on 2nd call") {
                 userManager.user shouldBeSameInstanceAs user
             }
         }
 
         context("getUserBy") {
-            it("gives same UserAnonymous - Identity.Anonymous") {
-                userManager.getUserBy(Identity.Anonymous()) shouldBeSameInstanceAs user
+            val defaultUser = userManager.user
+
+            context("Identity.Anonymous") {
+                val userFromGetBy = userManager.getUserBy(Identity.Anonymous())
+
+                it("gives same UserAnonymous instance") {
+                    userFromGetBy shouldBeSameInstanceAs defaultUser
+                }
             }
 
-            context("Identified") {
+            context("Identity.Known") {
                 val mockId = "mockId"
-                val userWithId = userManager.getUserBy(Identity.ExternalId(mockId))
-                it("gives UserIdentified with ExternalIdWithoutAuth") {
-                    userWithId.shouldBeTypeOf<UserIdentified>()
-                }
+                val userFromGetBy =
+                    userManager.getUserBy(Identity.ExternalId(mockId))
 
-                it("gives differ User with ExternalIdWithoutAuth") {
-                    userWithId shouldNotBeSameInstanceAs user
+                it("gives UserKnown") {
+                    userFromGetBy.shouldBeTypeOf<UserKnown>()
+                }
+                it("gives a different User with than default") {
+                    userFromGetBy shouldNotBe defaultUser
                 }
             }
         }
