@@ -3,7 +3,7 @@ package com.onesignal.onesignal
 import com.onesignal.onesignal.impl.OneSignalImp
 import com.onesignal.user.User
 import com.onesignal.user.UserAnonymous
-import com.onesignal.user.UserIdentified
+import com.onesignal.user.UserKnown
 import com.onesignal.user.Identity
 
 // This is singleton class that is designed to make OneSignal easy to use.
@@ -25,7 +25,7 @@ public object OneSignal : IOneSignal {
     //    User Logs in - Call with ExternalIdWithoutAuth or ExternalIdWithAuthHash
     //    User Logs out - Call with null (no push) or with UserIdentity.Anonymous (generic push)
 
-    override fun switchUser(identityKnown: Identity.Known): UserIdentified {
+    override fun switchUser(identityKnown: Identity.Known): UserKnown {
         return oneSignal.switchUser(identityKnown);
     }
 

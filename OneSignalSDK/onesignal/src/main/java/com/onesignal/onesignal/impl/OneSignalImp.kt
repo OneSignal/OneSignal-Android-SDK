@@ -3,7 +3,7 @@ package com.onesignal.onesignal.impl
 import com.onesignal.onesignal.IOneSignal
 import com.onesignal.user.User
 import com.onesignal.user.UserAnonymous
-import com.onesignal.user.UserIdentified
+import com.onesignal.user.UserKnown
 import com.onesignal.user.Identity
 
 class OneSignalImp : IOneSignal {
@@ -26,7 +26,7 @@ class OneSignalImp : IOneSignal {
         TODO()
     }
 
-    override fun switchUser(identityKnown: Identity.Known): UserIdentified {
+    override fun switchUser(identityKnown: Identity.Known): UserKnown {
         TODO("Not yet implemented")
     }
 
