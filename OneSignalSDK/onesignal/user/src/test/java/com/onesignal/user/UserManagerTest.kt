@@ -33,14 +33,18 @@ class UserManagerTest : DescribeSpec({
 
             context("Identity.Known") {
                 val mockId = "mockId"
-                val userFromGetBy =
-                    userManager.getUserBy(Identity.ExternalId(mockId))
+                val identity = Identity.ExternalId(mockId)
+                val userFromGetBy = userManager.getUserBy(identity)
 
                 it("gives UserKnown") {
                     userFromGetBy.shouldBeTypeOf<UserKnown>()
                 }
                 it("gives a different User with than default") {
                     userFromGetBy shouldNotBe defaultUser
+                }
+                it("gives same instance with same id") {
+                    userFromGetBy shouldBeSameInstanceAs
+                            userManager.getUserBy(identity)
                 }
             }
         }
