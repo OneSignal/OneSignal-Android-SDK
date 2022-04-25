@@ -20,6 +20,18 @@ class UserManagerTest : DescribeSpec({
         }
     }
 
+    // TODO: Make something more generic that can test many states for side
+    //       effects like this one.
+    context("active user is Known") {
+        val userManger = UserManager()
+        val knowUser = userManger.switchUser(Identity.ExternalId("mockId"))
+
+        it("getUserBy - Anonymous - should NOT change active User from Known") {
+            userManger.getUserBy(Identity.Anonymous())
+            knowUser shouldBeSameInstanceAs userManger.user
+        }
+    }
+
     data class UserMangerInstance(
         val stateDescription: String,
         val userManager: () -> UserManager

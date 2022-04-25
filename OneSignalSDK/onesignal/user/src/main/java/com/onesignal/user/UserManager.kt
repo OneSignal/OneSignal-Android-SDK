@@ -7,6 +7,10 @@ class UserManager {
     //   this is the User that will be used.
     private var _user: User<out Identity>? = null
 
+    // Used when the current _user is a UserKnown instance but we want repeated
+    //   calls to getUserBy(Anonymous) to give the same instance.
+    private var _userAnonymous: UserAnonymous? = null
+
     // TODO: Clearing users out of the RAM cache probably isn't something we need to optimize for.
     //       We probably be better to keep them in RAM as long as possible to save on disk reads
     //       and network calls instead.
@@ -29,10 +33,9 @@ class UserManager {
             UserKnown(identity).also { userMap[identity] = it }
 
     fun getUserBy(_identity: Identity.Anonymous): UserAnonymous {
-        val currentUser = user
-        if (currentUser is UserAnonymous) return currentUser
-        // TODO: Should give same instance
-        return UserAnonymous()
+        val localUser = user
+        if (localUser is UserAnonymous) return localUser
+        return _userAnonymous ?: UserAnonymous().also { _userAnonymous = it }
     }
 
     fun switchUser(identityKnown: Identity.Known): UserKnown {
