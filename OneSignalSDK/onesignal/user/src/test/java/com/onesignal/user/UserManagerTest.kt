@@ -2,7 +2,6 @@ package com.onesignal.user
 
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.nulls.shouldNotBeNull
-
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.kotest.matchers.types.shouldBeTypeOf
@@ -55,45 +54,47 @@ class UserManagerTest : DescribeSpec({
         },
     )
 
-    activeUserStates.forEach { context("State(${it.stateDescription})") {
-        context("user property getter") {
-            val userManager = it.userManager()
-            it("gives instance") {
-                userManager.user.shouldNotBeNull()
+    activeUserStates.forEach {
+        context("State(${it.stateDescription})") {
+            context("user property getter") {
+                val userManager = it.userManager()
+                it("gives instance") {
+                    userManager.user.shouldNotBeNull()
+                }
+            }
+            context("getUserBy") {
+                context("Anonymous") {
+                    val userManager = it.userManager()
+                    val getAnonymousUser = {
+                        userManager.getUserBy(Identity.Anonymous())
+                    }
+                    val firstUser = getAnonymousUser()
+
+                    it("gives UserAnonymous") {
+                        firstUser.shouldBeTypeOf<UserAnonymous>()
+                    }
+                    it("gives same instance") {
+                        getAnonymousUser() shouldBeSameInstanceAs firstUser
+                    }
+                }
+                context("Known") {
+                    val userManager = it.userManager()
+                    val mockId = "mockId"
+                    val identity = Identity.ExternalId(mockId)
+                    val userFromGetBy = userManager.getUserBy(identity)
+
+                    it("gives UserKnown") {
+                        userFromGetBy.shouldBeTypeOf<UserKnown>()
+                    }
+                    it("gives a different User with than default") {
+                        userFromGetBy shouldNotBe userManager.user
+                    }
+                    it("gives same instance with same id") {
+                        userFromGetBy shouldBeSameInstanceAs
+                            userManager.getUserBy(identity)
+                    }
+                }
             }
         }
-        context("getUserBy") {
-            context("Anonymous") {
-                val userManager = it.userManager()
-                val getAnonymousUser = {
-                    userManager.getUserBy(Identity.Anonymous())
-                }
-                val firstUser = getAnonymousUser()
-
-                it("gives UserAnonymous") {
-                    firstUser.shouldBeTypeOf<UserAnonymous>()
-                }
-                it("gives same instance") {
-                    getAnonymousUser() shouldBeSameInstanceAs firstUser
-                }
-            }
-            context("Known") {
-                val userManager = it.userManager()
-                val mockId = "mockId"
-                val identity = Identity.ExternalId(mockId)
-                val userFromGetBy = userManager.getUserBy(identity)
-
-                it("gives UserKnown") {
-                    userFromGetBy.shouldBeTypeOf<UserKnown>()
-                }
-                it("gives a different User with than default") {
-                    userFromGetBy shouldNotBe userManager.user
-                }
-                it("gives same instance with same id") {
-                    userFromGetBy shouldBeSameInstanceAs
-                        userManager.getUserBy(identity)
-                }
-            }
-        }
-    }}
+    }
 })

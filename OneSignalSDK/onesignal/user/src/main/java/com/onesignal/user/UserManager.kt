@@ -1,6 +1,6 @@
 package com.onesignal.user
 
-import java.util.*
+import java.util.WeakHashMap
 
 class UserManager {
     // The Active User - If an event happens (such a new session)
@@ -29,8 +29,8 @@ class UserManager {
         }
 
     fun getUserBy(identity: Identity.Known): UserKnown =
-        userMap[identity] ?:
-            UserKnown(identity).also { userMap[identity] = it }
+        userMap[identity]
+            ?: UserKnown(identity).also { userMap[identity] = it }
 
     fun getUserBy(_identity: Identity.Anonymous): UserAnonymous {
         val localUser = user
