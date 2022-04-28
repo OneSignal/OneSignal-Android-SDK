@@ -414,7 +414,7 @@ class OSUtils {
       try {
          ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
          return ai.metaData;
-      } catch (PackageManager.NameNotFoundException e) {
+      } catch (Exception e) {
          Log(OneSignal.LOG_LEVEL.ERROR, "Manifest application info not found", e);
       }
 
@@ -495,7 +495,7 @@ class OSUtils {
       try {
          ApplicationInfo applicationInfo = packageManager.getApplicationInfo(packageName, 0);
          return applicationInfo.targetSdkVersion;
-      } catch (PackageManager.NameNotFoundException e) {
+      } catch (Exception e) {
          e.printStackTrace();
       }
 
