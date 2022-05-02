@@ -385,7 +385,7 @@ class GenerateNotification {
       notifBuilder.setGroup(group);
 
       try {
-         notifBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
+         notifBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN);
       } catch (Throwable t) {
          //do nothing in this case...Android support lib 26 isn't in the project
       }
@@ -612,7 +612,7 @@ class GenerateNotification {
               .setGroupSummary(true);
 
          try {
-            summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
+            summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN);
          }
          catch (Throwable t) {
             //do nothing in this case...Android support lib 26 isn't in the project
@@ -674,7 +674,7 @@ class GenerateNotification {
                        .setGroupSummary(true);
 
          try {
-            summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
+            summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN);
          }
          catch (Throwable t) {
             //do nothing in this case...Android support lib 26 isn't in the project
@@ -730,7 +730,7 @@ class GenerateNotification {
             .setGroupSummary(true);
 
       try {
-        summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
+        summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN);
       }
       catch (Throwable t) {
         // Do nothing in this case... Android support lib 26 isn't in the project
