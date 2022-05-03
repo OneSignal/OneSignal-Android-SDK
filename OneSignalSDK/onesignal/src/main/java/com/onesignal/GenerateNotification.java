@@ -82,10 +82,24 @@ class GenerateNotification {
    private static Resources contextResources = null;
    private static Context currentContext = null;
    private static String packageName = null;
+   private static Integer groupAlertBehavior = null;
 
    private static class OneSignalNotificationBuilder {
       NotificationCompat.Builder compatBuilder;
       boolean hasLargeIcon;
+   }
+
+   // NotificationCompat unfortunately doesn't correctly support some features
+   // such as sounds and heads-up notifications with GROUP_ALERT_CHILDREN on
+   // Android 6.0 and older.
+   // This includes:
+   //    Android 6.0 - No Sound or heads-up
+   //    Android 5.0 - Sound, but no heads-up
+   private static void initGroupAlertBehavior() {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+         groupAlertBehavior = NotificationCompat.GROUP_ALERT_CHILDREN;
+     else
+         groupAlertBehavior = NotificationCompat.GROUP_ALERT_SUMMARY;
    }
 
    private static void setStatics(Context inContext) {
@@ -99,6 +113,8 @@ class GenerateNotification {
       setStatics(notificationJob.getContext());
 
       isRunningOnMainThreadCheck();
+
+      initGroupAlertBehavior();
 
       return showNotification(notificationJob);
    }
@@ -385,7 +401,7 @@ class GenerateNotification {
       notifBuilder.setGroup(group);
 
       try {
-         notifBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN);
+         notifBuilder.setGroupAlertBehavior(groupAlertBehavior);
       } catch (Throwable t) {
          //do nothing in this case...Android support lib 26 isn't in the project
       }
@@ -612,7 +628,7 @@ class GenerateNotification {
               .setGroupSummary(true);
 
          try {
-            summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN);
+            summaryBuilder.setGroupAlertBehavior(groupAlertBehavior);
          }
          catch (Throwable t) {
             //do nothing in this case...Android support lib 26 isn't in the project
@@ -674,7 +690,7 @@ class GenerateNotification {
                        .setGroupSummary(true);
 
          try {
-            summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN);
+            summaryBuilder.setGroupAlertBehavior(groupAlertBehavior);
          }
          catch (Throwable t) {
             //do nothing in this case...Android support lib 26 isn't in the project
@@ -730,7 +746,7 @@ class GenerateNotification {
             .setGroupSummary(true);
 
       try {
-        summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_CHILDREN);
+        summaryBuilder.setGroupAlertBehavior(groupAlertBehavior);
       }
       catch (Throwable t) {
         // Do nothing in this case... Android support lib 26 isn't in the project
