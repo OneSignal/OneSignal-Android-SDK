@@ -86,7 +86,7 @@ class GenerateNotificationOpenIntent(
     }
 
     // Return the provide intent if one was set, otherwise default to opening the app.
-    private fun getIntentVisible(): Intent? {
+    fun getIntentVisible(): Intent? {
         if (intent != null) return intent
         return getIntentAppOpen()
     }
