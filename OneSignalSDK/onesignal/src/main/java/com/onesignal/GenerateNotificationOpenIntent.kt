@@ -51,17 +51,11 @@ class GenerateNotificationOpenIntent(
             context,
             notificationOpenedClassAndroid22AndOlder
         )
-
-        if (getIntentVisible() == null) {
-            // If we don't show a visible Activity put OneSignal's invisible click tracking
-            // Activity on it's own task so it doesn't resume an existing one once it closes.
-            intent.addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
-                Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET
-            )
-        }
-
+        intent.addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK or
+            Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+            Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET
+        )
         return intent
     }
 
@@ -83,31 +77,10 @@ class GenerateNotificationOpenIntent(
         oneSignalIntent: Intent,
     ): PendingIntent? {
         val flags =  PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        val launchIntent = getIntentVisible()
-            ?:
-            // Even though the default app open action is disabled we still need to attach OneSignal's
-            // invisible Activity to capture click event to report click counts and etc.
-            // You may be thinking why not use a BroadcastReceiver instead of an invisible
-            // Activity? This could be done in a 5.0.0 release but can't be changed now as it is
-            // unknown if the app developer will be starting there own Activity from their
-            // OSNotificationOpenedHandler and that would have side-effects.
-            return PendingIntent.getActivity(
-                context,
-                requestCode,
-                oneSignalIntent,
-                flags
-            )
-
-
-        // This setups up a "Reverse Activity Trampoline"
-        // The first Activity to launch will be oneSignalIntent, which is an invisible
-        // Activity to track the click, fire OSNotificationOpenedHandler, etc. This Activity
-        // will finish quickly and the destination Activity, launchIntent, will be shown to the user
-        // since it is the next in the back stack.
-        return PendingIntent.getActivities(
+        return PendingIntent.getActivity(
             context,
             requestCode,
-            arrayOf(launchIntent, oneSignalIntent),
+            oneSignalIntent,
             flags
         )
     }
