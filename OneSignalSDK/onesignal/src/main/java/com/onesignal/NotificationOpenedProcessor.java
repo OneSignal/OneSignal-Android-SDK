@@ -114,7 +114,7 @@ class NotificationOpenedProcessor {
          if (!(context instanceof Activity))
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "NotificationOpenedProcessor processIntent from an non Activity context: " + context);
          else OneSignal.handleNotificationOpen((Activity) context, intentExtras.getDataArray(),
-                 false, OSNotificationFormatHelper.getOSNotificationIdFromJson(intentExtras.getJsonData()));
+                 OSNotificationFormatHelper.getOSNotificationIdFromJson(intentExtras.getJsonData()));
       }
    }
 
