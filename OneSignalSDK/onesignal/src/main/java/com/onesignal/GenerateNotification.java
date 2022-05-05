@@ -259,9 +259,8 @@ class GenerateNotification {
       JSONObject fcmJson = notificationJob.getJsonPayload();
       String group = fcmJson.optString("grp", null);
 
-      GenerateNotificationOpenIntent intentGenerator = GenerateNotificationOpenIntentFromPushPayload.INSTANCE.create(
-          currentContext,
-          fcmJson
+      IntentGeneratorForAttachingToNotifications intentGenerator = new IntentGeneratorForAttachingToNotifications(
+          currentContext
       );
 
       ArrayList<StatusBarNotification> grouplessNotifs = new ArrayList<>();
@@ -352,7 +351,7 @@ class GenerateNotification {
 
    private static Notification createGenericPendingIntentsForNotif(
        NotificationCompat.Builder notifBuilder,
-       GenerateNotificationOpenIntent intentGenerator,
+       IntentGeneratorForAttachingToNotifications intentGenerator,
        JSONObject gcmBundle,
        int notificationId
    ) {
@@ -369,7 +368,7 @@ class GenerateNotification {
 
    private static void createGenericPendingIntentsForGroup(
        NotificationCompat.Builder notifBuilder,
-       GenerateNotificationOpenIntent intentGenerator,
+       IntentGeneratorForAttachingToNotifications intentGenerator,
        JSONObject gcmBundle,
        String group,
        int notificationId
@@ -479,9 +478,8 @@ class GenerateNotification {
    private static void createSummaryNotification(OSNotificationGenerationJob notificationJob, OneSignalNotificationBuilder notifBuilder) {
       boolean updateSummary = notificationJob.isRestoring();
       JSONObject fcmJson = notificationJob.getJsonPayload();
-      GenerateNotificationOpenIntent intentGenerator = GenerateNotificationOpenIntentFromPushPayload.INSTANCE.create(
-           currentContext,
-           fcmJson
+      IntentGeneratorForAttachingToNotifications intentGenerator = new IntentGeneratorForAttachingToNotifications(
+           currentContext
       );
 
       String group = fcmJson.optString("grp", null);
@@ -690,7 +688,7 @@ class GenerateNotification {
    @RequiresApi(api = Build.VERSION_CODES.M)
    private static void createGrouplessSummaryNotification(
        OSNotificationGenerationJob notificationJob,
-       GenerateNotificationOpenIntent intentGenerator,
+       IntentGeneratorForAttachingToNotifications intentGenerator,
        int grouplessNotifCount
    ) {
       JSONObject fcmJson = notificationJob.getJsonPayload();
@@ -747,7 +745,7 @@ class GenerateNotification {
    
    private static Intent createBaseSummaryIntent(
        int summaryNotificationId,
-       GenerateNotificationOpenIntent intentGenerator,
+       IntentGeneratorForAttachingToNotifications intentGenerator,
        JSONObject fcmJson,
        String group
    ) {
@@ -1018,7 +1016,7 @@ class GenerateNotification {
 
    private static void addNotificationActionButtons(
        JSONObject fcmJson,
-       GenerateNotificationOpenIntent intentGenerator,
+       IntentGeneratorForAttachingToNotifications intentGenerator,
        NotificationCompat.Builder mBuilder,
        int notificationId,
        String groupSummary
