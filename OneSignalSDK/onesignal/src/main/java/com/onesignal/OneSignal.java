@@ -1780,13 +1780,28 @@ public class OneSignal {
       languageProviderAppDefined.setLanguage(language);
       languageContext.setStrategy(languageProviderAppDefined);
 
-      try {
-         JSONObject deviceInfo = new JSONObject();
-         deviceInfo.put("language", languageContext.getLanguage());
-         OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo, deviceInfoCompletionHandler);
-      } catch (JSONException exception) {
-         exception.printStackTrace();
+      OSDeviceInfoCompletionHandler finalDeviceInfoCompletionHandler = deviceInfoCompletionHandler;
+      Runnable setLanguageRunnable = new Runnable() {
+         @Override
+         public void run() {
+            try {
+               JSONObject deviceInfo = new JSONObject();
+               deviceInfo.put("language", languageContext.getLanguage());
+               OneSignalStateSynchronizer.updateDeviceInfo(deviceInfo, finalDeviceInfoCompletionHandler);
+            } catch (JSONException exception) {
+               exception.printStackTrace();
+            }
+         }
+      };
+
+      // If pendingTaskExecutor is running, there might be sendTags tasks running, use it to run sendTagsRunnable to keep order call
+      if (taskRemoteController.shouldRunTaskThroughQueue()) {
+         logger.debug("Sending " + OSTaskRemoteController.SET_LANGUAGE + " operation to pending task queue.");
+         taskRemoteController.addTaskToQueue(setLanguageRunnable);
+         return;
       }
+
+      setLanguageRunnable.run();
    }
 
    public static void setExternalUserId(@NonNull final String externalId) {
