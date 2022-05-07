@@ -1308,11 +1308,17 @@ public class GenerateNotificationRunner {
          }});
       }}.toString());
 
+      // Grab activity to remove it from the unit test's tracked list.
+      shadowOf(blankActivity).getNextStartedActivity();
+
       Intent notificationOpenIntent = createOpenIntent(2, inAppPreviewMockPayloadBundle());
       NotificationOpenedProcessor_processFromContext(blankActivity, notificationOpenIntent);
       threadAndTaskWait();
       threadAndTaskWait();
       assertEquals("PGh0bWw+PC9odG1sPgoKPHNjcmlwdD4KICAgIHNldFBsYXllclRhZ3MobnVsbCk7Cjwvc2NyaXB0Pg==", ShadowOSWebView.lastData);
+
+      // Ensure the app is foregrounded.
+      assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
    }
 
    @Test

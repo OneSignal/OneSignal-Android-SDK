@@ -2429,7 +2429,7 @@ public class OneSignal {
       runNotificationOpenedCallback(data);
    }
 
-   static private void openDestinationActivity(
+   static void openDestinationActivity(
       @NonNull final Activity activity,
       @NonNull final JSONArray pushPayloads
    ) {
@@ -2443,6 +2443,7 @@ public class OneSignal {
 
          Intent intent = intentGenerator.getIntentVisible();
          if (intent != null) {
+            logger.info("SDK running startActivity with Intent: " + intent);
             activity.startActivity(intent);
          }
          else {
