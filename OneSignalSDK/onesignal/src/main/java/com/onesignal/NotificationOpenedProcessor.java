@@ -126,7 +126,7 @@ class NotificationOpenedProcessor {
 
          if (!(context instanceof Activity))
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "NotificationOpenedProcessor processIntent from an non Activity context: " + context);
-         else if (handleIAMPreviewOpen((Activity) context, jsonData))
+         else if (OSInAppMessagePreviewHandler.notificationOpened((Activity) context, jsonData))
             return null;
 
          jsonData.put(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, intent.getIntExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0));
@@ -141,15 +141,6 @@ class NotificationOpenedProcessor {
          addChildNotifications(dataArray, summaryGroup, dbHelper);
 
       return new OSNotificationIntentExtras(dataArray, jsonData);
-   }
-
-   static boolean handleIAMPreviewOpen(@NonNull Activity context, @NonNull JSONObject jsonData) {
-      String previewUUID = OSInAppMessagePreviewHandler.inAppPreviewPushUUID(jsonData);
-      if (previewUUID == null)
-         return false;
-
-      OneSignal.getInAppMessageController().displayPreviewMessage(previewUUID);
-      return true;
    }
 
    private static void addChildNotifications(JSONArray dataArray, String summaryGroup, OneSignalDbHelper writableDb) {

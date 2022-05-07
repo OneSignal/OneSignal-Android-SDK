@@ -1,14 +1,17 @@
 package com.onesignal
 
+import android.app.Activity
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
+import androidx.annotation.ChecksSdkIntAtLeast
+import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
 internal object OSInAppMessagePreviewHandler {
     @JvmStatic
-    fun inAppMessagePreviewHandled(context: Context?, bundle: Bundle?): Boolean {
+    fun notificationReceived(context: Context?, bundle: Bundle?): Boolean {
         val pushPayloadJson = NotificationBundleProcessor.bundleAsJSONObject(bundle)
         // Show In-App message preview it is in the payload & the app is in focus
         val previewUUID = inAppPreviewPushUUID(pushPayloadJson) ?: return false
@@ -20,6 +23,15 @@ internal object OSInAppMessagePreviewHandler {
             val generationJob = OSNotificationGenerationJob(context, pushPayloadJson)
             GenerateNotification.displayIAMPreviewNotification(generationJob)
         }
+        return true
+    }
+
+    @JvmStatic
+    fun notificationOpened(activity: Activity, jsonData: JSONObject): Boolean {
+        val previewUUID = inAppPreviewPushUUID(jsonData) ?: return false
+
+        OneSignal.openDestinationActivity(activity, JSONArray().put(jsonData))
+        OneSignal.getInAppMessageController().displayPreviewMessage(previewUUID)
         return true
     }
 
@@ -43,5 +55,6 @@ internal object OSInAppMessagePreviewHandler {
     }
 
     // Validate that the current Android device is Android 4.4 or higher
+    @ChecksSdkIntAtLeast(api = Build.VERSION_CODES.KITKAT)
     private fun shouldDisplayNotification(): Boolean = Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR2
 }
