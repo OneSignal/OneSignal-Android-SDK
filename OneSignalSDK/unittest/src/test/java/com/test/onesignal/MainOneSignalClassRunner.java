@@ -1078,6 +1078,25 @@ public class MainOneSignalClassRunner {
    }
 
    @Test
+   public void testOpeningLauncherActivityWhenOffline() throws Exception {
+      ShadowOneSignalRestClient.failGetParams = true;
+      AddLauncherIntentFilter();
+
+      OneSignalInit();
+      // This removes Activity from the unit test's state
+      assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
+
+      // Background the app
+      blankActivityController.pause();
+
+      // Open a notification
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID);
+
+      // Ensure the app is foregrounded
+      assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
+   }
+
+   @Test
    public void testOpeningLaunchUrl() throws Exception {
       // First init run for appId to be saved
       // At least OneSignal was init once for user to be subscribed
