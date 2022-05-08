@@ -139,9 +139,14 @@ public class OneSignalRemoteParams {
                      sleepTime = MAX_WAIT_BETWEEN_RETRIES;
 
                   OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "Failed to get Android parameters, trying again in " + (sleepTime / 1_000) +  " seconds.");
-                  OSUtils.sleep(sleepTime);
-                  androidParamsRetries++;
-                  makeAndroidParamsRequest(appId, userId, callback);
+                  try {
+                     Thread.sleep(sleepTime);
+                     androidParamsRetries++;
+                     makeAndroidParamsRequest(appId, userId, callback);
+                  } catch (InterruptedException e) {
+                     // Don't retry if something intentionally wants to stop this action
+                     e.printStackTrace();
+                  }
                }
             }, "OS_PARAMS_REQUEST").start();
          }
