@@ -2395,22 +2395,6 @@ public class OneSignal {
     * Method called when opening a notification
     */
    static void handleNotificationOpen(final Activity context, final JSONArray data, @Nullable final String notificationId) {
-      // Delay call until remote params are set
-      if (taskRemoteController.shouldQueueTaskForInit(OSTaskRemoteController.HANDLE_NOTIFICATION_OPEN)) {
-         logger.error("Waiting for remote params. " +
-                 "Moving " + OSTaskRemoteController.HANDLE_NOTIFICATION_OPEN + " operation to a pending queue.");
-         taskRemoteController.addTaskToQueue(new Runnable() {
-            @Override
-            public void run() {
-               if (appContext != null) {
-                  logger.debug("Running " + OSTaskRemoteController.HANDLE_NOTIFICATION_OPEN + " operation from pending queue.");
-                  handleNotificationOpen(context, data, notificationId);
-               }
-            }
-         });
-         return;
-      }
-
       // If applicable, check if the user provided privacy consent
       if (shouldLogUserPrivacyConsentErrorMessageForMethodName(null))
          return;
