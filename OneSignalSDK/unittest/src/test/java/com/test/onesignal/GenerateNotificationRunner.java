@@ -1271,11 +1271,14 @@ public class GenerateNotificationRunner {
    @Test
    @Config(shadows = { ShadowGenerateNotification.class })
    public void shouldSetExpireTimeCorrectlyWhenMissingFromPayload() throws Exception {
+      time.freezeTime();
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle());
       threadAndTaskWait();
 
+      long currentTime = time.getCurrentTimeMillis() / 1_000L;
       long expireTime = (Long)TestHelpers.getAllNotificationRecords(dbHelper).get(0).get(NotificationTable.COLUMN_NAME_EXPIRE_TIME);
-      assertEquals((System.currentTimeMillis() / 1_000L) + 259_200, expireTime);
+      long expectedExpireTime = currentTime + 259_200;
+      assertEquals(expectedExpireTime, expireTime);
    }
 
    // TODO: Once we figure out the correct way to process notifications with high priority using the WorkManager
