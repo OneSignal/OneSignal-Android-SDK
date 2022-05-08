@@ -200,6 +200,8 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
                 );
 
         helper_startHMSOpenActivity(intent);
+        threadAndTaskWait();
+        threadAndTaskWait();
         assertEquals("PGh0bWw+PC9odG1sPgoKPHNjcmlwdD4KICAgIHNldFBsYXllclRhZ3MobnVsbCk7Cjwvc2NyaXB0Pg==", ShadowOSWebView.lastData);
     }
 }
