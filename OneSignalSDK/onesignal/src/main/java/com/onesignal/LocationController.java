@@ -343,8 +343,6 @@ class LocationController {
    }
 
    static void fireFailedComplete() {
-      PermissionsActivity.answered = false;
-
       synchronized (syncLock) {
          if (isGooglePlayServicesAvailable())
             GMSLocationController.fireFailedComplete();

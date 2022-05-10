@@ -33,6 +33,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+
 import androidx.annotation.NonNull;
 
 import com.onesignal.AndroidSupportV4Compat.ActivityCompat;
@@ -53,7 +54,7 @@ public class PermissionsActivity extends Activity {
    private static final int ONESIGNAL_PERMISSION_REQUEST_CODE = 2;
    private static final int REQUEST_SETTINGS = 3;
 
-   static boolean waiting, answered, fallbackToSettings, neverAskAgainClicked;
+   private static boolean waiting, fallbackToSettings, neverAskAgainClicked;
    private static ActivityLifecycleHandler.ActivityAvailableListener activityAvailableListener;
 
    private static final String INTENT_EXTRA_PERMISSION_TYPE = "INTENT_EXTRA_PERMISSION_TYPE";
@@ -79,26 +80,12 @@ public class PermissionsActivity extends Activity {
       OneSignal.initWithContext(this);
 
       handleBundleParams(getIntent().getExtras());
-
-// TODO: Very unlikely we need to handle this special case, but come back and confirm
-//      // Android sets android:hasCurrentPermissionsRequest if the Activity was recreated while
-//      //  the permission prompt is showing to the user.
-//      // This can happen if the task is cold resumed from the Recent Apps list.
-//      if (savedInstanceState != null &&
-//          savedInstanceState.getBoolean("android:hasCurrentPermissionsRequest", false))
-//         waiting = true;
-//      else
-//         requestPermission();
    }
 
    @Override
    protected void onNewIntent(Intent intent) {
       super.onNewIntent(intent);
       handleBundleParams(intent.getExtras());
-
-// TODO: Confirm if we still need this check
-//      if (OneSignal.isInitDone())
-//         requestPermission();
    }
 
    private void handleBundleParams(Bundle extras) {
@@ -140,7 +127,6 @@ public class PermissionsActivity extends Activity {
 
    @Override
    public void onRequestPermissionsResult(final int requestCode, @NonNull String permissions[], @NonNull final int[] grantResults) {
-      answered = true;
       waiting = false;
 
       // TODO improve this method
@@ -187,7 +173,7 @@ public class PermissionsActivity extends Activity {
       String androidPermissionString,
       Class<?> callbackClass
    ) {
-      if (PermissionsActivity.waiting || PermissionsActivity.answered)
+      if (PermissionsActivity.waiting)
          return;
 
       fallbackToSettings = fallbackCondition;
