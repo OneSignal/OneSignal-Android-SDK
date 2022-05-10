@@ -46,37 +46,45 @@ public class PermissionsActivity extends Activity {
    // TODO this will be removed once the handled is deleted
    // Default animation duration in milliseconds
    private static final int DELAY_TIME_CALLBACK_CALL = 500;
-   private static final int REQUEST_LOCATION = 2;
+   private static final int ONESIGNAL_PERMISSION_REQUEST_CODE = 2;
    private static final int REQUEST_SETTINGS = 3;
 
    static boolean waiting, answered, fallbackToSettings, neverAskAgainClicked;
    private static ActivityLifecycleHandler.ActivityAvailableListener activityAvailableListener;
 
+   private static final String INTENT_EXTRA_PERMISSION_TYPE = "INTENT_EXTRA_PERMISSION_TYPE";
+   private static final String INTENT_EXTRA_ANDROID_PERMISSION_STRING = "INTENT_EXTRA_ANDROID_PERMISSION_STRING";
+   private String permissionRequestType;
+
    @Override
    protected void onCreate(Bundle savedInstanceState) {
       super.onCreate(savedInstanceState);
-
       OneSignal.initWithContext(this);
 
-      // Android sets android:hasCurrentPermissionsRequest if the Activity was recreated while
-      //  the permission prompt is showing to the user.
-      // This can happen if the task is cold resumed from the Recent Apps list.
-      if (savedInstanceState != null &&
-          savedInstanceState.getBoolean("android:hasCurrentPermissionsRequest", false))
-         waiting = true;
-      else
-         requestPermission();
+      handleBundleParams(getIntent().getExtras());
+
+// TODO: Very unlikely we need to handle this special case, but come back and confirm
+//      // Android sets android:hasCurrentPermissionsRequest if the Activity was recreated while
+//      //  the permission prompt is showing to the user.
+//      // This can happen if the task is cold resumed from the Recent Apps list.
+//      if (savedInstanceState != null &&
+//          savedInstanceState.getBoolean("android:hasCurrentPermissionsRequest", false))
+//         waiting = true;
+//      else
+//         requestPermission();
    }
 
    @Override
    protected void onNewIntent(Intent intent) {
       super.onNewIntent(intent);
+      handleBundleParams(intent.getExtras());
 
-      if (OneSignal.isInitDone())
-         requestPermission();
+// TODO: Confirm if we still need this check
+//      if (OneSignal.isInitDone())
+//         requestPermission();
    }
 
-   private void requestPermission() {
+   private void handleBundleParams(Bundle extras) {
       // https://github.com/OneSignal/OneSignal-Android-SDK/issues/30
       // Activity maybe invoked directly through automated testing, omit prompting on old Android versions.
       if (Build.VERSION.SDK_INT < 23) {
@@ -85,10 +93,16 @@ public class PermissionsActivity extends Activity {
          return;
       }
 
+      permissionRequestType = extras.getString(INTENT_EXTRA_PERMISSION_TYPE);
+      String androidPermissionString = extras.getString(INTENT_EXTRA_ANDROID_PERMISSION_STRING);
+      requestPermission(androidPermissionString);
+   }
+
+   private void requestPermission(String androidPermissionString) {
       if (!waiting) {
          waiting = true;
-         neverAskAgainClicked = !ActivityCompat.shouldShowRequestPermissionRationale(PermissionsActivity.this, LocationController.requestPermission);
-         ActivityCompat.requestPermissions(this, new String[]{LocationController.requestPermission}, REQUEST_LOCATION);
+         neverAskAgainClicked = !ActivityCompat.shouldShowRequestPermissionRationale(PermissionsActivity.this, androidPermissionString);
+         ActivityCompat.requestPermissions(this, new String[]{androidPermissionString}, ONESIGNAL_PERMISSION_REQUEST_CODE);
       }
    }
 
@@ -103,7 +117,7 @@ public class PermissionsActivity extends Activity {
       // Current problem: IAM depends on an activity, because of prompt permission the evaluation of IAM
       // is being called before the prompt activity dismisses, so it's attaching the IAM to PermissionActivity
       // We need to wait for other activity to show
-      if (requestCode == REQUEST_LOCATION) {
+      if (requestCode == ONESIGNAL_PERMISSION_REQUEST_CODE) {
          new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -119,6 +133,7 @@ public class PermissionsActivity extends Activity {
             }
          }, DELAY_TIME_CALLBACK_CALL);
       }
+
       ActivityLifecycleHandler activityLifecycleHandler = ActivityLifecycleListener.getActivityLifecycleHandler();
       if (activityLifecycleHandler != null)
          activityLifecycleHandler.removeActivityAvailableListener(TAG);
@@ -154,7 +169,7 @@ public class PermissionsActivity extends Activity {
               .show();
    }
 
-   static void startPrompt(boolean fallbackCondition) {
+   static void startPrompt(boolean fallbackCondition, String permissionRequestType, String androidPermissionString) {
       if (PermissionsActivity.waiting || PermissionsActivity.answered)
          return;
 
@@ -165,6 +180,8 @@ public class PermissionsActivity extends Activity {
             if (!activity.getClass().equals(PermissionsActivity.class)) {
                Intent intent = new Intent(activity, PermissionsActivity.class);
                intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+               intent.putExtra(INTENT_EXTRA_PERMISSION_TYPE, permissionRequestType)
+                     .putExtra(INTENT_EXTRA_ANDROID_PERMISSION_STRING, androidPermissionString);
                activity.startActivity(intent);
                activity.overridePendingTransition(R.anim.onesignal_fade_in, R.anim.onesignal_fade_out);
             }

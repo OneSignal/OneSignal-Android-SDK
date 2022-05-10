@@ -252,7 +252,7 @@ class LocationController {
                //
                // For each case, we call the prompt handlers
                if (requestPermission != null && promptLocation) {
-                  PermissionsActivity.startPrompt(fallbackToSettings);
+                  PermissionsActivity.startPrompt(fallbackToSettings,"LOCATION", requestPermission);
                } else if (locationCoarsePermission == PackageManager.PERMISSION_GRANTED) {
                   sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.PERMISSION_GRANTED);
                   startGetLocation();
@@ -289,7 +289,7 @@ class LocationController {
          }
 
          if (requestPermission != null && promptLocation) {
-            PermissionsActivity.startPrompt(fallbackToSettings);
+            PermissionsActivity.startPrompt(fallbackToSettings, "LOCATION", requestPermission);
          } else {
             // Fine permission already granted
             sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.PERMISSION_GRANTED);
