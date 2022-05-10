@@ -561,7 +561,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         subscriptionSwitch.setOnClickListener(v -> {
             OneSignal.disablePush(!subscriptionSwitch.isChecked());
             if (subscriptionSwitch.isChecked())
-                OneSignal.promptForPushNotifications();
+                OneSignal.promptForPushNotifications(true);
         });
     }
 

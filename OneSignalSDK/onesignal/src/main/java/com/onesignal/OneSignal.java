@@ -2838,8 +2838,25 @@ public class OneSignal {
       LocationController.getLocation(appContext, true, fallbackToSettings, locationHandler);
    }
 
+   /**
+    * On Android 13 shows the system notification permission prompt to enable displaying
+    * notifications. This is required for apps that target Android API level 33 / "Tiramisu"
+    * to subscribe the device for push notifications.
+    */
    public static void promptForPushNotifications() {
-      NotificationPermissionController.INSTANCE.prompt(true, "android.permission.POST_NOTIFICATIONS");
+      promptForPushNotifications(false);
+   }
+
+   /**
+    * On Android 13 shows the system notification permission prompt to enable displaying
+    * notifications. This is required for apps that target Android API level 33 / "Tiramisu"
+    * to subscribe the device for push notifications.
+    *
+    * @param fallbackToSettings whether to show a Dialog to direct users to the App's notification
+    *                           settings if they have declined before.
+    */
+   public static void promptForPushNotifications(boolean fallbackToSettings) {
+      NotificationPermissionController.INSTANCE.prompt(fallbackToSettings);
    }
 
    /**

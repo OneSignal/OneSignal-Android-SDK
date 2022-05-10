@@ -1,20 +1,24 @@
 package com.onesignal
 
+import android.os.Build
+
 object NotificationPermissionController : PermissionsActivity.PermissionCallback {
     private const val PERMISSION_TYPE = "NOTIFICATION"
+    private const val ANDROID_PERMISSION_STRING = "android.permission.POST_NOTIFICATIONS"
 
     init {
         PermissionsActivity.registerAsCallback(PERMISSION_TYPE, this)
     }
 
-    fun prompt(
-        fallbackToSettings: Boolean,
-        androidPermissionString: String,
-    ) {
+    fun prompt(fallbackToSettings: Boolean) {
+        // TODO: Android 13 Beta 1 reports as 32 instead of 33, update to 33 once Google fixes this
+        if (Build.VERSION.SDK_INT < 32)
+            return
+
         PermissionsActivity.startPrompt(
             fallbackToSettings,
             PERMISSION_TYPE,
-            androidPermissionString,
+            ANDROID_PERMISSION_STRING,
             this::class.java
         )
     }
