@@ -1414,6 +1414,10 @@ public class OneSignal {
    }
 
    static void onAppStartFocusLogic() {
+      refreshNotificationPermissionState();
+   }
+
+   static void refreshNotificationPermissionState() {
       getCurrentPermissionState(appContext).refreshAsTo();
    }
 
@@ -1431,7 +1435,7 @@ public class OneSignal {
 
       OSNotificationRestoreWorkManager.beginEnqueueingWork(appContext, false);
 
-      getCurrentPermissionState(appContext).refreshAsTo();
+      refreshNotificationPermissionState();
 
       if (trackFirebaseAnalytics != null && getFirebaseAnalyticsEnabled())
          trackFirebaseAnalytics.trackInfluenceOpenEvent();
@@ -2832,6 +2836,10 @@ public class OneSignal {
       };
 
       LocationController.getLocation(appContext, true, fallbackToSettings, locationHandler);
+   }
+
+   public static void promptForPushNotifications() {
+      NotificationPermissionController.INSTANCE.prompt(true, "android.permission.POST_NOTIFICATIONS");
    }
 
    /**

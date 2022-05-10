@@ -9,4 +9,7 @@
 
     <string name="location_permission_name_for_title">Location</string>
     <string name="location_permission_settings_message">sharing your device location</string>
+
+    <string name="notification_permission_name_for_title">Notifications</string>
+    <string name="notification_permission_settings_message">Notifications</string>
 </resources>
