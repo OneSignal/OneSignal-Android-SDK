@@ -11,7 +11,7 @@ ext {
     googlePlayServicesVersion = '18.0.0'
     jUnitVersion = '4.13.2'
     reflectionsVersion = '0.9.12'
-    roboelectricVersion = '4.4'
+    roboelectricVersion = '4.8.1'
 }
 
 apply plugin: 'com.android.application'
