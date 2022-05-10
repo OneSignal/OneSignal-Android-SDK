@@ -28,11 +28,8 @@
 package com.onesignal;
 
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -40,7 +37,14 @@ import androidx.annotation.NonNull;
 
 import com.onesignal.AndroidSupportV4Compat.ActivityCompat;
 
+import java.util.HashMap;
+
 public class PermissionsActivity extends Activity {
+
+   interface PermissionCallback {
+      void onAccept();
+      void onReject(boolean fallbackToSettings);
+   }
 
    private static final String TAG = PermissionsActivity.class.getCanonicalName();
    // TODO this will be removed once the handled is deleted
@@ -54,7 +58,20 @@ public class PermissionsActivity extends Activity {
 
    private static final String INTENT_EXTRA_PERMISSION_TYPE = "INTENT_EXTRA_PERMISSION_TYPE";
    private static final String INTENT_EXTRA_ANDROID_PERMISSION_STRING = "INTENT_EXTRA_ANDROID_PERMISSION_STRING";
+   private static final String INTENT_EXTRA_CALLBACK_CLASS = "INTENT_EXTRA_CALLBACK_CLASS";
+
    private String permissionRequestType;
+
+   private String androidPermissionString;
+
+   private static final HashMap<String, PermissionCallback> callbackMap = new HashMap<>();
+
+   public static void registerAsCallback(
+      @NonNull String permissionType,
+      @NonNull PermissionCallback callback
+   ) {
+      callbackMap.put(permissionType, callback);
+   }
 
    @Override
    protected void onCreate(Bundle savedInstanceState) {
@@ -93,9 +110,24 @@ public class PermissionsActivity extends Activity {
          return;
       }
 
+      reregisterCallbackHandlers(extras);
+
       permissionRequestType = extras.getString(INTENT_EXTRA_PERMISSION_TYPE);
-      String androidPermissionString = extras.getString(INTENT_EXTRA_ANDROID_PERMISSION_STRING);
+      androidPermissionString = extras.getString(INTENT_EXTRA_ANDROID_PERMISSION_STRING);
       requestPermission(androidPermissionString);
+   }
+
+   // Required if the app was killed while this prompt was showing
+   private void reregisterCallbackHandlers(Bundle extras) {
+      String className = extras.getString(INTENT_EXTRA_CALLBACK_CLASS);
+      try {
+         // Loads class into memory so it's static initialization block runs
+         Class.forName(className);
+      } catch (ClassNotFoundException e) {
+         throw new RuntimeException(
+            "Could not find callback class for PermissionActivity: " + className
+         );
+      }
    }
 
    private void requestPermission(String androidPermissionString) {
@@ -122,13 +154,15 @@ public class PermissionsActivity extends Activity {
             @Override
             public void run() {
                boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
-               OneSignal.PromptActionResult result = granted ? OneSignal.PromptActionResult.PERMISSION_GRANTED : OneSignal.PromptActionResult.PERMISSION_DENIED;
-                LocationController.sendAndClearPromptHandlers(true, result);
-               if (granted) {
-                   LocationController.startGetLocation();
-               } else {
-                   attemptToShowLocationPermissionSettings();
-                   LocationController.fireFailedComplete();
+
+               PermissionCallback callback = callbackMap.get(permissionRequestType);
+               if (callback == null)
+                  throw new RuntimeException("Missing handler for permissionRequestType: " + permissionRequestType);
+
+               if (granted)
+                  callback.onAccept();
+               else {
+                  callback.onReject(shouldShowSettings());
                }
             }
          }, DELAY_TIME_CALLBACK_CALL);
@@ -141,35 +175,18 @@ public class PermissionsActivity extends Activity {
       overridePendingTransition(R.anim.onesignal_fade_in, R.anim.onesignal_fade_out);
    }
 
-   private void attemptToShowLocationPermissionSettings() {
-      if (fallbackToSettings
+   private boolean shouldShowSettings() {
+      return fallbackToSettings
               && neverAskAgainClicked
-              && !ActivityCompat.shouldShowRequestPermissionRationale(PermissionsActivity.this, LocationController.requestPermission))
-         showLocationPermissionSettings();
+              && !ActivityCompat.shouldShowRequestPermissionRationale(PermissionsActivity.this, androidPermissionString);
    }
 
-   private void showLocationPermissionSettings() {
-      new AlertDialog.Builder(OneSignal.getCurrentActivity())
-              .setTitle(R.string.location_not_available_title)
-              .setMessage(R.string.location_not_available_open_settings_message)
-              .setPositiveButton(R.string.location_not_available_open_settings_option, new DialogInterface.OnClickListener() {
-                 public void onClick(DialogInterface dialog, int which) {
-                    Intent intent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                    intent.setData(Uri.parse("package:" + getPackageName()));
-                    startActivity(intent);
-                     LocationController.sendAndClearPromptHandlers(true, OneSignal.PromptActionResult.PERMISSION_DENIED);
-                 }
-              })
-              .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
-                 @Override
-                 public void onClick(DialogInterface dialog, int which) {
-                     LocationController.sendAndClearPromptHandlers(true, OneSignal.PromptActionResult.PERMISSION_DENIED);
-                 }
-              })
-              .show();
-   }
-
-   static void startPrompt(boolean fallbackCondition, String permissionRequestType, String androidPermissionString) {
+   static void startPrompt(
+      boolean fallbackCondition,
+      String permissionRequestType,
+      String androidPermissionString,
+      Class<?> callbackClass
+   ) {
       if (PermissionsActivity.waiting || PermissionsActivity.answered)
          return;
 
@@ -181,7 +198,8 @@ public class PermissionsActivity extends Activity {
                Intent intent = new Intent(activity, PermissionsActivity.class);
                intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
                intent.putExtra(INTENT_EXTRA_PERMISSION_TYPE, permissionRequestType)
-                     .putExtra(INTENT_EXTRA_ANDROID_PERMISSION_STRING, androidPermissionString);
+                     .putExtra(INTENT_EXTRA_ANDROID_PERMISSION_STRING, androidPermissionString)
+                     .putExtra(INTENT_EXTRA_CALLBACK_CLASS, callbackClass.getName());
                activity.startActivity(intent);
                activity.overridePendingTransition(R.anim.onesignal_fade_in, R.anim.onesignal_fade_out);
             }
