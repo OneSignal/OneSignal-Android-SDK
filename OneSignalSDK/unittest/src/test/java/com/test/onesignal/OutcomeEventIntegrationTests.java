@@ -24,7 +24,6 @@ import com.onesignal.ShadowGenerateNotification;
 import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
-import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowPushRegistratorFCM;
 import com.onesignal.ShadowTimeoutHandler;
@@ -181,7 +180,7 @@ public class OutcomeEventIntegrationTests {
         pauseActivity(blankActivityController);
 
         // Click notification
-        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "2");
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID + "2");
         threadAndTaskWait();
 
         // Foreground app
@@ -212,7 +211,7 @@ public class OutcomeEventIntegrationTests {
         time.advanceSystemTimeBy(31);
 
         // Click notification
-        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "2");
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID + "2");
         threadAndTaskWait();
 
         // Foreground app
@@ -531,7 +530,7 @@ public class OutcomeEventIntegrationTests {
         pauseActivity(blankActivityController);
 
         // Receive and open a notification
-        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID);
         threadAndTaskWait();
 
         // Foreground the application
@@ -564,7 +563,7 @@ public class OutcomeEventIntegrationTests {
         pauseActivity(blankActivityController);
 
         // Receive and open a notification
-        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID);
         threadAndTaskWait();
 
         // Foreground the application
@@ -587,7 +586,7 @@ public class OutcomeEventIntegrationTests {
         assertNull(notificationOpenedMessage);
 
         // Click notification
-        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID);
         threadAndTaskWait();
 
         // Check message String matches data sent in open handler
@@ -632,7 +631,7 @@ public class OutcomeEventIntegrationTests {
         sessionManager.onNotificationReceived(notificationID);
 
         // Click notification before new session
-        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"" + notificationID + "\" } }]"), false, notificationID);
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"" + notificationID + "\" } }]"), notificationID);
         threadAndTaskWait();
 
         assertNotNull(notificationOpenedResult);
@@ -673,7 +672,7 @@ public class OutcomeEventIntegrationTests {
         time.advanceSystemAndElapsedTimeBy(61);
 
         // Click notification before new session
-        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"" + notificationID + "\" } }]"), false, notificationID);
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"" + notificationID + "\" } }]"), notificationID);
         threadAndTaskWait();
 
         assertNotNull(notificationOpenedResult);
@@ -713,7 +712,7 @@ public class OutcomeEventIntegrationTests {
         ShadowTimeoutHandler.setMockDelayMillis(1);
 
         // Click notification before new session
-        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"" + notificationID + "\" } }]"), false, notificationID);
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"" + notificationID + "\" } }]"), notificationID);
         threadAndTaskWait();
 
         assertNotNull(notificationOpenedResult);
@@ -752,7 +751,7 @@ public class OutcomeEventIntegrationTests {
         time.advanceSystemAndElapsedTimeBy(61);
 
         // Click notification before new session
-        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"" + notificationID + "\" } }]"), false, notificationID);
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"" + notificationID + "\" } }]"), notificationID);
         threadAndTaskWait();
 
         assertNotNull(notificationOpenedResult);
@@ -782,7 +781,7 @@ public class OutcomeEventIntegrationTests {
         String notificationID = ONESIGNAL_NOTIFICATION_ID + "1";
         sessionManager.onNotificationReceived(notificationID);
         // Click notification before new session
-        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"" + notificationID + "\" } }]"), false, notificationID);
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"" + notificationID + "\" } }]"), notificationID);
         threadAndTaskWait();
 
         assertNotNull(notificationOpenedResult);
@@ -834,7 +833,7 @@ public class OutcomeEventIntegrationTests {
         pauseActivity(blankActivityController);
 
         // Click notification before new session
-        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "2");
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID + "2");
         threadAndTaskWait();
 
         // Foreground app
@@ -862,7 +861,7 @@ public class OutcomeEventIntegrationTests {
         pauseActivity(blankActivityController);
 
         // Click notification before new session
-        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "2");
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID + "2");
         threadAndTaskWait();
 
         // Check directNotificationId is set to clicked notification
@@ -1212,7 +1211,7 @@ public class OutcomeEventIntegrationTests {
         String notificationID = ONESIGNAL_NOTIFICATION_ID + "1";
         sessionManager.onNotificationReceived(notificationID);
         // Click notification before new session
-        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"" + notificationID + "\" } }]"), false, notificationID);
+        OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"" + notificationID + "\" } }]"), notificationID);
         threadAndTaskWait();
 
         // App opened after clicking notification, but Robolectric needs this to simulate onAppFocus() code after a click

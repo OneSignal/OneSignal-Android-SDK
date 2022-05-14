@@ -372,7 +372,7 @@ class NotificationBundleProcessor {
         bundleResult.setOneSignalPayload(true);
         maximizeButtonsFromBundle(bundle);
 
-        if (OSInAppMessagePreviewHandler.inAppMessagePreviewHandled(context, bundle)) {
+        if (OSInAppMessagePreviewHandler.notificationReceived(context, bundle)) {
             // Return early, we don't want the extender service or etc. to fire for IAM previews
             bundleResult.setInAppPreviewShown(true);
             bundleReceiverCallback.onBundleProcessed(bundleResult);
