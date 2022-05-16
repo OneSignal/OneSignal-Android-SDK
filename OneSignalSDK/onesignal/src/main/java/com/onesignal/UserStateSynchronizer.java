@@ -266,7 +266,7 @@ abstract class UserStateSynchronizer {
         final boolean isSessionCall = !fromSyncService && isSessionCall();
         JSONObject jsonBody, dependDiff;
         synchronized (LOCK) {
-            jsonBody = currentUserState.generateJsonDiff(getToSyncUserState(), isSessionCall);
+            jsonBody = getCurrentUserState().generateJsonDiff(getToSyncUserState(), isSessionCall);
             UserState toSyncState = getToSyncUserState();
             dependDiff = currentUserState.generateJsonDiffFromDependValues(toSyncState, null);;
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "UserStateSynchronizer internalSyncUserState from session call: "+ isSessionCall + " jsonBody: " + jsonBody);
@@ -290,7 +290,7 @@ abstract class UserStateSynchronizer {
         String urlStr = "players/" + userId + "/email_logout";
         JSONObject jsonBody = new JSONObject();
         try {
-            ImmutableJSONObject dependValues = currentUserState.getDependValues();
+            ImmutableJSONObject dependValues = getCurrentUserState().getDependValues();
             if (dependValues.has(EMAIL_AUTH_HASH_KEY))
                 jsonBody.put(EMAIL_AUTH_HASH_KEY, dependValues.optString(EMAIL_AUTH_HASH_KEY));
 
@@ -333,7 +333,7 @@ abstract class UserStateSynchronizer {
         toSyncUserState.removeFromSyncValues(EMAIL_KEY);
         toSyncUserState.persistState();
 
-        currentUserState.removeFromDependValues(EMAIL_AUTH_HASH_KEY);
+        getCurrentUserState().removeFromDependValues(EMAIL_AUTH_HASH_KEY);
         currentUserState.removeFromSyncValues(PARENT_PLAYER_ID);
         String emailLoggedOut = currentUserState.getSyncValues().optString(EMAIL_KEY);
         currentUserState.removeFromSyncValues(EMAIL_KEY);
@@ -379,7 +379,7 @@ abstract class UserStateSynchronizer {
             @Override
             void onSuccess(String response) {
                 synchronized (LOCK) {
-                    currentUserState.persistStateAfterSync(dependDiff, jsonBody);
+                    getCurrentUserState().persistStateAfterSync(dependDiff, jsonBody);
                     onSuccessfulSync(jsonBody);
                 }
 
@@ -422,7 +422,7 @@ abstract class UserStateSynchronizer {
             void onSuccess(String response) {
                 synchronized (LOCK) {
                     waitingForSessionResponse = false;
-                    currentUserState.persistStateAfterSync(dependDiff, jsonBody);
+                    getCurrentUserState().persistStateAfterSync(dependDiff, jsonBody);
 
                     try {
                         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "doCreateOrNewSession:response: " + response);
@@ -468,7 +468,7 @@ abstract class UserStateSynchronizer {
     }
 
     private void fireNetworkFailureEvents() {
-        final JSONObject jsonBody = currentUserState.generateJsonDiff(toSyncUserState, false);
+        final JSONObject jsonBody = getCurrentUserState().generateJsonDiff(toSyncUserState, false);
         if (jsonBody != null)
             fireEventsForUpdateFailure(jsonBody);
 
@@ -570,7 +570,7 @@ abstract class UserStateSynchronizer {
     }
 
     void resetCurrentState() {
-        currentUserState.setSyncValues(new JSONObject());
+        getCurrentUserState().setSyncValues(new JSONObject());
         currentUserState.persistState();
     }
 
