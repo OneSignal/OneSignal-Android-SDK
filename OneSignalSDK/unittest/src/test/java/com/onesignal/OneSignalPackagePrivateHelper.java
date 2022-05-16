@@ -129,6 +129,10 @@ public class OneSignalPackagePrivateHelper {
       return NotificationBundleProcessor.bundleAsJSONObject(bundle);
    }
 
+   public static String toUnescapedEUIDString(JSONObject json) {
+      return JSONUtils.toUnescapedEUIDString(json);
+   }
+
    public static void OneSignal_handleNotificationOpen(Activity context, final JSONArray data, final String notificationId) {
       OneSignal.handleNotificationOpen(context, data, notificationId);
    }
