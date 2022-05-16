@@ -141,6 +141,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_taskQueueWaitingForInit;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSObservable;
+import static com.onesignal.OneSignalPackagePrivateHelper.toUnescapedEUIDString;
 import static com.onesignal.ShadowOneSignalRestClient.EMAIL_USER_ID;
 import static com.onesignal.ShadowOneSignalRestClient.PUSH_USER_ID;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
@@ -3376,6 +3377,69 @@ public class MainOneSignalClassRunner {
 
       JSONObject firstGroupedNotification = (JSONObject)testJsonObj.optJSONObject("notification").optJSONArray("groupedNotifications").get(0);
       assertEquals("collapseId1", firstGroupedNotification.optString("collapseId"));
+   }
+
+   // ####### Unit test JSONUtils methods
+   @Test
+   public void test_JSONUtils_toUnescapedEUIDString() throws Exception {
+      // 1. Test when EUID is first in the json, and has ($) and (/), and ($) elsewhere
+
+      // Set up the JSONObject to test with
+      String jsonStringWithDollarAndSlash = "{" +
+              "\"external_user_id\":\"$1$/abc/de$f/\"," +
+              "\"app_id\":\"b4f7f966-d8cc-11e4-bed1-df8f05be55ba\"," +
+              "\"timezone\":\"$Europe/London\"" +
+              "}";
+      JSONObject jsonWithDollarAndSlash = new JSONObject(jsonStringWithDollarAndSlash);
+
+      // The expected string which escapes the "timezone" slash (/) only
+      String expected_jsonStringWithDollarAndSlash = "{" +
+              "\"external_user_id\":\"$1$/abc/de$f/\"," +
+              "\"app_id\":\"b4f7f966-d8cc-11e4-bed1-df8f05be55ba\"," +
+              "\"timezone\":\"$Europe\\/London\"" +
+              "}";
+
+      // The actual string result from calling JSONUtils.toUnescapedEUIDString()
+      String actual_jsonStringWithDollarAndSlash = toUnescapedEUIDString(jsonWithDollarAndSlash);
+
+      // These two strings should be equal
+      assertEquals(expected_jsonStringWithDollarAndSlash, actual_jsonStringWithDollarAndSlash);
+
+      // 2. Test when EUID is first in the json, and has no dollar nor slash
+
+      String jsonStringWithEUID = "{" +
+              "\"external_user_id\":\"123abc\"," +
+              "\"app_id\":\"b4f7f966-d8cc-11e4-bed1-df8f05be55ba\"," +
+              "\"timezone\":\"$Europe/London\"" +
+              "}";
+      JSONObject jsonWithEUID = new JSONObject(jsonStringWithEUID);
+
+      String expected_jsonStringWithEUID = "{" +
+              "\"external_user_id\":\"123abc\"," +
+              "\"app_id\":\"b4f7f966-d8cc-11e4-bed1-df8f05be55ba\"," +
+              "\"timezone\":\"$Europe\\/London\"" +
+              "}";
+
+      String actual_jsonStringWithEUID = toUnescapedEUIDString(jsonWithEUID);
+
+      assertEquals(expected_jsonStringWithEUID, actual_jsonStringWithEUID);
+
+      // 3. Test when there is no EUID is in the json
+
+      String jsonStringWithoutEUID = "{" +
+              "\"app_id\":\"b4f7f966-d8cc-11e4-bed1-df8f05be55ba\"," +
+              "\"timezone\":\"Europe/London\"" +
+              "}";
+      JSONObject jsonWithoutEUID = new JSONObject(jsonStringWithoutEUID);
+
+      String expected_jsonStringWithoutEUID = "{" +
+              "\"app_id\":\"b4f7f966-d8cc-11e4-bed1-df8f05be55ba\"," +
+              "\"timezone\":\"Europe\\/London\"" +
+              "}";
+
+      String actual_jsonStringWithoutEUID = toUnescapedEUIDString(jsonWithoutEUID);
+
+      assertEquals(expected_jsonStringWithoutEUID, actual_jsonStringWithoutEUID);
    }
 
    @Test
