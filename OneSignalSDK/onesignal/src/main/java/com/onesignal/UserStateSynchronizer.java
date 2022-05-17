@@ -268,11 +268,11 @@ abstract class UserStateSynchronizer {
         synchronized (LOCK) {
             jsonBody = getCurrentUserState().generateJsonDiff(getToSyncUserState(), isSessionCall);
             UserState toSyncState = getToSyncUserState();
-            dependDiff = currentUserState.generateJsonDiffFromDependValues(toSyncState, null);;
+            dependDiff = getCurrentUserState().generateJsonDiffFromDependValues(toSyncState, null);;
             OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "UserStateSynchronizer internalSyncUserState from session call: "+ isSessionCall + " jsonBody: " + jsonBody);
             // Updates did not result in a server side change, skipping network call
             if (jsonBody == null) {
-                currentUserState.persistStateAfterSync(dependDiff, null);
+                getCurrentUserState().persistStateAfterSync(dependDiff, null);
                 sendTagsHandlersPerformOnSuccess();
                 externalUserIdUpdateHandlersPerformOnSuccess();
                 return;
@@ -294,7 +294,7 @@ abstract class UserStateSynchronizer {
             if (dependValues.has(EMAIL_AUTH_HASH_KEY))
                 jsonBody.put(EMAIL_AUTH_HASH_KEY, dependValues.optString(EMAIL_AUTH_HASH_KEY));
 
-            ImmutableJSONObject syncValues = currentUserState.getSyncValues();
+            ImmutableJSONObject syncValues = getCurrentUserState().getSyncValues();
             if (syncValues.has(PARENT_PLAYER_ID))
                 jsonBody.put(PARENT_PLAYER_ID, syncValues.optString(PARENT_PLAYER_ID));
 
@@ -334,9 +334,9 @@ abstract class UserStateSynchronizer {
         toSyncUserState.persistState();
 
         getCurrentUserState().removeFromDependValues(EMAIL_AUTH_HASH_KEY);
-        currentUserState.removeFromSyncValues(PARENT_PLAYER_ID);
-        String emailLoggedOut = currentUserState.getSyncValues().optString(EMAIL_KEY);
-        currentUserState.removeFromSyncValues(EMAIL_KEY);
+        getCurrentUserState().removeFromSyncValues(PARENT_PLAYER_ID);
+        String emailLoggedOut = getCurrentUserState().getSyncValues().optString(EMAIL_KEY);
+        getCurrentUserState().removeFromSyncValues(EMAIL_KEY);
 
         OneSignalStateSynchronizer.setNewSessionForEmail();
 
@@ -571,7 +571,7 @@ abstract class UserStateSynchronizer {
 
     void resetCurrentState() {
         getCurrentUserState().setSyncValues(new JSONObject());
-        currentUserState.persistState();
+        getCurrentUserState().persistState();
     }
 
     public abstract boolean getUserSubscribePreference();
