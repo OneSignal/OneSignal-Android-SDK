@@ -275,6 +275,7 @@ abstract class UserStateSynchronizer {
                 getCurrentUserState().persistStateAfterSync(dependDiff, null);
                 sendTagsHandlersPerformOnSuccess();
                 externalUserIdUpdateHandlersPerformOnSuccess();
+                deviceInfoHandlersPerformOnSuccess();
                 return;
             }
             getToSyncUserState().persistState();
@@ -349,6 +350,7 @@ abstract class UserStateSynchronizer {
             OneSignal.onesignalLog(getLogLevel(), "Error updating the user record because of the null user id");
             sendTagsHandlersPerformOnFailure(new SendTagsError(-1, "Unable to update tags: the current user is not registered with OneSignal"));
             externalUserIdUpdateHandlersPerformOnFailure();
+            deviceInfoHandlersPerformOnFailure(new OSDeviceInfoError(-1, "Unable to set Language: the current user is not registered with OneSignal"));
             return;
         }
 
