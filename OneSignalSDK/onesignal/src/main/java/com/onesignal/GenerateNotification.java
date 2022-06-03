@@ -525,7 +525,7 @@ class GenerateNotification {
          String[] whereArgs = { group };
          
          // Make sure to omit any old existing matching android ids in-case we are replacing it.
-         if (!updateSummary && notificationJob.getAndroidId() != -1)
+         if (!updateSummary)
             whereStr += " AND " + NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " <> " + notificationJob.getAndroidId();
          
          cursor = dbHelper.query(
