@@ -99,32 +99,58 @@ abstract class PushRegistratorAbstractGoogle implements PushRegistrator {
          registeredHandler.complete(registrationId, UserState.PUSH_STATUS_SUBSCRIBED);
          return true;
       } catch (IOException e) {
-         if (!"SERVICE_NOT_AVAILABLE".equals(e.getMessage())) {
-            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error Getting " + getProviderName() + " Token", e);
-            if (!firedCallback)
-               registeredHandler.complete(null, UserState.PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION);
-            return true;
-         }
-         else {
+         int pushStatus = pushStatusFromThrowable(e);
+         String exceptionMessage = OSUtils.getRootCauseMessage(e);
+         boolean retryingKnownToWorkSometimes =
+             "SERVICE_NOT_AVAILABLE".equals(exceptionMessage) ||
+             "AUTHENTICATION_FAILED".equals(exceptionMessage);
+
+         if (retryingKnownToWorkSometimes) {
+            // Wrapping with new Exception so the current line is included in the stack trace.
+            Exception exception = new Exception(e);
             if (currentRetry >= (REGISTRATION_RETRY_COUNT - 1))
-               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Retry count of " + REGISTRATION_RETRY_COUNT + " exceed! Could not get a " + getProviderName() + " Token.", e);
+               OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Retry count of " + REGISTRATION_RETRY_COUNT + " exceed! Could not get a " + getProviderName() + " Token.", exception);
             else {
-               OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "'Google Play services' returned SERVICE_NOT_AVAILABLE error. Current retry count: " + currentRetry, e);
+               OneSignal.Log(OneSignal.LOG_LEVEL.INFO, "'Google Play services' returned " + exceptionMessage + " error. Current retry count: " + currentRetry, exception);
                if (currentRetry == 2) {
                   // Retry 3 times before firing a null response and continuing a few more times.
-                  registeredHandler.complete(null, UserState.PUSH_STATUS_FIREBASE_FCM_ERROR_SERVICE_NOT_AVAILABLE);
+                  registeredHandler.complete(null, pushStatus);
                   firedCallback = true;
                   return true;
                }
             }
          }
+         else {
+            // Wrapping with new Exception so the current line is included in the stack trace.
+            Exception exception = new Exception(e);
+            OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error Getting " + getProviderName() + " Token", exception);
+            if (!firedCallback)
+               registeredHandler.complete(null, pushStatus);
+            return true;
+         }
       } catch (Throwable t) {
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Unknown error getting " + getProviderName() + " Token", t);
-         registeredHandler.complete(null, UserState.PUSH_STATUS_FIREBASE_FCM_ERROR_MISC_EXCEPTION);
+         // Wrapping with new Exception so the current line is included in the stack trace.
+         Exception exception = new Exception(t);
+         int pushStatus = pushStatusFromThrowable(t);
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Unknown error getting " + getProviderName() + " Token", exception);
+         registeredHandler.complete(null, pushStatus);
          return true;
       }
 
       return false;
+   }
+
+   static private int pushStatusFromThrowable(Throwable throwable) {
+      String exceptionMessage = OSUtils.getRootCauseMessage(throwable);
+      if (throwable instanceof IOException) {
+         if ("SERVICE_NOT_AVAILABLE".equals(exceptionMessage))
+            return  UserState.PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE;
+         else if ("AUTHENTICATION_FAILED".equals(exceptionMessage))
+            return UserState.PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED;
+         else
+            return UserState.PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER;
+      }
+      return UserState.PUSH_STATUS_FIREBASE_FCM_ERROR_MISC_EXCEPTION;
    }
 
    private boolean isValidProjectNumber(String senderId, PushRegistrator.RegisteredHandler callback) {

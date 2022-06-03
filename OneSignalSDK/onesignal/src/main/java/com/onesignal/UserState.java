@@ -40,9 +40,9 @@ abstract class UserState {
     static final int PUSH_STATUS_INVALID_FCM_SENDER_ID = -6;
     static final int PUSH_STATUS_OUTDATED_GOOGLE_PLAY_SERVICES_APP = -7;
     static final int PUSH_STATUS_FIREBASE_FCM_INIT_ERROR = -8;
-    static final int PUSH_STATUS_FIREBASE_FCM_ERROR_SERVICE_NOT_AVAILABLE = -9;
+    static final int PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE = -9;
     // -10 is a server side detection only from FCM that the app is no longer installed
-    static final int PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION = -11;
+    static final int PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER = -11;
     static final int PUSH_STATUS_FIREBASE_FCM_ERROR_MISC_EXCEPTION = -12;
     // -13 to -24 reserved for other platforms
     public static final int PUSH_STATUS_HMS_TOKEN_TIMEOUT = -25;
@@ -51,6 +51,7 @@ abstract class UserState {
     public static final int PUSH_STATUS_HMS_ARGUMENTS_INVALID = -26;
     public static final int PUSH_STATUS_HMS_API_EXCEPTION_OTHER = -27;
     public static final int PUSH_STATUS_MISSING_HMS_PUSHKIT_LIBRARY = -28;
+    public static final int PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED = -29;
 
     private static final String[] LOCATION_FIELDS = new String[] { "lat", "long", "loc_acc", "loc_type", "loc_bg", "loc_time_stamp" };
     private static final Set<String> LOCATION_FIELDS_SET = new HashSet<>(Arrays.asList(LOCATION_FIELDS));
