@@ -654,4 +654,17 @@ class OSUtils {
    static int getRandomDelay(int minDelay, int maxDelay) {
       return new Random().nextInt(maxDelay + 1 - minDelay) + minDelay;
    }
+
+   @NonNull
+   static Throwable getRootCauseThrowable(@NonNull Throwable subjectThrowable) {
+      Throwable throwable = subjectThrowable;
+      while (throwable.getCause() != null && throwable.getCause() != throwable) {
+         throwable = throwable.getCause();
+      }
+      return throwable;
+   }
+
+   static String getRootCauseMessage(@NonNull Throwable throwable) {
+      return getRootCauseThrowable(throwable).getMessage();
+   }
 }
