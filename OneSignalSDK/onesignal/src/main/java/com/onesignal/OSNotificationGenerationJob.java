@@ -40,6 +40,7 @@ public class OSNotificationGenerationJob {
     private Context context;
     private JSONObject jsonPayload;
     private boolean restoring;
+    private boolean isNotificationToDisplay;
 
     private Long shownTimeStamp;
 
@@ -61,7 +62,7 @@ public class OSNotificationGenerationJob {
     OSNotificationGenerationJob(Context context, OSNotification notification, JSONObject jsonPayload) {
         this.context = context;
         this.jsonPayload = jsonPayload;
-        this.notification = notification;
+        this.setNotification(notification);
     }
 
     /**
@@ -90,10 +91,17 @@ public class OSNotificationGenerationJob {
     }
 
     /**
-     * If androidNotificationId is -1 then the notification is a silent one
+     * Determine whether this notification has been displayed.
      */
     boolean isNotificationToDisplay() {
-        return getAndroidIdWithoutCreate() != -1;
+        return isNotificationToDisplay;
+    }
+
+    /**
+     * Indicate whether notification has been displayed.
+     */
+    void setIsNotificationToDisplay(boolean isNotificationToDisplay) {
+        this.isNotificationToDisplay = isNotificationToDisplay;
     }
 
     boolean hasExtender() {
@@ -104,28 +112,8 @@ public class OSNotificationGenerationJob {
         return OneSignal.getNotificationIdFromFCMJson(jsonPayload);
     }
 
-    int getAndroidIdWithoutCreate() {
-        if (!notification.hasNotificationId())
-            return -1;
-
-        return notification.getAndroidNotificationId();
-    }
-
     Integer getAndroidId() {
-        if (!notification.hasNotificationId())
-            notification.setAndroidNotificationId(new SecureRandom().nextInt());
-
         return notification.getAndroidNotificationId() ;
-    }
-
-    void setAndroidIdWithoutOverriding(Integer id) {
-        if (id == null)
-            return;
-
-        if (notification.hasNotificationId())
-            return;
-
-        notification.setAndroidNotificationId(id);
     }
 
     public OSNotification getNotification() {
@@ -133,6 +121,15 @@ public class OSNotificationGenerationJob {
     }
 
     public void setNotification(OSNotification notification) {
+        // If there is no android ID on the notification coming in, create one either
+        // copying from the previous one or generating a new one.
+        if (notification != null && !notification.hasNotificationId()) {
+            if (this.notification != null && this.notification.hasNotificationId())
+                notification.setAndroidNotificationId(this.notification.getAndroidNotificationId());
+            else
+                notification.setAndroidNotificationId(new SecureRandom().nextInt());
+        }
+
         this.notification = notification;
     }
 
@@ -221,6 +218,7 @@ public class OSNotificationGenerationJob {
         return "OSNotificationGenerationJob{" +
                 "jsonPayload=" + jsonPayload +
                 ", isRestoring=" + restoring +
+                ", isNotificationToDisplay=" + isNotificationToDisplay +
                 ", shownTimeStamp=" + shownTimeStamp +
                 ", overriddenBodyFromExtender=" + overriddenBodyFromExtender +
                 ", overriddenTitleFromExtender=" + overriddenTitleFromExtender +

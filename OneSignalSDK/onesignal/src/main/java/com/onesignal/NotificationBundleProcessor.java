@@ -136,12 +136,12 @@ class NotificationBundleProcessor {
 
         processCollapseKey(notificationJob);
 
-        int androidNotificationId = notificationJob.getAndroidIdWithoutCreate();
+        int androidNotificationId = notificationJob.getAndroidId();
         boolean doDisplay = shouldDisplayNotification(notificationJob);
         boolean notificationDisplayed = false;
 
         if (doDisplay) {
-            androidNotificationId = notificationJob.getAndroidId();
+            notificationJob.setIsNotificationToDisplay(true);
             if (fromBackgroundLogic && OneSignal.shouldFireForegroundHandlers(notificationJob)) {
                 notificationController.setFromBackgroundLogic(false);
                 OneSignal.fireForegroundHandlers(notificationController);
@@ -206,10 +206,10 @@ class NotificationBundleProcessor {
 
          OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notificationJob.getContext());
 
-         // Count any notifications with duplicated android notification ids as dismissed.
-         // -1 is used to note never displayed
+         // When notification was displayed, count any notifications with duplicated android
+         // notification ids as dismissed.
          if (notificationJob.isNotificationToDisplay()) {
-            String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notificationJob.getAndroidIdWithoutCreate();
+            String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notificationJob.getAndroidId();
 
             ContentValues values = new ContentValues();
             values.put(NotificationTable.COLUMN_NAME_DISMISSED, 1);
@@ -228,7 +228,7 @@ class NotificationBundleProcessor {
 
          values.put(NotificationTable.COLUMN_NAME_OPENED, opened ? 1 : 0);
          if (!opened)
-            values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, notificationJob.getAndroidIdWithoutCreate());
+            values.put(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, notificationJob.getAndroidId());
 
          if (notificationJob.getTitle() != null)
             values.put(NotificationTable.COLUMN_NAME_TITLE, notificationJob.getTitle().toString());
@@ -253,11 +253,11 @@ class NotificationBundleProcessor {
    }
 
     static void markNotificationAsDismissed(OSNotificationGenerationJob notifiJob) {
-        if (notifiJob.getAndroidIdWithoutCreate() == -1)
+        if (!notifiJob.isNotificationToDisplay())
             return;
 
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "Marking restored or disabled notifications as dismissed: " + notifiJob.toString());
-        String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notifiJob.getAndroidIdWithoutCreate();
+        String whereStr = NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notifiJob.getAndroidId();
 
         OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(notifiJob.getContext());
 
@@ -351,7 +351,7 @@ class NotificationBundleProcessor {
 
         if (cursor.moveToFirst()) {
             int androidNotificationId = cursor.getInt(cursor.getColumnIndex(NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID));
-            notificationJob.setAndroidIdWithoutOverriding(androidNotificationId);
+            notificationJob.getNotification().setAndroidNotificationId(androidNotificationId);
         }
 
         cursor.close();
