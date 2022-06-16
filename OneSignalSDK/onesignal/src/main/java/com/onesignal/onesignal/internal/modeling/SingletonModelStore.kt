@@ -1,6 +1,4 @@
-package com.onesignal.models.modeling
-
-import com.onesignal.onesignal.internal.modeling.Model
+package com.onesignal.onesignal.internal.modeling
 
 /**
  * A model store that is implemented in memory.
@@ -9,9 +7,6 @@ internal class SingletonModelStore<TModel>(
         val name: String,
         val store: IModelStore<TModel>,
         ) : ISingletonModelStore<TModel> where TModel : Model {
-    override fun create(model: TModel) {
-        store.create(name, model)
-    }
 
     override fun get(): TModel? {
         return store.get(name)
@@ -21,7 +16,11 @@ internal class SingletonModelStore<TModel>(
         store.update(name, model)
     }
 
-    override fun delete() {
-        store.delete(name)
+    override fun subscribe(handler: IModelStoreChangeHandler<TModel>) {
+        TODO("Not yet implemented")
+    }
+
+    override fun unsubscribe(handler: IModelStoreChangeHandler<TModel>) {
+        TODO("Not yet implemented")
     }
 }

@@ -22,10 +22,10 @@ open class UserManager(
 
     override var privacyConsent: Boolean = false
     override var isLocationShared: Boolean = false
-    override val subscriptions: SubscriptionCollection = SubscriptionCollection()
-    override val tags: TagCollection = TagCollection()
-    override val aliases: AliasCollection = AliasCollection()
-    override val triggers: TriggerCollection = TriggerCollection()
+    override val subscriptions: SubscriptionCollection = SubscriptionCollection(listOf())
+    override val tags: TagCollection = TagCollection(listOf())
+    override val aliases: AliasCollection = AliasCollection(listOf())
+    override val triggers: TriggerCollection = TriggerCollection(listOf())
 
     init {
         TODO("Populate based on incoming model?")

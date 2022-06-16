@@ -4,87 +4,87 @@ interface IApiService  {
 
     /** NEW ENDPOINTS **/
     /** POST /user **/
-    fun createUser(user: UserObject)
+    suspend fun createUserAsync(user: Any)
 
     /** PATCH /user/by/{aliasLabel}/{aliasId} **/
-    fun updateUser(aliasLabel: String, aliasId: String, user: UserObject)
+    suspend fun updateUserAsync(aliasLabel: String, aliasId: String, user: Any)
 
     /** DELETE /user/by/{aliasLabel}/{aliasId} **/
-    fun deleteUser(aliasLabel: String, aliasId: String)
+    suspend fun deleteUserAsync(aliasLabel: String, aliasId: String)
 
     /** POST /user/by/{aliasLabel}/{aliasId}/identity **/
-    fun setUserIdentity(aliasLabel: String, aliasId: String, identity: IdentityObject) : IdentityObject
+    suspend fun setUserIdentityAsync(aliasLabel: String, aliasId: String, identity: Any) : Any
     /** GET /user/by/{aliasLabel}/{aliasId}/identity **/
-    fun getUserIdentity(aliasLabel: String, aliasId: String) : IdentityObject
+    suspend fun getUserIdentityAsync(aliasLabel: String, aliasId: String) : Any
 
     /** PUT /user/identity/{aliasLabel}/{aliasId} **/
-    fun updateUserAlias(aliasLabel: String, aliasId: String, newAliasId: String)
+    suspend fun updateUserAliasAsync(aliasLabel: String, aliasId: String, newAliasId: String)
     /** DELETE /user/identity/{aliasLabel}/{aliasId} **/
-    fun deleteUserAlias(aliasLabel: String, aliasId: String)
+    suspend fun deleteUserAliasAsync(aliasLabel: String, aliasId: String)
 
     /** POST /user/by/{aliasLabel}/{aliasId}/subscription **/
-    fun createSubscription(aliasLabel: String, aliasId: String, subscription: SubscriptionObject)
+    suspend fun createSubscriptionAsync(aliasLabel: String, aliasId: String, subscription: Any)
     /** DELETE /subscription/{subscriptionId} **/
-    fun deleteSubscription(subscriptionId: String)
+    suspend fun deleteSubscriptionAsync(subscriptionId: String)
     /** GET /subscription/{subscriptionId}/identity **/
-    fun getIdentityFromSubscription(subscriptionId: String)
+    suspend fun getIdentityFromSubscriptionAsync(subscriptionId: String)
     /** POST /subscription/{subscriptionId}/identity **/
-    fun createIdentityForSubscription(subscriptionId: String)
+    suspend fun createIdentityForSubscriptionAsync(subscriptionId: String)
     /** PATCH /subscription/{subscriptionId}/identity **/
-    fun updateIdentityForSubscription(subscriptionId: String)
+    suspend fun updateIdentityForSubscriptionAsync(subscriptionId: String)
     /** DELETE /subscription/{subscriptionId}/properties **/
-    fun deleteSubscriptionProperties(subscriptionId: String)
+    suspend fun deleteSubscriptionPropertiesAsync(subscriptionId: String)
 
     /** GET /user/by/{aliasLabel}/{aliasId}/iams **/
-    fun listIAMsByUser(aliasLabel: String, aliasId: String)
+    suspend fun listIAMsByUserAsync(aliasLabel: String, aliasId: String)
     /** GET /subscription/{subscriptionId}/iams **/
-    fun listIAMsBySubscription(subscriptionId: String)
+    suspend fun listIAMsBySubscriptionAsync(subscriptionId: String)
 
     /** EXISTING ENDPOINTS **/
     /** GET players/{playerId}?app_id={appId} **/
-    fun getSubscription()
+    suspend fun getSubscriptionAsync()
     /** PUT players/{playerId} **/
-    fun updateSubscription()
+    suspend fun updateSubscriptionAsync()
 
     /** POST players/{playerId}/email_logout **/
-    fun logoutEmail()
+    suspend fun logoutEmailAsync()
 
     /** POST players/{playerId}/on_purchase **/
-    fun createPurchase()
+    suspend fun createPurchaseAsync()
 
     /** POST players **/
-    fun createSession()
+    suspend fun createSessionAsync()
 
     /** POST players/{playerId}/on_session **/
-    fun updateSession()
+    suspend fun updateSessionAsync()
 
     /** POST players/{playerId}/on_focus **/
-    fun createFocus()
+    suspend fun createFocusAsync()
 
     /** POST notifications **/
-    fun createNotification()
+    suspend fun createNotificationAsync()
 
     /** PUT notifications/{id} **/
-    fun updateNotificationAsOpened()
+    suspend fun updateNotificationAsOpenedAsync()
 
     /** PUT notifications/{id}/report_received **/
-    fun updateNotificationAsReceived()
+    suspend fun updateNotificationAsReceivedAsync()
 
     /** POST in_app_messages/{messageId}/click **/
-    fun updateIAMAsClicked()
+    suspend fun updateIAMAsClickedAsync()
 
     /** POST in_app_messages/{messageId}/pageImpression **/
-    fun updateIAMAsPageImpression()
+    suspend fun updateIAMAsPageImpressionAsync()
 
     /** POST in_app_messages/{messageId}/impression **/
-    fun updateIAMAsImpression()
+    suspend fun updateIAMAsImpressionAsync()
 
     /** GET in_app_messages/device_preview?preview_id={previewUUID}&app_id={appId} **/
-    fun getIAMPreviewData()
+    suspend fun getIAMPreviewDataAsync()
 
     /** GET in_app_messages/{messageId}/variants/{variantId}/html?app_id={appId} **/
-    fun getIAMData()
+    suspend fun getIAMDataAsync()
 
     /** GET apps/{appId}/android_params.js?player_id={userId} **/
-    fun getParams()
+    suspend fun getParamsAsync()
 }

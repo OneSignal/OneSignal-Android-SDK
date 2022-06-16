@@ -18,6 +18,9 @@ interface Identity {
         // TODO: From discussion,,,this may not be true?  Anonymous->Known->Anonymous, the two aren't the same users?
         override fun equals(other: Any?) = other is Anonymous
         override fun hashCode() = javaClass.hashCode()
+        override fun toString(): String {
+            return "Anonymous"
+        }
     }
 
     /**
@@ -33,5 +36,8 @@ interface Identity {
     ) : Identity {
         override fun equals(other: Any?) = other is Known && externalId == other.externalId && authHash == other.authHash
         override fun hashCode() = Objects.hash(externalId, authHash)
+        override fun toString(): String {
+            return "Known: $externalId"
+        }
     }
 }

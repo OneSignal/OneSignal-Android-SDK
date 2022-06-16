@@ -1,10 +1,16 @@
 package com.onesignal.onesignal
 
-import java.util.function.BiConsumer
+import kotlinx.coroutines.Dispatchers
 import java.util.function.Consumer
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
+
+class ContinueResult<R> (
+    val isSuccess: Boolean,
+    val data: R?,
+    val throwable: Throwable?) {
+}
 
 /**
  * A wrapper to allow Java invocations to Kotlin coroutines a little easier on the eye.
@@ -20,13 +26,26 @@ object Continue {
      */
     @JvmOverloads
     @JvmStatic
-    fun <R> with(onFinished: Consumer<Result<R>>, context: CoroutineContext = EmptyCoroutineContext): Continuation<R> {
+    fun <R> with(onFinished: Consumer<ContinueResult<R>>, context: CoroutineContext = Dispatchers.Main): Continuation<R> {
         return object : Continuation<R> {
             override val context: CoroutineContext
                 get() = context
 
             override fun resumeWith(result: Result<R>) {
-                onFinished.accept(result)
+                val data = ContinueResult<R>(result.isSuccess, result.getOrNull(), result.exceptionOrNull())
+                onFinished.accept(data)
+            }
+        }
+    }
+
+    @JvmOverloads
+    @JvmStatic
+    fun <R> none(): Continuation<R> {
+        return object : Continuation<R> {
+            override val context: CoroutineContext
+                get() = context
+
+            override fun resumeWith(result: Result<R>) {
             }
         }
     }

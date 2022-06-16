@@ -1,0 +1,22 @@
+package com.onesignal.onesignal.internal.listeners
+
+import com.onesignal.onesignal.internal.backend.api.IApiService
+import com.onesignal.onesignal.internal.modeling.IModelStore
+import com.onesignal.onesignal.internal.models.IdentityModel
+import com.onesignal.onesignal.internal.operations.*
+
+class IdentityModelStoreListener(
+    store: IModelStore<IdentityModel>,
+    opRepo: IOperationRepo,
+    api: IApiService) : ModelStoreListener<IdentityModel>(store, opRepo, api){
+
+    // TODO: IApiService shouldn't be here, not a dependency of the listener but need to create the backend operations. Need a factory? Maybe factor method in IOperationRepo?
+
+    override fun getOperation(action: Action, id: String, model: IdentityModel): Operation? {
+        return when(action) {
+            Action.CREATED -> CreateUserOperation(api)
+            Action.UPDATED -> UpdateUserOperation(api, id)
+            Action.DELETED -> DeleteUserOperation(api, id)
+        }
+    }
+}

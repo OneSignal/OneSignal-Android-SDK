@@ -2,6 +2,11 @@ package com.onesignal.onesignal.location
 
 interface ILocationManager {
     /**
+     * Whether location is currently shared
+     */
+    var isLocationShared: Boolean
+
+    /**
      * Use this method to manually prompt the user for location permissions.
      * This allows for geotagging so you send notifications to users based on location.
      *

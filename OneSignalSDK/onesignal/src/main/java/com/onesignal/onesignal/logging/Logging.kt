@@ -10,50 +10,50 @@ import java.io.StringWriter
 object Logging {
     private const val TAG = "OneSignal"
 
+    @JvmStatic
     var logLevel = LogLevel.WARN
 
     fun Verbose() {
 
     }
 
+    @JvmStatic
     fun log(level: LogLevel, message: String) {
         log(level, message, null);
     }
 
+    @JvmStatic
     fun log(level: LogLevel, message: String, throwable: Throwable?) {
         if (level.compareTo(logLevel) < 1) {
-            if (level == LogLevel.VERBOSE)
-                android.util.Log.v(TAG, message, throwable)
-            else if (level == LogLevel.DEBUG)
-                android.util.Log.d(TAG, message, throwable)
-            else if (level == LogLevel.INFO)
-                android.util.Log.i(TAG, message, throwable)
-            else if (level == LogLevel.WARN)
-                android.util.Log.w(TAG, message, throwable)
-            else if (level == LogLevel.ERROR || level == LogLevel.FATAL)
-                android.util.Log.e(TAG, message, throwable)
-        }
-
-        if (level.compareTo(logLevel) < 1 && OneSignal.getCurrentActivity() != null) {
-            try {
-                var fullMessage: String? = "$message\n".trimIndent()
-                if (throwable != null) {
-                    fullMessage += throwable.message
-                    val sw = StringWriter()
-                    val pw = PrintWriter(sw)
-                    throwable.printStackTrace(pw)
-                    fullMessage += sw.toString()
-                }
-                val finalFullMessage = fullMessage
-                OSUtils.runOnMainUIThread(Runnable {
-                    if (OneSignal.getCurrentActivity() != null) AlertDialog.Builder(OneSignal.getCurrentActivity())
-                            .setTitle(level.toString())
-                            .setMessage(finalFullMessage)
-                            .show()
-                })
-            } catch (t: Throwable) {
-                android.util.Log.e(TAG, "Error showing logging message.", t)
+            when (level) {
+                LogLevel.VERBOSE -> android.util.Log.v(TAG, message, throwable)
+                LogLevel.DEBUG -> android.util.Log.d(TAG, message, throwable)
+                LogLevel.INFO -> android.util.Log.i(TAG, message, throwable)
+                LogLevel.WARN -> android.util.Log.w(TAG, message, throwable)
+                LogLevel.ERROR, LogLevel.FATAL -> android.util.Log.e(TAG, message, throwable)
             }
         }
+
+//        if (level.compareTo(logLevel) < 1 && OneSignal.getCurrentActivity() != null) {
+//            try {
+//                var fullMessage: String? = "$message\n".trimIndent()
+//                if (throwable != null) {
+//                    fullMessage += throwable.message
+//                    val sw = StringWriter()
+//                    val pw = PrintWriter(sw)
+//                    throwable.printStackTrace(pw)
+//                    fullMessage += sw.toString()
+//                }
+//                val finalFullMessage = fullMessage
+//                OSUtils.runOnMainUIThread(Runnable {
+//                    if (OneSignal.getCurrentActivity() != null) AlertDialog.Builder(OneSignal.getCurrentActivity())
+//                            .setTitle(level.toString())
+//                            .setMessage(finalFullMessage)
+//                            .show()
+//                })
+//            } catch (t: Throwable) {
+//                android.util.Log.e(TAG, "Error showing logging message.", t)
+//            }
+//        }
     }
 }

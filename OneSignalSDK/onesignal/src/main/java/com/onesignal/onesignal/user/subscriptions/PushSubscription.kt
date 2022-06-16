@@ -13,10 +13,5 @@ class PushSubscription(
          */
         val pushToken: String,
 
-        /**
-         * Whether this subscription should be automatically unsubscribed (deleted) if the
-         * user disables notifications on the device/app this subscription is for.
-         */
-        val unsubscribeWhenNotificationsAreDisabled: Boolean
         ) : Subscription(id, enabled) {
 }

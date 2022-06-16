@@ -22,4 +22,8 @@ class SubscriptionList(val collection: List<Subscription>) {
      */
     val sms: List<SmsSubscription>
         get() = collection.filterIsInstance<SmsSubscription>()
+
+    /** Retrieve the subscription for this device, if there is one **/
+    val onThisDevice: PushSubscription?
+        get() = collection.filterIsInstance<PushSubscription>().firstOrNull() // TODO("Implement")
 }

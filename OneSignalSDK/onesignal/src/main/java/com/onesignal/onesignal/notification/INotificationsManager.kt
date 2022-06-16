@@ -7,11 +7,21 @@ interface INotificationsManager {
     val permissionStatus: IPermissionState
 
     /**
+     * Whether the current device push subscription should be automatically unsubscribed (deleted)
+     * if the user disables notifications on the device/app this subscription is for.
+     */
+    var unsubscribeWhenNotificationsAreDisabled: Boolean
+
+    /**
      * Prompt the user for permission to push notifications.  This will display the native
      * OS prompt to request push notification permission.  If the user enables, a push
-     * subscription to this device will be automatically added to the user. (TODO: Confirm)
+     * subscription to this device will be automatically added to the user.
+     *
+     * @return true if the user is opted in to push notifications (Android 13 and higher, user affirmed or already enabled. < Android 13, already enabled)
+     *         false if the user is opted out of push notifications (Android 13 and higher, user rejected. < Android 13, this cannot happen)
+     *         null if the intent could not be determined (notification disabled and user sent to settings to hopefully enable.)
      */
-    suspend fun promptForPushPermissionStatus()
+    suspend fun promptForPushPermissionStatus() : Boolean?
 
     /**
      * Allows you to send notifications from user to user or schedule ones in the future to be delivered
@@ -30,8 +40,8 @@ interface INotificationsManager {
      * TODO: SHOULD THERE BE A DISTINCTION BETWEEN A "PUSHMANAGER" AND A "NOTIFICATIONMANAGER", THIS IS THE ONLY THING THAT
      *       IS NOTIFICATION GENERIC, EVERYTHING ELSE IS PUSH/DEVICE BASED
      */
-    suspend fun postNotificationAsync(json: JSONObject) : JSONObject
-    suspend fun postNotificationAsync(json: String) : JSONObject
+    suspend fun postNotification(json: JSONObject) : JSONObject
+    suspend fun postNotification(json: String) : JSONObject
 
     /**
      * Cancels a single OneSignal notification based on its Android notification integer ID. Use
@@ -73,7 +83,7 @@ interface INotificationsManager {
      *                the permission changes within
      */
     fun addPushPermissionHandler(handler: IPermissionChangedHandler)
-    fun addPushPermissionHandler(handler: (IPermissionStateChanges) -> Unit) // TODO: SHOULD INCLUDE?
+    fun addPushPermissionHandler(handler: (IPermissionStateChanges?) -> Unit) // TODO: SHOULD INCLUDE?
 
     /**
      * Remove a push permission handler that has been previously added.
@@ -81,7 +91,7 @@ interface INotificationsManager {
      * @param handler The previously added handler that should be removed.
      */
     fun removePushPermissionHandler(handler: IPermissionChangedHandler)
-    fun removePushPermissionHandler(handler: (IPermissionStateChanges) -> Unit) // TODO: SHOULD INCLUDE?
+    fun removePushPermissionHandler(handler: (IPermissionStateChanges?) -> Unit) // TODO: SHOULD INCLUDE?
 
     /**
      * Sets the handler to run before displaying a notification while the app is in focus. Use this

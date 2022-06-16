@@ -1,11 +1,12 @@
-package com.onesignal.models.modeling
-
-import com.onesignal.onesignal.internal.modeling.Model
+package com.onesignal.onesignal.internal.modeling
 
 /**
  * A model store provides the ability to...store...a...model.
  */
 interface IModelStore<TModel> where TModel : Model {
+    fun subscribe(handler: IModelStoreChangeHandler<TModel>)
+    fun unsubscribe(handler: IModelStoreChangeHandler<TModel>)
+
     fun create(id: String, model: TModel)
     fun list() : Collection<TModel>
     fun get(id: String) : TModel?
@@ -18,8 +19,9 @@ interface IModelStore<TModel> where TModel : Model {
  * of a model.
  */
 interface ISingletonModelStore<TModel> where TModel : Model {
-    fun create(model: TModel)
+    fun subscribe(handler: IModelStoreChangeHandler<TModel>)
+    fun unsubscribe(handler: IModelStoreChangeHandler<TModel>)
+
     fun get() : TModel?
     fun update(model: TModel)
-    fun delete()
 }

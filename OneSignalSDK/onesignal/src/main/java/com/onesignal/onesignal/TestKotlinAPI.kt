@@ -4,14 +4,17 @@ import com.onesignal.onesignal.notification.IPermissionChangedHandler
 import com.onesignal.onesignal.notification.IPermissionStateChanges
 import com.onesignal.onesignal.user.IUserIdentityConflictResolver
 import com.onesignal.onesignal.user.IUserManager
-import com.onesignal.user.Identity
+import com.onesignal.onesignal.user.Identity
 
 // This is just a quick example to test what the new API would like in Kotlin
 // (should be moved into it's own project)
 class TestKotlinAPI {
-    fun test() {
-        // Init OneSignal
-        OneSignal.init("123")
+    suspend fun test() {
+        // Tell OneSignal the App Context
+//        OneSignal.initWithContext(context)
+
+        // Init OneSignal with the AppId
+        OneSignal.setAppId("123")
 
         // Can access user on OneSignal at any time
         print(OneSignal.user)
@@ -20,49 +23,51 @@ class TestKotlinAPI {
 
         // Example User Login
         //    - Create an Identity with External user id (with auth hash)
-        val identity = Identity.ExternalId("myID")
-        OneSignal.switchUser(identity)
+        OneSignal.login(Identity.Known("myID"))
+
+        OneSignal.login(Identity.Known("myID", "myIDAuthHash"))
 
         // Example 1 of Logout, you get generic push
-        OneSignal.switchUser(Identity.Anonymous())
+        OneSignal.login(Identity.Anonymous())
 
         // Example 2 of Logout, device won't get an pushes there is no user.
-        OneSignal.switchUser(null)
+        //OneSignal.loginAsync(null)
 
         // Add tag example
-        OneSignal.user.tags.add("key", "value")
+        OneSignal.user.setTag("key", "value")
+                      .setTag("key2", "value2")
+                      .setAlias("facebook", "myfacebookid")
+                      .setTrigger("level", 1)
+                      .addEmailSubscription("user@company.co")
+                      .addSmsSubscription("+8451111111")
 
-        // using anonymous class --> Cannot use lambda without something else? See propLambdaUserConflictResolver, or could make a fun instead of property
-        OneSignal.userConflictResolver = object : IUserIdentityConflictResolver {
+        // Set the user conflict resolver - anonymous class
+        OneSignal.setUserConflictResolver(object : IUserIdentityConflictResolver {
             override fun resolve(local: IUserManager, remote: IUserManager) : IUserManager {
                 // resolve
                 return remote
             }
-        }
+        })
+        // Set the user conflict resolver - anonymous function
+        OneSignal.setUserConflictResolver(fun(local: IUserManager, remote: IUserManager): IUserManager {
+            return remote
+        })
+        // Set the user conflict resolver - lambda
+        OneSignal.setUserConflictResolver { local, remote -> remote }
 
-//        OneSignal.setFuncIntfUserConflictResolver(object : IUserIdentityConflictResolver {
-//            override fun resolve(local: IUserManager, remote: IUserManager) : IUserManager {
-//                // resolve
-//                return remote
-//            }
-//        })
-//
-//        OneSignal.setFuncLambdaUserConflictResolver { local, remote ->  remote };
-//
-//        OneSignal.propLambdaUserConflictResolver = { local, remote -> remote }
-
-        // Using lambda
-        OneSignal.notifications.addPushPermissionHandler(fun(stateChanges: IPermissionStateChanges) {
+        // Add a push permission handler -> anonymous function
+        OneSignal.notifications.addPushPermissionHandler(fun(stateChanges: IPermissionStateChanges?) {
 
         })
 
-        // Using anonymous class
+        // Add a push permission handler -> lambda
+        OneSignal.notifications.addPushPermissionHandler { stateChanges ->
+
+        }
+        // Add a push permission handler -> anonymous class
         OneSignal.notifications.addPushPermissionHandler(object : IPermissionChangedHandler {
             override fun onOSPermissionChanged(stateChanges: IPermissionStateChanges?) {
-                TODO("Not yet implemented")
             }
         })
-
-
     }
 }

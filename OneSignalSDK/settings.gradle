@@ -1,6 +1,9 @@
 include ':onesignal', ':onesignal:user'
 include ':app', ':unittest'
+include ':userapp'
+
 project(':app').projectDir = new File(settingsDir, '../examples/OneSignalDemo/app')
+project(':userapp').projectDir = new File(settingsDir, '../examples/OneSignalUserDemo/userapp')
 
 // Allows running the :app project above with the local source for development of the SDK.
 // This means we can keep the example app as-is so it stays as a real world example.

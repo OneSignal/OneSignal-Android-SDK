@@ -4,11 +4,11 @@ import com.onesignal.onesignal.internal.modeling.Model
 
 class PropertiesModel : Model() {
     var language: String
-        get() = get(::language.name)
+        get() = get(::language.name, "en")
         set(value) { set(::language.name, value) }
 
     var country: String
-        get() = get(::country.name)
+        get() = get(::country.name, "US")
         set(value) { set(::country.name, value) }
 
     var timezone: UInt?
@@ -24,6 +24,6 @@ class PropertiesModel : Model() {
         set(value) { set(::longitude.name, value) }
 
     var tags: Map<String, String>
-        get() = get(::tags.name)
+        get() = get(::tags.name, mapOf())
         set(value) { set(::tags.name, value) }
 }

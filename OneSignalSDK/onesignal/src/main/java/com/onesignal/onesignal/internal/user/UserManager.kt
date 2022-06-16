@@ -5,13 +5,11 @@ import com.onesignal.onesignal.internal.models.PropertiesModel
 import com.onesignal.onesignal.internal.models.SubscriptionModel
 import com.onesignal.onesignal.user.IUserManager
 import com.onesignal.onesignal.user.Identity
-import com.onesignal.onesignal.internal.user.aliases.Alias
-import com.onesignal.onesignal.internal.user.aliases.AliasCollection
 import com.onesignal.onesignal.user.subscriptions.Subscription
 import com.onesignal.onesignal.user.subscriptions.SubscriptionList
-import com.onesignal.onesignal.internal.user.tags.Tag
-import com.onesignal.onesignal.internal.user.tags.TagCollection
 import com.onesignal.onesignal.internal.user.triggers.TriggerCollection
+import com.onesignal.onesignal.logging.LogLevel
+import com.onesignal.onesignal.logging.Logging
 
 open class UserManager() : IUserManager {
     override val identity: Identity
@@ -28,19 +26,18 @@ open class UserManager() : IUserManager {
         set(value) { _propertiesModel.language = value }
 
     override var privacyConsent: Boolean = false
-    override var isLocationShared: Boolean = false
-    override val subscriptions: SubscriptionList = SubscriptionList()
-    override val tags: TagCollection = TagCollection()
-    override val aliases: AliasCollection = AliasCollection()
-    override val triggers: TriggerCollection = TriggerCollection()
+    override val subscriptions: SubscriptionList = SubscriptionList(listOf())
+    override val tags: Map<String, String> = mapOf()
+    override val aliases: Map<String, String> = mapOf()
+    val triggers: TriggerCollection = TriggerCollection(listOf())
 
     //    private var userModel: UserModel
     private var _identityModel: IdentityModel = IdentityModel()
     private var _propertiesModel: PropertiesModel = PropertiesModel()
-    private var _subscriptionModels: List<SubscriptionModel> = List<SubscriptionModel>()
+    private var _subscriptionModels: List<SubscriptionModel> = listOf()
 
     init {
-        TODO("Populate based on initial model or would that call setUser once loaded?")
+        // TODO("Populate based on initial model or would that call setUser once loaded?")
         // Following  priority order is used until we have an instance
         //   1. _user - Already set internal instance
         //   2. From local storage - restore user from last time the app opened
@@ -50,23 +47,37 @@ open class UserManager() : IUserManager {
     }
 
     fun setUser(identityModel: IdentityModel, propertiesModel: PropertiesModel) {
-        // TODO: Initialization when user is switched
+        _identityModel = identityModel
+        _propertiesModel = propertiesModel
+
+    }
+
+    override fun setExternalId(externalId: String?): IUserManager {
+        Logging.log(LogLevel.DEBUG, "setExternalId(externalId: $externalId)")
+
+        _identityModel.userId = externalId
+        _identityModel.userIdAuthHash = null
+        return this
     }
 
     override fun setExternalId(externalId: String?, externalIdAuthHash: String?): IUserManager {
+        Logging.log(LogLevel.DEBUG, "setExternalId(externalId: $externalId, externalIdAuthHash: $externalIdAuthHash)")
+
         _identityModel.userId = externalId
         _identityModel.userIdAuthHash = externalIdAuthHash
         return this
     }
 
-    override fun setAlias(alias: Alias) : com.onesignal.onesignal.user.IUserManager {
+    override fun setAlias(label: String, id: String) : com.onesignal.onesignal.user.IUserManager {
+        Logging.log(LogLevel.DEBUG, "setAlias(label: $label, id: $id)")
         val aliases = _identityModel.aliases.toMutableMap()
-        aliases[alias.label] = alias.id
+        aliases[label] = id
         _identityModel.aliases = aliases
         return this
     }
 
     override fun removeAlias(label: String): IUserManager {
+        Logging.log(LogLevel.DEBUG, "removeAlias(label: $label)")
         val aliases = _identityModel.aliases.toMutableMap()
         aliases.remove(label)
         _identityModel.aliases = aliases
@@ -74,33 +85,41 @@ open class UserManager() : IUserManager {
     }
 
     override fun addEmailSubscription(email: String, emailAuthHash: String?): IUserManager {
-        TODO("How do new models get created? Need a hook to the repo to add a new subscription model.")
+        Logging.log(LogLevel.DEBUG, "addEmailSubscription(email: $email, emailAuthHash: $emailAuthHash)")
+        //TODO("How do new models get created? Need a hook to the repo to add a new subscription model.")
         return this
     }
 
-    override fun addSmsSubscription(sms: String): IUserManager {
-        TODO("Not yet implemented")
+    override fun addSmsSubscription(sms: String, smsAuthHash: String?): IUserManager {
+        Logging.log(LogLevel.DEBUG, "addSmsSubscription(sms: $sms, smsAuthHash: $smsAuthHash)")
+        //TODO("Not yet implemented")
         return this
     }
 
     override fun setSubscriptionEnablement(subscription: Subscription, enabled: Boolean): IUserManager {
-        TODO("Not yet implemented")
+        Logging.log(LogLevel.DEBUG, "setSubscriptionEnablement(subscription: $subscription, enabled: $enabled)")
+        //TODO("Not yet implemented")
         return this
     }
 
     override fun removeSubscription(subscription: Subscription): IUserManager {
-        TODO("Not yet implemented")
+        Logging.log(LogLevel.DEBUG, "removeSubscription(subscription: $subscription)")
+        //TODO("Not yet implemented")
         return this
     }
 
     override fun setTag(key: String, value: String): IUserManager {
+        Logging.log(LogLevel.DEBUG, "setTag(key: $key, value: $value)")
+
         val tags = _propertiesModel.tags.toMutableMap()
         tags[key] = value
         _propertiesModel.tags = tags
         return this
     }
 
-    override fun setTags(tags: Collection<Tag>): IUserManager {
+    override fun setTags(tags: Map<String, String>): IUserManager {
+        Logging.log(LogLevel.DEBUG, "setTags(tags: $tags)")
+
         val tagCollection = _propertiesModel.tags.toMutableMap()
 
         tags.forEach {
@@ -112,6 +131,8 @@ open class UserManager() : IUserManager {
     }
 
     override fun removeTag(key: String): IUserManager {
+        Logging.log(LogLevel.DEBUG, "removeTag(key: $key)")
+
         val tags = _propertiesModel.tags.toMutableMap()
         tags.remove(key)
         _propertiesModel.tags = tags
@@ -119,6 +140,8 @@ open class UserManager() : IUserManager {
     }
 
     override fun removeTags(keys: Collection<String>): IUserManager {
+        Logging.log(LogLevel.DEBUG, "removeTags(keys: $keys)")
+
         val tagCollection = _propertiesModel.tags.toMutableMap()
 
         keys.forEach {
@@ -129,43 +152,50 @@ open class UserManager() : IUserManager {
         return this
     }
 
-    override fun setTriggers(triggers: Map<String, Object>): IUserManager {
-        TODO("Not yet implemented")
+    override fun setTriggers(triggers: Map<String, Any>): IUserManager {
+        Logging.log(LogLevel.DEBUG, "setTriggers(triggers: $triggers)")
+        //TODO("Not yet implemented")
         return this
     }
 
-    override fun setTrigger(key: String, value: Object): IUserManager {
-        TODO("Not yet implemented")
+    override fun setTrigger(key: String, value: Any): IUserManager {
+        Logging.log(LogLevel.DEBUG, "setTrigger(key: $key, value: $value)")
+        //TODO("Not yet implemented")
         return this
     }
 
     override fun removeTriggers(keys: Collection<String>): IUserManager {
-        TODO("Not yet implemented")
+        Logging.log(LogLevel.DEBUG, "removeTriggers(keys: $keys)")
+        //TODO("Not yet implemented")
         return this
     }
 
     override fun removeTrigger(key: String): IUserManager {
-        TODO("Not yet implemented")
+        Logging.log(LogLevel.DEBUG, "removeTrigger(key: $key)")
         return this
     }
 
     override fun clearTriggers(): IUserManager {
-        TODO("Not yet implemented")
+        Logging.log(LogLevel.DEBUG, "clearTriggers()")
+        //TODO("Not yet implemented")
         return this
     }
 
     override fun sendOutcome(name: String): IUserManager {
-        TODO("Not yet implemented")
+        Logging.log(LogLevel.DEBUG, "sendOutcome(name: $name)")
+        //TODO("Not yet implemented")
         return this
     }
 
     override fun sendUniqueOutcome(name: String): IUserManager {
-        TODO("Not yet implemented")
+        Logging.log(LogLevel.DEBUG, "sendUniqueOutcome(name: $name)")
+        //TODO("Not yet implemented")
         return this
     }
 
     override fun sendOutcomeWithValue(name: String, value: Float): IUserManager {
-        TODO("Not yet implemented")
+        Logging.log(LogLevel.DEBUG, "sendOutcomeWithValue(name: $name, value: $value)")
+        //TODO("Not yet implemented")
         return this
     }
 }

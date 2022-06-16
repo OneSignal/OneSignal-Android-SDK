@@ -57,28 +57,6 @@ object OneSignal {
         set(value) { oneSignal.requiresPrivacyConsent = value }
 
     @JvmStatic
-    var userConflictResolver: IUserIdentityConflictResolver?
-        get() = oneSignal.userConflictResolver
-        set(value) { oneSignal.userConflictResolver = value }
-
-//    @JvmStatic
-//    lateinit var propLambdaUserConflictResolver: (IUserManager, IUserManager) -> IUserManager?
-//
-//    @JvmStatic
-//    fun setFuncLambdaUserConflictResolver(resolver: (IUserManager, IUserManager) -> IUserManager) {
-//        userConflictResolver = object : IUserIdentityConflictResolver {
-//            override fun resolve(local: IUserManager, remote: IUserManager) : IUserManager {
-//                return resolver.invoke(local, remote)
-//            }
-//        }
-//    }
-//
-//    @JvmStatic
-//    fun setFuncIntfUserConflictResolver(resolver: IUserIdentityConflictResolver) {
-//        userConflictResolver = resolver
-//    }
-
-    @JvmStatic
     suspend fun initWithContext(context: Context) {
         oneSignal.initWithContext(context)
     }
@@ -89,7 +67,13 @@ object OneSignal {
     }
 
     @JvmStatic
-    suspend fun loginAsync(identity: Identity): IUserManager {
-        return oneSignal.loginAsync(identity);
+    suspend fun login(identity: Identity): IUserManager {
+        return oneSignal.login(identity);
     }
+
+    @JvmStatic
+    fun setUserConflictResolver(handler: IUserIdentityConflictResolver) = oneSignal.setUserConflictResolver(handler)
+
+    @JvmStatic
+    fun setUserConflictResolver(handler: (local: IUserManager, remote: IUserManager) -> IUserManager) = oneSignal.setUserConflictResolver(handler)
 }

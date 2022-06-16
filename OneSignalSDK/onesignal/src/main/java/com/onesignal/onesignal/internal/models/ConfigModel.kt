@@ -37,4 +37,25 @@ class ConfigModel : Model() {
      * Operation repo file path
      */
     var operationRepoCachePath: String = "" // todo
+
+    /**
+     * The current AppID
+     */
+    var appId: String
+        get() = get(::appId.name)
+        set(value) { set(::appId.name, value) }
+
+    /**
+     * The current userID
+     */
+    var userId: String
+        get() = get(::userId.name)
+        set(value) { set(::userId.name, value) }
+
+    /**
+     * Whether this app requires privacy consent to send data to backend.
+     */
+    var requiresPrivacyConsent: Boolean
+        get() = get(::requiresPrivacyConsent.name)
+        set(value) { set(::requiresPrivacyConsent.name, value) }
 }

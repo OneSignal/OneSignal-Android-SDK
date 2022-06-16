@@ -1,20 +1,24 @@
 package com.onesignal.onesignal.internal.push
 
-import com.onesignal.OSPermissionObserver
-import com.onesignal.OneSignal
-import com.onesignal.onesignal.notification.INotificationsManager
+import com.onesignal.onesignal.logging.LogLevel
+import com.onesignal.onesignal.logging.Logging
+import com.onesignal.onesignal.notification.*
 import org.json.JSONObject
 
 /**
  * The notification manager is responsible for the management of notifications
  * on the current device (not the user).
  */
-class NotificationsManager : INotificationsManager {
-    override var permissionStatus: String = ""
+class NotificationsManager() : INotificationsManager {
+    override var permissionStatus: IPermissionState = object : IPermissionState {
+        override var notificationsEnabled: Boolean = false
+    }
 
-    /** TODO: ASYNC **/
-    override fun promptForPushPermissionStatus() {
+    override var unsubscribeWhenNotificationsAreDisabled: Boolean = false
 
+    override suspend fun promptForPushPermissionStatus() : Boolean? {
+        Logging.log(LogLevel.DEBUG, "promptForPushPermissionStatus()")
+        return false
     }
 
     /**
@@ -30,15 +34,19 @@ class NotificationsManager : INotificationsManager {
      *              POST call for all options.
      * @param callback a {@link PostNotificationResponseHandler} object to receive the request result
      *
-     * TODO: ASYNC
      * TODO: CAN WE SUPPLY A NOTIFICATION OBJECT
      */
-    override fun postNotification(json: JSONObject, callback: com.onesignal.OneSignal.PostNotificationResponseHandler) {
-        // Should this be in the java API library only?
+    override suspend fun postNotification(json: JSONObject) : JSONObject {
+        Logging.log(LogLevel.DEBUG, "postNotification(json: $json)")
+
+        //TODO()
+        return JSONObject()
     }
 
-    override fun postNotification(json: String, callback: com.onesignal.OneSignal.PostNotificationResponseHandler) {
-        // Should this be in the java API library only?
+    override suspend fun postNotification(json: String) : JSONObject {
+        Logging.log(LogLevel.DEBUG, "postNotification(json: $json)")
+//        TODO()
+        return JSONObject()
     }
 
     /**
@@ -49,11 +57,11 @@ class NotificationsManager : INotificationsManager {
      * @param id
      */
     override fun removeNotification(id: Int) {
-
+        Logging.log(LogLevel.DEBUG, "removeNotification(id: $id)")
     }
 
     override fun removeGroupedNotifications(group: String) {
-
+        Logging.log(LogLevel.DEBUG, "removeGroupedNotifications(group: $group)")
     }
 
     /**
@@ -62,7 +70,7 @@ class NotificationsManager : INotificationsManager {
      * your app is restarted.
      */
     override fun clearAll() {
-
+        Logging.log(LogLevel.DEBUG, "clearAll()")
     }
 
     /**
@@ -81,8 +89,14 @@ class NotificationsManager : INotificationsManager {
      * @param handler the instance of [com.onesignal.OSPermissionObserver] that you want to process
      *                 the permission changes within
      */
-    override fun addPushPermissionHandler(handler: OSPermissionObserver) {
+    override fun addPushPermissionHandler(handler: IPermissionChangedHandler) {
+        Logging.log(LogLevel.DEBUG, "addPushPermissionHandler(handler: $handler)")
+        //TODO("Not yet implemented")
+    }
 
+    override fun addPushPermissionHandler(handler: (IPermissionStateChanges?) -> Unit) {
+        Logging.log(LogLevel.DEBUG, "addPushPermissionHandler(handler: $handler)")
+        //TODO("Not yet implemented")
     }
 
     /**
@@ -90,8 +104,14 @@ class NotificationsManager : INotificationsManager {
      *
      * @param handler The previously added handler that should be removed.
      */
-    override fun removePushPermissionHandler(handler: OSPermissionObserver) {
+    override fun removePushPermissionHandler(handler: IPermissionChangedHandler) {
+        Logging.log(LogLevel.DEBUG, "removePushPermissionHandler(handler: $handler)")
+        //TODO("Not yet implemented")
+    }
 
+    override fun removePushPermissionHandler(handler: (IPermissionStateChanges?) -> Unit) {
+        Logging.log(LogLevel.DEBUG, "removePushPermissionHandler(handler: $handler)")
+        //TODO("Not yet implemented")
     }
 
     /**
@@ -103,8 +123,9 @@ class NotificationsManager : INotificationsManager {
      *
      * @param handler: The handler that is to be called when the even occurs.
      */
-    override fun setNotificationWillShowInForegroundHandler(handler: OneSignal.OSNotificationWillShowInForegroundHandler) {
-
+    override fun setNotificationWillShowInForegroundHandler(handler: INotificationWillShowInForegroundHandler) {
+        Logging.log(LogLevel.DEBUG, "setNotificationWillShowInForegroundHandler(handler: $handler)")
+        //TODO("Not yet implemented")
     }
 
     /**
@@ -112,7 +133,8 @@ class NotificationsManager : INotificationsManager {
      *
      * @param handler The handler that is to be called when the event occurs.
      */
-    override fun setNotificationOpenedHandler(handler: OneSignal.OSNotificationOpenedHandler) {
-
+    override fun setNotificationOpenedHandler(handler: INotificationOpenedHandler) {
+        Logging.log(LogLevel.DEBUG, "setNotificationOpenedHandler(handler: $handler)")
+        //TODO("Not yet implemented")
     }
 }

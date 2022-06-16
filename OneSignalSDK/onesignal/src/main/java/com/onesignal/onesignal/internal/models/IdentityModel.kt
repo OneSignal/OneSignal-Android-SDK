@@ -16,6 +16,6 @@ class IdentityModel : Model() {
         set(value) { set(::userIdAuthHash.name, value) }
 
     var aliases: Map<String, String>
-        get() = get(::aliases.name)
+        get() = get(::aliases.name, mapOf())
         set(value) { set(::aliases.name, value) }
 }

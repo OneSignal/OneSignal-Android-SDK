@@ -8,15 +8,15 @@ import com.onesignal.onesignal.user.subscriptions.SubscriptionList
  * The OneSignal user manager is responsible for managing the current user state.  When
  * an app starts up for the first time, it is defaulted to having a user with an [identity]
  * of [Identity.Anonymous].  Once the application knows the identity of the user using their
- * app they should call [OneSignal.loginAsync] providing that identity to OneSignal, at which
+ * app they should call [OneSignal.login] providing that identity to OneSignal, at which
  * point all state in here will reflect the state of that known user.
  *
  * The current user is persisted across the application lifecycle, even when the application
- * is restarted.  It is up to the application developer to call [OneSignal.loginAsync] when
+ * is restarted.  It is up to the application developer to call [OneSignal.login] when
  * the user of the application switches, or logs out, to ensure the identity tracked by OneSignal
  * remains in sync.
  *
- * When you should call [OneSignal.loginAsync]:
+ * When you should call [OneSignal.login]:
  *   1. When the identity of the user changes (i.e. a login or a context switch)
  *   2. When the identity of the user is lost (i.e. a logout)
  */
@@ -38,10 +38,9 @@ interface IUserManager {
     var privacyConsent: Boolean
 
     /**
-     * Whether the current user has enabled location sharing (may or may not be enabled on
-     * the current device, which is a device-scoped control managed within [OneSignal.location]).
+     * The aliases associated to the current user.
      */
-    var isLocationShared: Boolean
+    val aliases: Map<String, String>
 
     /**
      * The subscriptions associated to the current user.
@@ -49,14 +48,20 @@ interface IUserManager {
     val subscriptions: SubscriptionList
 
     /**
+     * The tags associated to the current user.
+     */
+    val tags: Map<String, String>
+
+    /**
      * Change the external ID of the current user.  This will update the current user's external id
-     * It will not switch users, to switch users you must call [OneSignal.loginAsync].
+     * It will not switch users, to switch users you must call [OneSignal.login].
      *
      * @param externalId The new external ID for the current user. Set to `null` to remove the
      * external ID for the current user (TODO: does this make them anonymous?)
      * @param externalIdAuthHash The optional auth hash for the external id. If not using identity
      * verification, this can be omitted or set to `null`. See [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
      */
+    fun setExternalId(externalId: String?) : IUserManager
     fun setExternalId(externalId: String?, externalIdAuthHash: String? = null) : IUserManager
 
     /**
@@ -83,6 +88,7 @@ interface IUserManager {
      * this can be omitted or set to `null`. See [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
      */
     fun addEmailSubscription(email: String, emailAuthHash: String? = null) : IUserManager
+    fun addEmailSubscription(email: String) : IUserManager = addEmailSubscription(email, null)
 
     /**
      * Add a new SMS subscription to the current user.
@@ -92,6 +98,7 @@ interface IUserManager {
      * this can be omitted or set to `null`. See [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
      */
     fun addSmsSubscription(sms: String, smsAuthHash: String? = null) : IUserManager
+    fun addSmsSubscription(sms: String) : IUserManager = addSmsSubscription(sms, null)
 
     /**
      * Change the enablement of the provided subscription.  The subscription will still exist

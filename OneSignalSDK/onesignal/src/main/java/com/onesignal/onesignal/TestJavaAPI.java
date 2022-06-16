@@ -15,47 +15,27 @@ import kotlin.coroutines.EmptyCoroutineContext;
 
 class TestJavaAPI {
    void test() {
+      OneSignal.initWithContext(null, Continue.none());
+
       // Init OneSignal
-      OneSignal.INSTANCE.init("123");
+      OneSignal.setAppId("123", Continue.none());
 
       // Can access user on OneSignal at any time
-      System.out.println(OneSignal.INSTANCE.getUser());
+      System.out.println(OneSignal.getUser());
 
       // OneSignal.user = (not allowed, use OneSignal.switchUser instead)
 
       // Example User Login
       //    - Create an Identity with External user id (with auth hash)
-      Identity.ExternalId identity = new Identity.ExternalId("myID");
-      OneSignal.INSTANCE.switchUser(identity);
-
-      // Example 1 of Logout, you get generic push
-      OneSignal.INSTANCE.switchUser(new Identity.Anonymous());
-
-      // Example 2 of Logout, device won't get an pushes there is no user.
-      // JAVA API CON: The casting here is not very clean, this is simply just null in Kotlin
-      OneSignal.INSTANCE.switchUser((Identity.Anonymous)null);
-
-      // Add tag example
-      // JAVA API CON: "getTags() here is confusing. In Kotlin, this reads OneSignal.user.tags.add
-      OneSignal.INSTANCE.getUser().getTags().add("key", "value");
-
-
-
-//      OneSignal.loginAsync(new Identity.Known("external_id", "auth_hash"), Continue.with((result, throwable) -> {
-//
-//      }));
-
-      // Using lambda wrapper
-      OneSignal.loginAsync(new Identity.Known("external_id"), Continue.with((result) -> {
+      OneSignal.login(new Identity.Known("myID"), Continue.with(result -> {
 
       }));
 
-      OneSignal.loginAsync(new Identity.Known("external_id", "auth_hash"), Continue.with((result) -> {
+      OneSignal.login(new Identity.Known("myID", "myIDAuthHash"), Continue.with(result -> {
 
       }));
 
-      // Using anonymous class
-      OneSignal.loginAsync(new Identity.Known("external_id", "auth_hash"), new Continuation<IUserManager>() {
+      OneSignal.login(new Identity.Known("myID", "myIDAuthHash"), new Continuation<IUserManager>() {
          @NonNull
          @Override
          public CoroutineContext getContext() {
@@ -68,12 +48,36 @@ class TestJavaAPI {
          }
       });
 
-      // Using Lambda
-      OneSignal.getNotifications().addPushPermissionHandler(stateChanges -> {
+      // Example 1 of Logout, you get generic push
+      OneSignal.login(new Identity.Anonymous(), Continue.none());
 
+      // Example 2 of Logout, device won't get an pushes there is no user.
+      // JAVA API CON: The casting here is not very clean, this is simply just null in Kotlin
+      // OneSignal.switchUser((Identity.Anonymous)null);
+
+      // Add tag example
+      // JAVA API CON: "getTags() here is confusing. In Kotlin, this reads OneSignal.user.tags.add
+      OneSignal.getUser().setTag("key", "value")
+                         .setTag("key2", "value2")
+                         .setAlias("facebook", "myfacebookid")
+                         .setTrigger("level", 1)
+                         .addEmailSubscription("user@company.co")
+                         .addSmsSubscription("+8451111111");
+
+      // Set the user conflict resolver - anonymous class
+      OneSignal.setUserConflictResolver(new IUserIdentityConflictResolver() {
+         @NonNull
+         @Override
+         public IUserManager resolve(@NonNull IUserManager local, @NonNull IUserManager remote) {
+            return remote;
+         }
+      });
+      // Set the user conflict resolver - lambda
+      OneSignal.setUserConflictResolver((IUserIdentityConflictResolver) (local, remote) -> {
+         return remote;
       });
 
-      // Using anonymous class
+      // Add a push permission handler -> anonymous class
       OneSignal.getNotifications().addPushPermissionHandler(new IPermissionChangedHandler() {
          @Override
          public void onOSPermissionChanged(@Nullable IPermissionStateChanges stateChanges) {
@@ -81,28 +85,9 @@ class TestJavaAPI {
          }
       });
 
+      // Add a push permission handler -> lambda
+      OneSignal.getNotifications().addPushPermissionHandler(stateChanges -> {
 
-//
-//      OneSignal.setFuncLambdaUserConflictResolver((local, remote) -> {
-//         return remote;
-//      });
-//
-//      OneSignal.setPropLambdaUserConflictResolver((local, remote) -> {
-//         return remote;
-//      });
-
-      // Using lambda
-      OneSignal.setUserConflictResolver((local, remote) -> {
-         return remote;
-      });
-
-      // Using anonymous class
-      OneSignal.setUserConflictResolver(new IUserIdentityConflictResolver() {
-         @NonNull
-         @Override
-         public IUserManager resolve(@NonNull IUserManager local, @NonNull IUserManager remote) {
-            return remote;
-         }
       });
    }
 }

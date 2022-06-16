@@ -1,6 +1,6 @@
 package com.onesignal.onesignal
 
-import android.content.Context;
+import android.content.Context
 
 import com.onesignal.onesignal.iam.IIAMManager
 import com.onesignal.onesignal.location.ILocationManager
@@ -59,11 +59,6 @@ interface IOneSignal {
     var requiresPrivacyConsent: Boolean
 
     /**
-     * The (optional) conflict resolver.
-     */
-    var userConflictResolver: IUserIdentityConflictResolver?
-
-    /**
      * Initialize the OneSignal SDK.  This should be called during
      * startup of the application.
      *
@@ -107,7 +102,13 @@ interface IOneSignal {
      *       app developer to "pause" IAM at the user level, in addition to the device level.
      *       Use Case:  Allow the user to toggle on/off
      */
-    suspend fun loginAsync(identity: Identity): IUserManager
+    suspend fun login(identity: Identity): IUserManager
+
+    /**
+     * Set the optional user conflict resolver.
+     */
+    fun setUserConflictResolver(handler: IUserIdentityConflictResolver?)
+    fun setUserConflictResolver(handler: (local: IUserManager, remote: IUserManager) -> IUserManager) // TODO: SHOULD INCLUDE?
 
     // TODO: Lifecycle events?
 }
