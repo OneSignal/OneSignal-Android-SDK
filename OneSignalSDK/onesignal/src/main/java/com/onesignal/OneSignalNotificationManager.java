@@ -100,15 +100,11 @@ public class OneSignalNotificationManager {
     /**
      * All groupless notifications are assigned the GROUPLESS_SUMMARY_KEY and notify() is called
      */
-    @RequiresApi(api = Build.VERSION_CODES.M)
+    @RequiresApi(api = Build.VERSION_CODES.N)
     static void assignGrouplessNotifications(Context context, ArrayList<StatusBarNotification> grouplessNotifs) {
         for (StatusBarNotification grouplessNotif : grouplessNotifs) {
-            Notification.Builder grouplessNotifBuilder;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                grouplessNotifBuilder = Notification.Builder.recoverBuilder(context, grouplessNotif.getNotification());
-            } else {
-                grouplessNotifBuilder = new Notification.Builder(context);
-            }
+            Notification.Builder grouplessNotifBuilder =
+                Notification.Builder.recoverBuilder(context, grouplessNotif.getNotification());
 
             // Recreate the notification but with the groupless key instead
             Notification notif = grouplessNotifBuilder
