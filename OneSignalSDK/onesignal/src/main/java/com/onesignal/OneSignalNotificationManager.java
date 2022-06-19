@@ -113,6 +113,7 @@ public class OneSignalNotificationManager {
             // Recreate the notification but with the groupless key instead
             Notification notif = grouplessNotifBuilder
                     .setGroup(GROUPLESS_SUMMARY_KEY)
+                    .setOnlyAlertOnce(true)
                     .build();
 
             NotificationManagerCompat.from(context).notify(grouplessNotif.getId(), notif);
