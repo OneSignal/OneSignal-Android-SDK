@@ -1,26 +1,39 @@
 package com.onesignal.onesignal.internal.modeling
 
+import com.onesignal.onesignal.internal.common.INotifyChangedHandler
+
 /**
  * A model store that is implemented in memory.
  */
 internal class SingletonModelStore<TModel>(
         val name: String,
+        private val create: () -> TModel,
         val store: IModelStore<TModel>,
-        ) : ISingletonModelStore<TModel> where TModel : Model {
+        ) : ISingletonModelStore<TModel>, INotifyChangedHandler<ModelChangedArgs> where TModel : Model {
 
-    override fun get(): TModel? {
-        return store.get(name)
+    private val _subscribers: MutableList<ISingletonModelStoreChangeHandler<TModel>> = mutableListOf()
+
+    override fun get(): TModel {
+        val model = store.get(name)
+        if(model != null)
+            return model
+
+        val createdModel = create()
+        createdModel.subscribe(this)
+        return store.get(name) ?: create()
     }
 
-    override fun update(model: TModel) {
-        store.update(name, model)
+    override fun subscribe(handler: ISingletonModelStoreChangeHandler<TModel>) {
+        _subscribers.add(handler)
     }
 
-    override fun subscribe(handler: IModelStoreChangeHandler<TModel>) {
-        TODO("Not yet implemented")
+    override fun unsubscribe(handler: ISingletonModelStoreChangeHandler<TModel>) {
+        _subscribers.remove(handler)
     }
 
-    override fun unsubscribe(handler: IModelStoreChangeHandler<TModel>) {
-        TODO("Not yet implemented")
+    override fun onChanged(args: ModelChangedArgs) {
+        for(s in _subscribers) {
+            s.updated(args.model as TModel, args.property, args.oldValue, args.newValue)
+        }
     }
 }

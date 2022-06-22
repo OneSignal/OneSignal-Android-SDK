@@ -1,10 +1,11 @@
 package com.onesignal.onesignal.internal.models
 
 import com.onesignal.onesignal.internal.modeling.Model
+import java.util.*
 
 class IdentityModel : Model() {
-    var oneSignalId: String?
-        get() = get(::oneSignalId.name)
+    var oneSignalId: UUID
+        get() = get(::oneSignalId.name) { UUID.randomUUID() }
         set(value) { set(::oneSignalId.name, value) }
 
     var userId: String?
@@ -16,6 +17,6 @@ class IdentityModel : Model() {
         set(value) { set(::userIdAuthHash.name, value) }
 
     var aliases: Map<String, String>
-        get() = get(::aliases.name, mapOf())
+        get() = get(::aliases.name) { mapOf() }
         set(value) { set(::aliases.name, value) }
 }

@@ -12,11 +12,16 @@ class IdentityModelStoreListener(
 
     // TODO: IApiService shouldn't be here, not a dependency of the listener but need to create the backend operations. Need a factory? Maybe factor method in IOperationRepo?
 
-    override fun getOperation(action: Action, id: String, model: IdentityModel): Operation? {
-        return when(action) {
-            Action.CREATED -> CreateUserOperation(api)
-            Action.UPDATED -> UpdateUserOperation(api, id)
-            Action.DELETED -> DeleteUserOperation(api, id)
-        }
+    override fun getAddOperation(model: IdentityModel): Operation? {
+        // TODO: Snapshot the model to prevent it from changing while the operation has been queued.
+        return CreateUserOperation(api, model.id)
+    }
+
+    override fun getRemoveOperation(model: IdentityModel): Operation? {
+        return DeleteUserOperation(api, model.id)
+    }
+
+    override fun getUpdateOperation(model: IdentityModel, property: String, oldValue: Any?, newValue: Any?): Operation? {
+        return UpdateUserOperation(api, model.id, property, newValue)
     }
 }

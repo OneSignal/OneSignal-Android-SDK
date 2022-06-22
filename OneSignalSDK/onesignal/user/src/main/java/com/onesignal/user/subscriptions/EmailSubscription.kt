@@ -4,5 +4,4 @@ class EmailSubscription(
         id: String,
         enabled: Boolean,
         val email: String
-        ) : Subscription(id, enabled) {
-}
+        ) : Subscription(id, enabled)

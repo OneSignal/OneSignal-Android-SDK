@@ -1,4 +1,4 @@
-package com.onesignal.onesignal.internal.push
+package com.onesignal.onesignal.internal.notification
 
 import com.onesignal.onesignal.logging.LogLevel
 import com.onesignal.onesignal.logging.Logging
@@ -16,7 +16,7 @@ class NotificationsManager() : INotificationsManager {
 
     override var unsubscribeWhenNotificationsAreDisabled: Boolean = false
 
-    override suspend fun promptForPushPermissionStatus() : Boolean? {
+    override suspend fun requestPermission() : Boolean? {
         Logging.log(LogLevel.DEBUG, "promptForPushPermissionStatus()")
         return false
     }

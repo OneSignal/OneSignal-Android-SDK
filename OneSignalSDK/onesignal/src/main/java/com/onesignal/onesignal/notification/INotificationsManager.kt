@@ -21,7 +21,7 @@ interface INotificationsManager {
      *         false if the user is opted out of push notifications (Android 13 and higher, user rejected. < Android 13, this cannot happen)
      *         null if the intent could not be determined (notification disabled and user sent to settings to hopefully enable.)
      */
-    suspend fun promptForPushPermissionStatus() : Boolean?
+    suspend fun requestPermission() : Boolean?
 
     /**
      * Allows you to send notifications from user to user or schedule ones in the future to be delivered

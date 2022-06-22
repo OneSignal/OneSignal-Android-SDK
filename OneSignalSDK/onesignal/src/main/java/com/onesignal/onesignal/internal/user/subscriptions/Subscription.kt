@@ -1,4 +1,7 @@
-package com.onesignal.onesignal.user.subscriptions
+package com.onesignal.onesignal.internal.user.subscriptions
+
+import com.onesignal.onesignal.user.subscriptions.ISubscription
+import java.util.*
 
 /**
  * An abstract subscription represents an open channel between
@@ -8,12 +11,11 @@ abstract class Subscription(
         /**
          * The unique identifier for this subscription.
          */
-        val id: String,
+        override val id: UUID,
 
         /**
          *  Whether this subscription is current enabled. When enabled, the user is able to
          *  receive notifications through this subscription.
          */
-        val enabled: Boolean
-) {
-}
+        override val enabled: Boolean
+) : ISubscription

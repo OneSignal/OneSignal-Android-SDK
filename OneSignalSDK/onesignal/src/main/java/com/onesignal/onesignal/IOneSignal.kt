@@ -54,7 +54,7 @@ interface IOneSignal {
      * Determines whether a user must consent to privacy prior
      * to their user data being sent up to OneSignal.  This
      * should be set to `true` prior to the invocation of
-     * [initAsync] to ensure compliance.
+     * [initWithContext] to ensure compliance.
      */
     var requiresPrivacyConsent: Boolean
 

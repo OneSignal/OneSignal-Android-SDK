@@ -41,21 +41,21 @@ class ConfigModel : Model() {
     /**
      * The current AppID
      */
-    var appId: String
-        get() = get(::appId.name)
+    var appId: String?
+        get() = get(::appId.name) { null }
         set(value) { set(::appId.name, value) }
 
     /**
      * The current userID
      */
-    var userId: String
-        get() = get(::userId.name)
+    var userId: String?
+        get() = get(::userId.name) { null }
         set(value) { set(::userId.name, value) }
 
     /**
      * Whether this app requires privacy consent to send data to backend.
      */
     var requiresPrivacyConsent: Boolean
-        get() = get(::requiresPrivacyConsent.name)
+        get() = get(::requiresPrivacyConsent.name) { false }
         set(value) { set(::requiresPrivacyConsent.name, value) }
 }

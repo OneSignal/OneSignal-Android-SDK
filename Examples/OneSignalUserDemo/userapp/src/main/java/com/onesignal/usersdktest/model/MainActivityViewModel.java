@@ -29,9 +29,9 @@ import com.onesignal.onesignal.Continue;
 import com.onesignal.onesignal.OneSignal;
 import com.onesignal.onesignal.notification.IPermissionStateChanges;
 import com.onesignal.onesignal.user.Identity;
-import com.onesignal.onesignal.user.subscriptions.EmailSubscription;
-import com.onesignal.onesignal.user.subscriptions.PushSubscription;
-import com.onesignal.onesignal.user.subscriptions.SmsSubscription;
+import com.onesignal.onesignal.user.subscriptions.IEmailSubscription;
+import com.onesignal.onesignal.user.subscriptions.IPushSubscription;
+import com.onesignal.onesignal.user.subscriptions.ISmsSubscription;
 import com.onesignal.usersdktest.R;
 import com.onesignal.usersdktest.activity.SecondaryActivity;
 import com.onesignal.usersdktest.adapter.InAppMessageRecyclerViewAdapter;
@@ -60,7 +60,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @RequiresApi(api = Build.VERSION_CODES.N)
 public class MainActivityViewModel implements ActivityViewModel {
@@ -354,7 +353,7 @@ public class MainActivityViewModel implements ActivityViewModel {
 
     @Override
     public void onOSPermissionChanged(@Nullable IPermissionStateChanges stateChanges) {
-        boolean isSubscribed = OneSignal.getUser().getSubscriptions().getOnThisDevice() != null;
+        boolean isSubscribed = OneSignal.getUser().getSubscriptions().getThisDevice() != null;
         boolean isPermissionEnabled = stateChanges.getTo().getNotificationsEnabled();
 
         subscriptionSwitch.setEnabled(isPermissionEnabled);
@@ -501,7 +500,7 @@ public class MainActivityViewModel implements ActivityViewModel {
                     animate.toggleAnimationView(true, View.GONE, aliasesRecyclerView, noAliasesTextView);
                 }
 
-                tagPairRecyclerViewAdapter.notifyDataSetChanged();
+                aliasesRecyclerViewAdapter.notifyDataSetChanged();
             }
         });
     }
@@ -605,7 +604,7 @@ public class MainActivityViewModel implements ActivityViewModel {
 
     private void setupPromptLocationButton() {
         promptLocationButton.setOnClickListener(v -> {
-            OneSignal.getLocation().promptLocationAsync(Continue.none());
+            OneSignal.getLocation().requestPermission(Continue.none());
         });
     }
 
@@ -617,7 +616,7 @@ public class MainActivityViewModel implements ActivityViewModel {
 
     private void setupSubscriptionSwitch() {
         boolean isPermissionEnabled = OneSignal.getNotifications().getPermissionStatus().getNotificationsEnabled();
-        boolean isSubscribed = OneSignal.getUser().getSubscriptions().getOnThisDevice() != null;
+        boolean isSubscribed = OneSignal.getUser().getSubscriptions().getThisDevice() != null;
 
         subscriptionSwitch.setEnabled(isPermissionEnabled);
         subscriptionSwitch.setChecked(isSubscribed);
@@ -626,7 +625,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         subscriptionRelativeLayout.setOnClickListener(v -> {
             boolean isPermissionEnabled1 = OneSignal.getNotifications().getPermissionStatus().getNotificationsEnabled();
             if(!isPermissionEnabled1) {
-                OneSignal.getNotifications().promptForPushPermissionStatus(Continue.with(r -> {
+                OneSignal.getNotifications().requestPermission(Continue.with(r -> {
                     // TODO: I think this will fire the change listener, which handles this code so might
                     //       not need to do anything here?
                     if(r.isSuccess()) {
@@ -639,7 +638,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         // Add a listener to toggle the push notification enablement for the current user. The assumption is this
         // can only fire if the subscription switch is enabled (push notifications are enabled).
         subscriptionSwitch.setOnClickListener(v -> {
-            PushSubscription subscription = OneSignal.getUser().getSubscriptions().getOnThisDevice();
+            IPushSubscription subscription = OneSignal.getUser().getSubscriptions().getThisDevice();
             if (subscription == null)
                 return;
 
@@ -731,12 +730,10 @@ public class MainActivityViewModel implements ActivityViewModel {
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         emailsRecyclerView.setLayoutManager(linearLayoutManager);
         emailsRecyclerViewAdapter = new SingleRecyclerViewAdapter(context, emailArrayList, value -> {
-            Optional<EmailSubscription> emailSub = OneSignal.getUser()
-                                                  .getSubscriptions()
-                                                  .getEmail()
-                                                  .stream().filter(s -> s.getEmail() == value).findFirst();
-            if(emailSub.isPresent()) {
-                OneSignal.getUser().removeSubscription(emailSub.get());
+            IEmailSubscription emailSub = OneSignal.getUser().getSubscriptions().getByEmail(value);
+
+            if(emailSub != null) {
+                OneSignal.getUser().removeSubscription(emailSub);
             }
 
             emailArrayList.remove(value);
@@ -763,12 +760,10 @@ public class MainActivityViewModel implements ActivityViewModel {
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         smssRecyclerView.setLayoutManager(linearLayoutManager);
         smssRecyclerViewAdapter = new SingleRecyclerViewAdapter(context, smsArrayList, value -> {
-            Optional<SmsSubscription> smsSub = OneSignal.getUser()
-                    .getSubscriptions()
-                    .getSms()
-                    .stream().filter(s -> s.getNumber() == value).findFirst();
-            if(smsSub.isPresent()) {
-                OneSignal.getUser().removeSubscription(smsSub.get());
+            ISmsSubscription smsSub = OneSignal.getUser().getSubscriptions().getBySMS(value);
+
+            if(smsSub != null) {
+                OneSignal.getUser().removeSubscription(smsSub);
             }
 
             smsArrayList.remove(value);
@@ -946,29 +941,29 @@ public class MainActivityViewModel implements ActivityViewModel {
 
         // email subscriptions
         emailArrayList.clear();
-        List<EmailSubscription> emailSubs = OneSignal.getUser().getSubscriptions().getEmail();
-        for (EmailSubscription emailSub: emailSubs) {
+        List<IEmailSubscription> emailSubs = OneSignal.getUser().getSubscriptions().getEmailSubscriptions();
+        for (IEmailSubscription emailSub: emailSubs) {
             emailArrayList.add(emailSub.getEmail());
         }
         refreshEmailRecyclerView();
 
         // sms subscriptions
         smsArrayList.clear();
-        List<SmsSubscription> smsSubs = OneSignal.getUser().getSubscriptions().getSms();
-        for (SmsSubscription smsSub: smsSubs) {
+        List<ISmsSubscription> smsSubs = OneSignal.getUser().getSubscriptions().getSmsSubscriptions();
+        for (ISmsSubscription smsSub: smsSubs) {
             smsArrayList.add(smsSub.getNumber());
         }
         refreshSMSRecyclerView();
 
         // tags
-        tagArrayList.clear();
+        tagSet.clear();
         for (Map.Entry<String, String> tagEntry :OneSignal.getUser().getTags().entrySet()) {
             tagSet.put(tagEntry.getKey(), tagEntry.getValue());
         }
         refreshTagRecyclerView();
 
         // triggers
-        triggerArrayList.clear();
+        triggerSet.clear();
         // triggers are not persisted, they are always "starting from scratch"
         refreshTriggerRecyclerView();
     }

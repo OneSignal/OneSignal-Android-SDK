@@ -4,7 +4,7 @@ import android.util.Log;
 
 import com.onesignal.onesignal.Continue;
 import com.onesignal.onesignal.OneSignal;
-import com.onesignal.onesignal.user.subscriptions.PushSubscription;
+import com.onesignal.onesignal.user.subscriptions.IPushSubscription;
 import com.onesignal.usersdktest.constant.Tag;
 import com.onesignal.usersdktest.type.Notification;
 
@@ -15,7 +15,7 @@ public class OneSignalNotificationSender {
 
     public static void sendDeviceNotification(final Notification notification) {
         new Thread(() -> {
-            PushSubscription subscription = OneSignal.getUser().getSubscriptions().getOnThisDevice();
+            IPushSubscription subscription = OneSignal.getUser().getSubscriptions().getThisDevice();
 
             if (subscription == null || !subscription.getEnabled())
                 return;

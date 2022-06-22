@@ -1,7 +1,7 @@
 package com.onesignal.onesignal.user
 
 import com.onesignal.onesignal.OneSignal
-import com.onesignal.onesignal.user.subscriptions.Subscription
+import com.onesignal.onesignal.user.subscriptions.ISubscription
 import com.onesignal.onesignal.user.subscriptions.SubscriptionList
 
 /**
@@ -109,7 +109,7 @@ interface IUserManager {
      *
      * @param enabled Whether the subscription should be enabled (`true`) or disabled (`false`).
      */
-    fun setSubscriptionEnablement(subscription: Subscription, enabled: Boolean) : IUserManager
+    fun setSubscriptionEnablement(subscription: ISubscription, enabled: Boolean) : IUserManager
 
     /**
      * Remove the subscription from the current user. The subscription will be deleted as a
@@ -118,7 +118,7 @@ interface IUserManager {
      * @param subscription The subscription that is to be removed. This is obtained within
      * the [subscriptions] collection.
      */
-    fun removeSubscription(subscription: Subscription) : IUserManager
+    fun removeSubscription(subscription: ISubscription) : IUserManager
 
     /**
      * Set a tag for the current user.  Tags are key:value pairs used as building blocks

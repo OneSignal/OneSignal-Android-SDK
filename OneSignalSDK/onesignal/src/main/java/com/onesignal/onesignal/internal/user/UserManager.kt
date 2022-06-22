@@ -1,17 +1,23 @@
 package com.onesignal.onesignal.internal.user
 
+import com.onesignal.onesignal.internal.modeling.IModelStore
 import com.onesignal.onesignal.internal.models.IdentityModel
 import com.onesignal.onesignal.internal.models.PropertiesModel
 import com.onesignal.onesignal.internal.models.SubscriptionModel
+import com.onesignal.onesignal.internal.models.SubscriptionType
+import com.onesignal.onesignal.internal.user.subscriptions.EmailSubscription
+import com.onesignal.onesignal.internal.user.subscriptions.PushSubscription
+import com.onesignal.onesignal.internal.user.subscriptions.SmsSubscription
 import com.onesignal.onesignal.user.IUserManager
 import com.onesignal.onesignal.user.Identity
-import com.onesignal.onesignal.user.subscriptions.Subscription
+import com.onesignal.onesignal.user.subscriptions.ISubscription
 import com.onesignal.onesignal.user.subscriptions.SubscriptionList
 import com.onesignal.onesignal.internal.user.triggers.TriggerCollection
 import com.onesignal.onesignal.logging.LogLevel
 import com.onesignal.onesignal.logging.Logging
+import java.util.*
 
-open class UserManager() : IUserManager {
+open class UserManager(val subscriptionModelStore: IModelStore<SubscriptionModel>) : IUserManager {
     override val identity: Identity
         get() {
             val userId = _identityModel.userId
@@ -25,31 +31,49 @@ open class UserManager() : IUserManager {
         get() = _propertiesModel.language
         set(value) { _propertiesModel.language = value }
 
+    override val tags: Map<String, String>
+        get() = _propertiesModel.tags
+
+    override val aliases: Map<String, String>
+        get() = _identityModel.aliases
+
+    // NOT IN USER MODEL
     override var privacyConsent: Boolean = false
-    override val subscriptions: SubscriptionList = SubscriptionList(listOf())
-    override val tags: Map<String, String> = mapOf()
-    override val aliases: Map<String, String> = mapOf()
-    val triggers: TriggerCollection = TriggerCollection(listOf())
+    override var subscriptions: SubscriptionList = SubscriptionList(listOf())
 
     //    private var userModel: UserModel
+    private val _triggers: TriggerCollection = TriggerCollection(listOf())
     private var _identityModel: IdentityModel = IdentityModel()
     private var _propertiesModel: PropertiesModel = PropertiesModel()
-    private var _subscriptionModels: List<SubscriptionModel> = listOf()
-
-    init {
-        // TODO("Populate based on initial model or would that call setUser once loaded?")
-        // Following  priority order is used until we have an instance
-        //   1. _user - Already set internal instance
-        //   2. From local storage - restore user from last time the app opened
-        //   3. Create new - Create a brand new UserAnonymous
-        // TODO: This should check local storage to see if there was a user assign before
-        //  val user = _user ?: UserAnonymous()
-    }
 
     fun setUser(identityModel: IdentityModel, propertiesModel: PropertiesModel) {
         _identityModel = identityModel
         _propertiesModel = propertiesModel
 
+        var subs = mutableListOf<ISubscription>()
+
+        for(s in subscriptionModelStore.list()) {
+            // TODO: Better way to find subscriptions for a user?
+            if(s.startsWith(_identityModel.oneSignalId.toString()))
+            {
+                val model = subscriptionModelStore.get(s);
+
+                when (model?.type) {
+                    SubscriptionType.EMAIL -> {
+                        subs.add(EmailSubscription(UUID.fromString(model.id), model.enabled, model.address))
+                    }
+                    SubscriptionType.SMS -> {
+                        subs.add(SmsSubscription(UUID.fromString(model.id), model.enabled, model.address))
+                    }
+                    SubscriptionType.PUSH -> {
+                        // TODO: Determine if is this device, set bool appropriately
+                        subs.add(PushSubscription(UUID.fromString(model.id), model.enabled, model.address, true))
+                    }
+                }
+            }
+        }
+
+        this.subscriptions = SubscriptionList(subs)
     }
 
     override fun setExternalId(externalId: String?): IUserManager {
@@ -86,25 +110,55 @@ open class UserManager() : IUserManager {
 
     override fun addEmailSubscription(email: String, emailAuthHash: String?): IUserManager {
         Logging.log(LogLevel.DEBUG, "addEmailSubscription(email: $email, emailAuthHash: $emailAuthHash)")
-        //TODO("How do new models get created? Need a hook to the repo to add a new subscription model.")
+
+        var emailSub = EmailSubscription(UUID.randomUUID(), true, email)
+        val subscriptions = subscriptions.collection.toMutableList()
+        subscriptions.add(emailSub)
+        this.subscriptions = SubscriptionList(subscriptions)
+
+        var emailSubModel = SubscriptionModel()
+        emailSubModel.id = emailSub.id.toString()
+        emailSubModel.enabled = true
+        emailSubModel.type = SubscriptionType.EMAIL
+        emailSubModel.address = email
+        subscriptionModelStore.add(_identityModel.oneSignalId.toString() + "-" + emailSub.id, emailSubModel)
+
         return this
     }
 
     override fun addSmsSubscription(sms: String, smsAuthHash: String?): IUserManager {
         Logging.log(LogLevel.DEBUG, "addSmsSubscription(sms: $sms, smsAuthHash: $smsAuthHash)")
-        //TODO("Not yet implemented")
+
+        var smsSub = SmsSubscription(UUID.randomUUID(), true, sms)
+        val subscriptions = subscriptions.collection.toMutableList()
+        subscriptions.add(smsSub)
+        this.subscriptions = SubscriptionList(subscriptions)
+
+        var smsSubModel = SubscriptionModel()
+        smsSubModel.id = smsSub.id.toString()
+        smsSubModel.enabled = true
+        smsSubModel.type = SubscriptionType.SMS
+        smsSubModel.address = sms
+        subscriptionModelStore.add(_identityModel.oneSignalId.toString() + "-" + smsSub.id, smsSubModel)
+
         return this
     }
 
-    override fun setSubscriptionEnablement(subscription: Subscription, enabled: Boolean): IUserManager {
+    override fun setSubscriptionEnablement(subscription: ISubscription, enabled: Boolean): IUserManager {
         Logging.log(LogLevel.DEBUG, "setSubscriptionEnablement(subscription: $subscription, enabled: $enabled)")
         //TODO("Not yet implemented")
         return this
     }
 
-    override fun removeSubscription(subscription: Subscription): IUserManager {
+    override fun removeSubscription(subscription: ISubscription): IUserManager {
         Logging.log(LogLevel.DEBUG, "removeSubscription(subscription: $subscription)")
-        //TODO("Not yet implemented")
+
+        val subscriptions = subscriptions.collection.toMutableList()
+        subscriptions.remove(subscription)
+        this.subscriptions = SubscriptionList(subscriptions)
+
+        subscriptionModelStore.remove(_identityModel.oneSignalId.toString() + "-" + subscription.id)
+
         return this
     }
 

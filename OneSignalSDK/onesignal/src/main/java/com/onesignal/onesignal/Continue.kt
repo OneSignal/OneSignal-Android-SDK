@@ -4,11 +4,22 @@ import kotlinx.coroutines.Dispatchers
 import java.util.function.Consumer
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.EmptyCoroutineContext
 
 class ContinueResult<R> (
+    /**
+     * Whether the coroutine call was successful (`true`) or not (`false`)
+     */
     val isSuccess: Boolean,
+
+    /**
+     * The data that is returned by the coroutine when complete.  This will be `null` if [isSuccess]
+     * is `false`.
+     */
     val data: R?,
+
+    /**
+     * The throwable that was thrown by the coroutine.  This will be `null` if [isSuccess] is `true`.
+     */
     val throwable: Throwable?) {
 }
 
@@ -20,9 +31,10 @@ object Continue {
     /**
      * Allows java code to provide a lambda as a continuation to a Kotlin coroutine.
      *
-     * @param onFinished Called when the coroutine has completed, passing in the result of the coroutine.
+     * @param onFinished Called when the coroutine has completed, passing in the result of the coroutine for
+     * the java code to continue processing.
      * @param context The optional coroutine context to run the [onFinished] lambda under. If not
-     * specified an empty context will be used.
+     * specified a context confined to the main thread will be used.
      */
     @JvmOverloads
     @JvmStatic
@@ -38,12 +50,15 @@ object Continue {
         }
     }
 
+    /**
+     * Allows java code to indicate they have no follow-up to a Kotlin coroutine.
+     */
     @JvmOverloads
     @JvmStatic
     fun <R> none(): Continuation<R> {
         return object : Continuation<R> {
             override val context: CoroutineContext
-                get() = context
+                get() = Dispatchers.Main
 
             override fun resumeWith(result: Result<R>) {
             }

@@ -13,12 +13,6 @@ abstract class ModelStoreListener<TModel>(
     private val opRepo: IOperationRepo,
     protected val api: IApiService) : IModelStoreChangeHandler<TModel>, Closeable where TModel : Model {
 
-    enum class Action {
-        CREATED,
-        UPDATED,
-        DELETED
-    }
-
     // TODO: IApiService shouldn't be here, not a dependency of the listener but need to create the backend operations. Need a factory? Maybe factor method in IOperationRepo?
 
     init {
@@ -29,23 +23,25 @@ abstract class ModelStoreListener<TModel>(
         store.unsubscribe(this)
     }
 
-    override fun created(id: String, model: TModel) {
-        val operation = getOperation(Action.CREATED, id, model)
+    override fun added(model: TModel) {
+        val operation = getAddOperation(model)
         if(operation != null)
             opRepo.enqueue(operation)
     }
 
-    override fun updated(id: String, before: TModel, after: TModel) {
-        val operation = getOperation(Action.UPDATED, id, after)
+    override fun updated(model: TModel, property: String, oldValue: Any?, newValue: Any?) {
+        val operation = getUpdateOperation(model, property, oldValue, newValue)
         if(operation != null)
             opRepo.enqueue(operation)
     }
 
-    override fun deleted(id: String, model: TModel) {
-        val operation = getOperation(Action.DELETED, id, model)
+    override fun removed(model: TModel) {
+        val operation = getRemoveOperation(model)
         if(operation != null)
             opRepo.enqueue(operation)
     }
 
-    abstract fun getOperation(action: Action, id: String, model: TModel) : Operation?
+    abstract fun getAddOperation(model: TModel) : Operation?
+    abstract fun getRemoveOperation(model: TModel) : Operation?
+    abstract fun getUpdateOperation(model: TModel, property: String, oldValue: Any?, newValue: Any?) : Operation?
 }
