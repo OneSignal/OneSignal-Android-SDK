@@ -349,6 +349,13 @@ public class OneSignal {
       void onFailure(JSONObject response);
    }
 
+   /**
+    * Fires when the User accepts or declines the notification permission prompt.
+    */
+   public interface PromptForPushNotificationPermissionResponseHandler {
+      void response(boolean accepted);
+   }
+
    interface EntryStateListener {
       // Fire with the last appEntryState that just ended.
       void onEntryStateChange(AppEntryAction appEntryState);
@@ -1400,6 +1407,7 @@ public class OneSignal {
       }
 
       LocationController.onFocusChange();
+      NotificationPermissionController.INSTANCE.onAppForegrounded();
 
       if (OSUtils.shouldLogMissingAppIdError(appId))
          return;
@@ -2856,7 +2864,23 @@ public class OneSignal {
     *                           settings if they have declined before.
     */
    public static void promptForPushNotifications(boolean fallbackToSettings) {
-      NotificationPermissionController.INSTANCE.prompt(fallbackToSettings);
+      promptForPushNotifications(fallbackToSettings, null);
+   }
+
+   /**
+    * On Android 13 shows the system notification permission prompt to enable displaying
+    * notifications. This is required for apps that target Android API level 33 / "Tiramisu"
+    * to subscribe the device for push notifications.
+    *
+    * @param fallbackToSettings whether to show a Dialog to direct users to the App's notification
+    *                           settings if they have declined before.
+    * @param handler fires when the user declines ore accepts the notification permission prompt.
+    */
+   public static void promptForPushNotifications(
+      boolean fallbackToSettings,
+      @Nullable PromptForPushNotificationPermissionResponseHandler handler
+   ) {
+      NotificationPermissionController.INSTANCE.prompt(fallbackToSettings, handler);
    }
 
    /**
