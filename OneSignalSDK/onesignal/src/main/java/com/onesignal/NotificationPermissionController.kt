@@ -34,7 +34,8 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
     private const val PERMISSION_TYPE = "NOTIFICATION"
     private const val ANDROID_PERMISSION_STRING = "android.permission.POST_NOTIFICATIONS"
 
-    private var callback: OneSignal.PromptForPushNotificationPermissionResponseHandler? = null
+    private val callbacks:
+            MutableSet<OneSignal.PromptForPushNotificationPermissionResponseHandler> = HashSet()
 
     init {
         PermissionsActivity.registerAsCallback(PERMISSION_TYPE, this)
@@ -49,10 +50,10 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
         fallbackToSettings: Boolean,
         callback: OneSignal.PromptForPushNotificationPermissionResponseHandler?,
     ) {
-        if (callback != null) this.callback = callback
+        if (callback != null) callbacks.add(callback)
 
         if (notificationsEnabled()) {
-            fireCallBack(true)
+            fireCallBacks(true)
             return
         }
 
@@ -60,7 +61,7 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
             if (fallbackToSettings)
                 showFallbackAlertDialog()
             else
-                fireCallBack(false)
+                fireCallBacks(false)
             return
         }
 
@@ -74,7 +75,7 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
 
     override fun onAccept() {
         OneSignal.refreshNotificationPermissionState()
-        fireCallBack(true)
+        fireCallBacks(true)
     }
 
     override fun onReject(fallbackToSettings: Boolean) {
@@ -83,7 +84,7 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
                 showFallbackAlertDialog()
             else
                 false
-        if (!fallbackShown) fireCallBack(false)
+        if (!fallbackShown) fireCallBacks(false)
     }
 
     // Returns true if dialog was shown
@@ -98,21 +99,21 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
                     NavigateToAndroidSettingsForNotifications.show(activity)
                 }
                 override fun onDecline() {
-                    fireCallBack(false)
+                    fireCallBacks(false)
                 }
             }
         )
         return true
     }
 
-    // Fires callback and clears it to ensure it is only called once.
-    private fun fireCallBack(accepted: Boolean) {
-        callback?.response(accepted)
-        callback = null
+    // Fires callbacks and clears them to ensure each is only called once.
+    private fun fireCallBacks(accepted: Boolean) {
+        callbacks.forEach { it.response(accepted) }
+        callbacks.clear()
     }
 
     fun onAppForegrounded() {
-        fireCallBack(notificationsEnabled())
+        fireCallBacks(notificationsEnabled())
     }
 
     private fun notificationsEnabled() = OSUtils.areNotificationsEnabled(OneSignal.appContext)
