@@ -68,7 +68,7 @@ interface INotificationsManager {
     fun clearAll()
 
     /**
-     * The [IPermissionChangedHandler.onOSPermissionChanged] method will be fired on the passed-in
+     * The [IPermissionChangedHandler.onPermissionChanged] method will be fired on the passed-in
      * object when a notification permission setting changes. This happens when the user enables or
      * disables notifications for your app from the system settings outside of your app. Disable
      * detection is supported on Android 4.4+

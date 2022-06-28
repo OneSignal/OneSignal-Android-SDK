@@ -1,7 +1,6 @@
 package com.onesignal.onesignal.notification
 
 import androidx.core.app.NotificationCompat
-import com.onesignal.onesignal.internal.collections.OSCollection
 import org.json.JSONObject
 
 interface IMutableNotification : INotification {
@@ -23,7 +22,7 @@ interface IMutableNotification : INotification {
     override var lockScreenVisibility: Int
     override var groupKey: String?
     override var groupMessage: String?
-    override var actionButtons: OSCollection<IActionButton>?
+    override var actionButtons: List<IActionButton>?
     override var fromProjectNumber: String?
     override var backgroundImageLayout: BackgroundImageLayout?
     override var collapseId: String?

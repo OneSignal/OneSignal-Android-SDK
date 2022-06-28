@@ -142,7 +142,7 @@ public class SplashActivityViewModel implements ActivityViewModel {
     }
 
     @Override
-    public void onOSPermissionChanged(@Nullable IPermissionStateChanges stateChanges) {
+    public void onPermissionChanged(@Nullable IPermissionStateChanges stateChanges) {
 
     }
 }

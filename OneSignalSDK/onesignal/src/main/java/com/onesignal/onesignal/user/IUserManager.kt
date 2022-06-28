@@ -101,6 +101,11 @@ interface IUserManager {
     fun addSmsSubscription(sms: String) : IUserManager = addSmsSubscription(sms, null)
 
     /**
+     * Add this device as a push subscriber for this user.
+     */
+    fun addPushSubscription() : IUserManager
+
+    /**
      * Change the enablement of the provided subscription.  The subscription will still exist
      * against the user, it will however no longer receive notifications.
      *

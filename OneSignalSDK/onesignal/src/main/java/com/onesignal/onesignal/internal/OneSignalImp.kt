@@ -1,11 +1,15 @@
 package com.onesignal.onesignal.internal
 
 import android.content.Context
-import com.onesignal.onesignal.AppEntryAction
 import com.onesignal.onesignal.IOneSignal
 import com.onesignal.onesignal.iam.IIAMManager
+import com.onesignal.onesignal.internal.application.ApplicationService
 import com.onesignal.onesignal.internal.backend.api.ApiService
 import com.onesignal.onesignal.internal.backend.api.IApiService
+import com.onesignal.onesignal.internal.common.CallbackProducer
+import com.onesignal.onesignal.internal.common.ICallbackNotifier
+import com.onesignal.onesignal.internal.common.ICallbackProducer
+import com.onesignal.onesignal.internal.device.DeviceService
 import com.onesignal.onesignal.internal.iam.IAMManager
 import com.onesignal.onesignal.internal.listeners.IdentityModelStoreListener
 import com.onesignal.onesignal.internal.listeners.PropertiesModelStoreListener
@@ -14,8 +18,10 @@ import com.onesignal.onesignal.internal.location.LocationManager
 import com.onesignal.onesignal.internal.modeling.*
 import com.onesignal.onesignal.internal.models.*
 import com.onesignal.onesignal.internal.notification.NotificationsManager
-import com.onesignal.onesignal.internal.operations.IOperationRepo
+import com.onesignal.onesignal.internal.operations.GetConfigOperation
 import com.onesignal.onesignal.internal.operations.OperationRepo
+import com.onesignal.onesignal.internal.params.ParamsService
+import com.onesignal.onesignal.internal.session.SessionService
 import com.onesignal.onesignal.internal.user.UserManager
 import com.onesignal.onesignal.location.ILocationManager
 import com.onesignal.onesignal.logging.LogLevel
@@ -30,21 +36,14 @@ import java.util.*
 class OneSignalImp() : IOneSignal {
     override val sdkVersion: String = "050000"
 
-    // SDK state that is persisted by the SDK
     override var requiresPrivacyConsent: Boolean
         get() = _configModel?.requiresPrivacyConsent == true
         set(value) { _configModel?.requiresPrivacyConsent = value }
 
-    // Component Services
     override val notifications: INotificationsManager get() = _notifications
     override val location: ILocationManager get() = _location
     override val user: IUserManager get() = _user
     override val iam: IIAMManager get() = _iam
-
-    override val inForeground: Boolean = false
-    override val appEntryState: AppEntryAction = AppEntryAction.APP_CLOSE
-
-    private var _userConflictResolver: IUserIdentityConflictResolver? = null
 
     // Services
     private val _user: UserManager
@@ -53,19 +52,25 @@ class OneSignalImp() : IOneSignal {
     private val _notifications: NotificationsManager
     private val _operationRepo: OperationRepo
     private val _api: IApiService
-
+    private val _sessionService: SessionService
     private val _identityModelListener: IdentityModelStoreListener
     private val _subscriptionModelListener: SubscriptionModelStoreListener
     private val _propertiesModelListener: PropertiesModelStoreListener
-
     private val _identityModelStore: IModelStore<IdentityModel>
     private val _propertiesModelStore: IModelStore<PropertiesModel>
     private val _subscriptionModelStore: IModelStore<SubscriptionModel>
     private val _configModelStore: ISingletonModelStore<ConfigModel>
     private val _sessionModelStore: ISingletonModelStore<SessionModel>
+    private val _applicationService: ApplicationService
+    private val _deviceService: DeviceService
+    private val _paramsService: ParamsService
 
+    // Other State
+
+    private var _appEntryState: AppEntryAction = AppEntryAction.APP_CLOSE
+    private var _userConflictResolverNotifier: ICallbackProducer<IUserIdentityConflictResolver> = CallbackProducer()
     private var _configModel: ConfigModel? = null
-    private var _appContext: Context? = null
+    private var _sessionModel: SessionModel? = null
 
     init {
         _identityModelStore = ModelStore()
@@ -74,31 +79,39 @@ class OneSignalImp() : IOneSignal {
         _configModelStore = SingletonModelStore("config", { ConfigModel() }, ModelStore())
         _sessionModelStore = SingletonModelStore("session", { SessionModel() }, ModelStore())
         _operationRepo = OperationRepo()
-        _user = UserManager(_subscriptionModelStore)
-        _iam = IAMManager()
-        _notifications = NotificationsManager()
-        _location = LocationManager()
         _api = ApiService()
         _identityModelListener = IdentityModelStoreListener(_identityModelStore, _operationRepo, _api)
         _subscriptionModelListener = SubscriptionModelStoreListener(_subscriptionModelStore, _operationRepo, _api)
         _propertiesModelListener = PropertiesModelStoreListener(_propertiesModelStore, _operationRepo, _api)
+
+        _applicationService = ApplicationService()
+        _deviceService = DeviceService(_applicationService)
+        _sessionService = SessionService(_applicationService)
+        _paramsService = ParamsService()
+        _location = LocationManager(_applicationService, _deviceService)
+        _user = UserManager(_subscriptionModelStore)
+        _iam = IAMManager()
+        _notifications = NotificationsManager(_deviceService, _applicationService, _paramsService)
     }
 
     override suspend fun initWithContext(context: Context) {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context)");
 
-        // start services
-        _operationRepo.start()
-
+        // get the current config model, if there is one
         _configModel = _configModelStore.get()
+        _sessionModel = _sessionModelStore.get()
 
-        //TODO:  Attempt to load config model from disk
-        //       * if there is one, load config from disk (and potentially merge what may have already been done?)
-        //       * if there isn't one, build from scratch
-        //       Start all the things
-        delay(1000L) // Simulate call to drive suspension
+        // start services
+        _applicationService.start(context)
+        _operationRepo.start()
+        _sessionService.start(_configModel!!, _sessionModel!!)
+        _location.start()
 
-        _appContext = context
+        // enqueue an operation to retrieve the config from the backend and refresh the config if necessary
+        // TODO: Should this happen within the call?
+        _operationRepo.enqueue(GetConfigOperation(_api))
+
+        delay(1000L) // TODO: temporary to simulate suspension call
     }
 
     override suspend fun setAppId(appId: String) {
@@ -144,6 +157,7 @@ class OneSignalImp() : IOneSignal {
 
                 if(propertiesModel == null) {
                     propertiesModel = PropertiesModel()
+                    propertiesModel.id = identityModel.id
                     _propertiesModelStore.add(identity.externalId, propertiesModel)
                 }
 
@@ -174,15 +188,15 @@ class OneSignalImp() : IOneSignal {
 
     override fun setUserConflictResolver(handler: IUserIdentityConflictResolver?) {
         Logging.log(LogLevel.DEBUG, "setUserConflictResolver(handler: $handler)");
-        _userConflictResolver = handler
+        _userConflictResolverNotifier.set(handler)
     }
 
     override fun setUserConflictResolver(handler: (local: IUserManager, remote: IUserManager) -> IUserManager) {
         Logging.log(LogLevel.DEBUG, "setUserConflictResolver(handler: $handler)");
-        _userConflictResolver = object : IUserIdentityConflictResolver {
+        _userConflictResolverNotifier.set(object : IUserIdentityConflictResolver {
             override fun resolve(local: IUserManager, remote: IUserManager): IUserManager {
                 return handler(local, remote)
             }
-        }
+        })
     }
 }

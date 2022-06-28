@@ -1,4 +1,4 @@
-package com.onesignal.onesignal
+package com.onesignal.onesignal.internal
 
 /**
  * An app entry type enum for knowing how the user foregrounded or backgrounded the app.

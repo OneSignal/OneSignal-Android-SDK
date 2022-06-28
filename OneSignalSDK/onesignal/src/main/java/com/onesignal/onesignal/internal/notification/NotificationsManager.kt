@@ -1,5 +1,13 @@
 package com.onesignal.onesignal.internal.notification
 
+import com.onesignal.onesignal.internal.application.IApplicationService
+import com.onesignal.onesignal.internal.common.*
+import com.onesignal.onesignal.internal.device.IDeviceService
+import com.onesignal.onesignal.internal.notification.registration.IPushRegistrator
+import com.onesignal.onesignal.internal.notification.registration.PushRegistratorADM
+import com.onesignal.onesignal.internal.notification.registration.PushRegistratorFCM
+import com.onesignal.onesignal.internal.notification.registration.PushRegistratorHMS
+import com.onesignal.onesignal.internal.params.IParamsService
 import com.onesignal.onesignal.logging.LogLevel
 import com.onesignal.onesignal.logging.Logging
 import com.onesignal.onesignal.notification.*
@@ -9,16 +17,42 @@ import org.json.JSONObject
  * The notification manager is responsible for the management of notifications
  * on the current device (not the user).
  */
-class NotificationsManager() : INotificationsManager {
-    override var permissionStatus: IPermissionState = object : IPermissionState {
-        override var notificationsEnabled: Boolean = false
-    }
+class NotificationsManager(
+    private val _deviceService: IDeviceService,
+    private val _applicationService: IApplicationService,
+    private val _paramsService: IParamsService,
+    private val _permissionChangedNotifier: IEventProducer<IPermissionChangedHandler> = EventProducer(),
+    private val _willShowNotificationNotifier: ICallbackProducer<INotificationWillShowInForegroundHandler> = CallbackProducer(),
+    private val _notificationOpenedNotifier: ICallbackProducer<INotificationOpenedHandler> = CallbackProducer()
+) : INotificationsManager {
 
+    override var permissionStatus: IPermissionState = PermissionState(false)
     override var unsubscribeWhenNotificationsAreDisabled: Boolean = false
 
+    private var _pushRegistrator: IPushRegistrator? = null
+
+    fun start() {
+        if (_deviceService.isFireOSDeviceType)
+            _pushRegistrator = PushRegistratorADM()
+        else if (_deviceService.isAndroidDeviceType) {
+            if (_deviceService.hasFCMLibrary())
+                _pushRegistrator = PushRegistratorFCM(_paramsService, _applicationService, _deviceService)
+        } else {
+            _pushRegistrator = PushRegistratorHMS(_deviceService)
+        }
+    }
     override suspend fun requestPermission() : Boolean? {
         Logging.log(LogLevel.DEBUG, "promptForPushPermissionStatus()")
-        return false
+
+        // TODO("Implement")
+
+        val oldPermissionStatus = permissionStatus
+        permissionStatus = PermissionState(true)
+
+        val changes = PermissionStateChanges(oldPermissionStatus, permissionStatus)
+        _permissionChangedNotifier.fire { it.onPermissionChanged(changes) }
+
+        return true
     }
 
     /**
@@ -91,7 +125,7 @@ class NotificationsManager() : INotificationsManager {
      */
     override fun addPushPermissionHandler(handler: IPermissionChangedHandler) {
         Logging.log(LogLevel.DEBUG, "addPushPermissionHandler(handler: $handler)")
-        //TODO("Not yet implemented")
+        _permissionChangedNotifier.subscribe(handler)
     }
 
     override fun addPushPermissionHandler(handler: (IPermissionStateChanges?) -> Unit) {
@@ -106,7 +140,7 @@ class NotificationsManager() : INotificationsManager {
      */
     override fun removePushPermissionHandler(handler: IPermissionChangedHandler) {
         Logging.log(LogLevel.DEBUG, "removePushPermissionHandler(handler: $handler)")
-        //TODO("Not yet implemented")
+        _permissionChangedNotifier.unsubscribe(handler)
     }
 
     override fun removePushPermissionHandler(handler: (IPermissionStateChanges?) -> Unit) {
@@ -125,7 +159,7 @@ class NotificationsManager() : INotificationsManager {
      */
     override fun setNotificationWillShowInForegroundHandler(handler: INotificationWillShowInForegroundHandler) {
         Logging.log(LogLevel.DEBUG, "setNotificationWillShowInForegroundHandler(handler: $handler)")
-        //TODO("Not yet implemented")
+        _willShowNotificationNotifier.set(handler)
     }
 
     /**
@@ -135,6 +169,6 @@ class NotificationsManager() : INotificationsManager {
      */
     override fun setNotificationOpenedHandler(handler: INotificationOpenedHandler) {
         Logging.log(LogLevel.DEBUG, "setNotificationOpenedHandler(handler: $handler)")
-        //TODO("Not yet implemented")
+        _notificationOpenedNotifier.set(handler)
     }
 }

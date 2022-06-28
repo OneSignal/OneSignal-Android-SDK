@@ -80,7 +80,7 @@ class TestJavaAPI {
       // Add a push permission handler -> anonymous class
       OneSignal.getNotifications().addPushPermissionHandler(new IPermissionChangedHandler() {
          @Override
-         public void onOSPermissionChanged(@Nullable IPermissionStateChanges stateChanges) {
+         public void onPermissionChanged(@Nullable IPermissionStateChanges stateChanges) {
 
          }
       });

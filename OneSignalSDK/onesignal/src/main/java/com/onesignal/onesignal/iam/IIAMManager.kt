@@ -21,7 +21,7 @@ interface IIAMManager {
      * @param handler: The handler that will be called at various times throughout
      *                 the IAM lifecycle.
      */
-    fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler)
+    fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler?)
 
     /**
      * Set the IAM click handler. TODO: SHOULD THIS BE PART OF THE LIFECYCLE HANDLER?
@@ -29,5 +29,5 @@ interface IIAMManager {
      * @param handler: The handler that will be called when the IAM has been
      *                 clicked.
      */
-    fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler)
+    fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler?)
 }

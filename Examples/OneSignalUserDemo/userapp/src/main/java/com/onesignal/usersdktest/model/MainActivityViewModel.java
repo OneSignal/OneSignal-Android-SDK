@@ -352,7 +352,7 @@ public class MainActivityViewModel implements ActivityViewModel {
     }
 
     @Override
-    public void onOSPermissionChanged(@Nullable IPermissionStateChanges stateChanges) {
+    public void onPermissionChanged(@Nullable IPermissionStateChanges stateChanges) {
         boolean isSubscribed = OneSignal.getUser().getSubscriptions().getThisDevice() != null;
         boolean isPermissionEnabled = stateChanges.getTo().getNotificationsEnabled();
 
@@ -639,10 +639,14 @@ public class MainActivityViewModel implements ActivityViewModel {
         // can only fire if the subscription switch is enabled (push notifications are enabled).
         subscriptionSwitch.setOnClickListener(v -> {
             IPushSubscription subscription = OneSignal.getUser().getSubscriptions().getThisDevice();
-            if (subscription == null)
-                return;
-
-            OneSignal.getUser().setSubscriptionEnablement(subscription, !subscriptionSwitch.isChecked());
+            if (subscription == null) {
+                if(subscriptionSwitch.isChecked()) {
+                    OneSignal.getUser().addPushSubscription();
+                }
+            }
+            else {
+                OneSignal.getUser().setSubscriptionEnablement(subscription, subscriptionSwitch.isChecked());
+            }
         });
     }
 

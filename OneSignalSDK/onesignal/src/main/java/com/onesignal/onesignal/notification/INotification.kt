@@ -1,6 +1,5 @@
 package com.onesignal.onesignal.notification
 
-import com.onesignal.onesignal.internal.collections.OSCollection
 import org.json.JSONObject
 
 interface INotification {
@@ -40,7 +39,7 @@ interface INotification {
     val lockScreenVisibility: Int
     val groupKey: String?
     val groupMessage: String?
-    val actionButtons: OSCollection<IActionButton>?
+    val actionButtons: List<IActionButton>?
     val fromProjectNumber: String?
     val backgroundImageLayout: BackgroundImageLayout?
     val collapseId: String?

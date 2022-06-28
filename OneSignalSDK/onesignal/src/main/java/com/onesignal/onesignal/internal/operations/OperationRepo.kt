@@ -7,11 +7,11 @@ import kotlinx.coroutines.delay
 
 class OperationRepo : IOperationRepo  {
     private val _queue: ArrayDeque<Operation> = ArrayDeque()
+    private var _queueJob: Deferred<Unit>? = null
 
-    suspend fun start() = coroutineScope {
-        launch {
-            doWork()
-        }
+    fun start() {
+        // fire up an async job that will run "forever"
+        _queueJob = doWorkAsync()
     }
 
     override fun enqueue(operation: Operation, force: Boolean) {
@@ -20,8 +20,7 @@ class OperationRepo : IOperationRepo  {
         _queue.addLast(operation)
     }
 
-    // this is your first suspending function
-    private suspend fun doWork() {
+    private fun doWorkAsync() = GlobalScope.async {
         try {
             while(true) {
                 // TODO: Sleep until woken rather than hard loop

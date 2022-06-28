@@ -1,9 +1,13 @@
 package com.onesignal.onesignal.internal.modeling
 
-import com.onesignal.onesignal.internal.common.BaseNotifyChanged
+import com.onesignal.onesignal.internal.common.EventProducer
+import com.onesignal.onesignal.internal.common.IEventNotifier
+import com.onesignal.onesignal.internal.common.IEventProducer
 import kotlin.collections.HashMap
 
-open class Model : BaseNotifyChanged<ModelChangedArgs>() {
+open class Model(
+    private val _changeNotifier: IEventProducer<IModelChangedHandler> = EventProducer()
+) : IEventNotifier<IModelChangedHandler> by _changeNotifier {
 
     var id: String
         get() = get(::id.name)
@@ -18,7 +22,7 @@ open class Model : BaseNotifyChanged<ModelChangedArgs>() {
         _data[name] = newValue
 
         val changeArgs = ModelChangedArgs(this, name, oldValue, newValue)
-        onChanged(changeArgs)
+        _changeNotifier.fire { it.onChanged(changeArgs) }
     }
 
     protected fun <T> get(name: String) : T {

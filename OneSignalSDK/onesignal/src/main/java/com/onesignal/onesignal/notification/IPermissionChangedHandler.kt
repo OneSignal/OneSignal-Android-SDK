@@ -1,5 +1,5 @@
 package com.onesignal.onesignal.notification
 
 interface IPermissionChangedHandler {
-    fun onOSPermissionChanged(stateChanges: IPermissionStateChanges?)
+    fun onPermissionChanged(stateChanges: IPermissionStateChanges?)
 }

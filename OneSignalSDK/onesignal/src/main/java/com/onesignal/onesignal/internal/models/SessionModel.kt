@@ -4,8 +4,11 @@ import com.onesignal.onesignal.internal.modeling.Model
 import java.util.*
 
 class SessionModel : Model() {
-    /**
-     * When the session was created
-     */
-    var created: Date = Date()
+    var startTime: Date
+        get() = get(::startTime.name)
+        set(value) { set(::startTime.name, value) }
+
+    var unfocusedDuration: Double
+        get() = get(::unfocusedDuration.name) { 0.0 }
+        set(value) { set(::unfocusedDuration.name, value) }
 }

@@ -1,15 +1,17 @@
 package com.onesignal.onesignal.internal.modeling
 
-import com.onesignal.onesignal.internal.common.INotifyChangedHandler
+import com.onesignal.onesignal.internal.common.IEventNotifier
+import com.onesignal.onesignal.internal.common.EventProducer
 
 /**
  * The implementation of a model store.
  */
-internal class ModelStore<TModel> : IModelStore<TModel>,
-    INotifyChangedHandler<ModelChangedArgs> where TModel : Model {
+internal class ModelStore<TModel>(
+    private val _changeSubscription: EventProducer<IModelStoreChangeHandler<TModel>> = EventProducer()
+) : IEventNotifier<IModelStoreChangeHandler<TModel>> by _changeSubscription, IModelStore<TModel>, IModelChangedHandler where TModel : Model {
 
     private val _models: HashMap<String, TModel> = HashMap()
-    private val _subscribers: MutableList<IModelStoreChangeHandler<TModel>> = mutableListOf()
+
 
     override fun add(id: String, model: TModel) {
         _models[id] = model
@@ -19,10 +21,7 @@ internal class ModelStore<TModel> : IModelStore<TModel>,
         // listen for changes to this model
         model.subscribe(this)
 
-        // notify any change listeners of the added model
-        for(s in _subscribers) {
-            s.added(model)
-        }
+        _changeSubscription.fire { it.added(model) }
     }
 
     override fun list() : Collection<String> {
@@ -43,25 +42,12 @@ internal class ModelStore<TModel> : IModelStore<TModel>,
 
         // TODO: Remove the model from storage
 
-        // notify any change listeners of the removed model
-        for(s in _subscribers) {
-            s.removed(model)
-        }
-    }
-
-    override fun subscribe(handler: IModelStoreChangeHandler<TModel>) {
-        _subscribers.add(handler)
-    }
-
-    override fun unsubscribe(handler: IModelStoreChangeHandler<TModel>) {
-        _subscribers.remove(handler)
+        _changeSubscription.fire { it.removed(model) }
     }
 
     override fun onChanged(args: ModelChangedArgs) {
         // TODO: Persist the changed model to storage. Consider batching.
 
-        for(s in _subscribers) {
-            s.updated(args.model as TModel, args.property, args.oldValue, args.newValue)
-        }
+        _changeSubscription.fire { it.updated(args.model as TModel, args.property, args.oldValue, args.newValue) }
     }
 }

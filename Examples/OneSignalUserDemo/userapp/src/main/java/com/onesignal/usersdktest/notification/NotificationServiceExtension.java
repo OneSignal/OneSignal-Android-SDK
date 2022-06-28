@@ -21,7 +21,7 @@ public class NotificationServiceExtension implements IRemoteNotificationReceived
       INotification notification = notificationReceivedEvent.getNotification();
 
       if (notification.getActionButtons() != null) {
-         for (IActionButton button : notification.getActionButtons().asCollection()) {
+         for (IActionButton button : notification.getActionButtons()) {
             Logging.log(LogLevel.VERBOSE, "ActionButton: " + button.toString());
          }
       }

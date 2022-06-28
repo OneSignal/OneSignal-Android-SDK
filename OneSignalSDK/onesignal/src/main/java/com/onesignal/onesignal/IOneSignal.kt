@@ -40,17 +40,6 @@ interface IOneSignal {
     val iam: IIAMManager
 
     /**
-     * Whether the SDK considers the application in the
-     * foreground.
-     */
-    val inForeground: Boolean
-
-    /**
-     * How the application was entered.
-     */
-    val appEntryState: AppEntryAction
-
-    /**
      * Determines whether a user must consent to privacy prior
      * to their user data being sent up to OneSignal.  This
      * should be set to `true` prior to the invocation of

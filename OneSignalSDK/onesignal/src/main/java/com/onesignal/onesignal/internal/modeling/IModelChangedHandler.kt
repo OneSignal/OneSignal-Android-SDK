@@ -1,9 +1,13 @@
 package com.onesignal.onesignal.internal.modeling
 
-import com.onesignal.onesignal.internal.common.INotifyChanged
+import com.onesignal.onesignal.internal.common.IEventNotifier
+
+interface IModelChangedHandler {
+    fun onChanged(args: ModelChangedArgs)
+}
 
 /**
- * The arguments passed to the [INotifyChanged] handler when subscribed via [Model.subscribe]
+ * The arguments passed to the [IEventNotifier] handler when subscribed via [Model.subscribe]
  */
 class ModelChangedArgs(
     /**

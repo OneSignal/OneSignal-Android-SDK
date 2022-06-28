@@ -66,7 +66,7 @@ class TestKotlinAPI {
         }
         // Add a push permission handler -> anonymous class
         OneSignal.notifications.addPushPermissionHandler(object : IPermissionChangedHandler {
-            override fun onOSPermissionChanged(stateChanges: IPermissionStateChanges?) {
+            override fun onPermissionChanged(stateChanges: IPermissionStateChanges?) {
             }
         })
     }

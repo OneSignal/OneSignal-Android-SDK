@@ -44,14 +44,6 @@ object OneSignal {
         get() = oneSignal.iam
 
     @JvmStatic
-    val inForeground: Boolean
-        get() = oneSignal.inForeground
-
-    @JvmStatic
-    val appEntryState: AppEntryAction
-        get() = oneSignal.appEntryState
-
-    @JvmStatic
     var requiresPrivacyConsent: Boolean
         get() = oneSignal.requiresPrivacyConsent
         set(value) { oneSignal.requiresPrivacyConsent = value }

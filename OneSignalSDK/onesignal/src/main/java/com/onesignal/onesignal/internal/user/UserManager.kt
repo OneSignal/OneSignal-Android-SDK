@@ -8,16 +8,18 @@ import com.onesignal.onesignal.internal.models.SubscriptionType
 import com.onesignal.onesignal.internal.user.subscriptions.EmailSubscription
 import com.onesignal.onesignal.internal.user.subscriptions.PushSubscription
 import com.onesignal.onesignal.internal.user.subscriptions.SmsSubscription
+import com.onesignal.onesignal.internal.user.triggers.Trigger
 import com.onesignal.onesignal.user.IUserManager
 import com.onesignal.onesignal.user.Identity
 import com.onesignal.onesignal.user.subscriptions.ISubscription
 import com.onesignal.onesignal.user.subscriptions.SubscriptionList
-import com.onesignal.onesignal.internal.user.triggers.TriggerCollection
 import com.onesignal.onesignal.logging.LogLevel
 import com.onesignal.onesignal.logging.Logging
 import java.util.*
 
-open class UserManager(val subscriptionModelStore: IModelStore<SubscriptionModel>) : IUserManager {
+open class UserManager(
+    private val _subscriptionModelStore: IModelStore<SubscriptionModel>
+) : IUserManager {
     override val identity: Identity
         get() {
             val userId = _identityModel.userId
@@ -42,7 +44,7 @@ open class UserManager(val subscriptionModelStore: IModelStore<SubscriptionModel
     override var subscriptions: SubscriptionList = SubscriptionList(listOf())
 
     //    private var userModel: UserModel
-    private val _triggers: TriggerCollection = TriggerCollection(listOf())
+    private val _triggers: List<Trigger> = listOf()
     private var _identityModel: IdentityModel = IdentityModel()
     private var _propertiesModel: PropertiesModel = PropertiesModel()
 
@@ -52,11 +54,11 @@ open class UserManager(val subscriptionModelStore: IModelStore<SubscriptionModel
 
         var subs = mutableListOf<ISubscription>()
 
-        for(s in subscriptionModelStore.list()) {
+        for(s in _subscriptionModelStore.list()) {
             // TODO: Better way to find subscriptions for a user?
             if(s.startsWith(_identityModel.oneSignalId.toString()))
             {
-                val model = subscriptionModelStore.get(s);
+                val model = _subscriptionModelStore.get(s);
 
                 when (model?.type) {
                     SubscriptionType.EMAIL -> {
@@ -118,10 +120,10 @@ open class UserManager(val subscriptionModelStore: IModelStore<SubscriptionModel
 
         var emailSubModel = SubscriptionModel()
         emailSubModel.id = emailSub.id.toString()
-        emailSubModel.enabled = true
+        emailSubModel.enabled = emailSub.enabled
         emailSubModel.type = SubscriptionType.EMAIL
-        emailSubModel.address = email
-        subscriptionModelStore.add(_identityModel.oneSignalId.toString() + "-" + emailSub.id, emailSubModel)
+        emailSubModel.address = emailSub.email
+        _subscriptionModelStore.add(_identityModel.oneSignalId.toString() + "-" + emailSub.id, emailSubModel)
 
         return this
     }
@@ -136,17 +138,59 @@ open class UserManager(val subscriptionModelStore: IModelStore<SubscriptionModel
 
         var smsSubModel = SubscriptionModel()
         smsSubModel.id = smsSub.id.toString()
-        smsSubModel.enabled = true
+        smsSubModel.enabled = smsSub.enabled
         smsSubModel.type = SubscriptionType.SMS
-        smsSubModel.address = sms
-        subscriptionModelStore.add(_identityModel.oneSignalId.toString() + "-" + smsSub.id, smsSubModel)
+        smsSubModel.address = smsSub.number
+        _subscriptionModelStore.add(_identityModel.oneSignalId.toString() + "-" + smsSub.id, smsSubModel)
+
+        return this
+    }
+
+    override fun addPushSubscription(): IUserManager {
+        Logging.log(LogLevel.DEBUG, "addPushSubscription()")
+
+        // TODO: Actually register this device for push
+        var pushSub = PushSubscription(UUID.randomUUID(), true, UUID.randomUUID().toString(), true)
+
+        val subscriptions = subscriptions.collection.toMutableList()
+        subscriptions.add(pushSub)
+        this.subscriptions = SubscriptionList(subscriptions)
+
+        var pushSubModel = SubscriptionModel()
+        pushSubModel.id = pushSub.id.toString()
+        pushSubModel.enabled = pushSub.enabled
+        pushSubModel.type = SubscriptionType.PUSH
+        pushSubModel.address = pushSub.pushToken
+        _subscriptionModelStore.add(_identityModel.oneSignalId.toString() + "-" + pushSub.id, pushSubModel)
 
         return this
     }
 
     override fun setSubscriptionEnablement(subscription: ISubscription, enabled: Boolean): IUserManager {
         Logging.log(LogLevel.DEBUG, "setSubscriptionEnablement(subscription: $subscription, enabled: $enabled)")
-        //TODO("Not yet implemented")
+
+        val subscriptionModel = _subscriptionModelStore.get(_identityModel.oneSignalId.toString() + "-" + subscription.id)
+
+        if(subscriptionModel != null) {
+            subscriptionModel.enabled = enabled
+        }
+
+        // remove the old subscription and add a new one with the proper enablement
+        val subscriptions = subscriptions.collection.toMutableList()
+        subscriptions.remove(subscription)
+        when (subscription) {
+            is SmsSubscription -> {
+                subscriptions.add(SmsSubscription(subscription.id, subscription.enabled, subscription.number))
+            }
+            is EmailSubscription -> {
+                subscriptions.add(EmailSubscription(subscription.id, subscription.enabled, subscription.email))
+            }
+            is PushSubscription -> {
+                subscriptions.add(PushSubscription(subscription.id, subscription.enabled, subscription.pushToken, subscription.isThisDevice))
+            }
+        }
+        this.subscriptions = SubscriptionList(subscriptions)
+
         return this
     }
 
@@ -157,7 +201,7 @@ open class UserManager(val subscriptionModelStore: IModelStore<SubscriptionModel
         subscriptions.remove(subscription)
         this.subscriptions = SubscriptionList(subscriptions)
 
-        subscriptionModelStore.remove(_identityModel.oneSignalId.toString() + "-" + subscription.id)
+        _subscriptionModelStore.remove(_identityModel.oneSignalId.toString() + "-" + subscription.id)
 
         return this
     }

@@ -1,7 +1,5 @@
 package com.onesignal.onesignal.internal.modeling
 
-import com.onesignal.onesignal.internal.common.INotifyChangedHandler
-
 /**
  * A model store that is implemented in memory.
  */
@@ -9,7 +7,7 @@ internal class SingletonModelStore<TModel>(
         val name: String,
         private val create: () -> TModel,
         val store: IModelStore<TModel>,
-        ) : ISingletonModelStore<TModel>, INotifyChangedHandler<ModelChangedArgs> where TModel : Model {
+        ) : ISingletonModelStore<TModel>, IModelChangedHandler where TModel : Model {
 
     private val _subscribers: MutableList<ISingletonModelStoreChangeHandler<TModel>> = mutableListOf()
 
