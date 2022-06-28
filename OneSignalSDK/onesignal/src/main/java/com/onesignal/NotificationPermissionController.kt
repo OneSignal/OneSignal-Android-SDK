@@ -28,19 +28,42 @@
 package com.onesignal
 
 import android.os.Build
+import androidx.annotation.ChecksSdkIntAtLeast
 
 object NotificationPermissionController : PermissionsActivity.PermissionCallback {
     private const val PERMISSION_TYPE = "NOTIFICATION"
     private const val ANDROID_PERMISSION_STRING = "android.permission.POST_NOTIFICATIONS"
 
+    private val callbacks:
+            MutableSet<OneSignal.PromptForPushNotificationPermissionResponseHandler> = HashSet()
+
     init {
         PermissionsActivity.registerAsCallback(PERMISSION_TYPE, this)
     }
 
-    fun prompt(fallbackToSettings: Boolean) {
-        // TODO: Android 13 Beta 1 reports as 32 instead of 33, update to 33 once Google fixes this
-        if (Build.VERSION.SDK_INT < 32)
+    @ChecksSdkIntAtLeast(api = 33)
+    val supportsNativePrompt =
+        Build.VERSION.SDK_INT > 32 &&
+        OSUtils.getTargetSdkVersion(OneSignal.appContext) > 32
+
+    fun prompt(
+        fallbackToSettings: Boolean,
+        callback: OneSignal.PromptForPushNotificationPermissionResponseHandler?,
+    ) {
+        if (callback != null) callbacks.add(callback)
+
+        if (notificationsEnabled()) {
+            fireCallBacks(true)
             return
+        }
+
+        if (!supportsNativePrompt) {
+            if (fallbackToSettings)
+                showFallbackAlertDialog()
+            else
+                fireCallBacks(false)
+            return
+        }
 
         PermissionsActivity.startPrompt(
             fallbackToSettings,
@@ -52,14 +75,21 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
 
     override fun onAccept() {
         OneSignal.refreshNotificationPermissionState()
+        fireCallBacks(true)
     }
 
     override fun onReject(fallbackToSettings: Boolean) {
-        if (fallbackToSettings) showFallbackAlertDialog()
+        val fallbackShown =
+            if (fallbackToSettings)
+                showFallbackAlertDialog()
+            else
+                false
+        if (!fallbackShown) fireCallBacks(false)
     }
 
-    private fun showFallbackAlertDialog() {
-        val activity = OneSignal.getCurrentActivity() ?: return
+    // Returns true if dialog was shown
+    private fun showFallbackAlertDialog(): Boolean {
+        val activity = OneSignal.getCurrentActivity() ?: return false
         AlertDialogPrepromptForAndroidSettings.show(
             activity,
             activity.getString(R.string.notification_permission_name_for_title),
@@ -69,8 +99,22 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
                     NavigateToAndroidSettingsForNotifications.show(activity)
                 }
                 override fun onDecline() {
+                    fireCallBacks(false)
                 }
             }
         )
+        return true
     }
+
+    // Fires callbacks and clears them to ensure each is only called once.
+    private fun fireCallBacks(accepted: Boolean) {
+        callbacks.forEach { it.response(accepted) }
+        callbacks.clear()
+    }
+
+    fun onAppForegrounded() {
+        fireCallBacks(notificationsEnabled())
+    }
+
+    private fun notificationsEnabled() = OSUtils.areNotificationsEnabled(OneSignal.appContext)
 }
