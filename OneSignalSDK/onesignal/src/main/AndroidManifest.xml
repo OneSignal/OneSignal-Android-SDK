@@ -4,6 +4,9 @@
     <!-- OneSignal SDK has runtime checks Android version. -->
     <!--<uses-sdk tools:overrideLibrary="android.support.customtabs"/>-->
 
+    <!-- Required runtime permission to display notifications on Android 13 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
     <!-- Required so the device can access the internet. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
