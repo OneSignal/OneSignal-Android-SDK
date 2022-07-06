@@ -39,6 +39,7 @@ import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
 import androidx.test.core.app.ApplicationProvider;
 
 import com.onesignal.MockOSLog;
@@ -140,6 +141,7 @@ import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTime;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_setTrackerFactory;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_taskQueueWaitingForInit;
 import static com.onesignal.OneSignalPackagePrivateHelper.OSObservable;
+import static com.onesignal.OneSignalPackagePrivateHelper.toUnescapedEUIDString;
 import static com.onesignal.ShadowOneSignalRestClient.EMAIL_USER_ID;
 import static com.onesignal.ShadowOneSignalRestClient.PUSH_USER_ID;
 import static com.onesignal.ShadowOneSignalRestClient.REST_METHOD;
@@ -557,7 +559,7 @@ public class MainOneSignalClassRunner {
       time.advanceSystemTimeBy(31);
 
       // Click notification
-      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, "notification_id");
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), "notification_id");
       threadAndTaskWait();
 
       // Foreground app
@@ -600,7 +602,7 @@ public class MainOneSignalClassRunner {
       time.advanceSystemTimeBy(31);
 
       // Click notification
-      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID + "1");
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID + "1");
       threadAndTaskWait();
 
       // Foreground app
@@ -968,7 +970,7 @@ public class MainOneSignalClassRunner {
    @Config(shadows = {ShadowOneSignal.class})
    public void testOpenFromNotificationWhenAppIsDead() throws Exception {
       OneSignal.initWithContext(blankActivity);
-      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID);
 
       OneSignal.setAppId(ONESIGNAL_APP_ID);
       OneSignal.initWithContext(blankActivity);
@@ -1024,7 +1026,7 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       OneSignal.setNotificationOpenedHandler(null);
-      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), false, ONESIGNAL_NOTIFICATION_ID);
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Robo test message\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID);
       assertNull(lastNotificationOpenedBody);
 
       OneSignalInit();
@@ -1055,6 +1057,151 @@ public class MainOneSignalClassRunner {
       threadAndTaskWait();
 
       assertEquals(null, lastNotificationOpenedBody);
+   }
+
+   @Test
+   public void testOpeningLauncherActivity() throws Exception {
+      // First init run for appId to be saved
+      // At least OneSignal was init once for user to be subscribed
+      // If this doesn't' happen, notifications will not arrive
+      OneSignalInit();
+      fastColdRestartApp();
+
+      AddLauncherIntentFilter();
+      // From app launching normally
+      assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
+      // Will get appId saved
+      OneSignal.initWithContext(blankActivity.getApplicationContext());
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID);
+
+      assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
+      assertNull(shadowOf(blankActivity).getNextStartedActivity());
+   }
+
+   @Test
+   public void testOpeningLauncherActivityWhenOffline() throws Exception {
+      ShadowOneSignalRestClient.failGetParams = true;
+      AddLauncherIntentFilter();
+
+      OneSignalInit();
+      // This removes Activity from the unit test's state
+      assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
+
+      // Background the app
+      blankActivityController.pause();
+
+      // Open a notification
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID);
+
+      // Ensure the app is foregrounded
+      assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
+   }
+
+   @Test
+   public void testOpeningLaunchUrl() throws Exception {
+      // First init run for appId to be saved
+      // At least OneSignal was init once for user to be subscribed
+      // If this doesn't' happen, notifications will not arrive
+      OneSignalInit();
+      fastColdRestartApp();
+      OneSignal.initWithContext(blankActivity);
+      // Removes app launch
+      shadowOf(blankActivity).getNextStartedActivity();
+
+      // No OneSignal init here to test case where it is located in an Activity.
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), ONESIGNAL_NOTIFICATION_ID);
+      Intent intent = shadowOf(blankActivity).getNextStartedActivity();
+      assertEquals("android.intent.action.VIEW", intent.getAction());
+      assertEquals("http://google.com", intent.getData().toString());
+      assertNull(shadowOf(blankActivity).getNextStartedActivity());
+   }
+
+   @Test
+   public void testOpeningLaunchUrlWithDisableDefault() throws Exception {
+      // Add the 'com.onesignal.NotificationOpened.DEFAULT' as 'DISABLE' meta-data tag
+      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationOpened.DEFAULT", "DISABLE");
+
+      // Removes app launch
+      shadowOf(blankActivity).getNextStartedActivity();
+
+      // No OneSignal init here to test case where it is located in an Activity.
+
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), ONESIGNAL_NOTIFICATION_ID);
+      assertNull(shadowOf(blankActivity).getNextStartedActivity());
+   }
+
+   @Test
+   public void testDisableOpeningLauncherActivityOnNotificationOpen() throws Exception {
+      // Add the 'com.onesignal.NotificationOpened.DEFAULT' as 'DISABLE' meta-data tag
+      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationOpened.DEFAULT", "DISABLE");
+
+      // From app launching normally
+      assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
+      OneSignal.setAppId(ONESIGNAL_APP_ID);
+      OneSignal.initWithContext(blankActivity);
+      OneSignal.setNotificationOpenedHandler(getNotificationOpenedHandler());
+      assertNull(lastNotificationOpenedBody);
+
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\" } }]"), ONESIGNAL_NOTIFICATION_ID);
+
+      assertNull(shadowOf(blankActivity).getNextStartedActivity());
+      assertEquals("Test Msg", lastNotificationOpenedBody);
+   }
+
+   @Test
+   public void testLaunchUrlSuppressTrue() throws Exception {
+      // Add the 'com.onesignal.suppressLaunchURLs' as 'true' meta-data tag
+      // First init run for appId to be saved
+      // At least OneSignal was init once for user to be subscribed
+      // If this doesn't' happen, notifications will not arrive
+      OneSignalInit();
+      fastColdRestartApp();
+
+      // Add the 'com.onesignal.suppressLaunchURLs' as 'true' meta-data tag
+      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.suppressLaunchURLs", true);
+
+      // Removes app launch
+      shadowOf(blankActivity).getNextStartedActivity();
+
+      // Init with context since this is call before calling OneSignal_handleNotificationOpen internally
+      OneSignal.initWithContext(blankActivity);
+
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), ONESIGNAL_NOTIFICATION_ID);
+      threadAndTaskWait();
+
+      assertOpenMainActivityIntent(shadowOf(blankActivity).getNextStartedActivity());
+   }
+
+   private void assertOpenMainActivityIntent(@NonNull Intent intent) {
+      assertEquals(Intent.ACTION_MAIN, intent.getAction());
+      assertTrue(intent.getCategories().contains(Intent.CATEGORY_LAUNCHER));
+   }
+
+   @Test
+   public void testLaunchUrlSuppressFalse() throws Exception {
+      // Add the 'com.onesignal.suppressLaunchURLs' as 'true' meta-data tag
+      // First init run for appId to be saved
+      // At least OneSignal was init once for user to be subscribed
+      // If this doesn't' happen, notifications will not arrive
+      OneSignalInit();
+      fastColdRestartApp();
+
+      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.suppressLaunchURLs", false);
+      OneSignal.initWithContext(blankActivity);
+
+      // Removes app launch
+      shadowOf(blankActivity).getNextStartedActivity();
+
+      // Init with context since this is call before calling OneSignal_handleNotificationOpen internally
+      OneSignal.initWithContext(blankActivity);
+
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray("[{ \"alert\": \"Test Msg\", \"custom\": { \"i\": \"UUID\", \"u\": \"http://google.com\" } }]"), ONESIGNAL_NOTIFICATION_ID);
+      threadAndTaskWait();
+
+      Intent intent = shadowOf(blankActivity).getNextStartedActivity();
+      assertEquals("android.intent.action.VIEW", intent.getAction());
+      assertEquals("http://google.com", intent.getData().toString());
+      assertNull(shadowOf(blankActivity).getNextStartedActivity());
    }
 
    private static String notificationReceivedBody;
@@ -3232,6 +3379,69 @@ public class MainOneSignalClassRunner {
       assertEquals("collapseId1", firstGroupedNotification.optString("collapseId"));
    }
 
+   // ####### Unit test JSONUtils methods
+   @Test
+   public void test_JSONUtils_toUnescapedEUIDString() throws Exception {
+      // 1. Test when EUID is first in the json, and has ($) and (/), and ($) elsewhere
+
+      // Set up the JSONObject to test with
+      String jsonStringWithDollarAndSlash = "{" +
+              "\"external_user_id\":\"$1$/abc/de$f/\"," +
+              "\"app_id\":\"b4f7f966-d8cc-11e4-bed1-df8f05be55ba\"," +
+              "\"timezone\":\"$Europe/London\"" +
+              "}";
+      JSONObject jsonWithDollarAndSlash = new JSONObject(jsonStringWithDollarAndSlash);
+
+      // The expected string which escapes the "timezone" slash (/) only
+      String expected_jsonStringWithDollarAndSlash = "{" +
+              "\"external_user_id\":\"$1$/abc/de$f/\"," +
+              "\"app_id\":\"b4f7f966-d8cc-11e4-bed1-df8f05be55ba\"," +
+              "\"timezone\":\"$Europe\\/London\"" +
+              "}";
+
+      // The actual string result from calling JSONUtils.toUnescapedEUIDString()
+      String actual_jsonStringWithDollarAndSlash = toUnescapedEUIDString(jsonWithDollarAndSlash);
+
+      // These two strings should be equal
+      assertEquals(expected_jsonStringWithDollarAndSlash, actual_jsonStringWithDollarAndSlash);
+
+      // 2. Test when EUID is first in the json, and has no dollar nor slash
+
+      String jsonStringWithEUID = "{" +
+              "\"external_user_id\":\"123abc\"," +
+              "\"app_id\":\"b4f7f966-d8cc-11e4-bed1-df8f05be55ba\"," +
+              "\"timezone\":\"$Europe/London\"" +
+              "}";
+      JSONObject jsonWithEUID = new JSONObject(jsonStringWithEUID);
+
+      String expected_jsonStringWithEUID = "{" +
+              "\"external_user_id\":\"123abc\"," +
+              "\"app_id\":\"b4f7f966-d8cc-11e4-bed1-df8f05be55ba\"," +
+              "\"timezone\":\"$Europe\\/London\"" +
+              "}";
+
+      String actual_jsonStringWithEUID = toUnescapedEUIDString(jsonWithEUID);
+
+      assertEquals(expected_jsonStringWithEUID, actual_jsonStringWithEUID);
+
+      // 3. Test when there is no EUID is in the json
+
+      String jsonStringWithoutEUID = "{" +
+              "\"app_id\":\"b4f7f966-d8cc-11e4-bed1-df8f05be55ba\"," +
+              "\"timezone\":\"Europe/London\"" +
+              "}";
+      JSONObject jsonWithoutEUID = new JSONObject(jsonStringWithoutEUID);
+
+      String expected_jsonStringWithoutEUID = "{" +
+              "\"app_id\":\"b4f7f966-d8cc-11e4-bed1-df8f05be55ba\"," +
+              "\"timezone\":\"Europe\\/London\"" +
+              "}";
+
+      String actual_jsonStringWithoutEUID = toUnescapedEUIDString(jsonWithoutEUID);
+
+      assertEquals(expected_jsonStringWithoutEUID, actual_jsonStringWithoutEUID);
+   }
+
    @Test
    public void testNotificationOpenedProcessorHandlesEmptyIntent() {
       NotificationOpenedProcessor_processFromContext(blankActivity, new Intent());
@@ -3812,7 +4022,7 @@ public class MainOneSignalClassRunner {
       openPayload.put("title", "Test title");
       openPayload.put("alert", "Test Msg");
       openPayload.put("custom", new JSONObject("{ \"i\": \"UUID\" }"));
-      OneSignal_handleNotificationOpen(blankActivity, new JSONArray().put(openPayload), false, ONESIGNAL_NOTIFICATION_ID);
+      OneSignal_handleNotificationOpen(blankActivity, new JSONArray().put(openPayload), ONESIGNAL_NOTIFICATION_ID);
 
       assertEquals("os_notification_opened", ShadowFirebaseAnalytics.lastEventString);
       Bundle expectedBundle = new Bundle();

@@ -124,8 +124,6 @@ class GMSLocationController extends LocationController {
         @Override
         public void onConnected(Bundle bundle) {
             synchronized (syncLock) {
-                PermissionsActivity.answered = false;
-
                 if (googleApiClient == null || googleApiClient.realInstance() == null) {
                     OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "GMSLocationController GoogleApiClientListener onConnected googleApiClient not available, returning");
                     return;

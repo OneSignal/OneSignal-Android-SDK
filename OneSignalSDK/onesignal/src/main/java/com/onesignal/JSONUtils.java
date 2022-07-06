@@ -13,6 +13,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static com.onesignal.UserStateSynchronizer.EXTERNAL_USER_ID;
 
 
 class JSONUtils {
@@ -62,7 +66,7 @@ class JSONUtils {
                         Object curValue = cur.get(key);
                         if (!value.equals(curValue)) {
                             // Work around for JSON serializer turning doubles/floats into ints since it drops ending 0's
-                            if (curValue instanceof Integer && !"".equals(value)) {
+                            if (curValue instanceof Number && value instanceof Number) {
                                 if ( ((Number)curValue).doubleValue() != ((Number)value).doubleValue())
                                     output.put(key, value);
                             }
@@ -128,6 +132,32 @@ class JSONUtils {
         } catch (JSONException ignored) {}
 
         return strArray + "]";
+    }
+
+    /**
+     * Returns the JSONObject as a String with the external user ID unescaped.
+     * Needed b/c the default JSONObject.toString() escapes (/) with (\/), which customers may not want.
+     */
+    static String toUnescapedEUIDString(JSONObject json) {
+        String strJsonBody = json.toString();
+
+        if (json.has(EXTERNAL_USER_ID)) {
+            // find the value of the external user ID
+            Pattern eidPattern = Pattern.compile("(?<=\"external_user_id\":\").*?(?=\")");
+            Matcher eidMatcher = eidPattern.matcher(strJsonBody);
+
+            if (eidMatcher.find()) {
+                String matched = eidMatcher.group(0);
+                if (matched != null) {
+                    String unescapedEID = matched.replace("\\/", "/");
+                    // backslashes (\) and dollar signs ($) in the replacement string will be treated literally
+                    unescapedEID = eidMatcher.quoteReplacement(unescapedEID);
+                    strJsonBody = eidMatcher.replaceAll(unescapedEID);
+                }
+            }
+        }
+
+        return strJsonBody;
     }
 
     static JSONObject getJSONObjectWithoutBlankValues(ImmutableJSONObject jsonObject, String getKey) {

@@ -62,13 +62,12 @@ class NotificationPayloadProcessorHMS {
     }
 
     private static void handleProcessJsonOpenData(@NonNull Activity activity, @NonNull JSONObject jsonData) {
-        if (NotificationOpenedProcessor.handleIAMPreviewOpen(activity, jsonData))
+        if (OSInAppMessagePreviewHandler.notificationOpened(activity, jsonData))
             return;
 
         OneSignal.handleNotificationOpen(
             activity,
             new JSONArray().put(jsonData),
-            true,
             OSNotificationFormatHelper.getOSNotificationIdFromJson(jsonData)
         );
     }

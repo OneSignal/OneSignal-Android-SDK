@@ -103,7 +103,7 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
 
    @WorkerThread
    @Override
-   String getToken(String senderId) throws ExecutionException, InterruptedException, IOException {
+   String getToken(String senderId) throws Exception {
       initFirebaseApp(senderId);
 
       try {
@@ -151,14 +151,18 @@ class PushRegistratorFCM extends PushRegistratorAbstractGoogle {
    }
 
    @WorkerThread
-   private String getTokenWithClassFirebaseMessaging() throws ExecutionException, InterruptedException {
+   private String getTokenWithClassFirebaseMessaging() throws Exception {
       // We use firebaseApp.get(FirebaseMessaging.class) instead of FirebaseMessaging.getInstance()
       //   as the latter uses the default Firebase app. We need to use a custom Firebase app as
       //   the senderId is provided at runtime.
       FirebaseMessaging fcmInstance = firebaseApp.get(FirebaseMessaging.class);
       // FirebaseMessaging.getToken API was introduced in firebase-messaging:21.0.0
       Task<String> tokenTask = fcmInstance.getToken();
-      return Tasks.await(tokenTask);
+      try {
+         return Tasks.await(tokenTask);
+      } catch (ExecutionException e) {
+         throw tokenTask.getException();
+      }
    }
 
    private void initFirebaseApp(String senderId) {

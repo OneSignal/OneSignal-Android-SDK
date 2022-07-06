@@ -20,6 +20,11 @@ public class MockOSTimeImpl extends OSTimeImpl {
         return mockedElapsedTime != null ? mockedElapsedTime : super.getElapsedRealtime();
     }
 
+    public void freezeTime() {
+        mockedTime = getCurrentTimeMillis();
+        mockedElapsedTime = getElapsedRealtime();
+    }
+
     public void setMockedTime(Long mockedTime) {
         this.mockedTime = mockedTime;
     }

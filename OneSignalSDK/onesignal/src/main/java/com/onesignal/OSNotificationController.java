@@ -113,8 +113,8 @@ public class OSNotificationController {
          // This will prevent it from being restored again
          NotificationBundleProcessor.markNotificationAsDismissed(notificationJob);
       } else {
-         // -1 is used to note never displayed
-         notificationJob.getNotification().setAndroidNotificationId(-1);
+         // indicate the notification job did not display
+         notificationJob.setIsNotificationToDisplay(false);
          NotificationBundleProcessor.processNotification(notificationJob, true, false);
          OneSignal.handleNotificationReceived(notificationJob);
       }
