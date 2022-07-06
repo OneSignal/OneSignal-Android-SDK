@@ -127,11 +127,11 @@ internal class NotificationBundleProcessor(
 
         val notificationJob = notificationController.notificationJob
         processCollapseKey(notificationJob)
-        var androidNotificationId = notificationJob.androidIdWithoutCreate
+        var androidNotificationId = notificationJob.androidId
         val doDisplay = shouldDisplayNotification(notificationJob)
         var notificationDisplayed = false
         if (doDisplay) {
-            androidNotificationId = notificationJob.androidId
+            notificationJob.isNotificationToDisplay = true;
 
             if (fromBackgroundLogic && shouldFireForegroundHandlers(notificationJob)) {
                 notificationController.isFromBackgroundLogic = false
@@ -208,10 +208,10 @@ internal class NotificationBundleProcessor(
         try {
             val customJSON = getCustomJSONObject(jsonPayload)
 
-            // Count any notifications with duplicated android notification ids as dismissed.
-            // -1 is used to note never displayed
+            // When notification was displayed, count any notifications with duplicated android
+            // notification ids as dismissed.
             if (notificationJob.isNotificationToDisplay) {
-                val whereStr = OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notificationJob.androidIdWithoutCreate
+                val whereStr = OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notificationJob.androidId
                 val values = ContentValues()
                 values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED, 1)
 
@@ -246,7 +246,7 @@ internal class NotificationBundleProcessor(
             )
             if (!opened) values.put(
                 OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
-                notificationJob.androidIdWithoutCreate
+                notificationJob.androidId
             )
             if (notificationJob.title != null) values.put(
                 OneSignalDbContract.NotificationTable.COLUMN_NAME_TITLE,
@@ -286,13 +286,13 @@ internal class NotificationBundleProcessor(
     }
 
     fun markNotificationAsDismissed(notifiJob: NotificationGenerationJob) {
-        if (notifiJob.androidIdWithoutCreate == -1)
+        if (!notifiJob.isNotificationToDisplay)
             return
 
         Logging.debug("Marking restored or disabled notifications as dismissed: $notifiJob")
 
         val whereStr =
-            OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notifiJob.androidIdWithoutCreate
+            OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + notifiJob.androidId
 
         val values = ContentValues()
         values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED, 1)
@@ -364,7 +364,7 @@ internal class NotificationBundleProcessor(
         if (cursor.moveToFirst()) {
             val androidNotificationId =
                 cursor.getInt(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID))
-            notificationJob.setAndroidIdWithoutOverriding(androidNotificationId)
+            notificationJob.notification.androidNotificationId = androidNotificationId
         }
         cursor.close()
     }

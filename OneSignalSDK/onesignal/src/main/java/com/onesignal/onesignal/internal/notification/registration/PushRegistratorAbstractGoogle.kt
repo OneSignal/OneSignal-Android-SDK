@@ -27,10 +27,12 @@
 package com.onesignal.onesignal.internal.notification.registration
 
 import android.content.Context
+import com.onesignal.onesignal.internal.common.AndroidUtils
 import com.onesignal.onesignal.internal.device.IDeviceService
 import com.onesignal.onesignal.logging.Logging
 import kotlinx.coroutines.delay
 import java.io.IOException
+
 
 /**
  * The abstract google push registration service.  It is expected [PushRegistratorFCM] will extend
@@ -103,20 +105,29 @@ internal abstract class PushRegistratorAbstractGoogle(private val _deviceService
             Logging.info("Device registered, push token = $registrationId")
             return IPushRegistrator.RegisterResult(registrationId, IPushRegistrator.RegisterStatus.PUSH_STATUS_SUBSCRIBED)
         } catch (e: IOException) {
-            if ("SERVICE_NOT_AVAILABLE" != e.message) {
-                Logging.error("Error Getting $providerName Token", e)
-                return IPushRegistrator.RegisterResult(null, IPushRegistrator.RegisterStatus.PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION)
-            } else {
-                if (currentRetry >= REGISTRATION_RETRY_COUNT - 1)
-                    Logging.error("Retry count of $REGISTRATION_RETRY_COUNT exceed! Could not get a $providerName Token.", e)
-                else {
-                    Logging.info("'Google Play services' returned SERVICE_NOT_AVAILABLE error. Current retry count: $currentRetry", e)
+            val pushStatus: IPushRegistrator.RegisterStatus = pushStatusFromThrowable(e)
+            val exceptionMessage: String? = AndroidUtils.getRootCauseMessage(e)
+            val retryingKnownToWorkSometimes = "SERVICE_NOT_AVAILABLE" == exceptionMessage || "AUTHENTICATION_FAILED" == exceptionMessage
 
-                    if (currentRetry == 2) {
+            if (retryingKnownToWorkSometimes) {
+                // Wrapping with new Exception so the current line is included in the stack trace.
+                val exception = Exception(e)
+                if (currentRetry >= REGISTRATION_RETRY_COUNT - 1)
+                    Logging.error("Retry count of $REGISTRATION_RETRY_COUNT exceed! Could not get a $providerName Token.", exception)
+                else {
+                    Logging.info("'Google Play services' returned $exceptionMessage error. Current retry count: $currentRetry", exception)
+
+                    if (currentRetry === 2) {
                         // Retry 3 times before firing a null response and continuing a few more times.
-                        return IPushRegistrator.RegisterResult(null, IPushRegistrator.RegisterStatus.PUSH_STATUS_FIREBASE_FCM_ERROR_SERVICE_NOT_AVAILABLE)
+                        return IPushRegistrator.RegisterResult(null, pushStatus)
                     }
                 }
+            } else {
+                // Wrapping with new Exception so the current line is included in the stack trace.
+                val exception = Exception(e)
+                Logging.error("Error Getting $providerName Token", exception)
+
+                return IPushRegistrator.RegisterResult(null, pushStatus)
             }
         } catch (t: Throwable) {
             Logging.error("Unknown error getting $providerName Token", t)
@@ -124,6 +135,19 @@ internal abstract class PushRegistratorAbstractGoogle(private val _deviceService
         }
 
         return null
+    }
+
+    private fun pushStatusFromThrowable(throwable: Throwable): IPushRegistrator.RegisterStatus {
+        val exceptionMessage: String? = AndroidUtils.getRootCauseMessage(throwable)
+        return if (throwable is IOException) {
+            when (exceptionMessage) {
+                "SERVICE_NOT_AVAILABLE" -> IPushRegistrator.RegisterStatus.PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE
+                "AUTHENTICATION_FAILED" -> IPushRegistrator.RegisterStatus.PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED
+                else -> IPushRegistrator.RegisterStatus.PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER
+            }
+        } else {
+            IPushRegistrator.RegisterStatus.PUSH_STATUS_FIREBASE_FCM_ERROR_MISC_EXCEPTION
+        }
     }
 
     private fun isValidProjectNumber(senderId: String?): Boolean {

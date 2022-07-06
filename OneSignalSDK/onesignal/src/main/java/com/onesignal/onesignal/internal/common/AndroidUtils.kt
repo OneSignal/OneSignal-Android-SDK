@@ -90,4 +90,16 @@ object AndroidUtils {
         }
         return null
     }
+
+    fun getRootCauseThrowable(subjectThrowable: Throwable): Throwable {
+        var throwable = subjectThrowable
+        while (throwable.cause != null && throwable.cause !== throwable) {
+            throwable = throwable.cause!!
+        }
+        return throwable
+    }
+
+    fun getRootCauseMessage(throwable: Throwable): String? {
+        return getRootCauseThrowable(throwable).message
+    }
 }

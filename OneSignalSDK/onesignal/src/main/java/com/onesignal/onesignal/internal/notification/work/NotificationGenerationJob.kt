@@ -9,10 +9,26 @@ import org.json.JSONObject
 import java.security.SecureRandom
 
 class NotificationGenerationJob {
-    var notification: Notification = Notification()
+    var notification: Notification?
+        get() = _notification
+        set(value) {
+            // If there is no android ID on the notification coming in, create one either
+            // copying from the previous one or generating a new one.
+            if (_notification != null && !_notification!!.hasNotificationId()) {
+                if (_notification != null && _notification!!.hasNotificationId()) _notification!!.androidNotificationId =
+                    _notification!!.androidNotificationId else _notification!!.androidNotificationId =
+                    SecureRandom().nextInt()
+            }
+
+            _notification = value
+        }
+
+    private var _notification: Notification? = null
+
     var context: Context
     var jsonPayload: JSONObject? = null
     var isRestoring = false
+    val isNotificationToDisplay = false
     var shownTimeStamp: Long? = null
     var overriddenBodyFromExtender: CharSequence? = null
     var overriddenTitleFromExtender: CharSequence? = null
@@ -53,12 +69,6 @@ class NotificationGenerationJob {
     val additionalData: JSONObject
         get() = notification!!.additionalData ?: JSONObject()
 
-    /**
-     * If androidNotificationId is -1 then the notification is a silent one
-     */
-    val isNotificationToDisplay: Boolean
-        get() = androidIdWithoutCreate != -1
-
     fun hasExtender(): Boolean {
         return notification!!.notificationExtender != null
     }
@@ -66,27 +76,14 @@ class NotificationGenerationJob {
     val apiNotificationId: String
         get() = NotificationHelper.getNotificationIdFromFCMJson(jsonPayload) ?: ""
 
-    val androidIdWithoutCreate: Int
-        get() = if (!notification!!.hasNotificationId()) -1 else notification!!.androidNotificationId
-
     val androidId: Int
-        get() {
-            if (!notification!!.hasNotificationId())
-                notification!!.androidNotificationId = SecureRandom().nextInt()
-
-            return notification!!.androidNotificationId
-        }
-
-    fun setAndroidIdWithoutOverriding(id: Int?) {
-        if (id == null) return
-        if (notification!!.hasNotificationId()) return
-        notification!!.androidNotificationId = id
-    }
+        get() = notification!!.androidNotificationId
 
     override fun toString(): String {
-        return "OSNotificationGenerationJob{" +
+        return "NotificationGenerationJob{" +
                 "jsonPayload=" + jsonPayload +
                 ", isRestoring=" + isRestoring +
+                ", isNotificationToDisplay=" + isNotificationToDisplay +
                 ", shownTimeStamp=" + shownTimeStamp +
                 ", overriddenBodyFromExtender=" + overriddenBodyFromExtender +
                 ", overriddenTitleFromExtender=" + overriddenTitleFromExtender +

@@ -66,8 +66,8 @@ internal class NotificationController(
             // This will prevent it from being restored again
             _notificationProcessor.markNotificationAsDismissed(notificationJob)
         } else {
-            // -1 is used to note never displayed
-            notificationJob.notification.androidNotificationId = -1
+            // indicate the notification job did not display
+            notificationJob.isNotificationToDisplay = false
             _notificationProcessor.processNotification(notificationJob, true, false)
             _notificationProcessor.handleNotificationReceived(notificationJob)
         }

@@ -120,7 +120,12 @@ internal class PushRegistratorFCM(
             val fcmInstance = firebaseApp!!.get(FirebaseMessaging::class.java)
             // FirebaseMessaging.getToken API was introduced in firebase-messaging:21.0.0
             val tokenTask = fcmInstance.token
-            token = Tasks.await(tokenTask)
+            try {
+                token = Tasks.await(tokenTask)
+            }
+            catch(e: ExecutionException) {
+                throw tokenTask.exception
+            }
         }
 
         return@coroutineScope token
