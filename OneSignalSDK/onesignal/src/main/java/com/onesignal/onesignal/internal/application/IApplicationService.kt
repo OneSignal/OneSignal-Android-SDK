@@ -16,6 +16,11 @@ interface IApplicationService  {
     var current: Activity?
 
     /**
+     * Whether the app is currently in the foreground
+     */
+    var isInForeground: Boolean
+
+    /**
      * Add an activity available handler
      */
     fun addActivityLifecycleHandler(handler: IActivityLifecycleHandler)

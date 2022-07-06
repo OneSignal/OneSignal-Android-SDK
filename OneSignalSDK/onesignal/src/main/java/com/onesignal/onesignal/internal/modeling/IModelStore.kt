@@ -1,6 +1,6 @@
 package com.onesignal.onesignal.internal.modeling
 
-import com.onesignal.onesignal.internal.common.IEventNotifier
+import com.onesignal.onesignal.internal.common.events.IEventNotifier
 
 /**
  * A model store provides access to the underlying models.  A model is

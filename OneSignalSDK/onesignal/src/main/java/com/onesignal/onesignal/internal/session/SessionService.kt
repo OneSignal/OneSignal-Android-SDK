@@ -2,8 +2,8 @@ package com.onesignal.onesignal.internal.session
 
 import com.onesignal.onesignal.internal.application.IApplicationLifecycleHandler
 import com.onesignal.onesignal.internal.application.IApplicationService
-import com.onesignal.onesignal.internal.common.EventProducer
-import com.onesignal.onesignal.internal.common.IEventNotifier
+import com.onesignal.onesignal.internal.common.events.EventProducer
+import com.onesignal.onesignal.internal.common.events.IEventNotifier
 import com.onesignal.onesignal.internal.models.ConfigModel
 import com.onesignal.onesignal.internal.models.SessionModel
 import com.onesignal.onesignal.logging.LogLevel

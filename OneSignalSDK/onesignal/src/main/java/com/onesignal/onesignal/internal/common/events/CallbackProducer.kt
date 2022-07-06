@@ -1,4 +1,4 @@
-package com.onesignal.onesignal.internal.common
+package com.onesignal.onesignal.internal.common.events
 
 /**
  * A standard implementation that implements [ICallbackProducer] to make callbacks less burdensome

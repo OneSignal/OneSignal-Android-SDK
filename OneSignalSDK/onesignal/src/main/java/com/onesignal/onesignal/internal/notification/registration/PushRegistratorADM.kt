@@ -14,7 +14,7 @@ class PushRegistratorADM : IPushRegistrator {
         var result: IPushRegistrator.RegisterResult? = null
 
         _channel = Channel()
-        launch(Dispatchers.Unconfined) {
+        launch(Dispatchers.Default) {
             val adm = ADM(context)
             var registrationId = adm.registrationId
             if (registrationId != null) {

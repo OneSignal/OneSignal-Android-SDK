@@ -10,8 +10,8 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.view.ViewTreeObserver.OnGlobalLayoutListener
 import com.onesignal.onesignal.internal.common.AndroidUtils
-import com.onesignal.onesignal.internal.common.EventProducer
-import com.onesignal.onesignal.internal.common.IEventProducer
+import com.onesignal.onesignal.internal.common.events.EventProducer
+import com.onesignal.onesignal.internal.common.events.IEventProducer
 import com.onesignal.onesignal.logging.Logging
 import java.lang.ref.WeakReference
 
@@ -28,7 +28,7 @@ class ApplicationService(
     private var _current: Activity? = null
 
     /** Whether the application is in the foreground **/
-    private var _inForeground: Boolean = false
+    override var isInForeground: Boolean = false
 
     /** Whether the next resume is due to the first activity or not **/
     private var _nextResumeIsFirstActivity: Boolean = false
@@ -87,10 +87,10 @@ class ApplicationService(
         val isContextActivity = context is Activity
         val isCurrentActivityNull = _current == null
 
-        _inForeground = !isCurrentActivityNull || isContextActivity
-        Logging.debug("ApplicationService.init: inForeground=$_inForeground")
+        isInForeground = !isCurrentActivityNull || isContextActivity
+        Logging.debug("ApplicationService.init: inForeground=$isInForeground")
 
-        if (_inForeground) {
+        if (isInForeground) {
             if (isCurrentActivityNull && isContextActivity) {
                 _current = context as Activity?
                 _nextResumeIsFirstActivity = true
@@ -197,11 +197,11 @@ class ApplicationService(
     }
 
     private fun handleLostFocus() {
-        if (_inForeground) {
+        if (isInForeground) {
             Logging.debug("ApplicationService.handleLostFocus: application is now out of focus")
 
             // TODO: Should we spin up a worker task for this? Or rely on the listeners to do it.
-            _inForeground = false;
+            isInForeground = false;
 
             _applicationLifecycleNotifier.fire { it.onUnfocused() }
         }
@@ -211,10 +211,10 @@ class ApplicationService(
     }
 
     private fun handleFocus() {
-        if (!_inForeground || _nextResumeIsFirstActivity) {
+        if (!isInForeground || _nextResumeIsFirstActivity) {
             Logging.debug("ApplicationService.handleFocus: application is now in focus, nextResumeIsFirstActivity=$_nextResumeIsFirstActivity")
             _nextResumeIsFirstActivity = false
-            _inForeground = true
+            isInForeground = true
             _applicationLifecycleNotifier.fire { it.onFocus() }
         } else {
             Logging.debug("ApplicationService.handleFocus: application never lost focus")

@@ -1,15 +1,29 @@
 package com.onesignal.onesignal.internal.common
 
 import android.app.Activity
+import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.Rect
+import android.os.Bundle
+import android.text.TextUtils
 import android.util.DisplayMetrics
 import android.view.View
+import com.onesignal.onesignal.logging.Logging
 import java.lang.ref.WeakReference
+import java.util.*
 
 object AndroidUtils {
     private val MARGIN_ERROR_PX_SIZE = dpToPx(24)
+
+    fun getRandomDelay(minDelay: Int, maxDelay: Int): Int {
+        return Random().nextInt(maxDelay + 1 - minDelay) + minDelay
+    }
+
+    fun isStringNotEmpty(body: String?): Boolean {
+        return !TextUtils.isEmpty(body)
+    }
 
     /**
      * Check if the keyboard is currently being shown.
@@ -37,6 +51,14 @@ object AndroidUtils {
         return (dp * Resources.getSystem().displayMetrics.density).toInt()
     }
 
+    fun sleep(ms: Int) {
+        try {
+            Thread.sleep(ms.toLong())
+        } catch (e: InterruptedException) {
+            e.printStackTrace()
+        }
+    }
+
     fun hasConfigChangeFlag(activity: Activity, configChangeFlag: Int): Boolean {
         var hasFlag = false
         try {
@@ -48,5 +70,24 @@ object AndroidUtils {
             e.printStackTrace()
         }
         return hasFlag
+    }
+
+    fun getManifestMeta(context: Context, metaName: String?): String? {
+        val bundle = getManifestMetaBundle(context)
+        return bundle?.getString(metaName)
+    }
+
+    fun getManifestMetaBundle(context: Context): Bundle? {
+        val ai: ApplicationInfo
+        try {
+            ai = context.packageManager.getApplicationInfo(
+                context.packageName,
+                PackageManager.GET_META_DATA
+            )
+            return ai.metaData
+        } catch (e: PackageManager.NameNotFoundException) {
+            Logging.error("Manifest application info not found", e)
+        }
+        return null
     }
 }

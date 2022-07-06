@@ -4,12 +4,15 @@ import android.content.Context
 import com.onesignal.onesignal.IOneSignal
 import com.onesignal.onesignal.iam.IIAMManager
 import com.onesignal.onesignal.internal.application.ApplicationService
+import com.onesignal.onesignal.internal.application.IApplicationService
 import com.onesignal.onesignal.internal.backend.api.ApiService
 import com.onesignal.onesignal.internal.backend.api.IApiService
-import com.onesignal.onesignal.internal.common.CallbackProducer
-import com.onesignal.onesignal.internal.common.ICallbackNotifier
-import com.onesignal.onesignal.internal.common.ICallbackProducer
+import com.onesignal.onesignal.internal.backend.http.HttpClient
+import com.onesignal.onesignal.internal.backend.http.IHttpClient
+import com.onesignal.onesignal.internal.common.events.CallbackProducer
+import com.onesignal.onesignal.internal.common.events.ICallbackProducer
 import com.onesignal.onesignal.internal.device.DeviceService
+import com.onesignal.onesignal.internal.device.IDeviceService
 import com.onesignal.onesignal.internal.iam.IAMManager
 import com.onesignal.onesignal.internal.listeners.IdentityModelStoreListener
 import com.onesignal.onesignal.internal.listeners.PropertiesModelStoreListener
@@ -19,8 +22,11 @@ import com.onesignal.onesignal.internal.modeling.*
 import com.onesignal.onesignal.internal.models.*
 import com.onesignal.onesignal.internal.notification.NotificationsManager
 import com.onesignal.onesignal.internal.operations.GetConfigOperation
+import com.onesignal.onesignal.internal.operations.IOperationRepo
 import com.onesignal.onesignal.internal.operations.OperationRepo
+import com.onesignal.onesignal.internal.params.IParamsService
 import com.onesignal.onesignal.internal.params.ParamsService
+import com.onesignal.onesignal.internal.session.ISessionService
 import com.onesignal.onesignal.internal.session.SessionService
 import com.onesignal.onesignal.internal.user.UserManager
 import com.onesignal.onesignal.location.ILocationManager
@@ -31,9 +37,13 @@ import com.onesignal.onesignal.user.IUserIdentityConflictResolver
 import com.onesignal.onesignal.user.IUserManager
 import com.onesignal.onesignal.user.Identity
 import kotlinx.coroutines.delay
+import java.lang.reflect.Type
 import java.util.*
+import kotlin.reflect.KType
+import kotlin.reflect.javaType
+import kotlin.reflect.typeOf
 
-class OneSignalImp() : IOneSignal {
+class OneSignalImp() : IOneSignal, IServiceProvider {
     override val sdkVersion: String = "050000"
 
     override var requiresPrivacyConsent: Boolean
@@ -46,12 +56,15 @@ class OneSignalImp() : IOneSignal {
     override val iam: IIAMManager get() = _iam
 
     // Services
+    private val _serviceMap: MutableMap<Class<*>, Any> = mutableMapOf()
+
     private val _user: UserManager
     private val _iam: IAMManager
     private val _location: LocationManager
     private val _notifications: NotificationsManager
     private val _operationRepo: OperationRepo
     private val _api: IApiService
+    private val _httpClient: IHttpClient
     private val _sessionService: SessionService
     private val _identityModelListener: IdentityModelStoreListener
     private val _subscriptionModelListener: SubscriptionModelStoreListener
@@ -74,20 +87,46 @@ class OneSignalImp() : IOneSignal {
 
     init {
         _identityModelStore = ModelStore()
+        _serviceMap[typeOf<IModelStore<IdentityModel>>().javaClass] = _identityModelStore
+
         _propertiesModelStore = ModelStore()
-        _subscriptionModelStore = ModelStore()
+        _serviceMap[typeOf<IModelStore<PropertiesModel>>().javaClass] = _propertiesModelStore
+
         _configModelStore = SingletonModelStore("config", { ConfigModel() }, ModelStore())
+        _serviceMap[typeOf<ISingletonModelStore<ConfigModel>>().javaClass] = _configModelStore
+
         _sessionModelStore = SingletonModelStore("session", { SessionModel() }, ModelStore())
+        _serviceMap[typeOf<ISingletonModelStore<SessionModel>>().javaClass] = _sessionModelStore
+
+        _subscriptionModelStore = ModelStore()
+        _serviceMap[typeOf<IModelStore<SubscriptionModel>>().javaClass] = _subscriptionModelStore
+
         _operationRepo = OperationRepo()
-        _api = ApiService()
+        _serviceMap[typeOf<IOperationRepo>().javaClass] = _operationRepo
+
+        _httpClient = HttpClient()
+        _serviceMap[typeOf<IHttpClient>().javaClass] = _httpClient
+
+        _api = ApiService(_httpClient)
+        _serviceMap[typeOf<IApiService>().javaClass] = _api
+
         _identityModelListener = IdentityModelStoreListener(_identityModelStore, _operationRepo, _api)
         _subscriptionModelListener = SubscriptionModelStoreListener(_subscriptionModelStore, _operationRepo, _api)
         _propertiesModelListener = PropertiesModelStoreListener(_propertiesModelStore, _operationRepo, _api)
 
         _applicationService = ApplicationService()
+        _serviceMap[typeOf<IApplicationService>().javaClass] = _applicationService
+
         _deviceService = DeviceService(_applicationService)
+        _serviceMap[typeOf<IDeviceService>().javaClass] = _deviceService
+
         _sessionService = SessionService(_applicationService)
+        _serviceMap[typeOf<ISessionService>().javaClass] = _sessionService
+
         _paramsService = ParamsService()
+        _serviceMap[typeOf<IParamsService>().javaClass] = _paramsService
+
+        // These are already accessible via IOneSignal, no need to add them to the service map.
         _location = LocationManager(_applicationService, _deviceService)
         _user = UserManager(_subscriptionModelStore)
         _iam = IAMManager()
@@ -198,5 +237,16 @@ class OneSignalImp() : IOneSignal {
                 return handler(local, remote)
             }
         })
+    }
+
+    override fun <T> getService(c: Class<T>): T {
+        return _serviceMap[c] as T
+    }
+
+    override fun <T> getServiceOrNull(c: Class<T>): T? {
+        if(_serviceMap.containsKey(c))
+            return _serviceMap[c] as T
+
+        return null
     }
 }

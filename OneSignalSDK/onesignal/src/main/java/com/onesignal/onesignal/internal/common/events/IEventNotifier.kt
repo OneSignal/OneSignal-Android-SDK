@@ -1,4 +1,4 @@
-package com.onesignal.onesignal.internal.common
+package com.onesignal.onesignal.internal.common.events
 
 /**
  * A generic interface which indicates the implementer has the ability to notify events through the

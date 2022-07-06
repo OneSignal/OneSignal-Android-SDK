@@ -1,7 +1,7 @@
 package com.onesignal.onesignal.internal.modeling
 
-import com.onesignal.onesignal.internal.common.IEventNotifier
-import com.onesignal.onesignal.internal.common.EventProducer
+import com.onesignal.onesignal.internal.common.events.IEventNotifier
+import com.onesignal.onesignal.internal.common.events.EventProducer
 
 /**
  * The implementation of a model store.

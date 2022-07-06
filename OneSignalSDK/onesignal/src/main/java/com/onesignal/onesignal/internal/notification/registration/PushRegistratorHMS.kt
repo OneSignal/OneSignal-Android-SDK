@@ -26,7 +26,7 @@ internal class PushRegistratorHMS(private val _deviceService: IDeviceService) : 
     override suspend fun registerForPush(context: Context, senderId: String?) : IPushRegistrator.RegisterResult = coroutineScope {
         var result: IPushRegistrator.RegisterResult? = null
 
-        launch(Dispatchers.Unconfined) {
+        launch(Dispatchers.Default) {
             result = try {
                 getHMSTokenTask(context)
             } catch (e: ApiException) {

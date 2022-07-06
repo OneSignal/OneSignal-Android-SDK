@@ -8,6 +8,7 @@ interface IDeviceService {
     val isFireOSDeviceType: Boolean
     val isHuaweiDeviceType: Boolean
 
+    fun getDeviceType(): Int
     fun isGMSInstalledAndEnabled(): Boolean
     fun hasAllHMSLibrariesForPushKit(): Boolean
     fun hasFCMLibrary(): Boolean

@@ -47,7 +47,7 @@ class DeviceService(private val _applicationService: IApplicationService) : IDev
      * i. "Notification Message" pushes are very bare bones. (title + body)
      * ii. "Data Message" works as expected.
      */
-    private fun getDeviceType(): Int {
+    override fun getDeviceType(): Int {
         if (supportsADM()) return DEVICE_TYPE_FIREOS
         if (supportsGooglePush()) return DEVICE_TYPE_ANDROID
 

@@ -85,7 +85,7 @@ internal class PushRegistratorFCM(
             val instanceId = getInstanceMethod.invoke(null, firebaseApp)
             val getTokenMethod = instanceId.javaClass.getMethod("getToken", String::class.java, String::class.java)
 
-            launch(Dispatchers.Unconfined) {
+            launch(Dispatchers.Default) {
                 val tkn = getTokenMethod.invoke(instanceId, senderId, "FCM")
                 token = tkn as String
             }
@@ -112,7 +112,7 @@ internal class PushRegistratorFCM(
     @Throws(ExecutionException::class, InterruptedException::class)
     private suspend fun getTokenWithClassFirebaseMessaging() : String = coroutineScope {
         var token: String = ""
-        launch(Dispatchers.Unconfined) {
+        launch(Dispatchers.Default) {
             // FirebaseMessaging.getToken API was introduced in firebase-messaging:21.0.0
             // We use firebaseApp.get(FirebaseMessaging.class) instead of FirebaseMessaging.getInstance()
             //   as the latter uses the default Firebase app. We need to use a custom Firebase app as

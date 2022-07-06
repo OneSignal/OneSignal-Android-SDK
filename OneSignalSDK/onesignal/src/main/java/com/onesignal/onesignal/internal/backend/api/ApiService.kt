@@ -1,6 +1,11 @@
 package com.onesignal.onesignal.internal.backend.api
 
-class ApiService : IApiService {
+import com.onesignal.onesignal.internal.backend.http.IHttpClient
+import com.onesignal.onesignal.logging.Logging
+import org.json.JSONException
+import org.json.JSONObject
+
+class ApiService(private val _httpClient: IHttpClient) : IApiService {
     override suspend fun createUserAsync(user: Any) {
         TODO("Not yet implemented")
     }
@@ -109,8 +114,20 @@ class ApiService : IApiService {
         TODO("Not yet implemented")
     }
 
-    override suspend fun updateNotificationAsReceivedAsync() {
-        TODO("Not yet implemented")
+    override suspend fun updateNotificationAsReceived(appId: String, notificationId: String, subscriptionId: String, deviceType: Int?) {
+        try {
+            val jsonBody = JSONObject()
+                .put("app_id", appId)
+                .put("player_id", subscriptionId)
+            if (deviceType != null) {
+                jsonBody.put("device_type", deviceType)
+            }
+
+            val response = _httpClient.put("notifications/$notificationId/report_received", jsonBody)
+
+        } catch (e: JSONException) {
+            Logging.error("Generating direct receive receipt:JSON Failed.", e)
+        }
     }
 
     override suspend fun updateIAMAsClickedAsync() {

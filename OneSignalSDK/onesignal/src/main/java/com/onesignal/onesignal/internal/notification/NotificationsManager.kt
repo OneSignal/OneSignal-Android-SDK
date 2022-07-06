@@ -2,6 +2,10 @@ package com.onesignal.onesignal.internal.notification
 
 import com.onesignal.onesignal.internal.application.IApplicationService
 import com.onesignal.onesignal.internal.common.*
+import com.onesignal.onesignal.internal.common.events.CallbackProducer
+import com.onesignal.onesignal.internal.common.events.EventProducer
+import com.onesignal.onesignal.internal.common.events.ICallbackProducer
+import com.onesignal.onesignal.internal.common.events.IEventProducer
 import com.onesignal.onesignal.internal.device.IDeviceService
 import com.onesignal.onesignal.internal.notification.registration.IPushRegistrator
 import com.onesignal.onesignal.internal.notification.registration.PushRegistratorADM

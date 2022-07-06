@@ -3,8 +3,8 @@ package com.onesignal.onesignal.internal.iam
 import com.onesignal.onesignal.iam.IIAMManager
 import com.onesignal.onesignal.iam.IInAppMessageClickHandler
 import com.onesignal.onesignal.iam.IInAppMessageLifecycleHandler
-import com.onesignal.onesignal.internal.common.CallbackProducer
-import com.onesignal.onesignal.internal.common.ICallbackProducer
+import com.onesignal.onesignal.internal.common.events.CallbackProducer
+import com.onesignal.onesignal.internal.common.events.ICallbackProducer
 import com.onesignal.onesignal.logging.LogLevel
 import com.onesignal.onesignal.logging.Logging
 

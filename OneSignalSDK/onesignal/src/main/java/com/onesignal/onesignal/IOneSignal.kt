@@ -53,7 +53,7 @@ interface IOneSignal {
      *
      * @param context The Android context the SDK should use.
      */
-    suspend fun initWithContext(context: Context)
+    fun initWithContext(context: Context)
 
     /**
      * Set the application ID the OneSignal SDK will be operating

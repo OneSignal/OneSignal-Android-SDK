@@ -1,8 +1,8 @@
 package com.onesignal.onesignal.internal.modeling
 
-import com.onesignal.onesignal.internal.common.EventProducer
-import com.onesignal.onesignal.internal.common.IEventNotifier
-import com.onesignal.onesignal.internal.common.IEventProducer
+import com.onesignal.onesignal.internal.common.events.EventProducer
+import com.onesignal.onesignal.internal.common.events.IEventNotifier
+import com.onesignal.onesignal.internal.common.events.IEventProducer
 import kotlin.collections.HashMap
 
 open class Model(

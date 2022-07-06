@@ -2,6 +2,7 @@ package com.onesignal.onesignal
 
 import android.content.Context
 import com.onesignal.onesignal.iam.IIAMManager
+import com.onesignal.onesignal.internal.IServiceProvider
 import com.onesignal.onesignal.internal.OneSignalImp
 import com.onesignal.onesignal.location.ILocationManager
 import com.onesignal.onesignal.notification.INotificationsManager
@@ -21,6 +22,20 @@ object OneSignal {
 
     private val oneSignal: IOneSignal by lazy {
         OneSignalImp()
+    }
+
+    internal val services: IServiceProvider
+        get() = oneSignal as IServiceProvider
+
+    /**
+     * Inline function to retrieve a specific service
+     */
+    internal inline fun <reified T: Any> getService(): T {
+        return services.getService(T::class.java)
+    }
+
+    internal inline fun <reified T: Any> getServiceOrNull() : T? {
+        return services.getServiceOrNull(T::class.java)
     }
 
     @JvmStatic
@@ -49,7 +64,7 @@ object OneSignal {
         set(value) { oneSignal.requiresPrivacyConsent = value }
 
     @JvmStatic
-    suspend fun initWithContext(context: Context) {
+    fun initWithContext(context: Context) {
         oneSignal.initWithContext(context)
     }
 

@@ -4,6 +4,9 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import androidx.core.app.NotificationManagerCompat
+import com.onesignal.onesignal.logging.Logging
+import org.json.JSONException
+import org.json.JSONObject
 
 object NotificationHelper {
 
@@ -32,7 +35,28 @@ object NotificationHelper {
         return true
     }
 
-    fun getNotificationManager(context: Context): NotificationManager? {
+    fun getNotificationManager(context: Context): NotificationManager {
         return context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    }
+
+    @Throws(JSONException::class)
+    fun getCustomJSONObject(jsonObject: JSONObject): JSONObject {
+        return JSONObject(jsonObject.optString("custom"))
+    }
+
+    fun getNotificationIdFromFCMJson(fcmJson: JSONObject?): String? {
+        if (fcmJson == null) return null
+        try {
+            val customJSON = JSONObject(fcmJson.getString("custom"))
+            if (customJSON.has("i")) return customJSON.optString(
+                "i",
+                null
+            ) else {
+                Logging.debug("Not a OneSignal formatted FCM message. No 'i' field in custom.")
+            }
+        } catch (e: JSONException) {
+            Logging.debug("Not a OneSignal formatted FCM message. No 'custom' field in the JSONObject.")
+        }
+        return null
     }
 }

@@ -1,5 +1,7 @@
 package com.onesignal.onesignal.internal.backend.api
 
+import org.json.JSONObject
+
 interface IApiService  {
 
     /** NEW ENDPOINTS **/
@@ -67,8 +69,16 @@ interface IApiService  {
     /** PUT notifications/{id} **/
     suspend fun updateNotificationAsOpenedAsync()
 
-    /** PUT notifications/{id}/report_received **/
-    suspend fun updateNotificationAsReceivedAsync()
+    /**
+     * Update the provided notification to indicate it has been received.
+     *
+     * @param appId The application ID the notification was sent from.
+     * @param subscriptionId The id of the subscription that received the notification.
+     * @param deviceType The type of device the notification was received on.
+     *
+     * PUT notifications/{notificationId}/report_received
+     */
+    suspend fun updateNotificationAsReceived(appId: String, notificationId: String, subscriptionId: String, deviceType: Int?)
 
     /** POST in_app_messages/{messageId}/click **/
     suspend fun updateIAMAsClickedAsync()
