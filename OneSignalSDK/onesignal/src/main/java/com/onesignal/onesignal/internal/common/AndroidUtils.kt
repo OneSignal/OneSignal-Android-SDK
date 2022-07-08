@@ -1,16 +1,22 @@
 package com.onesignal.onesignal.internal.common
 
 import android.app.Activity
+import android.content.ContentResolver
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.Rect
+import android.net.Uri
 import android.os.Bundle
+import android.os.Looper
 import android.text.TextUtils
 import android.util.DisplayMetrics
 import android.view.View
 import com.onesignal.onesignal.logging.Logging
+import org.json.JSONArray
+import org.json.JSONException
+import org.json.JSONObject
 import java.lang.ref.WeakReference
 import java.util.*
 
@@ -91,6 +97,16 @@ object AndroidUtils {
         return null
     }
 
+    fun getResourceString(context: Context, key: String?, defaultStr: String?): String? {
+        val resources = context.resources
+        val bodyResId = resources.getIdentifier(key, "string", context.packageName)
+        return if (bodyResId != 0) resources.getString(bodyResId) else defaultStr
+    }
+
+    fun isValidResourceName(name: String?): Boolean {
+        return name != null && !name.matches("^[0-9]".toRegex())
+    }
+
     fun getRootCauseThrowable(subjectThrowable: Throwable): Throwable {
         var throwable = subjectThrowable
         while (throwable.cause != null && throwable.cause !== throwable) {
@@ -101,5 +117,9 @@ object AndroidUtils {
 
     fun getRootCauseMessage(throwable: Throwable): String? {
         return getRootCauseThrowable(throwable).message
+    }
+
+    fun isRunningOnMainThread(): Boolean {
+        return Thread.currentThread() == Looper.getMainLooper().thread
     }
 }

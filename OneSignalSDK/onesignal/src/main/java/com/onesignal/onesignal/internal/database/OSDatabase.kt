@@ -21,8 +21,6 @@ import java.lang.StringBuilder
 import java.util.ArrayList
 
 internal class OSDatabase(
-        private val _time: ITime,
-        private val _paramsService: IParamsService,
         private val _outcomeTableProvider: OSOutcomeTableProvider,
         context: Context?) : SQLiteOpenHelper(context, DATABASE_NAME, null, dbVersion), IDatabase {
 
@@ -359,24 +357,6 @@ internal class OSDatabase(
             cursor.close()
         }
         onCreate(db)
-    }
-
-    fun recentUninteractedWithNotificationsWhere(): StringBuilder {
-        val currentTimeSec: Long = _time.currentTimeMillis / 1000L
-        val createdAtCutoff = currentTimeSec - 604800L // 1 Week back
-        val where: StringBuilder = StringBuilder(
-            OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME.toString() + " > " + createdAtCutoff + " AND " +
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0"
-        )
-
-        if (_paramsService.restoreTTLFilter) {
-            val expireTimeWhere =
-                " AND " + OneSignalDbContract.NotificationTable.COLUMN_NAME_EXPIRE_TIME.toString() + " > " + currentTimeSec
-            where.append(expireTimeWhere)
-        }
-        return where
     }
 
     companion object {

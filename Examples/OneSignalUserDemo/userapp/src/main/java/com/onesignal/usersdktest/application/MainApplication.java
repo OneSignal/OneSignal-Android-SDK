@@ -58,7 +58,7 @@ public class MainApplication extends MultiDexApplication {
         }
 
         OneSignal.setAppId(appId, Continue.none());
-        OneSignal.initWithContext(this, Continue.none());
+        OneSignal.initWithContext(this);
 
         OneSignal.getNotifications().setNotificationOpenedHandler(result ->
                 {

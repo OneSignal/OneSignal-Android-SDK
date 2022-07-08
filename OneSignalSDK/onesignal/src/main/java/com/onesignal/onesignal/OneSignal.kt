@@ -39,6 +39,10 @@ object OneSignal {
     }
 
     @JvmStatic
+    val isInitialized: Boolean
+        get() = oneSignal.isInitialized
+
+    @JvmStatic
     val sdkVersion: String
         get() = oneSignal.sdkVersion
 

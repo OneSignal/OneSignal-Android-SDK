@@ -16,6 +16,11 @@ interface IOneSignal {
     val sdkVersion: String
 
     /**
+     * Whether the SDK is initialized.
+     */
+    val isInitialized: Boolean
+
+    /**
      * The user manager for accessing user-scoped
      * management.
      */

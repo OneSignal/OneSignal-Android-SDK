@@ -14,10 +14,12 @@ class NotificationGenerationJob {
         set(value) {
             // If there is no android ID on the notification coming in, create one either
             // copying from the previous one or generating a new one.
-            if (_notification != null && !_notification!!.hasNotificationId()) {
-                if (_notification != null && _notification!!.hasNotificationId()) _notification!!.androidNotificationId =
-                    _notification!!.androidNotificationId else _notification!!.androidNotificationId =
-                    SecureRandom().nextInt()
+            if (value != null && !value!!.hasNotificationId()) {
+                val curNotification = _notification
+                if (curNotification != null && curNotification.hasNotificationId())
+                    value.androidNotificationId = curNotification.androidNotificationId
+                else
+                    value.androidNotificationId = SecureRandom().nextInt()
             }
 
             _notification = value
@@ -28,7 +30,7 @@ class NotificationGenerationJob {
     var context: Context
     var jsonPayload: JSONObject? = null
     var isRestoring = false
-    val isNotificationToDisplay = false
+    var isNotificationToDisplay = false
     var shownTimeStamp: Long? = null
     var overriddenBodyFromExtender: CharSequence? = null
     var overriddenTitleFromExtender: CharSequence? = null

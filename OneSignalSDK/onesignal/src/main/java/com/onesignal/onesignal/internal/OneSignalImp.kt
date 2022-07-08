@@ -11,6 +11,10 @@ import com.onesignal.onesignal.internal.backend.http.HttpClient
 import com.onesignal.onesignal.internal.backend.http.IHttpClient
 import com.onesignal.onesignal.internal.common.events.CallbackProducer
 import com.onesignal.onesignal.internal.common.events.ICallbackProducer
+import com.onesignal.onesignal.internal.common.time.ITime
+import com.onesignal.onesignal.internal.common.time.Time
+import com.onesignal.onesignal.internal.database.IDatabase
+import com.onesignal.onesignal.internal.database.OSDatabase
 import com.onesignal.onesignal.internal.device.DeviceService
 import com.onesignal.onesignal.internal.device.IDeviceService
 import com.onesignal.onesignal.internal.iam.IAMManager
@@ -21,6 +25,22 @@ import com.onesignal.onesignal.internal.location.LocationManager
 import com.onesignal.onesignal.internal.modeling.*
 import com.onesignal.onesignal.internal.models.*
 import com.onesignal.onesignal.internal.notification.NotificationsManager
+import com.onesignal.onesignal.internal.notification.badges.BadgeCountUpdater
+import com.onesignal.onesignal.internal.notification.common.NotificationQueryHelper
+import com.onesignal.onesignal.internal.notification.data.INotificationDataController
+import com.onesignal.onesignal.internal.notification.data.NotificationDataController
+import com.onesignal.onesignal.internal.notification.data.NotificationSummaryManager
+import com.onesignal.onesignal.internal.notification.generation.*
+import com.onesignal.onesignal.internal.notification.generation.GenerateNotification
+import com.onesignal.onesignal.internal.notification.generation.NotificationChannelManager
+import com.onesignal.onesignal.internal.notification.generation.NotificationLimitManager
+import com.onesignal.onesignal.internal.notification.generation.NotificationOpenedProcessor
+import com.onesignal.onesignal.internal.notification.receipt.IReceiveReceiptService
+import com.onesignal.onesignal.internal.notification.receipt.ReceiveReceiptService
+import com.onesignal.onesignal.internal.notification.work.*
+import com.onesignal.onesignal.internal.notification.work.INotificationBundleProcessor
+import com.onesignal.onesignal.internal.notification.work.NotificationBundleProcessor
+import com.onesignal.onesignal.internal.notification.work.NotificationGenerationProcessor
 import com.onesignal.onesignal.internal.operations.GetConfigOperation
 import com.onesignal.onesignal.internal.operations.IOperationRepo
 import com.onesignal.onesignal.internal.operations.OperationRepo
@@ -36,15 +56,15 @@ import com.onesignal.onesignal.notification.INotificationsManager
 import com.onesignal.onesignal.user.IUserIdentityConflictResolver
 import com.onesignal.onesignal.user.IUserManager
 import com.onesignal.onesignal.user.Identity
+import com.onesignal.outcomes.data.OSOutcomeTableProvider
 import kotlinx.coroutines.delay
-import java.lang.reflect.Type
 import java.util.*
-import kotlin.reflect.KType
-import kotlin.reflect.javaType
 import kotlin.reflect.typeOf
 
 class OneSignalImp() : IOneSignal, IServiceProvider {
     override val sdkVersion: String = "050000"
+    override var isInitialized: Boolean = false
+
 
     override var requiresPrivacyConsent: Boolean
         get() = _configModel?.requiresPrivacyConsent == true
@@ -126,6 +146,53 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
         _paramsService = ParamsService()
         _serviceMap[typeOf<IParamsService>().javaClass] = _paramsService
 
+
+        // Notifications
+        val time = Time()
+        _serviceMap[typeOf<ITime>().javaClass] = time
+
+        val database = OSDatabase(OSOutcomeTableProvider(), null) // TODO: Context???
+        _serviceMap[typeOf<IDatabase>().javaClass] = database
+
+        val notificationQueryHelper = NotificationQueryHelper(_paramsService, time)
+        _serviceMap[typeOf<NotificationQueryHelper>().javaClass] = notificationQueryHelper
+
+        val notificationBadgeCountUpdater = BadgeCountUpdater(notificationQueryHelper, database)
+        _serviceMap[typeOf<BadgeCountUpdater>().javaClass] = notificationBadgeCountUpdater
+
+        val notificationDataController = NotificationDataController(_applicationService, notificationQueryHelper, database, time, notificationBadgeCountUpdater)
+        _serviceMap[typeOf<INotificationDataController>().javaClass] = notificationDataController
+
+        val notificationWorkManager = NotificationGenerationWorkManager()
+        _serviceMap[typeOf<INotificationGenerationWorkManager>().javaClass] = notificationWorkManager
+
+        val notificationBundleProcessor = NotificationBundleProcessor(notificationWorkManager, time)
+        _serviceMap[typeOf<INotificationBundleProcessor>().javaClass] = notificationBundleProcessor
+
+        val receiptService = ReceiveReceiptService(_paramsService, _applicationService)
+        _serviceMap[typeOf<IReceiveReceiptService>().javaClass] = receiptService
+
+        val notificationChannelManager = NotificationChannelManager()
+        _serviceMap[typeOf<NotificationChannelManager>().javaClass] = notificationChannelManager
+
+        val notificationLimitManager = NotificationLimitManager(notificationDataController)
+        _serviceMap[typeOf<NotificationLimitManager>().javaClass] = notificationLimitManager
+
+        val generateNotificationService = GenerateNotification(_applicationService, notificationChannelManager, notificationLimitManager, database)
+        _serviceMap[typeOf<IGenerateNotification>().javaClass] = generateNotificationService
+
+        val notificationProcessor = NotificationGenerationProcessor(_applicationService, generateNotificationService, receiptService, _paramsService, notificationDataController, time, null, null) // TODO: fill in
+        _serviceMap[typeOf<INotificationGenerationProcessor>().javaClass] = notificationProcessor
+
+        val notificationRestoreProcessor = NotificationRestoreProcessor(_applicationService, notificationWorkManager, database, notificationQueryHelper)
+        _serviceMap[typeOf<NotificationRestoreProcessor>().javaClass] = notificationRestoreProcessor
+
+        val notificationSummaryManager = NotificationSummaryManager(database, notificationDataController, generateNotificationService, _paramsService, notificationRestoreProcessor)
+        _serviceMap[typeOf<NotificationSummaryManager>().javaClass] = notificationSummaryManager
+
+        val notificatinoOpenedProcessor = NotificationOpenedProcessor(database, notificationSummaryManager, notificationDataController, _paramsService)
+        _serviceMap[typeOf<NotificationOpenedProcessor>().javaClass] = notificatinoOpenedProcessor
+
         // These are already accessible via IOneSignal, no need to add them to the service map.
         _location = LocationManager(_applicationService, _deviceService)
         _user = UserManager(_subscriptionModelStore)
@@ -133,7 +200,7 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
         _notifications = NotificationsManager(_deviceService, _applicationService, _paramsService)
     }
 
-    override suspend fun initWithContext(context: Context) {
+    override fun initWithContext(context: Context) {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context)");
 
         // get the current config model, if there is one
@@ -150,7 +217,8 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
         // TODO: Should this happen within the call?
         _operationRepo.enqueue(GetConfigOperation(_api))
 
-        delay(1000L) // TODO: temporary to simulate suspension call
+        // delay(1000L) // TODO: temporary to simulate suspension call
+        isInitialized = true
     }
 
     override suspend fun setAppId(appId: String) {

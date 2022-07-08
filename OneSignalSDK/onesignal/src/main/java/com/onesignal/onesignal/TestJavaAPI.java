@@ -15,7 +15,7 @@ import kotlin.coroutines.EmptyCoroutineContext;
 
 class TestJavaAPI {
    void test() {
-      OneSignal.initWithContext(null, Continue.none());
+//      OneSignal.initWithContext(null, Continue.none());
 
       // Init OneSignal
       OneSignal.setAppId("123", Continue.none());
