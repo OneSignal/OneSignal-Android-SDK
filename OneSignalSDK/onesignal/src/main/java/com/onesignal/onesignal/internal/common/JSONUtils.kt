@@ -32,4 +32,21 @@ object JSONUtils {
         }
         return json
     }
+
+    fun jsonStringToBundle(data: String): Bundle? {
+        return try {
+            val jsonObject = JSONObject(data)
+            val bundle = Bundle()
+            val iterator: Iterator<*> = jsonObject.keys()
+            while (iterator.hasNext()) {
+                val key = iterator.next() as String
+                val value = jsonObject.getString(key)
+                bundle.putString(key, value)
+            }
+            bundle
+        } catch (e: JSONException) {
+            e.printStackTrace()
+            null
+        }
+    }
 }

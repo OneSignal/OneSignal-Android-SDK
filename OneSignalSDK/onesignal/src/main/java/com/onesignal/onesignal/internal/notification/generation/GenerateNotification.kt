@@ -30,6 +30,7 @@ import com.onesignal.onesignal.internal.common.AndroidUtils
 import com.onesignal.onesignal.internal.common.exceptions.MainThreadException
 import com.onesignal.onesignal.internal.database.IDatabase
 import com.onesignal.onesignal.internal.database.OneSignalDbContract
+import com.onesignal.onesignal.internal.notification.NotificationConstants
 import com.onesignal.onesignal.internal.notification.NotificationHelper
 import com.onesignal.onesignal.internal.notification.work.NotificationBundleProcessor
 import com.onesignal.onesignal.internal.notification.work.NotificationGenerationJob
@@ -52,7 +53,6 @@ internal class GenerateNotification(
     companion object {
         const val OS_SHOW_NOTIFICATION_THREAD = "OS_SHOW_NOTIFICATION_THREAD"
         const val BUNDLE_KEY_ANDROID_NOTIFICATION_ID = "androidNotificationId"
-        const val BUNDLE_KEY_ACTION_ID = "actionId"
 
         // Bundle key the whole OneSignal payload will be placed into as JSON and attached to the
         //   notification Intent.
@@ -981,7 +981,7 @@ internal class GenerateNotification(
                 buttonIntent.action =
                     "" + i // Required to keep each action button from replacing extras of each other
                 buttonIntent.putExtra("action_button", true)
-                bundle.put(BUNDLE_KEY_ACTION_ID, button.optString("id"))
+                bundle.put(NotificationConstants.GENERATE_NOTIFICATION_BUNDLE_KEY_ACTION_ID, button.optString("id"))
                 buttonIntent.putExtra(BUNDLE_KEY_ONESIGNAL_DATA, bundle.toString())
                 if (groupSummary != null) buttonIntent.putExtra(
                     "summary",
