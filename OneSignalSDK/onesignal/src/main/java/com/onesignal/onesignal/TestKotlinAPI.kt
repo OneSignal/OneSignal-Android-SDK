@@ -1,10 +1,11 @@
 package com.onesignal.onesignal
 
+import com.onesignal.onesignal.core.OneSignal
 import com.onesignal.onesignal.notification.IPermissionChangedHandler
 import com.onesignal.onesignal.notification.IPermissionStateChanges
-import com.onesignal.onesignal.user.IUserIdentityConflictResolver
-import com.onesignal.onesignal.user.IUserManager
-import com.onesignal.onesignal.user.Identity
+import com.onesignal.onesignal.core.user.IUserIdentityConflictResolver
+import com.onesignal.onesignal.core.user.IUserManager
+import com.onesignal.onesignal.core.user.Identity
 
 // This is just a quick example to test what the new API would like in Kotlin
 // (should be moved into it's own project)

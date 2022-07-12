@@ -3,11 +3,13 @@ package com.onesignal.onesignal;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.onesignal.onesignal.core.Continue;
+import com.onesignal.onesignal.core.OneSignal;
 import com.onesignal.onesignal.notification.IPermissionChangedHandler;
 import com.onesignal.onesignal.notification.IPermissionStateChanges;
-import com.onesignal.onesignal.user.IUserIdentityConflictResolver;
-import com.onesignal.onesignal.user.IUserManager;
-import com.onesignal.onesignal.user.Identity;
+import com.onesignal.onesignal.core.user.IUserIdentityConflictResolver;
+import com.onesignal.onesignal.core.user.IUserManager;
+import com.onesignal.onesignal.core.user.Identity;
 
 import kotlin.coroutines.Continuation;
 import kotlin.coroutines.CoroutineContext;

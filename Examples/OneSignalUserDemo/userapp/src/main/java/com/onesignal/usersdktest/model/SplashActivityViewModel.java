@@ -8,7 +8,7 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.onesignal.onesignal.OneSignal;
+import com.onesignal.onesignal.core.OneSignal;
 import com.onesignal.onesignal.notification.IPermissionStateChanges;
 import com.onesignal.usersdktest.constant.Tag;
 import com.onesignal.usersdktest.constant.Text;
