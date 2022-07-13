@@ -12,7 +12,8 @@ interface IPushSubscription : ISubscription {
     val pushToken: String
 
     /**
-     * When true, this subscription is for this device.
+     *  Whether this subscription is current enabled. When enabled, the user is able to
+     *  receive notifications through this subscription.
      */
-    val isThisDevice: Boolean
+    var enabled: Boolean
 }

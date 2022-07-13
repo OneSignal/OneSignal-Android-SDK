@@ -8,7 +8,6 @@ import com.onesignal.onesignal.location.ILocationManager
 import com.onesignal.onesignal.notification.INotificationsManager
 import com.onesignal.onesignal.core.user.IUserIdentityConflictResolver
 import com.onesignal.onesignal.core.user.IUserManager
-import com.onesignal.onesignal.core.user.Identity
 
 /**
  * This singleton class is the entry point to the OneSignal SDK. It
@@ -63,6 +62,11 @@ object OneSignal {
         get() = oneSignal.iam
 
     @JvmStatic
+    var privacyConsent: Boolean
+        get() = oneSignal.privacyConsent
+        set(value) { oneSignal.privacyConsent = value }
+
+    @JvmStatic
     var requiresPrivacyConsent: Boolean
         get() = oneSignal.requiresPrivacyConsent
         set(value) { oneSignal.requiresPrivacyConsent = value }
@@ -78,9 +82,17 @@ object OneSignal {
     }
 
     @JvmStatic
-    suspend fun login(identity: Identity): IUserManager {
-        return oneSignal.login(identity);
+    suspend fun login(externalId: String): IUserManager {
+        return oneSignal.login(externalId);
     }
+
+    @JvmStatic
+    suspend fun login(externalId: String, externalIdHash: String? = null): IUserManager {
+        return oneSignal.login(externalId, externalIdHash);
+    }
+
+    @JvmStatic
+    suspend fun loginGuest(): IUserManager = oneSignal.loginGuest()
 
     @JvmStatic
     fun setUserConflictResolver(handler: IUserIdentityConflictResolver) = oneSignal.setUserConflictResolver(handler)

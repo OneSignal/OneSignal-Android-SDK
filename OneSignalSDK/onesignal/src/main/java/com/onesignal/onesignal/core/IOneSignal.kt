@@ -7,7 +7,7 @@ import com.onesignal.onesignal.location.ILocationManager
 import com.onesignal.onesignal.notification.INotificationsManager
 import com.onesignal.onesignal.core.user.IUserIdentityConflictResolver
 import com.onesignal.onesignal.core.user.IUserManager
-import com.onesignal.onesignal.core.user.Identity
+import kotlin.math.log
 
 interface IOneSignal {
     /**
@@ -16,7 +16,7 @@ interface IOneSignal {
     val sdkVersion: String
 
     /**
-     * Whether the SDK is initialized.
+     * Whether the SDK has been initialized.
      */
     val isInitialized: Boolean
 
@@ -53,6 +53,12 @@ interface IOneSignal {
     var requiresPrivacyConsent: Boolean
 
     /**
+     * Indicates whether privacy consent has been granted. This field is only relevant when
+     * the application has opted into data privacy protections. See [requiresPrivacyConsent].
+     */
+    var privacyConsent: Boolean
+
+    /**
      * Initialize the OneSignal SDK.  This should be called during
      * startup of the application.
      *
@@ -72,34 +78,39 @@ interface IOneSignal {
     suspend fun setAppId(appId: String)
 
     /**
-     * Log into the provided identity.  The act of logging a user into the OneSignal SDK
-     * will switch the [user] context to that specific user.
+     * Log the SDK into OneSignal under the user identified by the [externalId] provided. The act of
+     * logging a user into the OneSignal SDK will switch the [user] context to that specific user.
      *
-     * The identity can either be:
-     *
-     * - Identity.Known:  An existing OneSignal user with known externalID (and optionally auth hash)
-     * - Identity.Anonymous:  An unknown or not-yet-existing OneSignal user
-     *      - You will get the same UserAnonymous if the active User was already Anonymous (TODO: Is this okay?)
+     * * If the [externalId] exists the user will be retrieved and the context set from that
+     *   user information. If operations have already been performed under a guest user the
+     *   [IUserIdentityConflictResolver] specified in [setUserConflictResolver] will be called
+     *   to determine how to proceed (defaulting to honor the remote user entirely).
+     * * If the [externalId] does not exist the user will be created and the context set from
+     *   the current local state. If operations have already been performed under a guest user
+     *   those operations will be applied to the newly created user.
      *
      * *Push Notifications and In App Messaging*
-     * Logging in a new user will transfer push notification and in app messaging subscriptions
-     * from the current user (if there is one) to the newly logged in user.  This is because
-     * both Push and IAM are owned by the OS.
-     * TODO: I feel like rather than transfer it should be a "pause".  I'm thinking of cases where
-     *       a device has 2 different IDs and the person switches between them.  Should only the
-     *       active user get push notifications or should both?  Should both have a *record* of
-     *       them being enrolled in push on the same device, or just one at any given moment.
-     *
-     * TODO: IAM same story.  Although a user can only have 1 IAM subscription (a user could have
-     *       multiple push subscriptions i.e. 2 phones).  If a user logs out their "IAM status"
-     *       should stay....but this is only a thing if we want to provide the ability for the
-     *       app developer to "pause" IAM at the user level, in addition to the device level.
-     *       Use Case:  Allow the user to toggle on/off
+     * Logging in a new user will automatically transfer push notification and in app messaging
+     * subscriptions from the current user (if there is one) to the newly logged in user.  This is
+     * because both Push and IAM are owned by the OS.
      */
-    suspend fun login(identity: Identity): IUserManager
+    suspend fun login(externalId: String, externalIdHash: String? = null): IUserManager
+    suspend fun login(externalId: String) : IUserManager = login(externalId, null)
 
     /**
-     * Set the optional user conflict resolver.
+     * Log the SDK into OneSignal as a guest user. A guest user has no user identity that can later
+     * be retrieved, except through this device as long as the app remains installed and the app
+     * data is not cleared.
+     */
+    suspend fun loginGuest(): IUserManager
+
+    /**
+     * Set the optional user conflict resolver.  The [handler] will be called in the event user
+     * operations were performed against a guest user, then [login] is called with an `externalId`
+     * identifying an existing user.  When these sequence of events occur, the app developer must
+     * provide insight into how to "merge" the two user states.  If no [IUserIdentityConflictResolver]
+     * has been set here, the SDK will default to honoring the remote user.  This means any operations
+     * made against the guest user prior to [login] will *not* be applied to the logged in user.
      */
     fun setUserConflictResolver(handler: IUserIdentityConflictResolver?)
     fun setUserConflictResolver(handler: (local: IUserManager, remote: IUserManager) -> IUserManager) // TODO: SHOULD INCLUDE?

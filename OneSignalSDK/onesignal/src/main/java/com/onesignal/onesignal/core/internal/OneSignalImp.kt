@@ -22,7 +22,6 @@ import com.onesignal.onesignal.iam.internal.IAMModule
 import com.onesignal.onesignal.iam.IIAMManager
 import com.onesignal.onesignal.core.user.IUserIdentityConflictResolver
 import com.onesignal.onesignal.core.user.IUserManager
-import com.onesignal.onesignal.core.user.Identity
 import kotlinx.coroutines.delay
 import java.util.*
 
@@ -36,6 +35,8 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
             _requiresPrivacyConsent = value
             _configModel?.requiresPrivacyConsent = value
         }
+
+    override var privacyConsent: Boolean = false
 
     override val notifications: INotificationsManager get() = if (isInitialized) _notifications!! else throw Exception("Must call 'initWithContext' before use")
     override val location: ILocationManager get() = if (isInitialized) _location!! else throw Exception("Must call 'initWithContext' before use")
@@ -120,8 +121,11 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
     }
 
     // This accepts UserIdentity.Anonymous?, so therefore UserAnonymous? might be null
-    override suspend fun login(identity: Identity): IUserManager {
-        Logging.log(LogLevel.DEBUG, "login(identity: $identity)");
+    override suspend fun login(externalId: String, externalIdHash: String?): IUserManager {
+        Logging.log(
+            LogLevel.DEBUG,
+            "login(externalId: $externalId, externalIdHash: $externalIdHash)"
+        );
 
         if (!isInitialized)
             throw Exception("Must call 'initWithContext' before use")
@@ -129,51 +133,37 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
         var retIdentityModel: IdentityModel? = null
         var retPropertiesModel: PropertiesModel? = null
 
-        when (identity) {
-            is Identity.Known -> {
-                // TODO: Attempt to retrieve user from backend,
-                //       * if exists set identityModel aliases and oneSignalId, and all of properties model.
-                //       * If doesn't exist create user?
-                //       * If invalid auth hash/user throw exception?
-                delay(1000L) // Simulate call to drive suspension
+        // TODO: Attempt to retrieve user from backend,
+        //       * if exists set identityModel aliases and oneSignalId, and all of properties model.
+        //       * If doesn't exist create user?
+        //       * If invalid auth hash/user throw exception?
+        delay(1000L) // Simulate call to drive suspension
 
-                // ASSUME BACKEND DOESN'T HAVE USER FOR NOW, CREATE LOCALLY
-                // TODO: Attempt to retrieve user from model stores. Should lookup be by external ID or onesignal id?
-                //       Feels more right to use the onesignal ID as that cannot change.  But the user provides an
-                //       externalID so we would need to keep a cache of externalID->onesignalID mappings in the event
-                //       there is no connectivity and we can't pull the user from the backend.
-                var identityModel = _identityModelStore!!.get(identity.externalId)
-                var propertiesModel = _propertiesModelStore!!.get(identity.externalId)
+        // ASSUME BACKEND DOESN'T HAVE USER FOR NOW, CREATE LOCALLY
+        // TODO: Attempt to retrieve user from model stores. Should lookup be by external ID or onesignal id?
+        //       Feels more right to use the onesignal ID as that cannot change.  But the user provides an
+        //       externalID so we would need to keep a cache of externalID->onesignalID mappings in the event
+        //       there is no connectivity and we can't pull the user from the backend.
+        var identityModel = _identityModelStore!!.get(externalId)
+        var propertiesModel = _propertiesModelStore!!.get(externalId)
 
-                if(identityModel == null) {
-                    identityModel = IdentityModel()
-                    identityModel.id = UUID.randomUUID().toString()
-                    identityModel.userId = identity.externalId
-                    identityModel.userIdAuthHash = identity.authHash
-                    _identityModelStore!!.add(identity.externalId, identityModel)
-                }
-
-                if(propertiesModel == null) {
-                    propertiesModel = PropertiesModel()
-                    propertiesModel.id = identityModel.id
-                    _propertiesModelStore!!.add(identity.externalId, propertiesModel)
-                }
-
-                retIdentityModel = identityModel
-                retPropertiesModel = propertiesModel
-                // TODO: Add repo op to create user on the backend.
-            }
-            is Identity.Anonymous -> {
-                retIdentityModel = IdentityModel()
-                retPropertiesModel = PropertiesModel()
-
-                // TODO: Do we do anything else?  Save the anonymous user in the store?  Save the anonymous user in the backend?
-                delay(1000L) // Simulate call to drive suspension
-            }
-            else -> {
-                throw Exception("Unrecognized identity type: " + identity.javaClass.name)
-            }
+        if(identityModel == null) {
+            identityModel = IdentityModel()
+            identityModel.id = UUID.randomUUID().toString()
+            identityModel.userId = externalId
+            identityModel.userIdAuthHash = externalIdHash
+            _identityModelStore!!.add(externalId, identityModel)
         }
+
+        if(propertiesModel == null) {
+            propertiesModel = PropertiesModel()
+            propertiesModel.id = identityModel.id
+            _propertiesModelStore!!.add(externalId, propertiesModel)
+        }
+
+        retIdentityModel = identityModel
+        retPropertiesModel = propertiesModel
+        // TODO: Add repo op to create user on the backend.
 
         if(retIdentityModel != null && retPropertiesModel != null) {
             // TODO: Clear anything else out?
@@ -181,6 +171,28 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
             // TODO: Hook the new models to the operation store, any changes to these are applicable.
             _userSwitcher!!.setUser(retIdentityModel, retPropertiesModel)
         }
+
+        return user
+    }
+
+    override suspend fun loginGuest(): IUserManager {
+        Logging.log(LogLevel.DEBUG, "loginGuest()");
+
+        if (!isInitialized)
+            throw Exception("Must call 'initWithContext' before use")
+
+        var retIdentityModel = IdentityModel()
+        var retPropertiesModel = PropertiesModel()
+
+        // TODO: Add repo op to create user on the backend.
+        // TODO: Do we do anything else?  Save the anonymous user in the store?  Save the anonymous user in the backend?
+        delay(1000L) // Simulate call to drive suspension
+
+        // TODO: Clear anything else out?
+        // TODO: Unhook the old models from the operation store, any changes to them are no longer applicable.
+        // TODO: Hook the new models to the operation store, any changes to these are applicable.
+        _userSwitcher!!.setUser(retIdentityModel, retPropertiesModel)
+
         return user;
     }
 

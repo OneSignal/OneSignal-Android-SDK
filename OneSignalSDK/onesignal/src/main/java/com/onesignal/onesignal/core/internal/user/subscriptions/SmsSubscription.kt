@@ -5,6 +5,5 @@ import java.util.*
 
 class SmsSubscription(
         id: UUID,
-        enabled: Boolean,
         override val number: String
-        ) : Subscription(id, enabled), ISmsSubscription
+        ) : Subscription(id), ISmsSubscription

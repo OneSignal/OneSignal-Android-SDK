@@ -9,7 +9,6 @@ import com.onesignal.onesignal.notification.IPermissionChangedHandler;
 import com.onesignal.onesignal.notification.IPermissionStateChanges;
 import com.onesignal.onesignal.core.user.IUserIdentityConflictResolver;
 import com.onesignal.onesignal.core.user.IUserManager;
-import com.onesignal.onesignal.core.user.Identity;
 
 import kotlin.coroutines.Continuation;
 import kotlin.coroutines.CoroutineContext;
@@ -29,15 +28,15 @@ class TestJavaAPI {
 
       // Example User Login
       //    - Create an Identity with External user id (with auth hash)
-      OneSignal.login(new Identity.Known("myID"), Continue.with(result -> {
+      OneSignal.login("myID", Continue.with(result -> {
 
       }));
 
-      OneSignal.login(new Identity.Known("myID", "myIDAuthHash"), Continue.with(result -> {
+      OneSignal.login("myID", "myIDAuthHash", Continue.with(result -> {
 
       }));
 
-      OneSignal.login(new Identity.Known("myID", "myIDAuthHash"), new Continuation<IUserManager>() {
+      OneSignal.login("myID", "myIDAuthHash", new Continuation<IUserManager>() {
          @NonNull
          @Override
          public CoroutineContext getContext() {
@@ -51,7 +50,7 @@ class TestJavaAPI {
       });
 
       // Example 1 of Logout, you get generic push
-      OneSignal.login(new Identity.Anonymous(), Continue.none());
+      OneSignal.loginGuest(Continue.none());
 
       // Example 2 of Logout, device won't get an pushes there is no user.
       // JAVA API CON: The casting here is not very clean, this is simply just null in Kotlin
@@ -61,7 +60,7 @@ class TestJavaAPI {
       // JAVA API CON: "getTags() here is confusing. In Kotlin, this reads OneSignal.user.tags.add
       OneSignal.getUser().setTag("key", "value")
                          .setTag("key2", "value2")
-                         .setAlias("facebook", "myfacebookid")
+                         .addAlias("facebook", "myfacebookid")
                          .setTrigger("level", 1)
                          .addEmailSubscription("user@company.co")
                          .addSmsSubscription("+8451111111");

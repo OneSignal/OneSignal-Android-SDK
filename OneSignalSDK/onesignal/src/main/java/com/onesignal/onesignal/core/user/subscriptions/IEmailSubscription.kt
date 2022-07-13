@@ -5,9 +5,8 @@ package com.onesignal.onesignal.core.user.subscriptions
  * channel.
  */
 interface IEmailSubscription : ISubscription {
-
-        /**
-         * The email address notifications will be sent to for this subscription.
-         */
-        val email: String
+    /**
+     * The email address notifications will be sent to for this subscription.
+     */
+    val email: String
 }

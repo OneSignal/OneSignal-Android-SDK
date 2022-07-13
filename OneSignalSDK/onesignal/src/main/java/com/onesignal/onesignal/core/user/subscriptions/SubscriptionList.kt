@@ -5,41 +5,37 @@ package com.onesignal.onesignal.core.user.subscriptions
  * to help navigate the list of subscriptions.
  */
 class SubscriptionList(val collection: List<ISubscription>) {
+
     /**
-     * Retrieve the subset of subscriptions that are [IPushSubscription].
+     * Retrieve the push subscription for this user.  This subscription is for this
+     * device, or it does not exist and is null.
      */
-    val pushSubscriptions: List<IPushSubscription>
-        get() = collection.filterIsInstance<IPushSubscription>()
+    val push: IPushSubscription?
+        get() = collection.filterIsInstance<IPushSubscription>().firstOrNull()
 
     /**
      * Retrieve the subset of subscriptions that are [IEmailSubscription].
      */
-    val emailSubscriptions: List<IEmailSubscription>
+    val emails: List<IEmailSubscription>
         get() = collection.filterIsInstance<IEmailSubscription>()
 
     /**
      * Retrieve the subset of subscriptions that are [ISmsSubscription].
      */
-    val smsSubscriptions: List<ISmsSubscription>
+    val smss: List<ISmsSubscription>
         get() = collection.filterIsInstance<ISmsSubscription>()
-
-    /**
-     * Retrieve the subscription for this device, if there is one.
-     */
-    val thisDevice: IPushSubscription?
-        get() = pushSubscriptions.firstOrNull() { it.isThisDevice }
 
     /**
      * Retrieve the Email subscription with the matching email, if there is one.
      */
     fun getByEmail(email: String) : IEmailSubscription? {
-         return emailSubscriptions.firstOrNull { it.email == email }
+         return emails.firstOrNull { it.email == email }
     }
 
     /**
      * Retrieve the SMS subscription with the matching SMS number, if there is one.
      */
     fun getBySMS(sms: String) : ISmsSubscription? {
-        return smsSubscriptions.firstOrNull { it.number == sms }
+        return smss.firstOrNull { it.number == sms }
     }
 }

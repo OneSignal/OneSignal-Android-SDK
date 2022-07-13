@@ -69,7 +69,7 @@ internal class ReceiveReceiptService(
 
         private suspend fun sendReceiveReceipt(notificationId: String) {
             val appId: String = _config!!.appId ?: ""
-            val playerId: String = _userManager!!.subscriptions.thisDevice?.id.toString()
+            val playerId: String = _userManager!!.subscriptions.push?.id.toString()
 
             var deviceType: Int? = null
 

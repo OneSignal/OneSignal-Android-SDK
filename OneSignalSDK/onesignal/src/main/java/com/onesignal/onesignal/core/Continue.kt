@@ -24,17 +24,34 @@ class ContinueResult<R> (
 }
 
 /**
- * A wrapper to allow Java invocations to Kotlin coroutines a little easier on the eye.
+ * A static helper class allowing Java invocations to Kotlin coroutines a little easier on the eye.
+ * When invoking a suspending function in Java there is an extra parameter on the signature accepting
+ * a [Continuation].  Typically this would require creating an anonymous object to implement both
+ * [Continuation.context] and [Continuation.resumeWith].  This class allows you to accomplish the
+ * same thing with a more inline/lambda approach:
+ *
+ * ```
+ * someSuspendingMethod(normalArg1, normalArg2, Continue.with(result -> { ... }))
+ * ```
+ *
+ * if you don't need to continue with anything you can simply use:
+ *
+ * ```
+ * someSuspendingMethod(normalArg1, normalArg2, Continue.none())
+ * ```
  */
 object Continue {
 
     /**
      * Allows java code to provide a lambda as a continuation to a Kotlin coroutine.
      *
-     * @param onFinished Called when the coroutine has completed, passing in the result of the coroutine for
-     * the java code to continue processing.
+     * @param onFinished Called when the coroutine has completed, passing in the result ([ContinueResult])
+     * of the coroutine for the java code to continue processing.
      * @param context The optional coroutine context to run the [onFinished] lambda under. If not
      * specified a context confined to the main thread will be used.
+     *
+     * @return The [Continuation] which should be provided to the Kotlin coroutine, and will be executed
+     * once that coroutine has completed.
      */
     @JvmOverloads
     @JvmStatic

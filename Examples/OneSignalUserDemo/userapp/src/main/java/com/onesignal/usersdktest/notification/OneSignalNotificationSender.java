@@ -15,7 +15,7 @@ public class OneSignalNotificationSender {
 
     public static void sendDeviceNotification(final Notification notification) {
         new Thread(() -> {
-            IPushSubscription subscription = OneSignal.getUser().getSubscriptions().getThisDevice();
+            IPushSubscription subscription = OneSignal.getUser().getSubscriptions().getPush();
 
             if (subscription == null || !subscription.getEnabled())
                 return;

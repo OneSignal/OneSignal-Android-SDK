@@ -5,7 +5,6 @@ import com.onesignal.onesignal.notification.IPermissionChangedHandler
 import com.onesignal.onesignal.notification.IPermissionStateChanges
 import com.onesignal.onesignal.core.user.IUserIdentityConflictResolver
 import com.onesignal.onesignal.core.user.IUserManager
-import com.onesignal.onesignal.core.user.Identity
 
 // This is just a quick example to test what the new API would like in Kotlin
 // (should be moved into it's own project)
@@ -24,12 +23,12 @@ class TestKotlinAPI {
 
         // Example User Login
         //    - Create an Identity with External user id (with auth hash)
-        OneSignal.login(Identity.Known("myID"))
+        OneSignal.login("myID")
 
-        OneSignal.login(Identity.Known("myID", "myIDAuthHash"))
+        OneSignal.login("myID", "myIDAuthHash")
 
         // Example 1 of Logout, you get generic push
-        OneSignal.login(Identity.Anonymous())
+        OneSignal.loginGuest()
 
         // Example 2 of Logout, device won't get an pushes there is no user.
         //OneSignal.loginAsync(null)
@@ -37,7 +36,7 @@ class TestKotlinAPI {
         // Add tag example
         OneSignal.user.setTag("key", "value")
                       .setTag("key2", "value2")
-                      .setAlias("facebook", "myfacebookid")
+                      .addAlias("facebook", "myfacebookid")
                       .setTrigger("level", 1)
                       .addEmailSubscription("user@company.co")
                       .addSmsSubscription("+8451111111")

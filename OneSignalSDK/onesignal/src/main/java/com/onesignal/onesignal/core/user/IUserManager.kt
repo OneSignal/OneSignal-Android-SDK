@@ -22,20 +22,15 @@ import com.onesignal.onesignal.core.user.subscriptions.SubscriptionList
  */
 interface IUserManager {
     /**
-     * The identity of the current user.
+     * The external id of the current user.  When null, the current user is a guest user
+     * and cannot be retrieved outside of this device/app.
      */
-    val identity: Identity
+    val externalId: String?
 
     /**
      * The language string for the current user.
      */
     var language: String
-
-    /**
-     * Indicates whether the current user has consented. This field is only relevant when
-     * the application has opted into data privacy protections. See [OneSignal.requiresPrivacyConsent].
-     */
-    var privacyConsent: Boolean
 
     /**
      * The aliases associated to the current user.
@@ -53,25 +48,22 @@ interface IUserManager {
     val tags: Map<String, String>
 
     /**
-     * Change the external ID of the current user.  This will update the current user's external id
-     * It will not switch users, to switch users you must call [OneSignal.login].
-     *
-     * @param externalId The new external ID for the current user. Set to `null` to remove the
-     * external ID for the current user (TODO: does this make them anonymous?)
-     * @param externalIdAuthHash The optional auth hash for the external id. If not using identity
-     * verification, this can be omitted or set to `null`. See [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
-     */
-    fun setExternalId(externalId: String?) : IUserManager
-    fun setExternalId(externalId: String?, externalIdAuthHash: String? = null) : IUserManager
-
-    /**
      * Set an alias for the current user.  If this alias already exists it will be overwritten.
      *
      * @param label The alias label that you want to set against the current user.
      * @param id The alias id that should be set against the current user. This must be a unique value
      * within the alias label across your entire user base so it can uniquely identify this user.
      */
-    fun setAlias(label: String, id: String) : IUserManager
+    fun addAlias(label: String, id: String) : IUserManager
+
+    /**
+     * Add/set aliases for the current user. If any alias already exists it will be overwritten.
+     *
+     * @param aliases A map of the alias label -> alias id that should be set against the user. Each
+     * alias id must be a unique value within the alias label across your entire user base so it can
+     * uniquely identify this user.
+     */
+    fun addAliases(aliases: Map<String, String>): IUserManager
 
     /**
      * Remove an alias from the current user.
@@ -91,6 +83,13 @@ interface IUserManager {
     fun addEmailSubscription(email: String) : IUserManager = addEmailSubscription(email, null)
 
     /**
+     * Remove an email subscription from the current user.
+     *
+     * @param email The email address that the current user was subscribed for, and should no longer be.
+     */
+    fun removeEmailSubscription(email: String) : IUserManager
+
+    /**
      * Add a new SMS subscription to the current user.
      *
      * @param sms The phone number that the current user has subscribed for, in [E.164](https://documentation.onesignal.com/docs/sms-faq#what-is-the-e164-format) format.
@@ -101,29 +100,11 @@ interface IUserManager {
     fun addSmsSubscription(sms: String) : IUserManager = addSmsSubscription(sms, null)
 
     /**
-     * Add this device as a push subscriber for this user.
-     */
-    fun addPushSubscription() : IUserManager
-
-    /**
-     * Change the enablement of the provided subscription.  The subscription will still exist
-     * against the user, it will however no longer receive notifications.
+     * Remove an SMS subscription from the current user.
      *
-     * @param subscription The subscription whose enablement should be updated. This is obtained within
-     * the [subscriptions] collection.
-     *
-     * @param enabled Whether the subscription should be enabled (`true`) or disabled (`false`).
+     * @param sms The sms address that the current user was subscribed for, and should no longer be.
      */
-    fun setSubscriptionEnablement(subscription: ISubscription, enabled: Boolean) : IUserManager
-
-    /**
-     * Remove the subscription from the current user. The subscription will be deleted as a
-     * record.
-     *
-     * @param subscription The subscription that is to be removed. This is obtained within
-     * the [subscriptions] collection.
-     */
-    fun removeSubscription(subscription: ISubscription) : IUserManager
+    fun removeSmsSubscription(sms: String) : IUserManager
 
     /**
      * Set a tag for the current user.  Tags are key:value pairs used as building blocks

@@ -28,7 +28,6 @@ import android.widget.TextView;
 import com.onesignal.onesignal.core.Continue;
 import com.onesignal.onesignal.core.OneSignal;
 import com.onesignal.onesignal.notification.IPermissionStateChanges;
-import com.onesignal.onesignal.core.user.Identity;
 import com.onesignal.onesignal.core.user.subscriptions.IEmailSubscription;
 import com.onesignal.onesignal.core.user.subscriptions.IPushSubscription;
 import com.onesignal.onesignal.core.user.subscriptions.ISmsSubscription;
@@ -353,7 +352,7 @@ public class MainActivityViewModel implements ActivityViewModel {
 
     @Override
     public void onPermissionChanged(@Nullable IPermissionStateChanges stateChanges) {
-        boolean isSubscribed = OneSignal.getUser().getSubscriptions().getThisDevice() != null;
+        boolean isSubscribed = OneSignal.getUser().getSubscriptions().getPush() != null;
         boolean isPermissionEnabled = stateChanges.getTo().getNotificationsEnabled();
 
         subscriptionSwitch.setEnabled(isPermissionEnabled);
@@ -426,14 +425,14 @@ public class MainActivityViewModel implements ActivityViewModel {
             }
         }));
 
-        switchUserButton.setOnClickListener(v -> dialog.createUpdateAlertDialog(getExternalUserIdFromOS(), Dialog.DialogAction.SWITCH, ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
+        switchUserButton.setOnClickListener(v -> dialog.createUpdateAlertDialog(OneSignal.getUser().getExternalId(), Dialog.DialogAction.SWITCH, ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
             @Override
             public void onSuccess(String update) {
                 if(update == null || update.isEmpty()) {
-                    OneSignal.login(new Identity.Anonymous(), Continue.with(r -> refreshState()));
+                    OneSignal.loginGuest(Continue.with(r -> refreshState()));
                 }
                 else {
-                    OneSignal.login(new Identity.Known(update), Continue.with(r -> refreshState()));
+                    OneSignal.login(update, Continue.with(r -> refreshState()));
                 }
             }
 
@@ -454,7 +453,7 @@ public class MainActivityViewModel implements ActivityViewModel {
                     aliasSet.remove(pair.first);
                     toaster.makeCustomViewToast("Deleted alias " + pair.first, ToastType.SUCCESS);
                 } else {
-                    OneSignal.getUser().setAlias(pair.first, pair.second.toString());
+                    OneSignal.getUser().addAlias(pair.first, pair.second.toString());
                     aliasSet.put(pair.first, pair.second);
                     toaster.makeCustomViewToast("Added alias " + pair.first, ToastType.SUCCESS);
                 }
@@ -506,33 +505,25 @@ public class MainActivityViewModel implements ActivityViewModel {
     }
 
     private void setupExternalUserIdButton() {
-        externalUserIdRelativeLayout.setOnClickListener(v -> {
-            String externalUserId2 = getExternalUserIdFromOS();
-            userExternalUserIdTextView.setText(externalUserId2 == null ? "" : externalUserId2);
-
-            dialog.createUpdateAlertDialog(externalUserId2, Dialog.DialogAction.UPDATE, ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
-                @Override
-                public void onSuccess(String externalUserId) {
-                    OneSignal.getUser().setExternalId(externalUserId);
-                    userExternalUserIdTextView.setText(externalUserId);
-                    SharedPreferenceUtil.cacheUserExternalUserId(context, externalUserId);
-                }
-
-                @Override
-                public void onFailure() {
-
-                }
-            });
-        });
-    }
-
-    private String getExternalUserIdFromOS() {
-        Identity identity = OneSignal.getUser().getIdentity();
-        if(identity instanceof Identity.Known) {
-            return ((Identity.Known)identity).getExternalId();
-        }
-
-        return null;
+        // TODO: Can no longer set external ID after the fact
+//        externalUserIdRelativeLayout.setOnClickListener(v -> {
+//            String externalUserId2 = getExternalUserIdFromOS();
+//            userExternalUserIdTextView.setText(externalUserId2 == null ? "" : externalUserId2);
+//
+//            dialog.createUpdateAlertDialog(externalUserId2, Dialog.DialogAction.UPDATE, ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
+//                @Override
+//                public void onSuccess(String externalUserId) {
+//                    OneSignal.getUser().setExternalId(externalUserId);
+//                    userExternalUserIdTextView.setText(externalUserId);
+//                    SharedPreferenceUtil.cacheUserExternalUserId(context, externalUserId);
+//                }
+//
+//                @Override
+//                public void onFailure() {
+//
+//                }
+//            });
+//        });
     }
 
     private void setupEmailLayout() {
@@ -616,7 +607,7 @@ public class MainActivityViewModel implements ActivityViewModel {
 
     private void setupSubscriptionSwitch() {
         boolean isPermissionEnabled = OneSignal.getNotifications().getPermissionStatus().getNotificationsEnabled();
-        boolean isSubscribed = OneSignal.getUser().getSubscriptions().getThisDevice() != null;
+        boolean isSubscribed = OneSignal.getUser().getSubscriptions().getPush() != null;
 
         subscriptionSwitch.setEnabled(isPermissionEnabled);
         subscriptionSwitch.setChecked(isSubscribed);
@@ -638,14 +629,9 @@ public class MainActivityViewModel implements ActivityViewModel {
         // Add a listener to toggle the push notification enablement for the current user. The assumption is this
         // can only fire if the subscription switch is enabled (push notifications are enabled).
         subscriptionSwitch.setOnClickListener(v -> {
-            IPushSubscription subscription = OneSignal.getUser().getSubscriptions().getThisDevice();
-            if (subscription == null) {
-                if(subscriptionSwitch.isChecked()) {
-                    OneSignal.getUser().addPushSubscription();
-                }
-            }
-            else {
-                OneSignal.getUser().setSubscriptionEnablement(subscription, subscriptionSwitch.isChecked());
+            IPushSubscription subscription = OneSignal.getUser().getSubscriptions().getPush();
+            if (subscription != null) {
+                subscription.setEnabled(subscriptionSwitch.isChecked());
             }
         });
     }
@@ -734,12 +720,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         emailsRecyclerView.setLayoutManager(linearLayoutManager);
         emailsRecyclerViewAdapter = new SingleRecyclerViewAdapter(context, emailArrayList, value -> {
-            IEmailSubscription emailSub = OneSignal.getUser().getSubscriptions().getByEmail(value);
-
-            if(emailSub != null) {
-                OneSignal.getUser().removeSubscription(emailSub);
-            }
-
+            OneSignal.getUser().removeEmailSubscription(value);
             emailArrayList.remove(value);
             refreshEmailRecyclerView();
             toaster.makeCustomViewToast("Deleted email " + value, ToastType.SUCCESS);
@@ -764,12 +745,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         smssRecyclerView.setLayoutManager(linearLayoutManager);
         smssRecyclerViewAdapter = new SingleRecyclerViewAdapter(context, smsArrayList, value -> {
-            ISmsSubscription smsSub = OneSignal.getUser().getSubscriptions().getBySMS(value);
-
-            if(smsSub != null) {
-                OneSignal.getUser().removeSubscription(smsSub);
-            }
-
+            OneSignal.getUser().removeTrigger(value);
             smsArrayList.remove(value);
             refreshSMSRecyclerView();
             toaster.makeCustomViewToast("Deleted SMS " + value, ToastType.SUCCESS);
@@ -913,7 +889,7 @@ public class MainActivityViewModel implements ActivityViewModel {
     }
 
     private void togglePrivacyConsent(boolean hasConsent) {
-        OneSignal.getUser().setPrivacyConsent(hasConsent);
+        OneSignal.setPrivacyConsent(hasConsent);
         SharedPreferenceUtil.cacheUserPrivacyConsent(context, hasConsent);
 
         shouldScrollTop = hasConsent;
@@ -933,7 +909,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         appIdTextView.setText(getOneSignalAppId());
 
         // externalId
-        String externalUserId = getExternalUserIdFromOS();
+        String externalUserId = OneSignal.getUser().getExternalId();
         userExternalUserIdTextView.setText(externalUserId == null ? "" : externalUserId);
 
         // aliases
@@ -945,7 +921,7 @@ public class MainActivityViewModel implements ActivityViewModel {
 
         // email subscriptions
         emailArrayList.clear();
-        List<IEmailSubscription> emailSubs = OneSignal.getUser().getSubscriptions().getEmailSubscriptions();
+        List<IEmailSubscription> emailSubs = OneSignal.getUser().getSubscriptions().getEmails();
         for (IEmailSubscription emailSub: emailSubs) {
             emailArrayList.add(emailSub.getEmail());
         }
@@ -953,7 +929,7 @@ public class MainActivityViewModel implements ActivityViewModel {
 
         // sms subscriptions
         smsArrayList.clear();
-        List<ISmsSubscription> smsSubs = OneSignal.getUser().getSubscriptions().getSmsSubscriptions();
+        List<ISmsSubscription> smsSubs = OneSignal.getUser().getSubscriptions().getSmss();
         for (ISmsSubscription smsSub: smsSubs) {
             smsArrayList.add(smsSub.getNumber());
         }
