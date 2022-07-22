@@ -41,11 +41,11 @@ android {
 //         make sure the latest minor value is a known stable version. Using a range for the
 //         patch version is ok, since this allows getting bug fix versions.
 dependencies {
-    implementation 'androidx.work:work-runtime-ktx:2.7.1'
     compileOnly fileTree(dir: 'libs', include: ['*.jar'])
 
     implementation project(":onesignal:user")
 
+    implementation 'androidx.work:work-runtime-ktx:2.7.1'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.2"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.2"

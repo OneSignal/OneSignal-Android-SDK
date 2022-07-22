@@ -6,5 +6,5 @@ package com.onesignal.onesignal.core.internal.service
  * initialization process.
  */
 interface IStartableService {
-    fun start()
+    suspend fun start()
 }

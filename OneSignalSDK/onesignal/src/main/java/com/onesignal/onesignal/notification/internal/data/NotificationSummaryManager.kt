@@ -8,8 +8,8 @@ import com.onesignal.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.onesignal.core.internal.database.impl.OneSignalDbContract
 import com.onesignal.onesignal.notification.internal.NotificationHelper
 import com.onesignal.onesignal.notification.internal.generation.IGenerateNotification
-import com.onesignal.onesignal.notification.internal.work.NotificationGenerationJob
-import com.onesignal.onesignal.notification.internal.work.NotificationRestoreProcessor
+import com.onesignal.onesignal.notification.internal.generation.NotificationGenerationJob
+import com.onesignal.onesignal.notification.internal.restoration.NotificationRestoreProcessor
 import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.core.internal.logging.Logging
 import org.json.JSONException

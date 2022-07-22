@@ -77,7 +77,7 @@ object OneSignal {
     }
 
     @JvmStatic
-    suspend fun setAppId(appId: String) {
+    fun setAppId(appId: String) {
         oneSignal.setAppId(appId)
     }
 

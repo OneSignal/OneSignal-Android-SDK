@@ -5,16 +5,14 @@ import com.onesignal.onesignal.core.internal.modeling.IModelStoreChangeHandler
 import com.onesignal.onesignal.core.internal.modeling.Model
 import com.onesignal.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.onesignal.core.internal.operations.Operation
-import com.onesignal.onesignal.core.internal.service.IStartableService
+import com.onesignal.onesignal.core.internal.service.IBootstrapService
 import java.io.Closeable
 
 abstract class ModelStoreListener<TModel>(
     private val store: IModelStore<TModel>,
-    private val opRepo: IOperationRepo) : IModelStoreChangeHandler<TModel>, IStartableService, Closeable where TModel : Model {
+    private val opRepo: IOperationRepo) : IModelStoreChangeHandler<TModel>, IBootstrapService, Closeable where TModel : Model {
 
-    // TODO: IApiService shouldn't be here, not a dependency of the listener but need to create the backend operations. Need a factory? Maybe factor method in IOperationRepo?
-
-    override fun start() {
+    override fun bootstrap() {
         store.subscribe(this)
     }
 

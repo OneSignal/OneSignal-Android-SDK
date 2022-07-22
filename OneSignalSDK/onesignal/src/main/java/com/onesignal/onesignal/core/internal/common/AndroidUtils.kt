@@ -6,6 +6,7 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.Rect
+import android.os.Build
 import android.os.Bundle
 import android.os.Looper
 import android.text.TextUtils
@@ -116,5 +117,17 @@ object AndroidUtils {
 
     fun isRunningOnMainThread(): Boolean {
         return Thread.currentThread() == Looper.getMainLooper().thread
+    }
+
+    fun getTargetSdkVersion(context: Context): Int {
+        val packageName = context.packageName
+        val packageManager = context.packageManager
+        try {
+            val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
+            return applicationInfo.targetSdkVersion
+        } catch (e: PackageManager.NameNotFoundException) {
+            e.printStackTrace()
+        }
+        return Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1
     }
 }

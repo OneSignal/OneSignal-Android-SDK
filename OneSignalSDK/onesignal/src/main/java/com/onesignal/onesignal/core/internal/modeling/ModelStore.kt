@@ -6,7 +6,7 @@ import com.onesignal.onesignal.core.internal.common.events.EventProducer
 /**
  * The implementation of a model store.
  */
-internal class ModelStore<TModel>(
+internal open class ModelStore<TModel>(
     private val _changeSubscription: EventProducer<IModelStoreChangeHandler<TModel>> = EventProducer()
 ) : IEventNotifier<IModelStoreChangeHandler<TModel>> by _changeSubscription, IModelStore<TModel>, IModelChangedHandler where TModel : Model {
 

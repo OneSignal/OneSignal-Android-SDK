@@ -1,10 +1,5 @@
 package com.onesignal.onesignal.core.internal.user
 
-import com.onesignal.onesignal.core.internal.modeling.IModelStore
-import com.onesignal.onesignal.core.internal.models.IdentityModel
-import com.onesignal.onesignal.core.internal.models.PropertiesModel
-import com.onesignal.onesignal.core.internal.models.SubscriptionModel
-import com.onesignal.onesignal.core.internal.models.SubscriptionType
 import com.onesignal.onesignal.core.internal.user.subscriptions.EmailSubscription
 import com.onesignal.onesignal.core.internal.user.subscriptions.PushSubscription
 import com.onesignal.onesignal.core.internal.user.subscriptions.SmsSubscription
@@ -14,15 +9,22 @@ import com.onesignal.onesignal.core.user.subscriptions.ISubscription
 import com.onesignal.onesignal.core.user.subscriptions.SubscriptionList
 import com.onesignal.onesignal.core.internal.logging.LogLevel
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.models.*
+import com.onesignal.onesignal.core.internal.models.SubscriptionModelStore
 import java.util.*
+
+interface ISubscriptionManager {
+    var subscriptions: SubscriptionList
+    fun addPushSubscription(pushToken: String): IUserManager
+}
 
 interface IUserSwitcher {
     fun setUser(identityModel: IdentityModel, propertiesModel: PropertiesModel)
 }
 
-open class UserManager(
-    private val _subscriptionModelStore: IModelStore<SubscriptionModel>
-) : IUserManager, IUserSwitcher {
+internal open class UserManager(
+    private val _subscriptionModelStore: SubscriptionModelStore,
+) : IUserManager, IUserSwitcher, ISubscriptionManager {
 
     override val externalId: String?
         get() = _identityModel.userId
@@ -162,11 +164,10 @@ open class UserManager(
         return this
     }
 
-    fun addPushSubscription(): IUserManager {
+    override fun addPushSubscription(pushToken: String): IUserManager {
         Logging.log(LogLevel.DEBUG, "addPushSubscription()")
 
-        // TODO: Actually register this device for push
-        var pushSub = PushSubscription(UUID.randomUUID(), true, UUID.randomUUID().toString(), this)
+        var pushSub = PushSubscription(UUID.randomUUID(), true, pushToken, this)
 
         val subscriptions = subscriptions.collection.toMutableList()
         subscriptions.add(pushSub)

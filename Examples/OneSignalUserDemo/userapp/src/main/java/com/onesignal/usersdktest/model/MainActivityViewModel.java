@@ -412,11 +412,10 @@ public class MainActivityViewModel implements ActivityViewModel {
         appIdRelativeLayout.setOnClickListener(v -> dialog.createUpdateAlertDialog(getOneSignalAppId(), Dialog.DialogAction.UPDATE, ProfileUtil.FieldType.APP_ID, new UpdateAlertDialogCallback() {
             @Override
             public void onSuccess(String update) {
-                OneSignal.setAppId(update, Continue.with(r -> {
-                    appIdTextView.setText(update);
-                    SharedPreferenceUtil.cacheOneSignalAppId(getActivity(), update);
-                    // TODO: Shouldn't need to do this anymore intentTo.resetApplication();
-                }));
+                OneSignal.setAppId(update);
+                appIdTextView.setText(update);
+                SharedPreferenceUtil.cacheOneSignalAppId(getActivity(), update);
+                // TODO: Shouldn't need to do this anymore intentTo.resetApplication();
             }
 
             @Override

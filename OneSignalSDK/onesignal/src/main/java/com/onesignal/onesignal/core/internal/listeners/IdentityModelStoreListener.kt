@@ -1,11 +1,11 @@
 package com.onesignal.onesignal.core.internal.listeners
 
-import com.onesignal.onesignal.core.internal.modeling.IModelStore
 import com.onesignal.onesignal.core.internal.models.IdentityModel
+import com.onesignal.onesignal.core.internal.models.IdentityModelStore
 import com.onesignal.onesignal.core.internal.operations.*
 
-class IdentityModelStoreListener(
-    store: IModelStore<IdentityModel>,
+internal class IdentityModelStoreListener(
+    store: IdentityModelStore,
     opRepo: IOperationRepo) : ModelStoreListener<IdentityModel>(store, opRepo){
 
     override fun getAddOperation(model: IdentityModel): Operation? {

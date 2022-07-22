@@ -16,10 +16,10 @@ import kotlin.coroutines.EmptyCoroutineContext;
 
 class TestJavaAPI {
    void test() {
-//      OneSignal.initWithContext(null, Continue.none());
+      OneSignal.initWithContext(null);
 
       // Init OneSignal
-      OneSignal.setAppId("123", Continue.none());
+      OneSignal.setAppId("123");
 
       // Can access user on OneSignal at any time
       System.out.println(OneSignal.getUser());

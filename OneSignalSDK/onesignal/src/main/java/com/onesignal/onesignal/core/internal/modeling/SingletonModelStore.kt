@@ -3,7 +3,7 @@ package com.onesignal.onesignal.core.internal.modeling
 /**
  * A model store that is implemented in memory.
  */
-internal class SingletonModelStore<TModel>(
+internal open class SingletonModelStore<TModel>(
         val name: String,
         private val create: () -> TModel,
         val store: IModelStore<TModel>,

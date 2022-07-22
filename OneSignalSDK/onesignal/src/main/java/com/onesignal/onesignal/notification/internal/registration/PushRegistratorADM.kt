@@ -10,7 +10,7 @@ class PushRegistratorADM : IPushRegistrator {
 
     private var _channel: Channel<String?>? = null
 
-    override suspend fun registerForPush(context: Context, noKeyNeeded: String?) : IPushRegistrator.RegisterResult = coroutineScope {
+    override suspend fun registerForPush(context: Context) : IPushRegistrator.RegisterResult = coroutineScope {
         var result: IPushRegistrator.RegisterResult? = null
 
         _channel = Channel()

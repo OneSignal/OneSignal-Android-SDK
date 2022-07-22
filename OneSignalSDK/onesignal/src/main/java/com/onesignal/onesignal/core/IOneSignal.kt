@@ -75,7 +75,7 @@ interface IOneSignal {
      *
      * @param appId The application ID the OneSignal SDK is bound to.
      */
-    suspend fun setAppId(appId: String)
+    fun setAppId(appId: String)
 
     /**
      * Log the SDK into OneSignal under the user identified by the [externalId] provided. The act of

@@ -10,20 +10,21 @@ import com.onesignal.onesignal.core.internal.models.SessionModel
 import com.onesignal.onesignal.core.internal.service.IStartableService
 import com.onesignal.onesignal.core.internal.logging.LogLevel
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.models.ConfigModelStore
+import com.onesignal.onesignal.core.internal.models.SessionModelStore
 import java.util.*
 
-class SessionService(
+internal class SessionService(
     private val _applicationService: IApplicationService,
-    private val _configModelStore: ISingletonModelStore<ConfigModel>,
-    private val _sessionModelStore: ISingletonModelStore<SessionModel>,
+    private val _configModelStore: ConfigModelStore,
+    private val _sessionModelStore: SessionModelStore,
     private val _sessionLifeCycleNotifier: EventProducer<ISessionLifecycleHandler> = EventProducer()
 ) : ISessionService, IStartableService, IApplicationLifecycleHandler, IEventNotifier<ISessionLifecycleHandler> by _sessionLifeCycleNotifier  {
-
     private var _focusOutTime: Date = Calendar.getInstance().time
     private var _session: SessionModel? = null
     private var _config: ConfigModel? = null
 
-    override fun start() {
+    override suspend fun start() {
         _session = _sessionModelStore.get()
         _config = _configModelStore.get()
         _applicationService.addApplicationLifecycleHandler(this)

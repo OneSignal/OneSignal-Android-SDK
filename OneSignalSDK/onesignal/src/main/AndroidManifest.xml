@@ -67,7 +67,7 @@
     <application>
 
         <service
-            android:name="com.onesignal.HmsMessageServiceOneSignal"
+            android:name="com.onesignal.onesignal.notification.services.HmsMessageServiceOneSignal"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.huawei.push.action.MESSAGING_EVENT" />
@@ -75,7 +75,7 @@
         </service>
 
         <activity
-          android:name="com.onesignal.NotificationOpenedActivityHMS"
+          android:name="com.onesignal.onesignal.notification.activities.NotificationOpenedActivityHMS"
           android:noHistory="true"
           android:theme="@android:style/Theme.Translucent.NoTitleBar"
           android:exported="true">
@@ -84,35 +84,38 @@
             </intent-filter>
         </activity>
 
-        <service
-            android:name="com.onesignal.FCMIntentService"
-            android:exported="false" />
+        <!-- TODO No longer needed? -->
+<!--        <service-->
+<!--            android:name="com.onesignal.FCMIntentService"-->
+<!--            android:exported="false" />-->
 
-        <service
-            android:name="com.onesignal.FCMIntentJobService"
-            android:permission="android.permission.BIND_JOB_SERVICE"
-            android:exported="false" />
+<!--        <service-->
+<!--            android:name="com.onesignal.FCMIntentJobService"-->
+<!--            android:permission="android.permission.BIND_JOB_SERVICE"-->
+<!--            android:exported="false" />-->
 
+        <!-- TODO: Replace with new -->
         <service
           android:name="com.onesignal.SyncService"
           android:stopWithTask="true"
           android:exported="false" />
 
+        <!-- TODO: Replace with new -->
         <service
           android:name="com.onesignal.SyncJobService"
           android:permission="android.permission.BIND_JOB_SERVICE"
           android:exported="false" />
 
-        <activity android:name="com.onesignal.PermissionsActivity"
+        <activity android:name="com.onesignal.onesignal.core.activities.PermissionsActivity"
                   android:theme="@android:style/Theme.Translucent.NoTitleBar"
                   android:exported="false" />
 
         <receiver
-            android:name="com.onesignal.NotificationDismissReceiver"
+            android:name="com.onesignal.onesignal.notification.receivers.NotificationDismissReceiver"
             android:exported="true"/>
 
         <receiver
-            android:name="com.onesignal.BootUpReceiver"
+            android:name="com.onesignal.onesignal.notification.receivers.BootUpReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -120,7 +123,7 @@
             </intent-filter>
         </receiver>
         <receiver
-            android:name="com.onesignal.UpgradeReceiver"
+            android:name="com.onesignal.onesignal.notification.receivers.UpgradeReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
@@ -128,7 +131,7 @@
         </receiver>
 
         <activity
-          android:name="com.onesignal.NotificationOpenedReceiver"
+          android:name="com.onesignal.onesignal.notification.activities.NotificationOpenedActivity"
           android:noHistory="true"
           android:excludeFromRecents="true"
           android:taskAffinity=""
@@ -136,7 +139,7 @@
           android:exported="true" />
 
         <activity
-            android:name="com.onesignal.NotificationOpenedReceiverAndroid22AndOlder"
+            android:name="com.onesignal.onesignal.notification.activities.NotificationOpenedActivityAndroid22AndOlder"
             android:noHistory="true"
             android:excludeFromRecents="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"

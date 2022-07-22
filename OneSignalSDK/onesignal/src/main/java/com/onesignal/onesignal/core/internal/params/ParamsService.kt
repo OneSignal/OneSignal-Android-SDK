@@ -3,21 +3,22 @@ package com.onesignal.onesignal.core.internal.params
 import org.json.JSONArray
 
 // TODO: Implement
-class ParamsService : IParamsService {
-    override val googleProjectNumber: String? = null
-    override val enterprise: Boolean = true
-    override val useSMSAuth: Boolean = false
-    override val useEmailAuth: Boolean = false
-    override val useUserIdAuth: Boolean = false
-    override val notificationChannels: JSONArray? = null
-    override val firebaseAnalytics : Boolean = false
-    override val restoreTTLFilter: Boolean = false
-    override val clearGroupOnSummaryClick: Boolean = false
-    override val receiveReceiptEnabled: Boolean = true
-    override val disableGMSMissingPrompt: Boolean? = null
-    override val unsubscribeWhenNotificationsDisabled: Boolean? = null
-    override val locationShared: Boolean? = null
-    override val requiresUserPrivacyConsent: Boolean? = null
-    override val influenceParams: IParamsService.InfluenceParams? = null
-    override val fcpParams: IParamsService.FCMParams = IParamsService.FCMParams(null, null, null)
+class ParamsService : IParamsService, IWriteableParamsService {
+    override var appId: String? = null
+    override var googleProjectNumber: String? = null
+    override var enterprise: Boolean = true
+    override var useSMSAuth: Boolean = false
+    override var useEmailAuth: Boolean = false
+    override var useUserIdAuth: Boolean = false
+    override var notificationChannels: JSONArray? = null
+    override var firebaseAnalytics : Boolean = false
+    override var restoreTTLFilter: Boolean = false
+    override var clearGroupOnSummaryClick: Boolean = false
+    override var receiveReceiptEnabled: Boolean = true
+    override var disableGMSMissingPrompt: Boolean? = null
+    override var unsubscribeWhenNotificationsDisabled: Boolean? = null
+    override var locationShared: Boolean? = null
+    override var requiresUserPrivacyConsent: Boolean? = null
+    override var influenceParams: IParamsService.InfluenceParams = IParamsService.InfluenceParams()
+    override var fcmParams: IParamsService.FCMParams = IParamsService.FCMParams()
 }

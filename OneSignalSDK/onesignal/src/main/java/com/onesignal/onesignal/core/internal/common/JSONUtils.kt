@@ -5,8 +5,11 @@ import com.onesignal.onesignal.core.internal.logging.Logging
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 
 object JSONUtils {
+    const val EXTERNAL_USER_ID = "external_user_id"
 
     /**
      * Wrap the provided [JSONObject] as a [JSONArray] with
@@ -49,4 +52,28 @@ object JSONUtils {
             null
         }
     }
+
+    /**
+     * Returns the JSONObject as a String with the external user ID unescaped.
+     * Needed b/c the default JSONObject.toString() escapes (/) with (\/), which customers may not want.
+     */
+    fun toUnescapedEUIDString(json: JSONObject): String {
+        var strJsonBody = json.toString()
+        if (json.has(EXTERNAL_USER_ID)) {
+            // find the value of the external user ID
+            val eidPattern = Pattern.compile("(?<=\"external_user_id\":\").*?(?=\")")
+            val eidMatcher = eidPattern.matcher(strJsonBody)
+            if (eidMatcher.find()) {
+                val matched = eidMatcher.group(0)
+                if (matched != null) {
+                    var unescapedEID: String? = matched.replace("\\/", "/")
+                    // backslashes (\) and dollar signs ($) in the replacement string will be treated literally
+                    unescapedEID = Matcher.quoteReplacement(unescapedEID)
+                    strJsonBody = eidMatcher.replaceAll(unescapedEID)
+                }
+            }
+        }
+        return strJsonBody
+    }
+
 }

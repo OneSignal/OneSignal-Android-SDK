@@ -4,12 +4,14 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.annotation.RequiresApi
+import com.onesignal.onesignal.notification.activities.NotificationOpenedActivity
+import com.onesignal.onesignal.notification.activities.NotificationOpenedActivityAndroid22AndOlder
 
 class IntentGeneratorForAttachingToNotifications(
     val context: Context
 ) {
-    private val notificationOpenedClassAndroid23Plus: Class<*> = NotificationOpenedReceiver::class.java
-    private val notificationOpenedClassAndroid22AndOlder: Class<*> = NotificationOpenedReceiverAndroid22AndOlder::class.java
+    private val notificationOpenedClassAndroid23Plus: Class<*> = NotificationOpenedActivity::class.java
+    private val notificationOpenedClassAndroid22AndOlder: Class<*> = NotificationOpenedActivityAndroid22AndOlder::class.java
 
     fun getNewBaseIntent(
         notificationId: Int,

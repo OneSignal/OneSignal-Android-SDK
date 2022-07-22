@@ -27,6 +27,17 @@ public class MainApplication extends MultiDexApplication {
 
         Logging.setLogLevel(LogLevel.DEBUG);
 
+        // OneSignal Initialization
+        String appId = SharedPreferenceUtil.getOneSignalAppId(this);
+        // If cached app id is null use the default, otherwise use cached.
+        if (appId == null) {
+            appId = getString(R.string.onesignal_app_id);
+            SharedPreferenceUtil.cacheOneSignalAppId(this, appId);
+        }
+
+        OneSignal.setAppId(appId);
+        OneSignal.initWithContext(this);
+
         OneSignal.getIam().setInAppMessageLifecycleHandler(new IInAppMessageLifecycleHandler() {
             @Override
             public void onWillDisplayInAppMessage(@NonNull IInAppMessage message) {
@@ -48,17 +59,6 @@ public class MainApplication extends MultiDexApplication {
                 Logging.log(LogLevel.VERBOSE, "MainApplication onDidDismissInAppMessage");
             }
         });
-
-        // OneSignal Initialization
-        String appId = SharedPreferenceUtil.getOneSignalAppId(this);
-        // If cached app id is null use the default, otherwise use cached.
-        if (appId == null) {
-            appId = getString(R.string.onesignal_app_id);
-            SharedPreferenceUtil.cacheOneSignalAppId(this, appId);
-        }
-
-        OneSignal.setAppId(appId, Continue.none());
-        OneSignal.initWithContext(this);
 
         OneSignal.getNotifications().setNotificationOpenedHandler(result ->
                 {

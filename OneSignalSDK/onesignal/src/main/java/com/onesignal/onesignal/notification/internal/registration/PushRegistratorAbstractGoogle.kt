@@ -30,6 +30,7 @@ import android.content.Context
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.onesignal.core.internal.device.IDeviceService
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.params.IParamsService
 import kotlinx.coroutines.delay
 import java.io.IOException
 
@@ -38,7 +39,9 @@ import java.io.IOException
  * The abstract google push registration service.  It is expected [PushRegistratorFCM] will extend
  * this class.  This performs error handling and retry logic for FCM.
  */
-internal abstract class PushRegistratorAbstractGoogle(private val _deviceService: IDeviceService) :
+internal abstract class PushRegistratorAbstractGoogle(
+    private val _deviceService: IDeviceService,
+    private val _paramsService: IParamsService) :
     IPushRegistrator {
     abstract val providerName: String
 
@@ -46,29 +49,28 @@ internal abstract class PushRegistratorAbstractGoogle(private val _deviceService
     abstract suspend fun getToken(senderId: String): String
 
     override suspend fun registerForPush(
-        context: Context,
-        senderId: String?
+        context: Context
     ): IPushRegistrator.RegisterResult {
-        return if (!isValidProjectNumber(senderId)) {
+        return if (!isValidProjectNumber(_paramsService.googleProjectNumber)) {
             Logging.error("Missing Google Project number!\nPlease enter a Google Project number / Sender ID on under App Settings > Android > Configuration on the OneSignal dashboard.")
             IPushRegistrator.RegisterResult(
                 null,
                 IPushRegistrator.RegisterStatus.PUSH_STATUS_INVALID_FCM_SENDER_ID
             )
         } else {
-            internalRegisterForPush(senderId!!)
+            internalRegisterForPush(_paramsService.googleProjectNumber!!)
         }
     }
 
     private suspend fun internalRegisterForPush(senderId: String): IPushRegistrator.RegisterResult {
         try {
-            if (_deviceService.isGMSInstalledAndEnabled()) {
+            return if (_deviceService.isGMSInstalledAndEnabled()) {
                 registerInBackground(senderId)
             } else {
                 // TODO: Add in showUpdateGPSDialog
                 //GooglePlayServicesUpgradePrompt.showUpdateGPSDialog()
                 Logging.error("'Google Play services' app not installed or disabled on the device.")
-                return IPushRegistrator.RegisterResult(
+                IPushRegistrator.RegisterResult(
                     null,
                     IPushRegistrator.RegisterStatus.PUSH_STATUS_OUTDATED_GOOGLE_PLAY_SERVICES_APP
                 )

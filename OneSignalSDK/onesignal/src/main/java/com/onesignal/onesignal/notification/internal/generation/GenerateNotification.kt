@@ -32,9 +32,11 @@ import com.onesignal.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.onesignal.core.internal.database.impl.OneSignalDbContract
 import com.onesignal.onesignal.notification.internal.NotificationConstants
 import com.onesignal.onesignal.notification.internal.NotificationHelper
-import com.onesignal.onesignal.notification.internal.work.NotificationBundleProcessor
-import com.onesignal.onesignal.notification.internal.work.NotificationGenerationJob
+import com.onesignal.onesignal.notification.internal.bundle.NotificationBundleProcessor
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.notification.activities.NotificationOpenedActivity
+import com.onesignal.onesignal.notification.internal.channels.NotificationChannelManager
+import com.onesignal.onesignal.notification.receivers.NotificationDismissReceiver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -59,7 +61,7 @@ internal class GenerateNotification(
         const val BUNDLE_KEY_ONESIGNAL_DATA = "onesignalData"
     }
 
-    private val notificationOpenedClass: Class<*> = NotificationOpenedReceiver::class.java
+    private val notificationOpenedClass: Class<*> = NotificationOpenedActivity::class.java
     private val notificationDismissedClass: Class<*> = NotificationDismissReceiver::class.java
     private var contextResources: Resources? = null
     private var currentContext: Context? = null

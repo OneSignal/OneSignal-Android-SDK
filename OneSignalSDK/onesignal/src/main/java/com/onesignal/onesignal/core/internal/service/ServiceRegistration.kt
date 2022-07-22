@@ -1,5 +1,6 @@
 package com.onesignal.onesignal.core.internal.service
 
+import com.onesignal.onesignal.core.internal.logging.Logging
 import java.lang.reflect.Constructor
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.WildcardType
@@ -64,7 +65,7 @@ class ServiceRegistrationReflection<T>(
                         else paramList.add(null)
                     }
                     else if(param is Class<*>) {
-                        paramList.add(provider.getServiceOrNull(param) as T)
+                        paramList.add(provider.getService(param) as T)
                     }
                     else paramList.add(null)
                 }
@@ -87,22 +88,29 @@ class ServiceRegistrationReflection<T>(
                     val clazz = argType.upperBounds.first()
                     if(clazz is Class<*>) {
                         if(!provider.hasService(clazz)) {
+                            Logging.debug("Constructor $constructor could not find service: $clazz")
                             return false
                         }
                     }
                 }
                 else if(argType is Class<*>) {
-                    if(!provider.hasService(argType))
+                    if(!provider.hasService(argType)) {
+                        Logging.debug("Constructor $constructor could not find service: $argType")
                         return false
+                    }
                 }
                 else return false
             }
             else if(param is Class<*>) {
                 if (!provider.hasService(param)) {
+                    Logging.debug("Constructor $constructor could not find service: $param")
                     return false
                 }
             }
-            else return false
+            else {
+                Logging.debug("Constructor $constructor could not identify param type: $param")
+                return false
+            }
         }
 
         return true

@@ -23,7 +23,7 @@ internal class PushRegistratorHMS(private val _deviceService: IDeviceService) : 
 
     private var _channel: Channel<String?>? = null
 
-    override suspend fun registerForPush(context: Context, senderId: String?) : IPushRegistrator.RegisterResult = coroutineScope {
+    override suspend fun registerForPush(context: Context) : IPushRegistrator.RegisterResult = coroutineScope {
         var result: IPushRegistrator.RegisterResult? = null
 
         launch(Dispatchers.Default) {

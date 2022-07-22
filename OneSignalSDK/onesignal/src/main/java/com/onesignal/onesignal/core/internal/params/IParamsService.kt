@@ -31,20 +31,83 @@ interface IParamsService {
         }
     }
 
+    val appId: String?
+
     val googleProjectNumber: String?
+
+    /**
+     * Whether the current application is an enterprise-level
+     */
     val enterprise: Boolean
+
+    /**
+     * Whether SMS auth hash should be used.
+     */
     val useSMSAuth: Boolean
+
+    /**
+     * Whether email auth hash should be used.
+     */
     val useEmailAuth: Boolean
+
+    /**
+     * Whether user auth hash should be used.
+     */
     val useUserIdAuth: Boolean
+
+    /**
+     * The notification channel information as a [JSONArray]
+     */
     val notificationChannels: JSONArray?
+
+    /**
+     * Whether firebase analytics should be used
+     */
     val firebaseAnalytics : Boolean
+
+    /**
+     * Whether to honor TTL for notifications
+     */
     val restoreTTLFilter: Boolean
+
+    /**
+     * TODO: Is this used anymore?
+     */
     val clearGroupOnSummaryClick: Boolean
+
+    /**
+     * Whether to track notification receive receipts
+     */
     val receiveReceiptEnabled: Boolean
+
+
+    /**
+     * TODO: Is this ever sent down?
+     */
     val disableGMSMissingPrompt: Boolean?
+
+    /**
+     * TODO: Is this ever sent down?
+     */
     val unsubscribeWhenNotificationsDisabled: Boolean?
+
+    /**
+     * TODO: Is this ever sent down?
+     */
     val locationShared: Boolean?
+
+    /**
+     * TODO: Is this ever sent down?
+     */
     val requiresUserPrivacyConsent: Boolean?
-    val influenceParams: InfluenceParams?
-    val fcpParams: FCMParams
+
+    /**
+     * The outcomes parameters
+     */
+    val influenceParams: InfluenceParams
+
+    /**
+     * The firebase cloud parameters
+     */
+    val fcmParams: FCMParams
 }

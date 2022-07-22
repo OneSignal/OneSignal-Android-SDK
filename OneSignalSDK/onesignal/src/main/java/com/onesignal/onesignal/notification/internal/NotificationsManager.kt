@@ -1,5 +1,6 @@
 package com.onesignal.onesignal.notification.internal
 
+import com.onesignal.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.*
 import com.onesignal.onesignal.core.internal.common.events.CallbackProducer
@@ -7,35 +8,44 @@ import com.onesignal.onesignal.core.internal.common.events.EventProducer
 import com.onesignal.onesignal.core.internal.common.events.ICallbackProducer
 import com.onesignal.onesignal.core.internal.common.events.IEventProducer
 import com.onesignal.onesignal.core.internal.device.IDeviceService
+import com.onesignal.onesignal.core.internal.logging.LogLevel
+import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.params.IParamsService
+import com.onesignal.onesignal.core.internal.service.IStartableService
+import com.onesignal.onesignal.core.internal.user.ISubscriptionManager
+import com.onesignal.onesignal.notification.*
+import com.onesignal.onesignal.notification.internal.permissions.NotificationPermissionController
 import com.onesignal.onesignal.notification.internal.registration.IPushRegistrator
 import com.onesignal.onesignal.notification.internal.registration.PushRegistratorADM
 import com.onesignal.onesignal.notification.internal.registration.PushRegistratorFCM
 import com.onesignal.onesignal.notification.internal.registration.PushRegistratorHMS
-import com.onesignal.onesignal.core.internal.params.IParamsService
-import com.onesignal.onesignal.core.internal.logging.LogLevel
-import com.onesignal.onesignal.core.internal.logging.Logging
-import com.onesignal.onesignal.notification.*
+import com.onesignal.onesignal.notification.internal.restoration.NotificationRestoreWorkManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /**
  * The notification manager is responsible for the management of notifications
  * on the current device (not the user).
  */
-class NotificationsManager(
+internal class NotificationsManager(
     private val _deviceService: IDeviceService,
     private val _applicationService: IApplicationService,
     private val _paramsService: IParamsService,
-    private val _permissionChangedNotifier: IEventProducer<IPermissionChangedHandler> = EventProducer(),
-    private val _willShowNotificationNotifier: ICallbackProducer<INotificationWillShowInForegroundHandler> = CallbackProducer(),
-    private val _notificationOpenedNotifier: ICallbackProducer<INotificationOpenedHandler> = CallbackProducer()
-) : INotificationsManager {
+    private val _notificationPermissionController: NotificationPermissionController,
+    private val _pushSubscriber: ISubscriptionManager,
+    private val _notificationRestoreWorkManager: NotificationRestoreWorkManager
 
+) : INotificationsManager, IStartableService {
     override var permissionStatus: IPermissionState = PermissionState(false)
     override var unsubscribeWhenNotificationsAreDisabled: Boolean = false
-
     private var _pushRegistrator: IPushRegistrator? = null
+    private val _permissionChangedNotifier: IEventProducer<IPermissionChangedHandler> = EventProducer()
+    private val _willShowNotificationNotifier: ICallbackProducer<INotificationWillShowInForegroundHandler> = CallbackProducer()
+    private val _notificationOpenedNotifier: ICallbackProducer<INotificationOpenedHandler> = CallbackProducer()
 
-    fun start() {
+    override suspend fun start() {
         if (_deviceService.isFireOSDeviceType)
             _pushRegistrator = PushRegistratorADM()
         else if (_deviceService.isAndroidDeviceType) {
@@ -44,19 +54,94 @@ class NotificationsManager(
         } else {
             _pushRegistrator = PushRegistratorHMS(_deviceService)
         }
+
+        // Refresh the notification permissions whenever we come back into focus
+        _applicationService.addApplicationLifecycleHandler(object: IApplicationLifecycleHandler {
+            override fun onFocus() = runBlocking {
+                onRefresh()
+            }
+
+            override fun onUnfocused() { }
+        })
+
+        onRefresh()
     }
+
+    private suspend fun onRefresh() {
+        // ensure all notifications for this app have been restored to the notification panel
+        _notificationRestoreWorkManager.beginEnqueueingWork(_applicationService.appContext!!, false)
+
+        val isEnabled = NotificationHelper.areNotificationsEnabled(_applicationService.appContext!!)
+        setPermissionStatusAndFire(isEnabled)
+
+        if(isEnabled) {
+            registerAndSubscribe()
+        }
+    }
+
     override suspend fun requestPermission() : Boolean? {
         Logging.log(LogLevel.DEBUG, "promptForPushPermissionStatus()")
 
-        // TODO("Implement")
+        // TODO: We do not yet handle the case where the activity is shown to the user, the application
+        //       is killed, the app is re-opened (showing the permission activity), and the
+        //       user makes a decision. Because the app is killed this flow is dead.
+        //       NotificationPermissionController does still get the callback, the way it is structured,
+        //       so we just need to figure out how to get it to tell us outside of us calling (weird).
+        val result = _notificationPermissionController.prompt(true)
 
-        val oldPermissionStatus = permissionStatus
-        permissionStatus = PermissionState(true)
+        // if result is null that means the user has gone to app settings and may or may not do
+        // something there.  However when they come back the application will be brought into
+        // focus and our application lifecycle handler will pick up any change that could have
+        // occurred.
+        if(result != null) {
+            setPermissionStatusAndFire(result)
 
-        val changes = PermissionStateChanges(oldPermissionStatus, permissionStatus)
-        _permissionChangedNotifier.fire { it.onPermissionChanged(changes) }
+            if(result) {
+                registerAndSubscribe()
+            }
+        }
 
         return true
+    }
+
+    private suspend fun setPermissionStatusAndFire(isEnabled: Boolean) {
+        val oldPermissionStatus = permissionStatus
+        permissionStatus = PermissionState(isEnabled)
+
+        if(oldPermissionStatus.notificationsEnabled != isEnabled) {
+            // switch over to the main thread for the firing of the event
+            withContext(Dispatchers.Main) {
+                val changes = PermissionStateChanges(oldPermissionStatus, permissionStatus)
+                _permissionChangedNotifier.fire { it.onPermissionChanged(changes) }
+            }
+        }
+    }
+
+    private suspend fun registerAndSubscribe() {
+        // if there's already a subscription, nothing to do.
+        if (_pushSubscriber.subscriptions.push != null)
+            return;
+
+        val registerResult = _pushRegistrator!!.registerForPush(_applicationService.appContext!!)
+
+
+        if (registerResult.status < IPushRegistrator.RegisterStatus.PUSH_STATUS_SUBSCRIBED) {
+            // Only allow errored subscribableStatuses if we have never gotten a token.
+            //   This ensures the device will not later be marked unsubscribed due to a
+            //   any inconsistencies returned by Google Play services.
+            // Also do not override a config error status if we got a runtime error
+//  TODO          if (OneSignalStateSynchronizer.getRegistrationId() == null &&
+//                (OneSignal.subscribableStatus == UserState.PUSH_STATUS_SUBSCRIBED ||
+//                        OneSignal.pushStatusRuntimeError(OneSignal.subscribableStatus))
+//            ) OneSignal.subscribableStatus = status
+        }
+//  TODO    else if (OneSignal.pushStatusRuntimeError(OneSignal.subscribableStatus))
+//            OneSignal.subscribableStatus = status
+
+        // TODO: What if no result or the push registration fails?
+        if (registerResult.status == IPushRegistrator.RegisterStatus.PUSH_STATUS_SUBSCRIBED) {
+            _pushSubscriber.addPushSubscription(registerResult.id!!)
+        }
     }
 
     /**

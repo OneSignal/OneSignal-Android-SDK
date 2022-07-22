@@ -1,5 +1,7 @@
 package com.onesignal.onesignal.core.internal.service
 
+import com.onesignal.onesignal.core.internal.logging.Logging
+
 /**
  * A service provider gives access to the implementations of a service.
  */
@@ -66,7 +68,13 @@ class ServiceProvider(
     }
 
     override fun <T> getService(c: Class<T>): T {
-        return getServiceOrNull(c) ?: throw Exception("Service could not be instantiated")
+        val service = getServiceOrNull(c)
+        if(service == null) {
+            Logging.warn("Service not found: $c")
+            throw Exception("Service $c could not be instantiated")
+        }
+
+        return service
     }
 
     override fun <T> getServiceOrNull(c: Class<T>): T? {

@@ -3,11 +3,12 @@ package com.onesignal.onesignal.core.internal
 import android.content.Context
 import com.onesignal.onesignal.core.IOneSignal
 import com.onesignal.onesignal.core.internal.application.ApplicationService
+import com.onesignal.onesignal.core.internal.application.IApplicationService
+import com.onesignal.onesignal.core.internal.common.OneSignalUtils
 import com.onesignal.onesignal.core.internal.common.events.CallbackProducer
 import com.onesignal.onesignal.core.internal.common.events.ICallbackProducer
-import com.onesignal.onesignal.core.internal.modeling.*
 import com.onesignal.onesignal.core.internal.models.*
-import com.onesignal.onesignal.core.internal.operations.GetConfigOperation
+import com.onesignal.onesignal.core.internal.operations.BootstrapOperation
 import com.onesignal.onesignal.core.internal.logging.LogLevel
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.operations.IOperationRepo
@@ -26,7 +27,7 @@ import kotlinx.coroutines.delay
 import java.util.*
 
 class OneSignalImp() : IOneSignal, IServiceProvider {
-    override val sdkVersion: String = "050000"
+    override val sdkVersion: String = OneSignalUtils.sdkVersion
     override var isInitialized: Boolean = false
 
     override var requiresPrivacyConsent: Boolean
@@ -49,8 +50,8 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
     private var _iam: IIAMManager? = null
     private var _location: ILocationManager? = null
     private var _notifications: INotificationsManager? = null
-    private var _identityModelStore: IModelStore<IdentityModel>? = null
-    private var _propertiesModelStore: IModelStore<PropertiesModel>? = null
+    private var _identityModelStore: IdentityModelStore? = null
+    private var _propertiesModelStore: PropertiesModelStore? = null
     private var _operationRepo: IOperationRepo? = null
 
     // Other State
@@ -77,11 +78,18 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
         // start the application service. This is called explicitly first because we want
         // to make sure it has the context provided on input, for all other startable services
         // to depend on if needed.
-        _services.getService<ApplicationService>().start(context)
+        (_services.getService<IApplicationService>() as ApplicationService).start(context)
 
-        // Start any startable services
-        for(startableService in _services.getAllServices<IStartableService>()) {
-            startableService.start()
+        // get the current config model, if there is one
+        _configModel = _services.getService<ConfigModelStore>().get()
+        _sessionModel = _services.getService<SessionModelStore>().get()
+
+        // if privacy consent was set prior to init, set it in the model now
+        if(_requiresPrivacyConsent != null)
+            _configModel!!.requiresPrivacyConsent = _requiresPrivacyConsent!!
+
+        for(bootstrapService in _services.getAllServices<IBootstrapService>()) {
+            bootstrapService.bootstrap()
         }
 
         // "Inject" the services required by this main class
@@ -94,30 +102,32 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
         _identityModelStore = _services.getService()
         _operationRepo = _services.getService()
 
-        // get the current config model, if there is one
-        _configModel = _services.getService<ISingletonModelStore<ConfigModel>>().get()
-        _sessionModel = _services.getService<ISingletonModelStore<SessionModel>>().get()
-
-        // if privacy consent was set prior to init, set it in the model now
-        if(_requiresPrivacyConsent != null)
-            _configModel!!.requiresPrivacyConsent = _requiresPrivacyConsent!!
-
-        // enqueue an operation to retrieve the config from the backend and refresh the config if necessary
-        // TODO: Should this happen within the call?
-        _operationRepo!!.enqueue(GetConfigOperation())
-
         isInitialized = true
+
+        if(_appId != null) {
+            setupApplication()
+        }
     }
 
-    override suspend fun setAppId(appId: String) {
+    private var _appId: String? = null
+
+    override fun setAppId(appId: String) {
         Logging.log(LogLevel.DEBUG, "setAppId(appId: $appId)");
 
-        //TODO:  Retrieve appId settings from backend
-        //       * if exists switch context to new AppId. This can happen at any time, there could be outstanding operations from the previous app.
-        //       * If doesn't exist, throw exception?
-        delay(1000L) // Simulate call to drive suspension
+        _appId = appId
 
-        _configModel?.appId = appId;
+        if(isInitialized) {
+            setupApplication()
+        }
+    }
+
+    private fun setupApplication() {
+        _configModel!!.appId = _appId!!;
+
+        // enqueue an operation to retrieve the config from the backend and refresh the config if necessary
+        _operationRepo!!.enqueue(BootstrapOperation(_appId!!))
+
+        isInitialized = true
     }
 
     // This accepts UserIdentity.Anonymous?, so therefore UserAnonymous? might be null

@@ -4,7 +4,7 @@ import com.onesignal.onesignal.core.internal.user.UserManager
 import com.onesignal.onesignal.core.user.subscriptions.IPushSubscription
 import java.util.*
 
-class PushSubscription(
+internal class PushSubscription(
         id: UUID,
         enabled: Boolean,
         override val pushToken: String,

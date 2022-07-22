@@ -12,6 +12,7 @@ import com.onesignal.onesignal.core.internal.logging.Logging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.lang.Error
 import java.lang.Exception
@@ -21,7 +22,7 @@ import java.util.concurrent.ExecutionException
 internal class PushRegistratorFCM(
     var _paramsService: IParamsService,
     val _applicationService: IApplicationService,
-    deviceService: IDeviceService) : PushRegistratorAbstractGoogle(deviceService) {
+    deviceService: IDeviceService) : PushRegistratorAbstractGoogle(deviceService, _paramsService) {
 
     companion object {
         private const val FCM_APP_NAME = "ONESIGNAL_SDK_FCM_APP_NAME"
@@ -45,7 +46,7 @@ internal class PushRegistratorFCM(
         get() = "FCM"
 
     init {
-        val fcpParams = _paramsService.fcpParams
+        val fcpParams = _paramsService.fcmParams
 
         this.projectId = fcpParams.projectId ?: FCM_DEFAULT_PROJECT_ID
         this.appId = fcpParams.appId ?: FCM_DEFAULT_APP_ID
@@ -112,7 +113,8 @@ internal class PushRegistratorFCM(
     @Throws(ExecutionException::class, InterruptedException::class)
     private suspend fun getTokenWithClassFirebaseMessaging() : String = coroutineScope {
         var token: String = ""
-        launch(Dispatchers.Default) {
+
+        withContext(Dispatchers.Default) {
             // FirebaseMessaging.getToken API was introduced in firebase-messaging:21.0.0
             // We use firebaseApp.get(FirebaseMessaging.class) instead of FirebaseMessaging.getInstance()
             //   as the latter uses the default Firebase app. We need to use a custom Firebase app as
