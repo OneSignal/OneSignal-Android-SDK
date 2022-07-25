@@ -10,11 +10,14 @@ import com.onesignal.onesignal.notification.internal.NotificationConstants
 import com.onesignal.onesignal.notification.internal.NotificationFormatHelper
 import com.onesignal.onesignal.notification.internal.NotificationHelper
 import com.onesignal.onesignal.notification.internal.bundle.NotificationBundleProcessor
+import com.onesignal.onesignal.notification.internal.lifecycle.INotificationLifecycleService
+import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
 internal class NotificationPayloadProcessorHMS(
-    private val _bundleProcessor: NotificationBundleProcessor
+    private val _bundleProcessor: NotificationBundleProcessor,
+    private val _lifecycleService: INotificationLifecycleService
 ) {
 
     fun handleHMSNotificationOpenIntent(activity: Activity, intent: Intent?) {
@@ -57,12 +60,7 @@ internal class NotificationPayloadProcessorHMS(
     private fun handleProcessJsonOpenData(activity: Activity, jsonData: JSONObject) {
         if (notificationOpened(activity, jsonData)) return
 
-        // TODO: Implement
-//        OneSignal.handleNotificationOpen(
-//            activity,
-//            JSONArray().put(jsonData),
-//            NotificationFormatHelper.getOSNotificationIdFromJson(jsonData)
-//        )
+        _lifecycleService.notificationOpened(activity, JSONUtils.wrapInJsonArray(jsonData), NotificationFormatHelper.getOSNotificationIdFromJson(jsonData)!!)
     }
 
     // HMS notification with Message Type being Message won't trigger Activity reverse trampolining logic

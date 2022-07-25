@@ -10,6 +10,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationManagerCompat
 import com.onesignal.language.LanguageContext
+import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.notification.internal.NotificationHelper
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.notification.internal.generation.NotificationGenerationJob
@@ -22,7 +23,9 @@ import java.util.ArrayList
 import java.util.HashSet
 import java.util.regex.Pattern
 
-internal class NotificationChannelManager {
+internal class NotificationChannelManager(
+    private val _applicationService: IApplicationService
+) {
     companion object {
         // Can't create a channel with the id 'miscellaneous' as an exception is thrown.
         // Using it results in the notification not being displayed.
@@ -36,7 +39,7 @@ internal class NotificationChannelManager {
 
     fun createNotificationChannel(notificationJob: NotificationGenerationJob): String {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return DEFAULT_CHANNEL_ID
-        val context = notificationJob.context
+        val context = _applicationService.appContext!!
         val jsonPayload = notificationJob.jsonPayload!!
         val notificationManager = NotificationHelper.getNotificationManager(context)
         if (notificationJob.isRestoring) return createRestoreChannel(notificationManager)

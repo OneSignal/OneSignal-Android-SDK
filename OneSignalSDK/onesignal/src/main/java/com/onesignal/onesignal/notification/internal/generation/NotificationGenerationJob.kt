@@ -1,6 +1,5 @@
 package com.onesignal.onesignal.notification.internal.generation
 
-import android.content.Context
 import android.net.Uri
 import com.onesignal.onesignal.core.internal.common.time.ITime
 import com.onesignal.onesignal.notification.internal.Notification
@@ -27,7 +26,6 @@ class NotificationGenerationJob {
 
     private var _notification: Notification? = null
 
-    var context: Context
     var jsonPayload: JSONObject? = null
     var isRestoring = false
     var isNotificationToDisplay = false
@@ -39,16 +37,14 @@ class NotificationGenerationJob {
     var orgFlags: Int? = null
     var orgSound: Uri? = null
 
-    internal constructor(context: Context) {
-        this.context = context
+    internal constructor() {
     }
 
-    internal constructor(context: Context, jsonPayload: JSONObject?, time: ITime) : this(
-        context, Notification(jsonPayload!!, time), jsonPayload
+    internal constructor(jsonPayload: JSONObject?, time: ITime) : this(
+        Notification(jsonPayload!!, time), jsonPayload
     )
 
-    internal constructor(context: Context, notification: Notification, jsonPayload: JSONObject?) {
-        this.context = context
+    internal constructor(notification: Notification, jsonPayload: JSONObject?) {
         this.jsonPayload = jsonPayload
         this.notification = notification
     }

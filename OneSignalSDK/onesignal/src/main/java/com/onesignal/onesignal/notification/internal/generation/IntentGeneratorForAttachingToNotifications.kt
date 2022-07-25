@@ -6,6 +6,7 @@ import android.content.Intent
 import androidx.annotation.RequiresApi
 import com.onesignal.onesignal.notification.activities.NotificationOpenedActivity
 import com.onesignal.onesignal.notification.activities.NotificationOpenedActivityAndroid22AndOlder
+import com.onesignal.onesignal.notification.internal.NotificationConstants
 
 class IntentGeneratorForAttachingToNotifications(
     val context: Context
@@ -24,7 +25,7 @@ class IntentGeneratorForAttachingToNotifications(
 
         return intent
             .putExtra(
-                GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID,
+                NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID,
                 notificationId
             )
             // We use SINGLE_TOP and CLEAR_TOP as we don't want more than one OneSignal invisible click

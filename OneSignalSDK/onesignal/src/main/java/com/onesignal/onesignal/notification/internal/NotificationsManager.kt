@@ -1,5 +1,6 @@
 package com.onesignal.onesignal.notification.internal
 
+import android.app.Activity
 import com.onesignal.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.*
@@ -7,6 +8,7 @@ import com.onesignal.onesignal.core.internal.common.events.CallbackProducer
 import com.onesignal.onesignal.core.internal.common.events.EventProducer
 import com.onesignal.onesignal.core.internal.common.events.ICallbackProducer
 import com.onesignal.onesignal.core.internal.common.events.IEventProducer
+import com.onesignal.onesignal.core.internal.common.time.ITime
 import com.onesignal.onesignal.core.internal.device.IDeviceService
 import com.onesignal.onesignal.core.internal.logging.LogLevel
 import com.onesignal.onesignal.core.internal.logging.Logging
@@ -14,6 +16,11 @@ import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.core.internal.service.IStartableService
 import com.onesignal.onesignal.core.internal.user.ISubscriptionManager
 import com.onesignal.onesignal.notification.*
+import com.onesignal.onesignal.notification.internal.actions.GenerateNotificationOpenIntentFromPushPayload
+import com.onesignal.onesignal.notification.internal.analyticsTracker.IAnalyticsTracker
+import com.onesignal.onesignal.notification.internal.generation.NotificationGenerationJob
+import com.onesignal.onesignal.notification.internal.lifecycle.INotificationLifecycleEventHandler
+import com.onesignal.onesignal.notification.internal.lifecycle.INotificationLifecycleService
 import com.onesignal.onesignal.notification.internal.permissions.NotificationPermissionController
 import com.onesignal.onesignal.notification.internal.registration.IPushRegistrator
 import com.onesignal.onesignal.notification.internal.registration.PushRegistratorADM
@@ -23,6 +30,8 @@ import com.onesignal.onesignal.notification.internal.restoration.NotificationRes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 
 /**
@@ -35,9 +44,12 @@ internal class NotificationsManager(
     private val _paramsService: IParamsService,
     private val _notificationPermissionController: NotificationPermissionController,
     private val _pushSubscriber: ISubscriptionManager,
-    private val _notificationRestoreWorkManager: NotificationRestoreWorkManager
+    private val _notificationRestoreWorkManager: NotificationRestoreWorkManager,
+    private val _notificationLifecycleService: INotificationLifecycleService,
+    private val _analyticsTracker: IAnalyticsTracker,
+    private val _time: ITime
 
-) : INotificationsManager, IStartableService {
+) : INotificationsManager, IStartableService, INotificationLifecycleEventHandler {
     override var permissionStatus: IPermissionState = PermissionState(false)
     override var unsubscribeWhenNotificationsAreDisabled: Boolean = false
     private var _pushRegistrator: IPushRegistrator? = null
@@ -46,6 +58,8 @@ internal class NotificationsManager(
     private val _notificationOpenedNotifier: ICallbackProducer<INotificationOpenedHandler> = CallbackProducer()
 
     override suspend fun start() {
+        _notificationLifecycleService.subscribe(this)
+
         if (_deviceService.isFireOSDeviceType)
             _pushRegistrator = PushRegistratorADM()
         else if (_deviceService.isAndroidDeviceType) {
@@ -259,5 +273,100 @@ internal class NotificationsManager(
     override fun setNotificationOpenedHandler(handler: INotificationOpenedHandler) {
         Logging.log(LogLevel.DEBUG, "setNotificationOpenedHandler(handler: $handler)")
         _notificationOpenedNotifier.set(handler)
+    }
+
+    override fun onReceived(notificationJob: NotificationGenerationJob) {
+        // TODO: Implement
+//        OneSignal.getSessionManager().onNotificationReceived(notificationId)
+
+        try {
+            val jsonObject = JSONObject(notificationJob.jsonPayload.toString())
+            jsonObject.put(NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notificationJob.androidId)
+            val openResult = generateNotificationOpenedResult(JSONUtils.wrapInJsonArray(jsonObject))
+
+            _analyticsTracker.trackReceivedEvent(openResult.notification.notificationId!!, NotificationHelper.getCampaignNameFromNotification(openResult.notification))
+        } catch (e: JSONException) {
+            e.printStackTrace()
+        }
+    }
+
+    override fun onOpened(activity: Activity, data: JSONArray, notificationId: String) {
+        // TODO: Implement call to backend
+//        OneSignal.notificationOpenedRESTCall(context, data)
+
+        val openResult = generateNotificationOpenedResult(data)
+        _analyticsTracker.trackOpenedEvent(openResult.notification.notificationId!!, NotificationHelper.getCampaignNameFromNotification(openResult.notification))
+
+
+        // TODO: Implement
+//        if (OneSignal.shouldInitDirectSessionFromNotificationOpen(context, data)) {
+//            OneSignal.applicationOpenedByNotification(notificationId)
+//        }
+
+        openDestinationActivity(activity, data)
+
+        // TODO: Need ability to queue opened notifications so when the handler is added
+        // we can fire it off for each one already processed.
+//        if (OneSignal.notificationOpenedHandler == null) {
+//            OneSignal.unprocessedOpenedNotifs.add(dataArray)
+//            return
+//        }
+
+        val openedResult = generateNotificationOpenedResult(data)
+
+        _notificationOpenedNotifier.fire { it.notificationOpened(openedResult) }
+    }
+
+    // Also called for received but OSNotification is extracted from it.
+    private fun generateNotificationOpenedResult(jsonArray: JSONArray): NotificationOpenedResult {
+        val jsonArraySize = jsonArray.length()
+        var firstMessage = true
+        val androidNotificationId = jsonArray.optJSONObject(0)
+                                             .optInt(NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID)
+        val groupedNotifications: MutableList<Notification> = ArrayList()
+        var actionSelected: String? = null
+        var payload: JSONObject? = null
+
+        for (i in 0 until jsonArraySize) {
+            try {
+                payload = jsonArray.getJSONObject(i)
+                if (actionSelected == null && payload.has(NotificationConstants.GENERATE_NOTIFICATION_BUNDLE_KEY_ACTION_ID))
+                    actionSelected = payload.optString(NotificationConstants.GENERATE_NOTIFICATION_BUNDLE_KEY_ACTION_ID, null)
+
+                if (firstMessage)
+                    firstMessage = false
+                else {
+                    groupedNotifications.add(Notification(payload, _time))
+                }
+
+            } catch (t: Throwable) {
+                Logging.error("Error parsing JSON item $i/$jsonArraySize for callback.", t)
+            }
+        }
+
+        val actionType =
+            if (actionSelected != null) INotificationAction.ActionType.ActionTaken else INotificationAction.ActionType.Opened
+        val notificationAction = NotificationAction(actionType, actionSelected)
+
+        val notification = Notification(groupedNotifications, payload!!, androidNotificationId, _time)
+        return NotificationOpenedResult(notification, notificationAction)
+    }
+
+    private fun openDestinationActivity(activity: Activity, pushPayloads: JSONArray) {
+        try {
+            // Always use the top most notification if user tapped on the summary notification
+            val firstPayloadItem = pushPayloads.getJSONObject(0)
+            val intentGenerator = GenerateNotificationOpenIntentFromPushPayload.create(activity, firstPayloadItem)
+
+            val intent = intentGenerator.getIntentVisible()
+            if (intent != null) {
+                Logging.info("SDK running startActivity with Intent: $intent")
+                activity.startActivity(intent)
+            } else {
+                Logging.info("SDK not showing an Activity automatically due to it's settings.")
+            }
+        } catch (e: JSONException) {
+            e.printStackTrace()
+        }
     }
 }

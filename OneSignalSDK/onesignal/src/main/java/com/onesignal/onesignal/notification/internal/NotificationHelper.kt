@@ -12,10 +12,12 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.notification.INotification
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.util.ArrayList
+import kotlin.math.min
 
 object NotificationHelper {
     const val grouplessSummaryKey = "os_group_undefined"
@@ -183,5 +185,13 @@ object NotificationHelper {
         }
         soundId = resources.getIdentifier("onesignal_default_sound", "raw", packageName)
         return if (soundId != 0) Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + packageName + "/" + soundId) else null
+    }
+
+    fun getCampaignNameFromNotification(notification: INotification): String {
+        if (notification.templateName?.isEmpty() != true && notification.templateId?.isEmpty() != true)
+            return notification.templateName + " - " + notification.templateId
+        else if (notification.title != null)
+            return notification.title!!.substring(0, min(10, notification.title!!.length))
+        return ""
     }
 }

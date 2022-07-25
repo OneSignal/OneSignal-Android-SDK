@@ -8,11 +8,12 @@ import com.onesignal.onesignal.notification.internal.Notification
 import com.onesignal.onesignal.notification.internal.NotificationConstants
 import com.onesignal.onesignal.notification.internal.NotificationReceivedEvent
 import com.onesignal.onesignal.notification.internal.data.INotificationDataController
-import com.onesignal.onesignal.notification.internal.receivereceipt.IReceiveReceiptService
 import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.notification.INotificationWillShowInForegroundHandler
 import com.onesignal.onesignal.notification.IRemoteNotificationReceivedHandler
+import com.onesignal.onesignal.notification.internal.data.NotificationSummaryManager
+import com.onesignal.onesignal.notification.internal.lifecycle.INotificationLifecycleService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 import org.json.JSONException
@@ -25,9 +26,10 @@ import org.json.JSONObject
 internal class NotificationGenerationProcessor(
     private val _applicationService: IApplicationService,
     private val _notificationGeneration: IGenerateNotification,
-    private val _receiptService: IReceiveReceiptService,
     private val _paramsService: IParamsService,
     private val _dataController: INotificationDataController,
+    private val _notificationSummaryManager: NotificationSummaryManager,
+    private val _lifecycleService: INotificationLifecycleService,
     private val _time: ITime,
 ) : INotificationGenerationProcessor {
 
@@ -47,7 +49,7 @@ internal class NotificationGenerationProcessor(
         if (!isRestoring && isDuplicateNotification(notification))
             return
 
-        val notificationJob = NotificationGenerationJob(context)
+        val notificationJob = NotificationGenerationJob()
         notificationJob.shownTimeStamp = timestamp
         notificationJob.isRestoring = isRestoring
         notificationJob.notification = notification
@@ -105,8 +107,6 @@ internal class NotificationGenerationProcessor(
         // finish up
         if (!notificationJob.isRestoring) {
             postProcessNotification(notificationJob, false, didDisplay)
-
-            handleNotificationReceived(notificationJob)
         }
 
         // Delay to prevent CPU spikes
@@ -154,10 +154,10 @@ internal class NotificationGenerationProcessor(
             // This will prevent it from being restored again
             markNotificationAsDismissed(notificationJob)
         } else {
-            // indicate the notification job did not display
+            // indicate the notification job did not display. We process it as "opened" to prevent
+            // a duplicate from coming in and us having to process it again.
             notificationJob.isNotificationToDisplay = false
             postProcessNotification(notificationJob, true, false)
-            handleNotificationReceived(notificationJob)
         }
 
         return null
@@ -175,19 +175,13 @@ internal class NotificationGenerationProcessor(
     }
 
     private suspend fun isDuplicateNotification(notification: Notification) : Boolean {
-        return _dataController.isDuplicateNotification(notification.notificationId)
+        return _dataController.doesNotificationExist(notification.notificationId)
     }
 
     private fun shouldDisplayNotification(notificationJob: NotificationGenerationJob): Boolean {
         return notificationJob.hasExtender() || AndroidUtils.isStringNotEmpty(
             notificationJob.jsonPayload!!.optString("alert")
         )
-    }
-
-    private fun handleNotificationReceived(notificationJob: NotificationGenerationJob) {
-
-        // TODO: Implement
-//            OneSignal.handleNotificationReceived(notificationJob)
     }
 
     /**
@@ -206,12 +200,7 @@ internal class NotificationGenerationProcessor(
             return
         }
 
-        // Logic for when the notification is displayed
-        val notificationId = notificationJob.apiNotificationId
-        _receiptService.notificationReceived(notificationId)
-
-        // TODO: Implement
-//        OneSignal.getSessionManager().onNotificationReceived(notificationId)
+        _lifecycleService.notificationReceived(notificationJob)
     }
 
     // Saving the notification provides the following:
@@ -240,11 +229,11 @@ internal class NotificationGenerationProcessor(
             )
             val expireTime = sentTime + ttl
 
-            _dataController.saveNotification(
+            _dataController.createNotification(
                 customJSON.optString("i"),
                 jsonPayload.optString("grp"),
                 collapseKey,
-                notificationJob.isNotificationToDisplay,
+                notificationJob.isNotificationToDisplay,         // When notification was displayed, count any notifications with duplicated android notification ids as dismissed.
                 opened,
                 notificationJob.androidId,
                 if (notificationJob.title != null) notificationJob.title.toString() else null,
@@ -262,7 +251,11 @@ internal class NotificationGenerationProcessor(
 
         Logging.debug("Marking restored or disabled notifications as dismissed: $notifiJob")
 
-        _dataController.markAsDismissed(notifiJob.androidId)
+        val didDismiss = _dataController.markAsDismissed(notifiJob.androidId)
+
+        if(didDismiss) {
+            _notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(notifiJob.androidId)
+        }
     }
 
     private suspend fun processCollapseKey(notificationJob: NotificationGenerationJob) {

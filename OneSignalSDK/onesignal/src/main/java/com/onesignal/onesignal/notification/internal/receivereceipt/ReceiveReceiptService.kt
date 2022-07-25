@@ -1,5 +1,6 @@
 package com.onesignal.onesignal.notification.internal.receivereceipt
 
+import android.app.Activity
 import android.content.Context
 import androidx.work.*
 import androidx.work.CoroutineWorker
@@ -12,18 +13,34 @@ import com.onesignal.onesignal.core.internal.models.ConfigModel
 import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.models.ConfigModelStore
+import com.onesignal.onesignal.core.internal.service.IStartableService
 import com.onesignal.onesignal.core.user.IUserManager
+import com.onesignal.onesignal.notification.internal.generation.NotificationGenerationJob
+import com.onesignal.onesignal.notification.internal.lifecycle.INotificationLifecycleEventHandler
+import com.onesignal.onesignal.notification.internal.lifecycle.INotificationLifecycleService
+import org.json.JSONArray
 import java.lang.NullPointerException
 import java.util.concurrent.TimeUnit
 
 internal class ReceiveReceiptService(
         private val _paramsService: IParamsService,
-        private val _applicationService: IApplicationService) :
-    IReceiveReceiptService {
+        private val _applicationService: IApplicationService,
+        private val _lifecycleService: INotificationLifecycleService) :
+    INotificationLifecycleEventHandler,
+    IStartableService {
+
     private val minDelay = 0
     private val maxDelay = 25
 
-    override fun notificationReceived(osNotificationId: String) {
+    override suspend fun start() {
+        _lifecycleService.subscribe(this)
+    }
+
+    override fun onOpened(activity: Activity, data: JSONArray, notificationId: String) {}
+
+    override fun onReceived(notificationJob: NotificationGenerationJob) {
+        val osNotificationId = notificationJob.apiNotificationId
+
         if (!_paramsService.receiveReceiptEnabled) {
             Logging.debug("sendReceiveReceipt disabled")
             return

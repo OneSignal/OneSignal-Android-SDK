@@ -7,6 +7,7 @@ import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.OneSignalUtils
 import com.onesignal.onesignal.core.internal.common.events.CallbackProducer
 import com.onesignal.onesignal.core.internal.common.events.ICallbackProducer
+import com.onesignal.onesignal.core.internal.device.DeviceService
 import com.onesignal.onesignal.core.internal.models.*
 import com.onesignal.onesignal.core.internal.operations.BootstrapOperation
 import com.onesignal.onesignal.core.internal.logging.LogLevel
@@ -23,6 +24,7 @@ import com.onesignal.onesignal.iam.internal.IAMModule
 import com.onesignal.onesignal.iam.IIAMManager
 import com.onesignal.onesignal.core.user.IUserIdentityConflictResolver
 import com.onesignal.onesignal.core.user.IUserManager
+import com.onesignal.onesignal.notification.internal.NotificationsManager
 import kotlinx.coroutines.delay
 import java.util.*
 

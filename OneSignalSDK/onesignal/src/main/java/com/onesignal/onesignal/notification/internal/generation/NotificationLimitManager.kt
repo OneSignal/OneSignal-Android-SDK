@@ -5,11 +5,13 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import com.onesignal.onesignal.notification.internal.NotificationHelper
 import com.onesignal.onesignal.notification.internal.data.INotificationDataController
+import com.onesignal.onesignal.notification.internal.data.NotificationSummaryManager
 import java.util.*
 
 // Ensures old notifications are cleared up to a limit before displaying new ones
 internal class NotificationLimitManager(
-    private val _dataController: INotificationDataController
+    private val _dataController: INotificationDataController,
+    private val _notificationSummaryManager: NotificationSummaryManager,
 ) {
     // Android does not allow a package to have more than 49 total notifications being shown.
     //   This limit prevents the following error;
@@ -26,10 +28,9 @@ internal class NotificationLimitManager(
     // If we don't make this room users will NOT be alerted of new notifications for the app.
     suspend fun clearOldestOverLimit(context: Context, notificationsToMakeRoomFor: Int) {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) clearOldestOverLimitStandard(
-                context,
-                notificationsToMakeRoomFor
-            ) else {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                clearOldestOverLimitStandard(context, notificationsToMakeRoomFor)
+            else {
                 _dataController.clearOldestOverLimitFallback(notificationsToMakeRoomFor, maxNumberOfNotificationsInt)
             }
         } catch (t: Throwable) {
@@ -58,7 +59,12 @@ internal class NotificationLimitManager(
 
         // Clear the oldest based on the count in notificationsToClear
         for ((_, value) in activeNotifIds) {
-            _dataController.removeNotification(value)
+            val didDismiss = _dataController.markAsDismissed(value)
+
+            if(didDismiss) {
+                _notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(value)
+            }
+
             if (--notificationsToClear <= 0) break
         }
     }

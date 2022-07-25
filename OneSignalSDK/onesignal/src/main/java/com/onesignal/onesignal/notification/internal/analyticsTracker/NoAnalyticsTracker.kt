@@ -1,7 +1,7 @@
 /**
  * Modified MIT License
  *
- * Copyright 2016 OneSignal
+ * Copyright 2017 OneSignal
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,26 +24,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package com.onesignal.onesignal.notification
+package com.onesignal.onesignal.notification.internal.analyticsTracker
 
-/** The action a user has taken when opening a notification.
+/**
+ * This implementation of [IAnalyticsTracker] does no tracking at all, used
+ * as a "no-op".
  */
-interface INotificationAction {
-    /** The type of action the user took on this notification. **/
-    val type: ActionType
+internal class NoAnalyticsTracker : IAnalyticsTracker {
+    override fun trackInfluenceOpenEvent() {
+    }
 
-    /** When [type] is [ActionType.ActionTaken], this will be the custom id of action taken.
-     *  See [Action Buttons | OneSignal Docs](https://documentation.onesignal.com/docs/action-buttons).
-     **/
-    val actionId: String?
+    override fun trackOpenedEvent(notificationId: String, campaign: String) {
+    }
 
-    /**
-     * The type of actions the user can take on a notification.
-     */
-    enum class ActionType {
-        /** The notification was tapped on. **/
-        Opened,
-        /** The user tapped on an action from the notification. **/
-        ActionTaken
+    override fun trackReceivedEvent(notificationId: String, campaign: String) {
     }
 }

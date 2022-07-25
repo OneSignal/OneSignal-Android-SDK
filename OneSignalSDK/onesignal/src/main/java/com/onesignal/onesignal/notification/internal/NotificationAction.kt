@@ -24,26 +24,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package com.onesignal.onesignal.notification
+package com.onesignal.onesignal.notification.internal
 
-/** The action a user has taken when opening a notification.
- */
-interface INotificationAction {
-    /** The type of action the user took on this notification. **/
-    val type: ActionType
+import com.onesignal.onesignal.notification.INotificationAction
 
-    /** When [type] is [ActionType.ActionTaken], this will be the custom id of action taken.
-     *  See [Action Buttons | OneSignal Docs](https://documentation.onesignal.com/docs/action-buttons).
-     **/
-    val actionId: String?
-
-    /**
-     * The type of actions the user can take on a notification.
-     */
-    enum class ActionType {
-        /** The notification was tapped on. **/
-        Opened,
-        /** The user tapped on an action from the notification. **/
-        ActionTaken
-    }
+class NotificationAction(
+    override val type: INotificationAction.ActionType,
+    override val actionId: String?
+) : INotificationAction {
 }

@@ -26,6 +26,7 @@
  */
 package com.onesignal.onesignal.notification.internal.actions
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.app.Activity
 import org.json.JSONException
@@ -34,27 +35,25 @@ import android.content.Context
 import android.os.Build
 import androidx.core.app.NotificationManagerCompat
 import com.onesignal.onesignal.core.internal.common.JSONUtils
-import com.onesignal.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.onesignal.core.internal.database.impl.OneSignalDbContract
 import com.onesignal.onesignal.notification.internal.NotificationHelper
 import com.onesignal.onesignal.notification.internal.data.INotificationDataController
 import com.onesignal.onesignal.notification.internal.data.NotificationSummaryManager
 import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.core.internal.logging.Logging
-import com.onesignal.onesignal.notification.internal.badges.BadgeCountUpdater
-import com.onesignal.onesignal.notification.internal.generation.GenerateNotification
+import com.onesignal.onesignal.notification.internal.NotificationConstants
+import com.onesignal.onesignal.notification.internal.NotificationFormatHelper
+import com.onesignal.onesignal.notification.internal.lifecycle.INotificationLifecycleService
 import org.json.JSONArray
 import org.json.JSONObject
 
 // Process both notifications opens and dismisses.
 internal class NotificationOpenedProcessor(
-    private val _databaseProvider: IDatabaseProvider,
     private val _summaryManager: NotificationSummaryManager,
     private val _dataController: INotificationDataController,
     private val _paramsService: IParamsService,
-    private val _badgeUpdater: BadgeCountUpdater
+    private val _lifecycleService: INotificationLifecycleService
 ) {
-    private val TAG = NotificationOpenedProcessor::class.java.canonicalName
     suspend fun processFromContext(context: Context, intent: Intent) {
         if (!isOneSignalIntent(intent))
             return
@@ -66,17 +65,18 @@ internal class NotificationOpenedProcessor(
     // Was Bundle created from our SDK? Prevents external Intents
     // TODO: Could most likely be simplified checking if BUNDLE_KEY_ONESIGNAL_DATA is present
     private fun isOneSignalIntent(intent: Intent): Boolean {
-        return intent.hasExtra(GenerateNotification.BUNDLE_KEY_ONESIGNAL_DATA) || intent.hasExtra("summary") || intent.hasExtra(
-            GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID
+        return intent.hasExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA) || intent.hasExtra("summary") || intent.hasExtra(
+            NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID
         )
     }
 
+    @SuppressLint("MissingPermission")
     private fun handleDismissFromActionButtonPress(context: Context?, intent: Intent) {
         // Pressed an action button, need to clear the notification and close the notification area manually.
         if (intent.getBooleanExtra("action_button", false)) {
             NotificationManagerCompat.from(context!!).cancel(
                 intent.getIntExtra(
-                    GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID,
+                    NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID,
                     0
                 )
             )
@@ -103,7 +103,7 @@ internal class NotificationOpenedProcessor(
         if (summaryGroup == null) {
             val group = intent.getStringExtra("grp")
             if (group != null)
-                _summaryManager.updateSummaryNotificationAfterChildRemoved(context, group, dismissed)
+                _summaryManager.updateSummaryNotificationAfterChildRemoved(group, dismissed)
         }
         Logging.debug("processIntent from context: $context and intent: $intent")
         if (intent.extras != null)
@@ -112,13 +112,12 @@ internal class NotificationOpenedProcessor(
             if (context !is Activity)
                 Logging.error("NotificationOpenedProcessor processIntent from an non Activity context: $context")
             else {
-                // TODO: Implement
-                //OneSignal.handleNotificationOpen(context as Activity?, intentExtras!!.dataArray, NotificationFormatHelper.getOSNotificationIdFromJson(intentExtras.jsonData))
+                _lifecycleService.notificationOpened(context, intentExtras!!.dataArray, NotificationFormatHelper.getOSNotificationIdFromJson(intentExtras.jsonData)!!)
             }
         }
     }
 
-    fun processToOpenIntent(
+    private suspend fun processToOpenIntent(
         context: Context?,
         intent: Intent,
         summaryGroup: String?
@@ -127,7 +126,7 @@ internal class NotificationOpenedProcessor(
         var jsonData: JSONObject? = null
         try {
             jsonData =
-                JSONObject(intent.getStringExtra(GenerateNotification.BUNDLE_KEY_ONESIGNAL_DATA))
+                JSONObject(intent.getStringExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA))
 
             if (context !is Activity)
                 Logging.error("NotificationOpenedProcessor processIntent from an non Activity context: $context")
@@ -136,17 +135,12 @@ internal class NotificationOpenedProcessor(
             //    return null
 
             jsonData.put(
-                GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID, intent.getIntExtra(
-                    GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0
-                )
+                NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID,
+                intent.getIntExtra(NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0)
             )
-            intent.putExtra(GenerateNotification.BUNDLE_KEY_ONESIGNAL_DATA, jsonData.toString())
+            intent.putExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA, jsonData.toString())
             dataArray = JSONUtils.wrapInJsonArray(
-                JSONObject(
-                    intent.getStringExtra(
-                        GenerateNotification.BUNDLE_KEY_ONESIGNAL_DATA
-                    )
-                )
+                JSONObject(intent.getStringExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA))
             )
         } catch (e: JSONException) {
             e.printStackTrace()
@@ -154,38 +148,16 @@ internal class NotificationOpenedProcessor(
 
         // We just opened a summary notification.
         if (summaryGroup != null)
-            addChildNotifications(dataArray, summaryGroup)
+            addChildNotifications(dataArray!!, summaryGroup)
 
-        return NotificationIntentExtras(dataArray, jsonData)
+        return NotificationIntentExtras(dataArray!!, jsonData!!)
     }
 
-    private fun addChildNotifications(dataArray: JSONArray?, summaryGroup: String) {
+    private suspend fun addChildNotifications(dataArray: JSONArray, summaryGroup: String) {
 
-        val retColumn = arrayOf(OneSignalDbContract.NotificationTable.COLUMN_NAME_FULL_DATA)
-        val whereArgs = arrayOf(summaryGroup)
-        val cursor = _databaseProvider.get().query(
-            OneSignalDbContract.NotificationTable.TABLE_NAME,
-            retColumn,
-            OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +  // Where String
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0",
-            whereArgs,
-            null, null, null
-        )
-        if (cursor.count > 1) {
-            cursor.moveToFirst()
-            do {
-                try {
-                    val jsonStr: String =
-                        cursor.getString(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_FULL_DATA))
-                    dataArray!!.put(JSONObject(jsonStr))
-                } catch (e: JSONException) {
-                    Logging.error("Could not parse JSON of sub notification in group: $summaryGroup")
-                }
-            } while (cursor.moveToNext())
-        }
-        cursor.close()
+        val childNotifications = _dataController.listNotificationsForGroup(summaryGroup)
+        for(childNotification in childNotifications)
+            dataArray!!.put(JSONObject(childNotification.fullData))
     }
 
     private suspend fun markNotificationsConsumed(
@@ -194,43 +166,14 @@ internal class NotificationOpenedProcessor(
         dismissed: Boolean
     ) {
         val summaryGroup = intent.getStringExtra("summary")
-        var whereStr: String
-        var whereArgs: Array<String>? = null
-        if (summaryGroup != null) {
-            val isGroupless = summaryGroup == NotificationHelper.grouplessSummaryKey
-            if (isGroupless)
-                whereStr = OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID + " IS NULL"
-            else {
-                whereStr = OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID + " = ?"
-                whereArgs = arrayOf(summaryGroup)
-            }
-            if (!dismissed) {
-                // Make sure when a notification is not being dismissed it is handled through the dashboard setting
-                if (!_paramsService.clearGroupOnSummaryClick) {
-                    /* If the open event shouldn't clear all summary notifications then the SQL query
-                * will look for the most recent notification instead of all grouped notifications */
-                    val mostRecentId = _dataController.getMostRecentNotifIdFromGroup(summaryGroup, isGroupless).toString()
-                    whereStr += " AND " + OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = ?"
-                    whereArgs = if (isGroupless) arrayOf(mostRecentId) else arrayOf(
-                        summaryGroup,
-                        mostRecentId
-                    )
-                }
-            }
-        } else
-            whereStr = OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + intent.getIntExtra(
-                    GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0
-                )
 
         clearStatusBarNotifications(context, summaryGroup)
-        _databaseProvider.get().update(
-            OneSignalDbContract.NotificationTable.TABLE_NAME,
-            newContentValuesWithConsumed(intent),
-            whereStr,
-            whereArgs
-        )
-
-        _badgeUpdater.update(context)
+        _dataController.markAsConsumed(
+                            intent.getIntExtra(NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0),
+                            dismissed,
+                            summaryGroup,
+                            _paramsService.clearGroupOnSummaryClick
+                            )
     }
 
     /**
@@ -239,7 +182,7 @@ internal class NotificationOpenedProcessor(
     private suspend fun clearStatusBarNotifications(context: Context, summaryGroup: String?) {
         // Handling for clearing the notification when opened
         if (summaryGroup != null)
-            _summaryManager.clearNotificationOnSummaryClick(context, summaryGroup)
+            _summaryManager.clearNotificationOnSummaryClick(summaryGroup)
         else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 // The summary group is null, represents the last notification in the groupless group

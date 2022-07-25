@@ -2,10 +2,12 @@ package com.onesignal.onesignal.core.internal.common
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.Rect
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Looper
@@ -79,6 +81,11 @@ object AndroidUtils {
         return bundle?.getString(metaName)
     }
 
+    fun getManifestMetaBoolean(context: Context, metaName: String?): Boolean {
+        val bundle = getManifestMetaBundle(context)
+        return bundle?.getBoolean(metaName) ?: false
+    }
+
     fun getManifestMetaBundle(context: Context): Bundle? {
         val ai: ApplicationInfo
         try {
@@ -129,5 +136,51 @@ object AndroidUtils {
             e.printStackTrace()
         }
         return Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1
+    }
+
+    private fun openURLInBrowser(appContext: Context, uri: Uri) {
+        val intent = openURLInBrowserIntent(uri)
+        appContext.startActivity(intent)
+    }
+
+    fun openURLInBrowserIntent(uri: Uri): Intent {
+        var uri = uri
+        var type = if (uri.scheme != null) SchemaType.fromString(uri.scheme) else null
+
+        if (type == null) {
+            type = SchemaType.HTTP
+            if (!uri.toString().contains("://")) {
+                uri = Uri.parse("http://$uri")
+            }
+        }
+        val intent: Intent
+        when (type) {
+            SchemaType.DATA -> {
+                intent =
+                    Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_BROWSER)
+                intent.data = uri
+            }
+            SchemaType.HTTPS, SchemaType.HTTP -> intent = Intent(Intent.ACTION_VIEW, uri)
+            else -> intent = Intent(Intent.ACTION_VIEW, uri)
+        }
+        intent.addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK
+        )
+        return intent
+    }
+
+    enum class SchemaType(private val text: String) {
+        DATA("data"), HTTPS("https"), HTTP("http");
+
+        companion object {
+            fun fromString(text: String?): SchemaType? {
+                for (type in SchemaType.values()) {
+                    if (type.text.equals(text, ignoreCase = true)) {
+                        return type
+                    }
+                }
+                return null
+            }
+        }
     }
 }

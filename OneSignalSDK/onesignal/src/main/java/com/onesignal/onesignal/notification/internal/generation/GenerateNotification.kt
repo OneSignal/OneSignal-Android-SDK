@@ -36,6 +36,7 @@ import com.onesignal.onesignal.notification.internal.bundle.NotificationBundlePr
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.notification.activities.NotificationOpenedActivity
 import com.onesignal.onesignal.notification.internal.channels.NotificationChannelManager
+import com.onesignal.onesignal.notification.internal.data.INotificationDataController
 import com.onesignal.onesignal.notification.receivers.NotificationDismissReceiver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -50,17 +51,9 @@ internal class GenerateNotification(
     private val _applicationService: IApplicationService,
     private val _notificationChannelManager: NotificationChannelManager,
     private val _notificationLimitManager: NotificationLimitManager,
-    private val _databaseProvider: IDatabaseProvider
+    private val _dataController: INotificationDataController
+
 ) : IGenerateNotification {
-    companion object {
-        const val OS_SHOW_NOTIFICATION_THREAD = "OS_SHOW_NOTIFICATION_THREAD"
-        const val BUNDLE_KEY_ANDROID_NOTIFICATION_ID = "androidNotificationId"
-
-        // Bundle key the whole OneSignal payload will be placed into as JSON and attached to the
-        //   notification Intent.
-        const val BUNDLE_KEY_ONESIGNAL_DATA = "onesignalData"
-    }
-
     private val notificationOpenedClass: Class<*> = NotificationOpenedActivity::class.java
     private val notificationDismissedClass: Class<*> = NotificationDismissReceiver::class.java
     private var contextResources: Resources? = null
@@ -86,14 +79,14 @@ internal class GenerateNotification(
     }
 
     override suspend fun displayNotification(notificationJob: NotificationGenerationJob): Boolean {
-        setStatics(notificationJob.context)
+        setStatics(_applicationService.appContext!!)
         isRunningOnMainThreadCheck
         initGroupAlertBehavior()
         return showNotification(notificationJob)
     }
 
     suspend fun displayIAMPreviewNotification(notificationJob: NotificationGenerationJob): Boolean {
-        setStatics(notificationJob.context)
+        setStatics(_applicationService.appContext!!)
         return showNotification(notificationJob)
     }// Runtime check against showing the notification from the main thread
 
@@ -125,7 +118,7 @@ internal class GenerateNotification(
 
     private fun getNewBaseDismissIntent(notificationId: Int): Intent {
         return Intent(currentContext, notificationDismissedClass)
-            .putExtra(BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notificationId)
+            .putExtra(NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notificationId)
             .putExtra("dismissed", true)
     }
 
@@ -322,7 +315,7 @@ internal class GenerateNotification(
         val contentIntent: PendingIntent? = intentGenerator.getNewActionPendingIntent(
             random.nextInt(),
             intentGenerator.getNewBaseIntent(notificationId)
-                .putExtra(BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString())
+                .putExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString())
         )
         notifBuilder!!.setContentIntent(contentIntent)
         val deleteIntent = getNewDismissActionPendingIntent(
@@ -344,7 +337,7 @@ internal class GenerateNotification(
         val contentIntent: PendingIntent? = intentGenerator.getNewActionPendingIntent(
             random.nextInt(),
             intentGenerator.getNewBaseIntent(notificationId)
-                .putExtra(BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString()).putExtra("grp", group)
+                .putExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString()).putExtra("grp", group)
         )
         notifBuilder!!.setContentIntent(contentIntent)
         val deleteIntent = getNewDismissActionPendingIntent(
@@ -436,7 +429,7 @@ internal class GenerateNotification(
     }
 
     override suspend fun updateSummaryNotification(notificationJob: NotificationGenerationJob) {
-        setStatics(notificationJob.context)
+        setStatics(_applicationService.appContext!!)
         createSummaryNotification(notificationJob, null)
     }
 
@@ -459,73 +452,33 @@ internal class GenerateNotification(
         var firstFullData: String? = null
         var summaryList: MutableCollection<SpannableString?>? = null
 
-        var dbJob = launch(Dispatchers.Default) {
-            var cursor: Cursor? = null
-            try {
-                val retColumn = arrayOf<String>(
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_FULL_DATA,
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY,
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_TITLE,
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_MESSAGE
-                )
-                var whereStr: String =
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID.toString() + " = ? AND " +  // Where String
-                            OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                            OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0"
-                val whereArgs = arrayOf(group)
 
-                // Make sure to omit any old existing matching android ids in-case we are replacing it.
-                if (!updateSummary) whereStr += " AND " + OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID.toString() + " <> " + notificationJob.androidId
-                cursor = _databaseProvider.get().query(
-                    OneSignalDbContract.NotificationTable.TABLE_NAME,
-                    retColumn,
-                    whereStr,
-                    whereArgs,
-                    null,  // group by
-                    null, BaseColumns._ID.toString() + " DESC"
-                )
-                if (cursor.moveToFirst()) {
-                    var spannableString: SpannableString
-                    summaryList = ArrayList()
-                    do {
-                        if (cursor.getInt(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY)) == 1) summaryNotificationId =
-                            cursor.getInt(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID)) else {
-                            var title =
-                                cursor.getString(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_TITLE))
-                            if (title == null) title = "" else title += " "
-                            val msg =
-                                cursor.getString(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_MESSAGE))
-                            spannableString = SpannableString(title + msg)
-                            if (title.length > 0) spannableString.setSpan(
-                                StyleSpan(Typeface.BOLD),
-                                0,
-                                title.length,
-                                0
-                            )
-                            summaryList!!.add(spannableString)
-                            if (firstFullData == null) firstFullData =
-                                cursor.getString(cursor.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_FULL_DATA))
-                        }
-                    } while (cursor.moveToNext())
-                    if (updateSummary && firstFullData != null) {
-                        try {
-                            fcmJson = JSONObject(firstFullData)
-                        } catch (e: JSONException) {
-                            e.printStackTrace()
-                        }
-                    }
-                }
-            } finally {
-                if (cursor != null && !cursor.isClosed) cursor.close()
-            }
-            if (summaryNotificationId == null) {
-                summaryNotificationId = random.nextInt()
-                createSummaryIdDatabaseEntry(group, summaryNotificationId!!)
-            }
+        summaryNotificationId = _dataController.getAndroidIdForGroup(group, true)
+
+        if (summaryNotificationId == null) {
+            summaryNotificationId = random.nextInt()
+
+            _dataController.createSummaryNotification(summaryNotificationId!!, group)
         }
 
-        dbJob.join()
+        val notifications = _dataController.listNotificationsForGroup(group)
+        var spannableString: SpannableString
+        summaryList = ArrayList()
+
+        for(notification in notifications) {
+            if(!updateSummary && notification.androidId == notificationJob.androidId)
+                continue
+
+            var title = notification.title
+            if (title == null) title = "" else title += " "
+            spannableString = SpannableString(title + notification.message)
+            if (title.length > 0)
+                spannableString.setSpan(StyleSpan(Typeface.BOLD),0, title.length, 0)
+
+            summaryList!!.add(spannableString)
+            if (firstFullData == null)
+                firstFullData = notification.fullData
+        }
 
         val summaryContentIntent: PendingIntent? = intentGenerator.getNewActionPendingIntent(
             random.nextInt(),
@@ -692,18 +645,8 @@ internal class GenerateNotification(
         group: String
     ): Intent {
         return intentGenerator.getNewBaseIntent(summaryNotificationId).putExtra(
-            BUNDLE_KEY_ONESIGNAL_DATA, fcmJson.toString()
+            NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA, fcmJson.toString()
         ).putExtra("summary", group)
-    }
-
-    private suspend fun createSummaryIdDatabaseEntry(group: String, id: Int) {
-        // There currently isn't a visible notification from for this group_id.
-        // Save the group summary notification id so it can be updated later.
-        val values = ContentValues()
-        values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, id)
-        values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID, group)
-        values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY, 1)
-        _databaseProvider.get().insertOrThrow(OneSignalDbContract.NotificationTable.TABLE_NAME, null, values)
     }
 
     // Keep 'throws Throwable' as 'onesignal_bgimage_notif_layout' may not be available
@@ -980,11 +923,10 @@ internal class GenerateNotification(
                 val button = buttons.optJSONObject(i)
                 val bundle = JSONObject(fcmJson.toString())
                 val buttonIntent: Intent = intentGenerator.getNewBaseIntent(notificationId)
-                buttonIntent.action =
-                    "" + i // Required to keep each action button from replacing extras of each other
+                buttonIntent.action = "" + i // Required to keep each action button from replacing extras of each other
                 buttonIntent.putExtra("action_button", true)
                 bundle.put(NotificationConstants.GENERATE_NOTIFICATION_BUNDLE_KEY_ACTION_ID, button.optString("id"))
-                buttonIntent.putExtra(BUNDLE_KEY_ONESIGNAL_DATA, bundle.toString())
+                buttonIntent.putExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA, bundle.toString())
                 if (groupSummary != null) buttonIntent.putExtra(
                     "summary",
                     groupSummary

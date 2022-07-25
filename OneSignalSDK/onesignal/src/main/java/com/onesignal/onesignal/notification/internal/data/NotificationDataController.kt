@@ -3,6 +3,8 @@ package com.onesignal.onesignal.notification.internal.data
 import android.app.NotificationManager
 import android.content.ContentValues
 import android.provider.BaseColumns
+import android.text.TextUtils
+import com.onesignal.OneSignalDb
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.time.ITime
 import com.onesignal.onesignal.core.internal.database.IDatabaseProvider
@@ -11,6 +13,7 @@ import com.onesignal.onesignal.notification.internal.NotificationHelper
 import com.onesignal.onesignal.notification.internal.badges.BadgeCountUpdater
 import com.onesignal.onesignal.notification.internal.common.INotificationQueryHelper
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.notification.internal.generation.NotificationLimitManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
@@ -23,22 +26,12 @@ internal class NotificationDataController(
     private val _time: ITime,
     private val _badgeCountUpdater: BadgeCountUpdater
 ) : INotificationDataController {
-
-    /**
-     * We clean outdated cache from several places within the OneSignal SDK here
-     * 1. Notifications & unique outcome events linked to notification ids (1 week)
-     * 2. Cached In App Messaging Sets in SharedPreferences (impressions, clicks, views) and SQL IAMs
-     */
-    override suspend fun cleanOldCachedData() {
-        cleanNotificationCache()
-    }
-
     /**
      * Deletes notifications with created timestamps older than 7 days
      * Cleans notification tables
      * 1. NotificationTable.TABLE_NAME
      */
-    override suspend fun cleanNotificationCache() = coroutineScope {
+    override suspend fun deleteExpiredNotifications() = coroutineScope {
         withContext(Dispatchers.Default) {
             val whereStr: String = OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME.toString() + " < ?"
             val sevenDaysAgoInSeconds: String = java.lang.String.valueOf(
@@ -54,7 +47,7 @@ internal class NotificationDataController(
         }
     }
 
-    override suspend fun clearOneSignalNotifications() = coroutineScope {
+    override suspend fun markAsDismissedForOutstanding() = coroutineScope {
         withContext(Dispatchers.Default) {
             val appContext = _applicationService.appContext ?: return@withContext
             val notificationManager: NotificationManager = NotificationHelper.getNotificationManager(appContext)
@@ -88,7 +81,7 @@ internal class NotificationDataController(
         }
     }
 
-    override suspend fun removeGroupedNotifications(group: String) = coroutineScope {
+    override suspend fun markAsDismissedForGroup(group: String) = coroutineScope {
         withContext(Dispatchers.Default) {
             val appContext = _applicationService.appContext ?: return@withContext
             val notificationManager: NotificationManager =
@@ -132,30 +125,32 @@ internal class NotificationDataController(
         }
     }
 
-    override suspend fun removeNotification(id: Int) = coroutineScope {
+    override suspend fun markAsDismissed(androidId: Int) : Boolean {
+        var didDismiss: Boolean = false
+
         withContext(Dispatchers.Default) {
             val appContext = _applicationService.appContext ?: return@withContext
 
             val whereStr: String =
-                OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID.toString() + " = " + id + " AND " +
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID.toString() + " = " + androidId + " AND " +
                         OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
                         OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0"
             val values = ContentValues()
             values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED, 1)
             val records: Int = _databaseProvider.get().update(OneSignalDbContract.NotificationTable.TABLE_NAME, values, whereStr, null)
-            if (records > 0) {
-                // TODO Implement (Circular dependency issues)
-//                NotificationSummaryManager.updatePossibleDependentSummaryOnDismiss(appContext, id)
-            }
+
+            didDismiss = records > 0
 
              _badgeCountUpdater.update(appContext)
 
             val notificationManager: NotificationManager = NotificationHelper.getNotificationManager(appContext)
-            notificationManager.cancel(id)
+            notificationManager.cancel(androidId)
         }
+
+        return didDismiss
     }
 
-    override suspend fun isDuplicateNotification(id: String?) : Boolean = coroutineScope {
+    override suspend fun doesNotificationExist(id: String?) : Boolean = coroutineScope {
         if (id == null || "" == id) {
             return@coroutineScope false
         }
@@ -188,31 +183,42 @@ internal class NotificationDataController(
         return@coroutineScope result
     }
 
+    override suspend fun createSummaryNotification(androidId: Int, groupId: String) {
+        withContext(Dispatchers.Default) {
+            // There currently isn't a visible notification from for this group_id.
+            // Save the group summary notification id so it can be updated later.
+            val values = ContentValues()
+            values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID, androidId)
+            values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID, groupId)
+            values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY, 1)
+            _databaseProvider.get()
+                .insertOrThrow(OneSignalDbContract.NotificationTable.TABLE_NAME, null, values)
+        }
+    }
+
     // Saving the notification provides the following:
     //   * Prevent duplicates
     //   * Build summary notifications
     //   * Collapse key / id support - Used to lookup the android notification id later
     //   * Redisplay notifications after reboot, upgrade of app, or cold boot after a force kill.
     //   * Future - Public API to get a list of notifications
-    override suspend fun saveNotification(id: String,
-                                          groupId: String?,
-                                          collapseKey: String?,
-                                          isShown: Boolean,
-                                          isOpened: Boolean,
-                                          androidId: Int,
-                                          title: String?,
-                                          body: String?,
-                                          expireTime: Long,
-                                          jsonPayload: String) = coroutineScope {
+    override suspend fun createNotification(id: String,
+                                            groupId: String?,
+                                            collapseKey: String?,
+                                            shouldDismissIdenticals: Boolean,
+                                            isOpened: Boolean,
+                                            androidId: Int,
+                                            title: String?,
+                                            body: String?,
+                                            expireTime: Long,
+                                            jsonPayload: String) = coroutineScope {
         withContext(Dispatchers.Default) {
             Logging.debug("Saving Notification id=$id")
 
             try {
                 val appContext = _applicationService.appContext ?: return@withContext
 
-                // When notification was displayed, count any notifications with duplicated android
-                // notification ids as dismissed.
-                if (isShown) {
+                if (shouldDismissIdenticals) {
                     val whereStr =
                         OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + androidId
                     val values = ContentValues()
@@ -282,26 +288,76 @@ internal class NotificationDataController(
         }
     }
 
-    override suspend fun markAsDismissed(androidId: Int) = coroutineScope {
-        Logging.debug("Marking restored or disabled notifications as dismissed: $androidId")
-
+    override suspend fun markAsConsumed(androidId: Int, dismissed: Boolean, summaryGroup: String?, clearGroupOnSummaryClick: Boolean) {
         withContext(Dispatchers.Default) {
-            val whereStr =
-                OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + androidId
+            var whereStr: String
+            var whereArgs: Array<String>? = null
+            if (summaryGroup != null) {
+                val isGroupless = summaryGroup == NotificationHelper.grouplessSummaryKey
+                if (isGroupless)
+                    whereStr =
+                        OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID + " IS NULL"
+                else {
+                    whereStr = OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID + " = ?"
+                    whereArgs = arrayOf(summaryGroup)
+                }
+                if (!dismissed) {
+                    // Make sure when a notification is not being dismissed it is handled through the dashboard setting
+                    if (!clearGroupOnSummaryClick) {
+                        /* If the open event shouldn't clear all summary notifications then the SQL query
+                * will look for the most recent notification instead of all grouped notifications */
+                        val mostRecentId = getAndroidIdForGroup(summaryGroup, false).toString()
+                        whereStr += " AND " + OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = ?"
+                        whereArgs = if (isGroupless) arrayOf(mostRecentId) else arrayOf(
+                            summaryGroup,
+                            mostRecentId
+                        )
+                    }
+                }
+            }
+            else {
+                whereStr =
+                    OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + androidId
+            }
 
             val values = ContentValues()
-            values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED, 1)
+            if (dismissed)
+                values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED, 1)
+            else
+                values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED, 1)
+
             _databaseProvider.get().update(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
                 values,
                 whereStr,
-                null
+                whereArgs
             )
 
             _badgeCountUpdater.update(_applicationService.appContext!!)
         }
+    }
 
-        Logging.debug("Marking restored or disabled notifications as dismissed: $androidId")
+    override suspend fun getGroupId(androidId: Int) : String? {
+        var groupId: String? = null
+
+        withContext(Dispatchers.Default) {
+            _databaseProvider.get().query(
+                OneSignalDbContract.NotificationTable.TABLE_NAME,
+                arrayOf(OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID),  // retColumn
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + androidId,
+                null,
+                null,
+                null,
+                null
+            ).use {
+                if (it.moveToFirst()) {
+                    groupId =
+                        it.getString(it.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID))
+                }
+            }
+        }
+
+        return groupId
     }
 
     override suspend fun getAndroidIdFromCollapseKey(collapseKey: String) : Int? = coroutineScope {
@@ -351,9 +407,8 @@ internal class NotificationDataController(
                         return@use
 
                     while (it.moveToNext()) {
-                        val existingId =
-                            it.getInt(it.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID))
-                        removeNotification(existingId)
+                        val existingId = it.getInt(it.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID))
+                        markAsDismissed(existingId)
                         if (--notificationsToClear <= 0) break
                     }
                 }
@@ -363,12 +418,51 @@ internal class NotificationDataController(
         }
     }
 
+    override suspend fun listNotificationsForGroup(summaryGroup: String) : List<INotificationDataController.NotificationData> {
+        val listOfNotifications = mutableListOf<INotificationDataController.NotificationData>()
+
+        withContext(Dispatchers.Default) {
+            val whereArgs = arrayOf(summaryGroup)
+
+            _databaseProvider.get().query(
+                OneSignalDbContract.NotificationTable.TABLE_NAME,
+                COLUMNS_FOR_LIST_NOTIFICATIONS,
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +  // Where String
+                        OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+                        OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
+                        OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0",
+                whereArgs,
+                null, null, BaseColumns._ID + " DESC" // sort order, new to old);
+            ).use {
+                if (it.count > 1) {
+                    it.moveToFirst()
+                    do {
+                        try {
+                            val title = it.getString(it.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_TITLE))
+                            val message = it.getString(it.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_MESSAGE))
+                            val osNotificationId = it.getString(it.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID))
+                            val existingId = it.getInt(it.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID))
+                            val fullData = it.getString(it.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_FULL_DATA))
+                            val dateTime = it.getLong(it.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME))
+
+                            listOfNotifications.add(INotificationDataController.NotificationData(existingId, osNotificationId, fullData, dateTime, title, message))
+                        } catch (e: JSONException) {
+                            Logging.error("Could not parse JSON of sub notification in group: $summaryGroup")
+                        }
+                    } while (it.moveToNext())
+                }
+            }
+        }
+
+        return listOfNotifications
+    }
+
     /**
      * Query SQLiteDatabase by group to find the most recent created notification id
      */
-    override suspend fun getMostRecentNotifIdFromGroup(group: String, isGroupless: Boolean): Int? = coroutineScope {
-
+    override suspend fun getAndroidIdForGroup(group: String, getSummaryNotification: Boolean): Int? = coroutineScope {
         var recentId: Int? = null
+        val isGroupless = group == NotificationHelper.grouplessSummaryKey
 
         /* Beginning of the query string changes based on being groupless or not
          * since the groupless notifications will have a null group key in the db */
@@ -378,15 +472,20 @@ internal class NotificationDataController(
         // Look for all active (not opened and not dismissed) notifications, not including summaries
         whereStr += " AND " +
                 OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-                OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0"
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND "
+
+        whereStr += if (getSummaryNotification)
+            OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 1"
+        else
+            OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0"
+
         val whereArgs = if (isGroupless) null else arrayOf(group)
 
         withContext(Dispatchers.Default) {
             // Order by timestamp in descending and limit to 1
             _databaseProvider.get().query(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
-                null,
+                arrayOf(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID),
                 whereStr,
                 whereArgs,
                 null,
@@ -408,8 +507,55 @@ internal class NotificationDataController(
         return@coroutineScope recentId
     }
 
+    override suspend fun listNotificationsForOutstanding(excludeAndroidIds: List<Int>?): List<INotificationDataController.NotificationData> {
+        val listOfNotifications = mutableListOf<INotificationDataController.NotificationData>()
+        withContext(Dispatchers.Default) {
+            val dbQuerySelection = _queryHelper.recentUninteractedWithNotificationsWhere()
+
+            if(excludeAndroidIds != null)
+            {
+                dbQuerySelection
+                    .append(" AND " + OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " NOT IN (")
+                    .append(TextUtils.join(",", excludeAndroidIds))
+                    .append(")")
+            }
+
+            _databaseProvider.get().query(
+                OneSignalDbContract.NotificationTable.TABLE_NAME,
+                COLUMNS_FOR_LIST_NOTIFICATIONS,
+                dbQuerySelection.toString(),
+                null,
+                null,  // group by
+                null,  // filter by row groups
+                BaseColumns._ID + " DESC",  // sort order, new to old
+                NotificationLimitManager.maxNumberOfNotificationsInt.toString() // limit
+            ).use {
+                val title = it.getString(it.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_TITLE))
+                val message = it.getString(it.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_MESSAGE))
+                val osNotificationId = it.getString(it.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID))
+                val existingId = it.getInt(it.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID))
+                val fullData = it.getString(it.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_FULL_DATA))
+                val dateTime = it.getLong(it.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME))
+
+                listOfNotifications.add(INotificationDataController.NotificationData(existingId, osNotificationId, fullData, dateTime, title, message))
+            }
+        }
+
+        return listOfNotifications
+    }
+
     companion object {
         private const val NOTIFICATION_CACHE_DATA_LIFETIME = 604800L // 7 days in second
         private const val OS_NOTIFICATIONS_THREAD = "OS_NOTIFICATIONS_THREAD"
+
+
+        val COLUMNS_FOR_LIST_NOTIFICATIONS = arrayOf(
+            OneSignalDbContract.NotificationTable.COLUMN_NAME_TITLE,
+            OneSignalDbContract.NotificationTable.COLUMN_NAME_MESSAGE,
+            OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID,
+            OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
+            OneSignalDbContract.NotificationTable.COLUMN_NAME_FULL_DATA,
+            OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME
+        )
     }
 }
