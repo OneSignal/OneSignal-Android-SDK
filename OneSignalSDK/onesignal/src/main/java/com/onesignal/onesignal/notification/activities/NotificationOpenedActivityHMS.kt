@@ -30,7 +30,7 @@ import android.app.Activity
 import android.os.Bundle
 import android.content.Intent
 import com.onesignal.onesignal.core.OneSignal
-import com.onesignal.onesignal.notification.internal.actions.NotificationPayloadProcessorHMS
+import com.onesignal.onesignal.notification.internal.open.INotificationOpenedProcessorHMS
 
 // HMS Core creates a notification with an Intent when opened to start this Activity.
 //   Intent is defined via OneSignal's backend and is sent to HMS.
@@ -73,7 +73,7 @@ class NotificationOpenedActivityHMS : Activity() {
     private fun processOpen(intent: Intent?) {
         OneSignal.initWithContext(applicationContext)
 
-        var notificationPayloadProcessorHMS = OneSignal.getService<NotificationPayloadProcessorHMS>()
+        var notificationPayloadProcessorHMS = OneSignal.getService<INotificationOpenedProcessorHMS>()
         notificationPayloadProcessorHMS.handleHMSNotificationOpenIntent(this, intent)
     }
 }

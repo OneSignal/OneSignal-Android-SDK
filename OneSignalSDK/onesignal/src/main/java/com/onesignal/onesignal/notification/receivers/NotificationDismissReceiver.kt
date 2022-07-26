@@ -28,14 +28,14 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.onesignal.onesignal.core.OneSignal
-import com.onesignal.onesignal.notification.internal.actions.NotificationOpenedProcessor
+import com.onesignal.onesignal.notification.internal.open.INotificationOpenedProcessor
 import kotlinx.coroutines.runBlocking
 
 class NotificationDismissReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         OneSignal.initWithContext(context.applicationContext)
 
-        var notificationOpenedProcessor = OneSignal.getService<NotificationOpenedProcessor>()
+        var notificationOpenedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
 
         runBlocking {
             notificationOpenedProcessor.processFromContext(context, intent)

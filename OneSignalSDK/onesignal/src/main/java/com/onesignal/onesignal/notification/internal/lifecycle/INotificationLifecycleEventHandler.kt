@@ -1,7 +1,7 @@
 package com.onesignal.onesignal.notification.internal.lifecycle
 
 import android.app.Activity
-import com.onesignal.onesignal.notification.internal.generation.NotificationGenerationJob
+import com.onesignal.onesignal.notification.internal.common.NotificationGenerationJob
 import org.json.JSONArray
 
 interface INotificationLifecycleEventHandler {

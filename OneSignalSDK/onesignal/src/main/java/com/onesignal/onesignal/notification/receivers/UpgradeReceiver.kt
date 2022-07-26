@@ -31,7 +31,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import com.onesignal.onesignal.core.OneSignal
-import com.onesignal.onesignal.notification.internal.restoration.NotificationRestoreWorkManager
+import com.onesignal.onesignal.notification.internal.restoration.INotificationRestoreWorkManager
 
 class UpgradeReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -46,7 +46,7 @@ class UpgradeReceiver : BroadcastReceiver() {
         if(!OneSignal.isInitialized)
             OneSignal.initWithContext(context)
 
-        var restoreWorkManager = OneSignal.getService<NotificationRestoreWorkManager>()
+        var restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
 
         restoreWorkManager.beginEnqueueingWork(context, true)
     }

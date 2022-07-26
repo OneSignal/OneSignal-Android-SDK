@@ -7,6 +7,8 @@ import com.onesignal.onesignal.notification.BackgroundImageLayout
 import com.onesignal.onesignal.notification.IActionButton
 import com.onesignal.onesignal.notification.IMutableNotification
 import com.onesignal.onesignal.notification.INotification
+import com.onesignal.onesignal.notification.internal.common.NotificationConstants
+import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject

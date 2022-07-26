@@ -9,7 +9,7 @@ import android.database.sqlite.*
 import android.os.SystemClock
 import android.provider.BaseColumns
 import com.onesignal.onesignal.core.internal.database.IDatabase
-import com.onesignal.onesignal.notification.internal.NotificationConstants
+import com.onesignal.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.outcomes.data.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V1
 import com.onesignal.outcomes.data.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V3

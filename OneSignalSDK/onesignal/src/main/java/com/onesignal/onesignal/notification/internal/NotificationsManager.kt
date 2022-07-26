@@ -16,17 +16,21 @@ import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.core.internal.service.IStartableService
 import com.onesignal.onesignal.core.internal.user.ISubscriptionManager
 import com.onesignal.onesignal.notification.*
-import com.onesignal.onesignal.notification.internal.actions.GenerateNotificationOpenIntentFromPushPayload
-import com.onesignal.onesignal.notification.internal.analyticsTracker.IAnalyticsTracker
-import com.onesignal.onesignal.notification.internal.generation.NotificationGenerationJob
+import com.onesignal.onesignal.notification.internal.analytics.IAnalyticsTracker
+import com.onesignal.onesignal.notification.internal.channels.INotificationChannelManager
+import com.onesignal.onesignal.notification.internal.common.GenerateNotificationOpenIntentFromPushPayload
+import com.onesignal.onesignal.notification.internal.common.NotificationConstants
+import com.onesignal.onesignal.notification.internal.common.NotificationGenerationJob
+import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.onesignal.notification.internal.lifecycle.INotificationLifecycleEventHandler
 import com.onesignal.onesignal.notification.internal.lifecycle.INotificationLifecycleService
-import com.onesignal.onesignal.notification.internal.permissions.NotificationPermissionController
+import com.onesignal.onesignal.notification.internal.permissions.INotificationPermissionController
+import com.onesignal.onesignal.notification.internal.receivereceipt.IReceiveReceiptWorkManager
 import com.onesignal.onesignal.notification.internal.registration.IPushRegistrator
-import com.onesignal.onesignal.notification.internal.registration.PushRegistratorADM
-import com.onesignal.onesignal.notification.internal.registration.PushRegistratorFCM
-import com.onesignal.onesignal.notification.internal.registration.PushRegistratorHMS
-import com.onesignal.onesignal.notification.internal.restoration.NotificationRestoreWorkManager
+import com.onesignal.onesignal.notification.internal.registration.impl.PushRegistratorADM
+import com.onesignal.onesignal.notification.internal.registration.impl.PushRegistratorFCM
+import com.onesignal.onesignal.notification.internal.registration.impl.PushRegistratorHMS
+import com.onesignal.onesignal.notification.internal.restoration.INotificationRestoreWorkManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -42,11 +46,13 @@ internal class NotificationsManager(
     private val _deviceService: IDeviceService,
     private val _applicationService: IApplicationService,
     private val _paramsService: IParamsService,
-    private val _notificationPermissionController: NotificationPermissionController,
+    private val _notificationPermissionController: INotificationPermissionController,
     private val _pushSubscriber: ISubscriptionManager,
-    private val _notificationRestoreWorkManager: NotificationRestoreWorkManager,
+    private val _notificationRestoreWorkManager: INotificationRestoreWorkManager,
     private val _notificationLifecycleService: INotificationLifecycleService,
     private val _analyticsTracker: IAnalyticsTracker,
+    private val _channelManager: INotificationChannelManager,
+    private val _receiveReceiptWorkManager: IReceiveReceiptWorkManager,
     private val _time: ITime
 
 ) : INotificationsManager, IStartableService, INotificationLifecycleEventHandler {
@@ -56,6 +62,7 @@ internal class NotificationsManager(
     private val _permissionChangedNotifier: IEventProducer<IPermissionChangedHandler> = EventProducer()
     private val _willShowNotificationNotifier: ICallbackProducer<INotificationWillShowInForegroundHandler> = CallbackProducer()
     private val _notificationOpenedNotifier: ICallbackProducer<INotificationOpenedHandler> = CallbackProducer()
+    private val _unprocessedOpenedNotifs: ArrayDeque<JSONArray> = ArrayDeque()
 
     override suspend fun start() {
         _notificationLifecycleService.subscribe(this)
@@ -77,6 +84,8 @@ internal class NotificationsManager(
 
             override fun onUnfocused() { }
         })
+
+        _channelManager.processChannelList(_paramsService.notificationChannels)
 
         onRefresh()
     }
@@ -273,9 +282,19 @@ internal class NotificationsManager(
     override fun setNotificationOpenedHandler(handler: INotificationOpenedHandler) {
         Logging.log(LogLevel.DEBUG, "setNotificationOpenedHandler(handler: $handler)")
         _notificationOpenedNotifier.set(handler)
+
+        // Ensure we process any queued up notifications that came in prior to this being set.
+        if(_notificationOpenedNotifier.hasCallback && _unprocessedOpenedNotifs.any()) {
+            for(data in _unprocessedOpenedNotifs) {
+                val openedResult = generateNotificationOpenedResult(data)
+                _notificationOpenedNotifier.fire { it.notificationOpened(openedResult) }
+            }
+        }
     }
 
     override fun onReceived(notificationJob: NotificationGenerationJob) {
+        _receiveReceiptWorkManager.enqueueReceiveReceipt(notificationJob.apiNotificationId)
+
         // TODO: Implement
 //        OneSignal.getSessionManager().onNotificationReceived(notificationId)
 
@@ -305,16 +324,15 @@ internal class NotificationsManager(
 
         openDestinationActivity(activity, data)
 
-        // TODO: Need ability to queue opened notifications so when the handler is added
-        // we can fire it off for each one already processed.
-//        if (OneSignal.notificationOpenedHandler == null) {
-//            OneSignal.unprocessedOpenedNotifs.add(dataArray)
-//            return
-//        }
-
-        val openedResult = generateNotificationOpenedResult(data)
-
-        _notificationOpenedNotifier.fire { it.notificationOpened(openedResult) }
+        // queue up the opened notification in case the handler hasn't been set yet. Once set,
+        // we will immediately fire the handler.
+        if(_notificationOpenedNotifier.hasCallback) {
+            val openedResult = generateNotificationOpenedResult(data)
+            _notificationOpenedNotifier.fire { it.notificationOpened(openedResult) }
+        }
+        else {
+            _unprocessedOpenedNotifs.add(data)
+        }
     }
 
     // Also called for received but OSNotification is extracted from it.

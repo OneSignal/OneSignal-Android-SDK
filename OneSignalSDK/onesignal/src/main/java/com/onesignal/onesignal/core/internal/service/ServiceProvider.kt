@@ -78,6 +78,7 @@ class ServiceProvider(
     }
 
     override fun <T> getServiceOrNull(c: Class<T>): T? {
+        Logging.debug("Retrieving service $c")
         return _serviceMap[c]?.last()?.resolve(this) as T?
     }
 }

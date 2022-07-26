@@ -8,6 +8,10 @@ package com.onesignal.onesignal.core.internal.common.events
  * Unlike [IEventNotifier], there can only be one (1) callback at any given time.
  */
 interface ICallbackNotifier<THandler> {
+    /**
+     * Whether there is a callback currently set.
+     */
+    val hasCallback: Boolean
 
     /**
      * Set the callback.
