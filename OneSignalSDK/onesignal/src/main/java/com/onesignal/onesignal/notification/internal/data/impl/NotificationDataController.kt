@@ -32,7 +32,7 @@ internal class NotificationDataController(
      * 1. NotificationTable.TABLE_NAME
      */
     override suspend fun deleteExpiredNotifications() = coroutineScope {
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             val whereStr: String = OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME.toString() + " < ?"
             val sevenDaysAgoInSeconds: String = java.lang.String.valueOf(
                 _time.currentTimeMillis / 1000L - NOTIFICATION_CACHE_DATA_LIFETIME
@@ -48,7 +48,7 @@ internal class NotificationDataController(
     }
 
     override suspend fun markAsDismissedForOutstanding() = coroutineScope {
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             val appContext = _applicationService.appContext ?: return@withContext
             val notificationManager: NotificationManager = NotificationHelper.getNotificationManager(appContext)
             val retColumn = arrayOf(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID)
@@ -82,7 +82,7 @@ internal class NotificationDataController(
     }
 
     override suspend fun markAsDismissedForGroup(group: String) = coroutineScope {
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             val appContext = _applicationService.appContext ?: return@withContext
             val notificationManager: NotificationManager =
                 NotificationHelper.getNotificationManager(appContext)
@@ -128,7 +128,7 @@ internal class NotificationDataController(
     override suspend fun markAsDismissed(androidId: Int) : Boolean {
         var didDismiss: Boolean = false
 
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             val appContext = _applicationService.appContext ?: return@withContext
 
             val whereStr: String =
@@ -157,7 +157,7 @@ internal class NotificationDataController(
 
         var result = false
 
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
 
             val retColumn =
                 arrayOf<String>(OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID)
@@ -184,7 +184,7 @@ internal class NotificationDataController(
     }
 
     override suspend fun createSummaryNotification(androidId: Int, groupId: String) {
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             // There currently isn't a visible notification from for this group_id.
             // Save the group summary notification id so it can be updated later.
             val values = ContentValues()
@@ -212,7 +212,7 @@ internal class NotificationDataController(
                                             body: String?,
                                             expireTime: Long,
                                             jsonPayload: String) = coroutineScope {
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             Logging.debug("Saving Notification id=$id")
 
             try {
@@ -289,7 +289,7 @@ internal class NotificationDataController(
     }
 
     override suspend fun markAsConsumed(androidId: Int, dismissed: Boolean, summaryGroup: String?, clearGroupOnSummaryClick: Boolean) {
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             var whereStr: String
             var whereArgs: Array<String>? = null
             if (summaryGroup != null) {
@@ -340,7 +340,7 @@ internal class NotificationDataController(
     override suspend fun getGroupId(androidId: Int) : String? {
         var groupId: String? = null
 
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             _databaseProvider.get().query(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
                 arrayOf(OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID),  // retColumn
@@ -364,7 +364,7 @@ internal class NotificationDataController(
 
         var androidId: Int? = null
 
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             _databaseProvider.get().query(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
                 arrayOf(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID),  // retColumn
@@ -386,7 +386,7 @@ internal class NotificationDataController(
     }
 
     override suspend fun clearOldestOverLimitFallback(notificationsToMakeRoomFor: Int, maxNumberOfNotificationsInt: Int) = coroutineScope {
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             val maxNumberOfNotificationsString = maxNumberOfNotificationsInt.toString()
 
             try {
@@ -421,7 +421,7 @@ internal class NotificationDataController(
     override suspend fun listNotificationsForGroup(summaryGroup: String) : List<INotificationDataController.NotificationData> {
         val listOfNotifications = mutableListOf<INotificationDataController.NotificationData>()
 
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             val whereArgs = arrayOf(summaryGroup)
 
             _databaseProvider.get().query(
@@ -490,7 +490,7 @@ internal class NotificationDataController(
 
         val whereArgs = if (isGroupless) null else arrayOf(group)
 
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             // Order by timestamp in descending and limit to 1
             _databaseProvider.get().query(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
@@ -518,7 +518,7 @@ internal class NotificationDataController(
 
     override suspend fun listNotificationsForOutstanding(excludeAndroidIds: List<Int>?): List<INotificationDataController.NotificationData> {
         val listOfNotifications = mutableListOf<INotificationDataController.NotificationData>()
-        withContext(Dispatchers.Default) {
+        withContext(Dispatchers.IO) {
             val dbQuerySelection = _queryHelper.recentUninteractedWithNotificationsWhere()
 
             if(excludeAndroidIds != null)

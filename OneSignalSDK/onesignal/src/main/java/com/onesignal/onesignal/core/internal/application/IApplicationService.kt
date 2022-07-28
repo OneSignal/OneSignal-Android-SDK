@@ -21,6 +21,18 @@ interface IApplicationService  {
     var isInForeground: Boolean
 
     /**
+     * Will determine and suspend until system conditions are available for displaying
+     * UI to the user.
+     */
+    suspend fun waitUntilSystemConditionsAvailable() : Boolean
+
+    /**
+     * Will determine and suspend until the decor view is ready to displayed
+     * within.
+     */
+    suspend fun waitUntilActivityReady() : Boolean
+
+    /**
      * Add an activity available handler
      */
     fun addActivityLifecycleHandler(handler: IActivityLifecycleHandler)
@@ -39,10 +51,4 @@ interface IApplicationService  {
      * Remove an application lifecycle handler
      */
     fun removeApplicationLifecycleHandler(handler: IApplicationLifecycleHandler)
-
-    /**
-     * Add a handler that will be notified when the system condition
-     * has changed, will be automatically removed after called one time.
-     */
-    fun addSystemConditionHandler(handler: ISystemConditionHandler)
 }

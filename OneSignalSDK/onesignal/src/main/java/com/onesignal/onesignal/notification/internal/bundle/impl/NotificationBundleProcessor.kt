@@ -114,7 +114,6 @@ internal class NotificationBundleProcessor(
         const val PUSH_MINIFIED_BUTTON_TEXT = "n"
         const val PUSH_MINIFIED_BUTTON_ICON = "p"
         private const val ANDROID_NOTIFICATION_ID = "android_notif_id"
-        const val IAM_PREVIEW_KEY = "os_in_app_message_preview_id"
         const val DEFAULT_ACTION = "__DEFAULT__"
     }
 }

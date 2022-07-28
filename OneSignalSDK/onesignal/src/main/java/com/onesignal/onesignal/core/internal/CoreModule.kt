@@ -1,6 +1,6 @@
 package com.onesignal.onesignal.core.internal
 
-import com.onesignal.onesignal.core.internal.application.ApplicationService
+import com.onesignal.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.backend.api.ApiService
 import com.onesignal.onesignal.core.internal.backend.api.IApiService

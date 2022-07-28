@@ -1,4 +1,4 @@
-package com.onesignal.onesignal.core.internal.application
+package com.onesignal.onesignal.core.internal.application.impl
 
 import android.app.Activity
 import android.app.Application
@@ -9,17 +9,25 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Bundle
 import android.view.ViewTreeObserver.OnGlobalLayoutListener
+import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import com.onesignal.onesignal.core.internal.application.IActivityLifecycleHandler
+import com.onesignal.onesignal.core.internal.application.IApplicationLifecycleHandler
+import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.onesignal.core.internal.common.events.EventProducer
 import com.onesignal.onesignal.core.internal.common.events.IEventProducer
 import com.onesignal.onesignal.core.internal.logging.Logging
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.runBlocking
 import java.lang.ref.WeakReference
 
-class ApplicationService(
-    private val _activityLifecycleNotifier: IEventProducer<IActivityLifecycleHandler> = EventProducer(),
-    private val _applicationLifecycleNotifier: IEventProducer<IApplicationLifecycleHandler> = EventProducer(),
+class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, OnGlobalLayoutListener  {
+    private val _activityLifecycleNotifier: IEventProducer<IActivityLifecycleHandler> = EventProducer()
+    private val _applicationLifecycleNotifier: IEventProducer<IApplicationLifecycleHandler> = EventProducer()
     private val _systemConditionNotifier: IEventProducer<ISystemConditionHandler> = EventProducer()
-) : IApplicationService, ActivityLifecycleCallbacks, OnGlobalLayoutListener  {
 
     /** The application the context is owned by **/
     private var _application: Application? = null
@@ -45,9 +53,8 @@ class ApplicationService(
 
                 Logging.debug("_current is NOW: " + if (_current != null) "" + _current?.javaClass?.name + ":" + _current else "null")
 
-                _activityLifecycleNotifier.fire { it.onAvailable(value) }
-
                 if(value != null) {
+                    _activityLifecycleNotifier.fire { it.onAvailable(value) }
                     try {
                         value.window.decorView.viewTreeObserver.addOnGlobalLayoutListener(this)
                     } catch (e: RuntimeException) {
@@ -111,15 +118,11 @@ class ApplicationService(
     override fun addActivityLifecycleHandler(handler: IActivityLifecycleHandler) {
         _activityLifecycleNotifier.subscribe(handler)
         if (_current != null)
-            handler.onAvailable(_current)
+            handler.onAvailable(_current!!)
     }
 
     override fun removeActivityLifecycleHandler(handler: IActivityLifecycleHandler) {
         _activityLifecycleNotifier.unsubscribe(handler)
-    }
-
-    override fun addSystemConditionHandler(handler: ISystemConditionHandler) {
-        _systemConditionNotifier.subscribe(handler)
     }
 
     override fun onActivityCreated(activity: Activity, bundle: Bundle?) {
@@ -165,9 +168,100 @@ class ApplicationService(
     }
 
     override fun onGlobalLayout() {
-        val keyboardUp = AndroidUtils.isKeyboardUp(WeakReference(_current))
-        if (!keyboardUp) {
-            _systemConditionNotifier.fireThenRemove { it.systemConditionChanged() }
+        _systemConditionNotifier.fire { it.systemConditionChanged() }
+    }
+
+    override suspend fun waitUntilSystemConditionsAvailable() : Boolean {
+        val currentActivity = current
+        if (currentActivity == null) {
+            Logging.warn("OSSystemConditionObserver curActivity null")
+            return false
+        }
+
+        try {
+            // Detect if user has a dialog fragment showing. If so we suspend until that dialog goes away
+            // We cannot detect AlertDialogs because they are added to the decor view as linear layout without an identification
+            if (currentActivity is AppCompatActivity) {
+                val manager = currentActivity.supportFragmentManager
+
+                var lastFragment = manager.fragments.lastOrNull()
+                if (lastFragment != null && lastFragment.isVisible && lastFragment is DialogFragment) {
+                    val channel = Channel<Any?>()
+
+                    manager.registerFragmentLifecycleCallbacks(object : FragmentManager.FragmentLifecycleCallbacks() {
+                        override fun onFragmentDetached(fm: FragmentManager, fragmentDetached: Fragment) {
+                            super.onFragmentDetached(fm, fragmentDetached)
+                            if (fragmentDetached is DialogFragment) {
+                                manager.unregisterFragmentLifecycleCallbacks(this)
+                                runBlocking {
+                                    channel.send(null)
+                                }
+                            }
+                        }
+                    }, true)
+
+                    channel.receive()
+                }
+
+            }
+        } catch (exception: NoClassDefFoundError) {
+            Logging.info("AppCompatActivity is not used in this app, skipping 'isDialogFragmentShowing' check: $exception")
+        }
+
+        val keyboardUp = AndroidUtils.isKeyboardUp(WeakReference(currentActivity))
+
+        // if the keyboard is up we suspend until it is down
+        if(keyboardUp) {
+            val channel = Channel<Any?>()
+            _systemConditionNotifier.subscribe(object : ISystemConditionHandler {
+                override fun systemConditionChanged() {
+                    val keyboardUp = AndroidUtils.isKeyboardUp(WeakReference(_current))
+                    if (!keyboardUp) {
+                        _systemConditionNotifier.unsubscribe(this)
+                        runBlocking {
+                            channel.send(null)
+                        }
+                    }
+                }
+            })
+            Logging.warn("OSSystemConditionObserver keyboard up detected")
+            channel.receive()
+        }
+
+        return true
+    }
+
+    override suspend fun waitUntilActivityReady(): Boolean {
+        val currentActivity = _current ?: return false
+
+        val channel = Channel<Any?>()
+        decorViewReady(currentActivity!!, object : Runnable {
+            override fun run() = runBlocking {
+                channel.send(null)
+            }
+        })
+
+        channel.receive()
+        return true
+    }
+
+    // Ensures the root decor view is ready by checking the following;
+    //   1. Is fully attach to the root window and insets are available
+    //   2. Ensure if any Activities are changed while waiting we use the updated one
+    fun decorViewReady(activity: Activity, runnable: Runnable) {
+        val listenerKey = "decorViewReady:$runnable"
+        val self = this
+        activity.window.decorView.post {
+            self.addActivityLifecycleHandler(object : IActivityLifecycleHandler {
+                override fun onAvailable(currentActivity: Activity) {
+                    self.removeActivityLifecycleHandler(this)
+                    if (AndroidUtils.isActivityFullyReady(currentActivity))
+                        runnable.run()
+                    else decorViewReady(currentActivity, runnable)
+                }
+
+                override fun onStopped(activity: Activity) {}
+            })
         }
     }
 

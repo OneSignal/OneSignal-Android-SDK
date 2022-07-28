@@ -14,7 +14,7 @@ object NotificationConstants {
 
     const val GENERATE_NOTIFICATION_BUNDLE_KEY_ACTION_ID = "actionId";
 
-
+    const val IAM_PREVIEW_KEY = "os_in_app_message_preview_id"
 
     const val BUNDLE_KEY_ANDROID_NOTIFICATION_ID = "androidNotificationId"
 

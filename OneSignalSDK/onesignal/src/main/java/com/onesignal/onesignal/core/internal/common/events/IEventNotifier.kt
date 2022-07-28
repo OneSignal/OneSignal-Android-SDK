@@ -38,7 +38,4 @@ interface IEventProducer<THandler> : IEventNotifier<THandler> {
      * @param callback The callback will be invoked for each subscriber, allowing you to call the handler.
      */
     fun fire(callback: (THandler) -> Unit)
-
-
-    fun fireThenRemove(callback: (THandler) -> Unit)
 }

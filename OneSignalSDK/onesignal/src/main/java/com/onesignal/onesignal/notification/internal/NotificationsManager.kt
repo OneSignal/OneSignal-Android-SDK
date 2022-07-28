@@ -370,7 +370,7 @@ internal class NotificationsManager(
         return NotificationOpenedResult(notification, notificationAction)
     }
 
-    private fun openDestinationActivity(activity: Activity, pushPayloads: JSONArray) {
+    fun openDestinationActivity(activity: Activity, pushPayloads: JSONArray) {
         try {
             // Always use the top most notification if user tapped on the summary notification
             val firstPayloadItem = pushPayloads.getJSONObject(0)

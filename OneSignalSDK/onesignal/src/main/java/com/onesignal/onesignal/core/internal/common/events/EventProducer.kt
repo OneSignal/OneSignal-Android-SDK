@@ -21,11 +21,4 @@ open class EventProducer<THandler> : IEventProducer<THandler> {
             callback(s)
         }
     }
-
-    override fun fireThenRemove(callback: (THandler) -> Unit) {
-        for(s in _subscribers) {
-            _subscribers.remove(s)
-            callback(s)
-        }
-    }
 }

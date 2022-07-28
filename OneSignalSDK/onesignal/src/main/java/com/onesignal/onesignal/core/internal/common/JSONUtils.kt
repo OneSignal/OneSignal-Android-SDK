@@ -53,6 +53,15 @@ object JSONUtils {
         }
     }
 
+    // Creates a new Set<String> from a Set String by converting and iterating a JSONArray
+    fun newStringSetFromJSONArray(jsonArray: JSONArray): Set<String> {
+        val stringSet: MutableSet<String> = mutableSetOf()
+        for (i in 0 until jsonArray.length()) {
+            stringSet.add(jsonArray.getString(i))
+        }
+        return stringSet
+    }
+
     /**
      * Returns the JSONObject as a String with the external user ID unescaped.
      * Needed b/c the default JSONObject.toString() escapes (/) with (\/), which customers may not want.

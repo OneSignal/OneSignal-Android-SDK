@@ -8,6 +8,13 @@ object Logging {
 
     @JvmStatic
     var logLevel = LogLevel.WARN
+    @JvmStatic
+    var visualLogLevel = LogLevel.WARN
+
+    @JvmStatic
+    fun atLogLevel(level: LogLevel): Boolean {
+        return level.compareTo(visualLogLevel) < 1 || level.compareTo(logLevel) < 1
+    }
 
     @JvmStatic
     fun verbose(message: String, throwable: Throwable? = null) {
