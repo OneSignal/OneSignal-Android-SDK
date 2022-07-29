@@ -1,13 +1,16 @@
 package com.onesignal.sdktest.activity;
 
+import android.os.Build;
 import android.os.Bundle;
 
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.onesignal.OneSignal;
+import com.onesignal.onesignal.core.OneSignal;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.model.MainActivityViewModel;
 
+@RequiresApi(api = Build.VERSION_CODES.N)
 public class MainActivity extends AppCompatActivity {
 
     private MainActivityViewModel viewModel;
@@ -18,9 +21,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.main_activity_layout);
 
         viewModel = new MainActivityViewModel();
-        OneSignal.addPermissionObserver(viewModel);
-        OneSignal.addSubscriptionObserver(viewModel);
-        OneSignal.addEmailSubscriptionObserver(viewModel);
+        OneSignal.getNotifications().addPushPermissionHandler(viewModel);
+// TODO("STILL SUPPORT?")
+//        OneSignal.addSubscriptionObserver(viewModel);
+//        OneSignal.addEmailSubscriptionObserver(viewModel);
         viewModel.onActivityCreated(this)
                 .setupInterfaceElements();
     }
@@ -37,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        boolean hasConsent = OneSignal.userProvidedPrivacyConsent();
+        boolean hasConsent = OneSignal.getRequiresPrivacyConsent();
         if (hasConsent)
             viewModel.setupSettingsLayout();
     }
