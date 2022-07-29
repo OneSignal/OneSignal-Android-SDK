@@ -36,6 +36,7 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
 
     private val callbacks:
             MutableSet<OneSignal.PromptForPushNotificationPermissionResponseHandler> = HashSet()
+    private var awaitingForReturnFromSystemSettings = false
 
     init {
         PermissionsActivity.registerAsCallback(PERMISSION_TYPE, this)
@@ -97,6 +98,7 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
             object : AlertDialogPrepromptForAndroidSettings.Callback {
                 override fun onAccept() {
                     NavigateToAndroidSettingsForNotifications.show(activity)
+                    awaitingForReturnFromSystemSettings = true
                 }
                 override fun onDecline() {
                     fireCallBacks(false)
@@ -113,6 +115,8 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
     }
 
     fun onAppForegrounded() {
+        if (!awaitingForReturnFromSystemSettings) return
+        awaitingForReturnFromSystemSettings = false
         fireCallBacks(notificationsEnabled())
     }
 
