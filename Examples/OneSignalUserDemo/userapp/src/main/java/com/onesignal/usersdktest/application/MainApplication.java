@@ -5,11 +5,10 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.multidex.MultiDexApplication;
 
-import com.onesignal.onesignal.core.Continue;
 import com.onesignal.onesignal.core.OneSignal;
 import com.onesignal.onesignal.iam.IInAppMessage;
 import com.onesignal.onesignal.iam.IInAppMessageLifecycleHandler;
-import com.onesignal.onesignal.core.internal.logging.LogLevel;
+import com.onesignal.onesignal.core.LogLevel;
 import com.onesignal.onesignal.core.internal.logging.Logging;
 import com.onesignal.onesignal.notification.INotification;
 import com.onesignal.usersdktest.R;

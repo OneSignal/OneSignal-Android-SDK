@@ -19,6 +19,7 @@ import android.os.Build
 import android.view.View
 import androidx.core.widget.PopupWindowCompat
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
+import com.onesignal.onesignal.core.internal.common.ViewUtils
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.iam.internal.InAppMessageContent
 import kotlinx.coroutines.*
@@ -57,10 +58,10 @@ internal class InAppMessageView(
     private var currentActivity: Activity? = null
     private val pageWidth: Int = ViewGroup.LayoutParams.MATCH_PARENT
     private var pageHeight: Int = messageContent.pageHeight
-    private var marginPxSizeLeft = AndroidUtils.dpToPx(24)
-    private var marginPxSizeRight = AndroidUtils.dpToPx(24)
-    private var marginPxSizeTop = AndroidUtils.dpToPx(24)
-    private var marginPxSizeBottom = AndroidUtils.dpToPx(24)
+    private var marginPxSizeLeft = ViewUtils.dpToPx(24)
+    private var marginPxSizeRight = ViewUtils.dpToPx(24)
+    private var marginPxSizeTop = ViewUtils.dpToPx(24)
+    private var marginPxSizeBottom = ViewUtils.dpToPx(24)
     val displayPosition: WebViewManager.Position = messageContent.displayLocation!!
     private val displayDuration: Double = if (messageContent.displayDuration == null) 0.0 else messageContent.displayDuration!!
     private val hasBackground: Boolean = !displayPosition.isBanner
@@ -89,10 +90,10 @@ internal class InAppMessageView(
      * @param content in app message content and style
      */
     private fun setMarginsFromContent(content: InAppMessageContent) {
-        marginPxSizeTop = if (content.useHeightMargin) AndroidUtils.dpToPx(24) else 0
-        marginPxSizeBottom = if (content.useHeightMargin) AndroidUtils.dpToPx(24) else 0
-        marginPxSizeLeft = if (content.useWidthMargin) AndroidUtils.dpToPx(24) else 0
-        marginPxSizeRight = if (content.useWidthMargin) AndroidUtils.dpToPx(24) else 0
+        marginPxSizeTop = if (content.useHeightMargin) ViewUtils.dpToPx(24) else 0
+        marginPxSizeBottom = if (content.useHeightMargin) ViewUtils.dpToPx(24) else 0
+        marginPxSizeLeft = if (content.useWidthMargin) ViewUtils.dpToPx(24) else 0
+        marginPxSizeRight = if (content.useWidthMargin) ViewUtils.dpToPx(24) else 0
     }
 
     fun setWebView(webView: WebView) {
@@ -172,7 +173,7 @@ internal class InAppMessageView(
     }
 
     private val displayYSize: Int
-        private get() = AndroidUtils.getWindowHeight(currentActivity!!)
+        private get() = ViewUtils.getWindowHeight(currentActivity!!)
 
     private fun createParentRelativeLayoutParams(): RelativeLayout.LayoutParams {
         val relativeLayoutParams =
@@ -371,8 +372,8 @@ internal class InAppMessageView(
         // Set the initial elevation of the CardView to 0dp if using Android 6 API 23
         //  Fixes bug when animating a elevated CardView class
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.M) cardView.cardElevation =
-            0f else cardView.cardElevation = AndroidUtils.dpToPx(5).toFloat()
-        cardView.radius = AndroidUtils.dpToPx(8).toFloat()
+            0f else cardView.cardElevation = ViewUtils.dpToPx(5).toFloat()
+        cardView.radius = ViewUtils.dpToPx(8).toFloat()
         cardView.clipChildren = false
         cardView.clipToPadding = false
         cardView.preventCornerOverlap = false
@@ -517,7 +518,7 @@ internal class InAppMessageView(
             override fun onAnimationEnd(animation: Animation) {
                 // For Android 6 API 23 devices, waits until end of animation to set elevation of CardView class
                 if (Build.VERSION.SDK_INT == Build.VERSION_CODES.M) {
-                    messageViewCardView.cardElevation = AndroidUtils.dpToPx(5).toFloat()
+                    messageViewCardView.cardElevation = ViewUtils.dpToPx(5).toFloat()
                 }
                 if (messageController != null) {
                     messageController!!.onMessageWasShown()
@@ -652,6 +653,6 @@ internal class InAppMessageView(
         private const val IN_APP_BACKGROUND_ANIMATION_DURATION_MS = 400
         private const val ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS = 600
         private const val ACTIVITY_INIT_DELAY = 200
-        private val DRAG_THRESHOLD_PX_SIZE = AndroidUtils.dpToPx(4)
+        private val DRAG_THRESHOLD_PX_SIZE = ViewUtils.dpToPx(4)
     }
 }

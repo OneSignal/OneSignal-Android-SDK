@@ -17,6 +17,7 @@ import com.onesignal.onesignal.core.internal.application.IActivityLifecycleHandl
 import com.onesignal.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
+import com.onesignal.onesignal.core.internal.common.DeviceUtils
 import com.onesignal.onesignal.core.internal.common.events.EventProducer
 import com.onesignal.onesignal.core.internal.common.events.IEventProducer
 import com.onesignal.onesignal.core.internal.logging.Logging
@@ -208,14 +209,14 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
             Logging.info("AppCompatActivity is not used in this app, skipping 'isDialogFragmentShowing' check: $exception")
         }
 
-        val keyboardUp = AndroidUtils.isKeyboardUp(WeakReference(currentActivity))
+        val keyboardUp = DeviceUtils.isKeyboardUp(WeakReference(currentActivity))
 
         // if the keyboard is up we suspend until it is down
         if(keyboardUp) {
             val channel = Channel<Any?>()
             _systemConditionNotifier.subscribe(object : ISystemConditionHandler {
                 override fun systemConditionChanged() {
-                    val keyboardUp = AndroidUtils.isKeyboardUp(WeakReference(_current))
+                    val keyboardUp = DeviceUtils.isKeyboardUp(WeakReference(_current))
                     if (!keyboardUp) {
                         _systemConditionNotifier.unsubscribe(this)
                         runBlocking {

@@ -11,7 +11,8 @@ import android.view.View
 import com.onesignal.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
-import com.onesignal.onesignal.core.internal.logging.LogLevel
+import com.onesignal.onesignal.core.LogLevel
+import com.onesignal.onesignal.core.internal.common.ViewUtils
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.iam.internal.InAppMessage
 import com.onesignal.onesignal.iam.internal.InAppMessageContent
@@ -161,7 +162,7 @@ internal class WebViewManager(
     private fun pageRectToViewHeight(activity: Activity, jsonObject: JSONObject): Int {
         return try {
             val pageHeight = jsonObject.getJSONObject("rect").getInt("height")
-            var pxHeight = AndroidUtils.dpToPx(pageHeight)
+            var pxHeight = ViewUtils.dpToPx(pageHeight)
             Logging.debug("getPageHeightData:pxHeight: $pxHeight")
             val maxPxHeight = getWebViewMaxSizeY(activity)
             if (pxHeight > maxPxHeight) {
@@ -177,7 +178,7 @@ internal class WebViewManager(
 
     private suspend fun updateSafeAreaInsets() {
         withContext(Dispatchers.Main) {
-            val insets = AndroidUtils.getCutoutAndStatusBarInsets(activity)
+            val insets = ViewUtils.getCutoutAndStatusBarInsets(activity)
             val safeAreaInsetsObject = String.format(
                 SAFE_AREA_JS_OBJECT,
                 insets[0],
@@ -363,15 +364,15 @@ internal class WebViewManager(
 
     private fun getWebViewMaxSizeX(activity: Activity): Int {
         if (messageContent.isFullBleed) {
-            return AndroidUtils.getFullbleedWindowWidth(activity)
+            return ViewUtils.getFullbleedWindowWidth(activity)
         }
         val margin = MARGIN_PX_SIZE * 2
-        return AndroidUtils.getWindowWidth(activity) - margin
+        return ViewUtils.getWindowWidth(activity) - margin
     }
 
     private fun getWebViewMaxSizeY(activity: Activity): Int {
         val margin = if (messageContent.isFullBleed) 0 else MARGIN_PX_SIZE * 2
-        return AndroidUtils.getWindowHeight(activity) - margin
+        return ViewUtils.getWindowHeight(activity) - margin
     }
 
     /**
@@ -394,7 +395,7 @@ internal class WebViewManager(
     fun setContentSafeAreaInsets(content: InAppMessageContent, activity: Activity) {
         var html = content.contentHtml
         var safeAreaInsetsScript = SET_SAFE_AREA_INSETS_SCRIPT
-        val insets = AndroidUtils.getCutoutAndStatusBarInsets(activity)
+        val insets = ViewUtils.getCutoutAndStatusBarInsets(activity)
         val safeAreaJSObject = String.format(
             SAFE_AREA_JS_OBJECT,
             insets[0],
@@ -416,7 +417,7 @@ internal class WebViewManager(
     }
 
     companion object {
-        private val MARGIN_PX_SIZE = AndroidUtils.dpToPx(24)
+        private val MARGIN_PX_SIZE = ViewUtils.dpToPx(24)
         const val JS_OBJ_NAME = "OSAndroid"
         const val GET_PAGE_META_DATA_JS_FUNCTION = "getPageMetaData()"
         const val SET_SAFE_AREA_INSETS_JS_FUNCTION = "setSafeAreaInsets(%s)"

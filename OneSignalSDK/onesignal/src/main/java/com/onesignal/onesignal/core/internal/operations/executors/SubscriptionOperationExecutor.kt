@@ -6,7 +6,7 @@ import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.backend.http.IHttpClient
 import com.onesignal.onesignal.core.internal.common.*
 import com.onesignal.onesignal.core.internal.device.IDeviceService
-import com.onesignal.onesignal.core.internal.logging.LogLevel
+import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.operations.*
 import org.json.JSONException

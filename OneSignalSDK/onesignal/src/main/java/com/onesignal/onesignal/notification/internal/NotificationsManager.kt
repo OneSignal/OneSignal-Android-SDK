@@ -10,7 +10,7 @@ import com.onesignal.onesignal.core.internal.common.events.ICallbackProducer
 import com.onesignal.onesignal.core.internal.common.events.IEventProducer
 import com.onesignal.onesignal.core.internal.common.time.ITime
 import com.onesignal.onesignal.core.internal.device.IDeviceService
-import com.onesignal.onesignal.core.internal.logging.LogLevel
+import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.core.internal.service.IStartableService

@@ -7,7 +7,6 @@ import com.onesignal.onesignal.location.ILocationManager
 import com.onesignal.onesignal.notification.INotificationsManager
 import com.onesignal.onesignal.core.user.IUserIdentityConflictResolver
 import com.onesignal.onesignal.core.user.IUserManager
-import kotlin.math.log
 
 interface IOneSignal {
     /**
@@ -45,6 +44,14 @@ interface IOneSignal {
     val iam: IIAMManager
 
     /**
+     * Access to debug the SDK in the additional information is required to diagnose any
+     * SDK-related issues.
+     *
+     * WARNING: This should not be used in a production setting.
+     */
+    val debug: IDebugManager
+
+    /**
      * Determines whether a user must consent to privacy prior
      * to their user data being sent up to OneSignal.  This
      * should be set to `true` prior to the invocation of
@@ -59,19 +66,17 @@ interface IOneSignal {
     var privacyConsent: Boolean
 
     /**
-     * Initialize the OneSignal SDK.  This should be called during
-     * startup of the application.
+     * Initialize the OneSignal SDK.  This should be called during startup of the application.
      *
      * @param context The Android context the SDK should use.
      */
     fun initWithContext(context: Context)
 
     /**
-     * Set the application ID the OneSignal SDK will be operating
-     * against.  This should be called during startup of the application.
-     * It can also be called again if the application ID needs to be
-     * changed.  Changing the application ID will automatically log out
-     * any current user, it's like starting over.
+     * Set the application ID the OneSignal SDK will be operating against.  This should be called
+     * during startup of the application.  It can also be called again if the application ID needs
+     * to be changed.  Changing the application ID will automatically log out any current user,
+     * it's like starting over.
      *
      * @param appId The application ID the OneSignal SDK is bound to.
      */

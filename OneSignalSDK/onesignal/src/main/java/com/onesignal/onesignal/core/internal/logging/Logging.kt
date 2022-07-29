@@ -1,5 +1,7 @@
 package com.onesignal.onesignal.core.internal.logging
 
+import com.onesignal.onesignal.core.LogLevel
+
 // This is singleton class that is designed to make OneSignal easy to use.
 //    - No instance management is required from the app developer.
 // This is a wrapper around an instance of OneSignalImp, no logic lives in this class

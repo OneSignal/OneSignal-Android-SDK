@@ -1,4 +1,4 @@
-package com.onesignal.onesignal.core.internal.logging
+package com.onesignal.onesignal.core
 
 enum class LogLevel {
     NONE,

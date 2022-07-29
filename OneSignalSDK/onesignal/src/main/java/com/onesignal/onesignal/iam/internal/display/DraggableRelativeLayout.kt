@@ -8,6 +8,7 @@ import android.widget.RelativeLayout
 import androidx.core.view.ViewCompat
 import androidx.customview.widget.ViewDragHelper
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
+import com.onesignal.onesignal.core.internal.common.ViewUtils
 
 internal class DraggableRelativeLayout(context: Context?) : RelativeLayout(context) {
     internal interface DraggableListener {
@@ -53,7 +54,7 @@ internal class DraggableRelativeLayout(context: Context?) : RelativeLayout(conte
         this.params = params
         params.offScreenYPos =
             params.messageHeight + params.posY + (Resources.getSystem().displayMetrics.heightPixels - params.messageHeight - params.posY) + EXTRA_PX_DISMISS
-        params.dismissingYVelocity = AndroidUtils.dpToPx(3000)
+        params.dismissingYVelocity = ViewUtils.dpToPx(3000)
         if (params.dragDirection == Params.DRAGGABLE_DIRECTION_UP) {
             params.offScreenYPos = -params.messageHeight - MARGIN_PX_SIZE
             params.dismissingYVelocity = -params.dismissingYVelocity
@@ -154,8 +155,8 @@ internal class DraggableRelativeLayout(context: Context?) : RelativeLayout(conte
     }
 
     companion object {
-        private val MARGIN_PX_SIZE = AndroidUtils.dpToPx(28)
-        private val EXTRA_PX_DISMISS = AndroidUtils.dpToPx(64)
+        private val MARGIN_PX_SIZE = ViewUtils.dpToPx(28)
+        private val EXTRA_PX_DISMISS = ViewUtils.dpToPx(64)
     }
 
     init {

@@ -4,7 +4,7 @@ import com.onesignal.onesignal.core.internal.application.IApplicationLifecycleHa
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.device.IDeviceService
 import com.onesignal.onesignal.location.ILocationManager
-import com.onesignal.onesignal.core.internal.logging.LogLevel
+import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.service.IBootstrapService
 

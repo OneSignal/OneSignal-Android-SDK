@@ -7,7 +7,7 @@ import com.onesignal.onesignal.core.internal.user.triggers.Trigger
 import com.onesignal.onesignal.core.user.IUserManager
 import com.onesignal.onesignal.core.user.subscriptions.ISubscription
 import com.onesignal.onesignal.core.user.subscriptions.SubscriptionList
-import com.onesignal.onesignal.core.internal.logging.LogLevel
+import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.models.*
 import com.onesignal.onesignal.core.internal.models.SubscriptionModelStore

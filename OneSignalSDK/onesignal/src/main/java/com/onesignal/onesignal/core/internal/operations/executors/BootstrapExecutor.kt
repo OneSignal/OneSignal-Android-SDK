@@ -2,7 +2,7 @@ package com.onesignal.onesignal.core.internal.operations.executors
 
 import com.onesignal.onesignal.core.internal.backend.http.CacheKeys
 import com.onesignal.onesignal.core.internal.backend.http.IHttpClient
-import com.onesignal.onesignal.core.internal.logging.LogLevel
+import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.operations.BootstrapOperation
 import com.onesignal.onesignal.core.internal.operations.IOperationExecutor

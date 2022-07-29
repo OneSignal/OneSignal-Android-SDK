@@ -1,6 +1,7 @@
 package com.onesignal.onesignal.core.internal
 
 import android.content.Context
+import com.onesignal.onesignal.core.IDebugManager
 import com.onesignal.onesignal.core.IOneSignal
 import com.onesignal.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.onesignal.core.internal.application.IApplicationService
@@ -9,7 +10,8 @@ import com.onesignal.onesignal.core.internal.common.events.CallbackProducer
 import com.onesignal.onesignal.core.internal.common.events.ICallbackProducer
 import com.onesignal.onesignal.core.internal.models.*
 import com.onesignal.onesignal.core.internal.operations.BootstrapOperation
-import com.onesignal.onesignal.core.internal.logging.LogLevel
+import com.onesignal.onesignal.core.LogLevel
+import com.onesignal.onesignal.core.internal.debug.DebugManager
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.onesignal.core.internal.service.*
@@ -43,6 +45,7 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
     override val location: ILocationManager get() = if (isInitialized) _location!! else throw Exception("Must call 'initWithContext' before use")
     override val user: IUserManager get() = if(isInitialized) _user!! else throw Exception("Must call 'initWithContext' before use")
     override val iam: IIAMManager get() = if(isInitialized) _iam!! else throw Exception("Must call 'initWithContext' before use")
+    override val debug: IDebugManager = DebugManager()
 
     // Services required by this class
     private var _user: IUserManager? = null

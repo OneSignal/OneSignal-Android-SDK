@@ -2,30 +2,17 @@ package com.onesignal.onesignal.iam.internal.display
 
 import android.annotation.TargetApi
 import android.app.Activity
-import android.webkit.JavascriptInterface
-import org.json.JSONException
-import android.annotation.SuppressLint
 import android.os.Build
-import android.os.Handler
-import android.webkit.WebView
-import android.os.Looper
 import android.util.Base64
-import android.view.View
-import com.onesignal.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.onesignal.core.internal.application.IApplicationService
-import com.onesignal.onesignal.core.internal.common.AndroidUtils
-import com.onesignal.onesignal.core.internal.logging.LogLevel
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.iam.internal.InAppMessage
 import com.onesignal.onesignal.iam.internal.InAppMessageContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
 import java.io.UnsupportedEncodingException
 import java.lang.Exception
-import java.util.*
 
 // Manages WebView instances by pre-loading them, displaying them, and closing them when dismissed.
 //   Includes a static map for pre-loading, showing, and dismissed so these events can't be duplicated.

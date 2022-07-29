@@ -1,10 +1,38 @@
 package com.onesignal.onesignal.core.internal.common
 
+import android.app.Activity
 import android.content.Context
+import android.graphics.Rect
 import android.net.ConnectivityManager
 import android.telephony.TelephonyManager
+import android.util.DisplayMetrics
+import android.view.View
+import java.lang.ref.WeakReference
 
 object DeviceUtils {
+    private val MARGIN_ERROR_PX_SIZE = ViewUtils.dpToPx(24)
+
+    /**
+     * Check if the keyboard is currently being shown.
+     * Does not work for cases when keyboard is full screen.
+     */
+    fun isKeyboardUp(activityWeakReference: WeakReference<Activity?>): Boolean {
+        val metrics = DisplayMetrics()
+        val visibleBounds = Rect()
+        var view: View? = null
+        var isOpen = false
+        if (activityWeakReference.get() != null) {
+            val window = activityWeakReference.get()!!.window
+            view = window.decorView
+            view.getWindowVisibleDisplayFrame(visibleBounds)
+            window.windowManager.defaultDisplay.getMetrics(metrics)
+        }
+        if (view != null) {
+            val heightDiff = metrics.heightPixels - visibleBounds.bottom
+            isOpen = heightDiff > MARGIN_ERROR_PX_SIZE
+        }
+        return isOpen
+    }
 
     fun getNetType(appContext: Context): Int? {
         val cm =
