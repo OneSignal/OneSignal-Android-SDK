@@ -12,7 +12,7 @@ buildscript {
         huaweiAgconnectVersion = '1.6.2.300'
         huaweiHMSPushVersion = '6.3.0.304'
         huaweiHMSLocationVersion = '4.0.0.300'
-        kotlinVersion = '1.4.32'
+        kotlinVersion = '1.6.20'
         ktlintVersion = '11.0.0'
         detektVersion = '1.21.0'
         onesignalGradlePluginVersion = '[0.14.0, 0.99.99]'

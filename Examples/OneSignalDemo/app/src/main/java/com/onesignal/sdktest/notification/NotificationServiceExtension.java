@@ -2,34 +2,34 @@ package com.onesignal.sdktest.notification;
 
 import android.content.Context;
 
-import com.onesignal.OSMutableNotification;
-import com.onesignal.OSNotification;
-import com.onesignal.OSNotificationOpenedResult;
-import com.onesignal.OSNotificationReceivedEvent;
-import com.onesignal.OneSignal;
+import com.onesignal.onesignal.core.LogLevel;
+import com.onesignal.onesignal.core.internal.logging.Logging;
+import com.onesignal.onesignal.notification.IActionButton;
+import com.onesignal.onesignal.notification.IMutableNotification;
+import com.onesignal.onesignal.notification.INotification;
+import com.onesignal.onesignal.notification.INotificationReceivedEvent;
+import com.onesignal.onesignal.notification.IRemoteNotificationReceivedHandler;
 import com.onesignal.sdktest.R;
 
-public class NotificationServiceExtension implements
-        OneSignal.OSRemoteNotificationReceivedHandler {
+public class NotificationServiceExtension implements IRemoteNotificationReceivedHandler {
 
    @Override
-   public void remoteNotificationReceived(Context context, OSNotificationReceivedEvent notificationReceivedEvent) {
-      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSRemoteNotificationReceivedHandler fired!" +
+   public void remoteNotificationReceived(Context context, INotificationReceivedEvent notificationReceivedEvent) {
+      Logging.log(LogLevel.VERBOSE, "OSRemoteNotificationReceivedHandler fired!" +
               " with OSNotificationReceived: " + notificationReceivedEvent.toString());
 
-      OSNotification notification = notificationReceivedEvent.getNotification();
+      INotification notification = notificationReceivedEvent.getNotification();
 
       if (notification.getActionButtons() != null) {
-         for (OSNotification.ActionButton button : notification.getActionButtons()) {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "ActionButton: " + button.toString());
+         for (IActionButton button : notification.getActionButtons()) {
+            Logging.log(LogLevel.VERBOSE, "ActionButton: " + button.toString());
          }
       }
 
-      OSMutableNotification mutableNotification = notification.mutableCopy();
+      IMutableNotification mutableNotification = notification.mutableCopy();
       mutableNotification.setExtender(builder -> builder.setColor(context.getResources().getColor(R.color.colorPrimary)));
 
       // If complete isn't call within a time period of 25 seconds, OneSignal internal logic will show the original notification
       notificationReceivedEvent.complete(mutableNotification);
    }
-
 }
