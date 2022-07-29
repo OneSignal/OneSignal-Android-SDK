@@ -10,6 +10,7 @@ public class ProfileUtil {
     public enum FieldType {
 
         APP_ID("App Id"),
+        ALIAS("Alias"),
         EMAIL("Email"),
         SMS("SMS"),
         EXTERNAL_USER_ID("External User Id"),
@@ -38,6 +39,21 @@ public class ProfileUtil {
             }
             if (appId.length() != 36) {
                 appIdTextInputLayout.setError(Text.INVALID_APP_ID);
+                return false;
+            }
+        } else {
+            appIdTextInputLayout.setError(Text.ERROR);
+            return false;
+        }
+        return true;
+    }
+
+    private static boolean isAliasValid(TextInputLayout appIdTextInputLayout) {
+        appIdTextInputLayout.setErrorEnabled(false);
+        if (appIdTextInputLayout.getEditText() != null) {
+            String aliasLabel = appIdTextInputLayout.getEditText().getText().toString().trim();
+            if (aliasLabel.isEmpty()) {
+                appIdTextInputLayout.setError(Text.ALIAS_LABEL_IS_REQUIRED);
                 return false;
             }
         } else {
@@ -115,6 +131,8 @@ public class ProfileUtil {
         switch (field) {
             case APP_ID:
                 return isAppIdValid(alertDialogTextInputLayout);
+            case ALIAS:
+                return isAliasValid(alertDialogTextInputLayout);
             case EMAIL:
                 return isEmailValid(alertDialogTextInputLayout);
             case SMS:

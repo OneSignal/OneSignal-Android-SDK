@@ -2,21 +2,27 @@
     
     <string name="app_name">OneSignal</string>
 
-    <string name="email">Email</string>
-    <string name="set_email">Set Email</string>
-
-    <string name="sms">SMS</string>
-    <string name="set_sms_number">Set SMs Number</string>
-
     <string name="continue_to_demo">Continue to demo</string>
 
     <string name="app">App</string>
     <string name="id_colon">Id:</string>
-    <string name="email_colon">Email:</string>
-    <string name="logout_email">Logout Email</string>
-    <string name="sms_colon">SMS:</string>
-    <string name="logout_sms">Logout SMS</string>
+
+    <string name="switch_user">Switch User</string>
+
+    <string name="aliases">Aliases</string>
     <string name="external_user_id_colon">External User Id:</string>
+    <string name="no_aliases_added">No Aliases Added</string>
+    <string name="add_alias">Add Alias</string>
+
+    <string name="emails">Emails</string>
+    <string name="no_emails_added">No Emails Added</string>
+    <string name="add_email">Add Email</string>
+    <string name="email_colon">Email:</string>
+
+    <string name="smss">SMSs</string>
+    <string name="no_smss_added">No SMSs Added</string>
+    <string name="add_sms">Add SMS</string>
+    <string name="sms_colon">SMS:</string>
 
     <string name="tags">Tags</string>
     <string name="no_tags_added">No Tags Added</string>
