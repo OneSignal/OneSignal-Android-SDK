@@ -1,10 +1,10 @@
 package com.onesignal.sdktest.callback;
 
-import android.util.Pair;
+import com.onesignal.sdktest.type.OutcomeEvent;
 
 public interface SendOutcomeAlertDialogCallback {
 
-    void onSuccess();
+    boolean onSuccess(OutcomeEvent outcomeEvent, String name, String value);
     void onFailure();
 
 }
