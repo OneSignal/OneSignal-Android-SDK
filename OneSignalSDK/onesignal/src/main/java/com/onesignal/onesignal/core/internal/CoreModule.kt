@@ -26,6 +26,8 @@ import com.onesignal.onesignal.core.internal.operations.impl.executors.UserOpera
 import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.core.internal.params.IWriteableParamsService
 import com.onesignal.onesignal.core.internal.params.impl.ParamsService
+import com.onesignal.onesignal.core.internal.permissions.IRequestPermissionService
+import com.onesignal.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.onesignal.core.internal.preferences.impl.PreferencesService
 import com.onesignal.onesignal.core.internal.service.IBootstrapService
@@ -63,6 +65,11 @@ object CoreModule {
         builder.register<PropertyOperationExecutor>().provides<IOperationExecutor>()
         builder.register<SubscriptionOperationExecutor>().provides<IOperationExecutor>()
         builder.register<UserOperationExecutor>().provides<IOperationExecutor>()
+
+        // Permissions
+        builder.register<RequestPermissionService>()
+            .provides<RequestPermissionService>()
+            .provides<IRequestPermissionService>()
 
         // Session
         builder.register<SessionService>().provides<ISessionService>()
