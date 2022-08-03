@@ -1,12 +1,12 @@
 package com.onesignal.onesignal.core.internal.operations.executors
 
-import com.onesignal.onesignal.core.internal.backend.api.IApiService
 import com.onesignal.onesignal.core.LogLevel
+import com.onesignal.onesignal.core.internal.backend.http.IHttpClient
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.operations.*
 
 class PropertyOperationExecutor(
-    private val _api: IApiService) : IOperationExecutor {
+    private val _http: IHttpClient) : IOperationExecutor {
 
     override val operations: List<String>
         get() = listOf(UPDATE_PROPERTY)

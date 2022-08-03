@@ -13,7 +13,7 @@ internal open class ModelStore<TModel>(
     private val _models: HashMap<String, TModel> = HashMap()
 
 
-    override fun add(id: String, model: TModel) {
+    override fun add(id: String, model: TModel, fireEvent: Boolean) {
         _models[id] = model
 
         // TODO: Persist the new model to storage.
@@ -21,7 +21,9 @@ internal open class ModelStore<TModel>(
         // listen for changes to this model
         model.subscribe(this)
 
-        _changeSubscription.fire { it.added(model) }
+        if(fireEvent) {
+            _changeSubscription.fire { it.added(model) }
+        }
     }
 
     override fun list() : Collection<String> {

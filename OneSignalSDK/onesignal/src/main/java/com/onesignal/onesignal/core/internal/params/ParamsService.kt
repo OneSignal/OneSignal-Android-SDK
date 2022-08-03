@@ -1,5 +1,6 @@
 package com.onesignal.onesignal.core.internal.params
 
+import com.onesignal.onesignal.core.internal.common.events.EventProducer
 import org.json.JSONArray
 
 // TODO: Implement
@@ -21,4 +22,13 @@ class ParamsService : IParamsService, IWriteableParamsService {
     override var requiresUserPrivacyConsent: Boolean? = null
     override var influenceParams: IParamsService.InfluenceParams = IParamsService.InfluenceParams()
     override var fcmParams: IParamsService.FCMParams = IParamsService.FCMParams()
+
+    private val _notifier = EventProducer<IParamsChangedHandler>()
+
+    override fun subscribe(handler: IParamsChangedHandler) = _notifier.subscribe(handler)
+    override fun unsubscribe(handler: IParamsChangedHandler) = _notifier.unsubscribe(handler)
+
+    override fun indicateChanged() {
+        _notifier.fire { it.onParamsChanged() }
+    }
 }

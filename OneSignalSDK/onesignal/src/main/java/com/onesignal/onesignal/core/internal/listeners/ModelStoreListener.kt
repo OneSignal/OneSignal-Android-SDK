@@ -5,14 +5,14 @@ import com.onesignal.onesignal.core.internal.modeling.IModelStoreChangeHandler
 import com.onesignal.onesignal.core.internal.modeling.Model
 import com.onesignal.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.onesignal.core.internal.operations.Operation
-import com.onesignal.onesignal.core.internal.service.IBootstrapService
+import com.onesignal.onesignal.core.internal.startup.IStartableService
 import java.io.Closeable
 
 abstract class ModelStoreListener<TModel>(
     private val store: IModelStore<TModel>,
-    private val opRepo: IOperationRepo) : IModelStoreChangeHandler<TModel>, IBootstrapService, Closeable where TModel : Model {
+    private val opRepo: IOperationRepo) : IModelStoreChangeHandler<TModel>, IStartableService, Closeable where TModel : Model {
 
-    override fun bootstrap() {
+    override fun start() {
         store.subscribe(this)
     }
 

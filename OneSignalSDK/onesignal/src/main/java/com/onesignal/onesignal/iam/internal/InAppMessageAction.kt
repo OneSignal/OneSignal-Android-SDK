@@ -14,7 +14,7 @@ internal class InAppMessageAction(json: JSONObject) : IInAppMessageAction {
      * UUID assigned by OneSignal for internal use.
      * Package-private to track which element was tapped to report to the OneSignal dashboard.
      */
-    override val clickId: String
+    override val clickId: String?
 
     /**
      * An optional click name entered defined by the app developer when creating the IAM
@@ -39,12 +39,12 @@ internal class InAppMessageAction(json: JSONObject) : IInAppMessageAction {
     /**
      * Outcome for action
      */
-    private val outcomes: MutableList<InAppMessageOutcome> = mutableListOf()
+    val outcomes: MutableList<InAppMessageOutcome> = mutableListOf()
 
     /**
      * Prompts for action
      */
-    private val prompts: MutableList<InAppMessagePrompt> = mutableListOf()
+    val prompts: MutableList<InAppMessagePrompt> = mutableListOf()
 
     /**
      * Tags for action

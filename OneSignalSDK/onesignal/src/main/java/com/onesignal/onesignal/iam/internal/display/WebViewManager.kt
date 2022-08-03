@@ -10,12 +10,12 @@ import android.webkit.WebView
 import android.view.View
 import com.onesignal.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.onesignal.core.internal.application.IApplicationService
-import com.onesignal.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.common.ViewUtils
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.iam.internal.InAppMessage
 import com.onesignal.onesignal.iam.internal.InAppMessageContent
+import com.onesignal.onesignal.iam.internal.lifecycle.IIAMLifecycleService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -35,6 +35,7 @@ internal class WebViewManager(
     private val message: InAppMessage,
     private var activity: Activity,
     private val messageContent: InAppMessageContent,
+    private val _lifecycle: IIAMLifecycleService,
     private val _applicationService: IApplicationService
 ) : IActivityLifecycleHandler {
 
@@ -63,10 +64,6 @@ internal class WebViewManager(
     // closing prevents IAM being redisplayed when the activity changes during an actionHandler
     private var closing = false
 
-    internal interface OneSignalGenericCallback {
-        fun onComplete()
-    }
-
     // Lets JS from the page send JSON payloads to this class
     internal inner class OSJavaScriptInterface {
         @JavascriptInterface
@@ -78,7 +75,7 @@ internal class WebViewManager(
                 when (messageType) {
                     Companion.EVENT_TYPE_RENDERING_COMPLETE -> handleRenderComplete(jsonObject)
                     Companion.EVENT_TYPE_ACTION_TAKEN ->                         // Added handling so that click actions won't trigger while dragging the IAM
-                        if (!messageView!!.isDragging) handleActionTaken(jsonObject)
+                        if (messageView?.isDragging == false) handleActionTaken(jsonObject)
                     Companion.EVENT_TYPE_RESIZE -> {}
                     Companion.EVENT_TYPE_PAGE_CHANGE -> handlePageChange(jsonObject)
                     else -> {}
@@ -138,11 +135,9 @@ internal class WebViewManager(
             val id = body.optString("id", null)
             closing = body.getBoolean("close")
             if (message.isPreview) {
-                // TODO: Implement
-//                OneSignal.getInAppMessageController().onMessageActionOccurredOnPreview(message, body)
+                _lifecycle.messageActionOccurredOnPreview(message, body)
             } else if (id != null) {
-                // TODO: Implement
-//                OneSignal.getInAppMessageController().onMessageActionOccurredOnMessage(message, body)
+                _lifecycle.messageActionOccurredOnMessage(message, body)
             }
             if (closing) {
                 // TODO: Should we fire and return?
@@ -154,8 +149,7 @@ internal class WebViewManager(
 
         @Throws(JSONException::class)
         private fun handlePageChange(jsonObject: JSONObject) {
-            // TODO: Implement
-//            OneSignal.getInAppMessageController().onPageChanged(message, jsonObject)
+            _lifecycle.pageChanged(message, jsonObject)
         }
     }
 
@@ -342,18 +336,15 @@ internal class WebViewManager(
         val self = this
         messageView!!.setMessageController(object : InAppMessageView.InAppMessageViewListener {
             override fun onMessageWasShown() {
-                // TODO: Implement
-                //OneSignal.getInAppMessageController().onMessageWasShown(message)
+                _lifecycle.messageWasShown(message)
             }
 
             override fun onMessageWillDismiss() {
-                // TODO: Implement
-//                OneSignal.getInAppMessageController().onMessageWillDismiss(message)
+                _lifecycle.messageWillDismiss(message)
             }
 
             override fun onMessageWasDismissed() {
-                // TODO: Implement
-//                OneSignal.getInAppMessageController().messageWasDismissed(message)
+                _lifecycle.messageWasDismissed(message)
                 _applicationService.removeActivityLifecycleHandler(self)
             }
         })
@@ -383,8 +374,7 @@ internal class WebViewManager(
             return
         }
         if (message != null && messageView != null) {
-            // TODO: Implement
-//            OneSignal.getInAppMessageController().onMessageWillDismiss(message)
+            _lifecycle.messageWillDismiss(message)
         }
         messageView!!.dismissAndAwaitNextMessage()
         dismissFired = false

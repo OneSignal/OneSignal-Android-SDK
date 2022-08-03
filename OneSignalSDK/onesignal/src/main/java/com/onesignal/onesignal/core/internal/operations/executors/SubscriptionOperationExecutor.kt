@@ -9,24 +9,29 @@ import com.onesignal.onesignal.core.internal.device.IDeviceService
 import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.operations.*
+import com.onesignal.onesignal.core.internal.user.ISubscriptionManager
 import org.json.JSONException
 import org.json.JSONObject
 import java.util.*
 
-class SubscriptionOperationExecutor(
+internal class SubscriptionOperationExecutor(
     private val _application: IApplicationService,
     private val _device: IDeviceService,
+    private val _subscriptionManager: ISubscriptionManager,
     private val _http: IHttpClient) : IOperationExecutor {
 
     override val operations: List<String>
-        get() = listOf(CREATE_SUBSCRIPTION, UPDATE_SUBSCRIPTION, DELETE_SUBSCRIPTION)
+        get() = listOf(CREATE_SUBSCRIPTION, CREATE_AND_ADD_SUBSCRIPTION, UPDATE_SUBSCRIPTION, DELETE_SUBSCRIPTION)
 
     override suspend fun executeAsync(operation: Operation) {
         Logging.log(LogLevel.DEBUG, "SubscriptionOperationExecutor(operation: $operation)")
 
         when (operation) {
             is CreateSubscriptionOperation -> {
-                createSubscription(operation)
+                createSubscription(operation.appId, operation.address, operation.id)
+            }
+            is CreateAndAddSubscriptionOperation -> {
+                createSubscription(operation.appId, operation.address, null)
             }
             is DeleteSubscriptionOperation -> {
 //                _api.deleteSubscriptionAsync(operation.id)
@@ -37,13 +42,13 @@ class SubscriptionOperationExecutor(
         }
     }
 
-    private suspend fun createSubscription(op: CreateSubscriptionOperation) {
+    private suspend fun createSubscription(appId: String, address: String, id: String?) {
         val json = JSONObject()
         try {
             // app_id required for all REST API calls
 
             // app_id required for all REST API calls
-            json.put("app_id", op.appId)
+            json.put("app_id", appId)
             json.put("device_type", _device.deviceType)
             json.put("device_model", Build.MODEL)
             json.put("device_os", Build.VERSION.RELEASE)
@@ -63,10 +68,10 @@ class SubscriptionOperationExecutor(
             json.put("carrier", DeviceUtils.getCarrierName(_application.appContext!!))
             json.put("rooted", RootToolsInternalMethods.isRooted)
 
-            json.put("identifier", op.address)
+            json.put("identifier", address)
         }
         catch(e: JSONException) {
-            Logging.error("Could not create JSON payload for $op", e)
+            Logging.error("Could not create JSON payload for create subscription", e)
         }
 
         val response = _http.post("players", json)
@@ -75,7 +80,13 @@ class SubscriptionOperationExecutor(
             if (responseJSON.has("id")) {
                 val subscriptionId: String = responseJSON.optString("id")
                 Logging.info("Device registered, SubscriptionId = $subscriptionId")
-                // TODO: Update the subscription ID to use the server side one
+
+                if(id == null) {
+                    _subscriptionManager.addPushSubscription(subscriptionId, address)
+                }
+                else {
+                    // TODO: Update the subscription ID to use the server side one. Do we need this?
+                }
             }
         }
         else {
@@ -103,6 +114,7 @@ class SubscriptionOperationExecutor(
 
     companion object {
         const val CREATE_SUBSCRIPTION = "create-subscription"
+        const val CREATE_AND_ADD_SUBSCRIPTION = "create-and-add-subscription"
         const val UPDATE_SUBSCRIPTION = "update-subscription"
         const val DELETE_SUBSCRIPTION = "delete-subscription"
 

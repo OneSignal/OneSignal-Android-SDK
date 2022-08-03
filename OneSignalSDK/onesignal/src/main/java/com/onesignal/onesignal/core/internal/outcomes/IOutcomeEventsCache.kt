@@ -47,8 +47,7 @@ interface IOutcomeEventsCache {
     /**
      * Deletes cached unique outcome notifications whose ids do not exist inside of the NotificationTable.TABLE_NAME
      */
-    @WorkerThread
-    fun cleanCachedUniqueOutcomeEventNotifications(
+    suspend fun cleanCachedUniqueOutcomeEventNotifications(
         notificationTableName: String,
         notificationIdColumnName: String
     )

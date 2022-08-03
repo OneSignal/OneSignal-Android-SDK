@@ -8,6 +8,7 @@ import com.onesignal.onesignal.notification.internal.bundle.INotificationBundleP
 import com.onesignal.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.onesignal.notification.internal.common.NotificationFormatHelper
 import com.onesignal.onesignal.notification.internal.generation.INotificationGenerationWorkManager
+import com.onesignal.onesignal.notification.internal.lifecycle.INotificationLifecycleService
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -71,14 +72,6 @@ internal class NotificationBundleProcessor(
 
         bundleResult.setOneSignalPayload(true)
         maximizeButtonsFromBundle(bundle)
-
-        // TODO: Implement
-//        if (OSInAppMessagePreviewHandler.inAppMessagePreviewHandled(context, bundle)) {
-//            // Return early, we don't want the extender service or etc. to fire for IAM previews
-//            bundleResult.setInAppPreviewShown(true)
-//            bundleReceiverCallback.onBundleProcessed(bundleResult)
-//            return
-//        }
 
         val jsonPayload = JSONUtils.bundleAsJSONObject(bundle)
         val timestamp = _time.currentTimeMillis / 1000L

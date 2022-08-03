@@ -34,7 +34,7 @@ import com.onesignal.onesignal.core.internal.permissions.impl.AlertDialogPreprom
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.onesignal.core.internal.permissions.IRequestPermissionService
-import com.onesignal.onesignal.core.internal.service.IBootstrapService
+import com.onesignal.onesignal.core.internal.startup.IStartableService
 import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.onesignal.notification.internal.permissions.INotificationPermissionController
 import kotlinx.coroutines.channels.Channel
@@ -43,12 +43,12 @@ import kotlinx.coroutines.runBlocking
 class NotificationPermissionController(
     private val _application: IApplicationService,
     private val _requestPermission: IRequestPermissionService
-) : IRequestPermissionService.PermissionCallback, IBootstrapService,
+) : IRequestPermissionService.PermissionCallback, IStartableService,
     INotificationPermissionController {
 
     private val _commChannel = Channel<Boolean?>()
 
-    override fun bootstrap() {
+    override fun start() {
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)
     }
 

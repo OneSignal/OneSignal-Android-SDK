@@ -3,8 +3,7 @@ package com.onesignal.onesignal.notification.internal
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.time.ITime
 import com.onesignal.onesignal.core.internal.preferences.IPreferencesService
-import com.onesignal.onesignal.core.internal.service.IBootstrapService
-import com.onesignal.onesignal.core.internal.service.IStartableService
+import com.onesignal.onesignal.core.internal.startup.IStartableService
 import com.onesignal.onesignal.core.internal.service.ServiceBuilder
 import com.onesignal.onesignal.notification.INotificationsManager
 import com.onesignal.onesignal.notification.internal.badges.impl.BadgeCountUpdater
@@ -38,9 +37,10 @@ import com.onesignal.onesignal.notification.internal.generation.impl.Notificatio
 import com.onesignal.onesignal.notification.internal.lifecycle.INotificationLifecycleService
 import com.onesignal.onesignal.notification.internal.lifecycle.impl.NotificationLifecycleService
 import com.onesignal.onesignal.notification.internal.limiting.INotificationLimitManager
+import com.onesignal.onesignal.notification.internal.listeners.PushTokenListener
 import com.onesignal.onesignal.notification.internal.open.INotificationOpenedProcessor
 import com.onesignal.onesignal.notification.internal.open.INotificationOpenedProcessorHMS
-import com.onesignal.onesignal.notification.internal.open.NotificationOpenedProcessorHMS
+import com.onesignal.onesignal.notification.internal.open.impl.NotificationOpenedProcessorHMS
 import com.onesignal.onesignal.notification.internal.permissions.INotificationPermissionController
 import com.onesignal.onesignal.notification.internal.receivereceipt.IReceiveReceiptProcessor
 import com.onesignal.onesignal.notification.internal.receivereceipt.IReceiveReceiptWorkManager
@@ -74,7 +74,7 @@ object NotificationModule {
 
         builder.register<NotificationPermissionController>()
                .provides<INotificationPermissionController>()
-               .provides<IBootstrapService>()
+               .provides<IStartableService>()
 
         builder.register<NotificationLifecycleService>()
                .provides<INotificationLifecycleService>()
@@ -93,8 +93,12 @@ object NotificationModule {
         builder.register<ReceiveReceiptWorkManager>().provides<IReceiveReceiptWorkManager>()
         builder.register<ReceiveReceiptProcessor>().provides<IReceiveReceiptProcessor>()
 
+        builder.register<PushTokenListener>().provides<IStartableService>()
+
         builder.register<NotificationsManager>()
                .provides<INotificationsManager>()
+               .provides<INotificationActivityOpener>()
+               .provides<IPushTokenManager>()
                .provides<IStartableService>()
     }
 }

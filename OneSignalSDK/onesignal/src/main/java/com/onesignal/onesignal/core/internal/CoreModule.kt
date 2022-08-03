@@ -2,8 +2,8 @@ package com.onesignal.onesignal.core.internal
 
 import com.onesignal.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.onesignal.core.internal.application.IApplicationService
-import com.onesignal.onesignal.core.internal.backend.api.ApiService
-import com.onesignal.onesignal.core.internal.backend.api.IApiService
+import com.onesignal.onesignal.core.internal.backend.IParamsBackendService
+import com.onesignal.onesignal.core.internal.backend.ParamsBackendService
 import com.onesignal.onesignal.core.internal.backend.http.HttpClient
 import com.onesignal.onesignal.core.internal.backend.http.IHttpClient
 import com.onesignal.onesignal.core.internal.common.time.ITime
@@ -12,6 +12,8 @@ import com.onesignal.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.onesignal.core.internal.database.impl.DatabaseProvider
 import com.onesignal.onesignal.core.internal.device.DeviceService
 import com.onesignal.onesignal.core.internal.device.IDeviceService
+import com.onesignal.onesignal.core.internal.influence.IInfluenceManager
+import com.onesignal.onesignal.core.internal.influence.impl.InfluenceManager
 import com.onesignal.onesignal.core.internal.listeners.IdentityModelStoreListener
 import com.onesignal.onesignal.core.internal.listeners.PropertiesModelStoreListener
 import com.onesignal.onesignal.core.internal.listeners.SubscriptionModelStoreListener
@@ -23,19 +25,24 @@ import com.onesignal.onesignal.core.internal.operations.executors.BootstrapExecu
 import com.onesignal.onesignal.core.internal.operations.executors.PropertyOperationExecutor
 import com.onesignal.onesignal.core.internal.operations.executors.SubscriptionOperationExecutor
 import com.onesignal.onesignal.core.internal.operations.executors.UserOperationExecutor
-import com.onesignal.onesignal.core.internal.params.IParamsService
-import com.onesignal.onesignal.core.internal.params.IWriteableParamsService
-import com.onesignal.onesignal.core.internal.params.ParamsService
+import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsCache
+import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsFactory
+import com.onesignal.onesignal.core.internal.outcomes.OutcomeEventsController
+import com.onesignal.onesignal.core.internal.outcomes.data.OSOutcomeEventsCache
+import com.onesignal.onesignal.core.internal.outcomes.data.OSOutcomeEventsFactory
+import com.onesignal.onesignal.core.internal.params.*
 import com.onesignal.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.onesignal.core.internal.preferences.PreferencesService
-import com.onesignal.onesignal.core.internal.service.IBootstrapService
+import com.onesignal.onesignal.core.internal.startup.IStartableService
 import com.onesignal.onesignal.core.internal.service.ServiceBuilder
 import com.onesignal.onesignal.core.internal.session.ISessionService
 import com.onesignal.onesignal.core.internal.session.SessionService
+import com.onesignal.onesignal.core.internal.startup.StartupService
 import com.onesignal.onesignal.core.internal.user.ISubscriptionManager
 import com.onesignal.onesignal.core.internal.user.IUserSwitcher
+import com.onesignal.onesignal.core.internal.user.SubscriptionManager
 import com.onesignal.onesignal.core.internal.user.UserManager
 import com.onesignal.onesignal.core.user.IUserManager
 
@@ -44,23 +51,24 @@ object CoreModule {
         // Low Level Services
         builder.register<PreferencesService>()
                .provides<IPreferencesService>()
-               .provides<IBootstrapService>()
+               .provides<IStartableService>()
         builder.register<HttpClient>().provides<IHttpClient>()
-        builder.register<ApiService>().provides<IApiService>()
         builder.register<ApplicationService>().provides<IApplicationService>()
         builder.register<DeviceService>().provides<IDeviceService>()
+        builder.register<Time>().provides<ITime>()
+        builder.register<DatabaseProvider>().provides<IDatabaseProvider>()
+        builder.register<StartupService>().provides<StartupService>()
+
+        // Params (Config)
         builder.register<ParamsService>()
                .provides<IParamsService>()
                .provides<IWriteableParamsService>()
-        builder.register<Time>().provides<ITime>()
-
-        // Database
-        builder.register<DatabaseProvider>().provides<IDatabaseProvider>()
+        builder.register<ParamsBackendService>().provides<IParamsBackendService>()
 
         // Operations
         builder.register<OperationRepo>()
                .provides<IOperationRepo>()
-               .provides<IBootstrapService>()
+               .provides<IStartableService>()
         builder.register<BootstrapExecutor>().provides<IOperationExecutor>()
         builder.register<PropertyOperationExecutor>().provides<IOperationExecutor>()
         builder.register<SubscriptionOperationExecutor>().provides<IOperationExecutor>()
@@ -71,8 +79,18 @@ object CoreModule {
                .provides<RequestPermissionService>()
                .provides<IRequestPermissionService>()
 
+        // Outcomes
+        builder.register<OutcomeEventsController>().provides<OutcomeEventsController>()
+        builder.register<OSOutcomeEventsFactory>().provides<IOutcomeEventsFactory>()
+        builder.register<OSOutcomeEventsCache>().provides<IOutcomeEventsCache>()
+
+        // Influence
+        builder.register<InfluenceManager>().provides<IInfluenceManager>()
+
         // Session
-        builder.register<SessionService>().provides<ISessionService>()
+        builder.register<SessionService>()
+               .provides<ISessionService>()
+               .provides<IStartableService>()
 
         // Model Stores
         builder.register<IdentityModelStore>().provides<IdentityModelStore>()
@@ -81,13 +99,15 @@ object CoreModule {
         builder.register<ConfigModelStore>().provides<ConfigModelStore>()
         builder.register<SessionModelStore>().provides<SessionModelStore>()
 
-        builder.register<IdentityModelStoreListener>().provides<IBootstrapService>()
-        builder.register<SubscriptionModelStoreListener>().provides<IBootstrapService>()
-        builder.register<PropertiesModelStoreListener>().provides<IBootstrapService>()
+        // Model Store -> Operation Listeners
+        builder.register<IdentityModelStoreListener>().provides<IStartableService>()
+        builder.register<SubscriptionModelStoreListener>().provides<IStartableService>()
+        builder.register<PropertiesModelStoreListener>().provides<IStartableService>()
 
+        // User
+        builder.register<SubscriptionManager>().provides<ISubscriptionManager>()
         builder.register<UserManager>()
                .provides<IUserManager>()
-               .provides<ISubscriptionManager>()
                .provides<IUserSwitcher>()
     }
 }

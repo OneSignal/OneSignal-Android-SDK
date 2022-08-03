@@ -2,7 +2,7 @@ package com.onesignal.onesignal.iam.internal.prompt
 
 internal abstract class InAppMessagePrompt() {
     private var prompted = false
-    abstract fun handlePrompt(callback: OSPromptActionCompletionCallback?)
+    abstract suspend fun handlePrompt() : PromptActionResult?
     abstract val promptKey: String
     fun hasPrompted(): Boolean {
         return prompted

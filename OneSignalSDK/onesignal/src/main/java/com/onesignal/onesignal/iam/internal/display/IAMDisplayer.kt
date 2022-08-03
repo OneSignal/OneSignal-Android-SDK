@@ -8,6 +8,7 @@ import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.iam.internal.InAppMessage
 import com.onesignal.onesignal.iam.internal.InAppMessageContent
+import com.onesignal.onesignal.iam.internal.lifecycle.IIAMLifecycleService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -24,7 +25,8 @@ import java.lang.Exception
 //       add it's prepared WebView add add it to the Activity.
 @TargetApi(Build.VERSION_CODES.KITKAT)
 internal class IAMDisplayer(
-    private val _applicationService: IApplicationService
+    private val _applicationService: IApplicationService,
+    private val _lifecycle: IIAMLifecycleService,
 ) {
     private var lastInstance: WebViewManager? = null
 
@@ -73,7 +75,7 @@ internal class IAMDisplayer(
                 content.contentHtml!!.toByteArray(charset("UTF-8")),
                 Base64.NO_WRAP
             )
-            val webViewManager = WebViewManager(message, currentActivity, content, _applicationService)
+            val webViewManager = WebViewManager(message, currentActivity, content, _lifecycle, _applicationService)
             lastInstance = webViewManager
 
             if (content.isFullBleed) {

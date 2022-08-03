@@ -53,6 +53,27 @@ object JSONUtils {
         }
     }
 
+    fun newStringMapFromJSONObject(jsonObject: JSONObject) : Map<String, String> {
+        val keys: Iterator<String> = jsonObject.keys()
+        val result = mutableMapOf<String, String>()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            try {
+                val value = jsonObject.opt(key)
+                if (value is JSONArray || value is JSONObject)
+                    Logging.error("Omitting key '$key'! sendTags DO NOT supported nested values!")
+                else if (jsonObject.isNull(key) || "" == value) {
+                    result[key] = ""
+                }
+                else
+                    result[key] = value.toString()
+            } catch (t: Throwable) {
+            }
+        }
+
+        return result
+    }
+
     // Creates a new Set<String> from a Set String by converting and iterating a JSONArray
     fun newStringSetFromJSONArray(jsonArray: JSONArray): Set<String> {
         val stringSet: MutableSet<String> = mutableSetOf()
@@ -85,4 +106,52 @@ object JSONUtils {
         return strJsonBody
     }
 
+    /**
+     * Compare two JSONArrays too determine if they are equal or not
+     */
+    fun compareJSONArrays(jsonArray1: JSONArray?, jsonArray2: JSONArray?): Boolean {
+        // If both JSONArrays are null, they are equal
+        if (jsonArray1 == null && jsonArray2 == null) return true
+
+        // If one JSONArray is null but not the other, they are not equal
+        if (jsonArray1 == null || jsonArray2 == null) return false
+
+        // If one JSONArray is a different size then the other, they are not equal
+        if (jsonArray1.length() != jsonArray2.length()) return false
+        try {
+            L1@ for (i in 0 until jsonArray1.length()) {
+                for (j in 0 until jsonArray2.length()) {
+                    val obj1 = normalizeType(jsonArray1[i])
+                    val obj2 = normalizeType(jsonArray2[j])
+                    // Make sure jsonArray1 current item exists somewhere inside jsonArray2
+                    // If item found continue looping
+                    if (obj1 == obj2) continue@L1
+                }
+
+                // Could not find current item from jsonArray1 inside jsonArray2, so they are not equal
+                return false
+            }
+        } catch (e: JSONException) {
+            e.printStackTrace()
+
+            // Exception thrown, return false
+            return false
+        }
+
+        // JSONArrays are equal
+        return true
+    }
+
+    // Converts Java types that are equivalent in the JSON format to the same types.
+    // This allows for assertEquals on two values from JSONObject.get to test values as long as it
+    //   returns in the same JSON output.
+    fun normalizeType(`object`: Any): Any? {
+        val clazz: Class<*> = `object`.javaClass
+        if (clazz == Int::class.java)
+            return (`object` as Int?)?.let { java.lang.Long.valueOf(it.toLong()) }
+        return if (clazz == Float::class.java) (`object` as Float?)?.let {
+            java.lang.Double.valueOf(
+                it.toDouble())
+        } else `object`
+    }
 }

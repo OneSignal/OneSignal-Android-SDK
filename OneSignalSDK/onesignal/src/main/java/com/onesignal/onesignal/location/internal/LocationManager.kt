@@ -6,17 +6,17 @@ import com.onesignal.onesignal.core.internal.device.IDeviceService
 import com.onesignal.onesignal.location.ILocationManager
 import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.logging.Logging
-import com.onesignal.onesignal.core.internal.service.IBootstrapService
+import com.onesignal.onesignal.core.internal.startup.IStartableService
 
 class LocationManager (
     private val _applicationService: IApplicationService,
-    private val _deviceService: IDeviceService) : ILocationManager, IBootstrapService, IApplicationLifecycleHandler {
+    private val _deviceService: IDeviceService) : ILocationManager, IStartableService, IApplicationLifecycleHandler {
 
     private var _locationController: ILocationController? = null
 
     override var isLocationShared: Boolean = false
 
-    override fun bootstrap() {
+    override fun start() {
         _locationController = if (_deviceService.isGooglePlayServicesAvailable) {
             GmsLocationController()
         } else if(_deviceService.isHMSAvailable) {

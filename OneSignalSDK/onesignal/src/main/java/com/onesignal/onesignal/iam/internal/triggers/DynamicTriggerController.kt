@@ -1,11 +1,13 @@
 package com.onesignal.onesignal.iam.internal.triggers
 
+import com.onesignal.onesignal.core.internal.common.events.EventProducer
+import com.onesignal.onesignal.core.internal.common.events.IEventNotifier
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.iam.internal.Trigger
 import java.util.*
 import kotlin.math.abs
 
-internal class DynamicTriggerController(triggerObserver: DynamicTriggerControllerObserver) {
+internal class DynamicTriggerController : IEventNotifier<DynamicTriggerController.DynamicTriggerControllerObserver> {
     internal interface DynamicTriggerControllerObserver {
         // Alerts the observer that a trigger evaluated to true
         fun messageDynamicTriggerCompleted(triggerId: String?)
@@ -14,12 +16,8 @@ internal class DynamicTriggerController(triggerObserver: DynamicTriggerControlle
         fun messageTriggerConditionChanged()
     }
 
-    private val observer: DynamicTriggerControllerObserver
+    private val event = EventProducer<DynamicTriggerControllerObserver>()
     private val scheduledMessages: MutableList<String> = mutableListOf()
-
-    init {
-        observer = triggerObserver
-    }
 
     fun dynamicTriggerShouldFire(trigger: Trigger): Boolean {
         if (trigger.value == null)
@@ -52,7 +50,7 @@ internal class DynamicTriggerController(triggerObserver: DynamicTriggerControlle
                     trigger.operatorType
                 )
             ) {
-                observer.messageDynamicTriggerCompleted(triggerId)
+                event.fire { it.messageDynamicTriggerCompleted(triggerId) }
                 return true
             }
             val offset = requiredTimeInterval - currentTimeInterval
@@ -65,7 +63,7 @@ internal class DynamicTriggerController(triggerObserver: DynamicTriggerControlle
             DynamicTriggerTimer.scheduleTrigger(object : TimerTask() {
                 override fun run() {
                     scheduledMessages.remove(triggerId)
-                    observer.messageTriggerConditionChanged()
+                    event.fire {  it.messageTriggerConditionChanged() }
                 }
             }, triggerId, offset)
             scheduledMessages.add(triggerId)
@@ -119,4 +117,7 @@ internal class DynamicTriggerController(triggerObserver: DynamicTriggerControlle
             return abs(left - right) < REQUIRED_ACCURACY
         }
     }
+
+    override fun subscribe(handler: DynamicTriggerControllerObserver) = event.subscribe(handler)
+    override fun unsubscribe(handler: DynamicTriggerControllerObserver) = event.unsubscribe(handler)
 }

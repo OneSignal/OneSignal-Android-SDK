@@ -2,57 +2,56 @@ package com.onesignal.onesignal.iam.internal.preview
 
 import android.app.Activity
 import android.os.Build
-import android.os.Bundle
 import androidx.annotation.ChecksSdkIntAtLeast
 import com.onesignal.onesignal.core.internal.application.IApplicationService
-import com.onesignal.onesignal.core.internal.common.JSONUtils
 import com.onesignal.onesignal.core.internal.common.time.ITime
-import com.onesignal.onesignal.iam.internal.IAMManager
-import com.onesignal.onesignal.notification.internal.NotificationsManager
+import com.onesignal.onesignal.core.internal.startup.IStartableService
+import com.onesignal.onesignal.iam.internal.IIAMDisplayer
+import com.onesignal.onesignal.notification.internal.INotificationActivityOpener
 import com.onesignal.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.onesignal.notification.internal.common.NotificationGenerationJob
 import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.onesignal.notification.internal.display.INotificationDisplayer
-import kotlinx.coroutines.runBlocking
+import com.onesignal.onesignal.notification.internal.lifecycle.INotificationLifecycleCallback
+import com.onesignal.onesignal.notification.internal.lifecycle.INotificationLifecycleService
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
 internal class InAppMessagePreviewHandler(
-    private val _iamManager: IAMManager,
+    private val _iamDisplayer: IIAMDisplayer,
     private val _applicationService: IApplicationService,
     private val _notificationDisplayer: INotificationDisplayer,
-    private val _notificationManager: NotificationsManager,
+    private val _notificationActivityOpener: INotificationActivityOpener,
+    private val _notificationLifeCycle: INotificationLifecycleService,
     private val _time: ITime
-) {
+) : IStartableService, INotificationLifecycleCallback {
 
-    fun notificationReceived(bundle: Bundle): Boolean {
-        val pushPayloadJson = JSONUtils.bundleAsJSONObject(bundle)
-        // Show In-App message preview it is in the payload & the app is in focus
-        val previewUUID = inAppPreviewPushUUID(pushPayloadJson) ?: return false
-
-        // TODO: Address blocking
-        runBlocking {
-            // If app is in focus display the IAMs preview now
-            if (_applicationService.isInForeground) {
-                _iamManager.displayPreviewMessage(previewUUID)
-            } else if (shouldDisplayNotification()) {
-                val generationJob = NotificationGenerationJob(pushPayloadJson, _time)
-                _notificationDisplayer.displayNotification(generationJob)
-            }
-        }
-        return true
+    override fun start() {
+        _notificationLifeCycle.set(this)
     }
 
-    fun notificationOpened(activity: Activity, jsonData: JSONObject): Boolean {
+    override suspend fun canReceiveNotification(jsonPayload: JSONObject): Boolean {
+        // Show In-App message preview it is in the payload & the app is in focus
+        val previewUUID = inAppPreviewPushUUID(jsonPayload) ?: return true
+
+        // If app is in focus display the IAMs preview now
+        if (_applicationService.isInForeground) {
+            _iamDisplayer.displayPreviewMessage(previewUUID)
+        } else if (shouldDisplayNotification()) {
+            val generationJob = NotificationGenerationJob(jsonPayload, _time)
+            _notificationDisplayer.displayNotification(generationJob)
+        }
+
+        return false
+    }
+
+    override suspend fun canOpenNotification(activity: Activity, jsonData: JSONObject): Boolean {
         val previewUUID = inAppPreviewPushUUID(jsonData) ?: return false
 
-        _notificationManager.openDestinationActivity(activity, JSONArray().put(jsonData))
+        _notificationActivityOpener.openDestinationActivity(activity, JSONArray().put(jsonData))
 
-        // TODO: Address blocking
-        runBlocking {
-            _iamManager.displayPreviewMessage(previewUUID)
-        }
+        _iamDisplayer.displayPreviewMessage(previewUUID)
 
         return true
     }

@@ -116,7 +116,11 @@ object AndroidUtils {
         return Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1
     }
 
-    private fun openURLInBrowser(appContext: Context, uri: Uri) {
+    fun openURLInBrowser(appContext: Context, url: String) {
+        openURLInBrowser(appContext, Uri.parse(url.trim { it <= ' ' }))
+    }
+
+    fun openURLInBrowser(appContext: Context, uri: Uri) {
         val intent = openURLInBrowserIntent(uri)
         appContext.startActivity(intent)
     }

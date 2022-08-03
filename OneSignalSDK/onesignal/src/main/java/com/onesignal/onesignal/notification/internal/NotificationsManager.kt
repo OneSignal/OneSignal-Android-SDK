@@ -4,17 +4,15 @@ import android.app.Activity
 import com.onesignal.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.*
-import com.onesignal.onesignal.core.internal.common.events.CallbackProducer
-import com.onesignal.onesignal.core.internal.common.events.EventProducer
-import com.onesignal.onesignal.core.internal.common.events.ICallbackProducer
-import com.onesignal.onesignal.core.internal.common.events.IEventProducer
 import com.onesignal.onesignal.core.internal.common.time.ITime
 import com.onesignal.onesignal.core.internal.device.IDeviceService
 import com.onesignal.onesignal.core.LogLevel
+import com.onesignal.onesignal.core.internal.common.events.*
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.params.IParamsChangedHandler
 import com.onesignal.onesignal.core.internal.params.IParamsService
-import com.onesignal.onesignal.core.internal.service.IStartableService
-import com.onesignal.onesignal.core.internal.user.ISubscriptionManager
+import com.onesignal.onesignal.core.internal.startup.IStartableService
+import com.onesignal.onesignal.core.user.IUserManager
 import com.onesignal.onesignal.notification.*
 import com.onesignal.onesignal.notification.internal.analytics.IAnalyticsTracker
 import com.onesignal.onesignal.notification.internal.channels.INotificationChannelManager
@@ -32,11 +30,23 @@ import com.onesignal.onesignal.notification.internal.registration.impl.PushRegis
 import com.onesignal.onesignal.notification.internal.registration.impl.PushRegistratorHMS
 import com.onesignal.onesignal.notification.internal.restoration.INotificationRestoreWorkManager
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
+
+interface INotificationActivityOpener {
+    suspend fun openDestinationActivity(activity: Activity, pushPayloads: JSONArray)
+}
+
+interface IPushTokenManager : IEventNotifier<IPushTokenChangedHandler> {
+    /** The push token for this device **/
+    val pushToken: String?
+}
+
+interface IPushTokenChangedHandler {
+    fun onPushTokenChanged(pushToken: String?)
+}
 
 /**
  * The notification manager is responsible for the management of notifications
@@ -47,7 +57,7 @@ internal class NotificationsManager(
     private val _applicationService: IApplicationService,
     private val _paramsService: IParamsService,
     private val _notificationPermissionController: INotificationPermissionController,
-    private val _pushSubscriber: ISubscriptionManager,
+    private val _userManager: IUserManager,
     private val _notificationRestoreWorkManager: INotificationRestoreWorkManager,
     private val _notificationLifecycleService: INotificationLifecycleService,
     private val _analyticsTracker: IAnalyticsTracker,
@@ -55,51 +65,53 @@ internal class NotificationsManager(
     private val _receiveReceiptWorkManager: IReceiveReceiptWorkManager,
     private val _time: ITime
 
-) : INotificationsManager, IStartableService, INotificationLifecycleEventHandler {
+) : INotificationsManager,
+    IStartableService,
+    INotificationActivityOpener,
+    IPushTokenManager,
+    INotificationLifecycleEventHandler,
+    IApplicationLifecycleHandler,
+    IParamsChangedHandler {
+
     override var permissionStatus: IPermissionState = PermissionState(false)
     override var unsubscribeWhenNotificationsAreDisabled: Boolean = false
-    private var _pushRegistrator: IPushRegistrator? = null
-    private val _permissionChangedNotifier: IEventProducer<IPermissionChangedHandler> = EventProducer()
-    private val _willShowNotificationNotifier: ICallbackProducer<INotificationWillShowInForegroundHandler> = CallbackProducer()
-    private val _notificationOpenedNotifier: ICallbackProducer<INotificationOpenedHandler> = CallbackProducer()
+    override var pushToken: String? = null
+
+    private val _permissionChangedNotifier = EventProducer<IPermissionChangedHandler>()
+    private val _willShowNotificationNotifier = CallbackProducer<INotificationWillShowInForegroundHandler>()
+    private val _notificationOpenedNotifier = CallbackProducer<INotificationOpenedHandler>()
+    private val _pushTokenChangedNotifier = EventProducer<IPushTokenChangedHandler>()
+
     private val _unprocessedOpenedNotifs: ArrayDeque<JSONArray> = ArrayDeque()
 
-    override suspend fun start() {
+    override fun start() {
         _notificationLifecycleService.subscribe(this)
-
-        if (_deviceService.isFireOSDeviceType)
-            _pushRegistrator = PushRegistratorADM()
-        else if (_deviceService.isAndroidDeviceType) {
-            if (_deviceService.hasFCMLibrary())
-                _pushRegistrator = PushRegistratorFCM(_paramsService, _applicationService, _deviceService)
-        } else {
-            _pushRegistrator = PushRegistratorHMS(_deviceService)
-        }
-
-        // Refresh the notification permissions whenever we come back into focus
-        _applicationService.addApplicationLifecycleHandler(object: IApplicationLifecycleHandler {
-            override fun onFocus() = runBlocking {
-                onRefresh()
-            }
-
-            override fun onUnfocused() { }
-        })
-
-        _channelManager.processChannelList(_paramsService.notificationChannels)
-
-        onRefresh()
+        _applicationService.addApplicationLifecycleHandler(this)
+        _paramsService.subscribe(this)
     }
 
-    private suspend fun onRefresh() {
+    override fun onParamsChanged() {
+        // Refresh the notification permissions whenever we come back into focus
+        _channelManager.processChannelList(_paramsService.notificationChannels)
+
+        suspendifyOnThread {
+            retrievePushToken()
+            refreshNotificationState()
+        }
+    }
+
+    override fun onFocus() = suspendifyOnThread {
+        refreshNotificationState()
+    }
+
+    override fun onUnfocused() { }
+
+    private suspend fun refreshNotificationState() {
         // ensure all notifications for this app have been restored to the notification panel
         _notificationRestoreWorkManager.beginEnqueueingWork(_applicationService.appContext!!, false)
 
         val isEnabled = NotificationHelper.areNotificationsEnabled(_applicationService.appContext!!)
         setPermissionStatusAndFire(isEnabled)
-
-        if(isEnabled) {
-            registerAndSubscribe()
-        }
     }
 
     override suspend fun requestPermission() : Boolean? {
@@ -118,10 +130,6 @@ internal class NotificationsManager(
         // occurred.
         if(result != null) {
             setPermissionStatusAndFire(result)
-
-            if(result) {
-                registerAndSubscribe()
-            }
         }
 
         return true
@@ -140,13 +148,26 @@ internal class NotificationsManager(
         }
     }
 
-    private suspend fun registerAndSubscribe() {
-        // if there's already a subscription, nothing to do.
-        if (_pushSubscriber.subscriptions.push != null)
+    private suspend fun retrievePushToken() {
+        // if there's already a push token, nothing to do.
+        if (pushToken != null)
             return;
 
-        val registerResult = _pushRegistrator!!.registerForPush(_applicationService.appContext!!)
+        val pushRegistrator = if (_deviceService.isFireOSDeviceType)
+            PushRegistratorADM()
+        else if (_deviceService.isAndroidDeviceType) {
+            if (_deviceService.hasFCMLibrary())
+                PushRegistratorFCM(_paramsService, _applicationService, _deviceService)
+            else
+                null
+        } else {
+            PushRegistratorHMS(_deviceService)
+        }
 
+        if (pushRegistrator == null)
+            return
+
+        val registerResult = pushRegistrator.registerForPush(_applicationService.appContext!!)
 
         if (registerResult.status < IPushRegistrator.RegisterStatus.PUSH_STATUS_SUBSCRIBED) {
             // Only allow errored subscribableStatuses if we have never gotten a token.
@@ -163,7 +184,8 @@ internal class NotificationsManager(
 
         // TODO: What if no result or the push registration fails?
         if (registerResult.status == IPushRegistrator.RegisterStatus.PUSH_STATUS_SUBSCRIBED) {
-            _pushSubscriber.addPushSubscription(registerResult.id!!)
+            pushToken = registerResult.id!!
+            _pushTokenChangedNotifier.fire { it.onPushTokenChanged(pushToken) }
         }
     }
 
@@ -218,6 +240,9 @@ internal class NotificationsManager(
     override fun clearAll() {
         Logging.log(LogLevel.DEBUG, "clearAll()")
     }
+
+    override fun subscribe(handler: IPushTokenChangedHandler) = _pushTokenChangedNotifier.subscribe(handler)
+    override fun unsubscribe(handler: IPushTokenChangedHandler) = _pushTokenChangedNotifier.unsubscribe(handler)
 
     /**
      * The [com.onesignal.OSPermissionObserver.onOSPermissionChanged]
@@ -292,7 +317,7 @@ internal class NotificationsManager(
         }
     }
 
-    override fun onReceived(notificationJob: NotificationGenerationJob) {
+    override suspend fun onNotificationGenerated(notificationJob: NotificationGenerationJob) {
         _receiveReceiptWorkManager.enqueueReceiveReceipt(notificationJob.apiNotificationId)
 
         // TODO: Implement
@@ -309,7 +334,7 @@ internal class NotificationsManager(
         }
     }
 
-    override fun onOpened(activity: Activity, data: JSONArray, notificationId: String) {
+    override suspend fun onNotificationOpened(activity: Activity, data: JSONArray, notificationId: String) {
         // TODO: Implement call to backend
 //        OneSignal.notificationOpenedRESTCall(context, data)
 
@@ -370,10 +395,11 @@ internal class NotificationsManager(
         return NotificationOpenedResult(notification, notificationAction)
     }
 
-    fun openDestinationActivity(activity: Activity, pushPayloads: JSONArray) {
+    override suspend fun openDestinationActivity(activity: Activity, pushPayloads: JSONArray) {
         try {
             // Always use the top most notification if user tapped on the summary notification
             val firstPayloadItem = pushPayloads.getJSONObject(0)
+            //val isHandled = _notificationLifecycleService.canOpenNotification(activity, firstPayloadItem)
             val intentGenerator = GenerateNotificationOpenIntentFromPushPayload.create(activity, firstPayloadItem)
 
             val intent = intentGenerator.getIntentVisible()

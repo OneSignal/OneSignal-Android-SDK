@@ -6,7 +6,7 @@ import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.time.ITime
 import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.logging.Logging
-import com.onesignal.onesignal.core.internal.service.IBootstrapService
+import com.onesignal.onesignal.core.internal.startup.IStartableService
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
@@ -15,7 +15,7 @@ import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
 class PreferencesService(
     private val _applicationService: IApplicationService,
     private val _time: ITime
-) : IPreferencesService, IBootstrapService {
+) : IPreferencesService, IStartableService {
     private val _prefsToApply: Map<String, MutableMap<String, Any?>> = mapOf(
         PreferenceStores.ONESIGNAL to mutableMapOf(),
         PreferenceStores.PLAYER_PURCHASES to mutableMapOf(),
@@ -27,16 +27,16 @@ class PreferencesService(
     // use CONFLATED to not wake up the worker more than needed.
     private val _conflatedChannel = Channel<Any?>(CONFLATED)
 
-    override fun bootstrap() {
-        // fire up an async job that will run "forever"
+    override fun start() {
+        // fire up an async job that will run "forever" so we don't hold up the other startable services.
         _queueJob = doWorkAsync()
     }
 
     override fun getString(store: String, key: String, defValue: String?) : String? = get(store, key, String::class.java, defValue) as String?
     override fun getBool(store: String, key: String, defValue: Boolean?) : Boolean? = get(store, key, Boolean::class.java, defValue) as Boolean?
-    override fun getInt(store: String, key: String, defValue: Int?) : Int? = get(store, key, Boolean::class.java, defValue) as Int?
-    override fun getLong(store: String, key: String, defValue: Long?) : Long? = get(store, key, Boolean::class.java, defValue) as Long?
-    override fun getStringSet(store: String, key: String, defValue: Set<String>?) : Set<String>? = get(store, key, Boolean::class.java, defValue) as Set<String>?
+    override fun getInt(store: String, key: String, defValue: Int?) : Int? = get(store, key, Int::class.java, defValue) as Int?
+    override fun getLong(store: String, key: String, defValue: Long?) : Long? = get(store, key, Long::class.java, defValue) as Long?
+    override fun getStringSet(store: String, key: String, defValue: Set<String>?) : Set<String>? = get(store, key, Set::class.java, defValue) as Set<String>?
 
     override fun saveString(store: String, key: String, value: String?) = save(store, key, value)
     override fun saveBool(store: String, key: String, value: Boolean?) = save(store, key, value)
@@ -63,7 +63,7 @@ class PreferencesService(
                 Boolean::class.java -> prefs.getBoolean(key, (defValue as Boolean?) ?: false)
                 Int::class.java -> prefs.getInt(key, (defValue as Int?) ?: 0)
                 Long::class.java -> prefs.getLong(key, (defValue as Long?) ?: 0)
-                MutableSet::class.java -> prefs.getStringSet(key, defValue as Set<String?>)
+                Set::class.java -> prefs.getStringSet(key, defValue as Set<String>?)
                 else -> null
             }
         }

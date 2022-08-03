@@ -2,13 +2,13 @@ package com.onesignal.onesignal.core.internal.operations
 
 import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.logging.Logging
-import com.onesignal.onesignal.core.internal.service.IBootstrapService
+import com.onesignal.onesignal.core.internal.startup.IStartableService
 import kotlinx.coroutines.*
 import kotlinx.coroutines.delay
 
 class OperationRepo(
     executors: List<IOperationExecutor>
-) : IOperationRepo, IBootstrapService  {
+) : IOperationRepo, IStartableService {
 
     private val _executorsMap: Map<String, IOperationExecutor>
     private val _queue: ArrayDeque<Operation> = ArrayDeque()
@@ -25,8 +25,8 @@ class OperationRepo(
         _executorsMap = executorsMap
     }
 
-    override fun bootstrap() {
-        // fire up an async job that will run "forever"
+    override fun start() {
+        // fire up an async job that will run "forever" so we don't hold up the other startable services.
         _queueJob = doWorkAsync()
     }
 

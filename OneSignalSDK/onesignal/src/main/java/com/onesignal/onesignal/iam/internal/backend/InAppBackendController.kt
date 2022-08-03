@@ -87,7 +87,7 @@ internal class InAppBackendController(
 
     suspend fun sendIAMImpression(
         appId: String?,
-        userId: String?,
+        subscriptionId: String?,
         variantId: String?,
         deviceType: Int,
         messageId: String,
@@ -96,7 +96,7 @@ internal class InAppBackendController(
         val json: JSONObject = object : JSONObject() {
             init {
                 put("app_id", appId)
-                put("player_id", userId)
+                put("player_id", subscriptionId)
                 put("variant_id", variantId)
                 put("device_type", deviceType)
                 put("first_impression", true)

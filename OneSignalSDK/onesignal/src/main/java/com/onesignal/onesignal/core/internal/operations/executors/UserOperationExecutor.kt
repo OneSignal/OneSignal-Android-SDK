@@ -1,12 +1,12 @@
 package com.onesignal.onesignal.core.internal.operations.executors
 
-import com.onesignal.onesignal.core.internal.backend.api.IApiService
 import com.onesignal.onesignal.core.LogLevel
+import com.onesignal.onesignal.core.internal.backend.http.IHttpClient
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.operations.*
 
 class UserOperationExecutor(
-    private val _api: IApiService) : IOperationExecutor {
+    private val _http: IHttpClient) : IOperationExecutor {
 
     override val operations: List<String>
         get() = listOf(CREATE_USER, UPDATE_USER, DELETE_USER)
@@ -15,13 +15,13 @@ class UserOperationExecutor(
         Logging.log(LogLevel.DEBUG, "UserOperationExecutor(operation: $operation)")
 
         if(operation is CreateUserOperation) {
-            _api.createUserAsync(null)
+//            _http.createUserAsync(null)
         }
         else if(operation is DeleteUserOperation) {
-            _api.deleteUserAsync("external_id", operation.id)
+//            _http.deleteUserAsync("external_id", operation.id)
         }
         else if(operation is UpdateUserOperation) {
-            _api.updateUserAsync("external_id", operation.id, null)
+//            _http.updateUserAsync("external_id", operation.id, null)
         }
     }
 

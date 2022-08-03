@@ -1,8 +1,9 @@
 package com.onesignal.onesignal.iam.internal.prompt
 
 internal class InAppMessagePushPrompt : InAppMessagePrompt() {
-    override fun handlePrompt(callback: InAppMessagePrompt.OSPromptActionCompletionCallback?) {
+    override suspend fun handlePrompt() : PromptActionResult? {
         // TODO: prompt for native location
+        return PromptActionResult.ERROR
 //        OneSignal.promptLocation(callback, true)
     }
 
