@@ -1,7 +1,6 @@
 package com.onesignal.onesignal.core.internal.influence.impl
 
-import com.onesignal.onesignal.core.internal.common.time.ITime
-import com.onesignal.onesignal.core.internal.influence.OSInfluenceConstants
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.influence.Influence
 import com.onesignal.onesignal.core.internal.influence.InfluenceChannel
 import com.onesignal.onesignal.core.internal.influence.InfluenceType
@@ -12,7 +11,7 @@ import org.json.JSONObject
 
 internal class InAppMessageTracker(dataRepository: InfluenceDataRepository, timeProvider: ITime) : ChannelTracker(dataRepository, timeProvider) {
     override val idTag: String
-        get() = OSInfluenceConstants.IAM_ID_TAG
+        get() = InfluenceConstants.IAM_ID_TAG
 
     override val channelType: InfluenceChannel
         get() = InfluenceChannel.IAM

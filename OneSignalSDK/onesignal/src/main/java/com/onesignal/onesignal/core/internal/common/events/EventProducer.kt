@@ -21,4 +21,26 @@ open class EventProducer<THandler> : IEventProducer<THandler> {
             callback(s)
         }
     }
+
+    /**
+     * Conditional fire all subscribers *until one indicates to stop firing*
+     *
+     * @param callback The callback, returns true when no more subscribers should be called.
+     *
+     * @return Whether a subscriber callback indicated to stop firing.
+     */
+    fun conditionalFire(callback: (THandler) -> Boolean) : Boolean {
+        for(s in _subscribers) {
+            if(!callback(s))
+                return true
+        }
+
+        return true
+    }
+
+    suspend fun suspendingFire(callback: suspend (THandler) -> Unit) {
+        for(s in _subscribers) {
+            callback(s)
+        }
+    }
 }

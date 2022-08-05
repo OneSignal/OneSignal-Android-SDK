@@ -1,9 +1,5 @@
 package com.onesignal.onesignal.core.internal.service
 
-import com.onesignal.onesignal.core.internal.application.IApplicationService
-import com.onesignal.onesignal.core.internal.common.time.ITime
-import com.onesignal.onesignal.core.internal.preferences.IPreferencesService
-
 /**
  * A service provider gives access to the implementations of a service.
  */

@@ -5,14 +5,14 @@ import com.onesignal.onesignal.core.internal.modeling.IModelStoreChangeHandler
 import com.onesignal.onesignal.core.internal.modeling.Model
 import com.onesignal.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.onesignal.core.internal.operations.Operation
-import com.onesignal.onesignal.core.internal.service.IBootstrapService
+import com.onesignal.onesignal.core.internal.startup.IStartableService
 import java.io.Closeable
 
 abstract class ModelStoreListener<TModel>(
     private val store: IModelStore<TModel>,
-    private val opRepo: IOperationRepo) : IModelStoreChangeHandler<TModel>, IBootstrapService, Closeable where TModel : Model {
+    private val opRepo: IOperationRepo) : IModelStoreChangeHandler<TModel>, IStartableService, Closeable where TModel : Model {
 
-    override fun bootstrap() {
+    override fun start() {
         store.subscribe(this)
     }
 
@@ -20,19 +20,19 @@ abstract class ModelStoreListener<TModel>(
         store.unsubscribe(this)
     }
 
-    override fun added(model: TModel) {
+    override fun onAdded(model: TModel) {
         val operation = getAddOperation(model)
         if(operation != null)
             opRepo.enqueue(operation)
     }
 
-    override fun updated(model: TModel, property: String, oldValue: Any?, newValue: Any?) {
+    override fun onUpdated(model: TModel, property: String, oldValue: Any?, newValue: Any?) {
         val operation = getUpdateOperation(model, property, oldValue, newValue)
         if(operation != null)
             opRepo.enqueue(operation)
     }
 
-    override fun removed(model: TModel) {
+    override fun onRemoved(model: TModel) {
         val operation = getRemoveOperation(model)
         if(operation != null)
             opRepo.enqueue(operation)

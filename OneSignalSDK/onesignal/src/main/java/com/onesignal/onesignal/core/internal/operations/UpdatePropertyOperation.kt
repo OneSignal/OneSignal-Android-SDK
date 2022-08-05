@@ -1,6 +1,6 @@
 package com.onesignal.onesignal.core.internal.operations
 
-import com.onesignal.onesignal.core.internal.operations.impl.executors.PropertyOperationExecutor
+import com.onesignal.onesignal.core.internal.operations.executors.PropertyOperationExecutor
 
 class UpdatePropertyOperation(
     val id: String,

@@ -1,13 +1,13 @@
 package com.onesignal.onesignal.core.internal.outcomes.impl
 
 import com.onesignal.onesignal.core.internal.backend.http.IHttpClient
+import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsCache
 import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsFactory
 import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsRepository
 
 internal class OSOutcomeEventsFactory(
     private val apiClient: IHttpClient,
-    private val outcomeEventsCache: IOutcomeEventsCache
-) : IOutcomeEventsFactory {
+    private val outcomeEventsCache: IOutcomeEventsCache) : IOutcomeEventsFactory {
 
     private var repository: IOutcomeEventsRepository? = null
 

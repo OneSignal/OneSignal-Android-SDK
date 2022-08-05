@@ -26,8 +26,9 @@ interface IModelStore<TModel> : IEventNotifier<IModelStoreChangeHandler<TModel>>
      *
      * @param id The unique identifier for the model being added.
      * @param model The model being added to the model store.
+     * @param fireChange Whether an event should be fired, defaults to true.
      */
-    fun add(id: String, model: TModel)
+    fun add(id: String, model: TModel, fireEvent: Boolean = true)
 
     /**
      * Retrieve the model associated to the id provided.
@@ -44,4 +45,9 @@ interface IModelStore<TModel> : IEventNotifier<IModelStoreChangeHandler<TModel>>
      * @param id The unique identifier to the model to remove.
      */
     fun remove(id: String)
+
+    /**
+     * Clear all models within the model store.
+     */
+    fun clear()
 }

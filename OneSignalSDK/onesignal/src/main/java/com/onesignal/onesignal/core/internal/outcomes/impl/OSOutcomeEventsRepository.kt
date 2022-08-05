@@ -2,7 +2,9 @@ package com.onesignal.onesignal.core.internal.outcomes.impl
 
 import com.onesignal.onesignal.core.internal.influence.Influence
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsCache
 import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsRepository
+import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsBackend
 import com.onesignal.onesignal.core.internal.outcomes.OutcomeEventParams
 
 internal abstract class OSOutcomeEventsRepository(
@@ -41,7 +43,7 @@ internal abstract class OSOutcomeEventsRepository(
         outcomeEventsCache.saveUnattributedUniqueOutcomeEventsSentByChannel(unattributedUniqueOutcomeEvents)
     }
 
-    override fun cleanCachedUniqueOutcomeEventNotifications(notificationTableName: String, notificationIdColumnName: String) {
+    override suspend fun cleanCachedUniqueOutcomeEventNotifications(notificationTableName: String, notificationIdColumnName: String) {
         outcomeEventsCache.cleanCachedUniqueOutcomeEventNotifications(notificationTableName, notificationIdColumnName);
     }
 }
