@@ -8,7 +8,7 @@
     <application>
 
         <receiver
-            android:name="com.onesignal.FCMBroadcastReceiver"
+            android:name="com.onesignal.onesignal.notification.receivers.FCMBroadcastReceiver"
             android:permission="com.google.android.c2dm.permission.SEND"
             android:exported="true">
             <!-- High priority so OneSignal payloads can be filtered from other FCM receivers -->
