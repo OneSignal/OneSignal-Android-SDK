@@ -28,4 +28,11 @@ open class CallbackProducer<THandler>() : ICallbackProducer<THandler> {
             callback(_callback!!)
         }
     }
+
+    suspend fun suspendingFire(callback: suspend (THandler) -> Unit) {
+        if (_callback != null)
+        {
+            callback(_callback!!)
+        }
+    }
 }

@@ -1,6 +1,6 @@
 package com.onesignal.onesignal.core.internal.operations
 
-import com.onesignal.onesignal.core.internal.operations.impl.executors.UserOperationExecutor
+import com.onesignal.onesignal.core.internal.operations.executors.UserOperationExecutor
 
 class UpdateUserOperation(
     val id: String,

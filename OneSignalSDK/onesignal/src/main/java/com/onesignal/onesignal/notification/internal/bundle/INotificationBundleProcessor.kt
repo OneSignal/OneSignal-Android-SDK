@@ -12,18 +12,18 @@ internal interface INotificationBundleProcessor {
 
     class ProcessedBundleResult {
         private var isOneSignalPayload = false
-        private var inAppPreviewShown = false
+        private var isDeniedByLifecycleCallback = false
         var isWorkManagerProcessing = false
 
         val isProcessed: Boolean
-            get() = !isOneSignalPayload || inAppPreviewShown || isWorkManagerProcessing
+            get() = !isOneSignalPayload || isDeniedByLifecycleCallback || isWorkManagerProcessing
 
         fun setOneSignalPayload(oneSignalPayload: Boolean) {
             isOneSignalPayload = oneSignalPayload
         }
 
-        fun setInAppPreviewShown(inAppPreviewShown: Boolean) {
-            this.inAppPreviewShown = inAppPreviewShown
+        fun setDeniedByLifecycleCallback(deniedByLifecycleCallback: Boolean) {
+            this.isDeniedByLifecycleCallback = deniedByLifecycleCallback
         }
     }
 }

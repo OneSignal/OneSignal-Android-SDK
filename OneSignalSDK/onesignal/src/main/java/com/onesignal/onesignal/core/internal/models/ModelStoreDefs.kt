@@ -8,3 +8,4 @@ internal class SessionModelStore : SingletonModelStore<SessionModel>("session", 
 internal class IdentityModelStore: ModelStore<IdentityModel>()
 internal class PropertiesModelStore: ModelStore<PropertiesModel>()
 internal class SubscriptionModelStore: ModelStore<SubscriptionModel>()
+internal class TriggerModelStore: ModelStore<TriggerModel>()

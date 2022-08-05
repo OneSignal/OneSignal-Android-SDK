@@ -1,7 +1,7 @@
 package com.onesignal.onesignal.notification.internal.common
 
 import android.net.Uri
-import com.onesignal.onesignal.core.internal.common.time.ITime
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.notification.internal.Notification
 import org.json.JSONObject
 import java.security.SecureRandom

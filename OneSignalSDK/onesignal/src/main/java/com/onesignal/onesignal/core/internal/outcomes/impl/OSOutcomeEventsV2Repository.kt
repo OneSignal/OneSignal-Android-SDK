@@ -2,6 +2,8 @@ package com.onesignal.onesignal.core.internal.outcomes.impl
 
 import com.onesignal.onesignal.core.internal.backend.http.HttpResponse
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsCache
+import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsBackend
 import com.onesignal.onesignal.core.internal.outcomes.OutcomeConstants
 import com.onesignal.onesignal.core.internal.outcomes.OutcomeEventParams
 import org.json.JSONException

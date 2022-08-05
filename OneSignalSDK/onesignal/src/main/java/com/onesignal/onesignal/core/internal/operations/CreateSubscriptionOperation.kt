@@ -1,7 +1,7 @@
 package com.onesignal.onesignal.core.internal.operations
 
 import com.onesignal.onesignal.core.internal.models.SubscriptionType
-import com.onesignal.onesignal.core.internal.operations.impl.executors.SubscriptionOperationExecutor
+import com.onesignal.onesignal.core.internal.operations.executors.SubscriptionOperationExecutor
 
 class CreateSubscriptionOperation(
     val appId: String,

@@ -14,6 +14,8 @@ import com.onesignal.onesignal.core.internal.outcomes.OutcomeConstants
 import com.onesignal.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.onesignal.core.internal.preferences.PreferenceStores
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONException
 import java.util.*
@@ -316,17 +318,19 @@ internal class OSOutcomeEventsCache(
     /**
      * Deletes cached unique outcome notifications whose ids do not exist inside of the NotificationTable.TABLE_NAME
      */
-    @WorkerThread
-    @Synchronized
-    override fun cleanCachedUniqueOutcomeEventNotifications(notificationTableName: String, notificationIdColumnName: String) {
-        val whereStr = "NOT EXISTS(" +
-                "SELECT NULL FROM " + notificationTableName + " n " +
-                "WHERE" + " n." + notificationIdColumnName + " = " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_INFLUENCE_ID +
-                " AND " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_TYPE + " = \"" + InfluenceChannel.NOTIFICATION.toString().toLowerCase(Locale.ROOT) +
-                "\")"
-        dbHelper.get().delete(
+    override suspend fun cleanCachedUniqueOutcomeEventNotifications(notificationTableName: String, notificationIdColumnName: String) {
+        withContext(Dispatchers.IO) {
+            val whereStr = "NOT EXISTS(" +
+                    "SELECT NULL FROM " + notificationTableName + " n " +
+                    "WHERE" + " n." + notificationIdColumnName + " = " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_INFLUENCE_ID +
+                    " AND " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_TYPE + " = \"" + InfluenceChannel.NOTIFICATION.toString()
+                .toLowerCase(Locale.ROOT) +
+                    "\")"
+            dbHelper.get().delete(
                 OutcomesDbContract.CACHE_UNIQUE_OUTCOME_TABLE,
                 whereStr,
-                null)
+                null
+            )
+        }
     }
 }

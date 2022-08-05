@@ -9,13 +9,12 @@ import com.onesignal.onesignal.core.internal.common.OneSignalUtils
 import com.onesignal.onesignal.core.internal.common.events.CallbackProducer
 import com.onesignal.onesignal.core.internal.common.events.ICallbackProducer
 import com.onesignal.onesignal.core.internal.models.*
-import com.onesignal.onesignal.core.internal.operations.BootstrapOperation
 import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.debug.DebugManager
 import com.onesignal.onesignal.core.internal.logging.Logging
-import com.onesignal.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.onesignal.core.internal.service.*
 import com.onesignal.onesignal.core.internal.service.ServiceBuilder
+import com.onesignal.onesignal.core.internal.startup.StartupService
 import com.onesignal.onesignal.core.internal.user.IUserSwitcher
 import com.onesignal.onesignal.location.internal.LocationModule
 import com.onesignal.onesignal.location.ILocationManager
@@ -55,7 +54,7 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
     private var _notifications: INotificationsManager? = null
     private var _identityModelStore: IdentityModelStore? = null
     private var _propertiesModelStore: PropertiesModelStore? = null
-    private var _operationRepo: IOperationRepo? = null
+    private var _startupService: StartupService? = null
 
     // Other State
     private val _services: ServiceProvider
@@ -78,6 +77,10 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
     override fun initWithContext(context: Context) {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context)");
 
+        // do not do this again if already initialized
+        if(isInitialized)
+            return
+
         // start the application service. This is called explicitly first because we want
         // to make sure it has the context provided on input, for all other startable services
         // to depend on if needed.
@@ -91,10 +94,6 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
         if(_requiresPrivacyConsent != null)
             _configModel!!.requiresPrivacyConsent = _requiresPrivacyConsent!!
 
-        for(bootstrapService in _services.getAllServices<IBootstrapService>()) {
-            bootstrapService.bootstrap()
-        }
-
         // "Inject" the services required by this main class
         _location = _services.getService()
         _user = _services.getService()
@@ -103,12 +102,15 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
         _notifications = _services.getService()
         _propertiesModelStore = _services.getService()
         _identityModelStore = _services.getService()
-        _operationRepo = _services.getService()
+
+        // Instantiate and call the IStartableServices
+        _startupService = _services.getService()
+        _startupService!!.start()
 
         isInitialized = true
 
         if(_appId != null) {
-            setupApplication()
+            _configModel!!.appId = _appId!!;
         }
     }
 
@@ -117,20 +119,12 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
     override fun setAppId(appId: String) {
         Logging.log(LogLevel.DEBUG, "setAppId(appId: $appId)");
 
-        _appId = appId
-
-        if(isInitialized) {
-            setupApplication()
+        if(!isInitialized) {
+            _appId = appId
         }
-    }
-
-    private fun setupApplication() {
-        _configModel!!.appId = _appId!!;
-
-        // enqueue an operation to retrieve the config from the backend and refresh the config if necessary
-        _operationRepo!!.enqueue(BootstrapOperation(_appId!!))
-
-        isInitialized = true
+        else {
+            _configModel!!.appId = _appId!!;
+        }
     }
 
     // This accepts UserIdentity.Anonymous?, so therefore UserAnonymous? might be null

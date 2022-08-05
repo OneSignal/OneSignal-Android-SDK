@@ -3,13 +3,14 @@ package com.onesignal.onesignal.notification.internal.generation.impl
 import android.content.Context
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
-import com.onesignal.onesignal.core.internal.common.time.ITime
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.notification.internal.Notification
 import com.onesignal.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.onesignal.notification.internal.NotificationReceivedEvent
 import com.onesignal.onesignal.notification.internal.data.INotificationDataController
 import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.session.ISessionService
 import com.onesignal.onesignal.notification.INotificationWillShowInForegroundHandler
 import com.onesignal.onesignal.notification.IRemoteNotificationReceivedHandler
 import com.onesignal.onesignal.notification.internal.common.NotificationGenerationJob
@@ -33,9 +34,11 @@ internal class NotificationGenerationProcessor(
     private val _dataController: INotificationDataController,
     private val _notificationSummaryManager: INotificationSummaryManager,
     private val _lifecycleService: INotificationLifecycleService,
+    private val _sessionService: ISessionService,
     private val _time: ITime,
 ) : INotificationGenerationProcessor {
 
+    // TODO: Implement callbacks
     val remoteNotificationReceivedHandler: IRemoteNotificationReceivedHandler? = null
     val notificationWillShowInForegroundHandler: INotificationWillShowInForegroundHandler? = null
 
@@ -45,6 +48,11 @@ internal class NotificationGenerationProcessor(
                     jsonPayload: JSONObject,
                     isRestoring: Boolean,
                     timestamp: Long) {
+
+        if(!_lifecycleService.canReceiveNotification(jsonPayload)) {
+            // Return early, we don't want the extender service or etc. to fire for IAM previews
+            return
+        }
 
         var notification = Notification(null, jsonPayload, androidNotificationId, _time)
 
@@ -203,7 +211,8 @@ internal class NotificationGenerationProcessor(
             return
         }
 
-        _lifecycleService.notificationReceived(notificationJob)
+        _lifecycleService.notificationGenerated(notificationJob)
+        _sessionService.onNotificationReceived(notificationJob.apiNotificationId)
     }
 
     // Saving the notification provides the following:

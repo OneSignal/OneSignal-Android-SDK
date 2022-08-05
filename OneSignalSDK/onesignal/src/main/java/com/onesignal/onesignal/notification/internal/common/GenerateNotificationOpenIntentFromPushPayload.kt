@@ -25,16 +25,8 @@ object GenerateNotificationOpenIntentFromPushPayload {
         return GenerateNotificationOpenIntent(
             context,
             openBrowserIntent(behavior.uri),
-            shouldOpenApp(behavior.shouldOpenApp, fcmPayload)
+            behavior.shouldOpenApp
         )
-    }
-
-    private fun shouldOpenApp(shouldOpenApp: Boolean, fcmPayload: JSONObject): Boolean {
-        return true
-        // TODO: Implement
-//        val isIAMPreviewNotification = OSInAppMessagePreviewHandler.inAppPreviewPushUUID(fcmPayload) != null
-//        return isIAMPreviewNotification or
-//            shouldOpenApp
     }
 
     private fun openBrowserIntent(

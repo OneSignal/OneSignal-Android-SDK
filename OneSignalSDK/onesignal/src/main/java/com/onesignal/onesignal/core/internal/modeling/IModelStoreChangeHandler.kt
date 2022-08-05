@@ -10,7 +10,7 @@ interface IModelStoreChangeHandler<TModel> where TModel : Model {
      *
      * @param model The model that has been added.
      */
-    fun added(model: TModel)
+    fun onAdded(model: TModel)
 
     /**
      * Called when a model has been updated.
@@ -20,12 +20,12 @@ interface IModelStoreChangeHandler<TModel> where TModel : Model {
      * @param oldValue The old value of the property that has changed.
      * @param newValue The new value of the property that has changed.
      */
-    fun updated(model: TModel, property: String, oldValue: Any?, newValue: Any?)
+    fun onUpdated(model: TModel, property: String, oldValue: Any?, newValue: Any?)
 
     /**
      * Called when a model has been removed from the model store.
      *
      * @param model The model that has been removed.
      */
-    fun removed(model: TModel)
+    fun onRemoved(model: TModel)
 }
