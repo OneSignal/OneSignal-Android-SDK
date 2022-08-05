@@ -23,4 +23,6 @@ interface IWriteableParamsService : IParamsService {
     override var requiresUserPrivacyConsent: Boolean?
     override var influenceParams: IParamsService.InfluenceParams
     override var fcmParams: IParamsService.FCMParams
+
+    fun indicateChanged()
 }

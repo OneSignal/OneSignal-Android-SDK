@@ -1,6 +1,6 @@
 package com.onesignal.onesignal.core.internal.operations
 
-import com.onesignal.onesignal.core.internal.operations.impl.executors.SubscriptionOperationExecutor
+import com.onesignal.onesignal.core.internal.operations.executors.SubscriptionOperationExecutor
 
 class UpdateSubscriptionOperation(
     val id: String,

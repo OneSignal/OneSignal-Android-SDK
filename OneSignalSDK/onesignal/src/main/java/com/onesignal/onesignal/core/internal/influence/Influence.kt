@@ -16,9 +16,9 @@ class Influence {
     @Throws(JSONException::class)
     constructor(jsonString: String) {
         val jsonObject = JSONObject(jsonString)
-        val channel = jsonObject.getString(OSInfluenceConstants.INFLUENCE_CHANNEL)
-        val type = jsonObject.getString(OSInfluenceConstants.INFLUENCE_TYPE)
-        val ids = jsonObject.getString(OSInfluenceConstants.INFLUENCE_IDS)
+        val channel = jsonObject.getString(INFLUENCE_CHANNEL)
+        val type = jsonObject.getString(INFLUENCE_TYPE)
+        val ids = jsonObject.getString(INFLUENCE_IDS)
         influenceChannel = InfluenceChannel.fromString(channel)
         influenceType = InfluenceType.fromString(type)
         this.ids = if (ids.isEmpty()) null else JSONArray(ids)
@@ -44,9 +44,9 @@ class Influence {
 
     @Throws(JSONException::class)
     fun toJSONString() = JSONObject()
-            .put(OSInfluenceConstants.INFLUENCE_CHANNEL, influenceChannel.toString())
-            .put(OSInfluenceConstants.INFLUENCE_TYPE, influenceType.toString())
-            .put(OSInfluenceConstants.INFLUENCE_IDS, if (ids != null) ids.toString() else "")
+            .put(INFLUENCE_CHANNEL, influenceChannel.toString())
+            .put(INFLUENCE_TYPE, influenceType.toString())
+            .put(INFLUENCE_IDS, if (ids != null) ids.toString() else "")
             .toString()
 
     override fun toString(): String {
@@ -69,5 +69,12 @@ class Influence {
         var result = influenceChannel.hashCode()
         result = 31 * result + influenceType.hashCode()
         return result
+    }
+
+    companion object {
+        // OSInfluence Constants
+        const val INFLUENCE_CHANNEL = "influence_channel"
+        const val INFLUENCE_TYPE = "influence_type"
+        const val INFLUENCE_IDS = "influence_ids"
     }
 }

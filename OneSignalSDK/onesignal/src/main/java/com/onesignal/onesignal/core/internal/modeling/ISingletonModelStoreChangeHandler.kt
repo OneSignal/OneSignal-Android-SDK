@@ -14,5 +14,5 @@ interface ISingletonModelStoreChangeHandler<TModel> where TModel : Model {
      * @param oldValue The old value of the property that has changed.
      * @param newValue The new value of the property that has changed.
      */
-    fun updated(model: TModel, property: String, oldValue: Any?, newValue: Any?)
+    fun onModelUpdated(model: TModel, property: String, oldValue: Any?, newValue: Any?)
 }

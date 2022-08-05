@@ -4,5 +4,5 @@ import android.app.Activity
 import android.content.Intent
 
 interface INotificationOpenedProcessorHMS {
-    fun handleHMSNotificationOpenIntent(activity: Activity, intent: Intent?)
+    suspend fun handleHMSNotificationOpenIntent(activity: Activity, intent: Intent?)
 }

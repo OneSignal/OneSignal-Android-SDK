@@ -55,7 +55,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
                 Logging.debug("_current is NOW: " + if (_current != null) "" + _current?.javaClass?.name + ":" + _current else "null")
 
                 if(value != null) {
-                    _activityLifecycleNotifier.fire { it.onAvailable(value) }
+                    _activityLifecycleNotifier.fire { it.onActivityAvailable(value) }
                     try {
                         value.window.decorView.viewTreeObserver.addOnGlobalLayoutListener(this)
                     } catch (e: RuntimeException) {
@@ -77,12 +77,12 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
             val configuration = object : ComponentCallbacks {
                 override fun onConfigurationChanged(newConfig: Configuration) {
                     // If Activity contains the configChanges orientation flag, re-create the view this way
-                    if (_current != null && AndroidUtils.hasConfigChangeFlag(
-                            _current!!,
+                    if (current != null && AndroidUtils.hasConfigChangeFlag(
+                            current!!,
                             ActivityInfo.CONFIG_ORIENTATION
                         )
                     ) {
-                        onOrientationChanged(newConfig.orientation, _current!!)
+                        onOrientationChanged(newConfig.orientation, current!!)
                     }
                 }
 
@@ -93,14 +93,14 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         }
 
         val isContextActivity = context is Activity
-        val isCurrentActivityNull = _current == null
+        val isCurrentActivityNull = current == null
 
         isInForeground = !isCurrentActivityNull || isContextActivity
         Logging.debug("ApplicationService.init: inForeground=$isInForeground")
 
         if (isInForeground) {
             if (isCurrentActivityNull && isContextActivity) {
-                _current = context as Activity?
+                current = context as Activity?
                 _nextResumeIsFirstActivity = true
             }
         } else {
@@ -118,8 +118,8 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
 
     override fun addActivityLifecycleHandler(handler: IActivityLifecycleHandler) {
         _activityLifecycleNotifier.subscribe(handler)
-        if (_current != null)
-            handler.onAvailable(_current!!)
+        if (current != null)
+            handler.onActivityAvailable(current!!)
     }
 
     override fun removeActivityLifecycleHandler(handler: IActivityLifecycleHandler) {
@@ -133,7 +133,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     override fun onActivityStarted(activity: Activity) {
         Logging.debug("ApplicationService.onActivityStarted: $activity")
 
-        _current = activity
+        current = activity
 
         if (++_activityReferences == 1 && !_isActivityChangingConfigurations) {
             handleFocus()
@@ -153,11 +153,11 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
 
         _isActivityChangingConfigurations = activity.isChangingConfigurations
         if (--_activityReferences == 0 && !_isActivityChangingConfigurations) {
-            _current = null
+            current = null
             handleLostFocus()
         }
 
-        _activityLifecycleNotifier.fire { it.onStopped(activity) }
+        _activityLifecycleNotifier.fire { it.onActivityStopped(activity) }
     }
 
     override fun onActivitySaveInstanceState(p0: Activity, p1: Bundle) {
@@ -209,31 +209,34 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
             Logging.info("AppCompatActivity is not used in this app, skipping 'isDialogFragmentShowing' check: $exception")
         }
 
-        val keyboardUp = DeviceUtils.isKeyboardUp(WeakReference(currentActivity))
-
-        // if the keyboard is up we suspend until it is down
-        if(keyboardUp) {
-            val channel = Channel<Any?>()
-            _systemConditionNotifier.subscribe(object : ISystemConditionHandler {
-                override fun systemConditionChanged() {
-                    val keyboardUp = DeviceUtils.isKeyboardUp(WeakReference(_current))
-                    if (!keyboardUp) {
-                        _systemConditionNotifier.unsubscribe(this)
-                        runBlocking {
-                            channel.send(null)
-                        }
+        val channel = Channel<Any?>()
+        val systemConditionHandler = object : ISystemConditionHandler {
+            override fun systemConditionChanged() {
+                val keyboardUp = DeviceUtils.isKeyboardUp(WeakReference(current))
+                if (!keyboardUp) {
+                    runBlocking {
+                        channel.send(null)
                     }
                 }
-            })
+            }
+        }
+
+        // Add the listener prior to checking the condition to avoid a race condition where
+        // we'll never get a callback and will be waiting forever.
+        _systemConditionNotifier.subscribe(systemConditionHandler)
+        val keyboardUp = DeviceUtils.isKeyboardUp(WeakReference(currentActivity))
+        // if the keyboard is up we suspend until it is down
+        if(keyboardUp) {
             Logging.warn("OSSystemConditionObserver keyboard up detected")
             channel.receive()
         }
+        _systemConditionNotifier.unsubscribe(systemConditionHandler)
 
         return true
     }
 
     override suspend fun waitUntilActivityReady(): Boolean {
-        val currentActivity = _current ?: return false
+        val currentActivity = current ?: return false
 
         val channel = Channel<Any?>()
         decorViewReady(currentActivity!!, object : Runnable {
@@ -254,14 +257,14 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         val self = this
         activity.window.decorView.post {
             self.addActivityLifecycleHandler(object : IActivityLifecycleHandler {
-                override fun onAvailable(currentActivity: Activity) {
+                override fun onActivityAvailable(currentActivity: Activity) {
                     self.removeActivityLifecycleHandler(this)
                     if (AndroidUtils.isActivityFullyReady(currentActivity))
                         runnable.run()
                     else decorViewReady(currentActivity, runnable)
                 }
 
-                override fun onStopped(activity: Activity) {}
+                override fun onActivityStopped(activity: Activity) {}
             })
         }
     }
@@ -281,10 +284,10 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
 
         // Remove view
         handleLostFocus()
-        _activityLifecycleNotifier.fire { it.onStopped(activity) }
+        _activityLifecycleNotifier.fire { it.onActivityStopped(activity) }
 
         // Show view
-        _activityLifecycleNotifier.fire { it.onAvailable(activity) }
+        _activityLifecycleNotifier.fire { it.onActivityAvailable(activity) }
 
         activity.window.decorView.viewTreeObserver.addOnGlobalLayoutListener(this)
 

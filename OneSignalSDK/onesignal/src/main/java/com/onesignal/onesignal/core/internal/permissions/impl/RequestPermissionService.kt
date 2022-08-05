@@ -42,7 +42,7 @@ class RequestPermissionService(
         fallbackToSettings = fallbackCondition
 
         _application.addActivityLifecycleHandler(object : IActivityLifecycleHandler {
-            override fun onAvailable(activity: Activity) {
+            override fun onActivityAvailable(activity: Activity) {
                 if (activity.javaClass != PermissionsActivity::class.java) {
                     val intent = Intent(activity, PermissionsActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
@@ -57,7 +57,7 @@ class RequestPermissionService(
                 }
             }
 
-            override fun onStopped(activity: Activity) {
+            override fun onActivityStopped(activity: Activity) {
 
             }
         })

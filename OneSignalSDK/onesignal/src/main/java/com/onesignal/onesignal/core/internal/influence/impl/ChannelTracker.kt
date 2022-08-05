@@ -1,8 +1,7 @@
 package com.onesignal.onesignal.core.internal.influence.impl
 
-import com.onesignal.onesignal.core.internal.common.time.ITime
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.influence.*
-import com.onesignal.onesignal.core.internal.influence.OSInfluenceConstants
 import com.onesignal.onesignal.core.internal.logging.Logging
 import org.json.JSONArray
 import org.json.JSONException
@@ -80,7 +79,7 @@ abstract class ChannelTracker internal constructor(protected var dataRepository:
                 val currentTime = timeProvider.currentTimeMillis
                 for (i in 0 until lastChannelObjectReceived.length()) {
                     val jsonObject = lastChannelObjectReceived.getJSONObject(i)
-                    val time = jsonObject.getLong(OSInfluenceConstants.TIME)
+                    val time = jsonObject.getLong(InfluenceConstants.TIME)
                     val difference = currentTime - time
                     if (difference <= attributionWindow) {
                         val id = jsonObject.getString(idTag)
@@ -115,7 +114,7 @@ abstract class ChannelTracker internal constructor(protected var dataRepository:
             timeProvider.run {
                 JSONObject()
                         .put(idTag, id)
-                        .put(OSInfluenceConstants.TIME, currentTimeMillis)
+                        .put(InfluenceConstants.TIME, currentTimeMillis)
             }.also { newInfluenceId ->
                 lastChannelObjectsReceived.put(newInfluenceId)
             }

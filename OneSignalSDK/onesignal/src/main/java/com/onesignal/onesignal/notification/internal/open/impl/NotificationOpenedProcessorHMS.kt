@@ -1,6 +1,5 @@
-package com.onesignal.onesignal.notification.internal.open
+package com.onesignal.onesignal.notification.internal.open.impl
 
-import com.onesignal.OSInAppMessagePreviewHandler.notificationOpened
 import android.app.Activity
 import android.content.Intent
 import com.onesignal.onesignal.core.internal.common.JSONUtils
@@ -8,6 +7,7 @@ import com.onesignal.onesignal.notification.internal.common.NotificationConstant
 import com.onesignal.onesignal.notification.internal.common.NotificationFormatHelper
 import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.onesignal.notification.internal.lifecycle.INotificationLifecycleService
+import com.onesignal.onesignal.notification.internal.open.INotificationOpenedProcessorHMS
 import org.json.JSONException
 import org.json.JSONObject
 
@@ -15,7 +15,7 @@ internal class NotificationOpenedProcessorHMS(
     private val _lifecycleService: INotificationLifecycleService
 ) : INotificationOpenedProcessorHMS {
 
-    override fun handleHMSNotificationOpenIntent(activity: Activity, intent: Intent?) {
+    override suspend fun handleHMSNotificationOpenIntent(activity: Activity, intent: Intent?) {
         if (intent == null) return
         val jsonData = covertHMSOpenIntentToJson(
             intent
@@ -52,8 +52,9 @@ internal class NotificationOpenedProcessorHMS(
         }
     }
 
-    private fun handleProcessJsonOpenData(activity: Activity, jsonData: JSONObject) {
-        if (notificationOpened(activity, jsonData)) return
+    private suspend fun handleProcessJsonOpenData(activity: Activity, jsonData: JSONObject) {
+        if (!_lifecycleService.canOpenNotification(activity, jsonData))
+            return
 
         _lifecycleService.notificationOpened(activity, JSONUtils.wrapInJsonArray(jsonData), NotificationFormatHelper.getOSNotificationIdFromJson(jsonData)!!)
     }
