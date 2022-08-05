@@ -1,7 +1,5 @@
 package com.onesignal.onesignal.core.internal.influence.impl
 
-import com.onesignal.onesignal.core.internal.influence.IInfluenceDataRepository
-import com.onesignal.onesignal.core.internal.influence.OSInfluenceConstants
 import com.onesignal.onesignal.core.internal.influence.InfluenceType
 import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.core.internal.preferences.IPreferencesService
@@ -20,7 +18,7 @@ class InfluenceDataRepository(private val preferences: IPreferencesService) :
     override fun cacheNotificationInfluenceType(influenceType: InfluenceType) {
         preferences.saveString(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_OUTCOMES_CURRENT_NOTIFICATION_INFLUENCE,
+                InfluenceConstants.PREFS_OS_OUTCOMES_CURRENT_NOTIFICATION_INFLUENCE,
                 influenceType.toString()
         )
     }
@@ -32,7 +30,7 @@ class InfluenceDataRepository(private val preferences: IPreferencesService) :
         get() {
             val influenceType = preferences.getString(
                     PreferenceStores.ONESIGNAL,
-                    OSInfluenceConstants.PREFS_OS_OUTCOMES_CURRENT_NOTIFICATION_INFLUENCE,
+                    InfluenceConstants.PREFS_OS_OUTCOMES_CURRENT_NOTIFICATION_INFLUENCE,
                     InfluenceType.UNATTRIBUTED.toString()
             )
             return InfluenceType.fromString(influenceType)
@@ -44,7 +42,7 @@ class InfluenceDataRepository(private val preferences: IPreferencesService) :
     override fun cacheIAMInfluenceType(influenceType: InfluenceType) {
         preferences.saveString(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_OUTCOMES_CURRENT_IAM_INFLUENCE,
+                InfluenceConstants.PREFS_OS_OUTCOMES_CURRENT_IAM_INFLUENCE,
                 influenceType.toString()
         )
     }
@@ -57,7 +55,7 @@ class InfluenceDataRepository(private val preferences: IPreferencesService) :
             val defaultValue = InfluenceType.UNATTRIBUTED.toString();
             val influenceType = preferences.getString(
                     PreferenceStores.ONESIGNAL,
-                    OSInfluenceConstants.PREFS_OS_OUTCOMES_CURRENT_IAM_INFLUENCE,
+                    InfluenceConstants.PREFS_OS_OUTCOMES_CURRENT_IAM_INFLUENCE,
                     defaultValue
             )
             return InfluenceType.fromString(influenceType)
@@ -69,7 +67,7 @@ class InfluenceDataRepository(private val preferences: IPreferencesService) :
     override fun cacheNotificationOpenId(id: String?) {
         preferences.saveString(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_LAST_ATTRIBUTED_NOTIFICATION_OPEN,
+                InfluenceConstants.PREFS_OS_LAST_ATTRIBUTED_NOTIFICATION_OPEN,
                 id
         )
     }
@@ -80,21 +78,21 @@ class InfluenceDataRepository(private val preferences: IPreferencesService) :
     override val cachedNotificationOpenId: String?
         get() = preferences.getString(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_LAST_ATTRIBUTED_NOTIFICATION_OPEN,
+                InfluenceConstants.PREFS_OS_LAST_ATTRIBUTED_NOTIFICATION_OPEN,
                 null
         )
 
     override fun saveNotifications(notifications: JSONArray) {
         preferences.saveString(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_LAST_NOTIFICATIONS_RECEIVED,
+                InfluenceConstants.PREFS_OS_LAST_NOTIFICATIONS_RECEIVED,
                 notifications.toString())
     }
 
     override fun saveIAMs(iams: JSONArray) {
         preferences.saveString(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_LAST_IAMS_RECEIVED,
+                InfluenceConstants.PREFS_OS_LAST_IAMS_RECEIVED,
                 iams.toString())
     }
 
@@ -103,7 +101,7 @@ class InfluenceDataRepository(private val preferences: IPreferencesService) :
         get() {
             val notificationsReceived = preferences.getString(
                     PreferenceStores.ONESIGNAL,
-                    OSInfluenceConstants.PREFS_OS_LAST_NOTIFICATIONS_RECEIVED,
+                    InfluenceConstants.PREFS_OS_LAST_NOTIFICATIONS_RECEIVED,
                     "[]")
             return notificationsReceived?.let { JSONArray(it) } ?: JSONArray()
         }
@@ -113,7 +111,7 @@ class InfluenceDataRepository(private val preferences: IPreferencesService) :
         get() {
             val iamReceived = preferences.getString(
                     PreferenceStores.ONESIGNAL,
-                    OSInfluenceConstants.PREFS_OS_LAST_IAMS_RECEIVED,
+                    InfluenceConstants.PREFS_OS_LAST_IAMS_RECEIVED,
                     "[]")
             return iamReceived?.let { JSONArray(it) } ?: JSONArray()
         }
@@ -121,86 +119,86 @@ class InfluenceDataRepository(private val preferences: IPreferencesService) :
     override val notificationLimit: Int
         get() = preferences.getInt(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_NOTIFICATION_LIMIT,
+                InfluenceConstants.PREFS_OS_NOTIFICATION_LIMIT,
                 IParamsService.InfluenceParams.DEFAULT_NOTIFICATION_LIMIT
         )!!
 
     override val iamLimit: Int
         get() = preferences.getInt(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_IAM_LIMIT,
+                InfluenceConstants.PREFS_OS_IAM_LIMIT,
                 IParamsService.InfluenceParams.DEFAULT_NOTIFICATION_LIMIT
         )!!
 
     override val notificationIndirectAttributionWindow: Int
         get() = preferences.getInt(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_NOTIFICATION_INDIRECT_ATTRIBUTION_WINDOW,
+                InfluenceConstants.PREFS_OS_NOTIFICATION_INDIRECT_ATTRIBUTION_WINDOW,
                 IParamsService.InfluenceParams.DEFAULT_INDIRECT_ATTRIBUTION_WINDOW
         )!!
 
     override val iamIndirectAttributionWindow: Int
         get() = preferences.getInt(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_IAM_INDIRECT_ATTRIBUTION_WINDOW,
+                InfluenceConstants.PREFS_OS_IAM_INDIRECT_ATTRIBUTION_WINDOW,
                 IParamsService.InfluenceParams.DEFAULT_INDIRECT_ATTRIBUTION_WINDOW
         )!!
 
     override val isDirectInfluenceEnabled: Boolean
         get() = preferences.getBool(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_DIRECT_ENABLED,
+                InfluenceConstants.PREFS_OS_DIRECT_ENABLED,
                 false
         )!!
 
     override val isIndirectInfluenceEnabled: Boolean
         get() = preferences.getBool(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_INDIRECT_ENABLED,
+                InfluenceConstants.PREFS_OS_INDIRECT_ENABLED,
                 false
         )!!
 
     override val isUnattributedInfluenceEnabled: Boolean
         get() = preferences.getBool(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_UNATTRIBUTED_ENABLED,
+                InfluenceConstants.PREFS_OS_UNATTRIBUTED_ENABLED,
                 false
         )!!
 
     override fun saveInfluenceParams(influenceParams: IParamsService.InfluenceParams) {
         preferences.saveBool(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_DIRECT_ENABLED,
+                InfluenceConstants.PREFS_OS_DIRECT_ENABLED,
                 influenceParams.isDirectEnabled
         )
         preferences.saveBool(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_INDIRECT_ENABLED,
+                InfluenceConstants.PREFS_OS_INDIRECT_ENABLED,
                 influenceParams.isIndirectEnabled
         )
         preferences.saveBool(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_UNATTRIBUTED_ENABLED,
+                InfluenceConstants.PREFS_OS_UNATTRIBUTED_ENABLED,
                 influenceParams.isUnattributedEnabled
         )
         preferences.saveInt(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_NOTIFICATION_LIMIT,
+                InfluenceConstants.PREFS_OS_NOTIFICATION_LIMIT,
                 influenceParams.notificationLimit
         )
         preferences.saveInt(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_NOTIFICATION_INDIRECT_ATTRIBUTION_WINDOW,
+                InfluenceConstants.PREFS_OS_NOTIFICATION_INDIRECT_ATTRIBUTION_WINDOW,
                 influenceParams.indirectNotificationAttributionWindow
         )
         preferences.saveInt(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_IAM_LIMIT,
+                InfluenceConstants.PREFS_OS_IAM_LIMIT,
                 influenceParams.iamLimit
         )
         preferences.saveInt(
                 PreferenceStores.ONESIGNAL,
-                OSInfluenceConstants.PREFS_OS_IAM_INDIRECT_ATTRIBUTION_WINDOW,
+                InfluenceConstants.PREFS_OS_IAM_INDIRECT_ATTRIBUTION_WINDOW,
                 influenceParams.indirectIAMAttributionWindow
         )
     }

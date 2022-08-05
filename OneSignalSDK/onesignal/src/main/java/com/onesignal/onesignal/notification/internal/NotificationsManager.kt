@@ -4,7 +4,7 @@ import android.app.Activity
 import com.onesignal.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.*
-import com.onesignal.onesignal.core.internal.common.time.ITime
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.device.IDeviceService
 import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.common.events.*

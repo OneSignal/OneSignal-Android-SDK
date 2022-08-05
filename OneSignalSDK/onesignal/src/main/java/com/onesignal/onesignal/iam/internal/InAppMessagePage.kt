@@ -1,11 +1,7 @@
 package com.onesignal.onesignal.iam.internal
 
-
 import org.json.JSONException
 import org.json.JSONObject
-
-const val PAGE_ID = "pageId"
-const val PAGE_INDEX = "pageIndex"
 
 internal open class InAppMessagePage constructor(jsonObject: JSONObject) {
     var pageId: String? = null
@@ -25,5 +21,10 @@ internal open class InAppMessagePage constructor(jsonObject: JSONObject) {
             e.printStackTrace()
         }
         return mainObj
+    }
+
+    companion object {
+        const val PAGE_ID = "pageId"
+        const val PAGE_INDEX = "pageIndex"
     }
 }

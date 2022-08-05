@@ -3,7 +3,7 @@ package com.onesignal.onesignal.notification.internal.generation.impl
 import android.content.Context
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
-import com.onesignal.onesignal.core.internal.common.time.ITime
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.notification.internal.Notification
 import com.onesignal.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.onesignal.notification.internal.NotificationReceivedEvent

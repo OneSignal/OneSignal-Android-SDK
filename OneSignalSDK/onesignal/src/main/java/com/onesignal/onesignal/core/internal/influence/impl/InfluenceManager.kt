@@ -1,9 +1,8 @@
 package com.onesignal.onesignal.core.internal.influence.impl
 
 import com.onesignal.onesignal.core.internal.AppEntryAction
-import com.onesignal.onesignal.core.internal.common.time.ITime
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.influence.*
-import com.onesignal.onesignal.core.internal.influence.OSInfluenceConstants
 import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.core.internal.preferences.IPreferencesService
 import org.json.JSONObject
@@ -20,13 +19,13 @@ class InfluenceManager(
         get() = trackers.values.map { it.currentSessionInfluence }
 
     override val sessionInfluences: List<Influence>
-        get() = trackers.values.filter { it.idTag != OSInfluenceConstants.IAM_TAG }.map { it.currentSessionInfluence }
+        get() = trackers.values.filter { it.idTag != InfluenceConstants.IAM_TAG }.map { it.currentSessionInfluence }
 
     override val iAMChannelTracker: IChannelTracker
-        get() = trackers[OSInfluenceConstants.IAM_TAG]!!
+        get() = trackers[InfluenceConstants.IAM_TAG]!!
 
     override val notificationChannelTracker: IChannelTracker
-        get() = trackers[OSInfluenceConstants.NOTIFICATION_TAG]!!
+        get() = trackers[InfluenceConstants.NOTIFICATION_TAG]!!
 
     override val channels: List<IChannelTracker>
         get() {
@@ -37,8 +36,8 @@ class InfluenceManager(
         }
 
     init {
-        trackers[OSInfluenceConstants.IAM_TAG] = InAppMessageTracker(dataRepository, timeProvider)
-        trackers[OSInfluenceConstants.NOTIFICATION_TAG] = NotificationTracker(dataRepository, timeProvider)
+        trackers[InfluenceConstants.IAM_TAG] = InAppMessageTracker(dataRepository, timeProvider)
+        trackers[InfluenceConstants.NOTIFICATION_TAG] = NotificationTracker(dataRepository, timeProvider)
     }
 
     override fun initFromCache() {
@@ -54,7 +53,7 @@ class InfluenceManager(
     override fun addSessionData(jsonObject: JSONObject, influences: List<Influence>) {
         influences.forEach {
             when (it.influenceChannel) {
-                InfluenceChannel.NOTIFICATION -> trackers[OSInfluenceConstants.NOTIFICATION_TAG]!!.addSessionData(jsonObject, it)
+                InfluenceChannel.NOTIFICATION -> trackers[InfluenceConstants.NOTIFICATION_TAG]!!.addSessionData(jsonObject, it)
                 InfluenceChannel.IAM -> {
                     // IAM doesn't influence session
                 }

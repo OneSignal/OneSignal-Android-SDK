@@ -1,6 +1,6 @@
 package com.onesignal.onesignal.iam.internal
 
-import com.onesignal.onesignal.core.internal.common.time.ITime
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.logging.Logging
 import org.json.JSONException
 import org.json.JSONObject

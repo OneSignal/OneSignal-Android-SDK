@@ -28,9 +28,10 @@ class LocationManager (
         _applicationService.addApplicationLifecycleHandler(this)
     }
 
-    override suspend fun requestPermission() {
+    override suspend fun requestPermission() : Boolean? {
         Logging.log(LogLevel.DEBUG, "LocationManager.promptLocationAsync()")
 //        TODO("Not yet implemented")
+        return false
     }
 
     override fun onFocus() {

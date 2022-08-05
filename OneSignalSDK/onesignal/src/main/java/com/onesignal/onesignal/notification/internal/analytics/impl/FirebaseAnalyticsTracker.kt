@@ -29,7 +29,7 @@ package com.onesignal.onesignal.notification.internal.analytics.impl
 import android.content.Context
 import android.os.Bundle
 import com.onesignal.onesignal.core.internal.application.IApplicationService
-import com.onesignal.onesignal.core.internal.common.time.ITime
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.onesignal.core.internal.preferences.PreferenceStores

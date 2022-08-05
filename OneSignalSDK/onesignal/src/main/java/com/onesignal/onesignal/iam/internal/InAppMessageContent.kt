@@ -1,6 +1,6 @@
 package com.onesignal.onesignal.iam.internal
 
-import com.onesignal.onesignal.iam.internal.display.WebViewManager
+import com.onesignal.onesignal.iam.internal.display.impl.WebViewManager
 import org.json.JSONObject
 
 internal open class InAppMessageContent constructor(jsonObject: JSONObject) {

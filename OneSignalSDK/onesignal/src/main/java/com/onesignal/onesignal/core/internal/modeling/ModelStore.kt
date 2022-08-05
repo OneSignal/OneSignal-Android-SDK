@@ -22,7 +22,7 @@ internal open class ModelStore<TModel>(
         model.subscribe(this)
 
         if(fireEvent) {
-            _changeSubscription.fire { it.added(model) }
+            _changeSubscription.fire { it.onAdded(model) }
         }
     }
 
@@ -44,12 +44,22 @@ internal open class ModelStore<TModel>(
 
         // TODO: Remove the model from storage
 
-        _changeSubscription.fire { it.removed(model) }
+        _changeSubscription.fire { it.onRemoved(model) }
+    }
+
+    override fun clear() {
+
+        val localList = _models.toList()
+        _models.clear()
+
+        for(item in localList) {
+            _changeSubscription.fire { it.onRemoved(item.second) }
+        }
     }
 
     override fun onChanged(args: ModelChangedArgs) {
         // TODO: Persist the changed model to storage. Consider batching.
 
-        _changeSubscription.fire { it.updated(args.model as TModel, args.property, args.oldValue, args.newValue) }
+        _changeSubscription.fire { it.onUpdated(args.model as TModel, args.property, args.oldValue, args.newValue) }
     }
 }

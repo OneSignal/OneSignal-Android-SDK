@@ -3,12 +3,11 @@ package com.onesignal.onesignal.notification.internal.bundle.impl
 import android.content.Context
 import android.os.Bundle
 import com.onesignal.onesignal.core.internal.common.JSONUtils
-import com.onesignal.onesignal.core.internal.common.time.ITime
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.notification.internal.bundle.INotificationBundleProcessor
 import com.onesignal.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.onesignal.notification.internal.common.NotificationFormatHelper
 import com.onesignal.onesignal.notification.internal.generation.INotificationGenerationWorkManager
-import com.onesignal.onesignal.notification.internal.lifecycle.INotificationLifecycleService
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject

@@ -1,7 +1,7 @@
 package com.onesignal.onesignal.notification.internal
 
 import com.onesignal.onesignal.core.internal.application.IApplicationService
-import com.onesignal.onesignal.core.internal.common.time.ITime
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.onesignal.core.internal.startup.IStartableService
 import com.onesignal.onesignal.core.internal.service.ServiceBuilder

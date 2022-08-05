@@ -2,28 +2,33 @@ package com.onesignal.onesignal.iam.internal.lifecycle.impl
 
 import com.onesignal.onesignal.core.internal.common.events.EventProducer
 import com.onesignal.onesignal.iam.internal.InAppMessage
-import com.onesignal.onesignal.iam.internal.lifecycle.IIAMLifecycleEventHandler
-import com.onesignal.onesignal.iam.internal.lifecycle.IIAMLifecycleService
-import org.json.JSONObject
+import com.onesignal.onesignal.iam.internal.InAppMessageAction
+import com.onesignal.onesignal.iam.internal.InAppMessagePage
+import com.onesignal.onesignal.iam.internal.lifecycle.IInAppLifecycleEventHandler
+import com.onesignal.onesignal.iam.internal.lifecycle.IInAppLifecycleService
 
 internal class IAMLifecycleService() :
-    EventProducer<IIAMLifecycleEventHandler>(),
-    IIAMLifecycleService {
+    EventProducer<IInAppLifecycleEventHandler>(),
+    IInAppLifecycleService {
 
-    override fun messageActionOccurredOnPreview(message: InAppMessage, actionJson: JSONObject) {
-        fire { it.onMessageActionOccurredOnPreview(message, actionJson) }
+    override fun messageWillDisplay(message: InAppMessage) {
+        fire { it.onMessageWillDisplay(message) }
     }
 
-    override fun messageActionOccurredOnMessage(message: InAppMessage, actionJson: JSONObject) {
-        fire { it.onMessageActionOccurredOnMessage(message, actionJson) }
+    override fun messageWasDisplayed(message: InAppMessage) {
+        fire { it.onMessageWasDisplayed(message) }
     }
 
-    override fun pageChanged(message: InAppMessage, eventJson: JSONObject) {
-        fire { it.onPageChanged(message, eventJson) }
+    override fun messageActionOccurredOnPreview(message: InAppMessage, action: InAppMessageAction) {
+        fire { it.onMessageActionOccurredOnPreview(message, action) }
     }
 
-    override fun messageWasShown(message: InAppMessage) {
-        fire { it.onMessageWasShown(message) }
+    override fun messageActionOccurredOnMessage(message: InAppMessage, action: InAppMessageAction) {
+        fire { it.onMessageActionOccurredOnMessage(message, action) }
+    }
+
+    override fun messagePageChanged(message: InAppMessage, page: InAppMessagePage) {
+        fire { it.onMessagePageChanged(message, page) }
     }
 
     override fun messageWillDismiss(message: InAppMessage) {

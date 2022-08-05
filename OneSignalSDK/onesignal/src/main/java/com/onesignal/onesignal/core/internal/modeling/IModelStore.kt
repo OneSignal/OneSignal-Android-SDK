@@ -45,4 +45,9 @@ interface IModelStore<TModel> : IEventNotifier<IModelStoreChangeHandler<TModel>>
      * @param id The unique identifier to the model to remove.
      */
     fun remove(id: String)
+
+    /**
+     * Clear all models within the model store.
+     */
+    fun clear()
 }

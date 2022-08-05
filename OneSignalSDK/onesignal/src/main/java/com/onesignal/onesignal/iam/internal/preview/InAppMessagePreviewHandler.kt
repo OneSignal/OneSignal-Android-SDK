@@ -4,9 +4,9 @@ import android.app.Activity
 import android.os.Build
 import androidx.annotation.ChecksSdkIntAtLeast
 import com.onesignal.onesignal.core.internal.application.IApplicationService
-import com.onesignal.onesignal.core.internal.common.time.ITime
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.startup.IStartableService
-import com.onesignal.onesignal.iam.internal.IIAMDisplayer
+import com.onesignal.onesignal.iam.internal.display.IInAppDisplayer
 import com.onesignal.onesignal.notification.internal.INotificationActivityOpener
 import com.onesignal.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.onesignal.notification.internal.common.NotificationGenerationJob
@@ -19,7 +19,7 @@ import org.json.JSONException
 import org.json.JSONObject
 
 internal class InAppMessagePreviewHandler(
-    private val _iamDisplayer: IIAMDisplayer,
+    private val _iamDisplayer: IInAppDisplayer,
     private val _applicationService: IApplicationService,
     private val _notificationDisplayer: INotificationDisplayer,
     private val _notificationActivityOpener: INotificationActivityOpener,

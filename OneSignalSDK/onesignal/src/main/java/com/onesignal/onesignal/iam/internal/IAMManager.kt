@@ -4,21 +4,22 @@ import android.app.AlertDialog
 import com.onesignal.R
 import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.application.IApplicationService
-import com.onesignal.onesignal.core.internal.backend.http.IHttpClient
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.onesignal.core.internal.common.JSONUtils
 import com.onesignal.onesignal.core.internal.common.events.CallbackProducer
 import com.onesignal.onesignal.core.internal.common.events.ICallbackProducer
 import com.onesignal.onesignal.core.internal.common.suspendifyOnThread
-import com.onesignal.onesignal.core.internal.common.time.ITime
-import com.onesignal.onesignal.core.internal.device.IDeviceService
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.modeling.IModelStoreChangeHandler
 import com.onesignal.onesignal.core.internal.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.onesignal.core.internal.models.ConfigModel
 import com.onesignal.onesignal.core.internal.models.ConfigModelStore
+import com.onesignal.onesignal.core.internal.models.TriggerModel
+import com.onesignal.onesignal.core.internal.models.TriggerModelStore
 import com.onesignal.onesignal.core.internal.outcomes.OutcomeEventsController
-import com.onesignal.onesignal.core.internal.startup.IStartableService
 import com.onesignal.onesignal.core.internal.session.ISessionService
+import com.onesignal.onesignal.core.internal.startup.IStartableService
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.user.ISubscriptionChangedHandler
 import com.onesignal.onesignal.core.internal.user.ISubscriptionManager
 import com.onesignal.onesignal.core.internal.user.subscriptions.PushSubscription
@@ -28,57 +29,48 @@ import com.onesignal.onesignal.iam.IIAMManager
 import com.onesignal.onesignal.iam.IInAppMessageClickHandler
 import com.onesignal.onesignal.iam.IInAppMessageLifecycleHandler
 import com.onesignal.onesignal.iam.InAppMessageActionUrlType
-import com.onesignal.onesignal.iam.internal.backend.InAppBackendController
-import com.onesignal.onesignal.iam.internal.data.InAppDataController
-import com.onesignal.onesignal.iam.internal.display.IAMDisplayer
-import com.onesignal.onesignal.iam.internal.lifecycle.IIAMLifecycleEventHandler
-import com.onesignal.onesignal.iam.internal.lifecycle.IIAMLifecycleService
-import com.onesignal.onesignal.iam.internal.preferences.InAppPreferencesController
-import com.onesignal.onesignal.iam.internal.prompt.InAppMessagePrompt
-import com.onesignal.onesignal.iam.internal.triggers.TriggerController
+import com.onesignal.onesignal.iam.internal.backend.IInAppBackendService
+import com.onesignal.onesignal.iam.internal.common.InAppHelper
+import com.onesignal.onesignal.iam.internal.common.OneSignalChromeTab
+import com.onesignal.onesignal.iam.internal.display.IInAppDisplayer
+import com.onesignal.onesignal.iam.internal.lifecycle.IInAppLifecycleEventHandler
+import com.onesignal.onesignal.iam.internal.lifecycle.IInAppLifecycleService
+import com.onesignal.onesignal.iam.internal.preferences.IInAppPreferencesController
+import com.onesignal.onesignal.iam.internal.prompt.impl.InAppMessagePrompt
+import com.onesignal.onesignal.iam.internal.repositories.IInAppRepository
+import com.onesignal.onesignal.iam.internal.state.InAppStateService
+import com.onesignal.onesignal.iam.internal.triggers.ITriggerController
+import com.onesignal.onesignal.iam.internal.triggers.ITriggerHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONException
-import org.json.JSONObject
 import java.util.*
-
-interface IIAMPreviewDisplayer
-
-internal interface IIAMDisplayer {
-    suspend fun displayMessage(message: InAppMessage)
-
-    suspend fun displayPreviewMessage(previewUUID: String)
-}
 
 internal class IAMManager (
     private val _applicationService: IApplicationService,
-    private val _deviceService: IDeviceService,
     private val _sessionService: ISessionService,
-    private val _httpClient: IHttpClient,
     private val _configModelStore: ConfigModelStore,
+    private val _triggerModelStore: TriggerModelStore,
     private val _userManager: IUserManager,
     private val _subscriptionManager: ISubscriptionManager,
     private val _outcomeEventsController: OutcomeEventsController,
-    private val _prefs: InAppPreferencesController,
-    private val _data: InAppDataController,
-    private val _backend: InAppBackendController,
-    private val _triggerController: TriggerController,
-    private val _displayer: IAMDisplayer,
-    private val _lifecycle: IIAMLifecycleService,
+    private val _state: InAppStateService,
+    private val _prefs: IInAppPreferencesController,
+    private val _repository: IInAppRepository,
+    private val _backend: IInAppBackendService,
+    private val _triggerController: ITriggerController,
+    private val _displayer: IInAppDisplayer,
+    private val _lifecycle: IInAppLifecycleService,
     private val _time: ITime
         ) : IIAMManager,
             IStartableService,
             ISubscriptionChangedHandler,
             ISingletonModelStoreChangeHandler<ConfigModel>,
-            IIAMPreviewDisplayer,
-            IIAMDisplayer,
-            IIAMLifecycleEventHandler {
+            IModelStoreChangeHandler<TriggerModel>,
+            IInAppLifecycleEventHandler,
+            ITriggerHandler {
 
     private val _lifecycleCallback: ICallbackProducer<IInAppMessageLifecycleHandler> = CallbackProducer()
     private val _messageClickCallback: ICallbackProducer<IInAppMessageClickHandler> = CallbackProducer()
-    private var _paused: Boolean = false
-
-    private var inAppMessageShowing = false
 
     // IAMs loaded remotely from on_session
     //   If on_session won't be called this will be loaded from cache
@@ -105,31 +97,42 @@ internal class IAMManager (
     // This is retrieved from a DB Table that take care of each object to be unique
     private val redisplayedInAppMessages: MutableList<InAppMessage> = mutableListOf()
 
-    private var lastTimeInAppDismissed: Date? = null
-    private var currentPrompt: InAppMessagePrompt? = null
-//    private var userTagsString: String? = null
-//    private var waitForTags = false
-//    private var pendingMessageContent: InAppMessageContent? = null
-
     override var paused: Boolean
-        get() = _paused
+        get() = _state.paused
         set(value) {
             Logging.log(LogLevel.DEBUG, "setPaused(value: $value)")
-            _paused = value
+            _state.paused = value
         }
 
     override fun start() {
         _subscriptionManager.subscribe(this)
         _configModelStore.subscribe(this)
+        _triggerModelStore.subscribe(this)
         _lifecycle.subscribe(this)
+        _triggerController.subscribe(this)
 
         suspendifyOnThread {
             // get saved IAMs from database
-            messages = _data.listInAppMessages()
+            redisplayedInAppMessages.addAll(_repository.listInAppMessages())
+
+            // reset all messages for redisplay to indicate not shown
+            for (redisplayInAppMessage in redisplayedInAppMessages) {
+                redisplayInAppMessage.isDisplayedInSession = false
+            }
 
             // attempt to fetch messages from the backend (if we have the pre-requisite data already)
             fetchMessages()
         }
+    }
+
+    override fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler?) {
+        Logging.log(LogLevel.DEBUG, "setInAppMessageLifecycleHandler(handler: $handler)")
+        _lifecycleCallback.set(handler)
+    }
+
+    override fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler?) {
+        Logging.log(LogLevel.DEBUG, "setInAppMessageClickHandler(handler: $handler)")
+        _messageClickCallback.set(handler)
     }
 
     override fun onModelUpdated(model: ConfigModel, property: String, oldValue: Any?, newValue: Any?) {
@@ -161,43 +164,22 @@ internal class IAMManager (
         if(subscriptionId == null || appId == null)
             return
 
-        // Retrieve any in app messages that might exist
-        val jsonBody = JSONObject()
-        jsonBody.put("app_id", appId)
+        val newMessages = _backend.listInAppMessages(appId, subscriptionId.toString())
 
-        // TODO: This will be replaced by dedicated iam endpoint once it's available
-        val response = _httpClient.post("players/${subscriptionId}/on_session", jsonBody)
-
-        if(response.isSuccess) {
-            val jsonResponse = JSONObject(response.payload)
-
-            if (jsonResponse.has("in_app_messages")) {
-                val iamMessagesAsJSON = jsonResponse.getJSONArray("in_app_messages")
-                // Cache copy for quick cold starts
-                _prefs.savedIAMs = iamMessagesAsJSON.toString()
-
-                // TODO: I feel like this might be a "new session" thing, not a "fetch IAMs" thing?
-                for (redisplayInAppMessage in messages) {
-                    redisplayInAppMessage.isDisplayedInSession = false
-                }
-
-
-                val newMessages = ArrayList<InAppMessage>()
-                for (i in 0 until iamMessagesAsJSON.length()) {
-                    val messageJson: JSONObject = iamMessagesAsJSON.getJSONObject(i)
-                    val message = InAppMessage(messageJson, _time)
-                    // Avoid null checks later if IAM already comes with null id
-                    if (message.messageId != null) {
-                        newMessages.add(message)
-                    }
-                }
-
-                this.messages = newMessages
-                evaluateInAppMessages()
+        if(newMessages != null) {
+            // TODO: I feel like this might be a "new session" thing, not a "fetch IAMs" thing?
+            for (redisplayInAppMessage in messages) {
+                redisplayInAppMessage.isDisplayedInSession = false
             }
+
+            this.messages = newMessages
+            evaluateInAppMessages()
         }
     }
 
+    /**
+     * Iterate through the messages and determine if they should be shown to the user.
+     */
     private suspend fun evaluateInAppMessages() {
         Logging.debug("Starting evaluateInAppMessages")
 
@@ -287,156 +269,69 @@ internal class IAMManager (
 
         Logging.debug("displayFirstIAMOnQueue: $messageDisplayQueue")
         // If there are IAMs in the queue and nothing showing, show first in the queue
-        if (messageDisplayQueue.size > 0 && !inAppMessageShowing) {
+        if (messageDisplayQueue.size > 0 && !_state.inAppMessageShowing) {
             Logging.debug("No IAM showing currently, showing first item in the queue!")
             displayMessage(messageDisplayQueue.get(0))
             return
         }
-        Logging.debug("In app message is currently showing or there are no IAMs left in the queue! isInAppMessageShowing: $inAppMessageShowing")
+        Logging.debug("In app message is currently showing or there are no IAMs left in the queue! isInAppMessageShowing: ${_state.inAppMessageShowing}")
     }
 
-    override suspend fun displayMessage(message: InAppMessage) {
-
-        if (_paused) {
+    private suspend fun displayMessage(message: InAppMessage) {
+        if (_state.paused) {
             Logging.verbose("In app messaging is currently paused, in app messages will not be shown!")
             return
         }
-        inAppMessageShowing = true
-        var response = _backend.getIAMData(_configModelStore.get().appId!!, message.messageId, variantIdForMessage(message))
 
-        if(response.isSuccess) {
-            try {
-                val jsonResponse = JSONObject(response.payload!!)
-                val content: InAppMessageContent = parseMessageContentData(jsonResponse, message)
-                if (content.contentHtml == null) {
-                    Logging.debug("displayMessage:OnSuccess: No HTML retrieved from loadMessageContent")
-                    return
-                }
+        var result = _displayer.displayMessage(message)
 
-                _sessionService.onInAppMessageReceived(message.messageId)
-                onMessageWillDisplay(message)
-                content.contentHtml = taggedHTMLString(content.contentHtml!!)
-                _displayer.showMessageContent(message, content)
-            } catch (e: JSONException) {
-                e.printStackTrace()
-            }
+        if(result == null) {
+            // Retry displaying the same IAM
+            // Using the queueMessageForDisplay method follows safety checks to prevent issues
+            // like having 2 IAMs showing at once or duplicate IAMs in the queue
+            queueMessageForDisplay(message)
         }
-        else {
-            inAppMessageShowing = false
-            try {
-                val jsonResponse = JSONObject(response.payload!!)
-                val retry =
-                    jsonResponse.getBoolean(InAppBackendController.IAM_DATA_RESPONSE_RETRY_KEY)
-                if (retry) {
-                    // Retry displaying the same IAM
-                    // Using the queueMessageForDisplay method follows safety checks to prevent issues
-                    // like having 2 IAMs showing at once or duplicate IAMs in the queue
-                    queueMessageForDisplay(message)
-                } else {
-                    messageWasDismissed(message, true)
-                }
-            } catch (e: JSONException) {
-                e.printStackTrace()
-            }
+        else if(result == false) {
+            messageWasDismissed(message, true)
         }
-    }
-
-    override suspend fun displayPreviewMessage(previewUUID: String) {
-        inAppMessageShowing = true
-        val message = InAppMessage(true, _time)
-        val response = _backend.getIAMPreviewData(_configModelStore.get().appId!!, previewUUID)
-
-        if(!response.isSuccess) {
-            dismissCurrentMessage(null)
-        } else
-        {
-            try {
-                val jsonResponse = JSONObject(response.payload!!)
-                val content: InAppMessageContent = parseMessageContentData(jsonResponse, message)
-                if (content.contentHtml == null) {
-                    Logging.debug("displayPreviewMessage:OnSuccess: No HTML retrieved from loadMessageContent")
-                    return
-                }
-                onMessageWillDisplay(message)
-                content.contentHtml = taggedHTMLString(content.contentHtml!!)
-                _displayer.showMessageContent(message, content)
-            } catch (e: JSONException) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    private fun parseMessageContentData(data: JSONObject, message: InAppMessage): InAppMessageContent {
-        val content = InAppMessageContent(data)
-        message.displayDuration = content.displayDuration!!
-        return content
-    }
-
-    fun taggedHTMLString(untaggedString: String): String {
-        val tagsAsJson = JSONObject(_userManager.tags)
-        val tagsString = tagsAsJson.toString()
-        val tagsDict: String = tagsString
-        val tagScript = LIQUID_TAG_SCRIPT
-        return untaggedString + String.format(tagScript, tagsDict)
-    }
-
-    private fun variantIdForMessage(message: InAppMessage): String? {
-        // TODO: Language context stuff
-//        val language: String = languageContext.getLanguage()
-        var language = "en"
-        for (variant in PREFERRED_VARIANT_ORDER) {
-            if (!message.variants.containsKey(variant)) continue
-            val variantMap = message.variants[variant]!!
-            return if (variantMap.containsKey(language)) variantMap[language] else variantMap["default"]
-        }
-        return null
     }
 
     /**
      * Called after an In-App message is closed and it's dismiss animation has completed
      */
-    suspend fun messageWasDismissed(message: InAppMessage) {
-        messageWasDismissed(message, false)
-    }
-
-    suspend fun messageWasDismissed(message: InAppMessage, failed: Boolean) {
+    private suspend fun messageWasDismissed(message: InAppMessage, failed: Boolean = false) {
         if (!message.isPreview) {
             dismissedMessages.add(message.messageId)
+
             // If failed we will retry on next session
             if (!failed) {
                 _prefs.dismissedMessagesId = dismissedMessages
 
                 // Don't keep track of last displayed time for a preview
-                lastTimeInAppDismissed = Date()
+                _state.lastTimeInAppDismissed = Date()
                 // Only increase IAM display quantity if IAM was truly displayed
                 persistInAppMessage(message)
             }
+
             Logging.debug("OSInAppMessageController messageWasDismissed dismissedMessages: $dismissedMessages")
         }
-        if (!shouldWaitForPromptsBeforeDismiss())
-            onMessageWasDismissed(message)
 
-        dismissCurrentMessage(message)
-    }
-
-    private fun shouldWaitForPromptsBeforeDismiss(): Boolean {
-        return currentPrompt != null
-    }
-
-    /**
-     * Removes first item from the queue and attempts to show the next IAM in the queue
-     *
-     * @param message The message dismissed, preview messages are null
-     */
-    private suspend fun dismissCurrentMessage(message: InAppMessage?) {
         // Remove DIRECT influence due to ClickHandler of ClickAction outcomes
         _sessionService.directInfluenceFromIAMClickFinished()
 
-        if (shouldWaitForPromptsBeforeDismiss()) {
+        if (_state.currentPrompt != null) {
             Logging.debug("Stop evaluateMessageDisplayQueue because prompt is currently displayed")
             return
         }
-        inAppMessageShowing = false
+
+        // fire the external callback
+        if (!_lifecycleCallback.hasCallback) {
+            Logging.verbose("OSInAppMessageController onMessageDidDismiss: inAppMessageLifecycleHandler is null")
+            return
+        }
+        _lifecycleCallback.fire { it.onDidDismissInAppMessage(message) }
+
+        _state.inAppMessageShowing = false
 
         if (message != null && !message.isPreview && messageDisplayQueue.size > 0) {
             if (!messageDisplayQueue.contains(message)) {
@@ -458,6 +353,25 @@ internal class IAMManager (
         }
     }
 
+    /**
+     * Part of redisplay logic
+     *
+     *
+     * Make all messages with redisplay available if:
+     * - Already displayed
+     * - At least one Trigger has changed
+     */
+    private fun makeRedisplayMessagesAvailableWithTriggers(newTriggersKeys: Collection<String>) {
+        for (message in messages) {
+            if (!message.isTriggerChanged && redisplayedInAppMessages.contains(message) &&
+                _triggerController.isTriggerOnMessage(message, newTriggersKeys)
+            ) {
+                Logging.debug("Trigger changed for message: $message")
+                message.isTriggerChanged = true
+            }
+        }
+    }
+
     private suspend fun persistInAppMessage(message: InAppMessage) {
         val displayTimeSeconds = _time.currentTimeMillis / 1000
         message.redisplayStats.lastDisplayTime = displayTimeSeconds
@@ -465,8 +379,8 @@ internal class IAMManager (
         message.isTriggerChanged = false
         message.isDisplayedInSession = true
 
-        _data.saveInAppMessage(message)
-        _prefs.lastTimeInAppDismissed = lastTimeInAppDismissed
+        _repository.saveInAppMessage(message)
+        _prefs.lastTimeInAppDismissed = _state.lastTimeInAppDismissed
 
         // Update the data to enable future re displays
         // Avoid calling the repository data again
@@ -480,70 +394,25 @@ internal class IAMManager (
         Logging.debug("persistInAppMessageForRedisplay: $message with msg array data: $redisplayedInAppMessages")
     }
 
-    override fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler?) {
-        Logging.log(LogLevel.DEBUG, "setInAppMessageLifecycleHandler(handler: $handler)")
-        _lifecycleCallback.set(handler)
-    }
-
-    override fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler?) {
-        Logging.log(LogLevel.DEBUG, "setInAppMessageClickHandler(handler: $handler)")
-        _messageClickCallback.set(handler)
-    }
-
-    companion object {
-        private val PREFERRED_VARIANT_ORDER: List<String> = listOf("android", "app", "all")
-        private const val LIQUID_TAG_SCRIPT = "\n\n" +
-                "<script>\n" +
-                "    setPlayerTags(%s);\n" +
-                "</script>"
-    }
-
-    override fun onMessageActionOccurredOnPreview(message: InAppMessage, actionJson: JSONObject) {
-        suspendifyOnThread {
-            val action = InAppMessageAction(actionJson)
-            action.isFirstClick = message.takeActionAsUnique()
-
-            firePublicClickHandler(message.messageId, action)
-            beginProcessingPrompts(message, action.prompts)
-            fireClickAction(action)
-            logInAppMessagePreviewActions(action)
-        }
-    }
-
-    override fun onMessageActionOccurredOnMessage(message: InAppMessage, actionJson: JSONObject) {
-        suspendifyOnThread {
-            val action = InAppMessageAction(actionJson)
-            action.isFirstClick = message.takeActionAsUnique()
-            firePublicClickHandler(message.messageId, action)
-            beginProcessingPrompts(message, action.prompts)
-            fireClickAction(action)
-            fireRESTCallForClick(message, action)
-            fireTagCallForClick(action)
-            fireOutcomesForClick(message.messageId, action.outcomes)
-        }
-    }
-
-    private suspend fun fireOutcomesForClick(messageId: String, outcomes: List<InAppMessageOutcome>) {
-        _sessionService.directInfluenceFromIAMClick(messageId)
-        _outcomeEventsController.sendClickActionOutcomes(outcomes)
-    }
-
-    override fun onPageChanged(message: InAppMessage, eventJson: JSONObject) {
-        val newPage = InAppMessagePage(eventJson)
-        if (message.isPreview) {
+    // IAM LIFECYCLE CALLBACKS
+    override fun onMessageWillDisplay(message: InAppMessage) {
+        if (!_lifecycleCallback.hasCallback) {
+            Logging.verbose("OSInAppMessageController onMessageWillDisplay: inAppMessageLifecycleHandler is null")
             return
         }
-
-        suspendifyOnThread {
-            fireRESTCallForPageChange(message, newPage)
-        }
+        _lifecycleCallback.fire { it.onWillDisplayInAppMessage(message) }
     }
 
-    override fun onMessageWasShown(message: InAppMessage) {
+    override fun onMessageWasDisplayed(message: InAppMessage) {
 
-        onMessageDidDisplay(message)
+        if (!_lifecycleCallback.hasCallback) {
+            Logging.verbose("OSInAppMessageController onMessageDidDisplay: inAppMessageLifecycleHandler is null")
+            return
+        }
+        _lifecycleCallback.fire { it.onDidDisplayInAppMessage(message) }
 
-        if (message.isPreview) return
+        if (message.isPreview)
+            return
 
         // Check that the messageId is in impressionedMessages so we return early without a second post being made
 
@@ -555,20 +424,18 @@ internal class IAMManager (
         // Add the messageId to impressionedMessages so no second request is made
         impressionedMessages.add(message.messageId)
 
-        val variantId = variantIdForMessage(message) ?: return
+        val variantId = InAppHelper.variantIdForMessage(message) ?: return
 
         suspendifyOnThread {
             val response = _backend.sendIAMImpression(
                 _configModelStore.get().appId!!,
                 _subscriptionManager.subscriptions.push?.id.toString(),
                 variantId,
-                _deviceService.deviceType,
-                message.messageId,
-                impressionedMessages
+                message.messageId
             )
 
             if (response.isSuccess) {
-                // Everything handled by repository
+                _prefs.impressionesMessagesId = impressionedMessages
             } else {
                 // Post failed, impressioned Messages should be removed and this way another post can be attempted
                 impressionedMessages.remove(message.messageId)
@@ -576,20 +443,37 @@ internal class IAMManager (
         }
     }
 
-    private fun onMessageWillDisplay(message: InAppMessage) {
-        if (!_lifecycleCallback.hasCallback) {
-            Logging.verbose("OSInAppMessageController onMessageWillDisplay: inAppMessageLifecycleHandler is null")
-            return
+    override fun onMessageActionOccurredOnPreview(message: InAppMessage, action: InAppMessageAction) {
+        suspendifyOnThread {
+            action.isFirstClick = message.takeActionAsUnique()
+
+            firePublicClickHandler(message.messageId, action)
+            beginProcessingPrompts(message, action.prompts)
+            fireClickAction(action)
+            logInAppMessagePreviewActions(action)
         }
-        _lifecycleCallback.fire { it.onWillDisplayInAppMessage(message) }
     }
 
-    private fun onMessageDidDisplay(message: InAppMessage) {
-        if (!_lifecycleCallback.hasCallback) {
-            Logging.verbose("OSInAppMessageController onMessageDidDisplay: inAppMessageLifecycleHandler is null")
+    override fun onMessageActionOccurredOnMessage(message: InAppMessage, action: InAppMessageAction) {
+        suspendifyOnThread {
+            action.isFirstClick = message.takeActionAsUnique()
+            firePublicClickHandler(message.messageId, action)
+            beginProcessingPrompts(message, action.prompts)
+            fireClickAction(action)
+            fireRESTCallForClick(message, action)
+            fireTagCallForClick(action)
+            fireOutcomesForClick(message.messageId, action.outcomes)
+        }
+    }
+
+    override fun onMessagePageChanged(message: InAppMessage, page: InAppMessagePage) {
+        if (message.isPreview) {
             return
         }
-        _lifecycleCallback.fire { it.onDidDisplayInAppMessage(message) }
+
+        suspendifyOnThread {
+            fireRESTCallForPageChange(message, page)
+        }
     }
 
     override fun onMessageWillDismiss(message: InAppMessage) {
@@ -601,12 +485,62 @@ internal class IAMManager (
     }
 
     override fun onMessageWasDismissed(message: InAppMessage) {
-        if (!_lifecycleCallback.hasCallback) {
-            Logging.verbose("OSInAppMessageController onMessageDidDismiss: inAppMessageLifecycleHandler is null")
-            return
+        suspendifyOnThread {
+            messageWasDismissed(message)
         }
-        _lifecycleCallback.fire { it.onDidDismissInAppMessage(message) }
     }
+    // END IAM LIFECYCLE CALLBACKS
+
+    // TRIGGER MODEL CALLBACKS
+    override fun onAdded(model: TriggerModel) {
+        _triggerController.addTriggers(model.key, model.value)
+        checkRedisplayMessagesAndEvaluate(model.key)
+    }
+
+    override fun onUpdated(model: TriggerModel, property: String, oldValue: Any?, newValue: Any?) {
+        _triggerController.addTriggers(model.key, model.value)
+        checkRedisplayMessagesAndEvaluate(model.key)
+    }
+
+    override fun onRemoved(model: TriggerModel) {
+        _triggerController.removeTriggersForKeys(model.key)
+    }
+    // END TRIGGER MODEL CALLBACKS
+
+    // TRIGGER FIRED CALLBACKS
+    /**
+     * Part of redisplay logic
+     *
+     *
+     * Will update redisplay messages depending on dynamic triggers before setDataForRedisplay is called.
+     * @see OSInAppMessageController.setDataForRedisplay
+     * @see OSInAppMessageController.messageTriggerConditionChanged
+     */
+    override fun onTriggerCompleted(triggerId: String) {
+        Logging.debug("onTriggerCompleted called with triggerId: $triggerId")
+        val triggerIds: MutableSet<String> = HashSet()
+        triggerIds.add(triggerId)
+        makeRedisplayMessagesAvailableWithTriggers(triggerIds)
+    }
+
+    /**
+     * Dynamic trigger logic
+     *
+     *
+     * This will re evaluate messages due to dynamic triggers evaluating to true potentially
+     *
+     * @see OSInAppMessageController.setDataForRedisplay
+     */
+    override fun onTriggerConditionChanged() {
+        Logging.debug("onTriggerConditionChanged called")
+
+        suspendifyOnThread {
+            // This method is called when a time-based trigger timer fires, meaning the message can
+            //  probably be shown now. So the current message conditions should be re-evaluated
+            evaluateInAppMessages()
+        }
+    }
+    // END TRIGGER FIRED CALLBACKS
 
     private suspend fun beginProcessingPrompts(message: InAppMessage, prompts: List<InAppMessagePrompt>) {
         if (prompts.isNotEmpty()) {
@@ -616,6 +550,11 @@ internal class IAMManager (
             _displayer.dismissCurrentInAppMessage()
             showMultiplePrompts(message, prompts)
         }
+    }
+
+    private suspend fun fireOutcomesForClick(messageId: String, outcomes: List<InAppMessageOutcome>) {
+        _sessionService.directInfluenceFromIAMClick(messageId)
+        _outcomeEventsController.sendClickActionOutcomes(outcomes)
     }
 
     private fun fireTagCallForClick(action: InAppMessageAction) {
@@ -637,12 +576,12 @@ internal class IAMManager (
         for (prompt in prompts) {
             // Don't show prompt twice
             if (!prompt.hasPrompted()) {
-                currentPrompt = prompt
+                _state.currentPrompt = prompt
 
-                Logging.debug("IAM prompt to handle: " + currentPrompt.toString())
-                currentPrompt!!.setPrompted(true)
-                val result = currentPrompt!!.handlePrompt()
-                currentPrompt = null
+                Logging.debug("IAM prompt to handle: " + _state.currentPrompt.toString())
+                _state.currentPrompt!!.setPrompted(true)
+                val result = _state.currentPrompt!!.handlePrompt()
+                _state.currentPrompt = null
                 Logging.debug("IAM prompt to handle finished with result: $result")
 
                 // On preview mode we show informative alert dialogs
@@ -653,7 +592,7 @@ internal class IAMManager (
             }
         }
 
-        if (currentPrompt == null) {
+        if (_state.currentPrompt == null) {
             Logging.debug("No IAM prompt to handle, dismiss message: " + inAppMessage.messageId)
             messageWasDismissed(inAppMessage)
         }
@@ -695,7 +634,7 @@ internal class IAMManager (
     }
 
     private suspend fun fireRESTCallForPageChange(message: InAppMessage, page: InAppMessagePage) {
-        val variantId = variantIdForMessage(message) ?: return
+        val variantId = InAppHelper.variantIdForMessage(message) ?: return
         val pageId = page.pageId
         val messagePrefixedPageId = message.messageId + pageId
 
@@ -706,16 +645,14 @@ internal class IAMManager (
         }
         viewedPageIds.add(messagePrefixedPageId)
         var response = _backend.sendIAMPageImpression(
-            _configModelStore.get().appId,
+            _configModelStore.get().appId!!,
             _subscriptionManager.subscriptions.push?.id.toString(),
             variantId,
-            _deviceService.deviceType,
             message.messageId,
-            pageId,
-            viewedPageIds)
+            pageId)
 
         if(response.isSuccess) {
-            // Everything handled by repository
+            _prefs.viewPageImpressionedIds = viewedPageIds
         }
         else {
             // Post failed, viewed page should be removed and this way another post can be attempted
@@ -724,7 +661,7 @@ internal class IAMManager (
     }
 
     private suspend fun fireRESTCallForClick(message: InAppMessage, action: InAppMessageAction) {
-        val variantId = variantIdForMessage(message) ?: return
+        val variantId = InAppHelper.variantIdForMessage(message) ?: return
         val clickId = action.clickId
 
         // If IAM has redisplay the clickId may be available
@@ -744,14 +681,13 @@ internal class IAMManager (
             _configModelStore.get().appId!!,
             _subscriptionManager.subscriptions.push?.id.toString(),
             variantId,
-            _deviceService.deviceType,
             message.messageId,
             clickId,
-            action.isFirstClick,
-            clickedClickIds)
+            action.isFirstClick)
 
         if(response.isSuccess) {
-            // Everything handled by repository
+            // Persist success click to disk. Id already added to set before making the network call
+            _prefs.clickedMessagesId = clickedClickIds
         }
         else {
             clickedClickIds.remove(clickId)
@@ -770,5 +706,13 @@ internal class IAMManager (
             .setMessage(message)
             .setPositiveButton(android.R.string.ok) { _, _ -> suspendifyOnThread { showMultiplePrompts(inAppMessage, prompts) } }
             .show()
+    }
+
+    private fun checkRedisplayMessagesAndEvaluate(newTriggerKey: String) {
+        makeRedisplayMessagesAvailableWithTriggers(listOf(newTriggerKey))
+
+        suspendifyOnThread {
+            evaluateInAppMessages()
+        }
     }
 }

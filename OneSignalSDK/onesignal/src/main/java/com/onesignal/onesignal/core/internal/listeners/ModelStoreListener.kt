@@ -20,19 +20,19 @@ abstract class ModelStoreListener<TModel>(
         store.unsubscribe(this)
     }
 
-    override fun added(model: TModel) {
+    override fun onAdded(model: TModel) {
         val operation = getAddOperation(model)
         if(operation != null)
             opRepo.enqueue(operation)
     }
 
-    override fun updated(model: TModel, property: String, oldValue: Any?, newValue: Any?) {
+    override fun onUpdated(model: TModel, property: String, oldValue: Any?, newValue: Any?) {
         val operation = getUpdateOperation(model, property, oldValue, newValue)
         if(operation != null)
             opRepo.enqueue(operation)
     }
 
-    override fun removed(model: TModel) {
+    override fun onRemoved(model: TModel) {
         val operation = getRemoveOperation(model)
         if(operation != null)
             opRepo.enqueue(operation)

@@ -1,7 +1,7 @@
 package com.onesignal.onesignal.core.internal.outcomes
 
 import android.os.Process
-import com.onesignal.onesignal.core.internal.common.time.ITime
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.database.impl.OneSignalDbContract
 import com.onesignal.onesignal.core.internal.device.IDeviceService
 import com.onesignal.onesignal.core.internal.influence.Influence

@@ -12,7 +12,8 @@ interface IUserSwitcher {
 }
 
 internal open class UserManager(
-    private val _subscriptionManager: ISubscriptionManager
+    private val _subscriptionManager: ISubscriptionManager,
+    private val _triggerModelStore: TriggerModelStore,
 ) : IUserManager, IUserSwitcher {
 
     override val externalId: String?
@@ -139,30 +140,47 @@ internal open class UserManager(
 
     override fun setTriggers(triggers: Map<String, Any>): IUserManager {
         Logging.log(LogLevel.DEBUG, "setTriggers(triggers: $triggers)")
-        //TODO("Not yet implemented")
+
+        triggers.forEach { setTrigger(it.key, it.value) }
+
         return this
     }
 
     override fun setTrigger(key: String, value: Any): IUserManager {
         Logging.log(LogLevel.DEBUG, "setTrigger(key: $key, value: $value)")
-        //TODO("Not yet implemented")
+
+        var triggerModel = _triggerModelStore.get(key)
+        if(triggerModel != null)
+            triggerModel.value = value
+        else {
+            triggerModel = TriggerModel()
+            triggerModel.key = key
+            triggerModel.value = value
+            _triggerModelStore.add(key, triggerModel)
+        }
+
         return this
     }
 
     override fun removeTriggers(keys: Collection<String>): IUserManager {
         Logging.log(LogLevel.DEBUG, "removeTriggers(keys: $keys)")
-        //TODO("Not yet implemented")
+
+        keys.forEach { removeTrigger(it) }
+
         return this
     }
 
     override fun removeTrigger(key: String): IUserManager {
         Logging.log(LogLevel.DEBUG, "removeTrigger(key: $key)")
+
+        _triggerModelStore.remove(key)
+
         return this
     }
 
     override fun clearTriggers(): IUserManager {
         Logging.log(LogLevel.DEBUG, "clearTriggers()")
-        //TODO("Not yet implemented")
+        _triggerModelStore.clear()
         return this
     }
 

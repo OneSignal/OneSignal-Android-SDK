@@ -5,7 +5,7 @@ import android.content.ContentValues
 import android.provider.BaseColumns
 import android.text.TextUtils
 import com.onesignal.onesignal.core.internal.application.IApplicationService
-import com.onesignal.onesignal.core.internal.common.time.ITime
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.onesignal.core.internal.database.impl.OneSignalDbContract
 import com.onesignal.onesignal.notification.internal.common.NotificationHelper

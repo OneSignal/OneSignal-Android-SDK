@@ -1,7 +1,6 @@
 package com.onesignal.onesignal.core.internal.influence.impl
 
-import com.onesignal.onesignal.core.internal.common.time.ITime
-import com.onesignal.onesignal.core.internal.influence.OSInfluenceConstants
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.influence.Influence
 import com.onesignal.onesignal.core.internal.influence.InfluenceChannel
 import com.onesignal.onesignal.core.internal.influence.InfluenceType
@@ -24,7 +23,7 @@ internal class NotificationTracker(dataRepository: InfluenceDataRepository, time
     override val lastChannelObjects: JSONArray
         get() = dataRepository.lastNotificationsReceivedData
     override val idTag: String
-        get() = OSInfluenceConstants.NOTIFICATION_ID_TAG
+        get() = InfluenceConstants.NOTIFICATION_ID_TAG
 
     override val channelType: InfluenceChannel
         get() = InfluenceChannel.NOTIFICATION
@@ -51,8 +50,8 @@ internal class NotificationTracker(dataRepository: InfluenceDataRepository, time
 
     override fun addSessionData(jsonObject: JSONObject, influence: Influence) {
         if (influence.influenceType.isAttributed()) try {
-            jsonObject.put(OSInfluenceConstants.DIRECT_TAG, influence.influenceType.isDirect())
-            jsonObject.put(OSInfluenceConstants.NOTIFICATIONS_IDS, influence.ids)
+            jsonObject.put(InfluenceConstants.DIRECT_TAG, influence.influenceType.isDirect())
+            jsonObject.put(InfluenceConstants.NOTIFICATIONS_IDS, influence.ids)
         } catch (exception: JSONException) {
             Logging.error("Generating notification tracker addSessionData JSONObject ", exception)
         }

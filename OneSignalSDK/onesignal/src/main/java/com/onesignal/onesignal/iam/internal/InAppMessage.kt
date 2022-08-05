@@ -1,8 +1,7 @@
 package com.onesignal.onesignal.iam.internal
 
-import com.onesignal.OSInAppMessage
 import com.onesignal.onesignal.core.internal.common.DateUtils
-import com.onesignal.onesignal.core.internal.common.time.ITime
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.iam.IInAppMessage
 import org.json.JSONArray
 import org.json.JSONException
@@ -10,6 +9,9 @@ import org.json.JSONObject
 import java.text.ParseException
 import java.util.*
 
+/**
+ * Represents an In App Message that exists within an application.
+ */
 internal class InAppMessage(
     override val messageId: String,
     time: ITime
@@ -21,17 +23,20 @@ internal class InAppMessage(
      * An example: {'ios' : {'en' : 'wfgkv-...', 'es' : '56ytdygd...' }}
      */
     var variants: Map<String, Map<String, String>> = mapOf()
+        private set
 
     /**
      * An array of arrays of triggers. The outer array represents AND conditions,
      * while the inner array represents AND conditions.
      */
     var triggers: List<List<Trigger>> = listOf()
+        private set
 
     /**
      * IAM clicks associated to this IAM
      */
-    private var clickedClickIds: MutableSet<String> = mutableSetOf()
+    var clickedClickIds: MutableSet<String> = mutableSetOf()
+        private set
 
     /**
      * Reference to redisplay properties
@@ -39,13 +44,34 @@ internal class InAppMessage(
     var redisplayStats: InAppMessageRedisplayStats = InAppMessageRedisplayStats(time)
         private set
 
+    /**
+     * The duration this IAM has been displayed on the device.
+     */
     var displayDuration = 0.0
+
+    /**
+     * Whether this IAM has been displayed in the session.
+     */
     var isDisplayedInSession = false
+
+    /**
+     * Whether a trigger change has occurred
+     */
     var isTriggerChanged = false
     private var actionTaken = false
     private var endTime: Date? = null
+
+    /**
+     * whether this IAM is a preview message
+     */
     var isPreview = false
+        private set
+
+    /**
+     * Whether this IAM has Liquid syntax which requires processing.
+     */
     var hasLiquid = false
+        private set
 
     constructor(isPreview: Boolean, time: ITime) : this("", time) {
         this.isPreview = isPreview
@@ -68,7 +94,6 @@ internal class InAppMessage(
         // "id" is expected instead of "messageId" when parsing JSON from the backend
         variants = parseVariants(json.getJSONObject(IAM_VARIANTS))
         triggers = parseTriggerJson(json.getJSONArray(IAM_TRIGGERS))
-        clickedClickIds = HashSet()
         endTime = parseEndTimeJson(json)
         if (json.has(HAS_LIQUID))
             hasLiquid = json.getBoolean(HAS_LIQUID)
@@ -113,7 +138,7 @@ internal class InAppMessage(
     }
 
     @Throws(JSONException::class)
-    protected fun parseTriggerJson(triggersJson: JSONArray): ArrayList<ArrayList<Trigger>> {
+    private fun parseTriggerJson(triggersJson: JSONArray): ArrayList<ArrayList<Trigger>> {
         // initialize triggers
         val parsedTriggers = ArrayList<ArrayList<Trigger>>()
         for (i in 0 until triggersJson.length()) {
@@ -169,10 +194,6 @@ internal class InAppMessage(
         return if (actionTaken) false else true.also { actionTaken = it }
     }
 
-    fun getClickedClickIds(): Set<String> {
-        return clickedClickIds
-    }
-
     fun isClickAvailable(clickId: String): Boolean {
         return !clickedClickIds.contains(clickId)
     }
@@ -187,10 +208,6 @@ internal class InAppMessage(
 
     fun removeClickId(clickId: String) {
         clickedClickIds.remove(clickId)
-    }
-
-    fun setRedisplayStats(displayQuantity: Int, lastDisplayTime: Long, time: ITime) {
-        redisplayStats = InAppMessageRedisplayStats(displayQuantity, lastDisplayTime, time)
     }
 
     override fun toString(): String {

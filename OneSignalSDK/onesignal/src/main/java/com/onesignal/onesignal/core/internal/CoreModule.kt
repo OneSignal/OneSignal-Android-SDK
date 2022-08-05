@@ -6,11 +6,11 @@ import com.onesignal.onesignal.core.internal.backend.IParamsBackendService
 import com.onesignal.onesignal.core.internal.backend.ParamsBackendService
 import com.onesignal.onesignal.core.internal.backend.http.HttpClient
 import com.onesignal.onesignal.core.internal.backend.http.IHttpClient
-import com.onesignal.onesignal.core.internal.common.time.ITime
-import com.onesignal.onesignal.core.internal.common.time.Time
+import com.onesignal.onesignal.core.internal.time.ITime
+import com.onesignal.onesignal.core.internal.time.Time
 import com.onesignal.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.onesignal.core.internal.database.impl.DatabaseProvider
-import com.onesignal.onesignal.core.internal.device.DeviceService
+import com.onesignal.onesignal.core.internal.device.impl.DeviceService
 import com.onesignal.onesignal.core.internal.device.IDeviceService
 import com.onesignal.onesignal.core.internal.influence.IInfluenceManager
 import com.onesignal.onesignal.core.internal.influence.impl.InfluenceManager
@@ -21,15 +21,14 @@ import com.onesignal.onesignal.core.internal.models.*
 import com.onesignal.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.onesignal.core.internal.operations.OperationRepo
-import com.onesignal.onesignal.core.internal.operations.executors.BootstrapExecutor
 import com.onesignal.onesignal.core.internal.operations.executors.PropertyOperationExecutor
 import com.onesignal.onesignal.core.internal.operations.executors.SubscriptionOperationExecutor
 import com.onesignal.onesignal.core.internal.operations.executors.UserOperationExecutor
 import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsCache
 import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsFactory
 import com.onesignal.onesignal.core.internal.outcomes.OutcomeEventsController
-import com.onesignal.onesignal.core.internal.outcomes.data.OSOutcomeEventsCache
-import com.onesignal.onesignal.core.internal.outcomes.data.OSOutcomeEventsFactory
+import com.onesignal.onesignal.core.internal.outcomes.impl.OSOutcomeEventsCache
+import com.onesignal.onesignal.core.internal.outcomes.impl.OSOutcomeEventsFactory
 import com.onesignal.onesignal.core.internal.params.*
 import com.onesignal.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.onesignal.core.internal.permissions.impl.RequestPermissionService
@@ -69,7 +68,6 @@ object CoreModule {
         builder.register<OperationRepo>()
                .provides<IOperationRepo>()
                .provides<IStartableService>()
-        builder.register<BootstrapExecutor>().provides<IOperationExecutor>()
         builder.register<PropertyOperationExecutor>().provides<IOperationExecutor>()
         builder.register<SubscriptionOperationExecutor>().provides<IOperationExecutor>()
         builder.register<UserOperationExecutor>().provides<IOperationExecutor>()
@@ -96,6 +94,7 @@ object CoreModule {
         builder.register<IdentityModelStore>().provides<IdentityModelStore>()
         builder.register<PropertiesModelStore>().provides<PropertiesModelStore>()
         builder.register<SubscriptionModelStore>().provides<SubscriptionModelStore>()
+        builder.register<TriggerModelStore>().provides<TriggerModelStore>()
         builder.register<ConfigModelStore>().provides<ConfigModelStore>()
         builder.register<SessionModelStore>().provides<SessionModelStore>()
 

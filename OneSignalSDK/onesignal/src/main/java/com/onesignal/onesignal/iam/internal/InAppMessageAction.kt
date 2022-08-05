@@ -2,14 +2,13 @@ package com.onesignal.onesignal.iam.internal
 
 import com.onesignal.onesignal.iam.IInAppMessageAction
 import com.onesignal.onesignal.iam.InAppMessageActionUrlType
-import com.onesignal.onesignal.iam.internal.prompt.InAppMessageLocationPrompt
-import com.onesignal.onesignal.iam.internal.prompt.InAppMessagePrompt
-import com.onesignal.onesignal.iam.internal.prompt.InAppMessagePushPrompt
+import com.onesignal.onesignal.iam.internal.prompt.IInAppMessagePromptFactory
+import com.onesignal.onesignal.iam.internal.prompt.impl.InAppMessagePrompt
 import org.json.JSONException
 import org.json.JSONArray
 import org.json.JSONObject
 
-internal class InAppMessageAction(json: JSONObject) : IInAppMessageAction {
+internal class InAppMessageAction(json: JSONObject, promptFactory: IInAppMessagePromptFactory) : IInAppMessageAction {
     /**
      * UUID assigned by OneSignal for internal use.
      * Package-private to track which element was tapped to report to the OneSignal dashboard.
@@ -75,7 +74,7 @@ internal class InAppMessageAction(json: JSONObject) : IInAppMessageAction {
         closesMessage = json.optBoolean(CLOSE, true)
         if (json.has(OUTCOMES)) parseOutcomes(json)
         if (json.has(TAGS)) tags = InAppMessageTag(json.getJSONObject(TAGS))
-        if (json.has(PROMPTS)) parsePrompts(json)
+        if (json.has(PROMPTS)) parsePrompts(json, promptFactory)
     }
 
     @Throws(JSONException::class)
@@ -87,14 +86,13 @@ internal class InAppMessageAction(json: JSONObject) : IInAppMessageAction {
     }
 
     @Throws(JSONException::class)
-    private fun parsePrompts(json: JSONObject) {
+    private fun parsePrompts(json: JSONObject, promptFactory: IInAppMessagePromptFactory) {
         val promptsJsonArray = json.getJSONArray(PROMPTS)
         for (i in 0 until promptsJsonArray.length()) {
             val promptType = promptsJsonArray.getString(i)
-            when (promptType) {
-                InAppMessagePushPrompt.PUSH_PROMPT_KEY -> prompts.add(InAppMessagePushPrompt())
-                InAppMessageLocationPrompt.LOCATION_PROMPT_KEY -> prompts.add(InAppMessageLocationPrompt())
-            }
+            val prompt = promptFactory.createPrompt(promptType)
+            if(prompt != null)
+                prompts.add(prompt)
         }
     }
 
