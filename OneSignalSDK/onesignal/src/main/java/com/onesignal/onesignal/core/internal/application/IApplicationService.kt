@@ -8,17 +8,17 @@ interface IApplicationService  {
     /**
      * The application context
      */
-    val appContext: Context?
+    val appContext: Context
 
     /**
      * The current activity for the application
      */
-    var current: Activity?
+    val current: Activity?
 
     /**
      * Whether the app is currently in the foreground
      */
-    var isInForeground: Boolean
+    val isInForeground: Boolean
 
     /**
      * Will determine and suspend until system conditions are available for displaying

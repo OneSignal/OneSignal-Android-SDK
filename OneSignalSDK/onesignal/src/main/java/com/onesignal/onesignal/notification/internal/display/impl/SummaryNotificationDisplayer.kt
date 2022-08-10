@@ -28,7 +28,7 @@ internal class SummaryNotificationDisplayer(
     private val _dataController: INotificationDataController,
     private val _notificationDisplayBuilder: INotificationDisplayBuilder,
 ) : ISummaryNotificationDisplayer {
-    private val currentContext: Context?
+    private val currentContext: Context
         get() = _applicationService.appContext
 
     override fun createGenericPendingIntentsForGroup(

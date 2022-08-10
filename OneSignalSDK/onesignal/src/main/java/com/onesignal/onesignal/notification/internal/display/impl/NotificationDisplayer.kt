@@ -40,13 +40,13 @@ internal class NotificationDisplayer(
 
 ) : INotificationDisplayer {
     private val contextResources: Resources?
-        get() = _applicationService.appContext?.resources
+        get() = _applicationService.appContext.resources
 
-    private val currentContext: Context?
+    private val currentContext: Context
         get() = _applicationService.appContext
 
     private val packageName: String?
-        get() = _applicationService.appContext?.packageName
+        get() = _applicationService.appContext.packageName
 
     override suspend fun displayNotification(notificationJob: NotificationGenerationJob): Boolean {
         isRunningOnMainThreadCheck

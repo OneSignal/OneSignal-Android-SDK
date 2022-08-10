@@ -41,9 +41,15 @@ class RequestPermissionService(
 
         fallbackToSettings = fallbackCondition
 
+        // it's possible the prompt is started before there's an activity available, or the
+        // current activity is changed.  We keep trying to add the permission prompt whenever
+        // an activity becomes available, until our permission activity is the one that's
+        // available.
         _application.addActivityLifecycleHandler(object : IActivityLifecycleHandler {
             override fun onActivityAvailable(activity: Activity) {
-                if (activity.javaClass != PermissionsActivity::class.java) {
+                if (activity.javaClass == PermissionsActivity::class.java)
+                    _application.removeActivityLifecycleHandler(this)
+                else {
                     val intent = Intent(activity, PermissionsActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
                     intent.putExtra(PermissionsActivity.INTENT_EXTRA_PERMISSION_TYPE, permissionRequestType)

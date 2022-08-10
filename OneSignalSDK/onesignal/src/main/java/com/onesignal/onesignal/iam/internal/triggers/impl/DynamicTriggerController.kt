@@ -13,7 +13,7 @@ internal class DynamicTriggerController(
     private val _state: InAppStateService
 ) : IEventNotifier<ITriggerHandler> {
 
-    private val _events = EventProducer<ITriggerHandler>()
+    val events = EventProducer<ITriggerHandler>()
     private val scheduledMessages: MutableList<String> = mutableListOf()
 
     fun dynamicTriggerShouldFire(trigger: Trigger): Boolean {
@@ -46,7 +46,7 @@ internal class DynamicTriggerController(
                     trigger.operatorType
                 )
             ) {
-                _events.fire { it.onTriggerCompleted(triggerId!!) }
+                events.fire { it.onTriggerCompleted(triggerId!!) }
                 return true
             }
             val offset = requiredTimeInterval - currentTimeInterval
@@ -59,7 +59,7 @@ internal class DynamicTriggerController(
             DynamicTriggerTimer.scheduleTrigger(object : TimerTask() {
                 override fun run() {
                     scheduledMessages.remove(triggerId)
-                    _events.fire { it.onTriggerConditionChanged() }
+                    events.fire { it.onTriggerConditionChanged() }
                 }
             }, triggerId, offset)
             scheduledMessages.add(triggerId)
@@ -114,6 +114,6 @@ internal class DynamicTriggerController(
         }
     }
 
-    override fun subscribe(handler: ITriggerHandler) = _events.subscribe(handler)
-    override fun unsubscribe(handler: ITriggerHandler) = _events.unsubscribe(handler)
+    override fun subscribe(handler: ITriggerHandler) = events.subscribe(handler)
+    override fun unsubscribe(handler: ITriggerHandler) = events.unsubscribe(handler)
 }

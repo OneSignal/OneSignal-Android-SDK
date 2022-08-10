@@ -36,7 +36,7 @@ internal class NotificationRestoreProcessor(
 
     override suspend fun processNotification(notification: INotificationDataController.NotificationData, delay: Int) {
         _workManager.beginEnqueueingWork(
-            _applicationService.appContext!!,
+            _applicationService.appContext,
             notification.id,
             notification.androidId,
             JSONObject(notification.fullData),
@@ -58,7 +58,7 @@ internal class NotificationRestoreProcessor(
      */
     private fun getVisibleNotifications() : List<Int>? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return null
-        val activeNotifs = NotificationHelper.getActiveNotifications(_applicationService.appContext!!)
+        val activeNotifs = NotificationHelper.getActiveNotifications(_applicationService.appContext)
         if (activeNotifs.isEmpty()) return null
         val activeNotifIds = mutableListOf<Int>()
         for (activeNotif in activeNotifs)

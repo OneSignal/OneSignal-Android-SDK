@@ -40,7 +40,7 @@ internal class NotificationChannelManager(
 
     override fun createNotificationChannel(notificationJob: NotificationGenerationJob): String {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return DEFAULT_CHANNEL_ID
-        val context = _applicationService.appContext!!
+        val context = _applicationService.appContext
         val jsonPayload = notificationJob.jsonPayload!!
         val notificationManager = NotificationHelper.getNotificationManager(context)
         if (notificationJob.isRestoring) return createRestoreChannel(notificationManager)
@@ -180,14 +180,14 @@ internal class NotificationChannelManager(
     override fun processChannelList(list: JSONArray?) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         if (list == null || list.length() == 0) return
-        val notificationManager = NotificationHelper.getNotificationManager(_applicationService.appContext!!)
+        val notificationManager = NotificationHelper.getNotificationManager(_applicationService.appContext)
         val syncedChannelSet: MutableSet<String> = HashSet()
         val jsonArraySize = list.length()
         for (i in 0 until jsonArraySize) {
             try {
                 syncedChannelSet.add(
                     createChannel(
-                        _applicationService.appContext!!,
+                        _applicationService.appContext,
                         notificationManager,
                         list.getJSONObject(i)
                     )

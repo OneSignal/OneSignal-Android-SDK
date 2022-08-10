@@ -139,13 +139,7 @@ class PreferencesService(
 
     @Synchronized
     private fun getSharedPrefsByName(store: String): SharedPreferences? {
-        val context = _applicationService.appContext
-        if (context == null) {
-            Logging.warn("OneSignal.appContext null, could not read $store from getSharedPreferences.")
-            return null
-        }
-
-        return context.getSharedPreferences(store, Context.MODE_PRIVATE)
+        return _applicationService.appContext.getSharedPreferences(store, Context.MODE_PRIVATE)
     }
 
     companion object {
