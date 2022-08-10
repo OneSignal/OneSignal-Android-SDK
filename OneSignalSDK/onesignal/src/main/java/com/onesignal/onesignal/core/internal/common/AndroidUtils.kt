@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Looper
 import android.text.TextUtils
+import androidx.annotation.Keep
 import com.onesignal.onesignal.core.internal.logging.Logging
 import java.util.*
 
@@ -149,6 +150,18 @@ object AndroidUtils {
             Intent.FLAG_ACTIVITY_NEW_TASK
         )
         return intent
+    }
+
+    // Interim method that works around Proguard's overly aggressive assumenosideeffects which
+    // ignores keep rules.
+    // This is specifically designed to address Proguard removing catches for NoClassDefFoundError
+    // when the config has "-assumenosideeffects" with
+    // java.lang.Class.getName() & java.lang.Object.getClass().
+    // This @Keep annotation is key so this method does not get removed / inlined.
+    // Addresses issue https://github.com/OneSignal/OneSignal-Android-SDK/issues/1423
+    @Keep
+    fun opaqueHasClass(_class: Class<*>): Boolean {
+        return true
     }
 
     enum class SchemaType(private val text: String) {

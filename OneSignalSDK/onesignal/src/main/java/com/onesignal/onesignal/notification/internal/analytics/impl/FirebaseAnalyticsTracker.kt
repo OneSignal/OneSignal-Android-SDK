@@ -130,7 +130,7 @@ internal class FirebaseAnalyticsTracker(
         if (mFirebaseAnalyticsInstance == null) {
             val getInstanceMethod = getInstanceMethod(FirebaseAnalyticsClass)
             mFirebaseAnalyticsInstance = try {
-                getInstanceMethod!!.invoke(null, _applicationService.appContext!!)
+                getInstanceMethod!!.invoke(null, _applicationService.appContext)
             } catch (e: Throwable) {
                 e.printStackTrace()
                 return null

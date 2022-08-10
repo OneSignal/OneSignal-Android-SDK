@@ -10,12 +10,9 @@ import com.onesignal.onesignal.core.internal.common.events.CallbackProducer
 import com.onesignal.onesignal.core.internal.common.events.ICallbackProducer
 import com.onesignal.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.onesignal.core.internal.logging.Logging
-import com.onesignal.onesignal.core.internal.modeling.IModelStoreChangeHandler
 import com.onesignal.onesignal.core.internal.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.onesignal.core.internal.models.ConfigModel
 import com.onesignal.onesignal.core.internal.models.ConfigModelStore
-import com.onesignal.onesignal.core.internal.models.TriggerModel
-import com.onesignal.onesignal.core.internal.models.TriggerModelStore
 import com.onesignal.onesignal.core.internal.outcomes.OutcomeEventsController
 import com.onesignal.onesignal.core.internal.session.ISessionService
 import com.onesignal.onesignal.core.internal.startup.IStartableService
@@ -49,7 +46,6 @@ internal class IAMManager (
     private val _applicationService: IApplicationService,
     private val _sessionService: ISessionService,
     private val _configModelStore: ConfigModelStore,
-    private val _triggerModelStore: TriggerModelStore,
     private val _userManager: IUserManager,
     private val _subscriptionManager: ISubscriptionManager,
     private val _outcomeEventsController: OutcomeEventsController,
@@ -65,7 +61,6 @@ internal class IAMManager (
             IStartableService,
             ISubscriptionChangedHandler,
             ISingletonModelStoreChangeHandler<ConfigModel>,
-            IModelStoreChangeHandler<TriggerModel>,
             IInAppLifecycleEventHandler,
             ITriggerHandler {
 
@@ -107,7 +102,6 @@ internal class IAMManager (
     override fun start() {
         _subscriptionManager.subscribe(this)
         _configModelStore.subscribe(this)
-        _triggerModelStore.subscribe(this)
         _lifecycle.subscribe(this)
         _triggerController.subscribe(this)
 
@@ -491,22 +485,6 @@ internal class IAMManager (
     }
     // END IAM LIFECYCLE CALLBACKS
 
-    // TRIGGER MODEL CALLBACKS
-    override fun onAdded(model: TriggerModel) {
-        _triggerController.addTriggers(model.key, model.value)
-        checkRedisplayMessagesAndEvaluate(model.key)
-    }
-
-    override fun onUpdated(model: TriggerModel, property: String, oldValue: Any?, newValue: Any?) {
-        _triggerController.addTriggers(model.key, model.value)
-        checkRedisplayMessagesAndEvaluate(model.key)
-    }
-
-    override fun onRemoved(model: TriggerModel) {
-        _triggerController.removeTriggersForKeys(model.key)
-    }
-    // END TRIGGER MODEL CALLBACKS
-
     // TRIGGER FIRED CALLBACKS
     /**
      * Part of redisplay logic
@@ -526,7 +504,6 @@ internal class IAMManager (
     /**
      * Dynamic trigger logic
      *
-     *
      * This will re evaluate messages due to dynamic triggers evaluating to true potentially
      *
      * @see OSInAppMessageController.setDataForRedisplay
@@ -540,6 +517,19 @@ internal class IAMManager (
             evaluateInAppMessages()
         }
     }
+
+    override fun onTriggerChanged(newTriggerKey: String) {
+        Logging.debug("onTriggerConditionChanged called")
+
+        makeRedisplayMessagesAvailableWithTriggers(listOf(newTriggerKey))
+
+        suspendifyOnThread {
+            // This method is called when a time-based trigger timer fires, meaning the message can
+            //  probably be shown now. So the current message conditions should be re-evaluated
+            evaluateInAppMessages()
+        }
+    }
+
     // END TRIGGER FIRED CALLBACKS
 
     private suspend fun beginProcessingPrompts(message: InAppMessage, prompts: List<InAppMessagePrompt>) {
@@ -599,11 +589,11 @@ internal class IAMManager (
     }
 
     private fun fireClickAction(action: InAppMessageAction) {
-        if (action.clickUrl != null && !action.clickUrl!!.isEmpty()) {
+        if (action.clickUrl != null && action.clickUrl.isNotEmpty()) {
             if (action.urlTarget == InAppMessageActionUrlType.BROWSER)
-                AndroidUtils.openURLInBrowser(_applicationService.appContext!!, action.clickUrl!!)
+                AndroidUtils.openURLInBrowser(_applicationService.appContext, action.clickUrl)
             else if (action.urlTarget == InAppMessageActionUrlType.IN_APP_WEBVIEW)
-                OneSignalChromeTab.open(action.clickUrl, true, _applicationService.appContext!!)
+                OneSignalChromeTab.open(action.clickUrl, true, _applicationService.appContext)
         }
     }
 
@@ -699,20 +689,12 @@ internal class IAMManager (
     }
 
     private fun showAlertDialogMessage(inAppMessage: InAppMessage, prompts: List<InAppMessagePrompt>) {
-        val messageTitle =  _applicationService.appContext!!.getString(R.string.location_permission_missing_title)
-        val message = _applicationService.appContext!!.getString(R.string.location_permission_missing_message)
+        val messageTitle =  _applicationService.appContext.getString(R.string.location_permission_missing_title)
+        val message = _applicationService.appContext.getString(R.string.location_permission_missing_message)
         AlertDialog.Builder(_applicationService.current)
             .setTitle(messageTitle)
             .setMessage(message)
             .setPositiveButton(android.R.string.ok) { _, _ -> suspendifyOnThread { showMultiplePrompts(inAppMessage, prompts) } }
             .show()
-    }
-
-    private fun checkRedisplayMessagesAndEvaluate(newTriggerKey: String) {
-        makeRedisplayMessagesAvailableWithTriggers(listOf(newTriggerKey))
-
-        suspendifyOnThread {
-            evaluateInAppMessages()
-        }
     }
 }

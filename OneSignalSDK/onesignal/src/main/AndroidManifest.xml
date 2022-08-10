@@ -94,15 +94,13 @@
 <!--            android:permission="android.permission.BIND_JOB_SERVICE"-->
 <!--            android:exported="false" />-->
 
-        <!-- TODO: Replace with new -->
         <service
-          android:name="com.onesignal.SyncService"
+          android:name="com.onesignal.onesignal.core.services.SyncService"
           android:stopWithTask="true"
           android:exported="false" />
 
-        <!-- TODO: Replace with new -->
         <service
-          android:name="com.onesignal.SyncJobService"
+          android:name="com.onesignal.onesignal.core.services.SyncJobService"
           android:permission="android.permission.BIND_JOB_SERVICE"
           android:exported="false" />
 

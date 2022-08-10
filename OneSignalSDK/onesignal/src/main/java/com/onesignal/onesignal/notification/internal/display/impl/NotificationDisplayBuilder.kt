@@ -36,13 +36,13 @@ internal class NotificationDisplayBuilder(
     private val notificationDismissedClass: Class<*> = NotificationDismissReceiver::class.java
 
     private val contextResources: Resources?
-        get() = _applicationService.appContext?.resources
+        get() = _applicationService.appContext.resources
 
-    private val currentContext: Context?
+    private val currentContext: Context
         get() = _applicationService.appContext
 
     private val packageName: String?
-        get() = _applicationService.appContext?.packageName
+        get() = _applicationService.appContext.packageName
 
     // NotificationCompat unfortunately doesn't correctly support some features
     // such as sounds and heads-up notifications with GROUP_ALERT_CHILDREN on
@@ -332,7 +332,7 @@ internal class NotificationDisplayBuilder(
         // This will get the correct color for day and dark modes
         try {
             val defaultColor: String? =
-                AndroidUtils.getResourceString(_applicationService.appContext!!, "onesignal_notification_accent_color", null)
+                AndroidUtils.getResourceString(_applicationService.appContext, "onesignal_notification_accent_color", null)
             if (defaultColor != null) {
                 return BigInteger(defaultColor, 16)
             }
@@ -341,7 +341,7 @@ internal class NotificationDisplayBuilder(
 
         // Get accent color from Manifest
         try {
-            val defaultColor: String? = AndroidUtils.getManifestMeta(_applicationService.appContext!!, "com.onesignal.NotificationAccentColor.DEFAULT")
+            val defaultColor: String? = AndroidUtils.getManifestMeta(_applicationService.appContext, "com.onesignal.NotificationAccentColor.DEFAULT")
             if (defaultColor != null) {
                 return BigInteger(defaultColor, 16)
             }
