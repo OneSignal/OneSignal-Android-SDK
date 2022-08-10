@@ -57,7 +57,6 @@ internal class NotificationsManager(
     private val _applicationService: IApplicationService,
     private val _paramsService: IParamsService,
     private val _notificationPermissionController: INotificationPermissionController,
-    private val _userManager: IUserManager,
     private val _notificationRestoreWorkManager: INotificationRestoreWorkManager,
     private val _notificationLifecycleService: INotificationLifecycleService,
     private val _analyticsTracker: IAnalyticsTracker,
@@ -108,9 +107,9 @@ internal class NotificationsManager(
 
     private suspend fun refreshNotificationState() {
         // ensure all notifications for this app have been restored to the notification panel
-        _notificationRestoreWorkManager.beginEnqueueingWork(_applicationService.appContext!!, false)
+        _notificationRestoreWorkManager.beginEnqueueingWork(_applicationService.appContext, false)
 
-        val isEnabled = NotificationHelper.areNotificationsEnabled(_applicationService.appContext!!)
+        val isEnabled = NotificationHelper.areNotificationsEnabled(_applicationService.appContext)
         setPermissionStatusAndFire(isEnabled)
     }
 
@@ -167,7 +166,7 @@ internal class NotificationsManager(
         if (pushRegistrator == null)
             return
 
-        val registerResult = pushRegistrator.registerForPush(_applicationService.appContext!!)
+        val registerResult = pushRegistrator.registerForPush(_applicationService.appContext)
 
         if (registerResult.status < IPushRegistrator.RegisterStatus.PUSH_STATUS_SUBSCRIBED) {
             // Only allow errored subscribableStatuses if we have never gotten a token.

@@ -35,7 +35,7 @@ internal class ReceiveReceiptWorkManager(
             .setInputData(inputData)
             .build()
         Logging.debug("OSReceiveReceiptController enqueueing send receive receipt work with notificationId: $notificationId and delay: $delay seconds")
-        WorkManager.getInstance(_applicationService.appContext!!)
+        WorkManager.getInstance(_applicationService.appContext)
             .enqueueUniqueWork(
                 notificationId + "_receive_receipt",
                 ExistingWorkPolicy.KEEP,

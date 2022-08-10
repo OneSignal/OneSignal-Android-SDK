@@ -45,7 +45,7 @@ internal class NotificationSummaryManager(
         //   - Mark summary notification as consumed.
         if (notificationsInGroup == 0) {
             // Remove the summary notification from the shade.
-            val notificationManager = NotificationHelper.getNotificationManager(_applicationService.appContext!!)
+            val notificationManager = NotificationHelper.getNotificationManager(_applicationService.appContext)
             notificationManager.cancel(androidNotifId)
 
             // Mark the summary notification as opened or dismissed.
@@ -87,7 +87,7 @@ internal class NotificationSummaryManager(
      * Clears notifications from the status bar based on a few parameters
      */
     override suspend fun clearNotificationOnSummaryClick(group: String) {
-        val notificationManager = NotificationHelper.getNotificationManager(_applicationService.appContext!!)
+        val notificationManager = NotificationHelper.getNotificationManager(_applicationService.appContext)
         // Obtain the most recent notification id
         val mostRecentId = _dataController.getAndroidIdForGroup(group, false)
         if (mostRecentId != null) {
