@@ -59,8 +59,9 @@ class ServiceProvider(
         if(_serviceMap.containsKey(c)) {
             for(serviceReg in _serviceMap!![c]!!) {
                 val service = serviceReg.resolve(this) as T?
-                if (service != null)
-                    listOfServices.add(service)
+                    ?: throw Exception("Could not instantiate service: $serviceReg")
+
+                listOfServices.add(service)
             }
         }
 
@@ -78,7 +79,14 @@ class ServiceProvider(
     }
 
     override fun <T> getServiceOrNull(c: Class<T>): T? {
-        Logging.debug("Retrieving service $c")
-        return _serviceMap[c]?.last()?.resolve(this) as T?
+        Logging.debug("${indent}Retrieving service $c")
+//        indent += "  "
+        val service = _serviceMap[c]?.last()?.resolve(this) as T?
+//        indent = indent.substring(0, indent.length-2)
+        return service
+    }
+
+    companion object {
+        var indent: String = ""
     }
 }

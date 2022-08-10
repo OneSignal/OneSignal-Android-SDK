@@ -132,9 +132,8 @@ internal class NotificationOpenedProcessor(
 
             if (context !is Activity)
                 Logging.error("NotificationOpenedProcessor processIntent from an non Activity context: $context")
-            // TODO: Implement
-            //else if (OSInAppMessagePreviewHandler.notificationOpened((context as Activity?)!!, jsonData))
-            //    return null
+            else if (!_lifecycleService.canOpenNotification(context, jsonData))
+                return null
 
             jsonData.put(
                 NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID,

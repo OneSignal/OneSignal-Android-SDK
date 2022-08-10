@@ -13,7 +13,7 @@ internal open class ModelStore<TModel>(
     private val _models: HashMap<String, TModel> = HashMap()
 
 
-    override fun add(id: String, model: TModel) {
+    override fun add(id: String, model: TModel, fireEvent: Boolean) {
         _models[id] = model
 
         // TODO: Persist the new model to storage.
@@ -21,7 +21,9 @@ internal open class ModelStore<TModel>(
         // listen for changes to this model
         model.subscribe(this)
 
-        _changeSubscription.fire { it.added(model) }
+        if(fireEvent) {
+            _changeSubscription.fire { it.onAdded(model) }
+        }
     }
 
     override fun list() : Collection<String> {
@@ -42,12 +44,22 @@ internal open class ModelStore<TModel>(
 
         // TODO: Remove the model from storage
 
-        _changeSubscription.fire { it.removed(model) }
+        _changeSubscription.fire { it.onRemoved(model) }
+    }
+
+    override fun clear() {
+
+        val localList = _models.toList()
+        _models.clear()
+
+        for(item in localList) {
+            _changeSubscription.fire { it.onRemoved(item.second) }
+        }
     }
 
     override fun onChanged(args: ModelChangedArgs) {
         // TODO: Persist the changed model to storage. Consider batching.
 
-        _changeSubscription.fire { it.updated(args.model as TModel, args.property, args.oldValue, args.newValue) }
+        _changeSubscription.fire { it.onUpdated(args.model as TModel, args.property, args.oldValue, args.newValue) }
     }
 }

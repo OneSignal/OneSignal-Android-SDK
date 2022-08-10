@@ -31,6 +31,7 @@ import android.os.Bundle
 import android.content.Intent
 import com.onesignal.onesignal.core.OneSignal
 import com.onesignal.onesignal.notification.internal.open.INotificationOpenedProcessorHMS
+import kotlinx.coroutines.runBlocking
 
 // HMS Core creates a notification with an Intent when opened to start this Activity.
 //   Intent is defined via OneSignal's backend and is sent to HMS.
@@ -74,6 +75,9 @@ class NotificationOpenedActivityHMS : Activity() {
         OneSignal.initWithContext(applicationContext)
 
         var notificationPayloadProcessorHMS = OneSignal.getService<INotificationOpenedProcessorHMS>()
-        notificationPayloadProcessorHMS.handleHMSNotificationOpenIntent(this, intent)
+        val self = this
+        runBlocking {
+            notificationPayloadProcessorHMS.handleHMSNotificationOpenIntent(self, intent)
+        }
     }
 }

@@ -1,7 +1,7 @@
 package com.onesignal.onesignal.notification.internal
 
 import androidx.core.app.NotificationCompat
-import com.onesignal.onesignal.core.internal.common.time.ITime
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.notification.BackgroundImageLayout
 import com.onesignal.onesignal.notification.IActionButton

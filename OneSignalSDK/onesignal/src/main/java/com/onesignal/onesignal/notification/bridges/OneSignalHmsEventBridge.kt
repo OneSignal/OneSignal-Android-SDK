@@ -5,7 +5,7 @@ import android.os.Bundle
 import com.huawei.hms.push.RemoteMessage
 import com.onesignal.onesignal.core.OneSignal
 import com.onesignal.onesignal.core.internal.common.JSONUtils
-import com.onesignal.onesignal.core.internal.common.time.ITime
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.notification.internal.bundle.INotificationBundleProcessor

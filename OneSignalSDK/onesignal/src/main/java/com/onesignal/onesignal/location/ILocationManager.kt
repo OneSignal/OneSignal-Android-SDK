@@ -20,5 +20,5 @@ interface ILocationManager {
      *
      * @see [Permission Requests | OneSignal Docs](https://documentation.onesignal.com/docs/permission-requests)
      */
-    suspend fun requestPermission()
+    suspend fun requestPermission() : Boolean?
 }
