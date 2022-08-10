@@ -57,15 +57,15 @@ internal class SubscriptionOperationExecutor(
             json.put("language", getLanguage())
             json.put("sdk", OneSignalUtils.sdkVersion)
             json.put("sdk_type", OneSignalUtils.sdkType)
-            json.put("android_package", _application.appContext!!.packageName)
+            json.put("android_package", _application.appContext.packageName)
 
             try {
-                json.put("game_version", _application.appContext!!.packageManager.getPackageInfo(_application.appContext!!.packageName, 0).versionCode)
+                json.put("game_version", _application.appContext.packageManager.getPackageInfo(_application.appContext.packageName, 0).versionCode)
             } catch (e: PackageManager.NameNotFoundException) {
             }
 
-            json.put("net_type", DeviceUtils.getNetType(_application.appContext!!))
-            json.put("carrier", DeviceUtils.getCarrierName(_application.appContext!!))
+            json.put("net_type", DeviceUtils.getNetType(_application.appContext))
+            json.put("carrier", DeviceUtils.getCarrierName(_application.appContext))
             json.put("rooted", RootToolsInternalMethods.isRooted)
 
             json.put("identifier", address)

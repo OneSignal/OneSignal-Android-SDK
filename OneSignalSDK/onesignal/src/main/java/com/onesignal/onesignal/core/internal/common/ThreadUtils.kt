@@ -1,6 +1,8 @@
 package com.onesignal.onesignal.core.internal.common
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlin.concurrent.thread
 
 
@@ -26,9 +28,25 @@ import kotlin.concurrent.thread
       * the main thread is parked via the `ThreadUtils.suspendify`. This will
       * never recover.
       */
-     fun suspendify(block: suspend () -> Unit) {
+     fun suspendifyBlocking(block: suspend () -> Unit) {
          runBlocking {
              block()
+         }
+     }
+
+     /**
+      * Allows a non suspending function to create a scope that can
+      * call suspending functions while on the main thread.  This is a nonblocking call,
+      * the scope will start on a background thread and block as it switches
+      * over to the main thread context.  This will return immediately!!!
+      */
+     fun suspendifyOnMain(block: suspend () -> Unit) {
+         thread {
+             runBlocking {
+                 withContext(Dispatchers.Main) {
+                     block()
+                 }
+             }
          }
      }
 

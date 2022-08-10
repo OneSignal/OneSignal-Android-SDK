@@ -45,7 +45,10 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     private var _activityReferences = 0
     private var _isActivityChangingConfigurations = false
 
-    override var appContext: Context? = null
+    override val appContext: Context
+            get() = _appContext!!
+
+    private var _appContext: Context? = null
 
     override var current: Activity?
             get() = _current
@@ -69,7 +72,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
 
     fun start(context: Context)
     {
-        appContext = context
+        _appContext = context
         if(_application == null) {
             _application = context.applicationContext as Application
             _application!!.registerActivityLifecycleCallbacks(this)
@@ -142,6 +145,14 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
 
     override fun onActivityResumed(activity: Activity) {
         Logging.debug("ApplicationService.onActivityResumed: $activity")
+
+        // When an activity has something shown above it, it will be paused allowing
+        // the new activity to be started (where current is set).  However when that
+        // new activity is finished the original activity is simply resumed (it's
+        // already been created).  For this case, we make sure current is set
+        // to the now current activity.
+        if(current != activity)
+            current = activity
     }
 
     override fun onActivityPaused(activity: Activity) {

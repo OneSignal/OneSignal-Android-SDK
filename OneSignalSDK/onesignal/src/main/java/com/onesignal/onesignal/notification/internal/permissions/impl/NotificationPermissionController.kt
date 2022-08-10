@@ -55,7 +55,7 @@ class NotificationPermissionController(
     @ChecksSdkIntAtLeast(api = 33)
     val supportsNativePrompt =
         Build.VERSION.SDK_INT > 32 &&
-        AndroidUtils.getTargetSdkVersion(_application.appContext!!) > 32
+        AndroidUtils.getTargetSdkVersion(_application.appContext) > 32
 
     /**
      * Prompt the user for notification permission.  Note it is possible the application
@@ -137,7 +137,7 @@ class NotificationPermissionController(
         return true
     }
 
-    private fun notificationsEnabled() = NotificationHelper.areNotificationsEnabled(_application.appContext!!)
+    private fun notificationsEnabled() = NotificationHelper.areNotificationsEnabled(_application.appContext)
 
     companion object {
         private const val PERMISSION_TYPE = "NOTIFICATION"

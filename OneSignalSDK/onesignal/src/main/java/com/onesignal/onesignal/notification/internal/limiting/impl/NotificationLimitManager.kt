@@ -34,7 +34,7 @@ internal class NotificationLimitManager(
     @RequiresApi(api = Build.VERSION_CODES.M)
     @Throws(Throwable::class)
     private suspend fun clearOldestOverLimitStandard(notificationsToMakeRoomFor: Int) {
-        val activeNotifs = NotificationHelper.getActiveNotifications(_applicationService.appContext!!)
+        val activeNotifs = NotificationHelper.getActiveNotifications(_applicationService.appContext)
         var notificationsToClear =
             activeNotifs.size - INotificationLimitManager.Constants.maxNumberOfNotifications + notificationsToMakeRoomFor
         // We have enough room in the notification shade, no need to clear any notifications

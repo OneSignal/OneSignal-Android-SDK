@@ -6,6 +6,8 @@ import com.onesignal.onesignal.core.internal.backend.IParamsBackendService
 import com.onesignal.onesignal.core.internal.backend.ParamsBackendService
 import com.onesignal.onesignal.core.internal.backend.http.HttpClient
 import com.onesignal.onesignal.core.internal.backend.http.IHttpClient
+import com.onesignal.onesignal.core.internal.background.IBackgroundManager
+import com.onesignal.onesignal.core.internal.background.impl.BackgroundManager
 import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.time.Time
 import com.onesignal.onesignal.core.internal.database.IDatabaseProvider
@@ -88,6 +90,11 @@ object CoreModule {
         // Session
         builder.register<SessionService>()
                .provides<ISessionService>()
+               .provides<IStartableService>()
+
+        // Background
+        builder.register<BackgroundManager>()
+               .provides<IBackgroundManager>()
                .provides<IStartableService>()
 
         // Model Stores

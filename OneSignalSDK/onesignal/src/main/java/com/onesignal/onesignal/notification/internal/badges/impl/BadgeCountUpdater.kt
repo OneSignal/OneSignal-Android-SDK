@@ -24,8 +24,8 @@ internal class BadgeCountUpdater(
     private fun areBadgeSettingsEnabled(): Boolean {
         if (badgesEnabled != -1) return badgesEnabled == 1
         try {
-            val ai = _applicationService.appContext!!.packageManager.getApplicationInfo(
-                _applicationService.appContext!!.packageName,
+            val ai = _applicationService.appContext.packageManager.getApplicationInfo(
+                _applicationService.appContext.packageName,
                 PackageManager.GET_META_DATA
             )
             val bundle = ai.metaData
@@ -41,7 +41,7 @@ internal class BadgeCountUpdater(
     }
 
     private fun areBadgesEnabled(): Boolean {
-        return areBadgeSettingsEnabled() && NotificationHelper.areNotificationsEnabled(_applicationService.appContext!!)
+        return areBadgeSettingsEnabled() && NotificationHelper.areNotificationsEnabled(_applicationService.appContext)
     }
 
     override fun update() {
@@ -54,7 +54,7 @@ internal class BadgeCountUpdater(
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     private fun updateStandard() {
-        val activeNotifs = NotificationHelper.getActiveNotifications(_applicationService.appContext!!)
+        val activeNotifs = NotificationHelper.getActiveNotifications(_applicationService.appContext)
         var runningCount = 0
         for (activeNotif in activeNotifs) {
             if (NotificationHelper.isGroupSummary(activeNotif)) continue
@@ -84,7 +84,7 @@ internal class BadgeCountUpdater(
     override fun updateCount(count: Int) {
         if (!areBadgeSettingsEnabled()) return
         try {
-            ShortcutBadger.applyCountOrThrow(_applicationService.appContext!!, count)
+            ShortcutBadger.applyCountOrThrow(_applicationService.appContext, count)
         } catch (e: ShortcutBadgeException) {
             // Suppress error as there are normal cases where this will throw
             // Can throw if:

@@ -141,6 +141,6 @@ internal class PushRegistratorFCM(
             .setApiKey(apiKey)
             .setProjectId(projectId)
             .build()
-        firebaseApp = FirebaseApp.initializeApp(_applicationService.appContext!!, firebaseOptions, FCM_APP_NAME)
+        firebaseApp = FirebaseApp.initializeApp(_applicationService.appContext, firebaseOptions, FCM_APP_NAME)
     }
 }
