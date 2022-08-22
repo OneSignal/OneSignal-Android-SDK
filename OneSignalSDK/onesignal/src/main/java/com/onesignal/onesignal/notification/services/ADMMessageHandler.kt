@@ -3,8 +3,10 @@ package com.onesignal.onesignal.notification.services
 import com.amazon.device.messaging.ADMMessageHandlerBase
 import android.content.Intent
 import com.onesignal.onesignal.core.OneSignal
+import com.onesignal.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.onesignal.notification.internal.bundle.INotificationBundleProcessor
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.notification.internal.registration.impl.IPushRegistratorCallback
 
 // WARNING: Do not pass 'this' to any methods as it will cause proguard build errors
 //             when "proguard-android-optimize.txt" is used.
@@ -22,8 +24,10 @@ class ADMMessageHandler : ADMMessageHandlerBase("ADMMessageHandler") {
     override fun onRegistered(newRegistrationId: String) {
         Logging.info("ADM registration ID: $newRegistrationId")
 
-        // TODO: Implement
-        //PushRegistratorADM.fireCallback(newRegistrationId)
+        var registerer = OneSignal.getService<IPushRegistratorCallback>()
+        suspendifyOnThread {
+            registerer.fireCallback(newRegistrationId)
+        }
     }
 
     override fun onRegistrationError(error: String) {
@@ -32,8 +36,10 @@ class ADMMessageHandler : ADMMessageHandlerBase("ADMMessageHandler") {
         if ("INVALID_SENDER" == error)
             Logging.error("Please double check that you have a matching package name (NOTE: Case Sensitive), api_key.txt, and the apk was signed with the same Keystore and Alias.")
 
-        // TODO: Implement
-        //PushRegistratorADM.fireCallback(null)
+        var registerer = OneSignal.getService<IPushRegistratorCallback>()
+        suspendifyOnThread {
+            registerer.fireCallback(null)
+        }
     }
 
     override fun onUnregistered(info: String) {

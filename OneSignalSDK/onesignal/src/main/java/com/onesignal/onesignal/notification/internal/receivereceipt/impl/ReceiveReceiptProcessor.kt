@@ -1,40 +1,32 @@
 package com.onesignal.onesignal.notification.internal.receivereceipt.impl
 
-import com.onesignal.onesignal.core.internal.backend.api.ApiException
 import com.onesignal.onesignal.core.internal.device.IDeviceService
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.models.ConfigModelStore
-import com.onesignal.onesignal.core.user.IUserManager
+import com.onesignal.onesignal.core.internal.user.ISubscriptionManager
+import com.onesignal.onesignal.notification.internal.backend.INotificationBackendService
 import com.onesignal.onesignal.notification.internal.receivereceipt.IReceiveReceiptProcessor
-import java.lang.NullPointerException
 
 internal class ReceiveReceiptProcessor(
-    private var _deviceService: IDeviceService,
-            private var _userManager: IUserManager,
-            private var _configModelStore: ConfigModelStore) : IReceiveReceiptProcessor {
+    private val _deviceService: IDeviceService,
+    private val _subscriptionManager: ISubscriptionManager,
+    private val _configModelStore: ConfigModelStore,
+    private val _backend: INotificationBackendService
+) : IReceiveReceiptProcessor {
 
     override suspend fun sendReceiveReceipt(notificationId: String) {
+        // TODO: There is a potential problem where this could get called before these things are setup.  Typically if there is
+        //       outstanding work and we are starting up again.  How to resolve?
         val config = _configModelStore.get()
-        val appId: String = config!!.appId ?: ""
-        val playerId: String = _userManager!!.subscriptions.push?.id.toString()
+        val appId: String = config.appId ?: ""
+        val subscriptionId: String = _subscriptionManager.subscriptions.push?.id.toString()
+        val deviceType = _deviceService.deviceType
 
-        var deviceType: Int? = null
-
-        try {
-            deviceType = _deviceService!!.deviceType
-        } catch (e: NullPointerException) {
-            e.printStackTrace()
-        }
-
-        val finalDeviceType = deviceType
-        Logging.debug("ReceiveReceiptWorker: Device Type is: $finalDeviceType")
-
-        try {
-            // TODO: Implement
-            //_apiService!!.updateNotificationAsReceived(appId, notificationId, playerId, deviceType)
+        val response = _backend.updateNotificationAsReceived(appId, notificationId, subscriptionId, deviceType)
+        if (response.isSuccess) {
             Logging.debug("Receive receipt sent for notificationID: $notificationId")
-        } catch (ae: ApiException) {
-            Logging.error("Receive receipt failed with statusCode: ${ae.statusCode} response: $ae.response")
+        } else {
+            Logging.error("Receive receipt failed with statusCode: ${response.statusCode} response: ${response.payload}")
         }
     }
 }

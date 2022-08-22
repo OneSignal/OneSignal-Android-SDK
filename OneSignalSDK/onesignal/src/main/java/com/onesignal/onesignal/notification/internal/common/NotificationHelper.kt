@@ -12,7 +12,11 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.notification.INotification
+import com.onesignal.onesignal.notification.INotificationAction
+import com.onesignal.onesignal.notification.internal.NotificationAction
+import com.onesignal.onesignal.notification.internal.NotificationOpenedResult
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -193,5 +197,49 @@ object NotificationHelper {
         else if (notification.title != null)
             return notification.title!!.substring(0, min(10, notification.title!!.length))
         return ""
+    }
+
+    fun generateNotificationOpenedResult(jsonArray: JSONArray, time: ITime): NotificationOpenedResult {
+        val jsonArraySize = jsonArray.length()
+        var firstMessage = true
+        val androidNotificationId = jsonArray.optJSONObject(0)
+            .optInt(NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID)
+        val groupedNotifications: MutableList<com.onesignal.onesignal.notification.internal.Notification> = ArrayList()
+        var actionSelected: String? = null
+        var payload: JSONObject? = null
+
+        for (i in 0 until jsonArraySize) {
+            try {
+                payload = jsonArray.getJSONObject(i)
+                if (actionSelected == null && payload.has(NotificationConstants.GENERATE_NOTIFICATION_BUNDLE_KEY_ACTION_ID))
+                    actionSelected = payload.optString(NotificationConstants.GENERATE_NOTIFICATION_BUNDLE_KEY_ACTION_ID, null)
+
+                if (firstMessage)
+                    firstMessage = false
+                else {
+                    groupedNotifications.add(
+                        com.onesignal.onesignal.notification.internal.Notification(
+                            payload,
+                            time
+                        )
+                    )
+                }
+
+            } catch (t: Throwable) {
+                Logging.error("Error parsing JSON item $i/$jsonArraySize for callback.", t)
+            }
+        }
+
+        val actionType =
+            if (actionSelected != null) INotificationAction.ActionType.ActionTaken else INotificationAction.ActionType.Opened
+        val notificationAction = NotificationAction(actionType, actionSelected)
+
+        val notification = com.onesignal.onesignal.notification.internal.Notification(
+            groupedNotifications,
+            payload!!,
+            androidNotificationId,
+            time
+        )
+        return NotificationOpenedResult(notification, notificationAction)
     }
 }

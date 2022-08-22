@@ -11,5 +11,5 @@ package com.onesignal.onesignal.notification
  * @see [Foreground Notification Received Event | OneSignal Docs](https://documentation.onesignal.com/docs/sdk-notification-event-handlers#foreground-notification-received-event)
  */
 interface INotificationWillShowInForegroundHandler {
-    fun notificationWillShowInForeground(notificationReceivedEvent: INotificationReceivedEvent?)
+    fun notificationWillShowInForeground(notificationReceivedEvent: INotificationReceivedEvent)
 }

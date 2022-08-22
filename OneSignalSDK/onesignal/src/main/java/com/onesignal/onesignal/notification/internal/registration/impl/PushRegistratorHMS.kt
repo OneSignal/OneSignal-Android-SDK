@@ -7,6 +7,7 @@ import com.huawei.hms.aaid.HmsInstanceId
 import com.huawei.hms.common.ApiException
 import com.huawei.hms.push.HmsMessaging
 import com.huawei.hms.support.api.entity.core.CommonCode
+import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.device.IDeviceService
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.notification.internal.registration.IPushRegistrator
@@ -16,7 +17,10 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
-internal class PushRegistratorHMS(private val _deviceService: IDeviceService) : IPushRegistrator {
+internal class PushRegistratorHMS(
+    private val _deviceService: IDeviceService,
+    private val _applicationService: IApplicationService) : IPushRegistrator,
+    IPushRegistratorCallback {
 
     companion object {
         private const val HMS_CLIENT_APP_ID = "client/app_id"
@@ -24,12 +28,12 @@ internal class PushRegistratorHMS(private val _deviceService: IDeviceService) : 
 
     private var _channel: Channel<String?>? = null
 
-    override suspend fun registerForPush(context: Context) : IPushRegistrator.RegisterResult = coroutineScope {
+    override suspend fun registerForPush() : IPushRegistrator.RegisterResult = coroutineScope {
         var result: IPushRegistrator.RegisterResult? = null
 
         launch(Dispatchers.Default) {
             result = try {
-                getHMSTokenTask(context)
+                getHMSTokenTask(_applicationService.appContext)
             } catch (e: ApiException) {
                 Logging.error("HMS ApiException getting Huawei push token!", e)
                 val pushStatus: IPushRegistrator.RegisterStatus =
@@ -92,7 +96,7 @@ internal class PushRegistratorHMS(private val _deviceService: IDeviceService) : 
         }
     }
 
-    suspend fun fireCallback(id: String?) {
+    override suspend fun fireCallback(id: String?) {
         _channel?.send(id)
     }
 }

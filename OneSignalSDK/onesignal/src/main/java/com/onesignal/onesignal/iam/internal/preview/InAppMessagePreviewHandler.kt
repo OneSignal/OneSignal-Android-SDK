@@ -28,7 +28,7 @@ internal class InAppMessagePreviewHandler(
 ) : IStartableService, INotificationLifecycleCallback {
 
     override fun start() {
-        _notificationLifeCycle.set(this)
+        _notificationLifeCycle.setInternalNotificationLifecycleCallback(this)
     }
 
     override suspend fun canReceiveNotification(jsonPayload: JSONObject): Boolean {
@@ -47,13 +47,13 @@ internal class InAppMessagePreviewHandler(
     }
 
     override suspend fun canOpenNotification(activity: Activity, jsonData: JSONObject): Boolean {
-        val previewUUID = inAppPreviewPushUUID(jsonData) ?: return false
+        val previewUUID = inAppPreviewPushUUID(jsonData) ?: return true
 
         _notificationActivityOpener.openDestinationActivity(activity, JSONArray().put(jsonData))
 
         _iamDisplayer.displayPreviewMessage(previewUUID)
 
-        return true
+        return false
     }
 
     private fun inAppPreviewPushUUID(payload: JSONObject): String? {

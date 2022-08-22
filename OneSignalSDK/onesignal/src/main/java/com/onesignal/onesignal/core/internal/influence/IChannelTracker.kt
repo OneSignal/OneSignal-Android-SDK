@@ -14,6 +14,7 @@ interface IChannelTracker {
      * @return ids that happen between attribution window
      */
     val lastReceivedIds: JSONArray
+    val currentSessionInfluence: Influence
 
     fun cacheState()
     fun resetAndInitInfluence()

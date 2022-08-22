@@ -38,10 +38,6 @@ internal class NotificationGenerationProcessor(
     private val _time: ITime,
 ) : INotificationGenerationProcessor {
 
-    // TODO: Implement callbacks
-    val remoteNotificationReceivedHandler: IRemoteNotificationReceivedHandler? = null
-    val notificationWillShowInForegroundHandler: INotificationWillShowInForegroundHandler? = null
-
     override suspend fun processNotificationData(
                     context: Context,
                     androidNotificationId: Int,
@@ -56,7 +52,7 @@ internal class NotificationGenerationProcessor(
 
         var notification = Notification(null, jsonPayload, androidNotificationId, _time)
 
-        // When restoring it will be seen as a duplicate, because we are restoring...
+        // When restoring it will always be seen as a duplicate, because we are restoring...
         if (!isRestoring && isDuplicateNotification(notification))
             return
 
@@ -66,29 +62,21 @@ internal class NotificationGenerationProcessor(
         notificationJob.notification = notification
         notificationJob.jsonPayload = jsonPayload
 
-        var shouldDisplay = true
         var didDisplay = false
 
-        if (remoteNotificationReceivedHandler == null) {
-            Logging.warn("remoteNotificationReceivedHandler not setup, displaying normal OneSignal notification")
-            shouldDisplay = processHandlerResponse(notificationJob, notification, isRestoring)
-                ?: return
-        }
-        else {
-            Logging.info("Fire remoteNotificationReceived")
-            val serviceExtensionReceivedEvent = NotificationReceivedEvent(notification)
+        Logging.info("Fire remoteNotificationReceived")
+        val serviceExtensionReceivedEvent = NotificationReceivedEvent(notification)
 
-            try {
-                withTimeout(30000L) {
-                    remoteNotificationReceivedHandler.remoteNotificationReceived(context, serviceExtensionReceivedEvent)
-                }
-            } catch (t: Throwable) {
-                Logging.error("remoteNotificationReceived throw an exception. Displaying normal OneSignal notification.", t)
+        try {
+            withTimeout(30000L) {
+                _lifecycleService.externalRemoteNotificationReceived(context, serviceExtensionReceivedEvent)
             }
-
-            shouldDisplay = processHandlerResponse(notificationJob, serviceExtensionReceivedEvent.notification?.copy(), isRestoring)
-                ?: return
+        } catch (t: Throwable) {
+            Logging.error("remoteNotificationReceived throw an exception. Displaying normal OneSignal notification.", t)
         }
+
+        var shouldDisplay = processHandlerResponse(notificationJob, serviceExtensionReceivedEvent.effectiveNotification?.copy(), isRestoring)
+            ?: return
 
         if(shouldDisplay) {
             if (shouldFireForegroundHandlers(notificationJob)) {
@@ -98,13 +86,13 @@ internal class NotificationGenerationProcessor(
 
                 try {
                     withTimeout(30000L) {
-                        notificationWillShowInForegroundHandler!!.notificationWillShowInForeground(foregroundReceivedEvent)
+                        _lifecycleService.externalNotificationWillShowInForeground(foregroundReceivedEvent)
                     }
                 } catch (t: Throwable) {
                     Logging.error("Exception thrown while notification was being processed for display by notificationWillShowInForegroundHandler, showing notification in foreground!", t)
                 }
 
-                shouldDisplay = processHandlerResponse(notificationJob, foregroundReceivedEvent.notification?.copy(), isRestoring)
+                shouldDisplay = processHandlerResponse(notificationJob, foregroundReceivedEvent.effectiveNotification?.copy(), isRestoring)
                     ?: return
             }
 
@@ -211,8 +199,7 @@ internal class NotificationGenerationProcessor(
             return
         }
 
-        _lifecycleService.notificationGenerated(notificationJob)
-        _sessionService.onNotificationReceived(notificationJob.apiNotificationId)
+        _lifecycleService.notificationReceived(notificationJob)
     }
 
     // Saving the notification provides the following:
@@ -292,10 +279,6 @@ internal class NotificationGenerationProcessor(
     private fun shouldFireForegroundHandlers(notificationJob: NotificationGenerationJob): Boolean {
         if (!_applicationService.isInForeground) {
             Logging.info("App is in background, show notification")
-            return false
-        }
-        if (notificationWillShowInForegroundHandler == null) {
-            Logging.info("No NotificationWillShowInForegroundHandler setup, show notification")
             return false
         }
 

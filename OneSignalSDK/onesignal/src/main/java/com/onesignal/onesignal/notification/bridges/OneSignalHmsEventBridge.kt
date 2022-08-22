@@ -5,10 +5,12 @@ import android.os.Bundle
 import com.huawei.hms.push.RemoteMessage
 import com.onesignal.onesignal.core.OneSignal
 import com.onesignal.onesignal.core.internal.common.JSONUtils
+import com.onesignal.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.notification.internal.bundle.INotificationBundleProcessor
+import com.onesignal.onesignal.notification.internal.registration.impl.IPushRegistratorCallback
 import org.json.JSONException
 import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicBoolean
@@ -32,8 +34,10 @@ object OneSignalHmsEventBridge {
     fun onNewToken(context: Context, token: String, bundle: Bundle?) {
         if (firstToken.compareAndSet(true, false)) {
             Logging.info("OneSignalHmsEventBridge onNewToken - HMS token: $token Bundle: $bundle")
-            // TODO: Implement
-//            PushRegistratorHMS.fireCallback(token)
+            var registerer = OneSignal.getService<IPushRegistratorCallback>()
+            suspendifyOnThread {
+                registerer.fireCallback(token)
+            }
         } else {
             Logging.info("OneSignalHmsEventBridge ignoring onNewToken - HMS token: $token Bundle: $bundle")
         }
