@@ -1,6 +1,5 @@
 package com.onesignal.onesignal.core.internal.user
 
-import com.onesignal.onesignal.core.internal.user.triggers.Trigger
 import com.onesignal.onesignal.core.user.IUserManager
 import com.onesignal.onesignal.core.user.subscriptions.SubscriptionList
 import com.onesignal.onesignal.core.LogLevel
@@ -8,6 +7,8 @@ import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.models.*
 
 interface IUserSwitcher {
+    val identityModel: IdentityModel
+    val propertiesModel: PropertiesModel
     fun setUser(identityModel: IdentityModel, propertiesModel: PropertiesModel)
 }
 
@@ -17,56 +18,55 @@ internal open class UserManager(
 ) : IUserManager, IUserSwitcher {
 
     override val externalId: String?
-        get() = _identityModel.userId
+        get() = identityModel.userId
 
     override var language: String
-        get() = _propertiesModel.language
-        set(value) { _propertiesModel.language = value }
+        get() = propertiesModel.language
+        set(value) { propertiesModel.language = value }
 
     override val tags: Map<String, String>
-        get() = _propertiesModel.tags
+        get() = propertiesModel.tags
 
     override val aliases: Map<String, String>
-        get() = _identityModel.aliases
+        get() = identityModel.aliases
 
     override var subscriptions: SubscriptionList = SubscriptionList(listOf())
 
     //    private var userModel: UserModel
-    private val _triggers: List<Trigger> = listOf()
-    private var _identityModel: IdentityModel = IdentityModel()
-    private var _propertiesModel: PropertiesModel = PropertiesModel()
+    override var identityModel: IdentityModel = IdentityModel()
+    override var propertiesModel: PropertiesModel = PropertiesModel()
 
     override fun setUser(identityModel: IdentityModel, propertiesModel: PropertiesModel) {
-        _identityModel = identityModel
-        _propertiesModel = propertiesModel
+        this.identityModel = identityModel
+        this.propertiesModel = propertiesModel
         _subscriptionManager.load(identityModel)
     }
 
     override fun addAlias(label: String, id: String) : com.onesignal.onesignal.core.user.IUserManager {
         Logging.log(LogLevel.DEBUG, "setAlias(label: $label, id: $id)")
-        val aliases = _identityModel.aliases.toMutableMap()
+        val aliases = identityModel.aliases.toMutableMap()
         aliases[label] = id
-        _identityModel.aliases = aliases
+        identityModel.aliases = aliases
         return this
     }
 
     override fun addAliases(aliases: Map<String, String>): IUserManager {
         Logging.log(LogLevel.DEBUG, "addAliases(aliases: $aliases")
-        val existingAliases = _identityModel.aliases.toMutableMap()
+        val existingAliases = identityModel.aliases.toMutableMap()
 
         aliases.forEach {
             existingAliases[it.key] = it.value
         }
 
-        _identityModel.aliases = aliases
+        identityModel.aliases = aliases
         return this
     }
 
     override fun removeAlias(label: String): IUserManager {
         Logging.log(LogLevel.DEBUG, "removeAlias(label: $label)")
-        val aliases = _identityModel.aliases.toMutableMap()
+        val aliases = identityModel.aliases.toMutableMap()
         aliases.remove(label)
-        _identityModel.aliases = aliases
+        identityModel.aliases = aliases
         return this
     }
 
@@ -97,44 +97,44 @@ internal open class UserManager(
     override fun setTag(key: String, value: String): IUserManager {
         Logging.log(LogLevel.DEBUG, "setTag(key: $key, value: $value)")
 
-        val tags = _propertiesModel.tags.toMutableMap()
+        val tags = propertiesModel.tags.toMutableMap()
         tags[key] = value
-        _propertiesModel.tags = tags
+        propertiesModel.tags = tags
         return this
     }
 
     override fun setTags(tags: Map<String, String>): IUserManager {
         Logging.log(LogLevel.DEBUG, "setTags(tags: $tags)")
 
-        val tagCollection = _propertiesModel.tags.toMutableMap()
+        val tagCollection = propertiesModel.tags.toMutableMap()
 
         tags.forEach {
             tagCollection[it.key] = it.value
         }
 
-        _propertiesModel.tags = tagCollection
+        propertiesModel.tags = tagCollection
         return this
     }
 
     override fun removeTag(key: String): IUserManager {
         Logging.log(LogLevel.DEBUG, "removeTag(key: $key)")
 
-        val tags = _propertiesModel.tags.toMutableMap()
+        val tags = propertiesModel.tags.toMutableMap()
         tags.remove(key)
-        _propertiesModel.tags = tags
+        propertiesModel.tags = tags
         return this
     }
 
     override fun removeTags(keys: Collection<String>): IUserManager {
         Logging.log(LogLevel.DEBUG, "removeTags(keys: $keys)")
 
-        val tagCollection = _propertiesModel.tags.toMutableMap()
+        val tagCollection = propertiesModel.tags.toMutableMap()
 
         keys.forEach {
             tagCollection.remove(it)
         }
 
-        _propertiesModel.tags = tagCollection
+        propertiesModel.tags = tagCollection
         return this
     }
 

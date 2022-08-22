@@ -12,6 +12,7 @@ import com.onesignal.onesignal.core.internal.application.IActivityLifecycleHandl
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.common.ViewUtils
+import com.onesignal.onesignal.core.internal.common.suspendifyOnMain
 import com.onesignal.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.iam.internal.InAppMessage
@@ -234,13 +235,14 @@ internal class WebViewManager(
         currentActivityName = activity.localClassName
         Logging.debug("In app message activity available currentActivityName: $currentActivityName lastActivityName: $lastActivityName")
 
-        suspendifyOnThread {
+        suspendifyOnMain {
             if (lastActivityName == null)
                 showMessageView(null)
             else if (lastActivityName != currentActivityName) {
                 if (!closing) {
                     // Navigate to new activity while displaying current IAM
-                    if (messageView != null) messageView!!.removeAllViews()
+                    if (messageView != null)
+                        messageView!!.removeAllViews()
                     showMessageView(lastPageHeight)
                 }
             } else {

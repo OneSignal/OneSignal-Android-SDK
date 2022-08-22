@@ -6,4 +6,6 @@ internal interface ITriggerHandler {
 
     // Alerts the observer that a trigger timer has fired
     fun onTriggerConditionChanged()
+
+    fun onTriggerChanged(newTriggerKey: String)
 }

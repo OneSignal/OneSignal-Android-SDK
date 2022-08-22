@@ -10,6 +10,7 @@ import com.huawei.hms.aaid.HmsInstanceId
 import com.huawei.hms.api.HuaweiApiAvailability
 import com.huawei.hms.location.LocationCallback
 import com.onesignal.onesignal.core.internal.application.IApplicationService
+import com.onesignal.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.onesignal.core.internal.device.IDeviceService
 
 class DeviceService(private val _applicationService: IApplicationService) : IDeviceService {
@@ -69,7 +70,7 @@ class DeviceService(private val _applicationService: IApplicationService) : IDev
     override val isGooglePlayStoreInstalled: Boolean
         get() {
             try {
-                val pm: PackageManager = _applicationService.appContext!!.getPackageManager()
+                val pm: PackageManager = _applicationService.appContext.getPackageManager()
                 val info = pm.getPackageInfo(
                     GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE,
                     PackageManager.GET_META_DATA
@@ -105,7 +106,7 @@ class DeviceService(private val _applicationService: IApplicationService) : IDev
 
     private fun packageInstalledAndEnabled(packageName: String): Boolean {
         return try {
-            val pm = _applicationService.appContext!!.packageManager
+            val pm = _applicationService.appContext.packageManager
             val info = pm.getPackageInfo(packageName, PackageManager.GET_META_DATA)
             info.applicationInfo.enabled
         } catch (e: PackageManager.NameNotFoundException) {
@@ -115,7 +116,7 @@ class DeviceService(private val _applicationService: IApplicationService) : IDev
 
     private fun hasGMSLocationLibrary(): Boolean {
         return try {
-            opaqueHasClass(LocationListener::class.java)
+            AndroidUtils.opaqueHasClass(LocationListener::class.java)
         } catch (e: NoClassDefFoundError) {
             false
         }
@@ -123,7 +124,7 @@ class DeviceService(private val _applicationService: IApplicationService) : IDev
 
     private fun hasHMSLocationLibrary(): Boolean {
         return try {
-            opaqueHasClass(LocationCallback::class.java)
+            AndroidUtils.opaqueHasClass(LocationCallback::class.java)
         } catch (e: NoClassDefFoundError) {
             false
         }
@@ -131,7 +132,7 @@ class DeviceService(private val _applicationService: IApplicationService) : IDev
 
     override fun hasFCMLibrary(): Boolean {
         return try {
-            opaqueHasClass(FirebaseMessaging::class.java)
+            AndroidUtils.opaqueHasClass(FirebaseMessaging::class.java)
         } catch (e: NoClassDefFoundError) {
             false
         }
@@ -157,7 +158,7 @@ class DeviceService(private val _applicationService: IApplicationService) : IDev
 
     private fun hasHMSAGConnectLibrary(): Boolean {
         return try {
-            opaqueHasClass(AGConnectServicesConfig::class.java)
+            AndroidUtils.opaqueHasClass(AGConnectServicesConfig::class.java)
         } catch (e: NoClassDefFoundError) {
             false
         }
@@ -165,7 +166,7 @@ class DeviceService(private val _applicationService: IApplicationService) : IDev
 
     private fun hasHMSPushKitLibrary(): Boolean {
         return try {
-            opaqueHasClass(HmsInstanceId::class.java)
+            AndroidUtils.opaqueHasClass(HmsInstanceId::class.java)
         } catch (e: NoClassDefFoundError) {
             false
         }
@@ -173,7 +174,7 @@ class DeviceService(private val _applicationService: IApplicationService) : IDev
 
     private fun hasHMSAvailabilityLibrary(): Boolean {
         return try {
-            opaqueHasClass(HuaweiApiAvailability::class.java)
+            AndroidUtils.opaqueHasClass(HuaweiApiAvailability::class.java)
         } catch (e: NoClassDefFoundError) {
             false
         }
@@ -188,17 +189,5 @@ class DeviceService(private val _applicationService: IApplicationService) : IDev
         } catch (e: ClassNotFoundException) {
             false
         }
-    }
-
-    // Interim method that works around Proguard's overly aggressive assumenosideeffects which
-    // ignores keep rules.
-    // This is specifically designed to address Proguard removing catches for NoClassDefFoundError
-    // when the config has "-assumenosideeffects" with
-    // java.lang.Class.getName() & java.lang.Object.getClass().
-    // This @Keep annotation is key so this method does not get removed / inlined.
-    // Addresses issue https://github.com/OneSignal/OneSignal-Android-SDK/issues/1423
-    @Keep
-    private fun opaqueHasClass(_class: Class<*>): Boolean {
-        return true
     }
 }

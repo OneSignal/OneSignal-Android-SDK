@@ -49,7 +49,7 @@ internal class NotificationDataController(
 
     override suspend fun markAsDismissedForOutstanding() = coroutineScope {
         withContext(Dispatchers.IO) {
-            val appContext = _applicationService.appContext ?: return@withContext
+            val appContext = _applicationService.appContext
             val notificationManager: NotificationManager = NotificationHelper.getNotificationManager(appContext)
             val retColumn = arrayOf(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID)
             _databaseProvider.get().query(
@@ -83,7 +83,7 @@ internal class NotificationDataController(
 
     override suspend fun markAsDismissedForGroup(group: String) = coroutineScope {
         withContext(Dispatchers.IO) {
-            val appContext = _applicationService.appContext ?: return@withContext
+            val appContext = _applicationService.appContext
             val notificationManager: NotificationManager =
                 NotificationHelper.getNotificationManager(appContext)
 
@@ -129,7 +129,7 @@ internal class NotificationDataController(
         var didDismiss: Boolean = false
 
         withContext(Dispatchers.IO) {
-            val appContext = _applicationService.appContext ?: return@withContext
+            val appContext = _applicationService.appContext
 
             val whereStr: String =
                 OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID.toString() + " = " + androidId + " AND " +
@@ -216,8 +216,6 @@ internal class NotificationDataController(
             Logging.debug("Saving Notification id=$id")
 
             try {
-                val appContext = _applicationService.appContext ?: return@withContext
-
                 if (shouldDismissIdenticals) {
                     val whereStr =
                         OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + androidId

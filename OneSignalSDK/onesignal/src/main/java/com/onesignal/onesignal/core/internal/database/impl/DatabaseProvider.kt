@@ -10,6 +10,6 @@ internal class DatabaseProvider(
 ) : IDatabaseProvider {
 
     override fun get() : IDatabase {
-        return OSDatabase(OSOutcomeTableProvider(), _application.appContext!!)
+        return OSDatabase(OSOutcomeTableProvider(), _application.appContext)
     }
 }

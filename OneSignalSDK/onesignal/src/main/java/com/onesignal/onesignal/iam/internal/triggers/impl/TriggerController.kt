@@ -1,6 +1,9 @@
 package com.onesignal.onesignal.iam.internal.triggers.impl
 
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.modeling.IModelStoreChangeHandler
+import com.onesignal.onesignal.core.internal.models.TriggerModel
+import com.onesignal.onesignal.core.internal.models.TriggerModelStore
 import com.onesignal.onesignal.iam.internal.InAppMessage
 import com.onesignal.onesignal.iam.internal.Trigger
 import com.onesignal.onesignal.iam.internal.triggers.ITriggerController
@@ -10,10 +13,15 @@ import java.text.DecimalFormat
 import java.util.concurrent.ConcurrentHashMap
 
 internal class TriggerController(
+    private val _triggerModelStore: TriggerModelStore,
     private var _dynamicTriggerController: DynamicTriggerController
-    ) : ITriggerController {
+    ) : ITriggerController, IModelStoreChangeHandler<TriggerModel> {
 
     val triggers: ConcurrentHashMap<String?, Any?> = ConcurrentHashMap()
+
+    init {
+        _triggerModelStore.subscribe(this)
+    }
 
     /**
      * This function evaluates all of the triggers for a message. The triggers are organized in
@@ -198,6 +206,20 @@ internal class TriggerController(
             }
         }
         return true
+    }
+
+    override fun onAdded(model: TriggerModel) {
+        addTriggers(model.key, model.value)
+        _dynamicTriggerController.events.fire { it.onTriggerChanged(model.key)}
+    }
+
+    override fun onUpdated(model: TriggerModel, property: String, oldValue: Any?, newValue: Any?) {
+        addTriggers(model.key, model.value)
+        _dynamicTriggerController.events.fire { it.onTriggerChanged(model.key)}
+    }
+
+    override fun onRemoved(model: TriggerModel) {
+        removeTriggersForKeys(model.key)
     }
 
     /**
