@@ -34,7 +34,7 @@ abstract class ChannelTracker internal constructor(protected var dataRepository:
     /**
      * Get the current session based on state + if outcomes features are enabled.
      */
-    val currentSessionInfluence: Influence
+    override val currentSessionInfluence: Influence
         get() {
             val sessionInfluence = Influence(channelType, InfluenceType.DISABLED, null)
             // Channel weren't init yet because application is starting

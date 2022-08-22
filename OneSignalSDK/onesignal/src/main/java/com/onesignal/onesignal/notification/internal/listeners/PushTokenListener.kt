@@ -8,14 +8,16 @@ import com.onesignal.onesignal.core.internal.operations.CreateAndAddSubscription
 import com.onesignal.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.onesignal.core.internal.startup.IStartableService
 import com.onesignal.onesignal.core.internal.user.ISubscriptionManager
-import com.onesignal.onesignal.notification.internal.IPushTokenChangedHandler
-import com.onesignal.onesignal.notification.internal.IPushTokenManager
+import com.onesignal.onesignal.notification.internal.INotificationStateRefresher
+import com.onesignal.onesignal.notification.internal.pushtoken.IPushTokenChangedHandler
+import com.onesignal.onesignal.notification.internal.pushtoken.IPushTokenManager
 
 internal class PushTokenListener(
     private val _operationRepo: IOperationRepo,
     private val _configModelStore: ConfigModelStore,
     private val _pushTokenManager: IPushTokenManager,
-    private val _subscriptionManager: ISubscriptionManager
+    private val _subscriptionManager: ISubscriptionManager,
+    private val _notificationStateRefresher: INotificationStateRefresher,
 ) : IStartableService, IPushTokenChangedHandler, ISingletonModelStoreChangeHandler<ConfigModel> {
 
     override fun start() {
@@ -35,6 +37,7 @@ internal class PushTokenListener(
             return
 
         createSubscriptionIfRequired()
+        _notificationStateRefresher.refreshNotificationState()
     }
 
     private fun createSubscriptionIfRequired() {

@@ -14,8 +14,5 @@ import android.content.Context
  * To omit displaying a notification call [OSNotificationReceivedEvent.complete] with null.
  */
 interface IRemoteNotificationReceivedHandler {
-    fun remoteNotificationReceived(
-        context: Context?,
-        notificationReceivedEvent: INotificationReceivedEvent?
-    )
+    fun remoteNotificationReceived(context: Context, notificationReceivedEvent: INotificationReceivedEvent)
 }

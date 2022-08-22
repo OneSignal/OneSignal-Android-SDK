@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import com.onesignal.onesignal.core.internal.AppEntryAction
 import com.onesignal.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.onesignal.core.internal.application.IApplicationService
@@ -38,6 +39,9 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
 
     /** Whether the application is in the foreground **/
     override var isInForeground: Boolean = false
+
+    /** How the application has been entered. **/
+    override var entryState: AppEntryAction = AppEntryAction.APP_OPEN
 
     /** Whether the next resume is due to the first activity or not **/
     private var _nextResumeIsFirstActivity: Boolean = false
@@ -102,12 +106,14 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         Logging.debug("ApplicationService.init: inForeground=$isInForeground")
 
         if (isInForeground) {
+            entryState = AppEntryAction.APP_OPEN
             if (isCurrentActivityNull && isContextActivity) {
                 current = context as Activity?
                 _nextResumeIsFirstActivity = true
             }
         } else {
             _nextResumeIsFirstActivity = true
+            entryState = AppEntryAction.APP_CLOSE
         }
     }
 
@@ -311,6 +317,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
 
             // TODO: Should we spin up a worker task for this? Or rely on the listeners to do it.
             isInForeground = false;
+            entryState = AppEntryAction.APP_CLOSE
 
             _applicationLifecycleNotifier.fire { it.onUnfocused() }
         }
