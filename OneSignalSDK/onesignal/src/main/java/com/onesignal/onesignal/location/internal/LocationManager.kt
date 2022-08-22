@@ -12,8 +12,8 @@ import com.onesignal.onesignal.core.internal.startup.IStartableService
 import com.onesignal.onesignal.location.ILocationManager
 import com.onesignal.onesignal.location.internal.capture.ILocationCapturer
 import com.onesignal.onesignal.location.internal.common.LocationUtils
-import com.onesignal.onesignal.location.internal.permissions.LocationPermissionController
 import com.onesignal.onesignal.location.internal.controller.ILocationController
+import com.onesignal.onesignal.location.internal.permissions.LocationPermissionController
 
 internal class LocationManager (
     private val _applicationService: IApplicationService,
@@ -120,7 +120,9 @@ internal class LocationManager (
                     // For each case, we call the prompt handlers
                     if (requestPermission != null) {
                         result = _locationPermissionController.prompt(true, requestPermission)
-                        Logging.error("Result is $result")
+                        if(result == true) {
+                            startGetLocation()
+                        }
                     } else if (locationCoarsePermission == PackageManager.PERMISSION_GRANTED) {
                         startGetLocation()
                         result = true
@@ -151,7 +153,7 @@ internal class LocationManager (
      * On Android 11 and greater, background location should be asked after fine and coarse permission
      * If background permission is asked at the same time as fine and coarse then both permission request are ignored
      */
-    private suspend fun backgroundLocationPermissionLogic() : Boolean {
+    private suspend fun backgroundLocationPermissionLogic() : Boolean? {
         try {
             var requestPermission: String? = null
             val packageInfo = _applicationService.appContext.packageManager.getPackageInfo(
@@ -163,16 +165,22 @@ internal class LocationManager (
                 // ACCESS_BACKGROUND_LOCATION permission defined on Manifest, prompt for permission
                 requestPermission = "android.permission.ACCESS_BACKGROUND_LOCATION"
             }
-            return if (requestPermission != null) {
-                _locationPermissionController.prompt(true, requestPermission) ?: false
+            val result = if (requestPermission != null) {
+                _locationPermissionController.prompt(true, requestPermission)
             } else {
                 // Fine permission already granted
-                startGetLocation()
                 true
             }
+
+            if(result == true) {
+                startGetLocation()
+            }
+
+            return result
         } catch (e: PackageManager.NameNotFoundException) {
             e.printStackTrace()
         }
+
         return false
     }
 

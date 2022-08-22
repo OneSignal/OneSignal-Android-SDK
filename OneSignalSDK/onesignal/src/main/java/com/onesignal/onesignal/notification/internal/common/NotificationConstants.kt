@@ -1,6 +1,12 @@
 package com.onesignal.onesignal.notification.internal.common
 
 object NotificationConstants {
+    /**
+     * The meta-data key within the AndroidManifest.xml that provides the class name for the
+     * Notification Service Extension.
+     */
+    const val EXTENSION_SERVICE_META_DATA_TAG_NAME = "com.onesignal.NotificationServiceExtension"
+
     const val DEFAULT_TTL_IF_NOT_IN_PAYLOAD = 259_200
 
 

@@ -33,12 +33,6 @@ interface INotificationsManager {
      *
      * @param json Contains notification options, see [OneSignal | Create Notification](https://documentation.onesignal.com/reference#create-notification)
      *             POST call for all options.
-     *
-     * TODO: CAN WE SUPPLY A NOTIFICATION OBJECT??
-     * TODO: SHOULD DEV BRING IN THE API CLIENT LIBRARY IF THEY WANT TO DO THIS?
-     * TODO: WHAT SHOULD THIS RETURN?
-     * TODO: SHOULD THERE BE A DISTINCTION BETWEEN A "PUSHMANAGER" AND A "NOTIFICATIONMANAGER", THIS IS THE ONLY THING THAT
-     *       IS NOTIFICATION GENERIC, EVERYTHING ELSE IS PUSH/DEVICE BASED
      */
     suspend fun postNotification(json: JSONObject) : JSONObject
     suspend fun postNotification(json: String) : JSONObject
@@ -50,7 +44,7 @@ interface INotificationsManager {
      *
      * @param id The android ID of the notification to be removed. See [INotification.androidNotificationId].
      */
-    fun removeNotification(id: Int)
+    suspend fun removeNotification(id: Int)
 
     /**
      * Cancels a group of OneSignal notifications with the provided group key. Grouping notifications
@@ -58,14 +52,14 @@ interface INotificationsManager {
      *
      * @param group The group key which all notifications fall under will be removed. See [INotification.groupKey].
      */
-    fun removeGroupedNotifications(group: String)
+    suspend fun removeGroupedNotifications(group: String)
 
     /**
      * Removes all OneSignal notifications from the Notification Shade. If you just use
      * [android.app.NotificationManager.cancelAll], OneSignal notifications will be restored when
      * your app is restarted.
      */
-    fun clearAll()
+    suspend fun clearAll()
 
     /**
      * The [IPermissionChangedHandler.onPermissionChanged] method will be fired on the passed-in
@@ -83,7 +77,6 @@ interface INotificationsManager {
      *                the permission changes within
      */
     fun addPushPermissionHandler(handler: IPermissionChangedHandler)
-    fun addPushPermissionHandler(handler: (IPermissionStateChanges?) -> Unit) // TODO: SHOULD INCLUDE?
 
     /**
      * Remove a push permission handler that has been previously added.
@@ -91,7 +84,6 @@ interface INotificationsManager {
      * @param handler The previously added handler that should be removed.
      */
     fun removePushPermissionHandler(handler: IPermissionChangedHandler)
-    fun removePushPermissionHandler(handler: (IPermissionStateChanges?) -> Unit) // TODO: SHOULD INCLUDE?
 
     /**
      * Sets the handler to run before displaying a notification while the app is in focus. Use this

@@ -4,8 +4,10 @@ import android.content.Context
 import android.content.Intent
 import com.amazon.device.messaging.ADMMessageHandlerJobBase
 import com.onesignal.onesignal.core.OneSignal
+import com.onesignal.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.onesignal.notification.internal.bundle.INotificationBundleProcessor
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.notification.internal.registration.impl.IPushRegistratorCallback
 
 class ADMMessageHandlerJob : ADMMessageHandlerJobBase() {
 
@@ -20,8 +22,10 @@ class ADMMessageHandlerJob : ADMMessageHandlerJobBase() {
     override fun onRegistered(context: Context?, newRegistrationId: String?) {
         Logging.info("ADM registration ID: $newRegistrationId")
 
-        //TODO: Implement
-        //PushRegistratorADM.fireCallback(newRegistrationId)
+        var registerer = OneSignal.getService<IPushRegistratorCallback>()
+        suspendifyOnThread {
+            registerer.fireCallback(newRegistrationId)
+        }
     }
 
     override fun onUnregistered(context: Context?, registrationId: String?) {
@@ -33,7 +37,9 @@ class ADMMessageHandlerJob : ADMMessageHandlerJobBase() {
         if ("INVALID_SENDER" == error)
             Logging.error("Please double check that you have a matching package name (NOTE: Case Sensitive), api_key.txt, and the apk was signed with the same Keystore and Alias.")
 
-        //TODO: Implement
-        //PushRegistratorADM.fireCallback(null)
+        var registerer = OneSignal.getService<IPushRegistratorCallback>()
+        suspendifyOnThread {
+            registerer.fireCallback(null)
+        }
     }
 }

@@ -22,7 +22,8 @@ import java.util.concurrent.ExecutionException
 internal class PushRegistratorFCM(
     var _paramsService: IParamsService,
     val _applicationService: IApplicationService,
-    deviceService: IDeviceService) : PushRegistratorAbstractGoogle(deviceService, _paramsService) {
+    upgradePrompt: GooglePlayServicesUpgradePrompt,
+    deviceService: IDeviceService) : PushRegistratorAbstractGoogle(deviceService, _paramsService, upgradePrompt) {
 
     companion object {
         private const val FCM_APP_NAME = "ONESIGNAL_SDK_FCM_APP_NAME"

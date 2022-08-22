@@ -2,6 +2,7 @@ package com.onesignal.onesignal.core.internal.application
 
 import android.app.Activity
 import android.content.Context
+import com.onesignal.onesignal.core.internal.AppEntryAction
 
 interface IApplicationService  {
 
@@ -19,6 +20,11 @@ interface IApplicationService  {
      * Whether the app is currently in the foreground
      */
     val isInForeground: Boolean
+
+    /**
+     * How the application was entered.
+     */
+    var entryState: AppEntryAction
 
     /**
      * Will determine and suspend until system conditions are available for displaying

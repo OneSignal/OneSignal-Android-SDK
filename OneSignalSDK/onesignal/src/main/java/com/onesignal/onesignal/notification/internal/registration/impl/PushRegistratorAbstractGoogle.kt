@@ -42,16 +42,15 @@ import java.io.IOException
  */
 internal abstract class PushRegistratorAbstractGoogle(
     private val _deviceService: IDeviceService,
-    private val _paramsService: IParamsService) :
-    IPushRegistrator {
+    private val _paramsService: IParamsService,
+    private val _upgradePrompt: GooglePlayServicesUpgradePrompt) :
+    IPushRegistrator, IPushRegistratorCallback {
     abstract val providerName: String
 
     @Throws(Throwable::class)
     abstract suspend fun getToken(senderId: String): String
 
-    override suspend fun registerForPush(
-        context: Context
-    ): IPushRegistrator.RegisterResult {
+    override suspend fun registerForPush(): IPushRegistrator.RegisterResult {
         return if (!isValidProjectNumber(_paramsService.googleProjectNumber)) {
             Logging.error("Missing Google Project number!\nPlease enter a Google Project number / Sender ID on under App Settings > Android > Configuration on the OneSignal dashboard.")
             IPushRegistrator.RegisterResult(
@@ -63,13 +62,16 @@ internal abstract class PushRegistratorAbstractGoogle(
         }
     }
 
+    override suspend fun fireCallback(id: String?) {
+        throw Exception("Google has no callback mechanism for push registration!")
+    }
+
     private suspend fun internalRegisterForPush(senderId: String): IPushRegistrator.RegisterResult {
         try {
             return if (_deviceService.isGMSInstalledAndEnabled()) {
                 registerInBackground(senderId)
             } else {
-                // TODO: Add in showUpdateGPSDialog
-                //GooglePlayServicesUpgradePrompt.showUpdateGPSDialog()
+                _upgradePrompt.showUpdateGPSDialog()
                 Logging.error("'Google Play services' app not installed or disabled on the device.")
                 IPushRegistrator.RegisterResult(
                     null,

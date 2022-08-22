@@ -38,9 +38,7 @@ interface IPushRegistrator {
     /**
      * Register the provided context for push notifications.
      *
-     * @param context The context that identifies the registrant.
-     *
      * @return a [RegisterResult] which describes the result of registration
      */
-    suspend fun registerForPush(context: Context) : RegisterResult
+    suspend fun registerForPush() : RegisterResult
 }
