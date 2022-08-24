@@ -89,7 +89,7 @@ internal class InAppPreferencesController(
             }
         }
         set(value) {
-            val lastTimeDismissedString = lastTimeInAppDismissed?.toString()
+            val lastTimeDismissedString = value?.toString()
             _prefs.saveString(
                 PreferenceStores.ONESIGNAL,
                 PreferenceOneSignalKeys.PREFS_OS_LAST_TIME_IAM_DISMISSED,
