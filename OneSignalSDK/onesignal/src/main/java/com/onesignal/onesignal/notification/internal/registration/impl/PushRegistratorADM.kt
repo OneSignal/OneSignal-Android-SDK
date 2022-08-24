@@ -1,22 +1,24 @@
 package com.onesignal.onesignal.notification.internal.registration.impl
 
-import android.content.Context
 import com.amazon.device.messaging.ADM
+import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.notification.internal.registration.IPushRegistrator
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 
-class PushRegistratorADM : IPushRegistrator {
+class PushRegistratorADM(
+    private val _applicationService: IApplicationService
+) : IPushRegistrator, IPushRegistratorCallback {
 
     private var _channel: Channel<String?>? = null
 
-    override suspend fun registerForPush(context: Context) : IPushRegistrator.RegisterResult = coroutineScope {
+    override suspend fun registerForPush() : IPushRegistrator.RegisterResult = coroutineScope {
         var result: IPushRegistrator.RegisterResult? = null
 
         _channel = Channel()
         launch(Dispatchers.Default) {
-            val adm = ADM(context)
+            val adm = ADM(_applicationService.appContext)
             var registrationId = adm.registrationId
             if (registrationId != null) {
                 Logging.debug("ADM Already registered with ID:$registrationId")
@@ -53,7 +55,7 @@ class PushRegistratorADM : IPushRegistrator {
         return@coroutineScope result!!
     }
 
-    suspend fun fireCallback(id: String?) {
+    override suspend fun fireCallback(id: String?) {
         _channel?.send(id)
     }
 }

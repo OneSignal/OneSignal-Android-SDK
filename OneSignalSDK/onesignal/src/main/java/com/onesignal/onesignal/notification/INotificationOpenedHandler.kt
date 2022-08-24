@@ -14,5 +14,5 @@ interface INotificationOpenedHandler {
      *
      * @param result a [INotificationOpenedResult] with the user's response and properties of this notification
      */
-    fun notificationOpened(result: INotificationOpenedResult?)
+    fun notificationOpened(result: INotificationOpenedResult)
 }

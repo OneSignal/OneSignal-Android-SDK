@@ -1,6 +1,7 @@
 package com.onesignal.onesignal.core.internal.session
 
 import com.onesignal.onesignal.core.LogLevel
+import com.onesignal.onesignal.core.internal.AppEntryAction
 import com.onesignal.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.JSONUtils
@@ -85,7 +86,7 @@ internal class SessionService(
     override fun unsubscribe(handler: ISessionLifecycleHandler) = _sessionLifeCycleNotifier.unsubscribe(handler)
 
     override fun onNotificationReceived(notificationId: String) {
-        Logging.debug("OneSignal SessionManager onNotificationReceived notificationId: $notificationId")
+        Logging.debug("SessionService.onNotificationReceived notificationId: $notificationId")
 
         if (notificationId.isEmpty())
             return
@@ -94,14 +95,23 @@ internal class SessionService(
     }
 
     override fun onInAppMessageReceived(messageId: String) {
-        Logging.debug("OneSignal SessionManager onInAppMessageReceived messageId: $messageId")
+        Logging.debug("SessionService.onInAppMessageReceived messageId: $messageId")
         val inAppMessageTracker = _influenceManager.iAMChannelTracker
         inAppMessageTracker.saveLastId(messageId)
         inAppMessageTracker.resetAndInitInfluence()
     }
 
+    override fun onDirectInfluenceFromNotificationOpen(entryAction: AppEntryAction, notificationId: String?) {
+        Logging.debug("SessionService.onDirectInfluenceFromNotificationOpen entryAction: $entryAction, notificationId: $notificationId")
+
+        if (notificationId == null || notificationId.isEmpty())
+            return
+
+        attemptSessionUpgrade(entryAction, notificationId)
+    }
+
     override fun directInfluenceFromIAMClick(messageId: String) {
-        Logging.debug("OneSignal SessionManager onDirectInfluenceFromIAMClick messageId: $messageId")
+        Logging.debug("SessionService.onDirectInfluenceFromIAMClick messageId: $messageId")
         val inAppMessageTracker =
         // We don't care about ending the session duration because IAM doesn't influence a session
         // We don't care about ending the session duration because IAM doesn't influence a session
@@ -109,9 +119,30 @@ internal class SessionService(
     }
 
     override fun directInfluenceFromIAMClickFinished() {
-        Logging.debug("OneSignal SessionManager onDirectInfluenceFromIAMClickFinished")
+        Logging.debug("SessionService.directInfluenceFromIAMClickFinished")
         val inAppMessageTracker = _influenceManager.iAMChannelTracker
         inAppMessageTracker.resetAndInitInfluence()
+    }
+
+    // TODO: This needs to be driven (on startup?)
+    fun restartSessionIfNeeded(entryAction: AppEntryAction) {
+        val channelTrackers: List<IChannelTracker> = _influenceManager.getChannelsToResetByEntryAction(entryAction)
+        val updatedInfluences: MutableList<Influence> = ArrayList()
+        Logging.debug("OneSignal SessionManager restartSessionIfNeeded with entryAction: $entryAction\n channelTrackers: $channelTrackers")
+
+        for (channelTracker in channelTrackers) {
+            val lastIds = channelTracker.lastReceivedIds
+            Logging.debug("OneSignal SessionManager restartSessionIfNeeded lastIds: $lastIds")
+            val influence = channelTracker.currentSessionInfluence
+            var updated: Boolean = if (lastIds.length() > 0) setSession(
+                channelTracker,
+                InfluenceType.INDIRECT,
+                null,
+                lastIds
+            ) else setSession(channelTracker, InfluenceType.UNATTRIBUTED, null, null)
+            if (updated) updatedInfluences.add(influence)
+        }
+        sendSessionEndingWithInfluences(updatedInfluences)
     }
 
     // Call when the session for the app changes, caches the state, and broadcasts the session that just ended
@@ -152,5 +183,63 @@ internal class SessionService(
                 !JSONUtils.compareJSONArrays(channelTracker.indirectIds, indirectNotificationIds)
 
         // Allow updating an indirect session to a new indirect when a new notification is received
+    }
+
+    private fun attemptSessionUpgrade(entryAction: AppEntryAction, directId: String?) {
+        Logging.debug("OneSignal SessionManager attemptSessionUpgrade with entryAction: $entryAction")
+        val channelTrackerByAction = _influenceManager.getChannelByEntryAction(entryAction)
+        val channelTrackersToReset = _influenceManager.getChannelsToResetByEntryAction(entryAction)
+        val influencesToEnd: MutableList<Influence> = ArrayList()
+        var lastInfluence: Influence? = null
+
+        // We will try to override any session with DIRECT
+        var updated = false
+        if (channelTrackerByAction != null) {
+            lastInfluence = channelTrackerByAction.currentSessionInfluence
+            updated = setSession(channelTrackerByAction, InfluenceType.DIRECT, directId ?: channelTrackerByAction.directId, null)
+        }
+
+        if (updated) {
+            Logging.debug("OneSignal SessionManager attemptSessionUpgrade channel updated, search for ending direct influences on channels: $channelTrackersToReset")
+            influencesToEnd.add(lastInfluence!!)
+            // Only one session influence channel can be DIRECT at the same time
+            // Reset other DIRECT channels, they will init an INDIRECT influence
+            // In that way we finish the session duration time for the last influenced session
+            for (tracker in channelTrackersToReset) {
+                if (tracker.influenceType!!.isDirect()) {
+                    influencesToEnd.add(tracker.currentSessionInfluence)
+                    tracker.resetAndInitInfluence()
+                }
+            }
+        }
+
+        Logging.debug("OneSignal SessionManager attemptSessionUpgrade try UNATTRIBUTED to INDIRECT upgrade")
+        // We will try to override the UNATTRIBUTED session with INDIRECT
+        for (channelTracker in channelTrackersToReset) {
+            if (channelTracker.influenceType!!.isUnattributed()) {
+                val lastIds = channelTracker.lastReceivedIds
+                // There are new ids for attribution and the application was open again without resetting session
+                if (lastIds.length() > 0 && !entryAction.isAppClose) {
+                    // Save influence to ended it later if needed
+                    // This influence will be unattributed
+                    val influence = channelTracker.currentSessionInfluence
+                    updated = setSession(channelTracker, InfluenceType.INDIRECT, null, lastIds)
+                    // Changed from UNATTRIBUTED to INDIRECT
+                    if (updated) influencesToEnd.add(influence)
+                }
+            }
+        }
+
+        Logging.debug("Trackers after update attempt: " + _influenceManager.channels.toString())
+        sendSessionEndingWithInfluences(influencesToEnd)
+    }
+
+    private fun sendSessionEndingWithInfluences(endingInfluences: List<Influence>) {
+        Logging.debug("OneSignal SessionManager sendSessionEndingWithInfluences with influences: $endingInfluences")
+
+        // Only end session if there are influences available to end
+        if (endingInfluences.isNotEmpty()) {
+            _sessionLifeCycleNotifier.fire { it.sessionEnding(endingInfluences) }
+        }
     }
 }

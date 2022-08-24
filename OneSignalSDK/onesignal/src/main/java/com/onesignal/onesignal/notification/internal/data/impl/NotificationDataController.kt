@@ -5,12 +5,12 @@ import android.content.ContentValues
 import android.provider.BaseColumns
 import android.text.TextUtils
 import com.onesignal.onesignal.core.internal.application.IApplicationService
-import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.onesignal.core.internal.database.impl.OneSignalDbContract
-import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.notification.internal.badges.IBadgeCountUpdater
+import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.onesignal.notification.internal.data.INotificationDataController
 import com.onesignal.onesignal.notification.internal.data.INotificationQueryHelper
 import com.onesignal.onesignal.notification.internal.limiting.INotificationLimitManager
@@ -109,7 +109,7 @@ internal class NotificationDataController(
             }
 
             whereStr =
-                OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID.toString() + " = ? AND " +
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " +
                         OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
                         OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0"
             val values = ContentValues()
