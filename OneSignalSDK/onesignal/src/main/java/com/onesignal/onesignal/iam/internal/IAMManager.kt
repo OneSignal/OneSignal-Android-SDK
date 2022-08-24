@@ -100,6 +100,11 @@ internal class IAMManager (
         }
 
     override fun start() {
+        val tempLastTimeInAppDismissed = _prefs.lastTimeInAppDismissed
+        if (tempLastTimeInAppDismissed != null) {
+            _state.lastTimeInAppDismissed = tempLastTimeInAppDismissed
+        }
+
         _subscriptionManager.subscribe(this)
         _configModelStore.subscribe(this)
         _lifecycle.subscribe(this)
