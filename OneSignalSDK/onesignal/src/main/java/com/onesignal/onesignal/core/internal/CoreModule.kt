@@ -1,19 +1,17 @@
 package com.onesignal.onesignal.core.internal
 
-import com.onesignal.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.onesignal.core.internal.application.IApplicationService
+import com.onesignal.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.onesignal.core.internal.backend.IParamsBackendService
 import com.onesignal.onesignal.core.internal.backend.ParamsBackendService
 import com.onesignal.onesignal.core.internal.backend.http.HttpClient
 import com.onesignal.onesignal.core.internal.backend.http.IHttpClient
 import com.onesignal.onesignal.core.internal.background.IBackgroundManager
 import com.onesignal.onesignal.core.internal.background.impl.BackgroundManager
-import com.onesignal.onesignal.core.internal.time.ITime
-import com.onesignal.onesignal.core.internal.time.Time
 import com.onesignal.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.onesignal.core.internal.database.impl.DatabaseProvider
-import com.onesignal.onesignal.core.internal.device.impl.DeviceService
 import com.onesignal.onesignal.core.internal.device.IDeviceService
+import com.onesignal.onesignal.core.internal.device.impl.DeviceService
 import com.onesignal.onesignal.core.internal.influence.IInfluenceManager
 import com.onesignal.onesignal.core.internal.influence.impl.InfluenceManager
 import com.onesignal.onesignal.core.internal.listeners.IdentityModelStoreListener
@@ -31,16 +29,23 @@ import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsFactory
 import com.onesignal.onesignal.core.internal.outcomes.OutcomeEventsController
 import com.onesignal.onesignal.core.internal.outcomes.impl.OSOutcomeEventsCache
 import com.onesignal.onesignal.core.internal.outcomes.impl.OSOutcomeEventsFactory
-import com.onesignal.onesignal.core.internal.params.*
+import com.onesignal.onesignal.core.internal.params.IParamsService
+import com.onesignal.onesignal.core.internal.params.IWriteableParamsService
+import com.onesignal.onesignal.core.internal.params.ParamsService
+import com.onesignal.onesignal.core.internal.params.RefreshParamsService
 import com.onesignal.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.onesignal.core.internal.preferences.PreferencesService
-import com.onesignal.onesignal.core.internal.startup.IStartableService
+import com.onesignal.onesignal.core.internal.purchases.TrackAmazonPurchase
+import com.onesignal.onesignal.core.internal.purchases.TrackGooglePurchase
 import com.onesignal.onesignal.core.internal.service.ServiceBuilder
 import com.onesignal.onesignal.core.internal.session.ISessionService
 import com.onesignal.onesignal.core.internal.session.SessionService
+import com.onesignal.onesignal.core.internal.startup.IStartableService
 import com.onesignal.onesignal.core.internal.startup.StartupService
+import com.onesignal.onesignal.core.internal.time.ITime
+import com.onesignal.onesignal.core.internal.time.Time
 import com.onesignal.onesignal.core.internal.user.ISubscriptionManager
 import com.onesignal.onesignal.core.internal.user.IUserSwitcher
 import com.onesignal.onesignal.core.internal.user.SubscriptionManager
@@ -65,6 +70,7 @@ object CoreModule {
                .provides<IParamsService>()
                .provides<IWriteableParamsService>()
         builder.register<ParamsBackendService>().provides<IParamsBackendService>()
+        builder.register<RefreshParamsService>().provides<IStartableService>()
 
         // Operations
         builder.register<OperationRepo>()
@@ -109,6 +115,10 @@ object CoreModule {
         builder.register<IdentityModelStoreListener>().provides<IStartableService>()
         builder.register<SubscriptionModelStoreListener>().provides<IStartableService>()
         builder.register<PropertiesModelStoreListener>().provides<IStartableService>()
+
+        // Purchase Tracking
+        builder.register<TrackAmazonPurchase>().provides<IStartableService>()
+        builder.register<TrackGooglePurchase>().provides<IStartableService>()
 
         // User
         builder.register<SubscriptionManager>().provides<ISubscriptionManager>()

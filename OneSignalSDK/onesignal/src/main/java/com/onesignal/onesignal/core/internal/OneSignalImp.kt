@@ -62,6 +62,7 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
     private var _configModel: ConfigModel? = null
     private var _sessionModel: SessionModel? = null
     private var _requiresPrivacyConsent: Boolean? = null
+    private var _haveServicesStarted: Boolean = false
 
     init {
         var serviceBuilder = ServiceBuilder()
@@ -103,14 +104,11 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
         _propertiesModelStore = _services.getService()
         _identityModelStore = _services.getService()
 
-        // Instantiate and call the IStartableServices
-        _startupService = _services.getService()
-        _startupService!!.start()
-
         isInitialized = true
 
         if(_appId != null) {
-            _configModel!!.appId = _appId!!;
+            _configModel!!.appId = _appId!!
+            startServices()
         }
     }
 
@@ -123,7 +121,17 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
             _appId = appId
         }
         else {
-            _configModel!!.appId = _appId!!;
+            _configModel!!.appId = _appId!!
+            startServices()
+        }
+    }
+
+    private fun startServices() {
+        if(!_haveServicesStarted) {
+            _haveServicesStarted = true
+            // Instantiate and call the IStartableServices
+            _startupService = _services.getService()
+            _startupService!!.start()
         }
     }
 
