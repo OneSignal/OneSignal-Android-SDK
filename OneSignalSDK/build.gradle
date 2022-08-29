@@ -14,6 +14,7 @@ buildscript {
         huaweiHMSLocationVersion = '4.0.0.300'
         kotlinVersion = '1.4.32'
         ktlintVersion = '11.0.0'
+        detektVersion = '1.21.0'
         onesignalGradlePluginVersion = '[0.14.0, 0.99.99]'
     }
 
@@ -37,6 +38,7 @@ buildscript {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
 
         classpath "org.jlleitschuh.gradle:ktlint-gradle:$ktlintVersion"
+        classpath "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:$detektVersion"
 
         // OneSignal-Gradle-Plugin - Local testing
         // classpath 'com.onesignal:onesignal-gradle-plugin:[0.8.1, 0.99.99]'
