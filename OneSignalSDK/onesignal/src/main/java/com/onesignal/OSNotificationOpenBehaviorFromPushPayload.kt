@@ -6,13 +6,13 @@ import org.json.JSONObject
 
 class OSNotificationOpenBehaviorFromPushPayload(
     private val context: Context,
-    private val fcmPayload: JSONObject,
+    private val fcmPayload: JSONObject
 ) {
 
     val shouldOpenApp: Boolean
         get() {
-            return OSNotificationOpenAppSettings.getShouldOpenActivity(context)
-                    && uri == null
+            return OSNotificationOpenAppSettings.getShouldOpenActivity(context) &&
+                uri == null
         }
 
     val uri: Uri?
@@ -31,5 +31,4 @@ class OSNotificationOpenBehaviorFromPushPayload(
 
             return null
         }
-
 }

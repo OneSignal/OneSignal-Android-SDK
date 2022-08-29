@@ -2,7 +2,7 @@ package com.onesignal.influence.domain
 
 enum class OSInfluenceChannel(private val nameValue: String) {
     IAM("iam"),
-    NOTIFICATION("notification"),
+    NOTIFICATION("notification")
     ;
 
     fun equalsName(otherName: String) = nameValue == otherName

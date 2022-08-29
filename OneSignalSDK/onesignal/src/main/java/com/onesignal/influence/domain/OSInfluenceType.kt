@@ -4,7 +4,7 @@ enum class OSInfluenceType {
     DIRECT,
     INDIRECT,
     UNATTRIBUTED,
-    DISABLED,
+    DISABLED
     ;
 
     fun isAttributed() = isDirect() || isIndirect()

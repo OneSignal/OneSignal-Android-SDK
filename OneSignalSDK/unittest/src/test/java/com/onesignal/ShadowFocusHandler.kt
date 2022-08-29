@@ -35,7 +35,6 @@ import android.content.Context
 import com.onesignal.OSFocusHandler.Companion.onLostFocusDoWork
 import org.robolectric.annotation.Implementation
 import org.robolectric.annotation.Implements
-import org.robolectric.annotation.RealObject
 
 @Implements(OSFocusHandler::class)
 class ShadowFocusHandler {

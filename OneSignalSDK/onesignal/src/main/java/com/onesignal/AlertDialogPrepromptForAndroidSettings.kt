@@ -41,7 +41,7 @@ object AlertDialogPrepromptForAndroidSettings {
         activity: Activity,
         titlePrefix: String,
         previouslyDeniedPostfix: String,
-        callback: Callback,
+        callback: Callback
     ) {
         val titleTemplate = activity.getString(R.string.permission_not_available_title)
         val title = titleTemplate.format(titlePrefix)

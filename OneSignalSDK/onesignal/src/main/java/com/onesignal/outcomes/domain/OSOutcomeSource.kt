@@ -4,8 +4,10 @@ import com.onesignal.outcomes.OSOutcomeConstants
 import org.json.JSONException
 import org.json.JSONObject
 
-class OSOutcomeSource(var directBody: OSOutcomeSourceBody?,
-                      var indirectBody: OSOutcomeSourceBody?) {
+class OSOutcomeSource(
+    var directBody: OSOutcomeSourceBody?,
+    var indirectBody: OSOutcomeSourceBody?
+) {
     @Throws(JSONException::class)
     fun toJSONObject(): JSONObject {
         val json = JSONObject()
@@ -28,8 +30,8 @@ class OSOutcomeSource(var directBody: OSOutcomeSourceBody?,
 
     override fun toString(): String {
         return "OSOutcomeSource{" +
-                "directBody=" + directBody +
-                ", indirectBody=" + indirectBody +
-                '}'
+            "directBody=" + directBody +
+            ", indirectBody=" + indirectBody +
+            '}'
     }
 }
