@@ -119,8 +119,8 @@ abstract class OSChannelTracker internal constructor(protected var dataRepositor
         try {
             timeProvider.run {
                 JSONObject()
-                        .put(idTag, id)
-                        .put(OSInfluenceConstants.TIME, currentTimeMillis)
+                    .put(idTag, id)
+                    .put(OSInfluenceConstants.TIME, currentTimeMillis)
             }.also { newInfluenceId ->
                 lastChannelObjectsReceived.put(newInfluenceId)
             }
@@ -152,11 +152,11 @@ abstract class OSChannelTracker internal constructor(protected var dataRepositor
 
     override fun toString(): String {
         return "OSChannelTracker{" +
-                "tag=" + idTag +
-                ", influenceType=" + influenceType +
-                ", indirectIds=" + indirectIds +
-                ", directId=" + directId +
-                '}'
+            "tag=" + idTag +
+            ", influenceType=" + influenceType +
+            ", indirectIds=" + indirectIds +
+            ", directId=" + directId +
+            '}'
     }
 
     override fun equals(other: Any?): Boolean {
