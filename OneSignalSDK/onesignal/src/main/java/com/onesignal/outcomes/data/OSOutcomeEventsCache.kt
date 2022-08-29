@@ -17,7 +17,7 @@ import com.onesignal.outcomes.domain.OSOutcomeSource
 import com.onesignal.outcomes.domain.OSOutcomeSourceBody
 import org.json.JSONArray
 import org.json.JSONException
-import java.util.*
+import java.util.Locale
 
 internal class OSOutcomeEventsCache(
     private val logger: OSLogger,
