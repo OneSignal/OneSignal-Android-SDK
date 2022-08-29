@@ -1,0 +1,38 @@
+#!/bin/bash
+
+function bootstrap_macos() {
+  # ensure we have homebrew installed
+  if ! command -v brew &> /dev/null; then
+    echo "You must install homebrew to install the dependencies."
+    exit 1
+  fi
+
+  echo "updating brew"
+  brew update
+
+  echo "installing java11"
+  brew install java11
+}
+
+
+function bootstrap_linux() {
+  if ! command -v sudo &> /dev/null; then
+      echo "Please install sudo before running this script"
+      exit
+  fi
+
+  echo "updating apt"
+  sudo apt update
+
+  echo "installing dependencies"
+  sudo apt install \
+    openjdk-11-jdk
+}
+
+if [[ "$(uname)" = "Darwin" ]]; then
+  bootstrap_macos
+elif [[ "$(uname)" = "Linux" ]]; then
+  bootstrap_linux
+fi
+
+echo "Please make sure to install the latest version of Android Studio"
