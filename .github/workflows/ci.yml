@@ -25,6 +25,10 @@ jobs:
             platforms;android-31
             build-tools;31.0.0
           cache: true
+      - name: "[Test] Linting"
+        working-directory: OneSignalSDK
+        run: |
+          ./gradlew ktlintCheck --console=plain
       - name: "[Test] SDK Unit Tests"
         working-directory: OneSignalSDK
         run: |
