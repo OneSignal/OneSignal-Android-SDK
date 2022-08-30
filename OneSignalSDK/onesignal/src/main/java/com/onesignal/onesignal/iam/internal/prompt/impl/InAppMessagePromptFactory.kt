@@ -10,7 +10,7 @@ internal class InAppMessagePromptFactory(
     private val _locationManager: ILocationManager
 ) : IInAppMessagePromptFactory {
 
-    override fun createPrompt(promptType: String) : InAppMessagePrompt? {
+    override fun createPrompt(promptType: String): InAppMessagePrompt? {
         return when (promptType) {
             InAppMessagePromptTypes.PUSH_PROMPT_KEY -> InAppMessagePushPrompt(_notificationsManager)
             InAppMessagePromptTypes.LOCATION_PROMPT_KEY -> InAppMessageLocationPrompt(_locationManager)

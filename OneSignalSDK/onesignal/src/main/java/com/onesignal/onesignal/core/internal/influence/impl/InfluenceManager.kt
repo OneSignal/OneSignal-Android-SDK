@@ -1,17 +1,20 @@
 package com.onesignal.onesignal.core.internal.influence.impl
 
 import com.onesignal.onesignal.core.internal.AppEntryAction
-import com.onesignal.onesignal.core.internal.time.ITime
-import com.onesignal.onesignal.core.internal.influence.*
+import com.onesignal.onesignal.core.internal.influence.IChannelTracker
+import com.onesignal.onesignal.core.internal.influence.IInfluenceManager
+import com.onesignal.onesignal.core.internal.influence.Influence
+import com.onesignal.onesignal.core.internal.influence.InfluenceChannel
 import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.core.internal.preferences.IPreferencesService
+import com.onesignal.onesignal.core.internal.time.ITime
 import org.json.JSONObject
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 class InfluenceManager(
     preferences: IPreferencesService,
-    timeProvider: ITime) : IInfluenceManager {
+    timeProvider: ITime
+) : IInfluenceManager {
     private val trackers = ConcurrentHashMap<String, ChannelTracker>()
     private val dataRepository: InfluenceDataRepository = InfluenceDataRepository(preferences)
 

@@ -5,8 +5,8 @@ import android.content.Intent
 import com.amazon.device.messaging.ADMMessageHandlerJobBase
 import com.onesignal.onesignal.core.OneSignal
 import com.onesignal.onesignal.core.internal.common.suspendifyOnThread
-import com.onesignal.onesignal.notification.internal.bundle.INotificationBundleProcessor
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.notification.internal.bundle.INotificationBundleProcessor
 import com.onesignal.onesignal.notification.internal.registration.impl.IPushRegistratorCallback
 
 class ADMMessageHandlerJob : ADMMessageHandlerJobBase() {

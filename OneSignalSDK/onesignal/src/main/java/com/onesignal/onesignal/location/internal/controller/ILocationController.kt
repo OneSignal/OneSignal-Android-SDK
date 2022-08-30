@@ -4,10 +4,10 @@ import android.location.Location
 import com.onesignal.onesignal.core.internal.common.events.IEventNotifier
 
 interface ILocationController : IEventNotifier<ILocationUpdatedHandler> {
-    suspend fun start() : Boolean
+    suspend fun start(): Boolean
     suspend fun stop()
 
-    fun getLastLocation() : Location?
+    fun getLastLocation(): Location?
 }
 
 interface ILocationUpdatedHandler {

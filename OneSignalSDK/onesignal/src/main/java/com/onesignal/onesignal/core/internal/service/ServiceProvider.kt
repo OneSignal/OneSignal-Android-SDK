@@ -15,16 +15,11 @@ class ServiceProvider(
         val serviceMap = mutableMapOf<Class<*>, MutableList<ServiceRegistration<*>>>()
 
         // go through the registrations to create the service map for easier lookup post-build
-        for(reg in registrations)
-        {
-            for(service in reg.services)
-            {
-                if(!serviceMap.containsKey(service))
-                {
+        for (reg in registrations) {
+            for (service in reg.services) {
+                if (!serviceMap.containsKey(service)) {
                     serviceMap[service] = mutableListOf(reg)
-                }
-                else
-                {
+                } else {
                     serviceMap[service]!!.add(reg)
                 }
             }
@@ -33,19 +28,19 @@ class ServiceProvider(
         _serviceMap = serviceMap
     }
 
-    internal inline fun <reified T: Any> hasService(): Boolean {
+    internal inline fun <reified T : Any> hasService(): Boolean {
         return hasService(T::class.java)
     }
 
-    internal inline fun <reified T: Any> getAllServices(): List<T> {
+    internal inline fun <reified T : Any> getAllServices(): List<T> {
         return getAllServices(T::class.java)
     }
 
-    internal inline fun <reified T: Any> getService(): T {
+    internal inline fun <reified T : Any> getService(): T {
         return getService(T::class.java)
     }
 
-    internal inline fun <reified T: Any> getServiceOrNull() : T? {
+    internal inline fun <reified T : Any> getServiceOrNull(): T? {
         return getServiceOrNull(T::class.java)
     }
 
@@ -56,8 +51,8 @@ class ServiceProvider(
     override fun <T> getAllServices(c: Class<T>): List<T> {
         val listOfServices: MutableList<T> = mutableListOf()
 
-        if(_serviceMap.containsKey(c)) {
-            for(serviceReg in _serviceMap!![c]!!) {
+        if (_serviceMap.containsKey(c)) {
+            for (serviceReg in _serviceMap!![c]!!) {
                 val service = serviceReg.resolve(this) as T?
                     ?: throw Exception("Could not instantiate service: $serviceReg")
 
@@ -70,7 +65,7 @@ class ServiceProvider(
 
     override fun <T> getService(c: Class<T>): T {
         val service = getServiceOrNull(c)
-        if(service == null) {
+        if (service == null) {
             Logging.warn("Service not found: $c")
             throw Exception("Service $c could not be instantiated")
         }

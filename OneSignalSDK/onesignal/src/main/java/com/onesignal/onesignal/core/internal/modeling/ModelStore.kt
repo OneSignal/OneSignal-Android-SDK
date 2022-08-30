@@ -1,7 +1,7 @@
 package com.onesignal.onesignal.core.internal.modeling
 
-import com.onesignal.onesignal.core.internal.common.events.IEventNotifier
 import com.onesignal.onesignal.core.internal.common.events.EventProducer
+import com.onesignal.onesignal.core.internal.common.events.IEventNotifier
 
 /**
  * The implementation of a model store.
@@ -12,7 +12,6 @@ internal open class ModelStore<TModel>(
 
     private val _models: HashMap<String, TModel> = HashMap()
 
-
     override fun add(id: String, model: TModel, fireEvent: Boolean) {
         _models[id] = model
 
@@ -21,16 +20,16 @@ internal open class ModelStore<TModel>(
         // listen for changes to this model
         model.subscribe(this)
 
-        if(fireEvent) {
+        if (fireEvent) {
             _changeSubscription.fire { it.onAdded(model) }
         }
     }
 
-    override fun list() : Collection<String> {
+    override fun list(): Collection<String> {
         return _models.keys
     }
 
-    override fun get(id: String) : TModel? {
+    override fun get(id: String): TModel? {
         return _models[id]
     }
 
@@ -52,7 +51,7 @@ internal open class ModelStore<TModel>(
         val localList = _models.toList()
         _models.clear()
 
-        for(item in localList) {
+        for (item in localList) {
             _changeSubscription.fire { it.onRemoved(item.second) }
         }
     }

@@ -26,7 +26,7 @@ class RequestPermissionService(
             callback
     }
 
-    fun getCallback(permissionType: String) : IRequestPermissionService.PermissionCallback? {
+    fun getCallback(permissionType: String): IRequestPermissionService.PermissionCallback? {
         return callbackMap[permissionType]
     }
 
@@ -64,7 +64,6 @@ class RequestPermissionService(
             }
 
             override fun onActivityStopped(activity: Activity) {
-
             }
         })
     }

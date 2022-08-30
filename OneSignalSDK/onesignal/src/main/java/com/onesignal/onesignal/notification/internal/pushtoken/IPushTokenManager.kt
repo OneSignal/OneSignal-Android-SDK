@@ -1,6 +1,6 @@
 package com.onesignal.onesignal.notification.internal.pushtoken
 
-import com.onesignal.onesignal.core.internal.common.events.*
+import com.onesignal.onesignal.core.internal.common.events.IEventNotifier
 
 interface IPushTokenManager : IEventNotifier<IPushTokenChangedHandler> {
     /** The push token for this device **/

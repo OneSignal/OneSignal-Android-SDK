@@ -53,7 +53,7 @@ interface IUserManager {
      * @param id The alias id that should be set against the current user. This must be a unique value
      * within the alias label across your entire user base so it can uniquely identify this user.
      */
-    fun addAlias(label: String, id: String) : IUserManager
+    fun addAlias(label: String, id: String): IUserManager
 
     /**
      * Add/set aliases for the current user. If any alias already exists it will be overwritten.
@@ -69,7 +69,7 @@ interface IUserManager {
      *
      * @param label The alias label that should no longer be set for the current user.
      */
-    fun removeAlias(label: String) : IUserManager
+    fun removeAlias(label: String): IUserManager
 
     /**
      * Add a new email subscription to the current user.
@@ -78,15 +78,15 @@ interface IUserManager {
      * @param emailAuthHash The optional auth hash for the email. If not using identity verification,
      * this can be omitted or set to `null`. See [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
      */
-    fun addEmailSubscription(email: String, emailAuthHash: String? = null) : IUserManager
-    fun addEmailSubscription(email: String) : IUserManager = addEmailSubscription(email, null)
+    fun addEmailSubscription(email: String, emailAuthHash: String? = null): IUserManager
+    fun addEmailSubscription(email: String): IUserManager = addEmailSubscription(email, null)
 
     /**
      * Remove an email subscription from the current user.
      *
      * @param email The email address that the current user was subscribed for, and should no longer be.
      */
-    fun removeEmailSubscription(email: String) : IUserManager
+    fun removeEmailSubscription(email: String): IUserManager
 
     /**
      * Add a new SMS subscription to the current user.
@@ -95,15 +95,15 @@ interface IUserManager {
      * @param emailAuthHash The optional auth hash for the email. If not using identity verification,
      * this can be omitted or set to `null`. See [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
      */
-    fun addSmsSubscription(sms: String, smsAuthHash: String? = null) : IUserManager
-    fun addSmsSubscription(sms: String) : IUserManager = addSmsSubscription(sms, null)
+    fun addSmsSubscription(sms: String, smsAuthHash: String? = null): IUserManager
+    fun addSmsSubscription(sms: String): IUserManager = addSmsSubscription(sms, null)
 
     /**
      * Remove an SMS subscription from the current user.
      *
      * @param sms The sms address that the current user was subscribed for, and should no longer be.
      */
-    fun removeSmsSubscription(sms: String) : IUserManager
+    fun removeSmsSubscription(sms: String): IUserManager
 
     /**
      * Set a tag for the current user.  Tags are key:value pairs used as building blocks
@@ -114,7 +114,7 @@ interface IUserManager {
      * @param key The key of the data tag.
      * @param value THe new value of the data tag.
      */
-    fun setTag(key: String, value: String) : IUserManager
+    fun setTag(key: String, value: String): IUserManager
 
     /**
      * Set multiple tags for the current user.  Tags are key:value pairs used as building blocks
@@ -124,21 +124,21 @@ interface IUserManager {
      *
      * @param tags A map of tags, all of which will be added/updated for the current user.
      */
-    fun setTags(tags: Map<String, String>) : IUserManager
+    fun setTags(tags: Map<String, String>): IUserManager
 
     /**
      * Remove the data tag with the provided key from the current user.
      *
      * @param key The key of the data tag.
      */
-    fun removeTag(key: String) : IUserManager
+    fun removeTag(key: String): IUserManager
 
     /**
      * Remove multiple tags from the current user.
      *
      * @param keys The collection of keys, all of which will be removed from the current user.
      */
-    fun removeTags(keys: Collection<String>) : IUserManager
+    fun removeTags(keys: Collection<String>): IUserManager
 
     /**
      * Set a trigger for the current user.  Triggers are currently explicitly used to determine
@@ -152,7 +152,7 @@ interface IUserManager {
      * @param value The value of the trigger. Although this is defined as [Any] its [Any.toString]
      * will be used for evaluation purposes.
      */
-    fun setTrigger(key: String, value: Any) : IUserManager
+    fun setTrigger(key: String, value: Any): IUserManager
 
     /**
      * Set multiple triggers for the current user.  Triggers are currently explicitly used to determine
@@ -166,26 +166,26 @@ interface IUserManager {
      * value of the [Map] is defined as [Any] its [Any.toString] will be used for evaluation
      * purposes.
      */
-    fun setTriggers(triggers: Map<String, Any>) : IUserManager
+    fun setTriggers(triggers: Map<String, Any>): IUserManager
 
     /**
      * Remove the trigger with the provided key from the current user.
      *
      * @param key The key of the trigger.
      */
-    fun removeTrigger(key: String) : IUserManager
+    fun removeTrigger(key: String): IUserManager
 
     /**
      * Remove multiple triggers from the current user.
      *
      * @param keys The collection of keys, all of which will be removed from the current user.
      */
-    fun removeTriggers(keys: Collection<String>) : IUserManager
+    fun removeTriggers(keys: Collection<String>): IUserManager
 
     /**
      * Clear all triggers from the current user.
      */
-    fun clearTriggers() : IUserManager
+    fun clearTriggers(): IUserManager
 
     /**
      * Send an outcome with the provided name, captured against the current user (ish).
@@ -193,7 +193,7 @@ interface IUserManager {
      *
      * @param name The name of the outcome that has occurred.
      */
-    fun sendOutcome(name: String) : IUserManager
+    fun sendOutcome(name: String): IUserManager
 
     /**
      * Send a unique outcome with the provided name, captured against the current user (ish).
@@ -201,7 +201,7 @@ interface IUserManager {
      *
      * @param name The name of the unique outcome that has occurred.
      */
-    fun sendUniqueOutcome(name: String) : IUserManager
+    fun sendUniqueOutcome(name: String): IUserManager
 
     /**
      * Send an outcome with the provided name and value, captured against the current user (ish).
@@ -210,5 +210,5 @@ interface IUserManager {
      * @param name The name of the outcome that has occurred.
      * @param value The value tied to the outcome.
      */
-    fun sendOutcomeWithValue(name: String, value: Float) : IUserManager
+    fun sendOutcomeWithValue(name: String, value: Float): IUserManager
 }

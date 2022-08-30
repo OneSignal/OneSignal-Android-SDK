@@ -1,10 +1,13 @@
 package com.onesignal.onesignal.core.internal.user
 
-import com.onesignal.onesignal.core.user.IUserManager
-import com.onesignal.onesignal.core.user.subscriptions.SubscriptionList
 import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.logging.Logging
-import com.onesignal.onesignal.core.internal.models.*
+import com.onesignal.onesignal.core.internal.models.IdentityModel
+import com.onesignal.onesignal.core.internal.models.PropertiesModel
+import com.onesignal.onesignal.core.internal.models.TriggerModel
+import com.onesignal.onesignal.core.internal.models.TriggerModelStore
+import com.onesignal.onesignal.core.user.IUserManager
+import com.onesignal.onesignal.core.user.subscriptions.SubscriptionList
 
 interface IUserSwitcher {
     val identityModel: IdentityModel
@@ -42,7 +45,7 @@ internal open class UserManager(
         _subscriptionManager.load(identityModel)
     }
 
-    override fun addAlias(label: String, id: String) : com.onesignal.onesignal.core.user.IUserManager {
+    override fun addAlias(label: String, id: String): com.onesignal.onesignal.core.user.IUserManager {
         Logging.log(LogLevel.DEBUG, "setAlias(label: $label, id: $id)")
         val aliases = identityModel.aliases.toMutableMap()
         aliases[label] = id
@@ -150,7 +153,7 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "setTrigger(key: $key, value: $value)")
 
         var triggerModel = _triggerModelStore.get(key)
-        if(triggerModel != null)
+        if (triggerModel != null)
             triggerModel.value = value
         else {
             triggerModel = TriggerModel()
@@ -186,19 +189,19 @@ internal open class UserManager(
 
     override fun sendOutcome(name: String): IUserManager {
         Logging.log(LogLevel.DEBUG, "sendOutcome(name: $name)")
-        //TODO("Not yet implemented")
+        // TODO("Not yet implemented")
         return this
     }
 
     override fun sendUniqueOutcome(name: String): IUserManager {
         Logging.log(LogLevel.DEBUG, "sendUniqueOutcome(name: $name)")
-        //TODO("Not yet implemented")
+        // TODO("Not yet implemented")
         return this
     }
 
     override fun sendOutcomeWithValue(name: String, value: Float): IUserManager {
         Logging.log(LogLevel.DEBUG, "sendOutcomeWithValue(name: $name, value: $value)")
-        //TODO("Not yet implemented")
+        // TODO("Not yet implemented")
         return this
     }
 }

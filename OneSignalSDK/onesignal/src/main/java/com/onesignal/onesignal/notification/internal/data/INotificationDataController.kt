@@ -18,16 +18,17 @@ interface INotificationDataController {
      * @param expireTime: The notification's expiration dateTime.
      * @param jsonPayload: The full payload of the notification.
      */
-    suspend fun createNotification(id: String,
-                                   groupId: String?,
-                                   collapseKey: String?,
-                                   shouldDismissIdenticals: Boolean,
-                                   isOpened: Boolean,
-                                   androidId: Int,
-                                   title: String?,
-                                   body: String?,
-                                   expireTime: Long,
-                                   jsonPayload: String
+    suspend fun createNotification(
+        id: String,
+        groupId: String?,
+        collapseKey: String?,
+        shouldDismissIdenticals: Boolean,
+        isOpened: Boolean,
+        androidId: Int,
+        title: String?,
+        body: String?,
+        expireTime: Long,
+        jsonPayload: String
     )
 
     /**
@@ -37,7 +38,7 @@ interface INotificationDataController {
      *
      * @return true if the notification exists, false otherwise.
      */
-    suspend fun doesNotificationExist(id: String?) : Boolean
+    suspend fun doesNotificationExist(id: String?): Boolean
 
     /**
      * Retrieve the group ID of a notification, given a notification's Android ID.
@@ -46,7 +47,7 @@ interface INotificationDataController {
      *
      * @return The group id of the notification, or null if it doesn't belong to a group.
      */
-    suspend fun getGroupId(androidId: Int) : String?
+    suspend fun getGroupId(androidId: Int): String?
 
     /**
      * Retrieve the Android ID for the group of notifications provided.
@@ -65,7 +66,7 @@ interface INotificationDataController {
      *
      * @return the Android ID, or null if there are no notifications with that group identifier.
      */
-    suspend fun getAndroidIdFromCollapseKey(collapseKey: String) : Int?
+    suspend fun getAndroidIdFromCollapseKey(collapseKey: String): Int?
 
     /**
      * List all notifications that belong to the provided group.
@@ -74,7 +75,7 @@ interface INotificationDataController {
      *
      * @return The list of each notifications full payload that belongs to the group provided.
      */
-    suspend fun listNotificationsForGroup(group: String) : List<NotificationData>
+    suspend fun listNotificationsForGroup(group: String): List<NotificationData>
 
     /**
      * List all notifications that are considered outstanding in the system.
@@ -94,7 +95,7 @@ interface INotificationDataController {
      *
      * @return true if a notification was marked as dismissed, false otherwise.
      */
-    suspend fun markAsDismissed(androidId: Int) : Boolean
+    suspend fun markAsDismissed(androidId: Int): Boolean
     suspend fun markAsDismissedForGroup(group: String)
     suspend fun markAsDismissedForOutstanding()
 

@@ -4,8 +4,11 @@ import com.amazon.device.messaging.ADM
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.notification.internal.registration.IPushRegistrator
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 class PushRegistratorADM(
     private val _applicationService: IApplicationService
@@ -13,7 +16,7 @@ class PushRegistratorADM(
 
     private var _channel: Channel<String?>? = null
 
-    override suspend fun registerForPush() : IPushRegistrator.RegisterResult = coroutineScope {
+    override suspend fun registerForPush(): IPushRegistrator.RegisterResult = coroutineScope {
         var result: IPushRegistrator.RegisterResult? = null
 
         _channel = Channel()
@@ -26,8 +29,7 @@ class PushRegistratorADM(
                     registrationId,
                     IPushRegistrator.RegisterStatus.PUSH_STATUS_SUBSCRIBED
                 )
-            }
-            else {
+            } else {
                 adm.startRegister()
 
                 // wait up to 30 seconds for someone to call `fireCallback` with the registration id.
@@ -36,7 +38,7 @@ class PushRegistratorADM(
                     registrationId = _channel?.receive()
                 }
 
-                result = if(registrationId != null) {
+                result = if (registrationId != null) {
                     Logging.error("ADM registered with ID:$registrationId")
                     IPushRegistrator.RegisterResult(
                         registrationId,

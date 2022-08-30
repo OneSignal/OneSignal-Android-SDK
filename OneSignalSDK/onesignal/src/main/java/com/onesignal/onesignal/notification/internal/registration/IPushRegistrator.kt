@@ -38,5 +38,5 @@ interface IPushRegistrator {
      *
      * @return a [RegisterResult] which describes the result of registration
      */
-    suspend fun registerForPush() : RegisterResult
+    suspend fun registerForPush(): RegisterResult
 }

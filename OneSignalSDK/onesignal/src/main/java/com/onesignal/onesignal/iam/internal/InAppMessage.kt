@@ -7,7 +7,7 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 import java.text.ParseException
-import java.util.*
+import java.util.Date
 
 /**
  * Represents an In App Message that exists within an application.
@@ -212,19 +212,19 @@ internal class InAppMessage(
 
     override fun toString(): String {
         return "OSInAppMessage{" +
-                "messageId='" + messageId + '\'' +
-                ", variants=" + variants +
-                ", triggers=" + triggers +
-                ", clickedClickIds=" + clickedClickIds +
-                ", redisplayStats=" + redisplayStats +
-                ", displayDuration=" + displayDuration +
-                ", displayedInSession=" + isDisplayedInSession +
-                ", triggerChanged=" + isTriggerChanged +
-                ", actionTaken=" + actionTaken +
-                ", isPreview=" + isPreview +
-                ", endTime=" + endTime +
-                ", hasLiquid=" + hasLiquid +
-                '}'
+            "messageId='" + messageId + '\'' +
+            ", variants=" + variants +
+            ", triggers=" + triggers +
+            ", clickedClickIds=" + clickedClickIds +
+            ", redisplayStats=" + redisplayStats +
+            ", displayDuration=" + displayDuration +
+            ", displayedInSession=" + isDisplayedInSession +
+            ", triggerChanged=" + isTriggerChanged +
+            ", actionTaken=" + actionTaken +
+            ", isPreview=" + isPreview +
+            ", endTime=" + endTime +
+            ", hasLiquid=" + hasLiquid +
+            '}'
     }
 
     override fun equals(o: Any?): Boolean {

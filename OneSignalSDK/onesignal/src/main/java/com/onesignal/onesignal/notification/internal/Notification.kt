@@ -1,8 +1,8 @@
 package com.onesignal.onesignal.notification.internal
 
 import androidx.core.app.NotificationCompat
-import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.notification.BackgroundImageLayout
 import com.onesignal.onesignal.notification.IActionButton
 import com.onesignal.onesignal.notification.IMutableNotification
@@ -188,9 +188,10 @@ open class Notification : INotification {
         if (jsonStrBgImage != null) {
             val jsonBgImage = JSONObject(jsonStrBgImage)
             backgroundImageLayout = BackgroundImageLayout(
-                            jsonBgImage.optString("img"),
-                            jsonBgImage.optString("tc"),
-                            jsonBgImage.optString("bc"))
+                jsonBgImage.optString("img"),
+                jsonBgImage.optString("tc"),
+                jsonBgImage.optString("bc")
+            )
         }
     }
 
@@ -278,32 +279,32 @@ open class Notification : INotification {
 
     override fun toString(): String {
         return "OSNotification{" +
-                "notificationExtender=" + notificationExtender +
-                ", groupedNotifications=" + groupedNotifications +
-                ", androidNotificationId=" + androidNotificationId +
-                ", notificationId='" + notificationId + '\'' +
-                ", templateName='" + templateName + '\'' +
-                ", templateId='" + templateId + '\'' +
-                ", title='" + title + '\'' +
-                ", body='" + body + '\'' +
-                ", additionalData=" + additionalData +
-                ", smallIcon='" + smallIcon + '\'' +
-                ", largeIcon='" + largeIcon + '\'' +
-                ", bigPicture='" + bigPicture + '\'' +
-                ", smallIconAccentColor='" + smallIconAccentColor + '\'' +
-                ", launchURL='" + launchURL + '\'' +
-                ", sound='" + sound + '\'' +
-                ", ledColor='" + ledColor + '\'' +
-                ", lockScreenVisibility=" + lockScreenVisibility +
-                ", groupKey='" + groupKey + '\'' +
-                ", groupMessage='" + groupMessage + '\'' +
-                ", actionButtons=" + actionButtons +
-                ", fromProjectNumber='" + fromProjectNumber + '\'' +
-                ", backgroundImageLayout=" + backgroundImageLayout +
-                ", collapseId='" + collapseId + '\'' +
-                ", priority=" + priority +
-                ", rawPayload='" + rawPayload + '\'' +
-                '}'
+            "notificationExtender=" + notificationExtender +
+            ", groupedNotifications=" + groupedNotifications +
+            ", androidNotificationId=" + androidNotificationId +
+            ", notificationId='" + notificationId + '\'' +
+            ", templateName='" + templateName + '\'' +
+            ", templateId='" + templateId + '\'' +
+            ", title='" + title + '\'' +
+            ", body='" + body + '\'' +
+            ", additionalData=" + additionalData +
+            ", smallIcon='" + smallIcon + '\'' +
+            ", largeIcon='" + largeIcon + '\'' +
+            ", bigPicture='" + bigPicture + '\'' +
+            ", smallIconAccentColor='" + smallIconAccentColor + '\'' +
+            ", launchURL='" + launchURL + '\'' +
+            ", sound='" + sound + '\'' +
+            ", ledColor='" + ledColor + '\'' +
+            ", lockScreenVisibility=" + lockScreenVisibility +
+            ", groupKey='" + groupKey + '\'' +
+            ", groupMessage='" + groupMessage + '\'' +
+            ", actionButtons=" + actionButtons +
+            ", fromProjectNumber='" + fromProjectNumber + '\'' +
+            ", backgroundImageLayout=" + backgroundImageLayout +
+            ", collapseId='" + collapseId + '\'' +
+            ", priority=" + priority +
+            ", rawPayload='" + rawPayload + '\'' +
+            '}'
     }
 
     /**

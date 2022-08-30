@@ -106,12 +106,14 @@ class PermissionsActivity : Activity() {
     }
 
     private fun shouldShowSettings(): Boolean {
-        return (_requestPermissionService!!.fallbackToSettings
-                && _requestPermissionService!!.neverAskAgainClicked
-                && !AndroidSupportV4Compat.ActivityCompat.shouldShowRequestPermissionRationale(
-            this@PermissionsActivity,
-            androidPermissionString
-        ))
+        return (
+            _requestPermissionService!!.fallbackToSettings &&
+                _requestPermissionService!!.neverAskAgainClicked &&
+                !AndroidSupportV4Compat.ActivityCompat.shouldShowRequestPermissionRationale(
+                    this@PermissionsActivity,
+                    androidPermissionString
+                )
+            )
     }
 
     companion object {

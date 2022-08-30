@@ -1,12 +1,11 @@
 package com.onesignal.onesignal.iam.internal
 
-import com.onesignal.onesignal.core.internal.startup.IStartableService
 import com.onesignal.onesignal.core.internal.service.ServiceBuilder
+import com.onesignal.onesignal.core.internal.startup.IStartableService
 import com.onesignal.onesignal.iam.IIAMManager
 import com.onesignal.onesignal.iam.internal.backend.IInAppBackendService
 import com.onesignal.onesignal.iam.internal.backend.impl.InAppBackendService
 import com.onesignal.onesignal.iam.internal.display.IInAppDisplayer
-import com.onesignal.onesignal.iam.internal.repositories.impl.InAppRepository
 import com.onesignal.onesignal.iam.internal.display.impl.InAppDisplayer
 import com.onesignal.onesignal.iam.internal.hydrators.InAppHydrator
 import com.onesignal.onesignal.iam.internal.lifecycle.IInAppLifecycleService
@@ -17,6 +16,7 @@ import com.onesignal.onesignal.iam.internal.preview.InAppMessagePreviewHandler
 import com.onesignal.onesignal.iam.internal.prompt.IInAppMessagePromptFactory
 import com.onesignal.onesignal.iam.internal.prompt.impl.InAppMessagePromptFactory
 import com.onesignal.onesignal.iam.internal.repositories.IInAppRepository
+import com.onesignal.onesignal.iam.internal.repositories.impl.InAppRepository
 import com.onesignal.onesignal.iam.internal.state.InAppStateService
 import com.onesignal.onesignal.iam.internal.triggers.ITriggerController
 import com.onesignal.onesignal.iam.internal.triggers.impl.DynamicTriggerController
@@ -46,8 +46,8 @@ object IAMModule {
         builder.register<InAppMessagePromptFactory>().provides<IInAppMessagePromptFactory>()
 
         builder.register<IAMManager>()
-               .provides<IIAMManager>()
-               .provides<IStartableService>()
+            .provides<IIAMManager>()
+            .provides<IStartableService>()
 
         // TODO: Only Android 4.4 can use IAMS (see OSInAppMessageDummyController)
     }

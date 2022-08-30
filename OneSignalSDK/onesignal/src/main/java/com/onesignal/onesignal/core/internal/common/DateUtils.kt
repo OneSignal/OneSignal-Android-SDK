@@ -27,7 +27,7 @@
 package com.onesignal.onesignal.core.internal.common
 
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Locale
 
 internal object DateUtils {
     fun iso8601Format(): SimpleDateFormat {

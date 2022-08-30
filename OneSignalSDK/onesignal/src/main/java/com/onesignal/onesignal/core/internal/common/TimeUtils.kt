@@ -2,7 +2,9 @@ package com.onesignal.onesignal.core.internal.common
 
 import android.os.Build
 import java.time.ZoneId
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.TimeZone
 
 object TimeUtils {
     fun getTimeZoneOffset(): Int {

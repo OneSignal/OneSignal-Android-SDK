@@ -1,6 +1,6 @@
 package com.onesignal.onesignal.notification.internal.pushtoken
 
-import com.onesignal.onesignal.core.internal.common.events.*
+import com.onesignal.onesignal.core.internal.common.events.EventProducer
 import com.onesignal.onesignal.notification.internal.registration.IPushRegistrator
 
 /**
@@ -17,7 +17,7 @@ internal class PushTokenManager(
     override suspend fun retrievePushToken() {
         // if there's already a push token, nothing to do.
         if (pushToken != null)
-            return;
+            return
 
         val registerResult = _pushRegistrator.registerForPush()
 

@@ -18,7 +18,7 @@ internal class NotificationBackendService(
         return _httpClient.put("notifications/$notificationId/report_received", jsonBody)
     }
 
-    override suspend fun updateNotificationAsOpened(appId: String, notificationId: String, subscriptionId: String, deviceType: Int) : HttpResponse {
+    override suspend fun updateNotificationAsOpened(appId: String, notificationId: String, subscriptionId: String, deviceType: Int): HttpResponse {
         val jsonBody = JSONObject()
         jsonBody.put("app_id", appId)
         jsonBody.put("player_id", subscriptionId)

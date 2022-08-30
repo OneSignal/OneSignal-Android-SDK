@@ -1,20 +1,20 @@
 package com.onesignal.onesignal.notification.internal.channels.impl
 
 import android.app.Notification
-import android.app.NotificationManager
-import org.json.JSONException
 import android.app.NotificationChannel
 import android.app.NotificationChannelGroup
+import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationManagerCompat
 import com.onesignal.onesignal.core.internal.application.IApplicationService
-import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.notification.internal.channels.INotificationChannelManager
 import com.onesignal.onesignal.notification.internal.common.NotificationGenerationJob
+import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 import java.lang.IllegalArgumentException
 import java.lang.NullPointerException

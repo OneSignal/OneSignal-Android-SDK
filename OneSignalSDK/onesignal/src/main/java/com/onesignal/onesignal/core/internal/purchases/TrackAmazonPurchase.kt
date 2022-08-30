@@ -26,12 +26,12 @@
  */
 package com.onesignal.onesignal.core.internal.purchases
 
-import com.amazon.device.iap.PurchasingService
 import com.amazon.device.iap.PurchasingListener
-import com.amazon.device.iap.model.RequestId
+import com.amazon.device.iap.PurchasingService
 import com.amazon.device.iap.model.ProductDataResponse
 import com.amazon.device.iap.model.PurchaseResponse
 import com.amazon.device.iap.model.PurchaseUpdatesResponse
+import com.amazon.device.iap.model.RequestId
 import com.amazon.device.iap.model.UserDataResponse
 import com.onesignal.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.onesignal.core.internal.application.IApplicationService
@@ -55,24 +55,24 @@ internal class TrackAmazonPurchase(
     private val _operationRepo: IOperationRepo,
     private val _configModelStore: ConfigModelStore,
     private val _userSwitcher: IUserSwitcher
-): IStartableService, IApplicationLifecycleHandler {
+) : IStartableService, IApplicationLifecycleHandler {
     private var canTrack = false
     private var osPurchasingListener: OSPurchasingListener? = null
     private var listenerHandlerObject: Any? = null
     private var listenerHandlerField: Field? = null
 
     override fun start() {
-        if(!canTrack())
+        if (!canTrack())
             return
 
         try {
             // 2.0.1
             val listenerHandlerClass = Class.forName("com.amazon.device.iap.internal.d")
             listenerHandlerObject = try {
-                //iap v2.x
+                // iap v2.x
                 listenerHandlerClass.getMethod("d").invoke(null)
             } catch (e: NullPointerException) {
-                //appstore v3.x
+                // appstore v3.x
                 listenerHandlerClass.getMethod("e").invoke(null)
             }
             val locListenerHandlerField = listenerHandlerClass.getDeclaredField("f")

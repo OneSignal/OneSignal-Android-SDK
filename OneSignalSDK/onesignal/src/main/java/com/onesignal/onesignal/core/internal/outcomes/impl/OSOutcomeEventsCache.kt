@@ -9,8 +9,11 @@ import com.onesignal.onesignal.core.internal.influence.InfluenceChannel
 import com.onesignal.onesignal.core.internal.influence.InfluenceType
 import com.onesignal.onesignal.core.internal.influence.InfluenceType.Companion.fromString
 import com.onesignal.onesignal.core.internal.logging.Logging
-import com.onesignal.onesignal.core.internal.outcomes.*
+import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsCache
 import com.onesignal.onesignal.core.internal.outcomes.OutcomeConstants
+import com.onesignal.onesignal.core.internal.outcomes.OutcomeEventParams
+import com.onesignal.onesignal.core.internal.outcomes.OutcomeSource
+import com.onesignal.onesignal.core.internal.outcomes.OutcomeSourceBody
 import com.onesignal.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.onesignal.core.internal.preferences.PreferenceStores
@@ -18,30 +21,33 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONException
-import java.util.*
+import java.util.Locale
 
 internal class OSOutcomeEventsCache(
     private val dbHelper: IDatabaseProvider,
     private val preferences: IPreferencesService
-    ) : IOutcomeEventsCache {
-    
+) : IOutcomeEventsCache {
+
     override val isOutcomesV2ServiceEnabled: Boolean
         get() = preferences.getBool(
-                PreferenceStores.ONESIGNAL,
-                PreferenceOneSignalKeys.PREFS_OS_OUTCOMES_V2,
-                false)!!
+            PreferenceStores.ONESIGNAL,
+            PreferenceOneSignalKeys.PREFS_OS_OUTCOMES_V2,
+            false
+        )!!
 
     override val unattributedUniqueOutcomeEventsSentByChannel: Set<String>?
         get() = preferences.getStringSet(
-                PreferenceStores.ONESIGNAL,
-                OutcomeConstants.PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT,
-                null)
+            PreferenceStores.ONESIGNAL,
+            OutcomeConstants.PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT,
+            null
+        )
 
     override fun saveUnattributedUniqueOutcomeEventsSentByChannel(unattributedUniqueOutcomeEvents: Set<String>?) {
         preferences.saveStringSet(
-                PreferenceStores.ONESIGNAL,
-                OutcomeConstants.PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT,  // Post success, store unattributed unique outcome event names
-                unattributedUniqueOutcomeEvents!!)
+            PreferenceStores.ONESIGNAL,
+            OutcomeConstants.PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT, // Post success, store unattributed unique outcome event names
+            unattributedUniqueOutcomeEvents!!
+        )
     }
 
     /**
@@ -121,13 +127,13 @@ internal class OSOutcomeEventsCache(
         var cursor: Cursor? = null
         try {
             cursor = dbHelper.get().query(
-                    OutcomeEventsTable.TABLE_NAME,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
+                OutcomeEventsTable.TABLE_NAME,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
             )
             with(cursor) {
                 if (moveToFirst()) {
@@ -140,9 +146,9 @@ internal class OSOutcomeEventsCache(
 
                         // Retrieve influence ids
                         val notificationIds = getString(getColumnIndex(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS))
-                                ?: "[]"
+                            ?: "[]"
                         val iamIds = getString(getColumnIndex(OutcomeEventsTable.COLUMN_NAME_IAM_IDS))
-                                ?: "[]"
+                            ?: "[]"
 
                         // Retrieve Outcome data
                         val name = getString(getColumnIndex(OutcomeEventsTable.COLUMN_NAME_NAME))
@@ -153,9 +159,9 @@ internal class OSOutcomeEventsCache(
                             val directSourceBody = OutcomeSourceBody()
                             val indirectSourceBody = OutcomeSourceBody()
                             val source: OutcomeSource = getNotificationInfluenceSource(notificationInfluenceType, directSourceBody, indirectSourceBody, notificationIds)
-                                    .also {
-                                        getIAMInfluenceSource(iamInfluenceType, directSourceBody, indirectSourceBody, iamIds, it)
-                                    } ?: OutcomeSource(null, null)
+                                .also {
+                                    getIAMInfluenceSource(iamInfluenceType, directSourceBody, indirectSourceBody, iamIds, it)
+                                } ?: OutcomeSource(null, null)
                             OutcomeEventParams(name, source, weight, timestamp).also {
                                 events.add(it)
                             }
@@ -173,10 +179,12 @@ internal class OSOutcomeEventsCache(
         return events
     }
 
-    private fun getNotificationInfluenceSource(notificationInfluenceType: InfluenceType,
-                                               directSourceBody: OutcomeSourceBody,
-                                               indirectSourceBody: OutcomeSourceBody,
-                                               notificationIds: String): OutcomeSource? {
+    private fun getNotificationInfluenceSource(
+        notificationInfluenceType: InfluenceType,
+        directSourceBody: OutcomeSourceBody,
+        indirectSourceBody: OutcomeSourceBody,
+        notificationIds: String
+    ): OutcomeSource? {
         return when (notificationInfluenceType) {
             InfluenceType.DIRECT -> {
                 directSourceBody.notificationIds = JSONArray(notificationIds)
@@ -192,21 +200,23 @@ internal class OSOutcomeEventsCache(
         }
     }
 
-    private fun getIAMInfluenceSource(iamInfluenceType: InfluenceType,
-                                      directSourceBody: OutcomeSourceBody,
-                                      indirectSourceBody: OutcomeSourceBody,
-                                      iamIds: String,
-                                      source: OutcomeSource?): OutcomeSource? {
+    private fun getIAMInfluenceSource(
+        iamInfluenceType: InfluenceType,
+        directSourceBody: OutcomeSourceBody,
+        indirectSourceBody: OutcomeSourceBody,
+        iamIds: String,
+        source: OutcomeSource?
+    ): OutcomeSource? {
         return when (iamInfluenceType) {
             InfluenceType.DIRECT -> {
                 directSourceBody.inAppMessagesIds = JSONArray(iamIds)
                 source?.setDirectBody(directSourceBody)
-                        ?: OutcomeSource(directSourceBody, null)
+                    ?: OutcomeSource(directSourceBody, null)
             }
             InfluenceType.INDIRECT -> {
                 indirectSourceBody.inAppMessagesIds = JSONArray(iamIds)
                 source?.setIndirectBody(indirectSourceBody)
-                        ?: OutcomeSource(null, indirectSourceBody)
+                    ?: OutcomeSource(null, indirectSourceBody)
             }
             else -> {
                 source
@@ -279,18 +289,18 @@ internal class OSOutcomeEventsCache(
                     val channel = influence.influenceChannel
                     val columns = arrayOf<String>()
                     val where = CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID + " = ? AND " +
-                            CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE + " = ? AND " +
-                            CachedUniqueOutcomeTable.COLUMN_NAME_NAME + " = ?"
+                        CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE + " = ? AND " +
+                        CachedUniqueOutcomeTable.COLUMN_NAME_NAME + " = ?"
                     val args = arrayOf(channelInfluenceId, channel.toString(), name)
                     cursor = dbHelper.get().query(
-                            CachedUniqueOutcomeTable.TABLE_NAME,
-                            columns,
-                            where,
-                            args,
-                            null,
-                            null,
-                            null,
-                            "1"
+                        CachedUniqueOutcomeTable.TABLE_NAME,
+                        columns,
+                        where,
+                        args,
+                        null,
+                        null,
+                        null,
+                        "1"
                     )
 
                     // Item is not cached, we can use the influence id, add it to the JSONArray
@@ -321,11 +331,11 @@ internal class OSOutcomeEventsCache(
     override suspend fun cleanCachedUniqueOutcomeEventNotifications(notificationTableName: String, notificationIdColumnName: String) {
         withContext(Dispatchers.IO) {
             val whereStr = "NOT EXISTS(" +
-                    "SELECT NULL FROM " + notificationTableName + " n " +
-                    "WHERE" + " n." + notificationIdColumnName + " = " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_INFLUENCE_ID +
-                    " AND " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_TYPE + " = \"" + InfluenceChannel.NOTIFICATION.toString()
+                "SELECT NULL FROM " + notificationTableName + " n " +
+                "WHERE" + " n." + notificationIdColumnName + " = " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_INFLUENCE_ID +
+                " AND " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_TYPE + " = \"" + InfluenceChannel.NOTIFICATION.toString()
                 .toLowerCase(Locale.ROOT) +
-                    "\")"
+                "\")"
             dbHelper.get().delete(
                 OutcomesDbContract.CACHE_UNIQUE_OUTCOME_TABLE,
                 whereStr,

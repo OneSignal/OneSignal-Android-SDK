@@ -6,7 +6,7 @@ import com.onesignal.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.onesignal.location.internal.common.LocationConstants
 import com.onesignal.onesignal.location.internal.preferences.ILocationPreferencesService
 
-internal class LocationPreferencesService (
+internal class LocationPreferencesService(
     private val _prefs: IPreferencesService,
 ) : ILocationPreferencesService {
     override var lastLocationTime: Long
@@ -14,6 +14,7 @@ internal class LocationPreferencesService (
         set(time) {
             _prefs.saveLong(
                 PreferenceStores.ONESIGNAL,
-                PreferenceOneSignalKeys.PREFS_OS_LAST_LOCATION_TIME, time)
+                PreferenceOneSignalKeys.PREFS_OS_LAST_LOCATION_TIME, time
+            )
         }
 }

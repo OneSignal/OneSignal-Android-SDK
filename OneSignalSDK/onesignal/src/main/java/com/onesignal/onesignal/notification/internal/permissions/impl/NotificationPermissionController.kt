@@ -30,10 +30,10 @@ package com.onesignal.onesignal.notification.internal.permissions.impl
 import android.os.Build
 import androidx.annotation.ChecksSdkIntAtLeast
 import com.onesignal.R
-import com.onesignal.onesignal.core.internal.permissions.impl.AlertDialogPrepromptForAndroidSettings
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.onesignal.core.internal.permissions.IRequestPermissionService
+import com.onesignal.onesignal.core.internal.permissions.impl.AlertDialogPrepromptForAndroidSettings
 import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.onesignal.notification.internal.permissions.INotificationPermissionController
 import kotlinx.coroutines.channels.Channel
@@ -54,7 +54,7 @@ class NotificationPermissionController(
     @ChecksSdkIntAtLeast(api = 33)
     val supportsNativePrompt =
         Build.VERSION.SDK_INT > 32 &&
-        AndroidUtils.getTargetSdkVersion(_application.appContext) > 32
+            AndroidUtils.getTargetSdkVersion(_application.appContext) > 32
 
     /**
      * Prompt the user for notification permission.  Note it is possible the application
@@ -68,7 +68,7 @@ class NotificationPermissionController(
      * does happen, the app will detect the permissions on app focus and drive permission callbacks
      * to notify of the status.
      */
-    override suspend fun prompt(fallbackToSettings: Boolean) : Boolean? {
+    override suspend fun prompt(fallbackToSettings: Boolean): Boolean? {
         if (notificationsEnabled()) {
             return true
         }
@@ -80,11 +80,9 @@ class NotificationPermissionController(
                 ANDROID_PERMISSION_STRING,
                 this::class.java
             )
-        }
-        else if(fallbackToSettings) {
+        } else if (fallbackToSettings) {
             showFallbackAlertDialog()
-        }
-        else return false
+        } else return false
 
         // this won't return until onAccept or onReject sends the response on the channel (either
         // through the native prompt or through the fallback)

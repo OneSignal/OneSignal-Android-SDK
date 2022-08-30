@@ -6,7 +6,8 @@ import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.iam.internal.Trigger
 import com.onesignal.onesignal.iam.internal.state.InAppStateService
 import com.onesignal.onesignal.iam.internal.triggers.ITriggerHandler
-import java.util.*
+import java.util.Date
+import java.util.TimerTask
 import kotlin.math.abs
 
 internal class DynamicTriggerController(
@@ -26,8 +27,9 @@ internal class DynamicTriggerController(
             if (trigger.value !is Number) return false
             var currentTimeInterval: Long = 0
             when (trigger.kind) {
-                Trigger.OSTriggerKind.SESSION_TIME -> currentTimeInterval =
-                    Date().time - sessionLaunchTime.time
+                Trigger.OSTriggerKind.SESSION_TIME ->
+                    currentTimeInterval =
+                        Date().time - sessionLaunchTime.time
                 Trigger.OSTriggerKind.TIME_SINCE_LAST_IN_APP -> {
                     if (_state.inAppMessageShowing)
                         return false
@@ -56,12 +58,15 @@ internal class DynamicTriggerController(
             if (scheduledMessages.contains(triggerId))
                 return false
 
-            DynamicTriggerTimer.scheduleTrigger(object : TimerTask() {
-                override fun run() {
-                    scheduledMessages.remove(triggerId)
-                    events.fire { it.onTriggerConditionChanged() }
-                }
-            }, triggerId, offset)
+            DynamicTriggerTimer.scheduleTrigger(
+                object : TimerTask() {
+                    override fun run() {
+                        scheduledMessages.remove(triggerId)
+                        events.fire { it.onTriggerConditionChanged() }
+                    }
+                },
+                triggerId, offset
+            )
             scheduledMessages.add(triggerId)
         }
         return false
@@ -78,7 +83,7 @@ internal class DynamicTriggerController(
                 timeInterval,
                 currentTimeInterval
             )
-            Trigger.OSTriggerOperator.GREATER_THAN ->                 // Counting equal as greater. This way we don't need to schedule a Runnable for 1ms in the future.
+            Trigger.OSTriggerOperator.GREATER_THAN -> // Counting equal as greater. This way we don't need to schedule a Runnable for 1ms in the future.
                 currentTimeInterval >= timeInterval
             Trigger.OSTriggerOperator.GREATER_THAN_OR_EQUAL_TO -> currentTimeInterval >= timeInterval || roughlyEqual(
                 timeInterval,

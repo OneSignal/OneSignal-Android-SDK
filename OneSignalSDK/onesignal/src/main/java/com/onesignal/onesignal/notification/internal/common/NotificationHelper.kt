@@ -44,7 +44,6 @@ object NotificationHelper {
         return statusBarNotifications
     }
 
-
     /**
      * Iterate over all active notifications and count the groupless ones
      * and return the int count
@@ -54,8 +53,8 @@ object NotificationHelper {
         val statusBarNotifications = getActiveNotifications(context)
         var groupCount = 0
         for (statusBarNotification in statusBarNotifications) {
-            if (!NotificationCompat.isGroupSummary(statusBarNotification.notification)
-                && grouplessSummaryKey == statusBarNotification.notification.group
+            if (!NotificationCompat.isGroupSummary(statusBarNotification.notification) &&
+                grouplessSummaryKey == statusBarNotification.notification.group
             ) {
                 groupCount++
             }
@@ -79,15 +78,16 @@ object NotificationHelper {
         for (statusBarNotification in statusBarNotifications) {
             val notification = statusBarNotification.notification
             val isGroupSummary = isGroupSummary(statusBarNotification)
-            val isGroupless = (notification.group == null
-                    || notification.group == grouplessSummaryKey)
+            val isGroupless = (
+                notification.group == null ||
+                    notification.group == grouplessSummaryKey
+                )
             if (!isGroupSummary && isGroupless) grouplessStatusBarNotifications.add(
                 statusBarNotification
             )
         }
         return grouplessStatusBarNotifications
     }
-
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     fun isGroupSummary(notif: StatusBarNotification): Boolean {
@@ -123,15 +123,14 @@ object NotificationHelper {
      * @param context The app context to check notification enablement against.
      * @param channelId The optional channel ID to check enablement for.
      */
-    fun areNotificationsEnabled(context: Context, channelId: String? = null) : Boolean {
+    fun areNotificationsEnabled(context: Context, channelId: String? = null): Boolean {
         try {
             val notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
             if (!notificationsEnabled)
                 return false
 
             // Channels were introduced in O
-            if(channelId != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-            {
+            if (channelId != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val channel = getNotificationManager(context)?.getNotificationChannel(channelId)
                 return channel == null || channel.importance != NotificationManager.IMPORTANCE_NONE
             }
@@ -224,7 +223,6 @@ object NotificationHelper {
                         )
                     )
                 }
-
             } catch (t: Throwable) {
                 Logging.error("Error parsing JSON item $i/$jsonArraySize for callback.", t)
             }

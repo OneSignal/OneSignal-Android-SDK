@@ -36,13 +36,13 @@ internal class NotificationLifecycleService(
     override fun addInternalNotificationLifecycleEventHandler(handler: INotificationLifecycleEventHandler) = _intLifecycleHandler.subscribe(handler)
     override fun removeInternalNotificationLifecycleEventHandler(handler: INotificationLifecycleEventHandler) = _intLifecycleHandler.unsubscribe(handler)
     override fun setInternalNotificationLifecycleCallback(callback: INotificationLifecycleCallback?) = _intLifecycleCallback.set(callback)
-    override fun setExternalWillShowInForegroundHandler(callback: INotificationWillShowInForegroundHandler?)  = _extWillShowInForegroundCallback.set(callback)
+    override fun setExternalWillShowInForegroundHandler(callback: INotificationWillShowInForegroundHandler?) = _extWillShowInForegroundCallback.set(callback)
     override fun setExternalNotificationOpenedHandler(callback: INotificationOpenedHandler?) {
         _extOpenedCallback.set(callback)
 
         // Ensure we process any queued up notifications that came in prior to this being set.
-        if(_extOpenedCallback.hasCallback && _unprocessedOpenedNotifs.any()) {
-            for(data in _unprocessedOpenedNotifs) {
+        if (_extOpenedCallback.hasCallback && _unprocessedOpenedNotifs.any()) {
+            for (data in _unprocessedOpenedNotifs) {
                 val openedResult = NotificationHelper.generateNotificationOpenedResult(data, _time)
                 _extOpenedCallback.fire { it.notificationOpened(openedResult) }
             }
@@ -74,11 +74,10 @@ internal class NotificationLifecycleService(
 
         // queue up the opened notification in case the handler hasn't been set yet. Once set,
         // we will immediately fire the handler.
-        if(_extOpenedCallback.hasCallback) {
+        if (_extOpenedCallback.hasCallback) {
             val openResult = NotificationHelper.generateNotificationOpenedResult(data, _time)
             _extOpenedCallback.fire { it.notificationOpened(openResult) }
-        }
-        else {
+        } else {
             _unprocessedOpenedNotifs.add(data)
         }
     }

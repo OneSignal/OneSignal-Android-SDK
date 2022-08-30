@@ -15,7 +15,7 @@ import com.onesignal.onesignal.location.internal.common.LocationUtils
 import com.onesignal.onesignal.location.internal.controller.ILocationController
 import com.onesignal.onesignal.location.internal.permissions.LocationPermissionController
 
-internal class LocationManager (
+internal class LocationManager(
     private val _applicationService: IApplicationService,
     private val _capturer: ILocationCapturer,
     private val _locationController: ILocationController,
@@ -25,7 +25,7 @@ internal class LocationManager (
     override var isLocationShared: Boolean = false
 
     override fun start() {
-        if(LocationUtils.hasLocationPermission(_applicationService.appContext)) {
+        if (LocationUtils.hasLocationPermission(_applicationService.appContext)) {
             suspendifyOnThread {
                 startGetLocation()
             }
@@ -49,10 +49,10 @@ internal class LocationManager (
      *
      * For all cases we are calling prompt listeners.
      */
-    override suspend fun requestPermission() : Boolean? {
+    override suspend fun requestPermission(): Boolean? {
         Logging.log(LogLevel.DEBUG, "LocationManager.requestPermission()")
 
-        if(!isLocationShared)
+        if (!isLocationShared)
             return false
 
         var result: Boolean? = null
@@ -60,9 +60,9 @@ internal class LocationManager (
         var locationBackgroundPermission = PackageManager.PERMISSION_DENIED
         var locationCoarsePermission = PackageManager.PERMISSION_DENIED
         val locationFinePermission = AndroidSupportV4Compat.ContextCompat.checkSelfPermission(
-                _applicationService.appContext,
-                "android.permission.ACCESS_FINE_LOCATION"
-            )
+            _applicationService.appContext,
+            "android.permission.ACCESS_FINE_LOCATION"
+        )
 
         if (locationFinePermission == PackageManager.PERMISSION_DENIED) {
             locationCoarsePermission = AndroidSupportV4Compat.ContextCompat.checkSelfPermission(
@@ -90,8 +90,8 @@ internal class LocationManager (
                 try {
                     var requestPermission: String? = null
                     val packageInfo: PackageInfo = _applicationService.appContext
-                                                        .packageManager
-                                                        .getPackageInfo(_applicationService.appContext.packageName, PackageManager.GET_PERMISSIONS)
+                        .packageManager
+                        .getPackageInfo(_applicationService.appContext.packageName, PackageManager.GET_PERMISSIONS)
                     val permissionList = listOf(*packageInfo.requestedPermissions)
 
                     if (permissionList.contains("android.permission.ACCESS_FINE_LOCATION")) {
@@ -120,7 +120,7 @@ internal class LocationManager (
                     // For each case, we call the prompt handlers
                     if (requestPermission != null) {
                         result = _locationPermissionController.prompt(true, requestPermission)
-                        if(result == true) {
+                        if (result == true) {
                             startGetLocation()
                         }
                     } else if (locationCoarsePermission == PackageManager.PERMISSION_GRANTED) {
@@ -153,7 +153,7 @@ internal class LocationManager (
      * On Android 11 and greater, background location should be asked after fine and coarse permission
      * If background permission is asked at the same time as fine and coarse then both permission request are ignored
      */
-    private suspend fun backgroundLocationPermissionLogic() : Boolean? {
+    private suspend fun backgroundLocationPermissionLogic(): Boolean? {
         try {
             var requestPermission: String? = null
             val packageInfo = _applicationService.appContext.packageManager.getPackageInfo(
@@ -172,7 +172,7 @@ internal class LocationManager (
                 true
             }
 
-            if(result == true) {
+            if (result == true) {
                 startGetLocation()
             }
 
@@ -186,7 +186,7 @@ internal class LocationManager (
 
     // Started from this class or PermissionActivity
     private suspend fun startGetLocation() {
-        Logging.debug("LocationController startGetLocation") //with lastLocation: " + lastLocation)
+        Logging.debug("LocationController startGetLocation") // with lastLocation: " + lastLocation)
         try {
             if (!_locationController!!.start()) {
                 Logging.warn("LocationController startGetLocation not possible, no location dependency found")

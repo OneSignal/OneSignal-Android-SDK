@@ -27,25 +27,25 @@
 package com.onesignal.onesignal.notification.internal.open.impl
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.app.Activity
-import org.json.JSONException
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationManagerCompat
 import com.onesignal.onesignal.core.internal.common.JSONUtils
 import com.onesignal.onesignal.core.internal.database.impl.OneSignalDbContract
-import com.onesignal.onesignal.notification.internal.common.NotificationHelper
-import com.onesignal.onesignal.notification.internal.data.INotificationDataController
-import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.onesignal.notification.internal.common.NotificationFormatHelper
+import com.onesignal.onesignal.notification.internal.common.NotificationHelper
+import com.onesignal.onesignal.notification.internal.data.INotificationDataController
 import com.onesignal.onesignal.notification.internal.lifecycle.INotificationLifecycleService
 import com.onesignal.onesignal.notification.internal.open.INotificationOpenedProcessor
 import com.onesignal.onesignal.notification.internal.summary.INotificationSummaryManager
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 
 internal class NotificationOpenedProcessor(
@@ -110,7 +110,7 @@ internal class NotificationOpenedProcessor(
         }
         Logging.debug("processIntent from context: $context and intent: $intent")
         if (intent.extras != null)
-            Logging.debug("""processIntent intent extras: ${intent.extras.toString()}""")
+            Logging.debug("""processIntent intent extras: ${intent.extras}""")
         if (!dismissed) {
             if (context !is Activity)
                 Logging.error("NotificationOpenedProcessor processIntent from an non Activity context: $context")
@@ -157,7 +157,7 @@ internal class NotificationOpenedProcessor(
     private suspend fun addChildNotifications(dataArray: JSONArray, summaryGroup: String) {
 
         val childNotifications = _dataController.listNotificationsForGroup(summaryGroup)
-        for(childNotification in childNotifications)
+        for (childNotification in childNotifications)
             dataArray!!.put(JSONObject(childNotification.fullData))
     }
 
@@ -170,11 +170,11 @@ internal class NotificationOpenedProcessor(
 
         clearStatusBarNotifications(context, summaryGroup)
         _dataController.markAsConsumed(
-                            intent.getIntExtra(NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0),
-                            dismissed,
-                            summaryGroup,
-                            _paramsService.clearGroupOnSummaryClick
-                            )
+            intent.getIntExtra(NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0),
+            dismissed,
+            summaryGroup,
+            _paramsService.clearGroupOnSummaryClick
+        )
     }
 
     /**

@@ -28,14 +28,14 @@ class SubscriptionList(val collection: List<ISubscription>) {
     /**
      * Retrieve the Email subscription with the matching email, if there is one.
      */
-    fun getByEmail(email: String) : IEmailSubscription? {
-         return emails.firstOrNull { it.email == email }
+    fun getByEmail(email: String): IEmailSubscription? {
+        return emails.firstOrNull { it.email == email }
     }
 
     /**
      * Retrieve the SMS subscription with the matching SMS number, if there is one.
      */
-    fun getBySMS(sms: String) : ISmsSubscription? {
+    fun getBySMS(sms: String): ISmsSubscription? {
         return smss.firstOrNull { it.number == sms }
     }
 }

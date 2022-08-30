@@ -1,9 +1,9 @@
 package com.onesignal.onesignal.notification.internal.registration.impl
 
-import android.content.pm.PackageManager
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.PendingIntent.CanceledException
+import android.content.pm.PackageManager
 import com.google.android.gms.common.GoogleApiAvailability
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
