@@ -4,7 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import com.onesignal.R
 import com.onesignal.onesignal.core.activities.PermissionsActivity
-import com.onesignal.onesignal.core.internal.application.IActivityLifecycleHandler
+import com.onesignal.onesignal.core.internal.application.ActivityLifecycleHandlerBase
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.permissions.IRequestPermissionService
 import java.util.HashMap
@@ -45,7 +45,7 @@ class RequestPermissionService(
         // current activity is changed.  We keep trying to add the permission prompt whenever
         // an activity becomes available, until our permission activity is the one that's
         // available.
-        _application.addActivityLifecycleHandler(object : IActivityLifecycleHandler {
+        _application.addActivityLifecycleHandler(object : ActivityLifecycleHandlerBase() {
             override fun onActivityAvailable(activity: Activity) {
                 if (activity.javaClass == PermissionsActivity::class.java)
                     _application.removeActivityLifecycleHandler(this)
@@ -55,16 +55,12 @@ class RequestPermissionService(
                     intent.putExtra(PermissionsActivity.INTENT_EXTRA_PERMISSION_TYPE, permissionRequestType)
                         .putExtra(PermissionsActivity.INTENT_EXTRA_ANDROID_PERMISSION_STRING, androidPermissionString)
                         .putExtra(PermissionsActivity.INTENT_EXTRA_CALLBACK_CLASS, callbackClass.name)
-                    activity!!.startActivity(intent)
-                    activity!!.overridePendingTransition(
+                    activity.startActivity(intent)
+                    activity.overridePendingTransition(
                         R.anim.onesignal_fade_in,
                         R.anim.onesignal_fade_out
                     )
                 }
-            }
-
-            override fun onActivityStopped(activity: Activity) {
-
             }
         })
     }

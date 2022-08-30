@@ -68,7 +68,7 @@ internal abstract class PushRegistratorAbstractGoogle(
 
     private suspend fun internalRegisterForPush(senderId: String): IPushRegistrator.RegisterResult {
         try {
-            return if (_deviceService.isGMSInstalledAndEnabled()) {
+            return if (_deviceService.isGMSInstalledAndEnabled) {
                 registerInBackground(senderId)
             } else {
                 _upgradePrompt.showUpdateGPSDialog()

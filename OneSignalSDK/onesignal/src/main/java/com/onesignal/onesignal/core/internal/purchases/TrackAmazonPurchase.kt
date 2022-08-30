@@ -33,7 +33,7 @@ import com.amazon.device.iap.model.ProductDataResponse
 import com.amazon.device.iap.model.PurchaseResponse
 import com.amazon.device.iap.model.PurchaseUpdatesResponse
 import com.amazon.device.iap.model.UserDataResponse
-import com.onesignal.onesignal.core.internal.application.IApplicationLifecycleHandler
+import com.onesignal.onesignal.core.internal.application.ApplicationLifecycleHandlerBase
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.models.ConfigModelStore
@@ -55,7 +55,7 @@ internal class TrackAmazonPurchase(
     private val _operationRepo: IOperationRepo,
     private val _configModelStore: ConfigModelStore,
     private val _userSwitcher: IUserSwitcher
-): IStartableService, IApplicationLifecycleHandler {
+): ApplicationLifecycleHandlerBase(), IStartableService {
     private var canTrack = false
     private var osPurchasingListener: OSPurchasingListener? = null
     private var listenerHandlerObject: Any? = null
@@ -105,8 +105,6 @@ internal class TrackAmazonPurchase(
         Logging.error("Error adding Amazon IAP listener.", e)
         e.printStackTrace()
     }
-
-    override fun onFocus() { }
 
     override fun onUnfocused() {
         if (!canTrack) return

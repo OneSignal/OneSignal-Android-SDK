@@ -1,6 +1,6 @@
 package com.onesignal.onesignal.core.internal.influence.impl
 
-import com.onesignal.onesignal.core.internal.AppEntryAction
+import com.onesignal.onesignal.core.internal.application.AppEntryAction
 import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.influence.*
 import com.onesignal.onesignal.core.internal.params.IParamsService

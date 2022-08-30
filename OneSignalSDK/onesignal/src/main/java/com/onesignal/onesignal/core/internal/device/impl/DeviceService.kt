@@ -60,7 +60,7 @@ class DeviceService(private val _applicationService: IApplicationService) : IDev
             // Start - Fallback logic
             //    Libraries in the app (Google:FCM, HMS:PushKit) + Device may not have a valid combo
             // Example: App with only the FCM library in it and a Huawei device with only HMS Core
-            if (isGMSInstalledAndEnabled()) return DEVICE_TYPE_ANDROID
+            if (isGMSInstalledAndEnabled) return DEVICE_TYPE_ANDROID
             return if (isHMSCoreInstalledAndEnabledFallback()) DEVICE_TYPE_HUAWEI else DEVICE_TYPE_ANDROID
 
             // Last fallback
@@ -85,7 +85,7 @@ class DeviceService(private val _applicationService: IApplicationService) : IDev
 
     private fun supportsGooglePush(): Boolean {
         // 1. If app does not have the FCM library it won't support Google push
-        return if (!hasFCMLibrary()) false else isGMSInstalledAndEnabled()
+        return if (!hasFCMLibrary) false else isGMSInstalledAndEnabled
 
         // 2. "Google Play services" must be installed and enabled
     }
@@ -100,9 +100,10 @@ class DeviceService(private val _applicationService: IApplicationService) : IDev
     // However before doing so we need to test with an old version of the "Google Play services"
     //   on the device to make sure it would still be counted as "SUCCESS".
     // Or if we get back "SERVICE_VERSION_UPDATE_REQUIRED" then we may want to count that as successful too.
-    override fun isGMSInstalledAndEnabled(): Boolean {
-        return packageInstalledAndEnabled(GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE)
-    }
+    override val isGMSInstalledAndEnabled: Boolean
+        get() {
+            return packageInstalledAndEnabled(GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE)
+        }
 
     private fun packageInstalledAndEnabled(packageName: String): Boolean {
         return try {
@@ -130,17 +131,18 @@ class DeviceService(private val _applicationService: IApplicationService) : IDev
         }
     }
 
-    override fun hasFCMLibrary(): Boolean {
-        return try {
-            AndroidUtils.opaqueHasClass(FirebaseMessaging::class.java)
-        } catch (e: NoClassDefFoundError) {
-            false
+    override val hasFCMLibrary: Boolean
+        get() {
+            return try {
+                AndroidUtils.opaqueHasClass(FirebaseMessaging::class.java)
+            } catch (e: NoClassDefFoundError) {
+                false
+            }
         }
-    }
 
     private fun supportsHMS(): Boolean {
         // 1. App should have the HMSAvailability for best detection and must have PushKit libraries
-        return if (!hasHMSAvailabilityLibrary() || !hasAllHMSLibrariesForPushKit()) false else isHMSCoreInstalledAndEnabled()
+        return if (!hasHMSAvailabilityLibrary() || !hasAllHMSLibrariesForPushKit) false else isHMSCoreInstalledAndEnabled()
 
         // 2. Device must have HMS Core installed and enabled
     }
@@ -150,11 +152,12 @@ class DeviceService(private val _applicationService: IApplicationService) : IDev
         return availability.isHuaweiMobileServicesAvailable(_applicationService.appContext) == HMS_AVAILABLE_SUCCESSFUL
     }
 
-    override fun hasAllHMSLibrariesForPushKit(): Boolean {
-        // NOTE: hasHMSAvailabilityLibrary technically is not required,
-        //   just used as recommend way to detect if "HMS Core" app exists and is enabled
-        return hasHMSAGConnectLibrary() && hasHMSPushKitLibrary()
-    }
+    override val hasAllHMSLibrariesForPushKit: Boolean
+        get() {
+            // NOTE: hasHMSAvailabilityLibrary technically is not required,
+            //   just used as recommend way to detect if "HMS Core" app exists and is enabled
+            return hasHMSAGConnectLibrary() && hasHMSPushKitLibrary()
+        }
 
     private fun hasHMSAGConnectLibrary(): Boolean {
         return try {

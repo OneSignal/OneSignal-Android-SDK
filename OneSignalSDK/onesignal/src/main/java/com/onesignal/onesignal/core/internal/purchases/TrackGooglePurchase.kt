@@ -33,7 +33,7 @@ import android.os.IBinder
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import com.onesignal.onesignal.core.internal.application.IApplicationLifecycleHandler
+import com.onesignal.onesignal.core.internal.application.ApplicationLifecycleHandlerBase
 import org.json.JSONObject
 import org.json.JSONArray
 import com.onesignal.onesignal.core.internal.application.IApplicationService
@@ -58,7 +58,7 @@ internal class TrackGooglePurchase(
     private val _operationRepo: IOperationRepo,
     private val _configModelStore: ConfigModelStore,
     private val _userSwitcher: IUserSwitcher
-    ) : IStartableService, IApplicationLifecycleHandler {
+    ) : ApplicationLifecycleHandlerBase(), IStartableService {
     private var mServiceConn: ServiceConnection? = null
     private var mIInAppBillingService: Any? = null
     private var getPurchasesMethod: Method? = null
@@ -97,8 +97,6 @@ internal class TrackGooglePurchase(
     override fun onFocus() {
         trackIAP()
     }
-
-    override fun onUnfocused() {}
 
     private fun trackIAP() {
         if (mServiceConn == null) {

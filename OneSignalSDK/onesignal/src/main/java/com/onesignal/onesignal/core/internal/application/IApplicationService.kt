@@ -2,8 +2,11 @@ package com.onesignal.onesignal.core.internal.application
 
 import android.app.Activity
 import android.content.Context
-import com.onesignal.onesignal.core.internal.AppEntryAction
 
+/**
+ * The application service provides the ability to view various application-specific
+ * information and subscribe to application events.
+ */
 interface IApplicationService  {
 
     /**
@@ -12,17 +15,20 @@ interface IApplicationService  {
     val appContext: Context
 
     /**
-     * The current activity for the application
+     * The current activity for the application. When null the application has no
+     * active activity, it is in the background.
      */
     val current: Activity?
 
     /**
-     * Whether the app is currently in the foreground
+     * Whether the application is currently in the foreground.
      */
     val isInForeground: Boolean
 
     /**
-     * How the application was entered.
+     * How the application was entered.  This is writeable to allow for the setting
+     * to [AppEntryAction.NOTIFICATION_CLICK] when it is determined a notification
+     * drove the app entry.
      */
     var entryState: AppEntryAction
 
@@ -39,22 +45,22 @@ interface IApplicationService  {
     suspend fun waitUntilActivityReady() : Boolean
 
     /**
-     * Add an activity available handler
+     * Add an activity lifecycle available handler.
      */
     fun addActivityLifecycleHandler(handler: IActivityLifecycleHandler)
 
     /**
-     * Remove an activity lifecycle handler
+     * Remove an activity lifecycle handler.
      */
     fun removeActivityLifecycleHandler(handler: IActivityLifecycleHandler)
 
     /**
-     * Add an application available handler
+     * Add an application available handler.
      */
     fun addApplicationLifecycleHandler(handler: IApplicationLifecycleHandler)
 
     /**
-     * Remove an application lifecycle handler
+     * Remove an application lifecycle handler.
      */
     fun removeApplicationLifecycleHandler(handler: IApplicationLifecycleHandler)
 }

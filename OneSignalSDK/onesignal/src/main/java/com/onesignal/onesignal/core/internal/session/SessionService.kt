@@ -1,7 +1,7 @@
 package com.onesignal.onesignal.core.internal.session
 
 import com.onesignal.onesignal.core.LogLevel
-import com.onesignal.onesignal.core.internal.AppEntryAction
+import com.onesignal.onesignal.core.internal.application.AppEntryAction
 import com.onesignal.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.JSONUtils
@@ -206,7 +206,7 @@ internal class SessionService(
             // Reset other DIRECT channels, they will init an INDIRECT influence
             // In that way we finish the session duration time for the last influenced session
             for (tracker in channelTrackersToReset) {
-                if (tracker.influenceType!!.isDirect()) {
+                if (tracker.influenceType?.isDirect() == true) {
                     influencesToEnd.add(tracker.currentSessionInfluence)
                     tracker.resetAndInitInfluence()
                 }
@@ -216,7 +216,7 @@ internal class SessionService(
         Logging.debug("OneSignal SessionManager attemptSessionUpgrade try UNATTRIBUTED to INDIRECT upgrade")
         // We will try to override the UNATTRIBUTED session with INDIRECT
         for (channelTracker in channelTrackersToReset) {
-            if (channelTracker.influenceType!!.isUnattributed()) {
+            if (channelTracker.influenceType?.isUnattributed() == true) {
                 val lastIds = channelTracker.lastReceivedIds
                 // There are new ids for attribution and the application was open again without resetting session
                 if (lastIds.length() > 0 && !entryAction.isAppClose) {

@@ -1,5 +1,8 @@
 package com.onesignal.onesignal.core.internal.device
 
+/**
+ * Provides access to the underlying device information.
+ */
 interface IDeviceService {
     val isGooglePlayServicesAvailable: Boolean
     val isGooglePlayStoreInstalled: Boolean
@@ -7,10 +10,8 @@ interface IDeviceService {
     val isAndroidDeviceType: Boolean
     val isFireOSDeviceType: Boolean
     val isHuaweiDeviceType: Boolean
-
     val deviceType: Int
-
-    fun isGMSInstalledAndEnabled(): Boolean
-    fun hasAllHMSLibrariesForPushKit(): Boolean
-    fun hasFCMLibrary(): Boolean
+    val isGMSInstalledAndEnabled: Boolean
+    val hasAllHMSLibrariesForPushKit: Boolean
+    val hasFCMLibrary: Boolean
 }

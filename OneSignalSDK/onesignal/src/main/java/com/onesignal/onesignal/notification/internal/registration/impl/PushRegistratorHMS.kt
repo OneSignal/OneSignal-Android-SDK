@@ -54,7 +54,7 @@ internal class PushRegistratorHMS(
     private suspend fun getHMSTokenTask(context: Context) : IPushRegistrator.RegisterResult {
         // Check required to prevent AGConnectServicesConfig or HmsInstanceId used below
         //   from throwing a ClassNotFoundException
-        if (!_deviceService.hasAllHMSLibrariesForPushKit()) {
+        if (!_deviceService.hasAllHMSLibrariesForPushKit) {
             return IPushRegistrator.RegisterResult(
                 null,
                 IPushRegistrator.RegisterStatus.PUSH_STATUS_MISSING_HMS_PUSHKIT_LIBRARY

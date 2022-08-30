@@ -1,7 +1,7 @@
 package com.onesignal.onesignal.notification.internal.listeners
 
 import android.app.Activity
-import com.onesignal.onesignal.core.internal.AppEntryAction
+import com.onesignal.onesignal.core.internal.application.AppEntryAction
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.JSONUtils
 import com.onesignal.onesignal.core.internal.device.IDeviceService
@@ -91,6 +91,7 @@ internal class NotificationListener(
     }
 
     private fun shouldInitDirectSessionFromNotificationOpen(context: Activity): Boolean {
+        // We assume we are called *before* the IApplicationService has determined focus.
         if (_applicationService.isInForeground) {
             return false
         }
