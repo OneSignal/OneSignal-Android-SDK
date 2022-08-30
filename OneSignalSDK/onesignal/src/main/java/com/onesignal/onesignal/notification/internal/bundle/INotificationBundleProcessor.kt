@@ -8,7 +8,7 @@ internal interface INotificationBundleProcessor {
     /**
      * Process bundle passed from FCM / HMS / ADM broadcast receiver
      */
-    fun processBundleFromReceiver(context: Context, bundle: Bundle) : ProcessedBundleResult?
+    fun processBundleFromReceiver(context: Context, bundle: Bundle): ProcessedBundleResult?
 
     class ProcessedBundleResult {
         private var isOneSignalPayload = false

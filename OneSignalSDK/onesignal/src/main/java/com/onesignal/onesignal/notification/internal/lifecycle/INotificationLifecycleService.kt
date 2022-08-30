@@ -2,9 +2,9 @@ package com.onesignal.onesignal.notification.internal.lifecycle
 
 import android.app.Activity
 import android.content.Context
-import com.onesignal.onesignal.core.internal.common.events.ICallbackNotifier
-import com.onesignal.onesignal.core.internal.common.events.IEventProducer
-import com.onesignal.onesignal.notification.*
+import com.onesignal.onesignal.notification.INotificationOpenedHandler
+import com.onesignal.onesignal.notification.INotificationReceivedEvent
+import com.onesignal.onesignal.notification.INotificationWillShowInForegroundHandler
 import com.onesignal.onesignal.notification.internal.common.NotificationGenerationJob
 import org.json.JSONArray
 import org.json.JSONObject
@@ -44,11 +44,10 @@ interface INotificationLifecycleService {
     fun setExternalWillShowInForegroundHandler(handler: INotificationWillShowInForegroundHandler?)
     fun setExternalNotificationOpenedHandler(handler: INotificationOpenedHandler?)
 
-
-    suspend fun canReceiveNotification(jsonPayload: JSONObject) : Boolean
+    suspend fun canReceiveNotification(jsonPayload: JSONObject): Boolean
     fun externalRemoteNotificationReceived(context: Context, notificationReceivedEvent: INotificationReceivedEvent)
     fun externalNotificationWillShowInForeground(notificationReceivedEvent: INotificationReceivedEvent)
     suspend fun notificationReceived(notificationJob: NotificationGenerationJob)
-    suspend fun canOpenNotification(activity: Activity, data: JSONObject) : Boolean
+    suspend fun canOpenNotification(activity: Activity, data: JSONObject): Boolean
     suspend fun notificationOpened(activity: Activity, data: JSONArray, notificationId: String)
 }

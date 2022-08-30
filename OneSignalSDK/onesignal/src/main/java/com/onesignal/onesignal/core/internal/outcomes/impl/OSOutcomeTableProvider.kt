@@ -13,10 +13,10 @@ class OSOutcomeTableProvider {
      */
     fun upgradeOutcomeTableRevision1To2(db: SQLiteDatabase) {
         val commonColumns: String = OutcomeEventsTable.ID.toString() + "," +
-                OutcomeEventsTable.COLUMN_NAME_SESSION + "," +
-                OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + "," +
-                OutcomeEventsTable.COLUMN_NAME_NAME + "," +
-                OutcomeEventsTable.COLUMN_NAME_TIMESTAMP
+            OutcomeEventsTable.COLUMN_NAME_SESSION + "," +
+            OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + "," +
+            OutcomeEventsTable.COLUMN_NAME_NAME + "," +
+            OutcomeEventsTable.COLUMN_NAME_TIMESTAMP
         try {
             // Since SQLite does not support dropping a column we need to:
             //   1. Create a temptable
@@ -49,10 +49,10 @@ class OSOutcomeTableProvider {
      */
     fun upgradeOutcomeTableRevision2To3(db: SQLiteDatabase) {
         val commonColumns: String = OutcomeEventsTable.ID + "," +
-                OutcomeEventsTable.COLUMN_NAME_NAME + "," +
-                OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + "," +
-                OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + "," +
-                OutcomeEventsTable.COLUMN_NAME_WEIGHT
+            OutcomeEventsTable.COLUMN_NAME_NAME + "," +
+            OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + "," +
+            OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + "," +
+            OutcomeEventsTable.COLUMN_NAME_WEIGHT
         val commonColumnsWithSessionColumn = commonColumns + "," + OutcomeEventsTable.COLUMN_NAME_SESSION
         val commonColumnsWithNewSessionColumn = commonColumns + "," + OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE
         val auxOutcomeTableName: String = OutcomeEventsTable.TABLE_NAME + "_aux"
@@ -66,8 +66,10 @@ class OSOutcomeTableProvider {
             db.execSQL("BEGIN TRANSACTION;")
             db.execSQL("ALTER TABLE " + OutcomeEventsTable.TABLE_NAME + " RENAME TO " + auxOutcomeTableName + ";")
             db.execSQL(SQL_CREATE_OUTCOME_ENTRIES_V3)
-            db.execSQL("INSERT INTO " + OutcomeEventsTable.TABLE_NAME + "(" + commonColumnsWithNewSessionColumn + ")" +
-                    " SELECT " + commonColumnsWithSessionColumn + " FROM " + auxOutcomeTableName + ";")
+            db.execSQL(
+                "INSERT INTO " + OutcomeEventsTable.TABLE_NAME + "(" + commonColumnsWithNewSessionColumn + ")" +
+                    " SELECT " + commonColumnsWithSessionColumn + " FROM " + auxOutcomeTableName + ";"
+            )
             db.execSQL("DROP TABLE $auxOutcomeTableName;")
         } catch (e: SQLiteException) {
             e.printStackTrace()
@@ -84,7 +86,7 @@ class OSOutcomeTableProvider {
      */
     fun upgradeCacheOutcomeTableRevision1To2(db: SQLiteDatabase) {
         val commonColumns: String = CachedUniqueOutcomeTable.ID + "," +
-                CachedUniqueOutcomeTable.COLUMN_NAME_NAME
+            CachedUniqueOutcomeTable.COLUMN_NAME_NAME
         val commonColumnsWithNotificationIdColumn = commonColumns + "," + CachedUniqueOutcomeTable.COLUMN_NAME_NOTIFICATION_ID
         val commonColumnsWithNewInfluenceIdColumn = commonColumns + "," + CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID
         val oldCacheUniqueOutcomeTable: String = CachedUniqueOutcomeTable.TABLE_NAME_V1
@@ -97,10 +99,14 @@ class OSOutcomeTableProvider {
             //   4. Drop altered table
             db.execSQL("BEGIN TRANSACTION;")
             db.execSQL(SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2)
-            db.execSQL("INSERT INTO " + CachedUniqueOutcomeTable.TABLE_NAME_V2 + "(" + commonColumnsWithNewInfluenceIdColumn + ")" +
-                    " SELECT " + commonColumnsWithNotificationIdColumn + " FROM " + oldCacheUniqueOutcomeTable + ";")
-            db.execSQL("UPDATE " + CachedUniqueOutcomeTable.TABLE_NAME_V2 +
-                    " SET " + CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE + " = \'" + InfluenceChannel.NOTIFICATION.toString() + "\';")
+            db.execSQL(
+                "INSERT INTO " + CachedUniqueOutcomeTable.TABLE_NAME_V2 + "(" + commonColumnsWithNewInfluenceIdColumn + ")" +
+                    " SELECT " + commonColumnsWithNotificationIdColumn + " FROM " + oldCacheUniqueOutcomeTable + ";"
+            )
+            db.execSQL(
+                "UPDATE " + CachedUniqueOutcomeTable.TABLE_NAME_V2 +
+                    " SET " + CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE + " = \'" + InfluenceChannel.NOTIFICATION.toString() + "\';"
+            )
             db.execSQL("DROP TABLE $oldCacheUniqueOutcomeTable;")
         } catch (e: SQLiteException) {
             e.printStackTrace()

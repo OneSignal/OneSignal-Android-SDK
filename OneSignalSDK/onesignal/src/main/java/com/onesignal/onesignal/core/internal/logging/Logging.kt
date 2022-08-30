@@ -20,37 +20,37 @@ object Logging {
 
     @JvmStatic
     fun verbose(message: String, throwable: Throwable? = null) {
-        log(LogLevel.VERBOSE, message, throwable);
+        log(LogLevel.VERBOSE, message, throwable)
     }
 
     @JvmStatic
     fun debug(message: String, throwable: Throwable? = null) {
-        log(LogLevel.DEBUG, message, throwable);
+        log(LogLevel.DEBUG, message, throwable)
     }
 
     @JvmStatic
     fun info(message: String, throwable: Throwable? = null) {
-        log(LogLevel.INFO, message, throwable);
+        log(LogLevel.INFO, message, throwable)
     }
 
     @JvmStatic
     fun warn(message: String, throwable: Throwable? = null) {
-        log(LogLevel.WARN, message, throwable);
+        log(LogLevel.WARN, message, throwable)
     }
 
     @JvmStatic
     fun error(message: String, throwable: Throwable? = null) {
-        log(LogLevel.ERROR, message, throwable);
+        log(LogLevel.ERROR, message, throwable)
     }
 
     @JvmStatic
     fun fatal(message: String, throwable: Throwable? = null) {
-        log(LogLevel.FATAL, message, throwable);
+        log(LogLevel.FATAL, message, throwable)
     }
 
     @JvmStatic
     fun log(level: LogLevel, message: String) {
-        log(level, message, null);
+        log(level, message, null)
     }
 
     @JvmStatic

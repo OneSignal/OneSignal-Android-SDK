@@ -6,5 +6,5 @@ interface IUserIdentityConflictResolver {
      * construct a new user that represents a resolution to the
      * conflict.
      */
-    fun resolve(local: IUserManager, remote: IUserManager) : IUserManager
+    fun resolve(local: IUserManager, remote: IUserManager): IUserManager
 }

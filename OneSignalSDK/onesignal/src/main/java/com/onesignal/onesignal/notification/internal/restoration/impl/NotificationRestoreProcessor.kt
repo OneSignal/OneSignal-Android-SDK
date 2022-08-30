@@ -2,9 +2,9 @@ package com.onesignal.onesignal.notification.internal.restoration.impl
 
 import android.os.Build
 import com.onesignal.onesignal.core.internal.application.IApplicationService
-import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.notification.internal.badges.IBadgeCountUpdater
+import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.onesignal.notification.internal.data.INotificationDataController
 import com.onesignal.onesignal.notification.internal.generation.INotificationGenerationWorkManager
 import com.onesignal.onesignal.notification.internal.restoration.INotificationRestoreProcessor
@@ -24,7 +24,7 @@ internal class NotificationRestoreProcessor(
             var excludeAndroidIds = getVisibleNotifications()
             var outstandingNotifications = _dataController.listNotificationsForOutstanding(excludeAndroidIds)
 
-            for(notification in outstandingNotifications) {
+            for (notification in outstandingNotifications) {
                 processNotification(notification, DELAY_BETWEEN_NOTIFICATION_RESTORES_MS)
             }
 
@@ -45,7 +45,7 @@ internal class NotificationRestoreProcessor(
             false
         )
 
-        if(delay > 0)
+        if (delay > 0)
             delay(delay.toLong())
     }
 
@@ -56,7 +56,7 @@ internal class NotificationRestoreProcessor(
      * they are displayed under a different channel which isn't ideal.
      * For pre-O devices this still have the benefit of being more efficient
      */
-    private fun getVisibleNotifications() : List<Int>? {
+    private fun getVisibleNotifications(): List<Int>? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return null
         val activeNotifs = NotificationHelper.getActiveNotifications(_applicationService.appContext)
         if (activeNotifs.isEmpty()) return null

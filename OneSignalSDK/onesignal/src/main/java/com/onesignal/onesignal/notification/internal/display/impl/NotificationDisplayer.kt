@@ -1,16 +1,16 @@
 package com.onesignal.onesignal.notification.internal.display.impl
 
-import android.app.PendingIntent
-import android.graphics.Bitmap
-import android.service.notification.StatusBarNotification
-import android.widget.RemoteViews
-import android.graphics.BitmapFactory
 import android.R.drawable
 import android.app.Notification
+import android.app.PendingIntent
 import android.content.Context
 import android.content.res.Resources
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Build
+import android.service.notification.StatusBarNotification
 import android.view.View
+import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.onesignal.R
@@ -18,10 +18,10 @@ import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.AndroidSupportV4Compat
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.onesignal.core.internal.common.exceptions.MainThreadException
-import com.onesignal.onesignal.notification.internal.common.NotificationConstants
-import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.onesignal.notification.internal.common.NotificationGenerationJob
+import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.onesignal.notification.internal.display.INotificationDisplayBuilder
 import com.onesignal.onesignal.notification.internal.display.INotificationDisplayer
 import com.onesignal.onesignal.notification.internal.display.ISummaryNotificationDisplayer
@@ -30,7 +30,8 @@ import org.json.JSONObject
 import java.math.BigInteger
 import java.net.URL
 import java.security.SecureRandom
-import java.util.*
+import java.util.Arrays
+import java.util.Random
 
 internal class NotificationDisplayer(
     private val _applicationService: IApplicationService,
@@ -55,7 +56,7 @@ internal class NotificationDisplayer(
 
     suspend fun displayIAMPreviewNotification(notificationJob: NotificationGenerationJob): Boolean {
         return showNotification(notificationJob)
-    }// Runtime check against showing the notification from the main thread
+    } // Runtime check against showing the notification from the main thread
 
     /**
      * For shadow test purpose
@@ -302,7 +303,8 @@ internal class NotificationDisplayer(
             val colorId =
                 contextResources!!.getIdentifier(colorDefaultResource, "color", packageName)
             if (colorId != 0) customView.setTextColor(
-                viewId, AndroidSupportV4Compat.ContextCompat.getColor(
+                viewId,
+                AndroidSupportV4Compat.ContextCompat.getColor(
                     currentContext!!, colorId
                 )
             )

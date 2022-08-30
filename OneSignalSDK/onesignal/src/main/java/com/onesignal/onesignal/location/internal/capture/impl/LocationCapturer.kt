@@ -13,7 +13,7 @@ import com.onesignal.onesignal.location.internal.preferences.ILocationPreference
 import java.math.BigDecimal
 import java.math.RoundingMode
 
-internal class LocationCapturer (
+internal class LocationCapturer(
     private val _applicationService: IApplicationService,
     private val _time: ITime,
     private val _prefs: ILocationPreferencesService,
@@ -30,10 +30,9 @@ internal class LocationCapturer (
     override fun captureLastLocation() {
         val location = _controller.getLastLocation()
 
-        if(location != null) {
+        if (location != null) {
             capture(location)
-        }
-        else {
+        } else {
             _prefs.lastLocationTime = _time.currentTimeMillis
         }
     }

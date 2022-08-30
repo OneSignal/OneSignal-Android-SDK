@@ -1,8 +1,8 @@
 package com.onesignal.onesignal.core.internal.backend
 
+import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.backend.http.CacheKeys
 import com.onesignal.onesignal.core.internal.backend.http.IHttpClient
-import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.core.internal.params.IWriteableParamsService
@@ -13,14 +13,15 @@ import java.net.HttpURLConnection
 
 class ParamsBackendService(
     private val _writeableParams: IWriteableParamsService,
-    private val _http: IHttpClient) : IParamsBackendService {
+    private val _http: IHttpClient
+) : IParamsBackendService {
 
     override suspend fun fetchAndSaveRemoteParams(appId: String, subscriptionId: String?) {
         Logging.log(LogLevel.DEBUG, "ParamsBackendService(appId: $appId, subscriptionId: $subscriptionId)")
 
-        var paramsUrl = "apps/${appId}/android_params.js"
+        var paramsUrl = "apps/$appId/android_params.js"
         if (subscriptionId != null)
-            paramsUrl += "?player_id=${subscriptionId}"
+            paramsUrl += "?player_id=$subscriptionId"
 
         // retrieve the params in a do-while loop.  If the first call fails we want to retry
         // until we get it right.  The only time we quit on failure is if there's an exception,
@@ -30,13 +31,12 @@ class ParamsBackendService(
             Logging.debug("Starting request to get Android parameters.")
             val response = _http.get(paramsUrl, CacheKeys.REMOTE_PARAMS)
 
-            if(response.isSuccess)
+            if (response.isSuccess)
                 processJson(appId, response.payload!!)
             else if (response.statusCode == HttpURLConnection.HTTP_FORBIDDEN) {
                 Logging.fatal("403 error getting OneSignal params, omitting further retries!")
                 return
-            }
-            else {
+            } else {
                 var sleepTime = MIN_WAIT_BETWEEN_RETRIES + androidParamsRetries * INCREASE_BETWEEN_RETRIES
                 if (sleepTime > MAX_WAIT_BETWEEN_RETRIES)
                     sleepTime = MAX_WAIT_BETWEEN_RETRIES
@@ -100,12 +100,13 @@ class ParamsBackendService(
 
         // Process outcomes params
         if (responseJson.has(OUTCOME_PARAM))
-            _writeableParams.influenceParams = processOutcomeJson(responseJson.optJSONObject(
-                OUTCOME_PARAM
-            ))
+            _writeableParams.influenceParams = processOutcomeJson(
+                responseJson.optJSONObject(
+                    OUTCOME_PARAM
+                )
+            )
         else
             _writeableParams.influenceParams = IParamsService.InfluenceParams()
-
 
         if (responseJson.has(FCM_PARENT_PARAM)) {
             var projectId: String?
@@ -118,15 +119,14 @@ class ParamsBackendService(
             projectId = fcm.optString(FCM_PROJECT_ID, null)
 
             _writeableParams.fcmParams = IParamsService.FCMParams(projectId, appId, apiKey)
-        }
-        else {
+        } else {
             _writeableParams.fcmParams = IParamsService.FCMParams()
         }
 
         _writeableParams.indicateChanged()
     }
 
-    private fun processOutcomeJson(outcomeJson: JSONObject) : IParamsService.InfluenceParams {
+    private fun processOutcomeJson(outcomeJson: JSONObject): IParamsService.InfluenceParams {
         var indirectNotificationAttributionWindow: Int =
             IParamsService.InfluenceParams.DEFAULT_INDIRECT_ATTRIBUTION_WINDOW
         var notificationLimit: Int = IParamsService.InfluenceParams.DEFAULT_NOTIFICATION_LIMIT
@@ -153,22 +153,25 @@ class ParamsBackendService(
                     NOTIFICATION_ATTRIBUTION_PARAM
                 )!!
                 indirectNotificationAttributionWindow = indirectNotificationAttribution.optInt(
-                        "minutes_since_displayed",
+                    "minutes_since_displayed",
                     IParamsService.InfluenceParams.DEFAULT_INDIRECT_ATTRIBUTION_WINDOW
                 )
-                notificationLimit = indirectNotificationAttribution.optInt("limit",
+                notificationLimit = indirectNotificationAttribution.optInt(
+                    "limit",
                     IParamsService.InfluenceParams.DEFAULT_NOTIFICATION_LIMIT
                 )
             }
 
             if (indirect.has(IAM_ATTRIBUTION_PARAM)) {
                 val indirectIAMAttribution = indirect.optJSONObject(IAM_ATTRIBUTION_PARAM)!!
-                indirectIAMAttributionWindow = indirectIAMAttribution.optInt("minutes_since_displayed",
+                indirectIAMAttributionWindow = indirectIAMAttribution.optInt(
+                    "minutes_since_displayed",
                     IParamsService.InfluenceParams.DEFAULT_INDIRECT_ATTRIBUTION_WINDOW
                 )
 
                 if (indirectIAMAttribution != null) {
-                    iamLimit = indirectIAMAttribution.optInt("limit",
+                    iamLimit = indirectIAMAttribution.optInt(
+                        "limit",
                         IParamsService.InfluenceParams.DEFAULT_NOTIFICATION_LIMIT
                     )
                 }

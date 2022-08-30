@@ -1,6 +1,6 @@
 package com.onesignal.onesignal.core.internal.application
 
-interface IApplicationLifecycleHandler  {
+interface IApplicationLifecycleHandler {
     fun onFocus()
     fun onUnfocused()
 }

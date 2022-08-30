@@ -1,29 +1,33 @@
 package com.onesignal.onesignal.iam.internal.display.impl
 
 import android.animation.Animator
-import android.webkit.WebView
-import android.widget.PopupWindow
-import android.app.Activity
-import android.widget.RelativeLayout
-import android.view.ViewGroup
-import android.view.WindowManager
-import android.graphics.drawable.ColorDrawable
-import android.view.Gravity
-import androidx.cardview.widget.CardView
-import android.view.animation.Animation
-import android.animation.ValueAnimator
 import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
+import android.app.Activity
 import android.content.Context
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Build
+import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
+import android.view.WindowManager
+import android.view.animation.Animation
+import android.webkit.WebView
+import android.widget.PopupWindow
+import android.widget.RelativeLayout
+import androidx.cardview.widget.CardView
 import androidx.core.widget.PopupWindowCompat
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.onesignal.core.internal.common.ViewUtils
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.iam.internal.InAppMessageContent
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 
 /**
  * Layout Documentation
@@ -126,7 +130,6 @@ internal class InAppMessageView(
         this.pageHeight = pageHeight
 
         runBlocking(Dispatchers.Main) {
-
         }
 
         withContext(Dispatchers.Main) {
@@ -207,8 +210,9 @@ internal class InAppMessageView(
         draggableParams.messageHeight = pageHeight
         draggableParams.height = displayYSize
         when (displayLocation) {
-            WebViewManager.Position.TOP_BANNER -> draggableParams.dragThresholdY =
-                marginPxSizeTop - DRAG_THRESHOLD_PX_SIZE
+            WebViewManager.Position.TOP_BANNER ->
+                draggableParams.dragThresholdY =
+                    marginPxSizeTop - DRAG_THRESHOLD_PX_SIZE
             WebViewManager.Position.BOTTOM_BANNER -> {
                 draggableParams.posY = displayYSize - pageHeight
                 draggableParams.dragThresholdY = marginPxSizeBottom + DRAG_THRESHOLD_PX_SIZE
@@ -391,7 +395,7 @@ internal class InAppMessageView(
         isDismissTimerSet = true
         delay(displayDuration.toLong() * 1000)
 
-        if(cancelDismissTimer) {
+        if (cancelDismissTimer) {
             cancelDismissTimer = false
             return
         }
@@ -536,8 +540,10 @@ internal class InAppMessageView(
     ) {
         // Animate the message view from above the screen downward to the top
         OneSignalAnimate.animateViewByTranslation(
-            messageView, (
-                    -height - marginPxSizeTop).toFloat(),
+            messageView,
+            (
+                -height - marginPxSizeTop
+                ).toFloat(),
             0f,
             IN_APP_BANNER_ANIMATION_DURATION_MS,
             OneSignalBounceInterpolator(0.1, 8.0),
@@ -553,8 +559,10 @@ internal class InAppMessageView(
     ) {
         // Animate the message view from under the screen upward to the bottom
         OneSignalAnimate.animateViewByTranslation(
-            messageView, (
-                    height + marginPxSizeBottom).toFloat(),
+            messageView,
+            (
+                height + marginPxSizeBottom
+                ).toFloat(),
             0f,
             IN_APP_BANNER_ANIMATION_DURATION_MS,
             OneSignalBounceInterpolator(0.1, 8.0),
@@ -631,17 +639,17 @@ internal class InAppMessageView(
 
     override fun toString(): String {
         return "InAppMessageView{" +
-                "currentActivity=" + currentActivity +
-                ", pageWidth=" + pageWidth +
-                ", pageHeight=" + pageHeight +
-                ", displayDuration=" + displayDuration +
-                ", hasBackground=" + hasBackground +
-                ", shouldDismissWhenActive=" + shouldDismissWhenActive +
-                ", isDragging=" + isDragging +
-                ", disableDragDismiss=" + disableDragDismiss +
-                ", displayLocation=" + displayPosition +
-                ", webView=" + webView +
-                '}'
+            "currentActivity=" + currentActivity +
+            ", pageWidth=" + pageWidth +
+            ", pageHeight=" + pageHeight +
+            ", displayDuration=" + displayDuration +
+            ", hasBackground=" + hasBackground +
+            ", shouldDismissWhenActive=" + shouldDismissWhenActive +
+            ", isDragging=" + isDragging +
+            ", disableDragDismiss=" + disableDragDismiss +
+            ", displayLocation=" + displayPosition +
+            ", webView=" + webView +
+            '}'
     }
 
     companion object {

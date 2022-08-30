@@ -29,10 +29,10 @@ package com.onesignal.onesignal.notification.internal.analytics.impl
 import android.content.Context
 import android.os.Bundle
 import com.onesignal.onesignal.core.internal.application.IApplicationService
-import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.notification.internal.analytics.IAnalyticsTracker
 import java.lang.reflect.Method
 import java.util.concurrent.atomic.AtomicLong
@@ -41,7 +41,7 @@ internal class FirebaseAnalyticsTracker(
     private val _applicationService: IApplicationService,
     private val _preferences: IPreferencesService,
     private val _time: ITime
-    ) : IAnalyticsTracker {
+) : IAnalyticsTracker {
 
     private var lastReceivedTime: AtomicLong? = null
     private var lastOpenedTime: AtomicLong? = null
@@ -65,7 +65,7 @@ internal class FirebaseAnalyticsTracker(
             val trackMethod = getTrackMethod(FirebaseAnalyticsClass)
             val event = EVENT_NOTIFICATION_INFLUENCE_OPEN
 
-            //construct the firebase analytics event bundle
+            // construct the firebase analytics event bundle
             val bundle = Bundle()
             bundle.putString("source", "OneSignal")
             bundle.putString("medium", "notification")
@@ -86,11 +86,11 @@ internal class FirebaseAnalyticsTracker(
 
         lastOpenedTime!!.set(_time.currentTimeMillis)
         try {
-            //get the source, medium, campaign params from the openResult
+            // get the source, medium, campaign params from the openResult
             val firebaseAnalyticsInstance = getFirebaseAnalyticsInstance()
             val trackMethod = getTrackMethod(FirebaseAnalyticsClass)
 
-            //construct the firebase analytics event bundle
+            // construct the firebase analytics event bundle
             val bundle = Bundle()
             bundle.putString("source", "OneSignal")
             bundle.putString("medium", "notification")
@@ -107,10 +107,10 @@ internal class FirebaseAnalyticsTracker(
             return
 
         try {
-            //get the source, medium, campaign params from the openResult
+            // get the source, medium, campaign params from the openResult
             val firebaseAnalyticsInstance = getFirebaseAnalyticsInstance()
             val trackMethod = getTrackMethod(FirebaseAnalyticsClass)
-            //construct the firebase analytics event bundle
+            // construct the firebase analytics event bundle
             val bundle = Bundle()
             bundle.putString("source", "OneSignal")
             bundle.putString("medium", "notification")

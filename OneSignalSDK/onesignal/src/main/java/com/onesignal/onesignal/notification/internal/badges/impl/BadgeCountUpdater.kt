@@ -6,12 +6,12 @@ import androidx.annotation.RequiresApi
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.onesignal.core.internal.database.impl.OneSignalDbContract
-import com.onesignal.onesignal.notification.internal.common.NotificationHelper
-import com.onesignal.onesignal.notification.internal.data.INotificationQueryHelper
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.notification.internal.badges.IBadgeCountUpdater
 import com.onesignal.onesignal.notification.internal.badges.impl.shortcutbadger.ShortcutBadgeException
 import com.onesignal.onesignal.notification.internal.badges.impl.shortcutbadger.ShortcutBadger
+import com.onesignal.onesignal.notification.internal.common.NotificationHelper
+import com.onesignal.onesignal.notification.internal.data.INotificationQueryHelper
 import com.onesignal.onesignal.notification.internal.limiting.INotificationLimitManager
 
 internal class BadgeCountUpdater(
@@ -70,10 +70,10 @@ internal class BadgeCountUpdater(
             OneSignalDbContract.NotificationTable.TABLE_NAME,
             null,
             _queryHelper.recentUninteractedWithNotificationsWhere().toString(),
-            null,  // Where args
-            null,  // group by
-            null,  // filter by row groups
-            null,  // sort order, new to old
+            null, // Where args
+            null, // group by
+            null, // filter by row groups
+            null, // sort order, new to old
             INotificationLimitManager.Constants.maxNumberOfNotifications.toString()
         ).use {
             notificationCount = it.count

@@ -44,19 +44,18 @@ internal class InAppDisplayer(
 ) : IInAppDisplayer {
     private var lastInstance: WebViewManager? = null
 
-    override suspend fun displayMessage(message: InAppMessage) : Boolean? {
+    override suspend fun displayMessage(message: InAppMessage): Boolean? {
         _state.inAppMessageShowing = true
         var response = _backend.getIAMData(_configModelStore.get().appId!!, message.messageId, InAppHelper.variantIdForMessage(message))
 
-        if(response.content != null) {
+        if (response.content != null) {
             message.displayDuration = response.content!!.displayDuration!!
             _sessionService.onInAppMessageReceived(message.messageId)
             showMessageContent(message, response.content!!)
             return true
-        }
-        else {
+        } else {
             _state.inAppMessageShowing = false
-            return if(response.shouldRetry) {
+            return if (response.shouldRetry) {
                 // Retry displaying the same IAM
                 // Using the queueMessageForDisplay method follows safety checks to prevent issues
                 // like having 2 IAMs showing at once or duplicate IAMs in the queue
@@ -67,7 +66,7 @@ internal class InAppDisplayer(
         }
     }
 
-    override suspend fun displayPreviewMessage(previewUUID: String) : Boolean {
+    override suspend fun displayPreviewMessage(previewUUID: String): Boolean {
         _state.inAppMessageShowing = true
         val message = InAppMessage(true, _time)
         val content = _backend.getIAMPreviewData(_configModelStore.get().appId!!, previewUUID)

@@ -10,12 +10,12 @@ import org.json.JSONException
 import org.json.JSONObject
 import java.util.ArrayList
 
-internal class InAppHydrator (
+internal class InAppHydrator(
     private val _time: ITime,
     private val _userManager: IUserManager
-        ) {
+) {
 
-    fun hydrateIAMMessages(jsonArray: JSONArray) : List<InAppMessage> {
+    fun hydrateIAMMessages(jsonArray: JSONArray): List<InAppMessage> {
         val newMessages = ArrayList<InAppMessage>()
         for (i in 0 until jsonArray.length()) {
             val messageJson: JSONObject = jsonArray.getJSONObject(i)
@@ -28,7 +28,7 @@ internal class InAppHydrator (
         return newMessages
     }
 
-    fun hydrateIAMMessageContent(jsonObject: JSONObject) : InAppMessageContent? {
+    fun hydrateIAMMessageContent(jsonObject: JSONObject): InAppMessageContent? {
         try {
             val content = InAppMessageContent(jsonObject)
             if (content.contentHtml == null) {
@@ -55,8 +55,8 @@ internal class InAppHydrator (
 
     companion object {
         private const val LIQUID_TAG_SCRIPT = "\n\n" +
-                "<script>\n" +
-                "    setPlayerTags(%s);\n" +
-                "</script>"
+            "<script>\n" +
+            "    setPlayerTags(%s);\n" +
+            "</script>"
     }
 }

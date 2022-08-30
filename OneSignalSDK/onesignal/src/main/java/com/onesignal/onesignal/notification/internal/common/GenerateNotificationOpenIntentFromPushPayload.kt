@@ -16,7 +16,7 @@ object GenerateNotificationOpenIntentFromPushPayload {
     /**
      * Create a new [GenerateNotificationOpenIntent] from the FCM payload
      */
-    fun create(context: Context, fcmPayload: JSONObject) : GenerateNotificationOpenIntent {
+    fun create(context: Context, fcmPayload: JSONObject): GenerateNotificationOpenIntent {
         val behavior = OSNotificationOpenBehaviorFromPushPayload(
             context,
             fcmPayload,

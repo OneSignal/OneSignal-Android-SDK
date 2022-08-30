@@ -1,13 +1,13 @@
 package com.onesignal.onesignal.core
 
 import android.content.Context
-import com.onesignal.onesignal.iam.IIAMManager
-import com.onesignal.onesignal.core.internal.service.IServiceProvider
 import com.onesignal.onesignal.core.internal.OneSignalImp
-import com.onesignal.onesignal.location.ILocationManager
-import com.onesignal.onesignal.notification.INotificationsManager
+import com.onesignal.onesignal.core.internal.service.IServiceProvider
 import com.onesignal.onesignal.core.user.IUserIdentityConflictResolver
 import com.onesignal.onesignal.core.user.IUserManager
+import com.onesignal.onesignal.iam.IIAMManager
+import com.onesignal.onesignal.location.ILocationManager
+import com.onesignal.onesignal.notification.INotificationsManager
 
 /**
  * This singleton class is the entry point to the OneSignal SDK. It
@@ -137,7 +137,7 @@ object OneSignal {
      * because both Push and IAM are owned by the OS.
      */
     @JvmStatic
-    suspend fun login(externalId: String): IUserManager = oneSignal.login(externalId);
+    suspend fun login(externalId: String): IUserManager = oneSignal.login(externalId)
     @JvmStatic
     suspend fun login(externalId: String, externalIdHash: String? = null): IUserManager = oneSignal.login(externalId, externalIdHash)
 
@@ -155,7 +155,6 @@ object OneSignal {
     @JvmStatic
     fun setUserConflictResolver(handler: (local: IUserManager, remote: IUserManager) -> IUserManager) = oneSignal.setUserConflictResolver(handler)
 
-
     private val oneSignal: IOneSignal by lazy {
         OneSignalImp()
     }
@@ -166,11 +165,11 @@ object OneSignal {
     /**
      * Inline function to retrieve a specific service
      */
-    internal inline fun <reified T: Any> getService(): T {
+    internal inline fun <reified T : Any> getService(): T {
         return services.getService(T::class.java)
     }
 
-    internal inline fun <reified T: Any> getServiceOrNull() : T? {
+    internal inline fun <reified T : Any> getServiceOrNull(): T? {
         return services.getServiceOrNull(T::class.java)
     }
 }

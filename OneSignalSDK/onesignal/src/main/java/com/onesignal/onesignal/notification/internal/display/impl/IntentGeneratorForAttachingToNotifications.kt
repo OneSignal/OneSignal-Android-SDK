@@ -32,7 +32,7 @@ class IntentGeneratorForAttachingToNotifications(
             //   tracking Activity instance around.
             .addFlags(
                 Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP
             )
     }
 
@@ -53,8 +53,8 @@ class IntentGeneratorForAttachingToNotifications(
         )
         intent.addFlags(
             Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
-                    Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET
+                Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET
         )
         return intent
     }
@@ -63,7 +63,7 @@ class IntentGeneratorForAttachingToNotifications(
         requestCode: Int,
         oneSignalIntent: Intent,
     ): PendingIntent? {
-        val flags =  PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         return PendingIntent.getActivity(
             context,
             requestCode,

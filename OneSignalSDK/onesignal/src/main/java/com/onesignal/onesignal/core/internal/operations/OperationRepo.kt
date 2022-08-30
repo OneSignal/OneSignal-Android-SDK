@@ -3,7 +3,9 @@ package com.onesignal.onesignal.core.internal.operations
 import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.startup.IStartableService
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 
 class OperationRepo(
@@ -17,8 +19,8 @@ class OperationRepo(
     init {
         val executorsMap: MutableMap<String, IOperationExecutor> = mutableMapOf()
 
-        for(executor in executors) {
-            for(operation in executor.operations) {
+        for (executor in executors) {
+            for (operation in executor.operations) {
                 executorsMap[operation] = executor
             }
         }
@@ -38,7 +40,7 @@ class OperationRepo(
 
     private fun doWorkAsync() = GlobalScope.async {
         try {
-            while(true) {
+            while (true) {
                 // TODO: Sleep until woken rather than hard loop
                 delay(5000L)
 
@@ -49,8 +51,7 @@ class OperationRepo(
                         ?: throw Exception("Could not find executor for operation ${op.name}")
 
                     executor.executeAsync(op)
-                }
-                catch(e: Throwable) {
+                } catch (e: Throwable) {
                     Logging.log(LogLevel.ERROR, "Error attempting to execute operation: $op", e)
                 }
             }

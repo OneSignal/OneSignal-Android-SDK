@@ -32,14 +32,13 @@ import android.os.Bundle
 import com.onesignal.onesignal.core.OneSignal
 import com.onesignal.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.onesignal.notification.internal.open.INotificationOpenedProcessor
-import kotlinx.coroutines.runBlocking
 
 abstract class NotificationOpenedActivityBase : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         OneSignal.initWithContext(applicationContext)
 
-        var self = this;
+        var self = this
 
         suspendifyOnThread {
             var openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
@@ -53,7 +52,7 @@ abstract class NotificationOpenedActivityBase : Activity() {
         super.onNewIntent(intent)
         OneSignal.initWithContext(applicationContext)
 
-        var self = this;
+        var self = this
         suspendifyOnThread {
             var openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
             openedProcessor.processFromContext(self, getIntent())

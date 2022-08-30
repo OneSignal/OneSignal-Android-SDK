@@ -94,12 +94,12 @@ internal class Trigger(json: JSONObject) {
 
     override fun toString(): String {
         return "OSTrigger{" +
-                "triggerId='" + triggerId + '\'' +
-                ", kind=" + kind +
-                ", property='" + property + '\'' +
-                ", operatorType=" + operatorType +
-                ", value=" + value +
-                '}'
+            "triggerId='" + triggerId + '\'' +
+            ", kind=" + kind +
+            ", property='" + property + '\'' +
+            ", operatorType=" + operatorType +
+            ", value=" + value +
+            '}'
     }
 
     init {

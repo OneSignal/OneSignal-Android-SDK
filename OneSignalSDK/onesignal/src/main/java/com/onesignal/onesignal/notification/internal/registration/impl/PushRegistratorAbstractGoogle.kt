@@ -26,7 +26,6 @@
  */
 package com.onesignal.onesignal.notification.internal.registration.impl
 
-import android.content.Context
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.onesignal.core.internal.device.IDeviceService
 import com.onesignal.onesignal.core.internal.logging.Logging
@@ -35,7 +34,6 @@ import com.onesignal.onesignal.notification.internal.registration.IPushRegistrat
 import kotlinx.coroutines.delay
 import java.io.IOException
 
-
 /**
  * The abstract google push registration service.  It is expected [PushRegistratorFCM] will extend
  * this class.  This performs error handling and retry logic for FCM.
@@ -43,7 +41,8 @@ import java.io.IOException
 internal abstract class PushRegistratorAbstractGoogle(
     private val _deviceService: IDeviceService,
     private val _paramsService: IParamsService,
-    private val _upgradePrompt: GooglePlayServicesUpgradePrompt) :
+    private val _upgradePrompt: GooglePlayServicesUpgradePrompt
+) :
     IPushRegistrator, IPushRegistratorCallback {
     abstract val providerName: String
 

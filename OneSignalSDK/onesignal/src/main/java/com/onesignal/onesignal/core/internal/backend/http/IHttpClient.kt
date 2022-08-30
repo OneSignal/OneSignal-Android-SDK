@@ -2,12 +2,12 @@ package com.onesignal.onesignal.core.internal.backend.http
 
 import org.json.JSONObject
 
-interface IHttpClient  {
-    suspend fun post(url: String, body: JSONObject) : HttpResponse
-    suspend fun get(url: String, cacheKey: String? = null) : HttpResponse
-    suspend fun put(url: String, body: JSONObject) : HttpResponse
-    suspend fun patch(url: String, body: JSONObject) : HttpResponse
-    suspend fun delete(url: String) : HttpResponse
+interface IHttpClient {
+    suspend fun post(url: String, body: JSONObject): HttpResponse
+    suspend fun get(url: String, cacheKey: String? = null): HttpResponse
+    suspend fun put(url: String, body: JSONObject): HttpResponse
+    suspend fun patch(url: String, body: JSONObject): HttpResponse
+    suspend fun delete(url: String): HttpResponse
 }
 
 /**

@@ -1,10 +1,14 @@
 package com.onesignal.onesignal.notification.internal.restoration.impl
 
 import android.content.Context
-import androidx.work.*
+import androidx.work.CoroutineWorker
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequest
+import androidx.work.WorkManager
+import androidx.work.WorkerParameters
 import com.onesignal.onesignal.core.OneSignal
-import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.onesignal.notification.internal.restoration.INotificationRestoreProcessor
 import com.onesignal.onesignal.notification.internal.restoration.INotificationRestoreWorkManager
 import java.util.concurrent.TimeUnit
@@ -19,7 +23,7 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
 
         // Only allow one piece of work to be enqueued.
         synchronized(restored) {
-            if(restored)
+            if (restored)
                 return
 
             restored = true

@@ -14,5 +14,4 @@ class NotificationOpenedResult(
 
     /** The action the user took to open the notification. **/
     override val action: INotificationAction
-) : INotificationOpenedResult {
-}
+) : INotificationOpenedResult

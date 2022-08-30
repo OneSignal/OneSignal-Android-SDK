@@ -31,10 +31,10 @@ internal class InAppMessageOutcome(json: JSONObject) {
 
     override fun toString(): String {
         return "OSInAppMessageOutcome{" +
-                "name='" + name + '\'' +
-                ", weight=" + weight +
-                ", unique=" + isUnique +
-                '}'
+            "name='" + name + '\'' +
+            ", weight=" + weight +
+            ", unique=" + isUnique +
+            '}'
     }
 
     companion object {

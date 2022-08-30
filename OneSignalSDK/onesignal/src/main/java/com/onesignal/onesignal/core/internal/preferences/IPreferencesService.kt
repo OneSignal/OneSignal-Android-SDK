@@ -1,12 +1,11 @@
 package com.onesignal.onesignal.core.internal.preferences
 
-
 interface IPreferencesService {
-    fun getString(store: String, key: String, defValue: String? = null) : String?
-    fun getBool(store: String, key: String, defValue: Boolean? = null) : Boolean?
-    fun getInt(store: String, key: String, defValue: Int? = null) : Int?
-    fun getLong(store: String, key: String, defValue: Long? = null) : Long?
-    fun getStringSet(store: String, key: String, defValue: Set<String>? = null) : Set<String>?
+    fun getString(store: String, key: String, defValue: String? = null): String?
+    fun getBool(store: String, key: String, defValue: Boolean? = null): Boolean?
+    fun getInt(store: String, key: String, defValue: Int? = null): Int?
+    fun getLong(store: String, key: String, defValue: Long? = null): Long?
+    fun getStringSet(store: String, key: String, defValue: Set<String>? = null): Set<String>?
 
     fun saveString(store: String, key: String, value: String?)
     fun saveBool(store: String, key: String, value: Boolean?)
@@ -27,9 +26,7 @@ object PreferencePlayerPurchasesKeys {
     const val PREFS_EXISTING_PURCHASES = "ExistingPurchases"
 }
 
-object PreferenceTriggerKeys {
-
-}
+object PreferenceTriggerKeys
 
 object PreferenceOneSignalKeys {
     // TODO: Remove this once the tasks below have been finished...

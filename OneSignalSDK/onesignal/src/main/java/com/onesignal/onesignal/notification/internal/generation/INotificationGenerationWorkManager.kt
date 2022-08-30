@@ -12,5 +12,5 @@ interface INotificationGenerationWorkManager {
         timestamp: Long,
         isRestoring: Boolean,
         isHighPriority: Boolean
-    ) : Boolean
+    ): Boolean
 }

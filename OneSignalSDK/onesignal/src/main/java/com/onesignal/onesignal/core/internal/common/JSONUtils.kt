@@ -53,7 +53,7 @@ object JSONUtils {
         }
     }
 
-    fun newStringMapFromJSONObject(jsonObject: JSONObject) : Map<String, String> {
+    fun newStringMapFromJSONObject(jsonObject: JSONObject): Map<String, String> {
         val keys: Iterator<String> = jsonObject.keys()
         val result = mutableMapOf<String, String>()
         while (keys.hasNext()) {
@@ -64,8 +64,7 @@ object JSONUtils {
                     Logging.error("Omitting key '$key'! sendTags DO NOT supported nested values!")
                 else if (jsonObject.isNull(key) || "" == value) {
                     result[key] = ""
-                }
-                else
+                } else
                     result[key] = value.toString()
             } catch (t: Throwable) {
             }
@@ -151,7 +150,8 @@ object JSONUtils {
             return (`object` as Int?)?.let { java.lang.Long.valueOf(it.toLong()) }
         return if (clazz == Float::class.java) (`object` as Float?)?.let {
             java.lang.Double.valueOf(
-                it.toDouble())
+                it.toDouble()
+            )
         } else `object`
     }
 }

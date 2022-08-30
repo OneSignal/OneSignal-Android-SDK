@@ -21,7 +21,7 @@ interface INotificationsManager {
      *         false if the user is opted out of push notifications (Android 13 and higher, user rejected. < Android 13, this cannot happen)
      *         null if the intent could not be determined (notification disabled and user sent to settings to hopefully enable.)
      */
-    suspend fun requestPermission() : Boolean?
+    suspend fun requestPermission(): Boolean?
 
     /**
      * Allows you to send notifications from user to user or schedule ones in the future to be delivered
@@ -34,8 +34,8 @@ interface INotificationsManager {
      * @param json Contains notification options, see [OneSignal | Create Notification](https://documentation.onesignal.com/reference#create-notification)
      *             POST call for all options.
      */
-    suspend fun postNotification(json: JSONObject) : JSONObject
-    suspend fun postNotification(json: String) : JSONObject
+    suspend fun postNotification(json: JSONObject): JSONObject
+    suspend fun postNotification(json: String): JSONObject
 
     /**
      * Cancels a single OneSignal notification based on its Android notification integer ID. Use

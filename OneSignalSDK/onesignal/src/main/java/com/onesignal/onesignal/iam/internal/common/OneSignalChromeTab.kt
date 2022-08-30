@@ -26,14 +26,14 @@
  */
 package com.onesignal.onesignal.iam.internal.common
 
-import androidx.browser.customtabs.CustomTabsServiceConnection
-import androidx.browser.customtabs.CustomTabsClient
 import android.content.ComponentName
 import android.content.Context
-import androidx.browser.customtabs.CustomTabsIntent
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import androidx.browser.customtabs.CustomTabsClient
+import androidx.browser.customtabs.CustomTabsIntent
+import androidx.browser.customtabs.CustomTabsServiceConnection
 
 internal object OneSignalChromeTab {
     private fun hasChromeTabLibrary(): Boolean {

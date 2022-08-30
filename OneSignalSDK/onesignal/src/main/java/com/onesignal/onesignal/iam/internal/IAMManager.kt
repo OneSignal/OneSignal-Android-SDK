@@ -40,9 +40,9 @@ import com.onesignal.onesignal.iam.internal.triggers.ITriggerController
 import com.onesignal.onesignal.iam.internal.triggers.ITriggerHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.*
+import java.util.Date
 
-internal class IAMManager (
+internal class IAMManager(
     private val _applicationService: IApplicationService,
     private val _sessionService: ISessionService,
     private val _configModelStore: ConfigModelStore,
@@ -57,12 +57,12 @@ internal class IAMManager (
     private val _displayer: IInAppDisplayer,
     private val _lifecycle: IInAppLifecycleService,
     private val _time: ITime
-        ) : IIAMManager,
-            IStartableService,
-            ISubscriptionChangedHandler,
-            ISingletonModelStoreChangeHandler<ConfigModel>,
-            IInAppLifecycleEventHandler,
-            ITriggerHandler {
+) : IIAMManager,
+    IStartableService,
+    ISubscriptionChangedHandler,
+    ISingletonModelStoreChangeHandler<ConfigModel>,
+    IInAppLifecycleEventHandler,
+    ITriggerHandler {
 
     private val _lifecycleCallback: ICallbackProducer<IInAppMessageLifecycleHandler> = CallbackProducer()
     private val _messageClickCallback: ICallbackProducer<IInAppMessageClickHandler> = CallbackProducer()
@@ -144,7 +144,7 @@ internal class IAMManager (
     }
 
     override fun onSubscriptionAdded(subscription: ISubscription) {
-        if(subscription !is PushSubscription)
+        if (subscription !is PushSubscription)
             return
 
         suspendifyOnThread {
@@ -160,12 +160,12 @@ internal class IAMManager (
         val appId = _configModelStore.get().appId
         val subscriptionId = _subscriptionManager.subscriptions.push?.id
 
-        if(subscriptionId == null || appId == null)
+        if (subscriptionId == null || appId == null)
             return
 
         val newMessages = _backend.listInAppMessages(appId, subscriptionId.toString())
 
-        if(newMessages != null) {
+        if (newMessages != null) {
             // TODO: I feel like this might be a "new session" thing, not a "fetch IAMs" thing?
             for (redisplayInAppMessage in messages) {
                 redisplayInAppMessage.isDisplayedInSession = false
@@ -284,13 +284,12 @@ internal class IAMManager (
 
         var result = _displayer.displayMessage(message)
 
-        if(result == null) {
+        if (result == null) {
             // Retry displaying the same IAM
             // Using the queueMessageForDisplay method follows safety checks to prevent issues
             // like having 2 IAMs showing at once or duplicate IAMs in the queue
             queueMessageForDisplay(message)
-        }
-        else if(result == false) {
+        } else if (result == false) {
             messageWasDismissed(message, true)
         }
     }
@@ -615,7 +614,7 @@ internal class IAMManager (
 
     private suspend fun firePublicClickHandler(messageId: String, action: InAppMessageAction) {
 
-        if(!_messageClickCallback.hasCallback)
+        if (!_messageClickCallback.hasCallback)
             return
 
         // Send public outcome not from handler
@@ -644,12 +643,12 @@ internal class IAMManager (
             _subscriptionManager.subscriptions.push?.id.toString(),
             variantId,
             message.messageId,
-            pageId)
+            pageId
+        )
 
-        if(response.isSuccess) {
+        if (response.isSuccess) {
             _prefs.viewPageImpressionedIds = viewedPageIds
-        }
-        else {
+        } else {
             // Post failed, viewed page should be removed and this way another post can be attempted
             viewedPageIds.remove(messagePrefixedPageId)
         }
@@ -666,7 +665,7 @@ internal class IAMManager (
         if (!clickAvailableByRedisplay && clickedClickIds.contains(clickId))
             return
 
-        if(clickId != null) {
+        if (clickId != null) {
             clickedClickIds.add(clickId)
             // Track clickId per IAM
             message.addClickId(clickId)
@@ -678,23 +677,23 @@ internal class IAMManager (
             variantId,
             message.messageId,
             clickId,
-            action.isFirstClick)
+            action.isFirstClick
+        )
 
-        if(response.isSuccess) {
+        if (response.isSuccess) {
             // Persist success click to disk. Id already added to set before making the network call
             _prefs.clickedMessagesId = clickedClickIds
-        }
-        else {
+        } else {
             clickedClickIds.remove(clickId)
 
-            if(clickId != null) {
+            if (clickId != null) {
                 message.removeClickId(clickId)
             }
         }
     }
 
     private fun showAlertDialogMessage(inAppMessage: InAppMessage, prompts: List<InAppMessagePrompt>) {
-        val messageTitle =  _applicationService.appContext.getString(R.string.location_permission_missing_title)
+        val messageTitle = _applicationService.appContext.getString(R.string.location_permission_missing_title)
         val message = _applicationService.appContext.getString(R.string.location_permission_missing_message)
         AlertDialog.Builder(_applicationService.current)
             .setTitle(messageTitle)

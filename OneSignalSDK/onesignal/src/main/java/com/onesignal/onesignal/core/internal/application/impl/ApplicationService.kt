@@ -26,7 +26,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import java.lang.ref.WeakReference
 
-class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, OnGlobalLayoutListener  {
+class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, OnGlobalLayoutListener {
     private val _activityLifecycleNotifier: IEventProducer<IActivityLifecycleHandler> = EventProducer()
     private val _applicationLifecycleNotifier: IEventProducer<IApplicationLifecycleHandler> = EventProducer()
     private val _systemConditionNotifier: IEventProducer<ISystemConditionHandler> = EventProducer()
@@ -50,34 +50,33 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     private var _isActivityChangingConfigurations = false
 
     override val appContext: Context
-            get() = _appContext!!
+        get() = _appContext!!
 
     private var _appContext: Context? = null
 
     override var current: Activity?
-            get() = _current
-            set(value) {
-                _current = value
+        get() = _current
+        set(value) {
+            _current = value
 
-                Logging.debug("_current is NOW: " + if (_current != null) "" + _current?.javaClass?.name + ":" + _current else "null")
+            Logging.debug("_current is NOW: " + if (_current != null) "" + _current?.javaClass?.name + ":" + _current else "null")
 
-                if(value != null) {
-                    _activityLifecycleNotifier.fire { it.onActivityAvailable(value) }
-                    try {
-                        value.window.decorView.viewTreeObserver.addOnGlobalLayoutListener(this)
-                    } catch (e: RuntimeException) {
-                        // Related to Unity Issue #239 on Github
-                        // https://github.com/OneSignal/OneSignal-Unity-SDK/issues/239
-                        // RuntimeException at ActivityLifecycleHandler.setCurActivity on Android (Unity 2.9.0)
-                        e.printStackTrace()
-                    }
+            if (value != null) {
+                _activityLifecycleNotifier.fire { it.onActivityAvailable(value) }
+                try {
+                    value.window.decorView.viewTreeObserver.addOnGlobalLayoutListener(this)
+                } catch (e: RuntimeException) {
+                    // Related to Unity Issue #239 on Github
+                    // https://github.com/OneSignal/OneSignal-Unity-SDK/issues/239
+                    // RuntimeException at ActivityLifecycleHandler.setCurActivity on Android (Unity 2.9.0)
+                    e.printStackTrace()
                 }
             }
+        }
 
-    fun start(context: Context)
-    {
+    fun start(context: Context) {
         _appContext = context
-        if(_application == null) {
+        if (_application == null) {
             _application = context.applicationContext as Application
             _application!!.registerActivityLifecycleCallbacks(this)
 
@@ -157,7 +156,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         // new activity is finished the original activity is simply resumed (it's
         // already been created).  For this case, we make sure current is set
         // to the now current activity.
-        if(current != activity)
+        if (current != activity)
             current = activity
     }
 
@@ -189,7 +188,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         _systemConditionNotifier.fire { it.systemConditionChanged() }
     }
 
-    override suspend fun waitUntilSystemConditionsAvailable() : Boolean {
+    override suspend fun waitUntilSystemConditionsAvailable(): Boolean {
         val currentActivity = current
         if (currentActivity == null) {
             Logging.warn("OSSystemConditionObserver curActivity null")
@@ -206,21 +205,23 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
                 if (lastFragment != null && lastFragment.isVisible && lastFragment is DialogFragment) {
                     val channel = Channel<Any?>()
 
-                    manager.registerFragmentLifecycleCallbacks(object : FragmentManager.FragmentLifecycleCallbacks() {
-                        override fun onFragmentDetached(fm: FragmentManager, fragmentDetached: Fragment) {
-                            super.onFragmentDetached(fm, fragmentDetached)
-                            if (fragmentDetached is DialogFragment) {
-                                manager.unregisterFragmentLifecycleCallbacks(this)
-                                runBlocking {
-                                    channel.send(null)
+                    manager.registerFragmentLifecycleCallbacks(
+                        object : FragmentManager.FragmentLifecycleCallbacks() {
+                            override fun onFragmentDetached(fm: FragmentManager, fragmentDetached: Fragment) {
+                                super.onFragmentDetached(fm, fragmentDetached)
+                                if (fragmentDetached is DialogFragment) {
+                                    manager.unregisterFragmentLifecycleCallbacks(this)
+                                    runBlocking {
+                                        channel.send(null)
+                                    }
                                 }
                             }
-                        }
-                    }, true)
+                        },
+                        true
+                    )
 
                     channel.receive()
                 }
-
             }
         } catch (exception: NoClassDefFoundError) {
             Logging.info("AppCompatActivity is not used in this app, skipping 'isDialogFragmentShowing' check: $exception")
@@ -243,7 +244,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         _systemConditionNotifier.subscribe(systemConditionHandler)
         val keyboardUp = DeviceUtils.isKeyboardUp(WeakReference(currentActivity))
         // if the keyboard is up we suspend until it is down
-        if(keyboardUp) {
+        if (keyboardUp) {
             Logging.warn("OSSystemConditionObserver keyboard up detected")
             channel.receive()
         }
@@ -256,11 +257,14 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         val currentActivity = current ?: return false
 
         val channel = Channel<Any?>()
-        decorViewReady(currentActivity!!, object : Runnable {
-            override fun run() = runBlocking {
-                channel.send(null)
+        decorViewReady(
+            currentActivity!!,
+            object : Runnable {
+                override fun run() = runBlocking {
+                    channel.send(null)
+                }
             }
-        })
+        )
 
         channel.receive()
         return true
@@ -316,12 +320,11 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
             Logging.debug("ApplicationService.handleLostFocus: application is now out of focus")
 
             // TODO: Should we spin up a worker task for this? Or rely on the listeners to do it.
-            isInForeground = false;
+            isInForeground = false
             entryState = AppEntryAction.APP_CLOSE
 
             _applicationLifecycleNotifier.fire { it.onUnfocused() }
-        }
-        else {
+        } else {
             Logging.debug("ApplicationService.handleLostFocus: application already out of focus")
         }
     }

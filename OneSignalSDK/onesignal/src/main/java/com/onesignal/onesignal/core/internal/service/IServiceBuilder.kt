@@ -17,7 +17,7 @@ interface IServiceBuilder {
      * @return The service registration that should be used to indicate what services this
      * implementation provides.
      */
-    fun <T> register(c: Class<T>) : ServiceRegistration<T>
+    fun <T> register(c: Class<T>): ServiceRegistration<T>
 
     /**
      * Register [T] as an implementation managed by the service infrastructure.  It is expected
@@ -32,7 +32,7 @@ interface IServiceBuilder {
      * @return The service registration that should be used to indicate what services this
      * implementation provides.
      */
-    fun <T> register(create: (IServiceProvider) -> T) : ServiceRegistration<T>
+    fun <T> register(create: (IServiceProvider) -> T): ServiceRegistration<T>
 
     /**
      * Register [T] as an implementation managed by the service infrastructure.  It is expected
@@ -46,7 +46,7 @@ interface IServiceBuilder {
      * @return The service registration that should be used to indicate what services this
      * implementation provides.
      */
-    fun <T> register(obj: T) : ServiceRegistration<T>
+    fun <T> register(obj: T): ServiceRegistration<T>
 
     /**
      * Build the registered implementations, mapping the services they provide, and return the
@@ -54,5 +54,5 @@ interface IServiceBuilder {
      *
      * @return The service provider that can be used to retrieve the provided services.
      */
-    fun build() : ServiceProvider
+    fun build(): ServiceProvider
 }

@@ -2,14 +2,14 @@ package com.onesignal.onesignal.core.internal.user.subscriptions
 
 import com.onesignal.onesignal.core.internal.user.ISubscriptionManager
 import com.onesignal.onesignal.core.user.subscriptions.IPushSubscription
-import java.util.*
+import java.util.UUID
 
 internal class PushSubscription(
-        id: UUID,
-        enabled: Boolean,
-        override val pushToken: String,
-        private val _subscriptionManager: ISubscriptionManager
-        ) : Subscription(id), IPushSubscription {
+    id: UUID,
+    enabled: Boolean,
+    override val pushToken: String,
+    private val _subscriptionManager: ISubscriptionManager
+) : Subscription(id), IPushSubscription {
 
     override var enabled: Boolean
         get() = _enabled

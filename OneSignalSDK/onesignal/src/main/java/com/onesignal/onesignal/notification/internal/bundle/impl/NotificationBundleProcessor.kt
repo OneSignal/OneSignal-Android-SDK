@@ -60,7 +60,7 @@ internal class NotificationBundleProcessor(
     /**
      * Process bundle passed from FCM / HMS / ADM broadcast receiver
      */
-    override fun processBundleFromReceiver(context: Context, bundle: Bundle, ) : INotificationBundleProcessor.ProcessedBundleResult? {
+    override fun processBundleFromReceiver(context: Context, bundle: Bundle,): INotificationBundleProcessor.ProcessedBundleResult? {
 
         val bundleResult = INotificationBundleProcessor.ProcessedBundleResult()
 
@@ -96,7 +96,7 @@ internal class NotificationBundleProcessor(
 
         bundleResult.isWorkManagerProcessing = processed
 
-        return bundleResult;
+        return bundleResult
     }
 
     companion object {

@@ -33,7 +33,7 @@ internal class PushTokenListener(
     }
 
     override fun onPushTokenChanged(pushToken: String?) {
-        if(pushToken == null || pushToken.isEmpty())
+        if (pushToken == null || pushToken.isEmpty())
             return
 
         createSubscriptionIfRequired()
@@ -44,7 +44,7 @@ internal class PushTokenListener(
         val appId = _configModelStore.get().appId
         val pushToken = _pushTokenManager.pushToken
 
-        if(appId == null || pushToken == null || _subscriptionManager.subscriptions.push != null)
+        if (appId == null || pushToken == null || _subscriptionManager.subscriptions.push != null)
             return
 
         // TODO: Is is possible for the push token to change and we need to update a subscription?

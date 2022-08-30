@@ -19,15 +19,15 @@ internal class InAppBackendService(
 ) : IInAppBackendService {
     private var htmlNetworkRequestAttemptCount = 0
 
-    override suspend fun listInAppMessages(appId: String, subscriptionId: String) : List<InAppMessage>? {
+    override suspend fun listInAppMessages(appId: String, subscriptionId: String): List<InAppMessage>? {
         // Retrieve any in app messages that might exist
         val jsonBody = JSONObject()
         jsonBody.put("app_id", appId)
 
         // TODO: This will be replaced by dedicated iam endpoint once it's available
-        var response = _httpClient.post("players/${subscriptionId}/on_session", jsonBody)
+        var response = _httpClient.post("players/$subscriptionId/on_session", jsonBody)
 
-        if(response.isSuccess) {
+        if (response.isSuccess) {
             val jsonResponse = JSONObject(response.payload)
 
             if (jsonResponse.has("in_app_messages")) {
@@ -43,20 +43,19 @@ internal class InAppBackendService(
         return null
     }
 
-    override suspend fun getIAMData(appId: String, messageId: String, variantId: String?) : GetIAMDataResponse {
+    override suspend fun getIAMData(appId: String, messageId: String, variantId: String?): GetIAMDataResponse {
 
         val htmlPath = htmlPathForMessage(messageId, variantId, appId)
             ?: throw Exception("variantId not valid: $variantId")
 
         val response = _httpClient.get(htmlPath, null)
 
-        if(response.isSuccess) {
+        if (response.isSuccess) {
             // Successful request, reset count
             htmlNetworkRequestAttemptCount = 0
             val jsonResponse = JSONObject(response.payload!!)
             return GetIAMDataResponse(_hydrator.hydrateIAMMessageContent(jsonResponse), false)
-        }
-        else {
+        } else {
             printHttpErrorForInAppMessageRequest("html", response.statusCode, response.payload)
 
             return if (!NetworkUtils.shouldRetryNetworkRequest(response.statusCode) || htmlNetworkRequestAttemptCount >= NetworkUtils.MAX_NETWORK_REQUEST_ATTEMPT_COUNT) {
@@ -71,12 +70,12 @@ internal class InAppBackendService(
         }
     }
 
-    override suspend fun getIAMPreviewData(appId: String, previewUUID: String) : InAppMessageContent? {
+    override suspend fun getIAMPreviewData(appId: String, previewUUID: String): InAppMessageContent? {
         val htmlPath = "in_app_messages/device_preview?preview_id=$previewUUID&app_id=$appId"
 
         val response = _httpClient.get(htmlPath, null)
 
-        return if(response.isSuccess) {
+        return if (response.isSuccess) {
             val jsonResponse = JSONObject(response.payload!!)
             _hydrator.hydrateIAMMessageContent(jsonResponse)
         } else {
@@ -139,10 +138,9 @@ internal class InAppBackendService(
 
         val response = _httpClient.post("in_app_messages/$messageId/pageImpression", json)
 
-        if(response.isSuccess) {
+        if (response.isSuccess) {
             printHttpSuccessForInAppMessageRequest("page impression", response.payload!!)
-        }
-        else {
+        } else {
             printHttpErrorForInAppMessageRequest("page impression", response.statusCode, response.payload)
         }
 
@@ -167,10 +165,9 @@ internal class InAppBackendService(
 
         val response = _httpClient.post("in_app_messages/$messageId/impression", json)
 
-        if(response.isSuccess) {
+        if (response.isSuccess) {
             printHttpSuccessForInAppMessageRequest("impression", response.payload!!)
-        }
-        else {
+        } else {
             printHttpErrorForInAppMessageRequest("impression", response.statusCode, response.payload)
         }
 

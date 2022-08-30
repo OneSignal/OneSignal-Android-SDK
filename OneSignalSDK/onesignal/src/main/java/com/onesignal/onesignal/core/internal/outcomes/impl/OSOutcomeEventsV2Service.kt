@@ -8,7 +8,7 @@ internal class OSOutcomeEventsV2Service(client: IHttpClient) : OSOutcomeEventsCl
     /***
      * API endpoint /api/v1/outcomes/measure_sources
      */
-    override suspend fun sendOutcomeEvent(jsonObject: JSONObject) : HttpResponse {
+    override suspend fun sendOutcomeEvent(jsonObject: JSONObject): HttpResponse {
         return client.post("outcomes/measure_sources", jsonObject)
     }
 }
