@@ -30,6 +30,7 @@ jobs:
         run: |
           ./gradlew ktlintCheck --console=plain
       - name: "[Test] Analyzing"
+        continue-on-error: true
         run: |
           ./gradlew detekt --console=plain
       - name: "[Test] SDK Unit Tests"
