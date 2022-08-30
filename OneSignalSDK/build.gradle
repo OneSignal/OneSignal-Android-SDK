@@ -51,6 +51,7 @@ buildscript {
 }
 
 allprojects {
+    apply plugin: 'kover'
     repositories {
         google()
         mavenCentral()
@@ -60,4 +61,8 @@ allprojects {
         // Huawei maven
         maven { url 'https://developer.huawei.com/repo/' }
     }
+}
+
+koverMerged {
+    enable()
 }

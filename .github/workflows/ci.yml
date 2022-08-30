@@ -48,4 +48,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: unit-tests-coverage
-          path: OneSignalSDK/unittest/build
+          path: OneSignalSDK/unittest/build/reports/kover/html/index.html
