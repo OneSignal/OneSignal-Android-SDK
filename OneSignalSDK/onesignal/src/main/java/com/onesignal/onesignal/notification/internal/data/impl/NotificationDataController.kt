@@ -501,13 +501,12 @@ internal class NotificationDataController(
                 "1"
             ).use {
                 val hasRecord = it.moveToFirst()
-                if (!hasRecord) {
-                    recentId = null
-                }
-
-                // Get more recent notification id from Cursor
-                recentId =
+                recentId = if (!hasRecord) {
+                    null
+                } else {
+                    // Get more recent notification id from Cursor
                     it.getInt(it.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID))
+                }
             }
         }
 

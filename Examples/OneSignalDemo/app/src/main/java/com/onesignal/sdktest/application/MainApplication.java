@@ -3,10 +3,13 @@ package com.onesignal.sdktest.application;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.multidex.MultiDexApplication;
 
 import com.onesignal.onesignal.core.OneSignal;
 import com.onesignal.onesignal.iam.IInAppMessage;
+import com.onesignal.onesignal.iam.IInAppMessageAction;
+import com.onesignal.onesignal.iam.IInAppMessageClickHandler;
 import com.onesignal.onesignal.iam.IInAppMessageLifecycleHandler;
 import com.onesignal.onesignal.core.LogLevel;
 import com.onesignal.onesignal.core.internal.logging.Logging;
@@ -56,6 +59,13 @@ public class MainApplication extends MultiDexApplication {
             @Override
             public void onDidDismissInAppMessage(@NonNull IInAppMessage message) {
                 Logging.log(LogLevel.VERBOSE, "MainApplication onDidDismissInAppMessage");
+            }
+        });
+
+        OneSignal.getIam().setInAppMessageClickHandler(new IInAppMessageClickHandler() {
+            @Override
+            public void inAppMessageClicked(@Nullable IInAppMessageAction result) {
+                Logging.log(LogLevel.VERBOSE, "MainApplication inAppMessageClicked");
             }
         });
 
