@@ -30,6 +30,7 @@ jobs:
         run: |
           ./gradlew ktlintCheck --console=plain
       - name: "[Test] Analyzing"
+        working-directory: OneSignalSDK
         continue-on-error: true
         run: |
           ./gradlew detekt --console=plain
