@@ -15,6 +15,7 @@ buildscript {
         kotlinVersion = '1.4.32'
         ktlintVersion = '11.0.0'
         detektVersion = '1.21.0'
+        koverVersion = '0.6.0'
         onesignalGradlePluginVersion = '[0.14.0, 0.99.99]'
     }
 
@@ -39,6 +40,7 @@ buildscript {
 
         classpath "org.jlleitschuh.gradle:ktlint-gradle:$ktlintVersion"
         classpath "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:$detektVersion"
+        classpath "org.jetbrains.kotlinx:kover:$koverVersion"
 
         // OneSignal-Gradle-Plugin - Local testing
         // classpath 'com.onesignal:onesignal-gradle-plugin:[0.8.1, 0.99.99]'

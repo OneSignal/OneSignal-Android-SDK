@@ -10,12 +10,14 @@ ext {
     firebaseAnalytics = '19.0.1'
     googlePlayServicesVersion = '18.0.0'
     jUnitVersion = '4.13.2'
+    koverVersion = '0.6.0'
     reflectionsVersion = '0.9.12'
     roboelectricVersion = '4.8.1'
 }
 
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
+apply plugin: 'kover'
 
 android {
     compileSdkVersion rootProject.buildVersions.compileSdkVersion
@@ -70,6 +72,7 @@ dependencies {
 
     testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
     testImplementation "junit:junit:$jUnitVersion"
+    testImplementation "org.jetbrains.kotlinx:kover:$koverVersion"
 
     testImplementation "androidx.test:core:$androidTestCoreVersion"
     testImplementation "androidx.work:work-testing:$androidWorkTestVersion"

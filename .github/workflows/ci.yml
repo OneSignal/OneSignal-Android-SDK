@@ -37,10 +37,15 @@ jobs:
       - name: "[Test] SDK Unit Tests"
         working-directory: OneSignalSDK
         run: |
-          ./gradlew unittest:testReleaseUnitTest --console=plain
-      - name: Unit tests results
+          ./gradlew unittest:koverHtmlReport --console=plain
+      - name: Failed test build directory
         if: failure()
         uses: actions/upload-artifact@v3
         with:
-          name: unit-tests-results
+          name: unit-tests-build
+          path: OneSignalSDK/unittest/build
+      - name: Unit tests coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-tests-coverage
           path: OneSignalSDK/unittest/build
