@@ -43,14 +43,16 @@ internal object OSInAppMessagePreviewHandler {
             return null
         }
 
-        if (!osCustom.has(NotificationBundleProcessor.PUSH_ADDITIONAL_DATA_KEY))
+        if (!osCustom.has(NotificationBundleProcessor.PUSH_ADDITIONAL_DATA_KEY)) {
             return null
+        }
 
         return osCustom.optJSONObject(NotificationBundleProcessor.PUSH_ADDITIONAL_DATA_KEY)?.let { additionalData ->
-            if (additionalData.has(NotificationBundleProcessor.IAM_PREVIEW_KEY))
+            if (additionalData.has(NotificationBundleProcessor.IAM_PREVIEW_KEY)) {
                 additionalData.optString(NotificationBundleProcessor.IAM_PREVIEW_KEY)
-            else
+            } else {
                 null
+            }
         }
     }
 

@@ -35,6 +35,7 @@ import com.amazon.device.iap.model.PurchaseUpdatesResponse
 import com.amazon.device.iap.model.UserDataResponse
 import com.onesignal.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.onesignal.core.internal.application.IApplicationService
+import com.onesignal.onesignal.core.internal.common.suspendifyOnMain
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.onesignal.core.internal.operations.IOperationRepo
@@ -61,6 +62,9 @@ internal class TrackAmazonPurchase(
     private var listenerHandlerObject: Any? = null
     private var listenerHandlerField: Field? = null
 
+    // appstore v3.x requires PurchasingService.registerListener() to run on main UI thread
+    private var registerListenerOnMainThread = false
+
     override fun start() {
         if(!canTrack())
             return
@@ -74,6 +78,7 @@ internal class TrackAmazonPurchase(
             } catch (e: NullPointerException) {
                 //appstore v3.x
                 listenerHandlerClass.getMethod("e").invoke(null)
+                registerListenerOnMainThread = true
             }
             val locListenerHandlerField = listenerHandlerClass.getDeclaredField("f")
             locListenerHandlerField.isAccessible = true
@@ -123,7 +128,13 @@ internal class TrackAmazonPurchase(
     }
 
     private fun setListener() {
-        PurchasingService.registerListener(_applicationService.appContext, osPurchasingListener)
+        if (registerListenerOnMainThread) {
+            suspendifyOnMain {
+                PurchasingService.registerListener(_applicationService.appContext, osPurchasingListener)
+            }
+        } else {
+            PurchasingService.registerListener(_applicationService.appContext, osPurchasingListener)
+        }
     }
 
     private inner class OSPurchasingListener(

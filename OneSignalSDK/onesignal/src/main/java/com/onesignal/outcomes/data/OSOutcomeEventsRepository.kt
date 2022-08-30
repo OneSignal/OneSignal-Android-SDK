@@ -6,9 +6,11 @@ import com.onesignal.influence.domain.OSInfluence
 import com.onesignal.outcomes.domain.OSOutcomeEventParams
 import com.onesignal.outcomes.domain.OSOutcomeEventsRepository
 
-internal abstract class OSOutcomeEventsRepository(protected val logger: OSLogger,
-                                                  private val outcomeEventsCache: OSOutcomeEventsCache,
-                                                  val outcomeEventsService: OutcomeEventsService) : OSOutcomeEventsRepository {
+internal abstract class OSOutcomeEventsRepository(
+    protected val logger: OSLogger,
+    private val outcomeEventsCache: OSOutcomeEventsCache,
+    val outcomeEventsService: OutcomeEventsService
+) : OSOutcomeEventsRepository {
     abstract override fun requestMeasureOutcomeEvent(appId: String, deviceType: Int, event: OSOutcomeEventParams, responseHandler: OneSignalApiResponseHandler)
 
     override fun getSavedOutcomeEvents(): List<OSOutcomeEventParams> = outcomeEventsCache.getAllEventsToSend()
@@ -43,6 +45,6 @@ internal abstract class OSOutcomeEventsRepository(protected val logger: OSLogger
     }
 
     override fun cleanCachedUniqueOutcomeEventNotifications(notificationTableName: String, notificationIdColumnName: String) {
-        outcomeEventsCache.cleanCachedUniqueOutcomeEventNotifications(notificationTableName, notificationIdColumnName);
+        outcomeEventsCache.cleanCachedUniqueOutcomeEventNotifications(notificationTableName, notificationIdColumnName)
     }
 }
