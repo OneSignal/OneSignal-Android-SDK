@@ -10,7 +10,7 @@ interface IDeviceService {
 
     val deviceType: Int
 
-    fun isGMSInstalledAndEnabled(): Boolean
-    fun hasAllHMSLibrariesForPushKit(): Boolean
-    fun hasFCMLibrary(): Boolean
+    val isGMSInstalledAndEnabled: Boolean
+    val hasAllHMSLibrariesForPushKit: Boolean
+    val hasFCMLibrary: Boolean
 }

@@ -4,8 +4,8 @@ import com.amazon.device.messaging.ADM
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.notification.internal.registration.IPushRegistrator
+import com.onesignal.onesignal.core.internal.common.suspend.WaiterWithValue
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
@@ -14,12 +14,12 @@ class PushRegistratorADM(
     private val _applicationService: IApplicationService
 ) : IPushRegistrator, IPushRegistratorCallback {
 
-    private var _channel: Channel<String?>? = null
+    private var _waiter: WaiterWithValue<String?>? = null
 
     override suspend fun registerForPush(): IPushRegistrator.RegisterResult = coroutineScope {
         var result: IPushRegistrator.RegisterResult? = null
 
-        _channel = Channel()
+        _waiter = WaiterWithValue()
         launch(Dispatchers.Default) {
             val adm = ADM(_applicationService.appContext)
             var registrationId = adm.registrationId
@@ -35,7 +35,7 @@ class PushRegistratorADM(
                 // wait up to 30 seconds for someone to call `fireCallback` with the registration id.
                 // if it comes before we will continue immediately.
                 withTimeout(30000) {
-                    registrationId = _channel?.receive()
+                    registrationId = _waiter?.waitForWake()
                 }
 
                 result = if (registrationId != null) {
@@ -58,6 +58,6 @@ class PushRegistratorADM(
     }
 
     override suspend fun fireCallback(id: String?) {
-        _channel?.send(id)
+        _waiter?.wake(id)
     }
 }

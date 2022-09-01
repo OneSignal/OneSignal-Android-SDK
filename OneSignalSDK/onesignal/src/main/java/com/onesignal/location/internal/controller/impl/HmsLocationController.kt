@@ -12,13 +12,14 @@ import com.onesignal.core.LogLevel
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.events.EventProducer
+import com.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.location.internal.common.LocationConstants
 import com.onesignal.location.internal.controller.ILocationController
 import com.onesignal.location.internal.controller.ILocationUpdatedHandler
+import com.onesignal.onesignal.core.internal.common.suspend.Waiter
+import com.onesignal.onesignal.core.internal.common.suspend.WaiterWithValue
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -59,26 +60,26 @@ class HmsLocationController(
                 if (_lastLocation != null)
                     _event.fire { it.onLocationChanged(_lastLocation!!) }
                 else {
-                    var channel = Channel<Boolean>()
+                    var waiter = WaiterWithValue<Boolean>()
                     hmsFusedLocationClient!!.lastLocation
                         .addOnSuccessListener(
                             OnSuccessListener { location ->
                                 Logging.warn("Huawei LocationServices getLastLocation returned location: $location")
 
                                 if (location == null) {
-                                    runBlocking { channel.send(false) }
+                                    waiter.wake(false)
                                     return@OnSuccessListener
                                 }
 
                                 _lastLocation = location
-                                runBlocking { channel.send(true) }
+                                waiter.wake(true)
                             }
                         )
                         .addOnFailureListener { e ->
                             Logging.error("Huawei LocationServices getLastLocation failed!", e)
-                            runBlocking { channel.send(false) }
+                            waiter.wake(false)
                         }
-                    wasSuccessful = channel.receive()
+                    wasSuccessful = waiter.waitForWake()
 
                     if (wasSuccessful) {
                         _event.fire { it.onLocationChanged(_lastLocation!!) }
@@ -115,27 +116,27 @@ class HmsLocationController(
 
         var retVal: Location? = null
 
-        runBlocking {
-            var channel = Channel<Any?>()
+        suspendifyOnThread {
+            var waiter = Waiter()
             locationClient.lastLocation
                 .addOnSuccessListener(
                     OnSuccessListener { location ->
                         Logging.warn("Huawei LocationServices getLastLocation returned location: $location")
 
                         if (location == null) {
-                            runBlocking { channel.send(null) }
+                            waiter.wake()
                             return@OnSuccessListener
                         }
 
                         retVal = location
-                        runBlocking { channel.send(null) }
+                        waiter.wake()
                     }
                 )
                 .addOnFailureListener { e ->
                     Logging.error("Huawei LocationServices getLastLocation failed!", e)
-                    runBlocking { channel.send(null) }
+                    waiter.wake()
                 }
-            channel.receive()
+            waiter.waitForWake()
         }
 
         return retVal

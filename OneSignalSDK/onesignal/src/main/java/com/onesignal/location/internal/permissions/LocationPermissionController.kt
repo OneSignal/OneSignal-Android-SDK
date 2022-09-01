@@ -33,8 +33,7 @@ import com.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.core.internal.permissions.impl.AlertDialogPrepromptForAndroidSettings
 import com.onesignal.core.internal.startup.IStartableService
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.runBlocking
+import com.onesignal.onesignal.core.internal.common.suspend.WaiterWithValue
 
 internal class LocationPermissionController(
     private val _application: IApplicationService,
@@ -45,7 +44,7 @@ internal class LocationPermissionController(
         private const val PERMISSION_TYPE = "LOCATION"
     }
 
-    private val _commChannel = Channel<Boolean?>()
+    private val _waiter = WaiterWithValue<Boolean?>()
 
     override fun start() {
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)
@@ -61,13 +60,11 @@ internal class LocationPermissionController(
 
         // this won't return until onAccept or onReject sends the response on the channel (either
         // through the native prompt or through the fallback)
-        return _commChannel.receive()
+        return _waiter.waitForWake()
     }
 
     override fun onAccept() {
-        suspendifyOnThread {
-            _commChannel.send(true)
-        }
+        _waiter.wake(true)
     }
 
     override fun onReject(fallbackToSettings: Boolean) {
@@ -78,9 +75,7 @@ internal class LocationPermissionController(
                 false
 
         if (!fallbackShown) {
-            suspendifyOnThread {
-                _commChannel.send(false)
-            }
+            _waiter.wake(false)
         }
     }
 
@@ -93,14 +88,10 @@ internal class LocationPermissionController(
             object : AlertDialogPrepromptForAndroidSettings.Callback {
                 override fun onAccept() {
                     NavigateToAndroidSettingsForLocation.show(activity)
-                    runBlocking {
-                        _commChannel.send(null)
-                    }
+                    _waiter.wake(null)
                 }
                 override fun onDecline() {
-                    runBlocking {
-                        _commChannel.send(false)
-                    }
+                    _waiter.wake(false)
                 }
             }
         )

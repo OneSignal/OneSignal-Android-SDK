@@ -1,7 +1,7 @@
 package com.onesignal.notification.internal.listeners
 
 import android.app.Activity
-import com.onesignal.core.internal.AppEntryAction
+import com.onesignal.core.internal.application.AppEntryAction
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.JSONUtils
 import com.onesignal.core.internal.device.IDeviceService
