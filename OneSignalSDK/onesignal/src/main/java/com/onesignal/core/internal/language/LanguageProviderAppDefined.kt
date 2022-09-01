@@ -3,7 +3,7 @@ package com.onesignal.core.internal.language
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceStores
 
-class LanguageProviderAppDefined(
+internal class LanguageProviderAppDefined(
     private val preferences: IPreferencesService
 ) : ILanguageProvider {
 

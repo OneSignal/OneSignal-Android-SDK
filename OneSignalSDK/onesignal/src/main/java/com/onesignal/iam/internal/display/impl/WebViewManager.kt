@@ -7,7 +7,7 @@ import android.os.Build
 import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
-import com.onesignal.core.LogLevel
+import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.ViewUtils

@@ -4,7 +4,7 @@ import android.app.Activity
 import android.content.Context
 import com.onesignal.core.internal.AppEntryAction
 
-interface IApplicationService {
+internal interface IApplicationService {
 
     /**
      * The application context

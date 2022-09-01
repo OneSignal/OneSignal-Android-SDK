@@ -22,7 +22,7 @@ import com.onesignal.iam.internal.triggers.ITriggerController
 import com.onesignal.iam.internal.triggers.impl.DynamicTriggerController
 import com.onesignal.iam.internal.triggers.impl.TriggerController
 
-object IAMModule {
+internal object IAMModule {
     fun register(builder: ServiceBuilder) {
         // Low level services
         builder.register<InAppStateService>().provides<InAppStateService>()

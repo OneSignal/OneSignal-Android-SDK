@@ -2,6 +2,6 @@ package com.onesignal.notification.internal
 
 import com.onesignal.notification.IPermissionState
 
-class PermissionState(
+internal class PermissionState(
     override var notificationsEnabled: Boolean
 ) : IPermissionState

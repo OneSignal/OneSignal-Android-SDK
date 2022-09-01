@@ -11,7 +11,7 @@ import com.onesignal.iam.IInAppMessage;
 import com.onesignal.iam.IInAppMessageAction;
 import com.onesignal.iam.IInAppMessageClickHandler;
 import com.onesignal.iam.IInAppMessageLifecycleHandler;
-import com.onesignal.core.LogLevel;
+import com.onesignal.core.debug.LogLevel;
 import com.onesignal.core.internal.logging.Logging;
 import com.onesignal.notification.INotification;
 import com.onesignal.sdktest.R;

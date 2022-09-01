@@ -10,7 +10,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
-class PushRegistratorADM(
+internal class PushRegistratorADM(
     private val _applicationService: IApplicationService
 ) : IPushRegistrator, IPushRegistratorCallback {
 

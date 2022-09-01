@@ -16,7 +16,7 @@ package com.onesignal.core.internal
  *
  * @see OneSignal.handleNotificationOpen
  */
-enum class AppEntryAction {
+internal enum class AppEntryAction {
     /**
      * Entered the app through opening a notification
      */

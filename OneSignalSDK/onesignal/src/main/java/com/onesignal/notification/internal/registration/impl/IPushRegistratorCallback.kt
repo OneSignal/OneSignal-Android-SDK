@@ -1,5 +1,5 @@
 package com.onesignal.notification.internal.registration.impl
 
-interface IPushRegistratorCallback {
+internal interface IPushRegistratorCallback {
     suspend fun fireCallback(id: String?)
 }

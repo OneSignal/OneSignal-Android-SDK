@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.user
 
-import com.onesignal.core.LogLevel
+import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.models.IdentityModel
 import com.onesignal.core.internal.models.PropertiesModel
@@ -9,7 +9,7 @@ import com.onesignal.core.internal.models.TriggerModelStore
 import com.onesignal.core.user.IUserManager
 import com.onesignal.core.user.subscriptions.SubscriptionList
 
-interface IUserSwitcher {
+internal interface IUserSwitcher {
     val identityModel: IdentityModel
     val propertiesModel: PropertiesModel
     fun setUser(identityModel: IdentityModel, propertiesModel: PropertiesModel)

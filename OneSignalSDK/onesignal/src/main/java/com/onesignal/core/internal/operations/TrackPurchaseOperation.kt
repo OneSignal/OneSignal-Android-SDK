@@ -7,7 +7,7 @@ import java.math.BigDecimal
  * An [Operation] to track the purchase of one or more items within an app by a specific
  * user.
  */
-class TrackPurchaseOperation(
+internal class TrackPurchaseOperation(
     /**
      * The OneSignal appId the purchase was captured under.
      */
@@ -32,7 +32,7 @@ class TrackPurchaseOperation(
 /**
  * Information about a specific purchase.
  */
-class PurchaseInfo(
+internal class PurchaseInfo(
     val sku: String,
     val iso: String,
     val amount: BigDecimal,

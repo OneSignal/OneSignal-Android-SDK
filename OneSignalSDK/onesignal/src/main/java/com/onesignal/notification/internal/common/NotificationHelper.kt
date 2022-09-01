@@ -23,7 +23,7 @@ import org.json.JSONObject
 import java.util.ArrayList
 import kotlin.math.min
 
-object NotificationHelper {
+internal object NotificationHelper {
     const val grouplessSummaryKey = "os_group_undefined"
     const val grouplessSummaryId = -718463522
 

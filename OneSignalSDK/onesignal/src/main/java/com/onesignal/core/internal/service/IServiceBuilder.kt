@@ -5,7 +5,7 @@ package com.onesignal.core.internal.service
  * services that each implementation provides.  Ultimately, the registered implementations
  * and provided services will be built, and can be used through the [IServiceProvider].
  */
-interface IServiceBuilder {
+internal interface IServiceBuilder {
     /**
      * Register [T] as an implementation managed by the service infrastructure.  It is expected
      * a service will be provided by this implementation via a subsequent call to

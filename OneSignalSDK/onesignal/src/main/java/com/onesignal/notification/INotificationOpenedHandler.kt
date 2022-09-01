@@ -10,9 +10,9 @@ package com.onesignal.notification
  */
 interface INotificationOpenedHandler {
     /**
-     * Fires when a user taps on a notification.
+     * Called when a user taps on a notification to open it.
      *
-     * @param result a [INotificationOpenedResult] with the user's response and properties of this notification
+     * @param result an [INotificationOpenedResult] with the user's response and properties of this notification
      */
     fun notificationOpened(result: INotificationOpenedResult)
 }

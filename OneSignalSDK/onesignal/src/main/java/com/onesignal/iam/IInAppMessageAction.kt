@@ -1,5 +1,9 @@
 package com.onesignal.iam
 
+/**
+ * An IAM action represents an action performed by the user in reaction to an IAM
+ * being displayed.
+ */
 interface IInAppMessageAction {
     /**
      * UUID assigned by OneSignal for internal use.

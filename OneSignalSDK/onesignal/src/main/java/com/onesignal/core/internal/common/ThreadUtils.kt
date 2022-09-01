@@ -27,7 +27,7 @@ import kotlin.concurrent.thread
  * the main thread is parked via the `ThreadUtils.suspendify`. This will
  * never recover.
  */
-fun suspendifyBlocking(block: suspend () -> Unit) {
+internal fun suspendifyBlocking(block: suspend () -> Unit) {
     runBlocking {
         block()
     }
@@ -39,7 +39,7 @@ fun suspendifyBlocking(block: suspend () -> Unit) {
  * the scope will start on a background thread and block as it switches
  * over to the main thread context.  This will return immediately!!!
  */
-fun suspendifyOnMain(block: suspend () -> Unit) {
+internal fun suspendifyOnMain(block: suspend () -> Unit) {
     thread {
         runBlocking {
             withContext(Dispatchers.Main) {
@@ -55,7 +55,7 @@ fun suspendifyOnMain(block: suspend () -> Unit) {
  * means the scope will run on a background thread.  This will
  * return immediately!!!
  */
-fun suspendifyOnThread(priority: Int = -1, block: suspend () -> Unit) {
+internal fun suspendifyOnThread(priority: Int = -1, block: suspend () -> Unit) {
     thread(priority = priority) {
         runBlocking {
             block()

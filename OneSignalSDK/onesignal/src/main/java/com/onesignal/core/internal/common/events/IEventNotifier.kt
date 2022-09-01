@@ -7,7 +7,7 @@ package com.onesignal.core.internal.common.events
  *
  * This should be used to extend an interface to broadcast it allows for subscriptions to an event.
  */
-interface IEventNotifier<THandler> {
+internal interface IEventNotifier<THandler> {
 
     /**
      * Subscribe to listen for events.
@@ -28,7 +28,7 @@ interface IEventNotifier<THandler> {
  * An extension of [IEventNotifier] should be used internally to indicate the implementing
  * class is the producer of the event.  The interface exists for abstraction/testing purposes.
  */
-interface IEventProducer<THandler> : IEventNotifier<THandler> {
+internal interface IEventProducer<THandler> : IEventNotifier<THandler> {
     /**
      * Call this to fire an event which will iterate through all subscribers
      * and allow the caller to drive the calling of the handler. It is done

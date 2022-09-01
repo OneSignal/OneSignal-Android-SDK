@@ -1,6 +1,6 @@
 package com.onesignal.location.internal.capture
 
-interface ILocationCapturer {
+internal interface ILocationCapturer {
     var locationCoarse: Boolean
     fun captureLastLocation()
 }

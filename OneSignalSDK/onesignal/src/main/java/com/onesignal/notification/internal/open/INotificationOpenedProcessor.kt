@@ -3,7 +3,7 @@ package com.onesignal.notification.internal.open
 import android.content.Context
 import android.content.Intent
 
-interface INotificationOpenedProcessor {
+internal interface INotificationOpenedProcessor {
     /**
      * Process the opening or dismissing of a notification.
      *

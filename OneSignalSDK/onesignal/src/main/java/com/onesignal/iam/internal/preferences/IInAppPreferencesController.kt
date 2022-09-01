@@ -1,7 +1,7 @@
 package com.onesignal.iam.internal.preferences
 import java.util.Date
 
-interface IInAppPreferencesController {
+internal interface IInAppPreferencesController {
     var clickedMessagesId: Set<String>?
     var impressionesMessagesId: Set<String>?
     var viewPageImpressionedIds: Set<String>?

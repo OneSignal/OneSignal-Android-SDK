@@ -5,7 +5,7 @@ import com.onesignal.core.internal.params.IParamsService
 import org.json.JSONArray
 import org.json.JSONException
 
-interface IInfluenceDataRepository {
+internal interface IInfluenceDataRepository {
     /**
      * Get the current cached influence type string, convert it to the influence type enum, and return it
      */

@@ -1,6 +1,6 @@
 package com.onesignal.notification.internal.badges
 
-interface IBadgeCountUpdater {
+internal interface IBadgeCountUpdater {
     /**
      * Update the badge by determining the current count from the
      * state of the application.

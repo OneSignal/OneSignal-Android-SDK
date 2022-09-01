@@ -5,7 +5,7 @@ import com.onesignal.core.internal.common.events.IEventNotifier
 import com.onesignal.core.internal.common.events.IEventProducer
 import kotlin.collections.HashMap
 
-open class Model(
+internal open class Model(
     private val _changeNotifier: IEventProducer<IModelChangedHandler> = EventProducer()
 ) : IEventNotifier<IModelChangedHandler> by _changeNotifier {
 

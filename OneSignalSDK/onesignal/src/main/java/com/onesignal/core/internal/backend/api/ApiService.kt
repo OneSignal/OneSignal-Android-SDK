@@ -5,7 +5,7 @@ import com.onesignal.core.internal.logging.Logging
 import org.json.JSONException
 import org.json.JSONObject
 
-class ApiService(private val _httpClient: IHttpClient) : IApiService {
+internal class ApiService(private val _httpClient: IHttpClient) : IApiService {
     override suspend fun createUserAsync(user: Any?) {
         TODO("Not yet implemented")
     }

@@ -1,6 +1,7 @@
 package com.onesignal.core
 
 import android.content.Context
+import com.onesignal.core.debug.IDebugManager
 import com.onesignal.core.user.IUserIdentityConflictResolver
 import com.onesignal.core.user.IUserManager
 import com.onesignal.iam.IIAMManager
@@ -117,7 +118,5 @@ interface IOneSignal {
      * made against the guest user prior to [login] will *not* be applied to the logged in user.
      */
     fun setUserConflictResolver(handler: IUserIdentityConflictResolver?)
-    fun setUserConflictResolver(handler: (local: IUserManager, remote: IUserManager) -> IUserManager) // TODO: SHOULD INCLUDE?
-
-    // TODO: Lifecycle events?
+    fun setUserConflictResolver(handler: (local: IUserManager, remote: IUserManager) -> IUserManager)
 }

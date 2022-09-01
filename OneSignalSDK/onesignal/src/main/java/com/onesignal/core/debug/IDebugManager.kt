@@ -1,4 +1,4 @@
-package com.onesignal.core
+package com.onesignal.core.debug
 
 interface IDebugManager {
     var logLevel: LogLevel

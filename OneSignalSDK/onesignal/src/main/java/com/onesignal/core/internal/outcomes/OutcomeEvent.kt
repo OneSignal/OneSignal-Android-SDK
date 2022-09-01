@@ -5,7 +5,7 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
-class OutcomeEvent(
+internal class OutcomeEvent(
     val session: InfluenceType,
     val notificationIds: JSONArray?,
     val name: String,

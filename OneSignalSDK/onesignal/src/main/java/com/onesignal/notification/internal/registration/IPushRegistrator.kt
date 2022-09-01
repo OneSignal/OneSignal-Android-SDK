@@ -1,6 +1,6 @@
 package com.onesignal.notification.internal.registration
 
-interface IPushRegistrator {
+internal interface IPushRegistrator {
     enum class RegisterStatus(val value: Int) {
         PUSH_STATUS_SUBSCRIBED(1),
         PUSH_STATUS_NO_PERMISSION(0),

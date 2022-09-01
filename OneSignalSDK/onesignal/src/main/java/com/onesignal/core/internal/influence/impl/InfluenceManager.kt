@@ -11,7 +11,7 @@ import com.onesignal.core.internal.time.ITime
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 
-class InfluenceManager(
+internal class InfluenceManager(
     preferences: IPreferencesService,
     timeProvider: ITime
 ) : IInfluenceManager {

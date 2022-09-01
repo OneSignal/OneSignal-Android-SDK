@@ -3,7 +3,7 @@ package com.onesignal.core.internal.outcomes
 import com.onesignal.core.internal.backend.http.HttpResponse
 import com.onesignal.core.internal.influence.Influence
 
-interface IOutcomeEventsRepository {
+internal interface IOutcomeEventsRepository {
     suspend fun requestMeasureOutcomeEvent(
         appId: String,
         deviceType: Int,

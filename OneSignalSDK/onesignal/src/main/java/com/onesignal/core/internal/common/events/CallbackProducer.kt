@@ -4,7 +4,7 @@ package com.onesignal.core.internal.common.events
  * A standard implementation that implements [ICallbackProducer] to make callbacks less burdensome
  * to the user.
  */
-open class CallbackProducer<THandler>() : ICallbackProducer<THandler> {
+internal open class CallbackProducer<THandler>() : ICallbackProducer<THandler> {
 
     private var _callback: THandler? = null
 

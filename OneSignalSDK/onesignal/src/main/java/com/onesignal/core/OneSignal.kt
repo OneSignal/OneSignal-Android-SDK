@@ -1,6 +1,7 @@
 package com.onesignal.core
 
 import android.content.Context
+import com.onesignal.core.debug.IDebugManager
 import com.onesignal.core.internal.OneSignalImp
 import com.onesignal.core.internal.service.IServiceProvider
 import com.onesignal.core.user.IUserIdentityConflictResolver
@@ -12,12 +13,13 @@ import com.onesignal.notification.INotificationsManager
 /**
  * This singleton class is the entry point to the OneSignal SDK. It
  * is designed to make OneSignal easy to use.
- *    - No instance management is required from the app developer.
- *    - This is a wrapper around an instance of OneSignalImp, no logic lives in this class
  *
- * Note: This does *not* implement [IOneSignal] because you cannot specify @JvmStatic on an
- * override function. The cleanliness that @JvmStatic gives when calling from java outweighed
- * the use of an interface.
+ * * No instance management is required from the app developer.
+ * * This is a wrapper around an instance of [IOneSignal], no logic lives in this class.
+ *
+ * Note: This does *not* implement [IOneSignal] itself because you cannot specify @JvmStatic on an
+ * override function. The cleanliness that @JvmStatic gives when calling from java outweighs
+ * the use of an interface.  This class however should implement [IOneSignal] "in spirit".
 */
 object OneSignal {
     /**
@@ -120,7 +122,7 @@ object OneSignal {
     }
 
     /**
-     * Log the SDK into OneSignal under the user identified by the [externalId] provided. The act of
+     * Login the SDK into OneSignal under the user identified by the [externalId] provided. The act of
      * logging a user into the OneSignal SDK will switch the [user] context to that specific user.
      *
      * * If the [externalId] exists the user will be retrieved and the context set from that

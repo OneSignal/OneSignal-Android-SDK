@@ -8,7 +8,7 @@ import java.lang.reflect.WildcardType
 /**
  * A registration of a service during the build phase.
  */
-abstract class ServiceRegistration<T> {
+internal abstract class ServiceRegistration<T> {
     val services: MutableSet<Class<*>> = mutableSetOf()
 
     internal inline fun <reified TService : Any> provides(): ServiceRegistration<T> {
@@ -32,7 +32,7 @@ abstract class ServiceRegistration<T> {
     abstract fun resolve(provider: IServiceProvider): Any?
 }
 
-class ServiceRegistrationReflection<T>(
+internal class ServiceRegistrationReflection<T>(
     private val clazz: Class<*>
 ) : ServiceRegistration<T>() {
 
@@ -109,14 +109,14 @@ class ServiceRegistrationReflection<T>(
     }
 }
 
-class ServiceRegistrationSingleton<T>(
+internal class ServiceRegistrationSingleton<T>(
     private var obj: T
 ) : ServiceRegistration<T>() {
 
     override fun resolve(provider: IServiceProvider): Any? = obj
 }
 
-class ServiceRegistrationLambda<T>(
+internal class ServiceRegistrationLambda<T>(
     private val create: ((IServiceProvider) -> T),
 ) : ServiceRegistration<T>() {
 
