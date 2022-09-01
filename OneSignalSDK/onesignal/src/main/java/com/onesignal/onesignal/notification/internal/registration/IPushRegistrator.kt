@@ -1,7 +1,5 @@
 package com.onesignal.onesignal.notification.internal.registration
 
-import android.content.Context
-
 interface IPushRegistrator {
     enum class RegisterStatus(val value: Int) {
         PUSH_STATUS_SUBSCRIBED(1),

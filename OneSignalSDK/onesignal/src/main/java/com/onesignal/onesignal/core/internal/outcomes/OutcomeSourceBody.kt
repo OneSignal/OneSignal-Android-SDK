@@ -1,6 +1,5 @@
 package com.onesignal.onesignal.core.internal.outcomes
 
-import com.onesignal.onesignal.core.internal.outcomes.OutcomeConstants
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject

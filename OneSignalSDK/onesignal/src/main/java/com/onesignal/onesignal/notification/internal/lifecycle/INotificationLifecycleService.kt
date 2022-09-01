@@ -2,8 +2,6 @@ package com.onesignal.onesignal.notification.internal.lifecycle
 
 import android.app.Activity
 import android.content.Context
-import com.onesignal.onesignal.core.internal.common.events.ICallbackNotifier
-import com.onesignal.onesignal.core.internal.common.events.IEventProducer
 import com.onesignal.onesignal.notification.*
 import com.onesignal.onesignal.notification.internal.common.NotificationGenerationJob
 import org.json.JSONArray

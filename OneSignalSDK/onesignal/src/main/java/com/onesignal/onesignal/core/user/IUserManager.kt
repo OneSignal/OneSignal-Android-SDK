@@ -1,7 +1,6 @@
 package com.onesignal.onesignal.core.user
 
 import com.onesignal.onesignal.core.OneSignal
-import com.onesignal.onesignal.core.user.subscriptions.ISubscription
 import com.onesignal.onesignal.core.user.subscriptions.SubscriptionList
 
 /**

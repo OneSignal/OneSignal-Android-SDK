@@ -2,7 +2,6 @@ package com.onesignal.onesignal.core.internal.backend.http
 
 import android.net.TrafficStats
 import android.os.Build
-import com.onesignal.TLS12SocketFactory
 import com.onesignal.onesignal.core.internal.common.JSONUtils
 import com.onesignal.onesignal.core.internal.common.OneSignalUtils
 import com.onesignal.onesignal.core.internal.logging.Logging
@@ -93,7 +92,10 @@ class HttpClient(
                 // Android 4.4 and older devices fail to register to onesignal.com to due it's TLS1.2+ requirement
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP_MR1 && con is HttpsURLConnection) {
                     val conHttps = con
-                    conHttps.sslSocketFactory = TLS12SocketFactory(conHttps.sslSocketFactory)
+                    conHttps.sslSocketFactory =
+                        TLS12SocketFactory(
+                            conHttps.sslSocketFactory
+                        )
                 }
 
                 con.useCaches = false

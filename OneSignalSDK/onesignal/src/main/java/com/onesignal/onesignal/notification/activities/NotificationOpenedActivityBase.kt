@@ -32,7 +32,6 @@ import android.os.Bundle
 import com.onesignal.onesignal.core.OneSignal
 import com.onesignal.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.onesignal.notification.internal.open.INotificationOpenedProcessor
-import kotlinx.coroutines.runBlocking
 
 abstract class NotificationOpenedActivityBase : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {

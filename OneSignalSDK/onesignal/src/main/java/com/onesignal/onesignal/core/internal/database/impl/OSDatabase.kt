@@ -1,6 +1,5 @@
 package com.onesignal.onesignal.core.internal.database.impl
 
-import com.onesignal.outcomes.data.OSOutcomeTableProvider
 import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
@@ -11,16 +10,17 @@ import android.provider.BaseColumns
 import com.onesignal.onesignal.core.internal.database.IDatabase
 import com.onesignal.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.onesignal.core.internal.logging.Logging
-import com.onesignal.outcomes.data.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V1
-import com.onesignal.outcomes.data.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V3
-import com.onesignal.outcomes.data.OutcomesDbContract.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V1
-import com.onesignal.outcomes.data.OutcomesDbContract.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2
+import com.onesignal.onesignal.core.internal.outcomes.impl.OSOutcomeTableProvider
+import com.onesignal.onesignal.core.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V1
+import com.onesignal.onesignal.core.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V3
+import com.onesignal.onesignal.core.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V1
+import com.onesignal.onesignal.core.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2
 import java.lang.IllegalStateException
 import java.util.ArrayList
 
 internal class OSDatabase(
-        private val _outcomeTableProvider: OSOutcomeTableProvider,
-        context: Context?) : SQLiteOpenHelper(context, DATABASE_NAME, null, dbVersion), IDatabase {
+    private val _outcomeTableProvider: OSOutcomeTableProvider,
+    context: Context?) : SQLiteOpenHelper(context, DATABASE_NAME, null, dbVersion), IDatabase {
 
     /**
      * Should be used in the event that we don't want to retry getting the a [SQLiteDatabase] instance

@@ -11,8 +11,6 @@ import com.onesignal.onesignal.notification.internal.data.INotificationDataContr
 import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.session.ISessionService
-import com.onesignal.onesignal.notification.INotificationWillShowInForegroundHandler
-import com.onesignal.onesignal.notification.IRemoteNotificationReceivedHandler
 import com.onesignal.onesignal.notification.internal.common.NotificationGenerationJob
 import com.onesignal.onesignal.notification.internal.display.INotificationDisplayer
 import com.onesignal.onesignal.notification.internal.generation.INotificationGenerationProcessor
