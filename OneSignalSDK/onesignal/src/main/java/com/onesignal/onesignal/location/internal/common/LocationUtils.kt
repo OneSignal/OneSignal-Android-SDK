@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationListener
 import com.huawei.hms.location.LocationCallback
-import com.onesignal.onesignal.core.internal.common.AndroidSupportV4Compat
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
 
 internal object LocationUtils {

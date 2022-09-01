@@ -1,8 +1,5 @@
 package com.onesignal.onesignal.location.internal.background
 
-import android.content.Context
-import android.content.pm.PackageManager
-import androidx.core.content.ContextCompat
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.background.IBackgroundService
 import com.onesignal.onesignal.core.internal.logging.Logging

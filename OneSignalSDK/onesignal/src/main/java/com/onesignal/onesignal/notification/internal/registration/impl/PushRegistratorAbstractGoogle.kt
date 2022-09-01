@@ -26,7 +26,6 @@
  */
 package com.onesignal.onesignal.notification.internal.registration.impl
 
-import android.content.Context
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.onesignal.core.internal.device.IDeviceService
 import com.onesignal.onesignal.core.internal.logging.Logging

@@ -1,7 +1,6 @@
 package com.onesignal.onesignal.notification.internal.lifecycle
 
 import android.app.Activity
-import android.os.Bundle
 import org.json.JSONObject
 
 interface INotificationLifecycleCallback {
