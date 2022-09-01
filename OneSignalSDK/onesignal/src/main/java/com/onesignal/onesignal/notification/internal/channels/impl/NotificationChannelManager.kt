@@ -8,7 +8,6 @@ import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationManagerCompat
-import com.onesignal.language.LanguageContext
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.notification.internal.channels.INotificationChannelManager
@@ -84,8 +83,9 @@ internal class NotificationChannelManager(
         var payloadWithText = channelPayload
         if (channelPayload.has("langs")) {
             val langList = channelPayload.getJSONObject("langs")
-            val language = LanguageContext.getInstance().language
-            if (langList.has(language)) payloadWithText = langList.optJSONObject(language)
+            // TODO: Language context
+//            val language = LanguageContext.getInstance().language
+//            if (langList.has(language)) payloadWithText = langList.optJSONObject(language)
         }
         val channel_name = payloadWithText!!.optString("nm", "Miscellaneous")
         val importance = priorityToImportance(payload.optInt("pri", 6))

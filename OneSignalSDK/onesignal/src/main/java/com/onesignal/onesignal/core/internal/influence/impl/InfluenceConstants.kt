@@ -1,18 +1,16 @@
 package com.onesignal.onesignal.core.internal.influence.impl
 
-import com.onesignal.influence.data.OSInAppMessageTracker
-import com.onesignal.influence.data.OSNotificationTracker
 
 internal object InfluenceConstants {
 
     const val TIME = "time"
 
     // OSInAppMessageTracker Constants
-    val IAM_TAG: String = OSInAppMessageTracker::class.java.canonicalName as String
+    val IAM_TAG: String = InAppMessageTracker::class.java.canonicalName as String
     const val IAM_ID_TAG = "iam_id"
 
     // OSNotificationTracker Constants
-    val NOTIFICATION_TAG: String = OSNotificationTracker::class.java.canonicalName as String
+    val NOTIFICATION_TAG: String = NotificationTracker::class.java.canonicalName as String
     const val DIRECT_TAG = "direct"
     const val NOTIFICATIONS_IDS = "notification_ids"
     const val NOTIFICATION_ID_TAG = "notification_id"

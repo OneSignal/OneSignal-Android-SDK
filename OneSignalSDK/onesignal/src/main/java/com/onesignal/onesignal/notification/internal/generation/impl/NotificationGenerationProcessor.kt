@@ -10,8 +10,8 @@ import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.notification.internal.Notification
 import com.onesignal.onesignal.notification.internal.NotificationReceivedEvent
 import com.onesignal.onesignal.notification.internal.common.NotificationConstants
-import com.onesignal.onesignal.notification.internal.common.NotificationGenerationJob
 import com.onesignal.onesignal.notification.internal.data.INotificationDataController
+import com.onesignal.onesignal.notification.internal.common.NotificationGenerationJob
 import com.onesignal.onesignal.notification.internal.display.INotificationDisplayer
 import com.onesignal.onesignal.notification.internal.generation.INotificationGenerationProcessor
 import com.onesignal.onesignal.notification.internal.lifecycle.INotificationLifecycleService
