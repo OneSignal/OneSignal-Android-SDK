@@ -35,7 +35,7 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
     private const val ANDROID_PERMISSION_STRING = "android.permission.POST_NOTIFICATIONS"
 
     private val callbacks:
-            MutableSet<OneSignal.PromptForPushNotificationPermissionResponseHandler> = HashSet()
+        MutableSet<OneSignal.PromptForPushNotificationPermissionResponseHandler> = HashSet()
     private var awaitingForReturnFromSystemSettings = false
 
     init {
@@ -45,11 +45,11 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
     @ChecksSdkIntAtLeast(api = 33)
     val supportsNativePrompt =
         Build.VERSION.SDK_INT > 32 &&
-        OSUtils.getTargetSdkVersion(OneSignal.appContext) > 32
+            OSUtils.getTargetSdkVersion(OneSignal.appContext) > 32
 
     fun prompt(
         fallbackToSettings: Boolean,
-        callback: OneSignal.PromptForPushNotificationPermissionResponseHandler?,
+        callback: OneSignal.PromptForPushNotificationPermissionResponseHandler?
     ) {
         if (callback != null) callbacks.add(callback)
 
@@ -59,10 +59,11 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
         }
 
         if (!supportsNativePrompt) {
-            if (fallbackToSettings)
+            if (fallbackToSettings) {
                 showFallbackAlertDialog()
-            else
+            } else {
                 fireCallBacks(false)
+            }
             return
         }
 
@@ -81,10 +82,11 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
 
     override fun onReject(fallbackToSettings: Boolean) {
         val fallbackShown =
-            if (fallbackToSettings)
+            if (fallbackToSettings) {
                 showFallbackAlertDialog()
-            else
+            } else {
                 false
+            }
         if (!fallbackShown) fireCallBacks(false)
     }
 

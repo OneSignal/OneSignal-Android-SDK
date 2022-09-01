@@ -1,8 +1,10 @@
 package com.onesignal.onesignal.core.internal.influence.impl
 
-import com.onesignal.onesignal.core.internal.time.ITime
-import com.onesignal.onesignal.core.internal.influence.*
+import com.onesignal.onesignal.core.internal.influence.IChannelTracker
+import com.onesignal.onesignal.core.internal.influence.Influence
+import com.onesignal.onesignal.core.internal.influence.InfluenceType
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.time.ITime
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -113,8 +115,8 @@ abstract class ChannelTracker internal constructor(protected var dataRepository:
         try {
             timeProvider.run {
                 JSONObject()
-                        .put(idTag, id)
-                        .put(InfluenceConstants.TIME, currentTimeMillis)
+                    .put(idTag, id)
+                    .put(InfluenceConstants.TIME, currentTimeMillis)
             }.also { newInfluenceId ->
                 lastChannelObjectsReceived.put(newInfluenceId)
             }
@@ -146,11 +148,11 @@ abstract class ChannelTracker internal constructor(protected var dataRepository:
 
     override fun toString(): String {
         return "OSChannelTracker{" +
-                "tag=" + idTag +
-                ", influenceType=" + influenceType +
-                ", indirectIds=" + indirectIds +
-                ", directId=" + directId +
-                '}'
+            "tag=" + idTag +
+            ", influenceType=" + influenceType +
+            ", indirectIds=" + indirectIds +
+            ", directId=" + directId +
+            '}'
     }
 
     override fun equals(other: Any?): Boolean {

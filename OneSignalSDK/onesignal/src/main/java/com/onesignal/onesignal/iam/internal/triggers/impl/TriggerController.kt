@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap
 internal class TriggerController(
     private val _triggerModelStore: TriggerModelStore,
     private var _dynamicTriggerController: DynamicTriggerController
-    ) : ITriggerController, IModelStoreChangeHandler<TriggerModel> {
+) : ITriggerController, IModelStoreChangeHandler<TriggerModel> {
 
     val triggers: ConcurrentHashMap<String?, Any?> = ConcurrentHashMap()
 
@@ -210,12 +210,12 @@ internal class TriggerController(
 
     override fun onAdded(model: TriggerModel) {
         addTriggers(model.key, model.value)
-        _dynamicTriggerController.events.fire { it.onTriggerChanged(model.key)}
+        _dynamicTriggerController.events.fire { it.onTriggerChanged(model.key) }
     }
 
     override fun onUpdated(model: TriggerModel, property: String, oldValue: Any?, newValue: Any?) {
         addTriggers(model.key, model.value)
-        _dynamicTriggerController.events.fire { it.onTriggerChanged(model.key)}
+        _dynamicTriggerController.events.fire { it.onTriggerChanged(model.key) }
     }
 
     override fun onRemoved(model: TriggerModel) {

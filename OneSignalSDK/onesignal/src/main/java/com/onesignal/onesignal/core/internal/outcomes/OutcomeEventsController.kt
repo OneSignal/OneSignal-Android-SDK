@@ -1,7 +1,6 @@
 package com.onesignal.onesignal.core.internal.outcomes
 
 import android.os.Process
-import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.database.impl.OneSignalDbContract
 import com.onesignal.onesignal.core.internal.device.IDeviceService
 import com.onesignal.onesignal.core.internal.influence.Influence
@@ -10,6 +9,7 @@ import com.onesignal.onesignal.core.internal.influence.InfluenceType
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.onesignal.core.internal.session.ISessionService
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.iam.internal.InAppMessageOutcome
 
 internal class OutcomeEventsController(
@@ -75,7 +75,7 @@ internal class OutcomeEventsController(
 
         val response = outcomeEventsFactory.getRepository().requestMeasureOutcomeEvent(appId, deviceType, event)
 
-        if(response?.isSuccess == true) {
+        if (response?.isSuccess == true) {
             outcomeEventsFactory.getRepository().removeEvent(event)
         }
     }
@@ -93,17 +93,17 @@ internal class OutcomeEventsController(
         }
     }
 
-    suspend fun sendUniqueOutcomeEvent(name: String) : OutcomeEvent? {
+    suspend fun sendUniqueOutcomeEvent(name: String): OutcomeEvent? {
         val sessionResult: List<Influence> = _session.influences
         return sendUniqueOutcomeEvent(name, sessionResult)
     }
 
-    suspend fun sendOutcomeEvent(name: String) : OutcomeEvent? {
+    suspend fun sendOutcomeEvent(name: String): OutcomeEvent? {
         val influences: List<Influence> = _session.influences
         return sendAndCreateOutcomeEvent(name, 0f, influences)
     }
 
-    suspend fun sendOutcomeEventWithValue(name: String, weight: Float) : OutcomeEvent? {
+    suspend fun sendOutcomeEventWithValue(name: String, weight: Float): OutcomeEvent? {
         val influences: List<Influence> = _session.influences
         return sendAndCreateOutcomeEvent(name, weight, influences)
     }
@@ -115,7 +115,7 @@ internal class OutcomeEventsController(
     private suspend fun sendUniqueOutcomeEvent(
         name: String,
         sessionInfluences: List<Influence>,
-    ) : OutcomeEvent? {
+    ): OutcomeEvent? {
         val influences: List<Influence> = removeDisabledInfluences(sessionInfluences)
         if (influences.isEmpty()) {
             Logging.debug("Unique Outcome disabled for current session")
@@ -135,11 +135,12 @@ internal class OutcomeEventsController(
             // Make sure unique Ids exist before trying to make measure request
             val uniqueInfluences: List<Influence>? = getUniqueIds(name, influences)
             if (uniqueInfluences == null) {
-                Logging.debug("""
+                Logging.debug(
+                    """
                         Measure endpoint will not send because unique outcome already sent for: 
                         SessionInfluences: $influences
                         Outcome name: $name
-                        """.trimIndent()
+                    """.trimIndent()
                 )
 
                 // Return null to determine not a failure, but not a success in terms of the request made
@@ -149,11 +150,12 @@ internal class OutcomeEventsController(
         } else {
             // Make sure unique outcome has not been sent for current unattributed session
             if (unattributedUniqueOutcomeEventsSentOnSession!!.contains(name)) {
-                Logging.debug("""
+                Logging.debug(
+                    """
                         Measure endpoint will not send because unique outcome already sent for: 
                         Session: ${InfluenceType.UNATTRIBUTED}
                         Outcome name: $name
-                        """.trimIndent()
+                    """.trimIndent()
                 )
 
                 // Return null to determine not a failure, but not a success in terms of the request made
@@ -168,7 +170,7 @@ internal class OutcomeEventsController(
         name: String,
         weight: Float,
         influences: List<Influence>,
-    ) : OutcomeEvent? {
+    ): OutcomeEvent? {
         val timestampSeconds: Long = _time.currentTimeMillis / 1000
         val deviceType: Int = _deviceService.deviceType
         val appId: String = _configModelStore.get().appId!!
@@ -188,7 +190,7 @@ internal class OutcomeEventsController(
                 InfluenceType.UNATTRIBUTED -> unattributed = true
                 InfluenceType.DISABLED -> {
                     Logging.verbose("Outcomes disabled for channel: " + influence.influenceChannel)
-                    return null  // finish method
+                    return null // finish method
                 }
             }
         }
@@ -203,20 +205,20 @@ internal class OutcomeEventsController(
 
         val response = outcomeEventsFactory.getRepository().requestMeasureOutcomeEvent(appId, deviceType, eventParams)
 
-        if(response?.isSuccess == true) {
+        if (response?.isSuccess == true) {
             saveUniqueOutcome(eventParams)
 
             // The only case where an actual success has occurred and the OutcomeEvent should be sent back
             return OutcomeEvent.fromOutcomeEventParamsV2toOutcomeEventV1(eventParams)
-        }
-        else {
+        } else {
             Thread({
                 Thread.currentThread().priority = Process.THREAD_PRIORITY_BACKGROUND
                 // Only if we need to save and retry the outcome, then we will save the timestamp for future sending
                 eventParams.timestamp = timestampSeconds
                 outcomeEventsFactory.getRepository().saveOutcomeEvent(eventParams)
             }, OS_SAVE_OUTCOMES).start()
-            Logging.warn("""Sending outcome with name: $name failed with status code: ${response?.statusCode} and response: $response
+            Logging.warn(
+                """Sending outcome with name: $name failed with status code: ${response?.statusCode} and response: $response
 Outcome event was cached and will be reattempted on app cold start"""
             )
 

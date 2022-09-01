@@ -78,17 +78,17 @@ class NotificationGenerationJob {
 
     override fun toString(): String {
         return "NotificationGenerationJob{" +
-                "jsonPayload=" + jsonPayload +
-                ", isRestoring=" + isRestoring +
-                ", isNotificationToDisplay=" + isNotificationToDisplay +
-                ", shownTimeStamp=" + shownTimeStamp +
-                ", overriddenBodyFromExtender=" + overriddenBodyFromExtender +
-                ", overriddenTitleFromExtender=" + overriddenTitleFromExtender +
-                ", overriddenSound=" + overriddenSound +
-                ", overriddenFlags=" + overriddenFlags +
-                ", orgFlags=" + orgFlags +
-                ", orgSound=" + orgSound +
-                ", notification=" + notification +
-                '}'
+            "jsonPayload=" + jsonPayload +
+            ", isRestoring=" + isRestoring +
+            ", isNotificationToDisplay=" + isNotificationToDisplay +
+            ", shownTimeStamp=" + shownTimeStamp +
+            ", overriddenBodyFromExtender=" + overriddenBodyFromExtender +
+            ", overriddenTitleFromExtender=" + overriddenTitleFromExtender +
+            ", overriddenSound=" + overriddenSound +
+            ", overriddenFlags=" + overriddenFlags +
+            ", orgFlags=" + orgFlags +
+            ", orgSound=" + orgSound +
+            ", notification=" + notification +
+            '}'
     }
 }

@@ -16,9 +16,9 @@ internal interface INotificationBackendService {
      * @param subscriptionId The specific subscription within the [appId] the notification has been received for.
      * @param deviceType The type of device the notification was received at.
      */
-    suspend fun updateNotificationAsReceived(appId: String, notificationId: String, subscriptionId: String, deviceType: Int) : HttpResponse
+    suspend fun updateNotificationAsReceived(appId: String, notificationId: String, subscriptionId: String, deviceType: Int): HttpResponse
 
-    suspend fun updateNotificationAsOpened(appId: String, notificationId: String, subscriptionId: String, deviceType: Int) : HttpResponse
+    suspend fun updateNotificationAsOpened(appId: String, notificationId: String, subscriptionId: String, deviceType: Int): HttpResponse
 
-    suspend fun postNotification(appId: String, json: JSONObject) : HttpResponse
+    suspend fun postNotification(appId: String, json: JSONObject): HttpResponse
 }

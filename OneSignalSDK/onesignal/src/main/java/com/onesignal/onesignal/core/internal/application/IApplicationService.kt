@@ -4,7 +4,7 @@ import android.app.Activity
 import android.content.Context
 import com.onesignal.onesignal.core.internal.AppEntryAction
 
-interface IApplicationService  {
+interface IApplicationService {
 
     /**
      * The application context
@@ -30,13 +30,13 @@ interface IApplicationService  {
      * Will determine and suspend until system conditions are available for displaying
      * UI to the user.
      */
-    suspend fun waitUntilSystemConditionsAvailable() : Boolean
+    suspend fun waitUntilSystemConditionsAvailable(): Boolean
 
     /**
      * Will determine and suspend until the decor view is ready to displayed
      * within.
      */
-    suspend fun waitUntilActivityReady() : Boolean
+    suspend fun waitUntilActivityReady(): Boolean
 
     /**
      * Add an activity available handler

@@ -55,7 +55,10 @@ class TrackAmazonPurchase {
    private boolean canTrack = false;
 
    private OSPurchasingListener osPurchasingListener;
-   
+
+   // appstore v3.x requires PurchasingService.registerListener() to run on main UI thread
+   private boolean registerListenerOnMainThread = false;
+
    private Object listenerHandlerObject;
    private Field listenerHandlerField;
 
@@ -72,6 +75,7 @@ class TrackAmazonPurchase {
          } catch(NullPointerException e) {
             //appstore v3.x
             listenerHandlerObject = listenerHandlerClass.getMethod("e").invoke(null);
+            registerListenerOnMainThread = true;
          }
 
          listenerHandlerField = listenerHandlerClass.getDeclaredField("f");
@@ -104,7 +108,16 @@ class TrackAmazonPurchase {
    }
 
    private void setListener() {
-      PurchasingService.registerListener(context, osPurchasingListener);
+      if (registerListenerOnMainThread) {
+         OSUtils.runOnMainUIThread(new Runnable() {
+            @Override
+            public void run() {
+               PurchasingService.registerListener(context, osPurchasingListener);
+            }
+         });
+      } else {
+         PurchasingService.registerListener(context, osPurchasingListener);
+      }
    }
 
    void checkListener() {

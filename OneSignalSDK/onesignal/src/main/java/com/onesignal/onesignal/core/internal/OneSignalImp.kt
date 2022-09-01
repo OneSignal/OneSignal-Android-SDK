@@ -3,29 +3,37 @@ package com.onesignal.onesignal.core.internal
 import android.content.Context
 import com.onesignal.onesignal.core.IDebugManager
 import com.onesignal.onesignal.core.IOneSignal
-import com.onesignal.onesignal.core.internal.application.impl.ApplicationService
+import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.application.IApplicationService
+import com.onesignal.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.onesignal.core.internal.common.OneSignalUtils
 import com.onesignal.onesignal.core.internal.common.events.CallbackProducer
 import com.onesignal.onesignal.core.internal.common.events.ICallbackProducer
-import com.onesignal.onesignal.core.internal.models.*
-import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.debug.DebugManager
 import com.onesignal.onesignal.core.internal.logging.Logging
-import com.onesignal.onesignal.core.internal.service.*
+import com.onesignal.onesignal.core.internal.models.ConfigModel
+import com.onesignal.onesignal.core.internal.models.ConfigModelStore
+import com.onesignal.onesignal.core.internal.models.IdentityModel
+import com.onesignal.onesignal.core.internal.models.IdentityModelStore
+import com.onesignal.onesignal.core.internal.models.PropertiesModel
+import com.onesignal.onesignal.core.internal.models.PropertiesModelStore
+import com.onesignal.onesignal.core.internal.models.SessionModel
+import com.onesignal.onesignal.core.internal.models.SessionModelStore
+import com.onesignal.onesignal.core.internal.service.IServiceProvider
 import com.onesignal.onesignal.core.internal.service.ServiceBuilder
+import com.onesignal.onesignal.core.internal.service.ServiceProvider
 import com.onesignal.onesignal.core.internal.startup.StartupService
 import com.onesignal.onesignal.core.internal.user.IUserSwitcher
-import com.onesignal.onesignal.location.internal.LocationModule
-import com.onesignal.onesignal.location.ILocationManager
-import com.onesignal.onesignal.notification.internal.NotificationModule
-import com.onesignal.onesignal.notification.INotificationsManager
-import com.onesignal.onesignal.iam.internal.IAMModule
-import com.onesignal.onesignal.iam.IIAMManager
 import com.onesignal.onesignal.core.user.IUserIdentityConflictResolver
 import com.onesignal.onesignal.core.user.IUserManager
+import com.onesignal.onesignal.iam.IIAMManager
+import com.onesignal.onesignal.iam.internal.IAMModule
+import com.onesignal.onesignal.location.ILocationManager
+import com.onesignal.onesignal.location.internal.LocationModule
+import com.onesignal.onesignal.notification.INotificationsManager
+import com.onesignal.onesignal.notification.internal.NotificationModule
 import kotlinx.coroutines.delay
-import java.util.*
+import java.util.UUID
 
 class OneSignalImp() : IOneSignal, IServiceProvider {
     override val sdkVersion: String = OneSignalUtils.sdkVersion
@@ -42,8 +50,8 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
 
     override val notifications: INotificationsManager get() = if (isInitialized) _notifications!! else throw Exception("Must call 'initWithContext' before use")
     override val location: ILocationManager get() = if (isInitialized) _location!! else throw Exception("Must call 'initWithContext' before use")
-    override val user: IUserManager get() = if(isInitialized) _user!! else throw Exception("Must call 'initWithContext' before use")
-    override val iam: IIAMManager get() = if(isInitialized) _iam!! else throw Exception("Must call 'initWithContext' before use")
+    override val user: IUserManager get() = if (isInitialized) _user!! else throw Exception("Must call 'initWithContext' before use")
+    override val iam: IIAMManager get() = if (isInitialized) _iam!! else throw Exception("Must call 'initWithContext' before use")
     override val debug: IDebugManager = DebugManager()
 
     // Services required by this class
@@ -76,10 +84,10 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
     }
 
     override fun initWithContext(context: Context) {
-        Logging.log(LogLevel.DEBUG, "initWithContext(context: $context)");
+        Logging.log(LogLevel.DEBUG, "initWithContext(context: $context)")
 
         // do not do this again if already initialized
-        if(isInitialized)
+        if (isInitialized)
             return
 
         // start the application service. This is called explicitly first because we want
@@ -92,7 +100,7 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
         _sessionModel = _services.getService<SessionModelStore>().get()
 
         // if privacy consent was set prior to init, set it in the model now
-        if(_requiresPrivacyConsent != null)
+        if (_requiresPrivacyConsent != null)
             _configModel!!.requiresPrivacyConsent = _requiresPrivacyConsent!!
 
         // "Inject" the services required by this main class
@@ -106,7 +114,7 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
 
         isInitialized = true
 
-        if(_appId != null) {
+        if (_appId != null) {
             _configModel!!.appId = _appId!!
             startServices()
         }
@@ -115,19 +123,18 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
     private var _appId: String? = null
 
     override fun setAppId(appId: String) {
-        Logging.log(LogLevel.DEBUG, "setAppId(appId: $appId)");
+        Logging.log(LogLevel.DEBUG, "setAppId(appId: $appId)")
 
-        if(!isInitialized) {
+        if (!isInitialized) {
             _appId = appId
-        }
-        else {
+        } else {
             _configModel!!.appId = _appId!!
             startServices()
         }
     }
 
     private fun startServices() {
-        if(!_haveServicesStarted) {
+        if (!_haveServicesStarted) {
             _haveServicesStarted = true
             // Instantiate and call the IStartableServices
             _startupService = _services.getService()
@@ -140,7 +147,7 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
         Logging.log(
             LogLevel.DEBUG,
             "login(externalId: $externalId, externalIdHash: $externalIdHash)"
-        );
+        )
 
         if (!isInitialized)
             throw Exception("Must call 'initWithContext' before use")
@@ -162,7 +169,7 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
         var identityModel = _identityModelStore!!.get(externalId)
         var propertiesModel = _propertiesModelStore!!.get(externalId)
 
-        if(identityModel == null) {
+        if (identityModel == null) {
             identityModel = IdentityModel()
             identityModel.id = UUID.randomUUID().toString()
             identityModel.userId = externalId
@@ -170,7 +177,7 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
             _identityModelStore!!.add(externalId, identityModel)
         }
 
-        if(propertiesModel == null) {
+        if (propertiesModel == null) {
             propertiesModel = PropertiesModel()
             propertiesModel.id = identityModel.id
             _propertiesModelStore!!.add(externalId, propertiesModel)
@@ -180,7 +187,7 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
         retPropertiesModel = propertiesModel
         // TODO: Add repo op to create user on the backend.
 
-        if(retIdentityModel != null && retPropertiesModel != null) {
+        if (retIdentityModel != null && retPropertiesModel != null) {
             // TODO: Clear anything else out?
             // TODO: Unhook the old models from the operation store, any changes to them are no longer applicable.
             // TODO: Hook the new models to the operation store, any changes to these are applicable.
@@ -191,7 +198,7 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
     }
 
     override suspend fun loginGuest(): IUserManager {
-        Logging.log(LogLevel.DEBUG, "loginGuest()");
+        Logging.log(LogLevel.DEBUG, "loginGuest()")
 
         if (!isInitialized)
             throw Exception("Must call 'initWithContext' before use")
@@ -208,16 +215,16 @@ class OneSignalImp() : IOneSignal, IServiceProvider {
         // TODO: Hook the new models to the operation store, any changes to these are applicable.
         _userSwitcher!!.setUser(retIdentityModel, retPropertiesModel)
 
-        return user;
+        return user
     }
 
     override fun setUserConflictResolver(handler: IUserIdentityConflictResolver?) {
-        Logging.log(LogLevel.DEBUG, "setUserConflictResolver(handler: $handler)");
+        Logging.log(LogLevel.DEBUG, "setUserConflictResolver(handler: $handler)")
         _userConflictResolverNotifier.set(handler)
     }
 
     override fun setUserConflictResolver(handler: (local: IUserManager, remote: IUserManager) -> IUserManager) {
-        Logging.log(LogLevel.DEBUG, "setUserConflictResolver(handler: $handler)");
+        Logging.log(LogLevel.DEBUG, "setUserConflictResolver(handler: $handler)")
         _userConflictResolverNotifier.set(object : IUserIdentityConflictResolver {
             override fun resolve(local: IUserManager, remote: IUserManager): IUserManager {
                 return handler(local, remote)

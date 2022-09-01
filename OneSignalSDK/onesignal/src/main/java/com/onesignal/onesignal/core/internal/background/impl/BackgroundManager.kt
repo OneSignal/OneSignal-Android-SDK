@@ -85,23 +85,23 @@ class BackgroundManager(
     }
 
     override fun onUnfocused() {
-       scheduleBackground()
+        scheduleBackground()
     }
 
     private fun scheduleBackground() {
         // Go through the background services to figure out whether, and when, to schedule the background run.
         var minDelay: Long? = null
 
-        for(backgroundService in _backgroundServices) {
+        for (backgroundService in _backgroundServices) {
             val scheduleIn = backgroundService.scheduleIn
-            if(scheduleIn != null) {
-                if(minDelay == null || scheduleIn < minDelay) {
+            if (scheduleIn != null) {
+                if (minDelay == null || scheduleIn < minDelay) {
                     minDelay = scheduleIn
                 }
             }
         }
 
-        if(minDelay != null) {
+        if (minDelay != null) {
             scheduleSyncTask(minDelay)
         }
     }
@@ -120,7 +120,7 @@ class BackgroundManager(
         backgroundSyncJob = launch(Dispatchers.Unconfined) {
             synchronized(_lock) { _nextScheduledSyncTimeMs = 0L }
 
-            for(backgroundService in _backgroundServices) {
+            for (backgroundService in _backgroundServices) {
                 backgroundService.run()
             }
 
@@ -199,8 +199,11 @@ class BackgroundManager(
         } catch (e: NullPointerException) {
             // Catch for buggy Oppo devices
             // https://github.com/OneSignal/OneSignal-Android-SDK/issues/487
-            Logging.error("scheduleSyncServiceAsJob called JobScheduler.jobScheduler which " +
-                    "triggered an internal null Android error. Skipping job.", e)
+            Logging.error(
+                "scheduleSyncServiceAsJob called JobScheduler.jobScheduler which " +
+                    "triggered an internal null Android error. Skipping job.",
+                e
+            )
         }
     }
 

@@ -7,7 +7,8 @@ import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsRepository
 
 internal class OSOutcomeEventsFactory(
     private val apiClient: IHttpClient,
-    private val outcomeEventsCache: IOutcomeEventsCache) : IOutcomeEventsFactory {
+    private val outcomeEventsCache: IOutcomeEventsCache
+) : IOutcomeEventsFactory {
 
     private var repository: IOutcomeEventsRepository? = null
 
@@ -25,5 +26,4 @@ internal class OSOutcomeEventsFactory(
         OSOutcomeEventsV2Repository(outcomeEventsCache, OSOutcomeEventsV2Service(apiClient))
     else
         OSOutcomeEventsV1Repository(outcomeEventsCache, OSOutcomeEventsV1Service(apiClient))
-
 }

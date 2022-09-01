@@ -37,8 +37,8 @@ object ViewUtils {
         // Use use stable heights as SystemWindowInset subtracts the keyboard
         val windowInsets = decorView.rootWindowInsets ?: return decorView.height
         return decorView.height -
-                windowInsets.stableInsetBottom -
-                windowInsets.stableInsetTop
+            windowInsets.stableInsetBottom -
+            windowInsets.stableInsetTop
     }
 
     private fun getWindowHeightLollipop(activity: Activity): Int {

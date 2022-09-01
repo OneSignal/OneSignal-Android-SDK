@@ -1,6 +1,6 @@
 package com.onesignal.onesignal.core.internal.backend.http
 
-import java.net.HttpURLConnection;
+import java.net.HttpURLConnection
 
 class HttpResponse(
     /**
@@ -16,8 +16,9 @@ class HttpResponse(
     /**
      * When non-null, the throwable that was thrown during processing.
      */
-    val throwable: Throwable? = null) {
+    val throwable: Throwable? = null
+) {
 
     val isSuccess: Boolean
-    get() = statusCode == HttpURLConnection.HTTP_OK || statusCode == HttpURLConnection.HTTP_ACCEPTED || statusCode == HttpURLConnection.HTTP_NOT_MODIFIED
+        get() = statusCode == HttpURLConnection.HTTP_OK || statusCode == HttpURLConnection.HTTP_ACCEPTED || statusCode == HttpURLConnection.HTTP_NOT_MODIFIED
 }

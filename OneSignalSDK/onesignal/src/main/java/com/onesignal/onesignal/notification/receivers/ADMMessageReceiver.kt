@@ -1,8 +1,8 @@
 package com.onesignal.onesignal.notification.receivers
 
-import com.onesignal.*
-import com.onesignal.onesignal.notification.services.ADMMessageHandler
+import com.onesignal.ADMMessageHandlerJob
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.notification.services.ADMMessageHandler
 
 // WARNING: Do not pass 'this' to any methods as it will cause proguard build errors
 //             when "proguard-android-optimize.txt" is used.

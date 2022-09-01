@@ -1,32 +1,32 @@
 package com.onesignal.onesignal.notification.internal.display.impl
 
-import android.content.Intent
-import android.app.PendingIntent
-import android.graphics.Bitmap
-import org.json.JSONException
-import android.graphics.BitmapFactory
 import android.R.drawable
 import android.app.Notification
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.res.Resources
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.onesignal.R
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
-import com.onesignal.onesignal.notification.internal.common.NotificationConstants
-import com.onesignal.onesignal.notification.internal.common.NotificationHelper
-import com.onesignal.onesignal.notification.internal.bundle.impl.NotificationBundleProcessor
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.notification.internal.bundle.impl.NotificationBundleProcessor
 import com.onesignal.onesignal.notification.internal.channels.INotificationChannelManager
+import com.onesignal.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.onesignal.notification.internal.common.NotificationGenerationJob
+import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.onesignal.notification.internal.display.INotificationDisplayBuilder
 import com.onesignal.onesignal.notification.receivers.NotificationDismissReceiver
+import org.json.JSONException
 import org.json.JSONObject
 import java.math.BigInteger
 import java.net.URL
-import java.util.*
+import java.util.Arrays
 
 internal class NotificationDisplayBuilder(
     private val _applicationService: IApplicationService,
@@ -50,7 +50,7 @@ internal class NotificationDisplayBuilder(
     // This includes:
     //    Android 6.0 - No Sound or heads-up
     //    Android 5.0 - Sound, but no heads-up
-    override fun getGroupAlertBehavior() : Int {
+    override fun getGroupAlertBehavior(): Int {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) NotificationCompat.GROUP_ALERT_CHILDREN else NotificationCompat.GROUP_ALERT_SUMMARY
     }
 

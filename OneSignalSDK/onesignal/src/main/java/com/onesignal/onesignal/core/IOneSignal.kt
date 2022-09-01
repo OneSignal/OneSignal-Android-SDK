@@ -1,12 +1,11 @@
 package com.onesignal.onesignal.core
 
 import android.content.Context
-
+import com.onesignal.onesignal.core.user.IUserIdentityConflictResolver
+import com.onesignal.onesignal.core.user.IUserManager
 import com.onesignal.onesignal.iam.IIAMManager
 import com.onesignal.onesignal.location.ILocationManager
 import com.onesignal.onesignal.notification.INotificationsManager
-import com.onesignal.onesignal.core.user.IUserIdentityConflictResolver
-import com.onesignal.onesignal.core.user.IUserManager
 
 interface IOneSignal {
     /**
@@ -100,7 +99,7 @@ interface IOneSignal {
      * because both Push and IAM are owned by the OS.
      */
     suspend fun login(externalId: String, externalIdHash: String? = null): IUserManager
-    suspend fun login(externalId: String) : IUserManager = login(externalId, null)
+    suspend fun login(externalId: String): IUserManager = login(externalId, null)
 
     /**
      * Log the SDK into OneSignal as a guest user. A guest user has no user identity that can later

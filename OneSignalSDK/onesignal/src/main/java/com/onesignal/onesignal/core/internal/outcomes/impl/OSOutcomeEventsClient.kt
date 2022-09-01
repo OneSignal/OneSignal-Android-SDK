@@ -6,5 +6,5 @@ import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsBackend
 import org.json.JSONObject
 
 internal abstract class OSOutcomeEventsClient(val client: IHttpClient) : IOutcomeEventsBackend {
-    abstract override suspend fun sendOutcomeEvent(jsonObject: JSONObject) : HttpResponse
+    abstract override suspend fun sendOutcomeEvent(jsonObject: JSONObject): HttpResponse
 }

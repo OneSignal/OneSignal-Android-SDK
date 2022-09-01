@@ -27,8 +27,8 @@
 package com.onesignal.onesignal.notification.activities
 
 import android.app.Activity
-import android.os.Bundle
 import android.content.Intent
+import android.os.Bundle
 import com.onesignal.onesignal.core.OneSignal
 import com.onesignal.onesignal.notification.internal.open.INotificationOpenedProcessorHMS
 import kotlinx.coroutines.runBlocking

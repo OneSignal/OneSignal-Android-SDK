@@ -1,7 +1,6 @@
 package com.onesignal.onesignal.core.internal.device.impl
 
 import android.content.pm.PackageManager
-import androidx.annotation.Keep
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.location.LocationListener
 import com.google.firebase.messaging.FirebaseMessaging
@@ -49,8 +48,8 @@ class DeviceService(private val _applicationService: IApplicationService) : IDev
      * i. "Notification Message" pushes are very bare bones. (title + body)
      * ii. "Data Message" works as expected.
      */
-     override val deviceType: Int
-         get() {
+    override val deviceType: Int
+        get() {
             if (supportsADM()) return DEVICE_TYPE_FIREOS
             if (supportsGooglePush()) return DEVICE_TYPE_ANDROID
 

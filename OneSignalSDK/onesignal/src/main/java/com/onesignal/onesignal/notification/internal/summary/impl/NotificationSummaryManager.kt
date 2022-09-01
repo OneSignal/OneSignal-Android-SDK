@@ -1,9 +1,9 @@
 package com.onesignal.onesignal.notification.internal.summary.impl
 
 import com.onesignal.onesignal.core.internal.application.IApplicationService
-import com.onesignal.onesignal.notification.internal.common.NotificationHelper
-import com.onesignal.onesignal.notification.internal.common.NotificationGenerationJob
 import com.onesignal.onesignal.core.internal.params.IParamsService
+import com.onesignal.onesignal.notification.internal.common.NotificationGenerationJob
+import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.onesignal.notification.internal.data.INotificationDataController
 import com.onesignal.onesignal.notification.internal.display.ISummaryNotificationDisplayer
 import com.onesignal.onesignal.notification.internal.restoration.INotificationRestoreProcessor
@@ -97,8 +97,7 @@ internal class NotificationSummaryManager(
                 val groupId = if (group == NotificationHelper.grouplessSummaryKey) {
                     // If the group is groupless, obtain the hardcoded groupless summary id
                     NotificationHelper.grouplessSummaryId
-                }
-                else {
+                } else {
                     // Obtain the group to clear notifications from
                     _dataController.getAndroidIdForGroup(group, true)
                 }
@@ -106,7 +105,6 @@ internal class NotificationSummaryManager(
                 // Clear the entire notification summary
                 if (groupId != null)
                     notificationManager.cancel(groupId)
-
             } else {
                 // Clear the most recent notification from the status bar summary
                 _dataController.markAsDismissed(mostRecentId)

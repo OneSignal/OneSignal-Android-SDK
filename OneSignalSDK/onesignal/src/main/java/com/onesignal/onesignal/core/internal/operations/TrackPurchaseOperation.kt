@@ -26,8 +26,8 @@ class TrackPurchaseOperation(
     /**
      * The list of purchases that have been made.
      */
-    val purchases: List<PurchaseInfo>) : Operation(UserOperationExecutor.TRACK_PURCHASE)  {
-}
+    val purchases: List<PurchaseInfo>
+) : Operation(UserOperationExecutor.TRACK_PURCHASE)
 
 /**
  * Information about a specific purchase.

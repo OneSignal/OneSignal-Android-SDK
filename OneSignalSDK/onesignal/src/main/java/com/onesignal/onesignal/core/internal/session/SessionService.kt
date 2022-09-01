@@ -18,14 +18,16 @@ import com.onesignal.onesignal.core.internal.models.SessionModel
 import com.onesignal.onesignal.core.internal.models.SessionModelStore
 import com.onesignal.onesignal.core.internal.startup.IStartableService
 import org.json.JSONArray
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.UUID
 
 internal class SessionService(
     private val _applicationService: IApplicationService,
     private val _configModelStore: ConfigModelStore,
     private val _sessionModelStore: SessionModelStore,
     private val _influenceManager: IInfluenceManager,
-) : ISessionService, IStartableService, IApplicationLifecycleHandler, IEventNotifier<ISessionLifecycleHandler>  {
+) : ISessionService, IStartableService, IApplicationLifecycleHandler, IEventNotifier<ISessionLifecycleHandler> {
 
     override val influences: List<Influence>
         get() = _influenceManager.influences
@@ -50,34 +52,32 @@ internal class SessionService(
         Logging.log(LogLevel.DEBUG, "SessionService.onFocus()")
         val now: Date = Calendar.getInstance().time
 
-        var dt = now.time - _focusOutTime.time;
+        var dt = now.time - _focusOutTime.time
 
         if (dt > (_config!!.sessionFocusTimeout * 60 * 1000)) {
-            Logging.debug("Session timeout reached");
-            createNewSession();
-        }
-        else if (dt < 0) {
+            Logging.debug("Session timeout reached")
+            createNewSession()
+        } else if (dt < 0) {
             // user is messing with system clock
-            Logging.debug("System clock changed to earlier than focus out time");
-            createNewSession();
-        }
-        else { // just add to the unfocused duration
-            _session!!.unfocusedDuration += dt;
+            Logging.debug("System clock changed to earlier than focus out time")
+            createNewSession()
+        } else { // just add to the unfocused duration
+            _session!!.unfocusedDuration += dt
         }
     }
 
     override fun onUnfocused() {
         Logging.log(LogLevel.DEBUG, "SessionService.onUnfocused()")
-        _focusOutTime = Calendar.getInstance().time;
+        _focusOutTime = Calendar.getInstance().time
     }
 
     private fun createNewSession() {
         // no reason to maintain old session models, just overwrite
         _session!!.id = UUID.randomUUID().toString()
         _session!!.startTime = Calendar.getInstance().time
-        _session!!.unfocusedDuration = 0.0;
+        _session!!.unfocusedDuration = 0.0
 
-        Logging.debug("New session started at ${_session!!.startTime}");
+        Logging.debug("New session started at ${_session!!.startTime}")
         _sessionLifeCycleNotifier.fire { it.sessionStarted() }
     }
 
@@ -113,9 +113,9 @@ internal class SessionService(
     override fun directInfluenceFromIAMClick(messageId: String) {
         Logging.debug("SessionService.onDirectInfluenceFromIAMClick messageId: $messageId")
         val inAppMessageTracker =
-        // We don't care about ending the session duration because IAM doesn't influence a session
-        // We don't care about ending the session duration because IAM doesn't influence a session
-        setSession(_influenceManager.iAMChannelTracker, InfluenceType.DIRECT, messageId, null)
+            // We don't care about ending the session duration because IAM doesn't influence a session
+            // We don't care about ending the session duration because IAM doesn't influence a session
+            setSession(_influenceManager.iAMChannelTracker, InfluenceType.DIRECT, messageId, null)
     }
 
     override fun directInfluenceFromIAMClickFinished() {
@@ -149,7 +149,8 @@ internal class SessionService(
     private fun setSession(channelTracker: IChannelTracker, influenceType: InfluenceType, directNotificationId: String?, indirectNotificationIds: JSONArray?): Boolean {
         if (!willChangeSession(channelTracker, influenceType, directNotificationId, indirectNotificationIds))
             return false
-        Logging.debug("""
+        Logging.debug(
+            """
             OSChannelTracker changed: ${channelTracker.idTag}
             from:
             influenceType: ${channelTracker.influenceType}, directNotificationId: ${channelTracker.directId}, indirectNotificationIds: ${channelTracker.indirectIds}

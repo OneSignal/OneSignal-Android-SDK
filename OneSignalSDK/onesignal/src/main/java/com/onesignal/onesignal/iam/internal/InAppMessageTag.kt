@@ -20,16 +20,16 @@ internal class InAppMessageTag(json: JSONObject) {
 
     override fun toString(): String {
         return "OSInAppMessageTag{" +
-                "adds=" + tagsToAdd +
-                ", removes=" + tagsToRemove +
-                '}'
+            "adds=" + tagsToAdd +
+            ", removes=" + tagsToRemove +
+            '}'
     }
 
     companion object {
-        //TODO when backend is ready check if key match
+        // TODO when backend is ready check if key match
         private const val ADD_TAGS = "adds"
 
-        //TODO when backend is ready check if key match
+        // TODO when backend is ready check if key match
         private const val REMOVE_TAGS = "removes"
     }
 

@@ -5,7 +5,7 @@ import com.onesignal.onesignal.notification.INotificationReceivedEvent
 
 internal class NotificationReceivedEvent(
     override val notification: Notification
-        ) : INotificationReceivedEvent {
+) : INotificationReceivedEvent {
 
     var effectiveNotification: Notification? = notification
 

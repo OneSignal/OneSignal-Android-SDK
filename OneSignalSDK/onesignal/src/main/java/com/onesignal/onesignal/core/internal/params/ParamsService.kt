@@ -12,7 +12,7 @@ class ParamsService : IParamsService, IWriteableParamsService {
     override var useEmailAuth: Boolean = false
     override var useUserIdAuth: Boolean = false
     override var notificationChannels: JSONArray? = null
-    override var firebaseAnalytics : Boolean = false
+    override var firebaseAnalytics: Boolean = false
     override var restoreTTLFilter: Boolean = false
     override var clearGroupOnSummaryClick: Boolean = false
     override var receiveReceiptEnabled: Boolean = true

@@ -1,17 +1,19 @@
 package com.onesignal.onesignal.core.internal.user
 
+import com.onesignal.onesignal.core.LogLevel
+import com.onesignal.onesignal.core.internal.common.events.EventProducer
+import com.onesignal.onesignal.core.internal.common.events.IEventNotifier
+import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.models.IdentityModel
+import com.onesignal.onesignal.core.internal.models.SubscriptionModel
+import com.onesignal.onesignal.core.internal.models.SubscriptionModelStore
+import com.onesignal.onesignal.core.internal.models.SubscriptionType
 import com.onesignal.onesignal.core.internal.user.subscriptions.EmailSubscription
 import com.onesignal.onesignal.core.internal.user.subscriptions.PushSubscription
 import com.onesignal.onesignal.core.internal.user.subscriptions.SmsSubscription
 import com.onesignal.onesignal.core.user.subscriptions.ISubscription
 import com.onesignal.onesignal.core.user.subscriptions.SubscriptionList
-import com.onesignal.onesignal.core.LogLevel
-import com.onesignal.onesignal.core.internal.common.events.EventProducer
-import com.onesignal.onesignal.core.internal.common.events.IEventNotifier
-import com.onesignal.onesignal.core.internal.logging.Logging
-import com.onesignal.onesignal.core.internal.models.*
-import com.onesignal.onesignal.core.internal.models.SubscriptionModelStore
-import java.util.*
+import java.util.UUID
 
 interface ISubscriptionManager : IEventNotifier<ISubscriptionChangedHandler> {
     var subscriptions: SubscriptionList
@@ -45,11 +47,10 @@ internal open class SubscriptionManager(
 
         var subs = mutableListOf<ISubscription>()
 
-        for(s in _subscriptionModelStore.list()) {
+        for (s in _subscriptionModelStore.list()) {
             // TODO: Better way to find subscriptions for a user?
-            if(s.startsWith(identity.oneSignalId.toString()))
-            {
-                val model = _subscriptionModelStore.get(s);
+            if (s.startsWith(identity.oneSignalId.toString())) {
+                val model = _subscriptionModelStore.get(s)
 
                 when (model?.type) {
                     SubscriptionType.EMAIL -> {
@@ -85,9 +86,9 @@ internal open class SubscriptionManager(
     }
 
     override fun removeEmailSubscription(email: String) {
-        val subscriptionToRem = subscriptions.emails.firstOrNull { it is EmailSubscription && it.email == email}
+        val subscriptionToRem = subscriptions.emails.firstOrNull { it is EmailSubscription && it.email == email }
 
-        if(subscriptionToRem != null) {
+        if (subscriptionToRem != null) {
             removeSubscription(subscriptionToRem)
         }
     }
@@ -109,9 +110,9 @@ internal open class SubscriptionManager(
     }
 
     override fun removeSmsSubscription(sms: String) {
-        val subscriptionToRem = subscriptions.smss.firstOrNull { it.number == sms}
+        val subscriptionToRem = subscriptions.smss.firstOrNull { it.number == sms }
 
-        if(subscriptionToRem != null) {
+        if (subscriptionToRem != null) {
             removeSubscription(subscriptionToRem)
         }
     }
@@ -138,7 +139,7 @@ internal open class SubscriptionManager(
 
         val subscriptionModel = _subscriptionModelStore.get(identity.oneSignalId.toString() + "-" + subscription.id)
 
-        if(subscriptionModel != null) {
+        if (subscriptionModel != null) {
             subscriptionModel.enabled = enabled
         }
 

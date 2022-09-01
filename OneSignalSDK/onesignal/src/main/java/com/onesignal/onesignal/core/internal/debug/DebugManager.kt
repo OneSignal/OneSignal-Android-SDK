@@ -11,5 +11,5 @@ class DebugManager() : IDebugManager {
 
     override var alertLevel: LogLevel
         get() = Logging.visualLogLevel
-        set(value) {Logging.visualLogLevel = value}
+        set(value) { Logging.visualLogLevel = value }
 }

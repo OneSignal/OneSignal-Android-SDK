@@ -51,7 +51,7 @@ internal class LocationPermissionController(
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)
     }
 
-    suspend fun prompt(fallbackToSettings: Boolean, androidPermissionString: String, ) : Boolean? {
+    suspend fun prompt(fallbackToSettings: Boolean, androidPermissionString: String,): Boolean? {
         _requestPermission.startPrompt(
             fallbackToSettings,
             PERMISSION_TYPE,
@@ -84,7 +84,7 @@ internal class LocationPermissionController(
         }
     }
 
-    private fun showFallbackAlertDialog() : Boolean {
+    private fun showFallbackAlertDialog(): Boolean {
         val activity = _application.current ?: return false
         AlertDialogPrepromptForAndroidSettings.show(
             activity,

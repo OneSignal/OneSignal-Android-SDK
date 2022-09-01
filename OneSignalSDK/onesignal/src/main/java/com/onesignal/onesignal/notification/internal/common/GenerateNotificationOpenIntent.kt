@@ -30,7 +30,7 @@ open class GenerateNotificationOpenIntent(
             context.packageManager.getLaunchIntentForPackage(
                 context.packageName
             )
-            ?: return null
+                ?: return null
 
         // Removing "package" from the intent treats the app as if it was started externally.
         //   - This is exactly what an Android Launcher does.

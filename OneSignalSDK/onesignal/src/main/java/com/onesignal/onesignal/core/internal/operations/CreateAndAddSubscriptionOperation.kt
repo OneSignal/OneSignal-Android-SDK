@@ -7,5 +7,5 @@ class CreateAndAddSubscriptionOperation(
     val appId: String,
     val type: SubscriptionType,
     val enabled: Boolean,
-    val address: String) : Operation(SubscriptionOperationExecutor.CREATE_AND_ADD_SUBSCRIPTION)  {
-}
+    val address: String
+) : Operation(SubscriptionOperationExecutor.CREATE_AND_ADD_SUBSCRIPTION)

@@ -15,5 +15,5 @@ interface ISingletonModelStore<TModel> :
      *
      * @return The single model managed by this store.
      */
-    fun get() : TModel
+    fun get(): TModel
 }

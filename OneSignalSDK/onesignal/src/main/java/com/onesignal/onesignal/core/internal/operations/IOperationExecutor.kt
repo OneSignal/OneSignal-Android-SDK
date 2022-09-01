@@ -7,7 +7,7 @@ package com.onesignal.onesignal.core.internal.operations
  * find the best [IOperationExecutor] and call [IOperationExecutor.executeAsync]
  * to execute the operation.
  */
-interface IOperationExecutor  {
+interface IOperationExecutor {
 
     /**
      * The list of operations that this executor can handle execution.

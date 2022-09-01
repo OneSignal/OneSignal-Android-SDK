@@ -1,7 +1,6 @@
 package com.onesignal.onesignal.notification.internal.lifecycle
 
 import android.app.Activity
-import android.os.Bundle
 import org.json.JSONObject
 
 interface INotificationLifecycleCallback {
@@ -15,6 +14,6 @@ interface INotificationLifecycleCallback {
      *
      * @return True if the callback does *not* want the bundle processor to process the bundle, false otherwise.
      */
-    suspend fun canReceiveNotification(jsonPayload: JSONObject) : Boolean
-    suspend fun canOpenNotification(activity: Activity, jsonData: JSONObject) : Boolean
+    suspend fun canReceiveNotification(jsonPayload: JSONObject): Boolean
+    suspend fun canOpenNotification(activity: Activity, jsonData: JSONObject): Boolean
 }

@@ -1,20 +1,27 @@
 package com.onesignal.onesignal.notification.internal.receivereceipt.impl
 
 import android.content.Context
-import androidx.work.*
+import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
+import androidx.work.WorkManager
+import androidx.work.WorkerParameters
 import com.onesignal.onesignal.core.OneSignal
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
-import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.notification.internal.receivereceipt.IReceiveReceiptProcessor
 import com.onesignal.onesignal.notification.internal.receivereceipt.IReceiveReceiptWorkManager
 import java.util.concurrent.TimeUnit
 
 internal class ReceiveReceiptWorkManager(
-        private val _paramsService: IParamsService,
-        private val _applicationService: IApplicationService) : IReceiveReceiptWorkManager {
+    private val _paramsService: IParamsService,
+    private val _applicationService: IApplicationService
+) : IReceiveReceiptWorkManager {
 
     private val minDelay = 0
     private val maxDelay = 25

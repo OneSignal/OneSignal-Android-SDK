@@ -1,7 +1,7 @@
 package com.onesignal.onesignal.core.internal.models
 
 import com.onesignal.onesignal.core.internal.modeling.Model
-import java.util.*
+import java.util.Date
 
 class SessionModel : Model() {
     var startTime: Date

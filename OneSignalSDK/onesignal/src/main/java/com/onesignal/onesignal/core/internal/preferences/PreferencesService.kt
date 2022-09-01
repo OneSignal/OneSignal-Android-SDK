@@ -2,15 +2,19 @@ package com.onesignal.onesignal.core.internal.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.onesignal.onesignal.core.internal.application.IApplicationService
-import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.LogLevel
+import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.startup.IStartableService
-import kotlinx.coroutines.*
+import com.onesignal.onesignal.core.internal.time.ITime
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
-
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 
 class PreferencesService(
     private val _applicationService: IApplicationService,
@@ -32,11 +36,11 @@ class PreferencesService(
         _queueJob = doWorkAsync()
     }
 
-    override fun getString(store: String, key: String, defValue: String?) : String? = get(store, key, String::class.java, defValue) as String?
-    override fun getBool(store: String, key: String, defValue: Boolean?) : Boolean? = get(store, key, Boolean::class.java, defValue) as Boolean?
-    override fun getInt(store: String, key: String, defValue: Int?) : Int? = get(store, key, Int::class.java, defValue) as Int?
-    override fun getLong(store: String, key: String, defValue: Long?) : Long? = get(store, key, Long::class.java, defValue) as Long?
-    override fun getStringSet(store: String, key: String, defValue: Set<String>?) : Set<String>? = get(store, key, Set::class.java, defValue) as Set<String>?
+    override fun getString(store: String, key: String, defValue: String?): String? = get(store, key, String::class.java, defValue) as String?
+    override fun getBool(store: String, key: String, defValue: Boolean?): Boolean? = get(store, key, Boolean::class.java, defValue) as Boolean?
+    override fun getInt(store: String, key: String, defValue: Int?): Int? = get(store, key, Int::class.java, defValue) as Int?
+    override fun getLong(store: String, key: String, defValue: Long?): Long? = get(store, key, Long::class.java, defValue) as Long?
+    override fun getStringSet(store: String, key: String, defValue: Set<String>?): Set<String>? = get(store, key, Set::class.java, defValue) as Set<String>?
 
     override fun saveString(store: String, key: String, value: String?) = save(store, key, value)
     override fun saveBool(store: String, key: String, value: Boolean?) = save(store, key, value)
@@ -44,8 +48,8 @@ class PreferencesService(
     override fun saveLong(store: String, key: String, value: Long?) = save(store, key, value)
     override fun saveStringSet(store: String, key: String, value: Set<String>?) = save(store, key, value)
 
-    private fun get(store: String, key: String, type: Class<*>, defValue: Any?) : Any? {
-        if(!_prefsToApply.containsKey(store))
+    private fun get(store: String, key: String, type: Class<*>, defValue: Any?): Any? {
+        if (!_prefsToApply.containsKey(store))
             throw Exception("Store not found: $store")
 
         val storeMap = _prefsToApply[store]!!
@@ -72,7 +76,7 @@ class PreferencesService(
     }
 
     private fun save(store: String, key: String, value: Any?) {
-        if(!_prefsToApply.containsKey(store))
+        if (!_prefsToApply.containsKey(store))
             throw Exception("Store not found: $store")
 
         val storeMap = _prefsToApply[store]!!
@@ -87,13 +91,13 @@ class PreferencesService(
         try {
             var lastSyncTime = _time.currentTimeMillis
 
-            while(true) {
+            while (true) {
                 // go through all outstanding items to process
                 for (storeKey in _prefsToApply.keys) {
                     val storeMap = _prefsToApply[storeKey]!!
                     val prefsToWrite = getSharedPrefsByName(storeKey)
 
-                    if(prefsToWrite == null) {
+                    if (prefsToWrite == null) {
                         // the assumption here is there is no context yet, but will be. So ensure
                         // we wake up to try again and persist the preference.
                         _conflatedChannel.send(null)
@@ -125,7 +129,7 @@ class PreferencesService(
                 val delay = lastSyncTime - newTime + WRITE_CALL_DELAY_TO_BUFFER_MS
                 lastSyncTime = newTime
 
-                if(delay > 0)
+                if (delay > 0)
                     delay(delay)
 
                 // wait to be woken up for the next pass

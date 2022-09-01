@@ -13,16 +13,18 @@ class OSOutcomeEventsFactory(private val logger: OSLogger, private val apiClient
     fun getRepository(): OSOutcomeEventsRepository = if (repository != null) validateRepositoryVersion() else createRepository()
 
     private fun validateRepositoryVersion(): OSOutcomeEventsRepository {
-        if (!outcomeEventsCache.isOutcomesV2ServiceEnabled && repository is OSOutcomeEventsV1Repository)
+        if (!outcomeEventsCache.isOutcomesV2ServiceEnabled && repository is OSOutcomeEventsV1Repository) {
             return repository!!
-        if (outcomeEventsCache.isOutcomesV2ServiceEnabled && repository is OSOutcomeEventsV2Repository)
+        }
+        if (outcomeEventsCache.isOutcomesV2ServiceEnabled && repository is OSOutcomeEventsV2Repository) {
             return repository!!
+        }
         return createRepository()
     }
 
-    private fun createRepository() = if (outcomeEventsCache.isOutcomesV2ServiceEnabled)
+    private fun createRepository() = if (outcomeEventsCache.isOutcomesV2ServiceEnabled) {
         OSOutcomeEventsV2Repository(logger, outcomeEventsCache, OSOutcomeEventsV2Service(apiClient))
-    else
+    } else {
         OSOutcomeEventsV1Repository(logger, outcomeEventsCache, OSOutcomeEventsV1Service(apiClient))
-
+    }
 }

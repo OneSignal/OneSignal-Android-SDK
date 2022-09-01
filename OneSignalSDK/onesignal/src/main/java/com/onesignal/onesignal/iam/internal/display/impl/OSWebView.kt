@@ -7,9 +7,15 @@ import android.webkit.WebView
 class OSWebView(context: Context?) : WebView(context!!) {
     // The method overrides below; overScrollBy, scrollTo, and computeScroll prevent page scrolling
     public override fun overScrollBy(
-        deltaX: Int, deltaY: Int, scrollX: Int, scrollY: Int,
-        scrollRangeX: Int, scrollRangeY: Int, maxOverScrollX: Int,
-        maxOverScrollY: Int, isTouchEvent: Boolean
+        deltaX: Int,
+        deltaY: Int,
+        scrollX: Int,
+        scrollY: Int,
+        scrollRangeX: Int,
+        scrollRangeY: Int,
+        maxOverScrollX: Int,
+        maxOverScrollY: Int,
+        isTouchEvent: Boolean
     ): Boolean {
         return false
     }

@@ -12,7 +12,7 @@ import android.os.Looper
 import android.text.TextUtils
 import androidx.annotation.Keep
 import com.onesignal.onesignal.core.internal.logging.Logging
-import java.util.*
+import java.util.Random
 
 object AndroidUtils {
     fun getRandomDelay(minDelay: Int, maxDelay: Int): Int {

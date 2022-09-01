@@ -20,8 +20,8 @@ class ContinueResult<R> (
     /**
      * The throwable that was thrown by the coroutine.  This will be `null` if [isSuccess] is `true`.
      */
-    val throwable: Throwable?) {
-}
+    val throwable: Throwable?
+)
 
 /**
  * A static helper class allowing Java invocations to Kotlin coroutines a little easier on the eye.

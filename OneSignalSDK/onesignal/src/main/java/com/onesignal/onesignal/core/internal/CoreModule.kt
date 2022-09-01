@@ -17,7 +17,12 @@ import com.onesignal.onesignal.core.internal.influence.impl.InfluenceManager
 import com.onesignal.onesignal.core.internal.listeners.IdentityModelStoreListener
 import com.onesignal.onesignal.core.internal.listeners.PropertiesModelStoreListener
 import com.onesignal.onesignal.core.internal.listeners.SubscriptionModelStoreListener
-import com.onesignal.onesignal.core.internal.models.*
+import com.onesignal.onesignal.core.internal.models.ConfigModelStore
+import com.onesignal.onesignal.core.internal.models.IdentityModelStore
+import com.onesignal.onesignal.core.internal.models.PropertiesModelStore
+import com.onesignal.onesignal.core.internal.models.SessionModelStore
+import com.onesignal.onesignal.core.internal.models.SubscriptionModelStore
+import com.onesignal.onesignal.core.internal.models.TriggerModelStore
 import com.onesignal.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.onesignal.core.internal.operations.OperationRepo
@@ -56,8 +61,8 @@ object CoreModule {
     fun register(builder: ServiceBuilder) {
         // Low Level Services
         builder.register<PreferencesService>()
-               .provides<IPreferencesService>()
-               .provides<IStartableService>()
+            .provides<IPreferencesService>()
+            .provides<IStartableService>()
         builder.register<HttpClient>().provides<IHttpClient>()
         builder.register<ApplicationService>().provides<IApplicationService>()
         builder.register<DeviceService>().provides<IDeviceService>()
@@ -67,23 +72,23 @@ object CoreModule {
 
         // Params (Config)
         builder.register<ParamsService>()
-               .provides<IParamsService>()
-               .provides<IWriteableParamsService>()
+            .provides<IParamsService>()
+            .provides<IWriteableParamsService>()
         builder.register<ParamsBackendService>().provides<IParamsBackendService>()
         builder.register<RefreshParamsService>().provides<IStartableService>()
 
         // Operations
         builder.register<OperationRepo>()
-               .provides<IOperationRepo>()
-               .provides<IStartableService>()
+            .provides<IOperationRepo>()
+            .provides<IStartableService>()
         builder.register<PropertyOperationExecutor>().provides<IOperationExecutor>()
         builder.register<SubscriptionOperationExecutor>().provides<IOperationExecutor>()
         builder.register<UserOperationExecutor>().provides<IOperationExecutor>()
 
         // Permissions
         builder.register<RequestPermissionService>()
-               .provides<RequestPermissionService>()
-               .provides<IRequestPermissionService>()
+            .provides<RequestPermissionService>()
+            .provides<IRequestPermissionService>()
 
         // Outcomes
         builder.register<OutcomeEventsController>().provides<OutcomeEventsController>()
@@ -95,13 +100,13 @@ object CoreModule {
 
         // Session
         builder.register<SessionService>()
-               .provides<ISessionService>()
-               .provides<IStartableService>()
+            .provides<ISessionService>()
+            .provides<IStartableService>()
 
         // Background
         builder.register<BackgroundManager>()
-               .provides<IBackgroundManager>()
-               .provides<IStartableService>()
+            .provides<IBackgroundManager>()
+            .provides<IStartableService>()
 
         // Model Stores
         builder.register<IdentityModelStore>().provides<IdentityModelStore>()
@@ -123,7 +128,7 @@ object CoreModule {
         // User
         builder.register<SubscriptionManager>().provides<ISubscriptionManager>()
         builder.register<UserManager>()
-               .provides<IUserManager>()
-               .provides<IUserSwitcher>()
+            .provides<IUserManager>()
+            .provides<IUserSwitcher>()
     }
 }

@@ -25,12 +25,12 @@ open class Model(
         _changeNotifier.fire { it.onChanged(changeArgs) }
     }
 
-    protected fun <T> get(name: String) : T {
+    protected fun <T> get(name: String): T {
         return _data[name] as T
     }
 
-    protected fun <T> get(name: String, create: () -> T) : T {
-        return if(_data.containsKey(name))
+    protected fun <T> get(name: String, create: () -> T): T {
+        return if (_data.containsKey(name))
             _data[name] as T
         else {
             val defaultValue = create()

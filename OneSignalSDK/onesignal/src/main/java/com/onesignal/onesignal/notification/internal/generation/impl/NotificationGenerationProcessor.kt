@@ -3,17 +3,15 @@ package com.onesignal.onesignal.notification.internal.generation.impl
 import android.content.Context
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
+import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.params.IParamsService
+import com.onesignal.onesignal.core.internal.session.ISessionService
 import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.notification.internal.Notification
-import com.onesignal.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.onesignal.notification.internal.NotificationReceivedEvent
-import com.onesignal.onesignal.notification.internal.data.INotificationDataController
-import com.onesignal.onesignal.core.internal.params.IParamsService
-import com.onesignal.onesignal.core.internal.logging.Logging
-import com.onesignal.onesignal.core.internal.session.ISessionService
-import com.onesignal.onesignal.notification.INotificationWillShowInForegroundHandler
-import com.onesignal.onesignal.notification.IRemoteNotificationReceivedHandler
+import com.onesignal.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.onesignal.notification.internal.common.NotificationGenerationJob
+import com.onesignal.onesignal.notification.internal.data.INotificationDataController
 import com.onesignal.onesignal.notification.internal.display.INotificationDisplayer
 import com.onesignal.onesignal.notification.internal.generation.INotificationGenerationProcessor
 import com.onesignal.onesignal.notification.internal.lifecycle.INotificationLifecycleService
@@ -39,13 +37,14 @@ internal class NotificationGenerationProcessor(
 ) : INotificationGenerationProcessor {
 
     override suspend fun processNotificationData(
-                    context: Context,
-                    androidNotificationId: Int,
-                    jsonPayload: JSONObject,
-                    isRestoring: Boolean,
-                    timestamp: Long) {
+        context: Context,
+        androidNotificationId: Int,
+        jsonPayload: JSONObject,
+        isRestoring: Boolean,
+        timestamp: Long
+    ) {
 
-        if(!_lifecycleService.canReceiveNotification(jsonPayload)) {
+        if (!_lifecycleService.canReceiveNotification(jsonPayload)) {
             // Return early, we don't want the extender service or etc. to fire for IAM previews
             return
         }
@@ -78,7 +77,7 @@ internal class NotificationGenerationProcessor(
         var shouldDisplay = processHandlerResponse(notificationJob, serviceExtensionReceivedEvent.effectiveNotification?.copy(), isRestoring)
             ?: return
 
-        if(shouldDisplay) {
+        if (shouldDisplay) {
             if (shouldFireForegroundHandlers(notificationJob)) {
                 Logging.info("Fire notificationWillShowInForegroundHandler")
 
@@ -96,7 +95,7 @@ internal class NotificationGenerationProcessor(
                     ?: return
             }
 
-            if(shouldDisplay ) {
+            if (shouldDisplay) {
                 // display the notification
                 // Notification might end not displaying because the channel for that notification has notification disable
                 didDisplay = _notificationDisplayer.displayNotification(notificationJob)
@@ -114,7 +113,6 @@ internal class NotificationGenerationProcessor(
             delay(100)
     }
 
-
     /**
      * Process the response to the external handler (either the foreground handler or the service extension).
      *
@@ -124,7 +122,7 @@ internal class NotificationGenerationProcessor(
      *
      * @return true if the job should continue display, false if the job should continue but not display, null if processing should stop.
      */
-    private suspend fun processHandlerResponse(notificationJob: NotificationGenerationJob, notification: Notification?, isRestoring: Boolean) : Boolean? {
+    private suspend fun processHandlerResponse(notificationJob: NotificationGenerationJob, notification: Notification?, isRestoring: Boolean): Boolean? {
         if (notification != null) {
             val canDisplay = AndroidUtils.isStringNotEmpty(notification.body)
             val withinTtl: Boolean = isNotificationWithinTTL(notification)
@@ -138,7 +136,7 @@ internal class NotificationGenerationProcessor(
                 var shouldDisplay = shouldDisplayNotification(notificationJob)
 
                 if (shouldDisplay) {
-                    notificationJob.isNotificationToDisplay = true;
+                    notificationJob.isNotificationToDisplay = true
                     return true
                 }
 
@@ -173,7 +171,7 @@ internal class NotificationGenerationProcessor(
         return sentTime + ttl > currentTimeInSeconds
     }
 
-    private suspend fun isDuplicateNotification(notification: Notification) : Boolean {
+    private suspend fun isDuplicateNotification(notification: Notification): Boolean {
         return _dataController.doesNotificationExist(notification.notificationId)
     }
 
@@ -215,7 +213,7 @@ internal class NotificationGenerationProcessor(
         try {
             val customJSON = getCustomJSONObject(jsonPayload)
 
-            val collapseKey: String? = if(jsonPayload.has("collapse_key") && "do_not_collapse" != jsonPayload.optString("collapse_key")) jsonPayload.optString("collapse_key") else null
+            val collapseKey: String? = if (jsonPayload.has("collapse_key") && "do_not_collapse" != jsonPayload.optString("collapse_key")) jsonPayload.optString("collapse_key") else null
 
             // Set expire_time
             val sentTime = jsonPayload.optLong(
@@ -232,13 +230,14 @@ internal class NotificationGenerationProcessor(
                 customJSON.optString("i"),
                 jsonPayload.optString("grp"),
                 collapseKey,
-                notificationJob.isNotificationToDisplay,         // When notification was displayed, count any notifications with duplicated android notification ids as dismissed.
+                notificationJob.isNotificationToDisplay, // When notification was displayed, count any notifications with duplicated android notification ids as dismissed.
                 opened,
                 notificationJob.androidId,
                 if (notificationJob.title != null) notificationJob.title.toString() else null,
                 if (notificationJob.body != null) notificationJob.body.toString() else null,
                 expireTime,
-                jsonPayload.toString())
+                jsonPayload.toString()
+            )
         } catch (e: JSONException) {
             e.printStackTrace()
         }
@@ -252,7 +251,7 @@ internal class NotificationGenerationProcessor(
 
         val didDismiss = _dataController.markAsDismissed(notifiJob.androidId)
 
-        if(didDismiss) {
+        if (didDismiss) {
             _notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(notifiJob.androidId)
         }
     }
@@ -266,7 +265,7 @@ internal class NotificationGenerationProcessor(
 
         val androidNotificationId = _dataController.getAndroidIdFromCollapseKey(collapseId)
 
-        if(androidNotificationId != null) {
+        if (androidNotificationId != null) {
             notificationJob.notification?.androidNotificationId = androidNotificationId
         }
     }

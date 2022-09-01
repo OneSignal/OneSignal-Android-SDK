@@ -1,7 +1,5 @@
 package com.onesignal.onesignal.notification.internal.registration
 
-import android.content.Context
-
 interface IPushRegistrator {
     enum class RegisterStatus(val value: Int) {
         PUSH_STATUS_SUBSCRIBED(1),
@@ -40,5 +38,5 @@ interface IPushRegistrator {
      *
      * @return a [RegisterResult] which describes the result of registration
      */
-    suspend fun registerForPush() : RegisterResult
+    suspend fun registerForPush(): RegisterResult
 }

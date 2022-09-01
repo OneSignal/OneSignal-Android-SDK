@@ -4,16 +4,16 @@ package com.onesignal.onesignal.core.internal.modeling
  * A model store that is implemented in memory.
  */
 internal open class SingletonModelStore<TModel>(
-        val name: String,
-        private val create: () -> TModel,
-        val store: IModelStore<TModel>,
-        ) : ISingletonModelStore<TModel>, IModelChangedHandler where TModel : Model {
+    val name: String,
+    private val create: () -> TModel,
+    val store: IModelStore<TModel>,
+) : ISingletonModelStore<TModel>, IModelChangedHandler where TModel : Model {
 
     private val _subscribers: MutableList<ISingletonModelStoreChangeHandler<TModel>> = mutableListOf()
 
     override fun get(): TModel {
         val model = store.get(name)
-        if(model != null)
+        if (model != null)
             return model
 
         val createdModel = create()
@@ -31,7 +31,7 @@ internal open class SingletonModelStore<TModel>(
     }
 
     override fun onChanged(args: ModelChangedArgs) {
-        for(s in _subscribers) {
+        for (s in _subscribers) {
             s.onModelUpdated(args.model as TModel, args.property, args.oldValue, args.newValue)
         }
     }

@@ -1,8 +1,5 @@
 package com.onesignal.onesignal.location.internal.background
 
-import android.content.Context
-import android.content.pm.PackageManager
-import androidx.core.content.ContextCompat
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.background.IBackgroundService
 import com.onesignal.onesignal.core.internal.logging.Logging
@@ -22,7 +19,7 @@ internal class LocationBackgroundService(
 ) : IBackgroundService {
     override val scheduleIn: Long?
         get() {
-            if(!_locationManager.isLocationShared) {
+            if (!_locationManager.isLocationShared) {
                 Logging.debug("LocationController scheduleUpdate not possible, location shared not enabled")
                 return null
             }

@@ -1,6 +1,6 @@
 package com.onesignal.onesignal.core.internal.backend.api
 
-interface IApiService  {
+interface IApiService {
 
     /** NEW ENDPOINTS **/
     /** POST /user **/
@@ -13,9 +13,9 @@ interface IApiService  {
     suspend fun deleteUserAsync(aliasLabel: String, aliasId: String)
 
     /** POST /user/by/{aliasLabel}/{aliasId}/identity **/
-    suspend fun setUserIdentityAsync(aliasLabel: String, aliasId: String, identity: Any) : Any
+    suspend fun setUserIdentityAsync(aliasLabel: String, aliasId: String, identity: Any): Any
     /** GET /user/by/{aliasLabel}/{aliasId}/identity **/
-    suspend fun getUserIdentityAsync(aliasLabel: String, aliasId: String) : Any
+    suspend fun getUserIdentityAsync(aliasLabel: String, aliasId: String): Any
 
     /** PUT /user/identity/{aliasLabel}/{aliasId} **/
     suspend fun updateUserAliasAsync(aliasLabel: String, aliasId: String, newAliasId: String)

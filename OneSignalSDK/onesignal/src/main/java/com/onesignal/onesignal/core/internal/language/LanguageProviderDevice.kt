@@ -1,6 +1,6 @@
 package com.onesignal.onesignal.core.internal.language
 
-import java.util.*
+import java.util.Locale
 
 class LanguageProviderDevice : ILanguageProvider {
     override val language: String
