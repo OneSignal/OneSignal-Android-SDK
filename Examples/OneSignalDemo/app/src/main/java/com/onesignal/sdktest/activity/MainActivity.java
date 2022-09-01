@@ -6,7 +6,7 @@ import android.os.Bundle;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.onesignal.onesignal.core.OneSignal;
+import com.onesignal.core.OneSignal;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.model.MainActivityViewModel;
 
