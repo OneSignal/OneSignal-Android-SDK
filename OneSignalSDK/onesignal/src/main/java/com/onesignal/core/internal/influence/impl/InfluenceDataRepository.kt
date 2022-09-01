@@ -10,7 +10,7 @@ import org.json.JSONException
 /**
  * Setter and Getter of Notifications received
  */
-class InfluenceDataRepository(private val preferences: IPreferencesService) :
+internal class InfluenceDataRepository(private val preferences: IPreferencesService) :
     IInfluenceDataRepository {
     /**
      * Cache a influence type enum for Notification as a string

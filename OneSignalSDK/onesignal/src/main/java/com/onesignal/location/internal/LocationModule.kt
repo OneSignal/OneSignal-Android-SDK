@@ -17,7 +17,7 @@ import com.onesignal.location.internal.permissions.LocationPermissionController
 import com.onesignal.location.internal.preferences.ILocationPreferencesService
 import com.onesignal.location.internal.preferences.impl.LocationPreferencesService
 
-object LocationModule {
+internal object LocationModule {
     fun register(builder: ServiceBuilder) {
         builder.register<LocationPermissionController>()
             .provides<LocationPermissionController>()

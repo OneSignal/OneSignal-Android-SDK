@@ -3,7 +3,7 @@ package com.onesignal.core.internal.outcomes
 import org.json.JSONException
 import org.json.JSONObject
 
-class OutcomeSource(
+internal class OutcomeSource(
     var directBody: OutcomeSourceBody?,
     var indirectBody: OutcomeSourceBody?
 ) {

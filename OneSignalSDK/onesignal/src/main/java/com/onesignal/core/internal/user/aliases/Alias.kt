@@ -6,7 +6,7 @@ package com.onesignal.core.internal.user.aliases
  * unique value for the alias label that can uniquely identify a
  * specific user.
  */
-class Alias(
+internal class Alias(
     val label: String,
     val id: String
 )

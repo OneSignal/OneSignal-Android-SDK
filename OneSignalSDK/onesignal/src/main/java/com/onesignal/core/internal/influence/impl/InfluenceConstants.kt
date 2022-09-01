@@ -1,8 +1,6 @@
 package com.onesignal.core.internal.influence.impl
 
-
 internal object InfluenceConstants {
-
     const val TIME = "time"
 
     // OSInAppMessageTracker Constants

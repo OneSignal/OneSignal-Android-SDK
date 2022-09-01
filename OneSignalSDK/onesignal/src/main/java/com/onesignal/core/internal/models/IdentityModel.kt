@@ -3,7 +3,7 @@ package com.onesignal.core.internal.models
 import com.onesignal.core.internal.modeling.Model
 import java.util.UUID
 
-class IdentityModel : Model() {
+internal class IdentityModel : Model() {
     var oneSignalId: UUID
         get() = get(::oneSignalId.name) { UUID.randomUUID() }
         set(value) { set(::oneSignalId.name, value) }

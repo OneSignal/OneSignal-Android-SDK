@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.preferences
 
-interface IPreferencesService {
+internal interface IPreferencesService {
     fun getString(store: String, key: String, defValue: String? = null): String?
     fun getBool(store: String, key: String, defValue: Boolean? = null): Boolean?
     fun getInt(store: String, key: String, defValue: Int? = null): Int?
@@ -14,21 +14,21 @@ interface IPreferencesService {
     fun saveStringSet(store: String, key: String, value: Set<String>?)
 }
 
-object PreferenceStores {
+internal object PreferenceStores {
     const val ONESIGNAL = "OneSignal"
     const val PLAYER_PURCHASES = "GTPlayerPurchases"
     const val TRIGGERS = "OneSignalTriggers"
 }
 
-object PreferencePlayerPurchasesKeys {
+internal object PreferencePlayerPurchasesKeys {
     // Player Purchase Keys
     const val PREFS_PURCHASE_TOKENS = "purchaseTokens"
     const val PREFS_EXISTING_PURCHASES = "ExistingPurchases"
 }
 
-object PreferenceTriggerKeys
+internal object PreferenceTriggerKeys
 
-object PreferenceOneSignalKeys {
+internal object PreferenceOneSignalKeys {
     // TODO: Remove this once the tasks below have been finished...
     //  1. Fix all of the SharedPreference Keys so they are organized by usage with comments
     //  ex.

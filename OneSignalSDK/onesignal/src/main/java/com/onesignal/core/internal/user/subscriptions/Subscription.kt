@@ -7,7 +7,7 @@ import java.util.UUID
  * An abstract subscription represents an open channel between
  * OneSignal and a user.
  */
-abstract class Subscription(
+internal abstract class Subscription(
     /**
      * The unique identifier for this subscription.
      */

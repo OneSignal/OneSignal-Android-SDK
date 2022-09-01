@@ -1,6 +1,6 @@
 package com.onesignal.notification.internal.summary
 
-interface INotificationSummaryManager {
+internal interface INotificationSummaryManager {
     // A notification was just dismissed, check if it was a child to a summary notification and update it.
     suspend fun updatePossibleDependentSummaryOnDismiss(androidNotificationId: Int)
 

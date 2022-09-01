@@ -2,7 +2,7 @@ package com.onesignal.core.internal.language
 
 import java.util.Locale
 
-class LanguageProviderDevice : ILanguageProvider {
+internal class LanguageProviderDevice : ILanguageProvider {
     override val language: String
         get() {
             return when (val language = Locale.getDefault().language) {

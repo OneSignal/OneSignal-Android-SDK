@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.influence
 
-enum class InfluenceChannel(private val nameValue: String) {
+internal enum class InfluenceChannel(private val nameValue: String) {
     IAM("iam"),
     NOTIFICATION("notification"),
     ;

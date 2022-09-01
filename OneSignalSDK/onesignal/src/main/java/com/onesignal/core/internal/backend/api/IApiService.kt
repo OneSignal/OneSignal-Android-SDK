@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.backend.api
 
-interface IApiService {
+internal interface IApiService {
 
     /** NEW ENDPOINTS **/
     /** POST /user **/

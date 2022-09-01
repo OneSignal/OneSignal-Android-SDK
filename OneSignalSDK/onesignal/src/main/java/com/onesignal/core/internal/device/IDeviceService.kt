@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.device
 
-interface IDeviceService {
+internal interface IDeviceService {
     val isGooglePlayServicesAvailable: Boolean
     val isGooglePlayStoreInstalled: Boolean
     val isHMSAvailable: Boolean

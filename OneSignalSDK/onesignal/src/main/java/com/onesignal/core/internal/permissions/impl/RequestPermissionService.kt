@@ -9,7 +9,7 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.permissions.IRequestPermissionService
 import java.util.HashMap
 
-class RequestPermissionService(
+internal class RequestPermissionService(
     private val _application: IApplicationService
 ) : Activity(), IRequestPermissionService {
 

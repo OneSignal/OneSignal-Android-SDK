@@ -4,7 +4,7 @@ import android.content.ContentValues
 import android.database.Cursor
 import android.database.SQLException
 
-interface IDatabase {
+internal interface IDatabase {
     fun query(
         table: String,
         columns: Array<String>?,

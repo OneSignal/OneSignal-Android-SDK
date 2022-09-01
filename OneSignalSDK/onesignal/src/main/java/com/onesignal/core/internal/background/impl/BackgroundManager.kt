@@ -61,7 +61,7 @@ import java.lang.NullPointerException
  * - Player update
  * - IF there are any pending field updates - pushToken, tags, etc
  */
-class BackgroundManager(
+internal class BackgroundManager(
     private val _applicationService: IApplicationService,
     private val _time: ITime,
     private val _backgroundServices: List<(IBackgroundService)>,

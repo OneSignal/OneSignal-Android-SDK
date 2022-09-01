@@ -3,7 +3,7 @@ package com.onesignal.notification.internal.common
 import android.content.Context
 import android.content.Intent
 
-open class GenerateNotificationOpenIntent(
+internal open class GenerateNotificationOpenIntent(
     private val context: Context,
     private val intent: Intent?,
     private val startApp: Boolean

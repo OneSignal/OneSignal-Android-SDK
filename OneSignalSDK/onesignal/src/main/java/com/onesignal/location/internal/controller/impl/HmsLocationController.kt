@@ -8,7 +8,7 @@ import com.huawei.hms.location.FusedLocationProviderClient
 import com.huawei.hms.location.LocationCallback
 import com.huawei.hms.location.LocationRequest
 import com.huawei.hms.location.LocationResult
-import com.onesignal.core.LogLevel
+import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.events.EventProducer
@@ -24,8 +24,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.Closeable
 
-// TODO: Implement
-class HmsLocationController(
+internal class HmsLocationController(
     private val _applicationService: IApplicationService
 ) : ILocationController {
     private val _locationHandlerThread = LocationHandlerThread()

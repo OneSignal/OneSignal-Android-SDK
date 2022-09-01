@@ -9,7 +9,7 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
-abstract class ChannelTracker internal constructor(protected var dataRepository: InfluenceDataRepository, private var timeProvider: ITime) :
+internal abstract class ChannelTracker internal constructor(protected var dataRepository: InfluenceDataRepository, private var timeProvider: ITime) :
     IChannelTracker {
     override var influenceType: InfluenceType? = null
     override var indirectIds: JSONArray? = null

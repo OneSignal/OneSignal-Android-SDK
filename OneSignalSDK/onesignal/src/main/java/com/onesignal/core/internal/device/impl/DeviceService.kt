@@ -12,7 +12,7 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.core.internal.device.IDeviceService
 
-class DeviceService(private val _applicationService: IApplicationService) : IDeviceService {
+internal class DeviceService(private val _applicationService: IApplicationService) : IDeviceService {
     companion object {
         private const val HMS_CORE_SERVICES_PACKAGE = "com.huawei.hwid" // = HuaweiApiAvailability.SERVICES_PACKAGE
         private const val HMS_AVAILABLE_SUCCESSFUL = 0

@@ -1,5 +1,5 @@
 package com.onesignal.core.internal.outcomes
 
-interface IOutcomeEventsFactory {
+internal interface IOutcomeEventsFactory {
     fun getRepository(): IOutcomeEventsRepository
 }

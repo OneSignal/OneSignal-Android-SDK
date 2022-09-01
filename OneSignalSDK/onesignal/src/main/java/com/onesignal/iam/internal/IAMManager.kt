@@ -2,7 +2,7 @@ package com.onesignal.iam.internal
 
 import android.app.AlertDialog
 import com.onesignal.R
-import com.onesignal.core.LogLevel
+import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.core.internal.common.JSONUtils

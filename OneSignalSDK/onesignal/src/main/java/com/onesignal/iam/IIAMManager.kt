@@ -7,10 +7,11 @@ package com.onesignal.iam
  * blanket disable IAMs, set [paused] to `true` on startup.
  */
 interface IIAMManager {
+
     /**
      * Whether the In-app messaging is currently paused.  When set to `true` no IAM
      * will be presented to the user regardless of whether they qualify for them. When
-     * set to 'false` any IAM the user qualifies for will be presented to the user
+     * set to 'false` any IAMs the user qualifies for will be presented to the user
      * at the appropriate time.
      */
     var paused: Boolean

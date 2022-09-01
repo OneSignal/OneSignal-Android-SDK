@@ -8,7 +8,7 @@ import org.json.JSONObject
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
-object JSONUtils {
+internal object JSONUtils {
     const val EXTERNAL_USER_ID = "external_user_id"
 
     /**

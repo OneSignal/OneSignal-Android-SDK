@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.backend
 
-import com.onesignal.core.LogLevel
+import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.backend.http.CacheKeys
 import com.onesignal.core.internal.backend.http.IHttpClient
 import com.onesignal.core.internal.logging.Logging
@@ -11,7 +11,7 @@ import org.json.JSONException
 import org.json.JSONObject
 import java.net.HttpURLConnection
 
-class ParamsBackendService(
+internal class ParamsBackendService(
     private val _writeableParams: IWriteableParamsService,
     private val _http: IHttpClient
 ) : IParamsBackendService {

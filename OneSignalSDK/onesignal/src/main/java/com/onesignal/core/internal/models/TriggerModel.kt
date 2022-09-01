@@ -2,7 +2,7 @@ package com.onesignal.core.internal.models
 
 import com.onesignal.core.internal.modeling.Model
 
-class TriggerModel : Model() {
+internal class TriggerModel : Model() {
     /**
      * The key of this trigger
      */

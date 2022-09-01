@@ -7,7 +7,7 @@ package com.onesignal.core.internal.common.events
  *
  * Unlike [IEventNotifier], there can only be one (1) callback at any given time.
  */
-interface ICallbackNotifier<THandler> {
+internal interface ICallbackNotifier<THandler> {
     /**
      * Whether there is a callback currently set.
      */
@@ -25,6 +25,6 @@ interface ICallbackNotifier<THandler> {
  * An extension of [ICallbackNotifier] should be used internally to indicate the implementing
  * class is the producer of the callback.  The interface exists for abstraction/testing purposes.
  */
-interface ICallbackProducer<THandler> : ICallbackNotifier<THandler> {
+internal interface ICallbackProducer<THandler> : ICallbackNotifier<THandler> {
     fun fire(callback: (THandler) -> Unit)
 }

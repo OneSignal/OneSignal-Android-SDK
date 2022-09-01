@@ -1,5 +1,5 @@
 package com.onesignal.core.internal.database
 
-interface IDatabaseProvider {
+internal interface IDatabaseProvider {
     fun get(): IDatabase
 }

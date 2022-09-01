@@ -2,7 +2,7 @@ package com.onesignal.core.internal.operations.executors
 
 import android.content.pm.PackageManager
 import android.os.Build
-import com.onesignal.core.LogLevel
+import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.backend.http.IHttpClient
 import com.onesignal.core.internal.common.DeviceUtils

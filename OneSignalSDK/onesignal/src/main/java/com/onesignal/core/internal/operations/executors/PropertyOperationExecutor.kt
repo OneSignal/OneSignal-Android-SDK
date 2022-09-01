@@ -1,13 +1,13 @@
 package com.onesignal.core.internal.operations.executors
 
-import com.onesignal.core.LogLevel
+import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.backend.http.IHttpClient
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.core.internal.operations.UpdatePropertyOperation
 
-class PropertyOperationExecutor(
+internal class PropertyOperationExecutor(
     private val _http: IHttpClient
 ) : IOperationExecutor {
 

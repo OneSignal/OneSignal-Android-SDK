@@ -39,7 +39,7 @@ import com.onesignal.notification.internal.permissions.INotificationPermissionCo
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 
-class NotificationPermissionController(
+internal class NotificationPermissionController(
     private val _application: IApplicationService,
     private val _requestPermission: IRequestPermissionService
 ) : IRequestPermissionService.PermissionCallback,

@@ -3,7 +3,7 @@ package com.onesignal.notification.internal.lifecycle
 import android.app.Activity
 import org.json.JSONObject
 
-interface INotificationLifecycleCallback {
+internal interface INotificationLifecycleCallback {
     /**
      * Called when a OneSignal notification bundle has been received by the SDK.  This
      * callback has the option to indicate to the bundle processor whether it should

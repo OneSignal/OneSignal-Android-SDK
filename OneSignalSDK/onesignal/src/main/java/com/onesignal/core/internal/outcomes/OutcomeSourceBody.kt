@@ -4,7 +4,7 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
-class OutcomeSourceBody @JvmOverloads constructor(var notificationIds: JSONArray? = JSONArray(), var inAppMessagesIds: JSONArray? = JSONArray()) {
+internal class OutcomeSourceBody @JvmOverloads constructor(var notificationIds: JSONArray? = JSONArray(), var inAppMessagesIds: JSONArray? = JSONArray()) {
 
     @Throws(JSONException::class)
     fun toJSONObject(): JSONObject = JSONObject()

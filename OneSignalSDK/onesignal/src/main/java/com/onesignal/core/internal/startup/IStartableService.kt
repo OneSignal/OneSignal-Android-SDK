@@ -19,7 +19,7 @@ import com.onesignal.core.internal.models.ConfigModelStore
  * must be instantiated immediately and will add their appropriate hooks to then respond to changes
  * in the system.
  */
-interface IStartableService {
+internal interface IStartableService {
 
     /**
      * Called when the service is to be started.  The appId and appContext have already been

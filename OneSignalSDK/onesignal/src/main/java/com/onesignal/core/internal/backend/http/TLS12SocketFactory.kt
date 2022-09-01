@@ -6,7 +6,7 @@ import java.net.Socket
 import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
 
-class TLS12SocketFactory(var sslSocketFactory: SSLSocketFactory) : SSLSocketFactory() {
+internal class TLS12SocketFactory(var sslSocketFactory: SSLSocketFactory) : SSLSocketFactory() {
     override fun getDefaultCipherSuites(): Array<String> {
         return sslSocketFactory.defaultCipherSuites
     }
