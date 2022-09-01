@@ -13,7 +13,7 @@ interface IWriteableParamsService : IParamsService {
     override var useEmailAuth: Boolean
     override var useUserIdAuth: Boolean
     override var notificationChannels: JSONArray?
-    override var firebaseAnalytics : Boolean
+    override var firebaseAnalytics: Boolean
     override var restoreTTLFilter: Boolean
     override var clearGroupOnSummaryClick: Boolean
     override var receiveReceiptEnabled: Boolean

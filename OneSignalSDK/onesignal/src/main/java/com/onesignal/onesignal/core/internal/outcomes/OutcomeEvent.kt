@@ -52,12 +52,12 @@ class OutcomeEvent(
 
     override fun toString(): String {
         return "OutcomeEvent{" +
-                "session=" + session +
-                ", notificationIds=" + notificationIds +
-                ", name='" + name + '\'' +
-                ", timestamp=" + timestamp +
-                ", weight=" + weight +
-                '}'
+            "session=" + session +
+            ", notificationIds=" + notificationIds +
+            ", name='" + name + '\'' +
+            ", timestamp=" + timestamp +
+            ", weight=" + weight +
+            '}'
     }
 
     companion object {

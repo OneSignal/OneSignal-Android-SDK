@@ -1,7 +1,7 @@
 package com.onesignal.onesignal.iam.internal
 
-import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.time.ITime
 import org.json.JSONException
 import org.json.JSONObject
 
@@ -79,11 +79,11 @@ internal class InAppMessageRedisplayStats(
 
     override fun toString(): String {
         return "OSInAppMessageDisplayStats{" +
-                "lastDisplayTime=" + lastDisplayTime +
-                ", displayQuantity=" + displayQuantity +
-                ", displayLimit=" + displayLimit +
-                ", displayDelay=" + displayDelay +
-                '}'
+            "lastDisplayTime=" + lastDisplayTime +
+            ", displayQuantity=" + displayQuantity +
+            ", displayLimit=" + displayLimit +
+            ", displayDelay=" + displayDelay +
+            '}'
     }
 
     companion object {

@@ -11,7 +11,7 @@ import java.lang.reflect.WildcardType
 abstract class ServiceRegistration<T> {
     val services: MutableSet<Class<*>> = mutableSetOf()
 
-    internal inline fun <reified TService: Any> provides(): ServiceRegistration<T> {
+    internal inline fun <reified TService : Any> provides(): ServiceRegistration<T> {
         return provides(TService::class.java)
     }
 
@@ -24,12 +24,12 @@ abstract class ServiceRegistration<T> {
      *
      * @return The service registration for chaining of calls.
      */
-    fun <TService> provides(c: Class<TService>) : ServiceRegistration<T> {
+    fun <TService> provides(c: Class<TService>): ServiceRegistration<T> {
         services.add(c)
         return this
     }
 
-    abstract fun resolve(provider: IServiceProvider) : Any?
+    abstract fun resolve(provider: IServiceProvider): Any?
 }
 
 class ServiceRegistrationReflection<T>(
@@ -38,39 +38,32 @@ class ServiceRegistrationReflection<T>(
 
     private var obj: T? = null
 
-    override fun resolve(provider: IServiceProvider) : Any? {
-        if(obj != null) {
+    override fun resolve(provider: IServiceProvider): Any? {
+        if (obj != null) {
             Logging.info("${ServiceProvider.indent}Already instantiated: $obj")
             return obj
         }
 
         // use reflection to try to instantiate the thing
-        for(constructor in clazz!!.constructors)
-        {
-            if(doesHaveAllParameters(constructor, provider)) {
+        for (constructor in clazz!!.constructors) {
+            if (doesHaveAllParameters(constructor, provider)) {
                 Logging.info("${ServiceProvider.indent}Found constructor: $constructor")
                 var paramList: MutableList<Any?> = mutableListOf()
 
-                for(param in constructor.genericParameterTypes)
-                {
-                    if(param is ParameterizedType) {
+                for (param in constructor.genericParameterTypes) {
+                    if (param is ParameterizedType) {
                         val argType = param.actualTypeArguments.firstOrNull()
-                        if(argType is WildcardType) {
+                        if (argType is WildcardType) {
                             val clazz = argType.upperBounds.first()
-                            if(clazz is Class<*>) {
+                            if (clazz is Class<*>) {
                                 paramList.add(provider.getAllServices(clazz))
-                            }
-                            else paramList.add(null)
-                        }
-                        else if(argType is Class<*>) {
+                            } else paramList.add(null)
+                        } else if (argType is Class<*>) {
                             paramList.add(provider.getAllServices(argType))
-                        }
-                        else paramList.add(null)
-                    }
-                    else if(param is Class<*>) {
+                        } else paramList.add(null)
+                    } else if (param is Class<*>) {
                         paramList.add(provider.getService(param) as T)
-                    }
-                    else paramList.add(null)
+                    } else paramList.add(null)
                 }
 
                 // The spread operator '*' will populate java varargs from the array
@@ -82,35 +75,31 @@ class ServiceRegistrationReflection<T>(
         return obj
     }
 
-    private fun doesHaveAllParameters(constructor: Constructor<*>, provider: IServiceProvider) : Boolean {
-        for(param in constructor.genericParameterTypes) {
-            if(param is ParameterizedType) {
+    private fun doesHaveAllParameters(constructor: Constructor<*>, provider: IServiceProvider): Boolean {
+        for (param in constructor.genericParameterTypes) {
+            if (param is ParameterizedType) {
                 val argType = param.actualTypeArguments.firstOrNull()
 
-                if(argType is WildcardType) {
+                if (argType is WildcardType) {
                     val clazz = argType.upperBounds.first()
-                    if(clazz is Class<*>) {
-                        if(!provider.hasService(clazz)) {
+                    if (clazz is Class<*>) {
+                        if (!provider.hasService(clazz)) {
                             Logging.debug("Constructor $constructor could not find service: $clazz")
                             return false
                         }
                     }
-                }
-                else if(argType is Class<*>) {
-                    if(!provider.hasService(argType)) {
+                } else if (argType is Class<*>) {
+                    if (!provider.hasService(argType)) {
                         Logging.debug("Constructor $constructor could not find service: $argType")
                         return false
                     }
-                }
-                else return false
-            }
-            else if(param is Class<*>) {
+                } else return false
+            } else if (param is Class<*>) {
                 if (!provider.hasService(param)) {
                     Logging.debug("Constructor $constructor could not find service: $param")
                     return false
                 }
-            }
-            else {
+            } else {
                 Logging.debug("Constructor $constructor could not identify param type: $param")
                 return false
             }
@@ -124,7 +113,7 @@ class ServiceRegistrationSingleton<T>(
     private var obj: T
 ) : ServiceRegistration<T>() {
 
-    override fun resolve(provider: IServiceProvider) : Any? = obj
+    override fun resolve(provider: IServiceProvider): Any? = obj
 }
 
 class ServiceRegistrationLambda<T>(
@@ -133,8 +122,8 @@ class ServiceRegistrationLambda<T>(
 
     private var obj: T? = null
 
-    override fun resolve(provider: IServiceProvider) : Any? {
-        if(obj != null)
+    override fun resolve(provider: IServiceProvider): Any? {
+        if (obj != null)
             return obj
 
         obj = create(provider)

@@ -1,11 +1,11 @@
 package com.onesignal.onesignal.notification.services
 
-import com.amazon.device.messaging.ADMMessageHandlerBase
 import android.content.Intent
+import com.amazon.device.messaging.ADMMessageHandlerBase
 import com.onesignal.onesignal.core.OneSignal
 import com.onesignal.onesignal.core.internal.common.suspendifyOnThread
-import com.onesignal.onesignal.notification.internal.bundle.INotificationBundleProcessor
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.notification.internal.bundle.INotificationBundleProcessor
 import com.onesignal.onesignal.notification.internal.registration.impl.IPushRegistratorCallback
 
 // WARNING: Do not pass 'this' to any methods as it will cause proguard build errors

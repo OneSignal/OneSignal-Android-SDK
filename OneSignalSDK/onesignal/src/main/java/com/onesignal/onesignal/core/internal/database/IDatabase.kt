@@ -6,15 +6,24 @@ import android.database.SQLException
 
 interface IDatabase {
     fun query(
-        table: String, columns: Array<String>?, selection: String?,
-        selectionArgs: Array<String>?, groupBy: String?, having: String?,
+        table: String,
+        columns: Array<String>?,
+        selection: String?,
+        selectionArgs: Array<String>?,
+        groupBy: String?,
+        having: String?,
         orderBy: String?
     ): Cursor
 
     fun query(
-        table: String, columns: Array<String>?, selection: String?,
-        selectionArgs: Array<String>?, groupBy: String?, having: String?,
-        orderBy: String?, limit: String?
+        table: String,
+        columns: Array<String>?,
+        selection: String?,
+        selectionArgs: Array<String>?,
+        groupBy: String?,
+        having: String?,
+        orderBy: String?,
+        limit: String?
     ): Cursor
 
     fun insert(table: String, nullColumnHack: String?, values: ContentValues?)

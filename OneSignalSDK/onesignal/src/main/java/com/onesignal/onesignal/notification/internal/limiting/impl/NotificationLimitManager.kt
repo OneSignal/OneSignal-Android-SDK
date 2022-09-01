@@ -7,8 +7,8 @@ import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.onesignal.notification.internal.data.INotificationDataController
 import com.onesignal.onesignal.notification.internal.limiting.INotificationLimitManager
 import com.onesignal.onesignal.notification.internal.summary.INotificationSummaryManager
-
-import java.util.*
+import java.util.SortedMap
+import java.util.TreeMap
 
 internal class NotificationLimitManager(
     private val _dataController: INotificationDataController,
@@ -51,7 +51,7 @@ internal class NotificationLimitManager(
         for ((_, value) in activeNotifIds) {
             val didDismiss = _dataController.markAsDismissed(value)
 
-            if(didDismiss) {
+            if (didDismiss) {
                 _notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(value)
             }
 

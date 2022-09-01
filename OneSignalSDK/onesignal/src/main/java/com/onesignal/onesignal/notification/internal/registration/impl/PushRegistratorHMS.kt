@@ -19,7 +19,8 @@ import kotlinx.coroutines.withTimeout
 
 internal class PushRegistratorHMS(
     private val _deviceService: IDeviceService,
-    private val _applicationService: IApplicationService) : IPushRegistrator,
+    private val _applicationService: IApplicationService
+) : IPushRegistrator,
     IPushRegistratorCallback {
 
     companion object {
@@ -28,7 +29,7 @@ internal class PushRegistratorHMS(
 
     private var _channel: Channel<String?>? = null
 
-    override suspend fun registerForPush() : IPushRegistrator.RegisterResult = coroutineScope {
+    override suspend fun registerForPush(): IPushRegistrator.RegisterResult = coroutineScope {
         var result: IPushRegistrator.RegisterResult? = null
 
         launch(Dispatchers.Default) {
@@ -51,7 +52,7 @@ internal class PushRegistratorHMS(
 
     @Synchronized
     @Throws(ApiException::class)
-    private suspend fun getHMSTokenTask(context: Context) : IPushRegistrator.RegisterResult {
+    private suspend fun getHMSTokenTask(context: Context): IPushRegistrator.RegisterResult {
         // Check required to prevent AGConnectServicesConfig or HmsInstanceId used below
         //   from throwing a ClassNotFoundException
         if (!_deviceService.hasAllHMSLibrariesForPushKit()) {
@@ -80,7 +81,7 @@ internal class PushRegistratorHMS(
                 pushToken = _channel?.receive()
             }
 
-            return if(pushToken != null) {
+            return if (pushToken != null) {
                 Logging.error("ADM registered with ID:$pushToken")
                 IPushRegistrator.RegisterResult(
                     pushToken,

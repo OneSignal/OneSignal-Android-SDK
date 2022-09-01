@@ -4,8 +4,8 @@ import com.onesignal.onesignal.iam.IInAppMessageAction
 import com.onesignal.onesignal.iam.InAppMessageActionUrlType
 import com.onesignal.onesignal.iam.internal.prompt.IInAppMessagePromptFactory
 import com.onesignal.onesignal.iam.internal.prompt.impl.InAppMessagePrompt
-import org.json.JSONException
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 
 internal class InAppMessageAction(json: JSONObject, promptFactory: IInAppMessagePromptFactory) : IInAppMessageAction {
@@ -60,7 +60,6 @@ internal class InAppMessageAction(json: JSONObject, promptFactory: IInAppMessage
      */
     override val closesMessage: Boolean
 
-
     init {
         clickId = json.optString(ID, null)
         clickName = json.optString(NAME, null)
@@ -91,7 +90,7 @@ internal class InAppMessageAction(json: JSONObject, promptFactory: IInAppMessage
         for (i in 0 until promptsJsonArray.length()) {
             val promptType = promptsJsonArray.getString(i)
             val prompt = promptFactory.createPrompt(promptType)
-            if(prompt != null)
+            if (prompt != null)
                 prompts.add(prompt)
         }
     }

@@ -1,7 +1,7 @@
 package com.onesignal.onesignal.notification.internal.open
 
-import android.content.Intent
 import android.content.Context
+import android.content.Intent
 
 interface INotificationOpenedProcessor {
     /**

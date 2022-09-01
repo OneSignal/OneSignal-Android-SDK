@@ -9,7 +9,7 @@ internal class DatabaseProvider(
     private val _application: IApplicationService
 ) : IDatabaseProvider {
 
-    override fun get() : IDatabase {
+    override fun get(): IDatabase {
         return OSDatabase(OSOutcomeTableProvider(), _application.appContext)
     }
 }

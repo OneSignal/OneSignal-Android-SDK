@@ -1,10 +1,10 @@
 package com.onesignal.onesignal.notification.services
 
-import com.huawei.hms.push.HmsMessageService
 import android.os.Bundle
+import com.huawei.hms.push.HmsMessageService
 import com.huawei.hms.push.RemoteMessage
-import com.onesignal.onesignal.notification.bridges.OneSignalHmsEventBridge
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.notification.bridges.OneSignalHmsEventBridge
 
 /**
  * The hms:push library creates an instance of this service based on the

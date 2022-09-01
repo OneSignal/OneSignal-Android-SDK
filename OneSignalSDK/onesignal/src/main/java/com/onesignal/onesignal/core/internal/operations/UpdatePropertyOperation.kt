@@ -5,5 +5,5 @@ import com.onesignal.onesignal.core.internal.operations.executors.PropertyOperat
 class UpdatePropertyOperation(
     val id: String,
     val property: String,
-    val value: Any?) : Operation(PropertyOperationExecutor.UPDATE_PROPERTY)  {
-}
+    val value: Any?
+) : Operation(PropertyOperationExecutor.UPDATE_PROPERTY)

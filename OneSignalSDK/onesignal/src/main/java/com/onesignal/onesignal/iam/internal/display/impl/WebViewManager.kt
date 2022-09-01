@@ -1,16 +1,15 @@
 package com.onesignal.onesignal.iam.internal.display.impl
 
+import android.annotation.SuppressLint
 import android.annotation.TargetApi
 import android.app.Activity
-import android.webkit.JavascriptInterface
-import org.json.JSONException
-import android.annotation.SuppressLint
 import android.os.Build
-import android.webkit.WebView
 import android.view.View
+import android.webkit.JavascriptInterface
+import android.webkit.WebView
+import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.onesignal.core.internal.application.IApplicationService
-import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.common.ViewUtils
 import com.onesignal.onesignal.core.internal.common.suspendifyOnMain
 import com.onesignal.onesignal.core.internal.common.suspendifyOnThread
@@ -25,8 +24,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import org.json.JSONException
 import org.json.JSONObject
-import java.util.*
+import java.util.Locale
 
 // Manages WebView instances by pre-loading them, displaying them, and closing them when dismissed.
 //   Includes a static map for pre-loading, showing, and dismissed so these events can't be duplicated.
@@ -81,7 +81,7 @@ internal class WebViewManager(
                 val messageType = jsonObject.getString(EVENT_TYPE_KEY)
                 when (messageType) {
                     EVENT_TYPE_RENDERING_COMPLETE -> handleRenderComplete(jsonObject)
-                    EVENT_TYPE_ACTION_TAKEN ->                         // Added handling so that click actions won't trigger while dragging the IAM
+                    EVENT_TYPE_ACTION_TAKEN -> // Added handling so that click actions won't trigger while dragging the IAM
                         if (messageView?.isDragging == false) handleActionTaken(jsonObject)
                     EVENT_TYPE_RESIZE -> {}
                     EVENT_TYPE_PAGE_CHANGE -> handlePageChange(jsonObject)
@@ -253,11 +253,12 @@ internal class WebViewManager(
     }
 
     override fun onActivityStopped(activity: Activity) {
-        Logging.debug("""
+        Logging.debug(
+            """
      In app message activity stopped, cleaning views, currentActivityName: $currentActivityName
      activity: ${this.activity}
      messageView: $messageView
-     """.trimIndent()
+            """.trimIndent()
         )
         if (messageView != null && activity.localClassName == currentActivityName)
             messageView!!.removeAllViews()
@@ -298,8 +299,8 @@ internal class WebViewManager(
         webView!!.addJavascriptInterface(OSJavaScriptInterface(), JS_OBJ_NAME)
         if (isFullScreen) {
             webView!!.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                    View.SYSTEM_UI_FLAG_IMMERSIVE or
-                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                View.SYSTEM_UI_FLAG_IMMERSIVE or
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 webView!!.fitsSystemWindows = false
             }
@@ -425,15 +426,15 @@ internal class WebViewManager(
         const val GET_PAGE_META_DATA_JS_FUNCTION = "getPageMetaData()"
         const val SET_SAFE_AREA_INSETS_JS_FUNCTION = "setSafeAreaInsets(%s)"
         const val SAFE_AREA_JS_OBJECT = "{\n" +
-                "   top: %d,\n" +
-                "   bottom: %d,\n" +
-                "   right: %d,\n" +
-                "   left: %d,\n" +
-                "}"
+            "   top: %d,\n" +
+            "   bottom: %d,\n" +
+            "   right: %d,\n" +
+            "   left: %d,\n" +
+            "}"
         const val SET_SAFE_AREA_INSETS_SCRIPT = "\n\n" +
-                "<script>\n" +
-                "    setSafeAreaInsets(%s);\n" +
-                "</script>"
+            "<script>\n" +
+            "    setSafeAreaInsets(%s);\n" +
+            "</script>"
         const val EVENT_TYPE_KEY = "type"
         const val EVENT_TYPE_RENDERING_COMPLETE = "rendering_complete"
         const val EVENT_TYPE_RESIZE = "resize"

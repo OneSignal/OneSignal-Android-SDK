@@ -1,5 +1,5 @@
 package com.onesignal.onesignal.core.internal.application.impl
 
-interface ISystemConditionHandler  {
+interface ISystemConditionHandler {
     fun systemConditionChanged()
 }

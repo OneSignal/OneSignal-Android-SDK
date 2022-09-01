@@ -1,27 +1,27 @@
 package com.onesignal.onesignal.notification.internal.display.impl
 
-import android.content.Intent
-import android.app.PendingIntent
-import android.text.SpannableString
-import android.text.style.StyleSpan
 import android.app.Notification
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.graphics.Typeface
 import android.os.Build
+import android.text.SpannableString
+import android.text.style.StyleSpan
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.notification.internal.common.NotificationConstants
+import com.onesignal.onesignal.notification.internal.common.NotificationGenerationJob
 import com.onesignal.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.onesignal.notification.internal.data.INotificationDataController
-import com.onesignal.onesignal.notification.internal.common.NotificationGenerationJob
 import com.onesignal.onesignal.notification.internal.display.INotificationDisplayBuilder
 import com.onesignal.onesignal.notification.internal.display.ISummaryNotificationDisplayer
 import kotlinx.coroutines.coroutineScope
 import org.json.JSONObject
 import java.security.SecureRandom
-import java.util.*
+import java.util.Random
 
 internal class SummaryNotificationDisplayer(
     private val _applicationService: IApplicationService,
@@ -54,7 +54,7 @@ internal class SummaryNotificationDisplayer(
         try {
             notifBuilder.setGroupAlertBehavior(_notificationDisplayBuilder.getGroupAlertBehavior())
         } catch (t: Throwable) {
-            //do nothing in this case...Android support lib 26 isn't in the project
+            // do nothing in this case...Android support lib 26 isn't in the project
         }
     }
 
@@ -70,7 +70,7 @@ internal class SummaryNotificationDisplayer(
             Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1 && Build.VERSION.SDK_INT < Build.VERSION_CODES.N && !notificationJob.isRestoring
         if (singleNotifWorkArounds) {
             if ((notificationJob.overriddenSound != null) && !notificationJob.overriddenSound!!
-                    .equals(notificationJob.orgSound)
+                .equals(notificationJob.orgSound)
             ) notifBuilder!!.setSound(null)
         }
         val notification = notifBuilder!!.build()
@@ -103,7 +103,6 @@ internal class SummaryNotificationDisplayer(
         var firstFullData: String? = null
         var summaryList: MutableCollection<SpannableString?>? = null
 
-
         summaryNotificationId = _dataController.getAndroidIdForGroup(group, true)
 
         if (summaryNotificationId == null) {
@@ -116,15 +115,15 @@ internal class SummaryNotificationDisplayer(
         var spannableString: SpannableString
         summaryList = ArrayList()
 
-        for(notification in notifications) {
-            if(!updateSummary && notification.androidId == notificationJob.androidId)
+        for (notification in notifications) {
+            if (!updateSummary && notification.androidId == notificationJob.androidId)
                 continue
 
             var title = notification.title
             if (title == null) title = "" else title += " "
             spannableString = SpannableString(title + notification.message)
             if (title.length > 0)
-                spannableString.setSpan(StyleSpan(Typeface.BOLD),0, title.length, 0)
+                spannableString.setSpan(StyleSpan(Typeface.BOLD), 0, title.length, 0)
 
             summaryList!!.add(spannableString)
             if (firstFullData == null)
@@ -138,8 +137,10 @@ internal class SummaryNotificationDisplayer(
 
         // 2 or more notifications with a group received, group them together as a single notification.
         if (summaryList != null &&
-            (updateSummary && summaryList!!.size > 1 ||
-                    !updateSummary && summaryList!!.size > 0)
+            (
+                updateSummary && summaryList!!.size > 1 ||
+                    !updateSummary && summaryList!!.size > 0
+                )
         ) {
             val notificationCount = summaryList!!.size + if (updateSummary) 0 else 1
             var summaryMessage = fcmJson.optString("grp_msg", null)
@@ -177,7 +178,7 @@ internal class SummaryNotificationDisplayer(
             try {
                 summaryBuilder.setGroupAlertBehavior(groupAlertBehavior)
             } catch (t: Throwable) {
-                //do nothing in this case...Android support lib 26 isn't in the project
+                // do nothing in this case...Android support lib 26 isn't in the project
             }
             if (!updateSummary) summaryBuilder.setTicker(summaryMessage)
             val inboxStyle = NotificationCompat.InboxStyle()
@@ -226,7 +227,7 @@ internal class SummaryNotificationDisplayer(
             try {
                 summaryBuilder.setGroupAlertBehavior(groupAlertBehavior)
             } catch (t: Throwable) {
-                //do nothing in this case...Android support lib 26 isn't in the project
+                // do nothing in this case...Android support lib 26 isn't in the project
             }
             summaryNotification = summaryBuilder.build()
             _notificationDisplayBuilder.addXiaomiSettings(notifBuilder, summaryNotification)

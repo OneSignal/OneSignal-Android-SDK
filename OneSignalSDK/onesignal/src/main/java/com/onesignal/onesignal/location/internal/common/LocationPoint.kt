@@ -9,12 +9,12 @@ internal class LocationPoint {
     var timeStamp: Long? = null
     override fun toString(): String {
         return "LocationPoint{" +
-                "lat=" + lat +
-                ", log=" + log +
-                ", accuracy=" + accuracy +
-                ", type=" + type +
-                ", bg=" + bg +
-                ", timeStamp=" + timeStamp +
-                '}'
+            "lat=" + lat +
+            ", log=" + log +
+            ", accuracy=" + accuracy +
+            ", type=" + type +
+            ", bg=" + bg +
+            ", timeStamp=" + timeStamp +
+            '}'
     }
 }

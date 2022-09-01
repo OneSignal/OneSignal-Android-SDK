@@ -17,7 +17,7 @@ object GenerateNotificationOpenIntentFromPushPayload {
     ): GenerateNotificationOpenIntent {
         val behavior = OSNotificationOpenBehaviorFromPushPayload(
             context,
-            fcmPayload,
+            fcmPayload
         )
 
         return GenerateNotificationOpenIntent(
@@ -34,7 +34,7 @@ object GenerateNotificationOpenIntentFromPushPayload {
     }
 
     private fun openBrowserIntent(
-        uri: Uri?,
+        uri: Uri?
     ): Intent? {
         if (uri == null) return null
         return OSUtils.openURLInBrowserIntent(uri)

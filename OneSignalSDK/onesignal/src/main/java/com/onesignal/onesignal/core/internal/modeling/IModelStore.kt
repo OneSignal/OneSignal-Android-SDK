@@ -16,7 +16,7 @@ interface IModelStore<TModel> : IEventNotifier<IModelStoreChangeHandler<TModel>>
      *
      * @return The collection of keys.
      */
-    fun list() : Collection<String>
+    fun list(): Collection<String>
 
     /**
      * Add a new model to this model store.  Once added, any changes to the
@@ -37,7 +37,7 @@ interface IModelStore<TModel> : IEventNotifier<IModelStoreChangeHandler<TModel>>
      *
      * @return The model associated to the id provided, or null if no such model exists.
      */
-    fun get(id: String) : TModel?
+    fun get(id: String): TModel?
 
     /**
      * Remove the model associated to the id provided from the model store.

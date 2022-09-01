@@ -17,7 +17,7 @@ open class EventProducer<THandler> : IEventProducer<THandler> {
     }
 
     override fun fire(callback: (THandler) -> Unit) {
-        for(s in _subscribers) {
+        for (s in _subscribers) {
             callback(s)
         }
     }
@@ -29,9 +29,9 @@ open class EventProducer<THandler> : IEventProducer<THandler> {
      *
      * @return Whether a subscriber callback indicated to stop firing.
      */
-    fun conditionalFire(callback: (THandler) -> Boolean) : Boolean {
-        for(s in _subscribers) {
-            if(!callback(s))
+    fun conditionalFire(callback: (THandler) -> Boolean): Boolean {
+        for (s in _subscribers) {
+            if (!callback(s))
                 return true
         }
 
@@ -39,7 +39,7 @@ open class EventProducer<THandler> : IEventProducer<THandler> {
     }
 
     suspend fun suspendingFire(callback: suspend (THandler) -> Unit) {
-        for(s in _subscribers) {
+        for (s in _subscribers) {
             callback(s)
         }
     }

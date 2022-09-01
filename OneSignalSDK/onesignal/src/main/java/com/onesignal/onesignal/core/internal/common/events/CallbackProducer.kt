@@ -23,15 +23,13 @@ open class CallbackProducer<THandler>() : ICallbackProducer<THandler> {
      * @param callback The callback will be invoked if one exists, allowing you to call the handler.
      */
     override fun fire(callback: (THandler) -> Unit) {
-        if (_callback != null)
-        {
+        if (_callback != null) {
             callback(_callback!!)
         }
     }
 
     suspend fun suspendingFire(callback: suspend (THandler) -> Unit) {
-        if (_callback != null)
-        {
+        if (_callback != null) {
             callback(_callback!!)
         }
     }

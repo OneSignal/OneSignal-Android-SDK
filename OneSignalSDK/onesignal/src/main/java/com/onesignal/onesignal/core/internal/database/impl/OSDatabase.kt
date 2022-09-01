@@ -4,12 +4,16 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.database.SQLException
-import android.database.sqlite.*
+import android.database.sqlite.SQLiteCantOpenDatabaseException
+import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteDatabaseLockedException
+import android.database.sqlite.SQLiteException
+import android.database.sqlite.SQLiteOpenHelper
 import android.os.SystemClock
 import android.provider.BaseColumns
 import com.onesignal.onesignal.core.internal.database.IDatabase
-import com.onesignal.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.onesignal.core.internal.outcomes.impl.OSOutcomeTableProvider
 import com.onesignal.onesignal.core.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V1
 import com.onesignal.onesignal.core.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V3
@@ -20,7 +24,8 @@ import java.util.ArrayList
 
 internal class OSDatabase(
     private val _outcomeTableProvider: OSOutcomeTableProvider,
-    context: Context?) : SQLiteOpenHelper(context, DATABASE_NAME, null, dbVersion), IDatabase {
+    context: Context?
+) : SQLiteOpenHelper(context, DATABASE_NAME, null, dbVersion), IDatabase {
 
     /**
      * Should be used in the event that we don't want to retry getting the a [SQLiteDatabase] instance
@@ -73,8 +78,12 @@ internal class OSDatabase(
     }
 
     override fun query(
-        table: String, columns: Array<String>?, selection: String?,
-        selectionArgs: Array<String>?, groupBy: String?, having: String?,
+        table: String,
+        columns: Array<String>?,
+        selection: String?,
+        selectionArgs: Array<String>?,
+        groupBy: String?,
+        having: String?,
         orderBy: String?
     ): Cursor {
         synchronized(LOCK) {
@@ -91,9 +100,14 @@ internal class OSDatabase(
     }
 
     override fun query(
-        table: String, columns: Array<String>?, selection: String?,
-        selectionArgs: Array<String>?, groupBy: String?, having: String?,
-        orderBy: String?, limit: String?
+        table: String,
+        columns: Array<String>?,
+        selection: String?,
+        selectionArgs: Array<String>?,
+        groupBy: String?,
+        having: String?,
+        orderBy: String?,
+        limit: String?
     ): Cursor {
         synchronized(LOCK) {
             return getSQLiteDatabaseWithRetries().query(
@@ -282,7 +296,7 @@ internal class OSDatabase(
         safeExecSQL(
             db,
             "ALTER TABLE " + OneSignalDbContract.NotificationTable.TABLE_NAME.toString() + " " +
-                    "ADD COLUMN " + OneSignalDbContract.NotificationTable.COLUMN_NAME_COLLAPSE_ID.toString() + TEXT_TYPE + ";"
+                "ADD COLUMN " + OneSignalDbContract.NotificationTable.COLUMN_NAME_COLLAPSE_ID.toString() + TEXT_TYPE + ";"
         )
         safeExecSQL(db, OneSignalDbContract.NotificationTable.INDEX_CREATE_GROUP_ID)
     }
@@ -293,13 +307,13 @@ internal class OSDatabase(
         safeExecSQL(
             db,
             "ALTER TABLE " + OneSignalDbContract.NotificationTable.TABLE_NAME.toString() + " " +
-                    "ADD COLUMN " + OneSignalDbContract.NotificationTable.COLUMN_NAME_EXPIRE_TIME.toString() + " TIMESTAMP" + ";"
+                "ADD COLUMN " + OneSignalDbContract.NotificationTable.COLUMN_NAME_EXPIRE_TIME.toString() + " TIMESTAMP" + ";"
         )
         safeExecSQL(
             db,
             "UPDATE " + OneSignalDbContract.NotificationTable.TABLE_NAME.toString() + " " +
-                    "SET " + OneSignalDbContract.NotificationTable.COLUMN_NAME_EXPIRE_TIME.toString() + " = "
-                    + OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME.toString() + " + " + NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD.toString() + ";"
+                "SET " + OneSignalDbContract.NotificationTable.COLUMN_NAME_EXPIRE_TIME.toString() + " = " +
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME.toString() + " + " + NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD.toString() + ";"
         )
         safeExecSQL(db, OneSignalDbContract.NotificationTable.INDEX_CREATE_EXPIRE_TIME)
     }
@@ -371,29 +385,29 @@ internal class OSDatabase(
         private const val DB_OPEN_RETRY_BACKOFF = 400
         private const val SQL_CREATE_ENTRIES =
             "CREATE TABLE " + OneSignalDbContract.NotificationTable.TABLE_NAME + " (" +
-                    BaseColumns._ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID + TEXT_TYPE + COMMA_SEP +
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + INT_TYPE + COMMA_SEP +
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID + TEXT_TYPE + COMMA_SEP +
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_COLLAPSE_ID + TEXT_TYPE + COMMA_SEP +
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + INT_TYPE + " DEFAULT 0" + COMMA_SEP +
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + INT_TYPE + " DEFAULT 0" + COMMA_SEP +
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + INT_TYPE + " DEFAULT 0" + COMMA_SEP +
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_TITLE + TEXT_TYPE + COMMA_SEP +
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_MESSAGE + TEXT_TYPE + COMMA_SEP +
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_FULL_DATA + TEXT_TYPE + COMMA_SEP +
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME + TIMESTAMP_TYPE + " DEFAULT (strftime('%s', 'now'))" + COMMA_SEP +
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_EXPIRE_TIME + TIMESTAMP_TYPE +
-                    ");"
+                BaseColumns._ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID + TEXT_TYPE + COMMA_SEP +
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + INT_TYPE + COMMA_SEP +
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID + TEXT_TYPE + COMMA_SEP +
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_COLLAPSE_ID + TEXT_TYPE + COMMA_SEP +
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + INT_TYPE + " DEFAULT 0" + COMMA_SEP +
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + INT_TYPE + " DEFAULT 0" + COMMA_SEP +
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + INT_TYPE + " DEFAULT 0" + COMMA_SEP +
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_TITLE + TEXT_TYPE + COMMA_SEP +
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_MESSAGE + TEXT_TYPE + COMMA_SEP +
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_FULL_DATA + TEXT_TYPE + COMMA_SEP +
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME + TIMESTAMP_TYPE + " DEFAULT (strftime('%s', 'now'))" + COMMA_SEP +
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_EXPIRE_TIME + TIMESTAMP_TYPE +
+                ");"
         private const val SQL_CREATE_IN_APP_MESSAGE_ENTRIES =
             "CREATE TABLE " + OneSignalDbContract.InAppMessageTable.TABLE_NAME + " (" +
-                    BaseColumns._ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
-                    OneSignalDbContract.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY + INT_TYPE + COMMA_SEP +
-                    OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY + INT_TYPE + COMMA_SEP +
-                    OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID + TEXT_TYPE + COMMA_SEP +
-                    OneSignalDbContract.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION + INT_TYPE + COMMA_SEP +
-                    OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS + TEXT_TYPE +
-                    ");"
+                BaseColumns._ID + INTEGER_PRIMARY_KEY_TYPE + COMMA_SEP +
+                OneSignalDbContract.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY + INT_TYPE + COMMA_SEP +
+                OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY + INT_TYPE + COMMA_SEP +
+                OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID + TEXT_TYPE + COMMA_SEP +
+                OneSignalDbContract.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION + INT_TYPE + COMMA_SEP +
+                OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS + TEXT_TYPE +
+                ");"
         private val SQL_INDEX_ENTRIES = arrayOf(
             OneSignalDbContract.NotificationTable.INDEX_CREATE_NOTIFICATION_ID,
             OneSignalDbContract.NotificationTable.INDEX_CREATE_ANDROID_NOTIFICATION_ID,

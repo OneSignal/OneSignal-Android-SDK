@@ -2,15 +2,15 @@ package com.onesignal.onesignal.core.internal.outcomes.impl
 
 import com.onesignal.onesignal.core.internal.influence.Influence
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsBackend
 import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsCache
 import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsRepository
-import com.onesignal.onesignal.core.internal.outcomes.IOutcomeEventsBackend
 import com.onesignal.onesignal.core.internal.outcomes.OutcomeEventParams
 
 internal abstract class OSOutcomeEventsRepository(
     private val outcomeEventsCache: IOutcomeEventsCache,
     val outcomeEventsService: IOutcomeEventsBackend
-    ) : IOutcomeEventsRepository {
+) : IOutcomeEventsRepository {
 
     override fun getSavedOutcomeEvents(): List<OutcomeEventParams> = outcomeEventsCache.getAllEventsToSend()
 
@@ -44,6 +44,6 @@ internal abstract class OSOutcomeEventsRepository(
     }
 
     override suspend fun cleanCachedUniqueOutcomeEventNotifications(notificationTableName: String, notificationIdColumnName: String) {
-        outcomeEventsCache.cleanCachedUniqueOutcomeEventNotifications(notificationTableName, notificationIdColumnName);
+        outcomeEventsCache.cleanCachedUniqueOutcomeEventNotifications(notificationTableName, notificationIdColumnName)
     }
 }

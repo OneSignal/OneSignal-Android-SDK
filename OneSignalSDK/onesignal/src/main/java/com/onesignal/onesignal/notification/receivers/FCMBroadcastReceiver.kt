@@ -1,9 +1,9 @@
 package com.onesignal.onesignal.notification.receivers
 
-import android.content.Intent
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
 import com.onesignal.onesignal.core.OneSignal
 import com.onesignal.onesignal.notification.internal.bundle.INotificationBundleProcessor
 

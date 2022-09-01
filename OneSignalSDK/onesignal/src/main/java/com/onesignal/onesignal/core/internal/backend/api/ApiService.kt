@@ -124,7 +124,6 @@ class ApiService(private val _httpClient: IHttpClient) : IApiService {
             }
 
             val response = _httpClient.put("notifications/$notificationId/report_received", jsonBody)
-
         } catch (e: JSONException) {
             Logging.error("Generating direct receive receipt:JSON Failed.", e)
         }
@@ -153,5 +152,4 @@ class ApiService(private val _httpClient: IHttpClient) : IApiService {
     override suspend fun getParamsAsync() {
         TODO("Not yet implemented")
     }
-
 }

@@ -1,7 +1,7 @@
 package com.onesignal.onesignal.iam.internal.state
 
 import com.onesignal.onesignal.iam.internal.prompt.impl.InAppMessagePrompt
-import java.util.*
+import java.util.Date
 
 internal class InAppStateService {
     var paused: Boolean = false

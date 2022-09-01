@@ -1,9 +1,9 @@
 package com.onesignal.onesignal.core.internal.user.subscriptions
 
 import com.onesignal.onesignal.core.user.subscriptions.ISmsSubscription
-import java.util.*
+import java.util.UUID
 
 class SmsSubscription(
-        id: UUID,
-        override val number: String
-        ) : Subscription(id), ISmsSubscription
+    id: UUID,
+    override val number: String
+) : Subscription(id), ISmsSubscription

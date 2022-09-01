@@ -36,7 +36,7 @@ object LocationPermissionController : PermissionsActivity.PermissionCallback {
 
     fun prompt(
         fallbackToSettings: Boolean,
-        androidPermissionString: String,
+        androidPermissionString: String
     ) {
         PermissionsActivity.startPrompt(
             fallbackToSettings,

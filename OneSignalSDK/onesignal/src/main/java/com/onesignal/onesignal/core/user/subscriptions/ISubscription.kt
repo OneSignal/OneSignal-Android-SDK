@@ -1,6 +1,6 @@
 package com.onesignal.onesignal.core.user.subscriptions
 
-import java.util.*
+import java.util.UUID
 
 /**
  * A subscription

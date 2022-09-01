@@ -26,16 +26,14 @@
  */
 package com.onesignal.onesignal.core.internal.purchases
 
-import android.content.ServiceConnection
 import android.content.ComponentName
 import android.content.Context
-import android.os.IBinder
 import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.IBinder
 import com.onesignal.onesignal.core.internal.application.IApplicationLifecycleHandler
-import org.json.JSONObject
-import org.json.JSONArray
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.models.ConfigModelStore
@@ -47,7 +45,9 @@ import com.onesignal.onesignal.core.internal.preferences.PreferencePlayerPurchas
 import com.onesignal.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.onesignal.core.internal.startup.IStartableService
 import com.onesignal.onesignal.core.internal.user.IUserSwitcher
+import org.json.JSONArray
 import org.json.JSONException
+import org.json.JSONObject
 import java.lang.reflect.Method
 import java.math.BigDecimal
 import java.util.ArrayList
@@ -58,7 +58,7 @@ internal class TrackGooglePurchase(
     private val _operationRepo: IOperationRepo,
     private val _configModelStore: ConfigModelStore,
     private val _userSwitcher: IUserSwitcher
-    ) : IStartableService, IApplicationLifecycleHandler {
+) : IStartableService, IApplicationLifecycleHandler {
     private var mServiceConn: ServiceConnection? = null
     private var mIInAppBillingService: Any? = null
     private var getPurchasesMethod: Method? = null
@@ -72,7 +72,7 @@ internal class TrackGooglePurchase(
 
     override fun start() {
 
-        if(!canTrack(_applicationService.appContext))
+        if (!canTrack(_applicationService.appContext))
             return
 
         try {
@@ -85,7 +85,6 @@ internal class TrackGooglePurchase(
             newAsExisting = jsonPurchaseTokens.length() == 0
             if (newAsExisting)
                 newAsExisting = _prefs.getBool(PreferenceStores.PLAYER_PURCHASES, PreferencePlayerPurchasesKeys.PREFS_EXISTING_PURCHASES, true)!!
-
         } catch (e: JSONException) {
             e.printStackTrace()
         }

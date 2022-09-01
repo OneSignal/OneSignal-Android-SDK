@@ -8,7 +8,8 @@ The Interface implements a getter and setter for the Language Provider.
 It defaults to the device defined Language unless a language override is set.
  */
 class LanguageContext(
-    private val _preferences: IPreferencesService) {
+    private val _preferences: IPreferencesService
+) {
 
     private var strategy: ILanguageProvider? = null
 

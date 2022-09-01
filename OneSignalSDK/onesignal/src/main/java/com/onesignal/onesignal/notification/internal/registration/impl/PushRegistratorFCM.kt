@@ -3,12 +3,12 @@ package com.onesignal.onesignal.notification.internal.registration.impl
 import android.util.Base64
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.FirebaseApp
-import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.FirebaseOptions
+import com.google.firebase.messaging.FirebaseMessaging
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.device.IDeviceService
-import com.onesignal.onesignal.core.internal.params.IParamsService
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.params.IParamsService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -23,7 +23,8 @@ internal class PushRegistratorFCM(
     var _paramsService: IParamsService,
     val _applicationService: IApplicationService,
     upgradePrompt: GooglePlayServicesUpgradePrompt,
-    deviceService: IDeviceService) : PushRegistratorAbstractGoogle(deviceService, _paramsService, upgradePrompt) {
+    deviceService: IDeviceService
+) : PushRegistratorAbstractGoogle(deviceService, _paramsService, upgradePrompt) {
 
     companion object {
         private const val FCM_APP_NAME = "ONESIGNAL_SDK_FCM_APP_NAME"
@@ -105,14 +106,15 @@ internal class PushRegistratorFCM(
 
         throw Error(
             "Reflection error on FirebaseInstanceId.getInstance(firebaseApp).getToken(senderId, FirebaseMessaging.INSTANCE_ID_SCOPE)",
-            exception)
+            exception
+        )
     }
 
     // We use firebaseApp.get(FirebaseMessaging.class) instead of FirebaseMessaging.getInstance()
     //   as the latter uses the default Firebase app. We need to use a custom Firebase app as
     //   the senderId is provided at runtime.
     @Throws(ExecutionException::class, InterruptedException::class)
-    private suspend fun getTokenWithClassFirebaseMessaging() : String = coroutineScope {
+    private suspend fun getTokenWithClassFirebaseMessaging(): String = coroutineScope {
         var token: String = ""
 
         withContext(Dispatchers.Default) {
@@ -125,8 +127,7 @@ internal class PushRegistratorFCM(
             val tokenTask = fcmInstance.token
             try {
                 token = Tasks.await(tokenTask)
-            }
-            catch(e: ExecutionException) {
+            } catch (e: ExecutionException) {
                 throw tokenTask.exception
             }
         }

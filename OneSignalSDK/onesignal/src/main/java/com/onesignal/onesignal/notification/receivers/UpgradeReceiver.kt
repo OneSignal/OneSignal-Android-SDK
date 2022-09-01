@@ -43,7 +43,7 @@ class UpgradeReceiver : BroadcastReceiver() {
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.N)
             return
 
-        if(!OneSignal.isInitialized)
+        if (!OneSignal.isInitialized)
             OneSignal.initWithContext(context)
 
         var restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()

@@ -24,9 +24,11 @@ class Influence {
         this.ids = if (ids.isEmpty()) null else JSONArray(ids)
     }
 
-    constructor(influenceChannel: InfluenceChannel,
-                influenceType: InfluenceType,
-                ids: JSONArray?) {
+    constructor(
+        influenceChannel: InfluenceChannel,
+        influenceType: InfluenceType,
+        ids: JSONArray?
+    ) {
         this.influenceChannel = influenceChannel
         this.influenceType = influenceType
         this.ids = ids
@@ -37,24 +39,24 @@ class Influence {
         get() = ids?.let { if (it.length() > 0) it.getString(0) else null }
 
     fun copy() = Influence(
-            influenceChannel = this@Influence.influenceChannel,
-            influenceType = this@Influence.influenceType,
-            ids = this@Influence.ids
+        influenceChannel = this@Influence.influenceChannel,
+        influenceType = this@Influence.influenceType,
+        ids = this@Influence.ids
     )
 
     @Throws(JSONException::class)
     fun toJSONString() = JSONObject()
-            .put(INFLUENCE_CHANNEL, influenceChannel.toString())
-            .put(INFLUENCE_TYPE, influenceType.toString())
-            .put(INFLUENCE_IDS, if (ids != null) ids.toString() else "")
-            .toString()
+        .put(INFLUENCE_CHANNEL, influenceChannel.toString())
+        .put(INFLUENCE_TYPE, influenceType.toString())
+        .put(INFLUENCE_IDS, if (ids != null) ids.toString() else "")
+        .toString()
 
     override fun toString(): String {
         return "SessionInfluence{" +
-                "influenceChannel=" + influenceChannel +
-                ", influenceType=" + influenceType +
-                ", ids=" + ids +
-                '}'
+            "influenceChannel=" + influenceChannel +
+            ", influenceType=" + influenceType +
+            ", ids=" + ids +
+            '}'
     }
 
     override fun equals(o: Any?): Boolean {
@@ -62,7 +64,7 @@ class Influence {
         if (o == null || javaClass != o.javaClass) return false
         val that = o as Influence
         return influenceChannel == that.influenceChannel &&
-                influenceType == that.influenceType
+            influenceType == that.influenceType
     }
 
     override fun hashCode(): Int {

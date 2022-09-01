@@ -8,13 +8,13 @@ class OutcomeSourceBody @JvmOverloads constructor(var notificationIds: JSONArray
 
     @Throws(JSONException::class)
     fun toJSONObject(): JSONObject = JSONObject()
-            .put(OutcomeConstants.NOTIFICATION_IDS, notificationIds)
-            .put(OutcomeConstants.IAM_IDS, inAppMessagesIds)
+        .put(OutcomeConstants.NOTIFICATION_IDS, notificationIds)
+        .put(OutcomeConstants.IAM_IDS, inAppMessagesIds)
 
     override fun toString(): String {
         return "OSOutcomeSourceBody{" +
-                "notificationIds=" + notificationIds +
-                ", inAppMessagesIds=" + inAppMessagesIds +
-                '}'
+            "notificationIds=" + notificationIds +
+            ", inAppMessagesIds=" + inAppMessagesIds +
+            '}'
     }
 }

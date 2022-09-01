@@ -1,11 +1,16 @@
 package com.onesignal.onesignal.notification.internal.generation.impl
 
 import android.content.Context
-import androidx.work.*
+import androidx.work.CoroutineWorker
+import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequest
+import androidx.work.WorkManager
+import androidx.work.WorkerParameters
 import com.onesignal.onesignal.core.OneSignal
 import com.onesignal.onesignal.core.internal.common.AndroidUtils
-import com.onesignal.onesignal.notification.internal.common.NotificationFormatHelper
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.notification.internal.common.NotificationFormatHelper
 import com.onesignal.onesignal.notification.internal.generation.INotificationGenerationProcessor
 import com.onesignal.onesignal.notification.internal.generation.INotificationGenerationWorkManager
 import org.json.JSONException
@@ -22,7 +27,7 @@ class NotificationGenerationWorkManager : INotificationGenerationWorkManager {
         timestamp: Long,
         isRestoring: Boolean,
         isHighPriority: Boolean
-    ) : Boolean {
+    ): Boolean {
         val id: String? = NotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload)
 
         if (id == null) {
@@ -48,7 +53,7 @@ class NotificationGenerationWorkManager : INotificationGenerationWorkManager {
             .build()
         Logging.debug("NotificationWorkManager enqueueing notification work with notificationId: $osNotificationId and jsonPayload: $jsonPayload")
         WorkManager.getInstance(context)
-                   .enqueueUniqueWork(osNotificationId, ExistingWorkPolicy.KEEP, workRequest)
+            .enqueueUniqueWork(osNotificationId, ExistingWorkPolicy.KEEP, workRequest)
 
         return true
     }
@@ -69,7 +74,6 @@ class NotificationGenerationWorkManager : INotificationGenerationWorkManager {
                 val isRestoring = inputData.getBoolean(IS_RESTORING_WORKER_DATA_PARAM, false)
 
                 _notificationProcessor.processNotificationData(applicationContext, androidNotificationId, jsonPayload, isRestoring, timestamp)
-
             } catch (e: JSONException) {
                 Logging.error("Error occurred doing work for job with id: $id", e)
                 return Result.failure()
@@ -79,7 +83,6 @@ class NotificationGenerationWorkManager : INotificationGenerationWorkManager {
             return Result.success()
         }
     }
-
 
     companion object {
         private const val OS_ID_DATA_PARAM = "os_notif_id"
@@ -111,5 +114,4 @@ class NotificationGenerationWorkManager : INotificationGenerationWorkManager {
             }
         }
     }
-
 }

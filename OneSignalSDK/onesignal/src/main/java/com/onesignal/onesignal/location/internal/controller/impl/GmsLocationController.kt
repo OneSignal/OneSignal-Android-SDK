@@ -41,18 +41,18 @@ class GmsLocationController(
     // contains the last location received from location services
     private var _lastLocation: Location? = null
 
-    override suspend fun start() : Boolean {
+    override suspend fun start(): Boolean {
         var self = this
         var wasSuccessful = false
 
         withContext(Dispatchers.IO) {
             _startStopMutex.withLock {
                 if (_googleApiClient != null) {
-                    if(_lastLocation != null)
+                    if (_lastLocation != null)
                         _event.fire { it.onLocationChanged(_lastLocation!!) }
                     else {
                         val localLastLocation = getLastLocation()
-                        if(localLastLocation != null) {
+                        if (localLastLocation != null) {
                             setLocationAndFire(localLastLocation)
                         }
                     }
@@ -73,10 +73,10 @@ class GmsLocationController(
                             // TODO: google api client has a blocking connect with timeout, use that instead of our withTimeout?
                             var result = proxyGoogleApiClient.blockingConnect()
 
-                            if(result?.isSuccess == true) {
+                            if (result?.isSuccess == true) {
                                 if (_lastLocation == null) {
                                     var lastLocation = FusedLocationApiWrapper.getLastLocation(googleApiClient)
-                                    if(lastLocation != null) {
+                                    if (lastLocation != null) {
                                         setLocationAndFire(lastLocation)
                                     }
                                 }
@@ -85,8 +85,7 @@ class GmsLocationController(
                                 self._locationUpdateListener = LocationUpdateListener(_applicationService, self, proxyGoogleApiClient.realInstance)
                                 self._googleApiClient = proxyGoogleApiClient
                                 wasSuccessful = true
-                            }
-                            else {
+                            } else {
                                 Logging.debug("GMSLocationController connection to GoogleApiService failed: (${result?.errorCode}) ${result?.errorMessage}")
                             }
                         }
@@ -102,12 +101,12 @@ class GmsLocationController(
 
     override suspend fun stop() {
         _startStopMutex.withLock {
-            if(_locationUpdateListener != null) {
+            if (_locationUpdateListener != null) {
                 _locationUpdateListener!!.close()
                 _locationUpdateListener = null
             }
 
-            if(_googleApiClient != null) {
+            if (_googleApiClient != null) {
                 _googleApiClient!!.disconnect()
                 _googleApiClient = null
             }
@@ -160,7 +159,7 @@ class GmsLocationController(
         private var hasExistingRequest = false
 
         init {
-            if(!googleApiClient.isConnected)
+            if (!googleApiClient.isConnected)
                 throw Exception("googleApiClient not connected, cannot listen!")
 
             _applicationService.addApplicationLifecycleHandler(this)
@@ -180,17 +179,17 @@ class GmsLocationController(
         override fun close() {
             _applicationService.removeApplicationLifecycleHandler(this)
 
-            if(hasExistingRequest)
+            if (hasExistingRequest)
                 FusedLocationApiWrapper.cancelLocationUpdates(googleApiClient, this)
         }
 
         private fun refreshRequest() {
-            if(!googleApiClient.isConnected) {
+            if (!googleApiClient.isConnected) {
                 Logging.warn("Attempt to refresh location request but not currently connected!")
                 return
             }
 
-            if(hasExistingRequest) {
+            if (hasExistingRequest) {
                 FusedLocationApiWrapper.cancelLocationUpdates(googleApiClient, this)
             }
 

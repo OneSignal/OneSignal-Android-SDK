@@ -2,12 +2,12 @@ package com.onesignal.onesignal.iam.internal.display.impl
 
 import android.animation.Animator
 import android.animation.ArgbEvaluator
-import android.view.animation.Animation
-import android.view.animation.TranslateAnimation
 import android.animation.ValueAnimator
 import android.view.View
+import android.view.animation.Animation
 import android.view.animation.Interpolator
 import android.view.animation.ScaleAnimation
+import android.view.animation.TranslateAnimation
 
 internal object OneSignalAnimate {
     /**

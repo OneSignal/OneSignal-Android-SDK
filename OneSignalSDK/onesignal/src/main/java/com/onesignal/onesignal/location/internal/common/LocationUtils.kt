@@ -25,7 +25,9 @@ internal object LocationUtils {
     }
 
     fun hasLocationPermission(context: Context): Boolean {
-        return (ContextCompat.checkSelfPermission(context, "android.permission.ACCESS_FINE_LOCATION") === PackageManager.PERMISSION_GRANTED
-                || ContextCompat.checkSelfPermission(context, "android.permission.ACCESS_COARSE_LOCATION") === PackageManager.PERMISSION_GRANTED)
+        return (
+            ContextCompat.checkSelfPermission(context, "android.permission.ACCESS_FINE_LOCATION") === PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(context, "android.permission.ACCESS_COARSE_LOCATION") === PackageManager.PERMISSION_GRANTED
+            )
     }
 }

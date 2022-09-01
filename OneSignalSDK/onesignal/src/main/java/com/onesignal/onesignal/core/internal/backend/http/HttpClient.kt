@@ -18,12 +18,12 @@ import java.net.ConnectException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.UnknownHostException
-import java.util.*
+import java.util.Scanner
 import javax.net.ssl.HttpsURLConnection
 
 class HttpClient(
     private val _prefs: IPreferencesService
-) : IHttpClient  {
+) : IHttpClient {
     override suspend fun post(url: String, body: JSONObject): HttpResponse {
         return makeRequest(url, "POST", body, TIMEOUT, null)
     }
@@ -40,7 +40,7 @@ class HttpClient(
         return makeRequest(url, "PATCH", body, TIMEOUT, null)
     }
 
-    override suspend fun delete(url: String) : HttpResponse {
+    override suspend fun delete(url: String): HttpResponse {
         return makeRequest(url, "DELETE", null, TIMEOUT, null)
     }
 
@@ -50,7 +50,7 @@ class HttpClient(
         jsonBody: JSONObject?,
         timeout: Int,
         cacheKey: String?
-    ) : HttpResponse {
+    ): HttpResponse {
         // TODO: Implement If not a GET request, check if the user provided privacy consent if the application is set to require user privacy consent
 //        if (method != null && OneSignal.shouldLogUserPrivacyConsentErrorMessageForMethodName(null))
 //            return
@@ -59,12 +59,10 @@ class HttpClient(
             return withTimeout(getThreadTimeout(timeout).toLong()) {
                 return@withTimeout makeRequestIODispatcher(url, method, jsonBody, timeout, cacheKey)
             }
-        }
-        catch(e: TimeoutCancellationException) {
+        } catch (e: TimeoutCancellationException) {
             Logging.error("HttpClient: Request timed out: $url", e)
             return HttpResponse(0, null, e)
-        }
-        catch(e: Throwable) {
+        } catch (e: Throwable) {
             return HttpResponse(0, null, e)
         }
     }
@@ -75,7 +73,7 @@ class HttpClient(
         jsonBody: JSONObject?,
         timeout: Int,
         cacheKey: String?
-    ) : HttpResponse {
+    ): HttpResponse {
         val result = withContext(Dispatchers.IO) {
             var httpResponse = -1
             var con: HttpURLConnection? = null
@@ -201,7 +199,7 @@ class HttpClient(
     }
 
     @Throws(IOException::class)
-    private fun newHttpURLConnection(url: String): HttpURLConnection{
+    private fun newHttpURLConnection(url: String): HttpURLConnection {
         return URL(BASE_URL + url).openConnection() as HttpURLConnection
     }
 

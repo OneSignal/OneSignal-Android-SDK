@@ -28,8 +28,13 @@
 package com.onesignal
 
 import android.content.Context
-import android.os.Handler
-import androidx.work.*
+import androidx.work.Constraints
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
+import androidx.work.WorkManager
+import androidx.work.Worker
+import androidx.work.WorkerParameters
 import java.util.concurrent.TimeUnit
 
 class OSFocusHandler {
@@ -75,7 +80,7 @@ class OSFocusHandler {
         }
     }
 
-    fun startOnLostFocusWorker(tag: String, delay: Long, context: Context)  {
+    fun startOnLostFocusWorker(tag: String, delay: Long, context: Context) {
         val constraints = buildConstraints()
         val workRequest = OneTimeWorkRequest.Builder(OnLostFocusWorker::class.java)
             .setConstraints(constraints)

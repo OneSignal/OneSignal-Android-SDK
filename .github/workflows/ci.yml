@@ -1,0 +1,46 @@
+name: Test
+
+on:
+  pull_request:
+    branches: "**"
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: "[Setup] Java"
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: 11
+      - name: "[Setup] Gradle"
+        uses: gradle/gradle-build-action@v2
+        with:
+          gradle-version: 7.3.1
+      - name: "[Setup] Android"
+        uses: maxim-lobanov/setup-android-tools@v1
+        with:
+          packages: |
+            platforms;android-31
+            build-tools;31.0.0
+          cache: true
+      - name: "[Test] Linting"
+        working-directory: OneSignalSDK
+        run: |
+          ./gradlew ktlintCheck --console=plain
+      - name: "[Test] Analyzing"
+        working-directory: OneSignalSDK
+        continue-on-error: true
+        run: |
+          ./gradlew detekt --console=plain
+      - name: "[Test] SDK Unit Tests"
+        working-directory: OneSignalSDK
+        run: |
+          ./gradlew unittest:testReleaseUnitTest --console=plain
+      - name: Unit tests results
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-tests-results
+          path: OneSignalSDK/unittest/build

@@ -1,12 +1,11 @@
 package com.onesignal.onesignal.iam.internal.repositories.impl
 
-import org.json.JSONException
 import android.content.ContentValues
 import com.onesignal.onesignal.core.internal.common.JSONUtils
-import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.onesignal.core.internal.database.impl.OneSignalDbContract
 import com.onesignal.onesignal.core.internal.logging.Logging
+import com.onesignal.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.iam.internal.InAppMessage
 import com.onesignal.onesignal.iam.internal.InAppMessageRedisplayStats
 import com.onesignal.onesignal.iam.internal.preferences.IInAppPreferencesController
@@ -14,6 +13,7 @@ import com.onesignal.onesignal.iam.internal.repositories.IInAppRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import org.json.JSONException
 
 internal class InAppRepository(
     private val _databaseProvider: IDatabaseProvider,

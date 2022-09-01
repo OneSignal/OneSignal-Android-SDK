@@ -3,11 +3,16 @@ package com.onesignal.onesignal.notification.internal
 import android.app.Activity
 import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.application.IApplicationService
-import com.onesignal.onesignal.core.internal.common.*
-import com.onesignal.onesignal.core.internal.common.events.*
+import com.onesignal.onesignal.core.internal.common.events.EventProducer
+import com.onesignal.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.models.ConfigModelStore
-import com.onesignal.onesignal.notification.*
+import com.onesignal.onesignal.notification.INotificationOpenedHandler
+import com.onesignal.onesignal.notification.INotificationWillShowInForegroundHandler
+import com.onesignal.onesignal.notification.INotificationsManager
+import com.onesignal.onesignal.notification.IPermissionChangedHandler
+import com.onesignal.onesignal.notification.IPermissionState
+import com.onesignal.onesignal.notification.PostNotificationException
 import com.onesignal.onesignal.notification.internal.backend.INotificationBackendService
 import com.onesignal.onesignal.notification.internal.common.GenerateNotificationOpenIntentFromPushPayload
 import com.onesignal.onesignal.notification.internal.common.NotificationHelper
@@ -69,7 +74,7 @@ internal class NotificationsManager(
         }
     }
 
-    override suspend fun requestPermission() : Boolean? {
+    override suspend fun requestPermission(): Boolean? {
         Logging.log(LogLevel.DEBUG, "promptForPushPermissionStatus()")
 
         // TODO: We do not yet handle the case where the activity is shown to the user, the application
@@ -83,7 +88,7 @@ internal class NotificationsManager(
         // something there.  However when they come back the application will be brought into
         // focus and our application lifecycle handler will pick up any change that could have
         // occurred.
-        if(result != null) {
+        if (result != null) {
             setPermissionStatusAndFire(result)
         }
 
@@ -94,7 +99,7 @@ internal class NotificationsManager(
         val oldPermissionStatus = permissionStatus
         permissionStatus = PermissionState(isEnabled)
 
-        if(oldPermissionStatus.notificationsEnabled != isEnabled) {
+        if (oldPermissionStatus.notificationsEnabled != isEnabled) {
             // switch over to the main thread for the firing of the event
             withContext(Dispatchers.Main) {
                 val changes = PermissionStateChanges(oldPermissionStatus, permissionStatus)
@@ -116,7 +121,7 @@ internal class NotificationsManager(
      *              POST call for all options.
      * @param callback a {@link PostNotificationResponseHandler} object to receive the request result
      */
-    override suspend fun postNotification(json: JSONObject) : JSONObject {
+    override suspend fun postNotification(json: JSONObject): JSONObject {
         Logging.log(LogLevel.DEBUG, "postNotification(json: $json)")
 
         // app_id will not be set if init was never called.
@@ -128,17 +133,15 @@ internal class NotificationsManager(
         }
 
         var response = _backend.postNotification(appId, json)
-        if(response.isSuccess) {
+        if (response.isSuccess) {
             val jsonObject = JSONObject(response.payload!!)
             if (!jsonObject.has("errors")) {
                 return jsonObject
-            }
-            else {
+            } else {
                 throw PostNotificationException(jsonObject)
             }
-        }
-        else {
-            val jsonObject = if(response.payload != null) {
+        } else {
+            val jsonObject = if (response.payload != null) {
                 JSONObject(response.payload)
             } else {
                 JSONObject("{\"error\": \"HTTP no response error\"}")
@@ -148,7 +151,7 @@ internal class NotificationsManager(
         }
     }
 
-    override suspend fun postNotification(json: String) : JSONObject = postNotification(JSONObject(json))
+    override suspend fun postNotification(json: String): JSONObject = postNotification(JSONObject(json))
 
     /**
      * Cancels a single OneSignal notification based on its Android notification integer ID. Use
@@ -159,7 +162,7 @@ internal class NotificationsManager(
      */
     override suspend fun removeNotification(id: Int) {
         Logging.log(LogLevel.DEBUG, "removeNotification(id: $id)")
-        if(_notificationDataController.markAsDismissed(id))
+        if (_notificationDataController.markAsDismissed(id))
             _summaryManager.updatePossibleDependentSummaryOnDismiss(id)
     }
 
@@ -237,7 +240,7 @@ internal class NotificationsManager(
         try {
             // Always use the top most notification if user tapped on the summary notification
             val firstPayloadItem = pushPayloads.getJSONObject(0)
-            //val isHandled = _notificationLifecycleService.canOpenNotification(activity, firstPayloadItem)
+            // val isHandled = _notificationLifecycleService.canOpenNotification(activity, firstPayloadItem)
             val intentGenerator = GenerateNotificationOpenIntentFromPushPayload.create(activity, firstPayloadItem)
 
             val intent = intentGenerator.getIntentVisible()

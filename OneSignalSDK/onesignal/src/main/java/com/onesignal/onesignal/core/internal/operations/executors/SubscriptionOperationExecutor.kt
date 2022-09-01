@@ -2,23 +2,32 @@ package com.onesignal.onesignal.core.internal.operations.executors
 
 import android.content.pm.PackageManager
 import android.os.Build
+import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.application.IApplicationService
 import com.onesignal.onesignal.core.internal.backend.http.IHttpClient
-import com.onesignal.onesignal.core.internal.common.*
+import com.onesignal.onesignal.core.internal.common.DeviceUtils
+import com.onesignal.onesignal.core.internal.common.OneSignalUtils
+import com.onesignal.onesignal.core.internal.common.RootToolsInternalMethods
+import com.onesignal.onesignal.core.internal.common.TimeUtils
 import com.onesignal.onesignal.core.internal.device.IDeviceService
-import com.onesignal.onesignal.core.LogLevel
 import com.onesignal.onesignal.core.internal.logging.Logging
-import com.onesignal.onesignal.core.internal.operations.*
+import com.onesignal.onesignal.core.internal.operations.CreateAndAddSubscriptionOperation
+import com.onesignal.onesignal.core.internal.operations.CreateSubscriptionOperation
+import com.onesignal.onesignal.core.internal.operations.DeleteSubscriptionOperation
+import com.onesignal.onesignal.core.internal.operations.IOperationExecutor
+import com.onesignal.onesignal.core.internal.operations.Operation
+import com.onesignal.onesignal.core.internal.operations.UpdateSubscriptionOperation
 import com.onesignal.onesignal.core.internal.user.ISubscriptionManager
 import org.json.JSONException
 import org.json.JSONObject
-import java.util.*
+import java.util.Locale
 
 internal class SubscriptionOperationExecutor(
     private val _application: IApplicationService,
     private val _device: IDeviceService,
     private val _subscriptionManager: ISubscriptionManager,
-    private val _http: IHttpClient) : IOperationExecutor {
+    private val _http: IHttpClient
+) : IOperationExecutor {
 
     override val operations: List<String>
         get() = listOf(CREATE_SUBSCRIPTION, CREATE_AND_ADD_SUBSCRIPTION, UPDATE_SUBSCRIPTION, DELETE_SUBSCRIPTION)
@@ -69,27 +78,24 @@ internal class SubscriptionOperationExecutor(
             json.put("rooted", RootToolsInternalMethods.isRooted)
 
             json.put("identifier", address)
-        }
-        catch(e: JSONException) {
+        } catch (e: JSONException) {
             Logging.error("Could not create JSON payload for create subscription", e)
         }
 
         val response = _http.post("players", json)
-        if(response.isSuccess) {
+        if (response.isSuccess) {
             val responseJSON = JSONObject(response.payload)
             if (responseJSON.has("id")) {
                 val subscriptionId: String = responseJSON.optString("id")
                 Logging.info("Device registered, SubscriptionId = $subscriptionId")
 
-                if(id == null) {
+                if (id == null) {
                     _subscriptionManager.addPushSubscription(subscriptionId, address)
-                }
-                else {
+                } else {
                     // TODO: Update the subscription ID to use the server side one. Do we need this?
                 }
             }
-        }
-        else {
+        } else {
             Logging.warn("Failed last request. statusCode: $response.statusCode\nresponse: $response")
 
             // TODO: Need a concept of retrying on network error, and other error handling

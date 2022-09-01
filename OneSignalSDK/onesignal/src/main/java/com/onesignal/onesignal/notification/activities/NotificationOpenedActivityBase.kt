@@ -38,7 +38,7 @@ abstract class NotificationOpenedActivityBase : Activity() {
         super.onCreate(savedInstanceState)
         OneSignal.initWithContext(applicationContext)
 
-        var self = this;
+        var self = this
 
         suspendifyOnThread {
             var openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
@@ -52,7 +52,7 @@ abstract class NotificationOpenedActivityBase : Activity() {
         super.onNewIntent(intent)
         OneSignal.initWithContext(applicationContext)
 
-        var self = this;
+        var self = this
         suspendifyOnThread {
             var openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
             openedProcessor.processFromContext(self, getIntent())

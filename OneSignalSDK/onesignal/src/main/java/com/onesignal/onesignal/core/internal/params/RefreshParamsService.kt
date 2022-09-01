@@ -38,7 +38,7 @@ internal class RefreshParamsService(
     private fun fetchParams() {
         val appId = _configModelStore.get().appId
 
-        if(appId == null || appId.isEmpty())
+        if (appId == null || appId.isEmpty())
             return
 
         suspendifyOnThread {

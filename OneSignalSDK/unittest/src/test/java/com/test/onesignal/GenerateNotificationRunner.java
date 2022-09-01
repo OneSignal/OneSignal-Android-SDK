@@ -127,6 +127,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
@@ -1789,6 +1790,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   @Ignore
    @Config(shadows = { ShadowGenerateNotification.class })
    public void testNotificationProcessingAndForegroundHandler_displayCalled_noMutateId() throws Exception {
       // 1. Setup correct notification extension service class

@@ -6,11 +6,11 @@ import com.onesignal.onesignal.location.ILocationManager
 internal class InAppMessageLocationPrompt(
     private val _locationManager: ILocationManager
 ) : InAppMessagePrompt() {
-    override suspend fun handlePrompt() : PromptActionResult? {
+    override suspend fun handlePrompt(): PromptActionResult? {
 
         val result = _locationManager.requestPermission()
 
-        return when(result) {
+        return when (result) {
             true -> PromptActionResult.PERMISSION_GRANTED
             false -> PromptActionResult.PERMISSION_DENIED
             null -> null

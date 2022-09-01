@@ -39,7 +39,7 @@ class HmsLocationController(
     // contains the last location received from location services
     private var _lastLocation: Location? = null
 
-    override suspend fun start() : Boolean {
+    override suspend fun start(): Boolean {
         var self = this
         var wasSuccessful = false
 
@@ -61,24 +61,26 @@ class HmsLocationController(
                 else {
                     var channel = Channel<Boolean>()
                     hmsFusedLocationClient!!.lastLocation
-                        .addOnSuccessListener(OnSuccessListener { location ->
-                            Logging.warn("Huawei LocationServices getLastLocation returned location: $location")
+                        .addOnSuccessListener(
+                            OnSuccessListener { location ->
+                                Logging.warn("Huawei LocationServices getLastLocation returned location: $location")
 
-                            if (location == null) {
-                                runBlocking { channel.send(false) }
-                                return@OnSuccessListener
+                                if (location == null) {
+                                    runBlocking { channel.send(false) }
+                                    return@OnSuccessListener
+                                }
+
+                                _lastLocation = location
+                                runBlocking { channel.send(true) }
                             }
-
-                            _lastLocation = location
-                            runBlocking { channel.send(true) }
-                        })
+                        )
                         .addOnFailureListener { e ->
                             Logging.error("Huawei LocationServices getLastLocation failed!", e)
                             runBlocking { channel.send(false) }
                         }
                     wasSuccessful = channel.receive()
 
-                    if(wasSuccessful) {
+                    if (wasSuccessful) {
                         _event.fire { it.onLocationChanged(_lastLocation!!) }
                         locationUpdateListener = LocationUpdateListener(
                             self,
@@ -95,12 +97,12 @@ class HmsLocationController(
 
     override suspend fun stop() {
         _startStopMutex.withLock {
-            if(locationUpdateListener != null) {
+            if (locationUpdateListener != null) {
                 locationUpdateListener!!.close()
                 locationUpdateListener = null
             }
 
-            if(hmsFusedLocationClient != null) {
+            if (hmsFusedLocationClient != null) {
                 hmsFusedLocationClient = null
             }
 
@@ -116,17 +118,19 @@ class HmsLocationController(
         runBlocking {
             var channel = Channel<Any?>()
             locationClient.lastLocation
-                .addOnSuccessListener(OnSuccessListener { location ->
-                    Logging.warn("Huawei LocationServices getLastLocation returned location: $location")
+                .addOnSuccessListener(
+                    OnSuccessListener { location ->
+                        Logging.warn("Huawei LocationServices getLastLocation returned location: $location")
 
-                    if (location == null) {
+                        if (location == null) {
+                            runBlocking { channel.send(null) }
+                            return@OnSuccessListener
+                        }
+
+                        retVal = location
                         runBlocking { channel.send(null) }
-                        return@OnSuccessListener
                     }
-
-                    retVal = location
-                    runBlocking { channel.send(null) }
-                })
+                )
                 .addOnFailureListener { e ->
                     Logging.error("Huawei LocationServices getLastLocation failed!", e)
                     runBlocking { channel.send(null) }
@@ -166,7 +170,7 @@ class HmsLocationController(
         override fun close() {
             _applicationService.removeApplicationLifecycleHandler(this)
 
-            if(hasExistingRequest)
+            if (hasExistingRequest)
                 huaweiFusedLocationProviderClient.removeLocationUpdates(this)
         }
 
@@ -176,7 +180,7 @@ class HmsLocationController(
         }
 
         private fun refreshRequest() {
-            if(hasExistingRequest) {
+            if (hasExistingRequest) {
                 huaweiFusedLocationProviderClient.removeLocationUpdates(this)
             }
 

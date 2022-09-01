@@ -9,7 +9,6 @@ import com.onesignal.influence.OSInfluenceConstants
 import com.onesignal.influence.domain.OSInfluence
 import com.onesignal.influence.domain.OSInfluenceChannel
 import org.json.JSONObject
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 class OSTrackerFactory(preferences: OSSharedPreferences, logger: OSLogger, timeProvider: OSTime) {

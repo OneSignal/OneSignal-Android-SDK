@@ -31,5 +31,4 @@ import com.onesignal.onesignal.notification.INotificationAction
 class NotificationAction(
     override val type: INotificationAction.ActionType,
     override val actionId: String?
-) : INotificationAction {
-}
+) : INotificationAction

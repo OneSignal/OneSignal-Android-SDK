@@ -68,7 +68,7 @@ interface IParamsService : IEventNotifier<IParamsChangedHandler> {
     /**
      * Whether firebase analytics should be used
      */
-    val firebaseAnalytics : Boolean
+    val firebaseAnalytics: Boolean
 
     /**
      * Whether to honor TTL for notifications
@@ -84,7 +84,6 @@ interface IParamsService : IEventNotifier<IParamsChangedHandler> {
      * Whether to track notification receive receipts
      */
     val receiveReceiptEnabled: Boolean
-
 
     /**
      * TODO: Is this ever sent down?

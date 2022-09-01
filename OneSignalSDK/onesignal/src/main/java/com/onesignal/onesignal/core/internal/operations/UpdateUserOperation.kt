@@ -5,5 +5,5 @@ import com.onesignal.onesignal.core.internal.operations.executors.UserOperationE
 class UpdateUserOperation(
     val id: String,
     val property: String,
-    val value: Any?) : Operation(UserOperationExecutor.UPDATE_USER)  {
-}
+    val value: Any?
+) : Operation(UserOperationExecutor.UPDATE_USER)
