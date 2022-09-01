@@ -113,7 +113,7 @@ object NotificationModule {
             val service = if (deviceService.isFireOSDeviceType)
                 PushRegistratorADM(it.getService(IApplicationService::class.java))
             else if (deviceService.isAndroidDeviceType) {
-                if (deviceService.hasFCMLibrary())
+                if (deviceService.hasFCMLibrary)
                     PushRegistratorFCM(it.getService(IParamsService::class.java), it.getService(IApplicationService::class.java), it.getService(GooglePlayServicesUpgradePrompt::class.java), deviceService)
                 else
                     PushRegistratorNone()

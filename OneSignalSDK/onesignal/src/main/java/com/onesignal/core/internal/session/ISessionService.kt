@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.session
 
-import com.onesignal.core.internal.AppEntryAction
+import com.onesignal.core.internal.application.AppEntryAction
 import com.onesignal.core.internal.common.events.IEventNotifier
 import com.onesignal.core.internal.influence.Influence
 

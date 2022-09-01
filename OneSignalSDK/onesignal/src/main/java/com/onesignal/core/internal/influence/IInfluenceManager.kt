@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.influence
 
-import com.onesignal.core.internal.AppEntryAction
+import com.onesignal.core.internal.application.AppEntryAction
 import com.onesignal.core.internal.params.IParamsService
 import org.json.JSONObject
 
