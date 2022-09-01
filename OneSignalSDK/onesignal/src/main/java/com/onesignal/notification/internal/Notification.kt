@@ -20,7 +20,7 @@ import org.json.JSONObject
  * [.groupedNotifications] - If the notification is a summary notification for a group, this will contain
  * all notification payloads it was created from.
  */
-open class Notification : INotification {
+internal open class Notification : INotification {
     var notificationExtender: NotificationCompat.Extender? = null
 
     /**

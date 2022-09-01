@@ -31,7 +31,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import com.onesignal.R
 
-object AlertDialogPrepromptForAndroidSettings {
+internal object AlertDialogPrepromptForAndroidSettings {
 
     interface Callback {
         fun onAccept()

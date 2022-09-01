@@ -2,7 +2,7 @@ package com.onesignal.core.internal.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.onesignal.core.LogLevel
+import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.startup.IStartableService
@@ -14,7 +14,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 
-class PreferencesService(
+internal class PreferencesService(
     private val _applicationService: IApplicationService,
     private val _time: ITime
 ) : IPreferencesService, IStartableService {

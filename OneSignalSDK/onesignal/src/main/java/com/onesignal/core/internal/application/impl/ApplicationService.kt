@@ -22,7 +22,7 @@ import com.onesignal.core.internal.logging.Logging
 import com.onesignal.onesignal.core.internal.common.suspend.Waiter
 import java.lang.ref.WeakReference
 
-class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, OnGlobalLayoutListener {
+internal class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, OnGlobalLayoutListener {
     private val _activityLifecycleNotifier: IEventProducer<IActivityLifecycleHandler> = EventProducer()
     private val _applicationLifecycleNotifier: IEventProducer<IApplicationLifecycleHandler> = EventProducer()
     private val _systemConditionNotifier: IEventProducer<ISystemConditionHandler> = EventProducer()

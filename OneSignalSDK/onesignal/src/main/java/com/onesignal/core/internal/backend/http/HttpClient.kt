@@ -21,7 +21,7 @@ import java.net.UnknownHostException
 import java.util.Scanner
 import javax.net.ssl.HttpsURLConnection
 
-class HttpClient(
+internal class HttpClient(
     private val _prefs: IPreferencesService
 ) : IHttpClient {
     override suspend fun post(url: String, body: JSONObject): HttpResponse {

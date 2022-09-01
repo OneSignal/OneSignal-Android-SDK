@@ -3,7 +3,7 @@ package com.onesignal.core.internal.application
 /**
  * An app entry type enum for knowing how the user foregrounded or backgrounded the app.
  */
-enum class AppEntryAction {
+internal enum class AppEntryAction {
     /**
      * Entered the app through opening a notification
      */

@@ -11,7 +11,7 @@ import android.view.View
 import android.view.Window
 import kotlin.math.roundToInt
 
-object ViewUtils {
+internal object ViewUtils {
     fun dpToPx(dp: Int): Int {
         return (dp * Resources.getSystem().displayMetrics.density).toInt()
     }

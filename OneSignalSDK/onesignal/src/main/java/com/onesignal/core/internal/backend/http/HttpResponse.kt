@@ -2,7 +2,7 @@ package com.onesignal.core.internal.backend.http
 
 import java.net.HttpURLConnection
 
-class HttpResponse(
+internal class HttpResponse(
     /**
      * The status code of the response ([HttpURLConnection.HTTP_OK] as an example)
      */

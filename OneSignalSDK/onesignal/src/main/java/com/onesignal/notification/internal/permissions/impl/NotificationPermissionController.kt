@@ -38,7 +38,7 @@ import com.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.notification.internal.permissions.INotificationPermissionController
 import com.onesignal.onesignal.core.internal.common.suspend.WaiterWithValue
 
-class NotificationPermissionController(
+internal class NotificationPermissionController(
     private val _application: IApplicationService,
     private val _requestPermission: IRequestPermissionService
 ) : IRequestPermissionService.PermissionCallback,

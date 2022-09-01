@@ -3,7 +3,7 @@ package com.onesignal.core.internal.user.subscriptions
 import com.onesignal.core.user.subscriptions.IEmailSubscription
 import java.util.UUID
 
-class EmailSubscription(
+internal class EmailSubscription(
     id: UUID,
 
     /**

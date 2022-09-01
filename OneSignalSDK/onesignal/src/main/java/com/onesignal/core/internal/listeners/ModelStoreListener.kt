@@ -8,7 +8,7 @@ import com.onesignal.core.internal.operations.Operation
 import com.onesignal.core.internal.startup.IStartableService
 import java.io.Closeable
 
-abstract class ModelStoreListener<TModel>(
+internal abstract class ModelStoreListener<TModel>(
     private val store: IModelStore<TModel>,
     private val opRepo: IOperationRepo
 ) : IModelStoreChangeHandler<TModel>, IStartableService, Closeable where TModel : Model {

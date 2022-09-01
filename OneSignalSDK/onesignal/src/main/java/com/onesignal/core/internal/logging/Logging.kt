@@ -1,11 +1,11 @@
 package com.onesignal.core.internal.logging
 
-import com.onesignal.core.LogLevel
+import com.onesignal.core.debug.LogLevel
 
 // This is singleton class that is designed to make OneSignal easy to use.
 //    - No instance management is required from the app developer.
 // This is a wrapper around an instance of OneSignalImp, no logic lives in this class
-object Logging {
+internal object Logging {
     private const val TAG = "OneSignal"
 
     @JvmStatic

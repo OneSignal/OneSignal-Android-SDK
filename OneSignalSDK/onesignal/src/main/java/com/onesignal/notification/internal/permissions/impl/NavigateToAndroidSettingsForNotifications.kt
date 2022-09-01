@@ -30,7 +30,7 @@ package com.onesignal.notification.internal.permissions.impl
 import android.content.Context
 import android.content.Intent
 
-object NavigateToAndroidSettingsForNotifications {
+internal object NavigateToAndroidSettingsForNotifications {
     fun show(context: Context) {
         val intent = Intent()
         intent.action = "android.settings.APP_NOTIFICATION_SETTINGS"

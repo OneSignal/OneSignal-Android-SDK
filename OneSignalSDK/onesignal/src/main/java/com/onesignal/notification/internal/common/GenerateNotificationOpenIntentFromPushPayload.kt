@@ -11,7 +11,7 @@ import org.json.JSONObject
  *    * OSNotificationOpenBehaviorFromPushPayload
  *    * Payload
  */
-object GenerateNotificationOpenIntentFromPushPayload {
+internal object GenerateNotificationOpenIntentFromPushPayload {
 
     /**
      * Create a new [GenerateNotificationOpenIntent] from the FCM payload

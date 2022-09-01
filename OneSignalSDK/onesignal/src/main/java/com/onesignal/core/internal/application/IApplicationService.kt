@@ -7,7 +7,7 @@ import android.content.Context
  * The application service provides the ability to view various application-specific
  * information and subscribe to application events.
  */
-interface IApplicationService {
+internal interface IApplicationService {
 
     /**
      * The application context

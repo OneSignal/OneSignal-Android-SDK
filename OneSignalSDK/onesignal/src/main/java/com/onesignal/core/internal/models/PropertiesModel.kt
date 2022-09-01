@@ -2,7 +2,7 @@ package com.onesignal.core.internal.models
 
 import com.onesignal.core.internal.modeling.Model
 
-class PropertiesModel : Model() {
+internal class PropertiesModel : Model() {
     var language: String
         get() = get(::language.name) { "en" }
         set(value) { set(::language.name, value) }

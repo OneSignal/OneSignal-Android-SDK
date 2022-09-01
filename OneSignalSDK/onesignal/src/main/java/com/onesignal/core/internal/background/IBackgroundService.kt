@@ -8,7 +8,7 @@ import androidx.annotation.WorkerThread
  * background process is initiated when the application is no longer in focus.  Each background
  * service's [scheduleIn] will be analyzed to determine when [run] should be called.
  */
-interface IBackgroundService {
+internal interface IBackgroundService {
 
     /**
      * When this background service should be run, in milliseconds. If null, this service does not

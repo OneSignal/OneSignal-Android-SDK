@@ -8,7 +8,7 @@ import com.onesignal.notification.activities.NotificationOpenedActivity
 import com.onesignal.notification.activities.NotificationOpenedActivityAndroid22AndOlder
 import com.onesignal.notification.internal.common.NotificationConstants
 
-class IntentGeneratorForAttachingToNotifications(
+internal class IntentGeneratorForAttachingToNotifications(
     val context: Context
 ) {
     private val notificationOpenedClassAndroid23Plus: Class<*> = NotificationOpenedActivity::class.java

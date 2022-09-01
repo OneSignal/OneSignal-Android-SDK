@@ -10,7 +10,7 @@ import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.location.LocationListener
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
-import com.onesignal.core.LogLevel
+import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.events.EventProducer
@@ -27,7 +27,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import java.io.Closeable
 
-class GmsLocationController(
+internal class GmsLocationController(
     private val _applicationService: IApplicationService
 ) : ILocationController {
     private val _locationHandlerThread = LocationHandlerThread()

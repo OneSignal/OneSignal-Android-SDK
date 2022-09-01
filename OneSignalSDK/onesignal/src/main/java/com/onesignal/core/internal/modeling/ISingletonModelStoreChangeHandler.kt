@@ -4,7 +4,7 @@ package com.onesignal.core.internal.modeling
  * A handler interface for [ISingletonModelStore.subscribe]. Implement this interface to subscribe
  * to model change events for a specific model store.
  */
-interface ISingletonModelStoreChangeHandler<TModel> where TModel : Model {
+internal interface ISingletonModelStoreChangeHandler<TModel> where TModel : Model {
 
     /**
      * Called when a model has been updated.

@@ -17,7 +17,7 @@ import org.json.JSONException
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 
-class NotificationGenerationWorkManager : INotificationGenerationWorkManager {
+internal class NotificationGenerationWorkManager : INotificationGenerationWorkManager {
 
     override fun beginEnqueueingWork(
         context: Context,

@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.params
 
-import com.onesignal.core.LogLevel
+import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.backend.IParamsBackendService
 import com.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.core.internal.logging.Logging

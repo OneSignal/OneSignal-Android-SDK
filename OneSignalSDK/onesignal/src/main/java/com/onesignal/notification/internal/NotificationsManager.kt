@@ -1,7 +1,7 @@
 package com.onesignal.notification.internal
 
 import android.app.Activity
-import com.onesignal.core.LogLevel
+import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.events.EventProducer
 import com.onesignal.core.internal.common.suspendifyOnThread
@@ -27,11 +27,11 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
-interface INotificationStateRefresher {
+internal interface INotificationStateRefresher {
     fun refreshNotificationState()
 }
 
-interface INotificationActivityOpener {
+internal interface INotificationActivityOpener {
     suspend fun openDestinationActivity(activity: Activity, pushPayloads: JSONArray)
 }
 

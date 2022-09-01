@@ -4,7 +4,7 @@ import android.content.Context
 import android.net.Uri
 import org.json.JSONObject
 
-class OSNotificationOpenBehaviorFromPushPayload(
+internal class OSNotificationOpenBehaviorFromPushPayload(
     private val context: Context,
     private val fcmPayload: JSONObject,
 ) {

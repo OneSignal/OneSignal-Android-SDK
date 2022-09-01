@@ -4,7 +4,7 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
-class Influence {
+internal class Influence {
     /**
      * InfluenceType will be DISABLED only if the outcome feature is disabled.
      */

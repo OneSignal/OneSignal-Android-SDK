@@ -9,7 +9,7 @@ import com.onesignal.core.internal.common.events.IEventNotifier
  * in the model store must have a unique identifier for retrieving
  * a specific model.
  */
-interface IModelStore<TModel> : IEventNotifier<IModelStoreChangeHandler<TModel>> where TModel : Model {
+internal interface IModelStore<TModel> : IEventNotifier<IModelStoreChangeHandler<TModel>> where TModel : Model {
 
     /**
      * List the keys of the models that are owned by this model store.

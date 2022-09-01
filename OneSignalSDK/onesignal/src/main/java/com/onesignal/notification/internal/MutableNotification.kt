@@ -29,7 +29,7 @@ package com.onesignal.notification.internal
 import androidx.core.app.NotificationCompat
 import com.onesignal.notification.IMutableNotification
 
-class MutableNotification(notification: Notification) : Notification(notification), IMutableNotification {
+internal class MutableNotification(notification: Notification) : Notification(notification), IMutableNotification {
     override fun setExtender(extender: NotificationCompat.Extender?) {
         notificationExtender = extender
     }

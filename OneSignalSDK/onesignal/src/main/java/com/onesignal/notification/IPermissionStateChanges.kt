@@ -26,7 +26,17 @@
  */
 package com.onesignal.notification
 
+/**
+ * The permission state changes that have occurred.
+ */
 interface IPermissionStateChanges {
+    /**
+     * The state of permissions prior to the change.
+     */
     val from: IPermissionState
+
+    /**
+     * The state of permissions after the change.
+     */
     val to: IPermissionState
 }

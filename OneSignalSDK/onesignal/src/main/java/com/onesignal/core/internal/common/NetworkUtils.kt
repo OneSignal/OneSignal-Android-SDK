@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.common
 
-object NetworkUtils {
+internal object NetworkUtils {
     var MAX_NETWORK_REQUEST_ATTEMPT_COUNT = 3
     val NO_RETRY_NETWROK_REQUEST_STATUS_CODES = intArrayOf(401, 402, 403, 404, 410)
 

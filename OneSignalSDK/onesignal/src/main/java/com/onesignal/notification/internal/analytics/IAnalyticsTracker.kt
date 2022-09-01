@@ -26,7 +26,7 @@
  */
 package com.onesignal.notification.internal.analytics
 
-interface IAnalyticsTracker {
+internal interface IAnalyticsTracker {
     fun trackInfluenceOpenEvent()
     fun trackOpenedEvent(notificationId: String, campaign: String)
     fun trackReceivedEvent(notificationId: String, campaign: String)

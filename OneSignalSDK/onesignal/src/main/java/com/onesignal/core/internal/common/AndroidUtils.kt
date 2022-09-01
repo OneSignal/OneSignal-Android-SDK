@@ -14,7 +14,7 @@ import androidx.annotation.Keep
 import com.onesignal.core.internal.logging.Logging
 import java.util.Random
 
-object AndroidUtils {
+internal object AndroidUtils {
     fun getRandomDelay(minDelay: Int, maxDelay: Int): Int {
         return Random().nextInt(maxDelay + 1 - minDelay) + minDelay
     }

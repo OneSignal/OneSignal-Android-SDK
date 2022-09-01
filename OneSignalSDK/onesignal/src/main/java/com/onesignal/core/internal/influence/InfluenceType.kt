@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.influence
 
-enum class InfluenceType {
+internal enum class InfluenceType {
     DIRECT,
     INDIRECT,
     UNATTRIBUTED,

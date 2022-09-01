@@ -8,7 +8,7 @@ import com.onesignal.core.internal.common.events.IEventNotifier
  * there are no IDs, and there is an expectation that the (one) model
  * always exists.
  */
-interface ISingletonModelStore<TModel> :
+internal interface ISingletonModelStore<TModel> :
     IEventNotifier<ISingletonModelStoreChangeHandler<TModel>> where TModel : Model {
     /**
      * Retrieve the model managed by this singleton model store.

@@ -2,7 +2,7 @@ package com.onesignal.core.internal.models
 
 import com.onesignal.core.internal.modeling.Model
 
-class ConfigModel : Model() {
+internal class ConfigModel : Model() {
     /**
      * Interval at which the [OperationRepo] will release batches of [Operation] when not forced
      */

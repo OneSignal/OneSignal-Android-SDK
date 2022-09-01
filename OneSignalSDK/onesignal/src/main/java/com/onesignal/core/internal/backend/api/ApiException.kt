@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.backend.api
 
-class ApiException(
+internal class ApiException(
     msg: String,
     val statusCode: Int,
     val response: String?,

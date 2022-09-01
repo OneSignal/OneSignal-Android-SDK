@@ -3,7 +3,7 @@ package com.onesignal.core.internal.outcomes
 import org.json.JSONException
 import org.json.JSONObject
 
-class OutcomeEventParams constructor(
+internal class OutcomeEventParams constructor(
     val outcomeId: String,
     val outcomeSource: OutcomeSource?, // This field is optional
     var weight: Float, // This field is optional.

@@ -57,7 +57,7 @@ import com.onesignal.core.internal.user.SubscriptionManager
 import com.onesignal.core.internal.user.UserManager
 import com.onesignal.core.user.IUserManager
 
-object CoreModule {
+internal object CoreModule {
     fun register(builder: ServiceBuilder) {
         // Low Level Services
         builder.register<PreferencesService>()

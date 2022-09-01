@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.operations
 
-import com.onesignal.core.LogLevel
+import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.startup.IStartableService
 import kotlinx.coroutines.Deferred
@@ -8,7 +8,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 
-class OperationRepo(
+internal class OperationRepo(
     executors: List<IOperationExecutor>
 ) : IOperationRepo, IStartableService {
 

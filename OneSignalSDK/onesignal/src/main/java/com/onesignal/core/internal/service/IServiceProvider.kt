@@ -3,7 +3,7 @@ package com.onesignal.core.internal.service
 /**
  * A service provider gives access to the implementations of a service.
  */
-interface IServiceProvider {
+internal interface IServiceProvider {
     /**
      * Determine if the service provide has the provided service.
      *

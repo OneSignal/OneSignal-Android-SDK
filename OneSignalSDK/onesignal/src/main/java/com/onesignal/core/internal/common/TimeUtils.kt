@@ -6,7 +6,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.TimeZone
 
-object TimeUtils {
+internal object TimeUtils {
     fun getTimeZoneOffset(): Int {
         val timezone = Calendar.getInstance().timeZone
         var offset = timezone.rawOffset

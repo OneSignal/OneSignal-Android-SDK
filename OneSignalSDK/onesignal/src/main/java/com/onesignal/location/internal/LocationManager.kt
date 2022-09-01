@@ -3,7 +3,7 @@ package com.onesignal.location.internal
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Build
-import com.onesignal.core.LogLevel
+import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.AndroidSupportV4Compat
 import com.onesignal.core.internal.common.suspendifyOnThread
