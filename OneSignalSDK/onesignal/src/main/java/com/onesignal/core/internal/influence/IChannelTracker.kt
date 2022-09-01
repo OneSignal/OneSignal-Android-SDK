@@ -2,7 +2,7 @@ package com.onesignal.core.internal.influence
 
 import org.json.JSONArray
 
-interface IChannelTracker {
+internal interface IChannelTracker {
     var influenceType: InfluenceType?
     var indirectIds: JSONArray?
     var directId: String?

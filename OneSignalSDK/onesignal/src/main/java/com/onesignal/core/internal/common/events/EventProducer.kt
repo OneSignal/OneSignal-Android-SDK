@@ -4,7 +4,7 @@ package com.onesignal.core.internal.common.events
  * A standard implementation that implements [IEventProducer] to make event firing less burdensome
  * to the user.
  */
-open class EventProducer<THandler> : IEventProducer<THandler> {
+internal open class EventProducer<THandler> : IEventProducer<THandler> {
 
     private val _subscribers: MutableList<THandler> = mutableListOf()
 

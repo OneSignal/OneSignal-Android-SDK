@@ -2,8 +2,13 @@ package com.onesignal.notification
 
 import org.json.JSONObject
 
+/**
+ * The entry point to the notification SDK for OneSignal.
+ */
 interface INotificationsManager {
-    /** The current permission state **/
+    /**
+     * The current permission state of push notifications on this device.
+     */
     val permissionStatus: IPermissionState
 
     /**
@@ -33,6 +38,8 @@ interface INotificationsManager {
      *
      * @param json Contains notification options, see [OneSignal | Create Notification](https://documentation.onesignal.com/reference#create-notification)
      *             POST call for all options.
+     *
+     * @return The JSON response to sending the notification.
      */
     suspend fun postNotification(json: JSONObject): JSONObject
     suspend fun postNotification(json: String): JSONObject

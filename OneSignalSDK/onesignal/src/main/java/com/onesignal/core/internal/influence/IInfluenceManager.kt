@@ -4,7 +4,7 @@ import com.onesignal.core.internal.application.AppEntryAction
 import com.onesignal.core.internal.params.IParamsService
 import org.json.JSONObject
 
-interface IInfluenceManager {
+internal interface IInfluenceManager {
     val influences: List<Influence>
     val sessionInfluences: List<Influence>
     val iAMChannelTracker: IChannelTracker

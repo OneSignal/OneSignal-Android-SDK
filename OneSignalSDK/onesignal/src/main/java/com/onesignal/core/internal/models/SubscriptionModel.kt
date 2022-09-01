@@ -2,13 +2,13 @@ package com.onesignal.core.internal.models
 
 import com.onesignal.core.internal.modeling.Model
 
-enum class SubscriptionType {
+internal enum class SubscriptionType {
     EMAIL,
     SMS,
     PUSH
 }
 
-class SubscriptionModel : Model() {
+internal class SubscriptionModel : Model() {
     var enabled: Boolean
         get() = get(::enabled.name)
         set(value) { set(::enabled.name, value) }

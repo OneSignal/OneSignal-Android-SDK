@@ -3,16 +3,7 @@ package com.onesignal.core.internal.application
 import android.app.Activity
 import android.app.Application.ActivityLifecycleCallbacks
 
-/**
- * Implementations of the activity lifecycle handler added via [IApplicationService.addActivityLifecycleHandler]
- * will be notified throughout the activity lifecycle.  This should be used over the Android-provided
- * [ActivityLifecycleCallbacks], it provides an abstraction more specific to the OneSignal SDK
- */
-interface IActivityLifecycleHandler {
-
-    /**
-     * Called when an activity is made available to the application.
-     */
+internal interface IActivityLifecycleHandler {
     fun onActivityAvailable(activity: Activity)
 
     /**

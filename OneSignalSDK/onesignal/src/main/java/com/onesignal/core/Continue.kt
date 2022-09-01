@@ -5,6 +5,10 @@ import java.util.function.Consumer
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.CoroutineContext
 
+/**
+ * The result provided by [Continue.with] when the Java user wants to inspect the results
+ * of a Kotlin coroutine completing.
+ */
 class ContinueResult<R> (
     /**
      * Whether the coroutine call was successful (`true`) or not (`false`)

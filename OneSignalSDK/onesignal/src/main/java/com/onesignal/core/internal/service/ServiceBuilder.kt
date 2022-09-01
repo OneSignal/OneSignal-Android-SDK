@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.service
 
-class ServiceBuilder : IServiceBuilder {
+internal class ServiceBuilder : IServiceBuilder {
     private val _registrations: MutableList<ServiceRegistration<*>> = mutableListOf()
 
     internal inline fun <reified T : Any> register(): ServiceRegistration<T> {

@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.user
 
-import com.onesignal.core.LogLevel
+import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.common.events.EventProducer
 import com.onesignal.core.internal.common.events.IEventNotifier
 import com.onesignal.core.internal.logging.Logging
@@ -15,7 +15,7 @@ import com.onesignal.core.user.subscriptions.ISubscription
 import com.onesignal.core.user.subscriptions.SubscriptionList
 import java.util.UUID
 
-interface ISubscriptionManager : IEventNotifier<ISubscriptionChangedHandler> {
+internal interface ISubscriptionManager : IEventNotifier<ISubscriptionChangedHandler> {
     var subscriptions: SubscriptionList
 
     fun load(identity: IdentityModel)
@@ -28,7 +28,7 @@ interface ISubscriptionManager : IEventNotifier<ISubscriptionChangedHandler> {
     fun setSubscriptionEnablement(subscription: ISubscription, enabled: Boolean)
 }
 
-interface ISubscriptionChangedHandler {
+internal interface ISubscriptionChangedHandler {
     fun onSubscriptionAdded(subscription: ISubscription)
     fun onSubscriptionRemoved(subscription: ISubscription)
 }

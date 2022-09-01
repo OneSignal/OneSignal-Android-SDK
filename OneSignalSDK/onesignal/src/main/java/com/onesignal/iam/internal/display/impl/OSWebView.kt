@@ -4,7 +4,7 @@ import android.content.Context
 import android.webkit.WebView
 
 // Custom WebView to lock scrolling
-class OSWebView(context: Context?) : WebView(context!!) {
+internal class OSWebView(context: Context?) : WebView(context!!) {
     // The method overrides below; overScrollBy, scrollTo, and computeScroll prevent page scrolling
     public override fun overScrollBy(
         deltaX: Int,

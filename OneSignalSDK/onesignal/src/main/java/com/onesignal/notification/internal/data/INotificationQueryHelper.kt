@@ -1,5 +1,5 @@
 package com.onesignal.notification.internal.data
 
-interface INotificationQueryHelper {
+internal interface INotificationQueryHelper {
     fun recentUninteractedWithNotificationsWhere(): StringBuilder
 }

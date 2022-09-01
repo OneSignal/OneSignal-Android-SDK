@@ -5,7 +5,7 @@ package com.onesignal.notification.internal.receivereceipt
  * likely the [IReceiveReceiptWorkManager] should be used as that has a higher
  * assurance of success.
  */
-interface IReceiveReceiptProcessor {
+internal interface IReceiveReceiptProcessor {
 
     /**
      * Send the receive receipt to the backend on the current thread.

@@ -4,7 +4,7 @@ import android.app.Activity
 import com.onesignal.notification.internal.common.NotificationGenerationJob
 import org.json.JSONArray
 
-interface INotificationLifecycleEventHandler {
+internal interface INotificationLifecycleEventHandler {
     /**
      * Called *after* the notification has been generated and processed by the SDK.
      */

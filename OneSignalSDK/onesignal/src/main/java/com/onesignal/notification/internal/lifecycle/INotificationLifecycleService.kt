@@ -37,7 +37,7 @@ import org.json.JSONObject
  *  9. [INotificationLifecycleEventHandler.onNotificationOpened] To indicate the notification has been opened.
  * 10. [INotificationOpenedHandler.notificationOpened] To indicate the notification has been opened.
  */
-interface INotificationLifecycleService {
+internal interface INotificationLifecycleService {
     fun addInternalNotificationLifecycleEventHandler(handler: INotificationLifecycleEventHandler)
     fun removeInternalNotificationLifecycleEventHandler(handler: INotificationLifecycleEventHandler)
     fun setInternalNotificationLifecycleCallback(callback: INotificationLifecycleCallback?)

@@ -1,6 +1,6 @@
 package com.onesignal.notification.internal.common
 
-object NotificationConstants {
+internal object NotificationConstants {
     /**
      * The meta-data key within the AndroidManifest.xml that provides the class name for the
      * Notification Service Extension.

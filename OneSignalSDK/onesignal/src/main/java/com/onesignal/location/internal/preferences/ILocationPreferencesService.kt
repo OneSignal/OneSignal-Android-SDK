@@ -1,5 +1,5 @@
 package com.onesignal.location.internal.preferences
 
-interface ILocationPreferencesService {
+internal interface ILocationPreferencesService {
     var lastLocationTime: Long
 }

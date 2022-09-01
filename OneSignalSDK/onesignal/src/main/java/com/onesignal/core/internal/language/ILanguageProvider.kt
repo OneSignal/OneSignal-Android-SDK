@@ -1,5 +1,5 @@
 package com.onesignal.core.internal.language
 
-interface ILanguageProvider {
+internal interface ILanguageProvider {
     val language: String
 }

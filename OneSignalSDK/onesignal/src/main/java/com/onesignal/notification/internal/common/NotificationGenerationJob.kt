@@ -6,7 +6,7 @@ import com.onesignal.notification.internal.Notification
 import org.json.JSONObject
 import java.security.SecureRandom
 
-class NotificationGenerationJob {
+internal class NotificationGenerationJob {
     var notification: Notification?
         get() = _notification
         set(value) {

@@ -67,7 +67,7 @@ import com.onesignal.notification.internal.restoration.impl.NotificationRestoreW
 import com.onesignal.notification.internal.summary.INotificationSummaryManager
 import com.onesignal.notification.internal.summary.impl.NotificationSummaryManager
 
-object NotificationModule {
+internal object NotificationModule {
     fun register(builder: ServiceBuilder) {
         builder.register<NotificationBackendService>().provides<INotificationBackendService>()
 

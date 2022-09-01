@@ -8,7 +8,7 @@ import com.onesignal.notification.INotificationOpenedResult
  * The data provided to [INotificationOpenedHandler.notificationOpened] when a notification
  * has been opened by the user.
  */
-class NotificationOpenedResult(
+internal class NotificationOpenedResult(
     /** The notification that was opened by the user. **/
     override val notification: INotification,
 

@@ -16,7 +16,7 @@ internal interface IInAppMessagePromptFactory {
     fun createPrompt(promptType: String): InAppMessagePrompt?
 }
 
-object InAppMessagePromptTypes {
+internal object InAppMessagePromptTypes {
     const val PUSH_PROMPT_KEY = "push"
     const val LOCATION_PROMPT_KEY = "location"
 }

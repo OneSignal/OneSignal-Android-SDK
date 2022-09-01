@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.operations.executors
 
-import com.onesignal.core.LogLevel
+import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.backend.http.IHttpClient
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.operations.CreateUserOperation
@@ -12,7 +12,7 @@ import com.onesignal.core.internal.operations.UpdateUserOperation
 import org.json.JSONArray
 import org.json.JSONObject
 
-class UserOperationExecutor(
+internal class UserOperationExecutor(
     private val _http: IHttpClient
 ) : IOperationExecutor {
 

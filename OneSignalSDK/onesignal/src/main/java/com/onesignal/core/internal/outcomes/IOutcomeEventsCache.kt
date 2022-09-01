@@ -3,7 +3,7 @@ package com.onesignal.core.internal.outcomes
 import androidx.annotation.WorkerThread
 import com.onesignal.core.internal.influence.Influence
 
-interface IOutcomeEventsCache {
+internal interface IOutcomeEventsCache {
     val isOutcomesV2ServiceEnabled: Boolean
     val unattributedUniqueOutcomeEventsSentByChannel: Set<String>?
 

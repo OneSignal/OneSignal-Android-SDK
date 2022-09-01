@@ -2,7 +2,7 @@ package com.onesignal.core.internal.backend.http
 
 import org.json.JSONObject
 
-interface IHttpClient {
+internal interface IHttpClient {
     suspend fun post(url: String, body: JSONObject): HttpResponse
     suspend fun get(url: String, cacheKey: String? = null): HttpResponse
     suspend fun put(url: String, body: JSONObject): HttpResponse
@@ -13,7 +13,7 @@ interface IHttpClient {
 /**
  * The cache keys that can be provided on [IHttpClient.get]
  */
-object CacheKeys {
+internal object CacheKeys {
     /**
      * Cache key for retrieving tags
      */

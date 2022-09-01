@@ -5,7 +5,7 @@ package com.onesignal.notification.internal.receivereceipt
  * the Android Work Manager.  Typically this should be used over [IReceiveReceiptProcessor]
  * as the worker will persist across the application lifecycle.
  */
-interface IReceiveReceiptWorkManager {
+internal interface IReceiveReceiptWorkManager {
 
     /**
      * Enqueue a worker which will send receipt of receiving a notification.

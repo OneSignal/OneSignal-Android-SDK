@@ -1,9 +1,9 @@
 package com.onesignal.core.internal
 
 import android.content.Context
-import com.onesignal.core.IDebugManager
+import com.onesignal.core.debug.IDebugManager
 import com.onesignal.core.IOneSignal
-import com.onesignal.core.LogLevel
+import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.core.internal.common.OneSignalUtils
@@ -32,10 +32,10 @@ import com.onesignal.location.ILocationManager
 import com.onesignal.location.internal.LocationModule
 import com.onesignal.notification.INotificationsManager
 import com.onesignal.notification.internal.NotificationModule
-import kotlinx.coroutines.delay
 import java.util.UUID
+import kotlinx.coroutines.delay
 
-class OneSignalImp() : IOneSignal, IServiceProvider {
+internal class OneSignalImp() : IOneSignal, IServiceProvider {
     override val sdkVersion: String = OneSignalUtils.sdkVersion
     override var isInitialized: Boolean = false
 

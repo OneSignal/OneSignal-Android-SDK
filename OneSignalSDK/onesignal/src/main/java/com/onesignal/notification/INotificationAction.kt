@@ -26,10 +26,13 @@
  */
 package com.onesignal.notification
 
-/** The action a user has taken when opening a notification.
+/**
+ * The action a user has taken when opening a notification.
  */
 interface INotificationAction {
-    /** The type of action the user took on this notification. **/
+    /**
+     * The type of action the user took on this notification.
+     */
     val type: ActionType
 
     /** When [type] is [ActionType.ActionTaken], this will be the custom id of action taken.
@@ -41,9 +44,14 @@ interface INotificationAction {
      * The type of actions the user can take on a notification.
      */
     enum class ActionType {
-        /** The notification was tapped on. **/
+        /**
+         * The notification was tapped on.
+         */
         Opened,
-        /** The user tapped on an action from the notification. **/
+
+        /**
+         * The user tapped on an action from the notification.
+         */
         ActionTaken
     }
 }

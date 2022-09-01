@@ -4,7 +4,7 @@ package com.onesignal.core.internal.modeling
  * A handler interface for [IModelStore.subscribe]. Implement this interface to subscribe
  * to model change events for a specific model store.
  */
-interface IModelStoreChangeHandler<TModel> where TModel : Model {
+internal interface IModelStoreChangeHandler<TModel> where TModel : Model {
     /**
      * Called when a model has been added to the model store.
      *

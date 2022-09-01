@@ -4,7 +4,7 @@ import com.onesignal.core.internal.common.events.EventProducer
 import org.json.JSONArray
 
 // TODO: Implement
-class ParamsService : IParamsService, IWriteableParamsService {
+internal class ParamsService : IParamsService, IWriteableParamsService {
     override var appId: String? = null
     override var googleProjectNumber: String? = null
     override var enterprise: Boolean = true

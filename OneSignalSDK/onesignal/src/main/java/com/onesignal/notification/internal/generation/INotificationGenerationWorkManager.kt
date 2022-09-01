@@ -3,7 +3,7 @@ package com.onesignal.notification.internal.generation
 import android.content.Context
 import org.json.JSONObject
 
-interface INotificationGenerationWorkManager {
+internal interface INotificationGenerationWorkManager {
     fun beginEnqueueingWork(
         context: Context,
         osNotificationId: String,

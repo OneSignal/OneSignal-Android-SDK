@@ -5,7 +5,7 @@ import com.onesignal.core.internal.logging.Logging
 /**
  * A service provider gives access to the implementations of a service.
  */
-class ServiceProvider(
+internal class ServiceProvider(
     registrations: List<ServiceRegistration<*>>
 ) : IServiceProvider {
 

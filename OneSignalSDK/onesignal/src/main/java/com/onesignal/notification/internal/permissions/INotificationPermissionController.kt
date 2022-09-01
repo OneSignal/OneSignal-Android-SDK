@@ -27,7 +27,7 @@
 
 package com.onesignal.notification.internal.permissions
 
-interface INotificationPermissionController {
+internal interface INotificationPermissionController {
     /**
      * Prompt the user for notification permission.  Note it is possible the application
      * will be killed while the permission prompt is being displayed to the user. When the

@@ -1,7 +1,7 @@
 package com.onesignal.core.internal.session
 
-import com.onesignal.core.LogLevel
-import com.onesignal.core.internal.application.AppEntryAction
+import com.onesignal.core.debug.LogLevel
+import com.onesignal.core.internal.AppEntryAction
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.JSONUtils

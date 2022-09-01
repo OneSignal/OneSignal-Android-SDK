@@ -33,7 +33,7 @@ import android.os.Parcelable
 import android.os.PersistableBundle
 import androidx.annotation.RequiresApi
 
-interface BundleCompat<T> {
+internal interface BundleCompat<T> {
     fun putString(key: String?, value: String?)
     fun putInt(key: String?, value: Int?)
     fun putLong(key: String?, value: Long?)

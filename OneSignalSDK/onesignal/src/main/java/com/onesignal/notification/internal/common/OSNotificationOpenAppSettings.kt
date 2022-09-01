@@ -6,7 +6,7 @@ import com.onesignal.core.internal.common.AndroidUtils
 /***
  * Settings that effect the OneSignal notification open behavior at the app level.
  */
-object OSNotificationOpenAppSettings {
+internal object OSNotificationOpenAppSettings {
 
     /***
      * When the notification is tapped on should it show an Activity?

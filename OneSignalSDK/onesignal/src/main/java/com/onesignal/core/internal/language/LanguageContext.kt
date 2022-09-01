@@ -7,7 +7,7 @@ import com.onesignal.core.internal.preferences.PreferenceStores
 The Interface implements a getter and setter for the Language Provider.
 It defaults to the device defined Language unless a language override is set.
  */
-class LanguageContext(
+internal class LanguageContext(
     private val _preferences: IPreferencesService
 ) {
 

@@ -5,7 +5,7 @@ import org.json.JSONArray
 /**
  * The params service gives access to the parameters managed by the back end.
  */
-interface IWriteableParamsService : IParamsService {
+internal interface IWriteableParamsService : IParamsService {
     override var appId: String?
     override var googleProjectNumber: String?
     override var enterprise: Boolean

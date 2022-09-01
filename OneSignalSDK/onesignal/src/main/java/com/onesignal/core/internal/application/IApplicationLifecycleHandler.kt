@@ -1,17 +1,6 @@
 package com.onesignal.core.internal.application
 
-import android.app.Application.ActivityLifecycleCallbacks
-
-/**
- * Implementations of the application lifecycle handler added via [IApplicationService.addApplicationLifecycleHandler]
- * will be notified throughout the application lifecycle.  This should be used over the Android-provided
- * [ActivityLifecycleCallbacks], it provides an abstraction more specific to the OneSignal SDK
- */
-interface IApplicationLifecycleHandler {
-
-    /**
-     * Called when the application is brought into the foreground.
-     */
+internal interface IApplicationLifecycleHandler {
     fun onFocus()
 
     /**

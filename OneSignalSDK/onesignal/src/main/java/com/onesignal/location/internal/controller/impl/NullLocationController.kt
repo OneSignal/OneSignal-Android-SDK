@@ -7,7 +7,7 @@ import com.onesignal.location.internal.controller.ILocationUpdatedHandler
 /**
  * This location controller is used when the device doesn't support location services.
  */
-class NullLocationController : ILocationController {
+internal class NullLocationController : ILocationController {
     override suspend fun start(): Boolean { return false }
     override suspend fun stop() {}
     override fun getLastLocation(): Location? = null

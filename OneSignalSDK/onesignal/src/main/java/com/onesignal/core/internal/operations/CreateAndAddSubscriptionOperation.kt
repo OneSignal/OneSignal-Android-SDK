@@ -3,7 +3,7 @@ package com.onesignal.core.internal.operations
 import com.onesignal.core.internal.models.SubscriptionType
 import com.onesignal.core.internal.operations.executors.SubscriptionOperationExecutor
 
-class CreateAndAddSubscriptionOperation(
+internal class CreateAndAddSubscriptionOperation(
     val appId: String,
     val type: SubscriptionType,
     val enabled: Boolean,

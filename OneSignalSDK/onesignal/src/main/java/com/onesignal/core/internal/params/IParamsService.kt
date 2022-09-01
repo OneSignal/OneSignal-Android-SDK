@@ -3,14 +3,14 @@ package com.onesignal.core.internal.params
 import com.onesignal.core.internal.common.events.IEventNotifier
 import org.json.JSONArray
 
-interface IParamsChangedHandler {
+internal interface IParamsChangedHandler {
     fun onParamsChanged()
 }
 
 /**
  * The params service gives access to the parameters managed by the back end.
  */
-interface IParamsService : IEventNotifier<IParamsChangedHandler> {
+internal interface IParamsService : IEventNotifier<IParamsChangedHandler> {
     class FCMParams(
         val projectId: String? = null,
         val appId: String? = null,

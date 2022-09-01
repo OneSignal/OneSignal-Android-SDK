@@ -28,7 +28,7 @@ package com.onesignal.notification.internal
 
 import com.onesignal.notification.INotificationAction
 
-class NotificationAction(
+internal class NotificationAction(
     override val type: INotificationAction.ActionType,
     override val actionId: String?
 ) : INotificationAction

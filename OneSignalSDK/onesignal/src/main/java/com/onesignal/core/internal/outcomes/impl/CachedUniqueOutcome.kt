@@ -2,7 +2,7 @@ package com.onesignal.core.internal.outcomes.impl
 
 import com.onesignal.core.internal.influence.InfluenceChannel
 
-open class CachedUniqueOutcome(
+internal open class CachedUniqueOutcome(
     private val influenceId: String,
     private val channel: InfluenceChannel
 ) {

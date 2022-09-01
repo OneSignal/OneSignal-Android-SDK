@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.time
 
-interface ITime {
+internal interface ITime {
     val currentTimeMillis: Long
     val elapsedRealtime: Long
 }

@@ -6,7 +6,7 @@ import org.json.JSONArray
 /**
  * Manager of the notification channels on the current device.
  */
-interface INotificationChannelManager {
+internal interface INotificationChannelManager {
 
     /**
      * Create a notification channel, returning it's identifier to post notifications to.
