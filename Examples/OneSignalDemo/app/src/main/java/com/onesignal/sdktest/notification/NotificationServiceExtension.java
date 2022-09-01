@@ -2,13 +2,13 @@ package com.onesignal.sdktest.notification;
 
 import android.content.Context;
 
-import com.onesignal.onesignal.core.LogLevel;
-import com.onesignal.onesignal.core.internal.logging.Logging;
-import com.onesignal.onesignal.notification.IActionButton;
-import com.onesignal.onesignal.notification.IMutableNotification;
-import com.onesignal.onesignal.notification.INotification;
-import com.onesignal.onesignal.notification.INotificationReceivedEvent;
-import com.onesignal.onesignal.notification.IRemoteNotificationReceivedHandler;
+import com.onesignal.core.LogLevel;
+import com.onesignal.core.internal.logging.Logging;
+import com.onesignal.notification.IActionButton;
+import com.onesignal.notification.IMutableNotification;
+import com.onesignal.notification.INotification;
+import com.onesignal.notification.INotificationReceivedEvent;
+import com.onesignal.notification.IRemoteNotificationReceivedHandler;
 import com.onesignal.sdktest.R;
 
 public class NotificationServiceExtension implements IRemoteNotificationReceivedHandler {
