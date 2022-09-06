@@ -20,13 +20,12 @@ import androidx.cardview.widget.CardView
 import androidx.core.widget.PopupWindowCompat
 import com.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.core.internal.common.ViewUtils
+import com.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.iam.internal.InAppMessageContent
+import com.onesignal.onesignal.core.internal.common.suspend.Waiter
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 /**
@@ -128,9 +127,6 @@ internal class InAppMessageView(
      */
     suspend fun updateHeight(pageHeight: Int) {
         this.pageHeight = pageHeight
-
-        runBlocking(Dispatchers.Main) {
-        }
 
         withContext(Dispatchers.Main) {
             if (webView == null) {
@@ -326,12 +322,8 @@ internal class InAppMessageView(
                     messageController!!.onMessageWillDismiss()
                 }
 
-                runBlocking {
-                    // launch a coroutine without blocking. This will return and the finish
-                    // will carry on within the coroutine suspending function.
-                    launch {
-                        finishAfterDelay()
-                    }
+                suspendifyOnThread {
+                    finishAfterDelay()
                 }
             }
 
@@ -598,13 +590,11 @@ internal class InAppMessageView(
     }
 
     private suspend fun animateAndDismissLayout(backgroundView: View) {
-        val channel = Channel<Any?>()
+        val waiter = Waiter()
         val animCallback: Animator.AnimatorListener = object : AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: Animator) {
                 cleanupViewsAfterDismiss()
-                runBlocking {
-                    channel.send(null)
-                }
+                waiter.wake()
             }
         }
 
@@ -618,7 +608,7 @@ internal class InAppMessageView(
         )
             .start()
 
-        channel.receive()
+        waiter.waitForWake()
     }
 
     private fun animateBackgroundColor(

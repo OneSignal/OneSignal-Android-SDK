@@ -13,17 +13,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
-import com.onesignal.core.internal.AppEntryAction
-import com.onesignal.core.internal.application.IActivityLifecycleHandler
-import com.onesignal.core.internal.application.IApplicationLifecycleHandler
-import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.application.*
 import com.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.core.internal.common.DeviceUtils
 import com.onesignal.core.internal.common.events.EventProducer
 import com.onesignal.core.internal.common.events.IEventProducer
 import com.onesignal.core.internal.logging.Logging
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.runBlocking
+import com.onesignal.onesignal.core.internal.common.suspend.Waiter
 import java.lang.ref.WeakReference
 
 internal class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, OnGlobalLayoutListener {
@@ -31,29 +27,16 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
     private val _applicationLifecycleNotifier: IEventProducer<IApplicationLifecycleHandler> = EventProducer()
     private val _systemConditionNotifier: IEventProducer<ISystemConditionHandler> = EventProducer()
 
-    /** The application the context is owned by **/
-    private var _application: Application? = null
+    override val isInForeground: Boolean
+        get() = entryState.isAppOpen || entryState.isNotificationClick
+    override var entryState: AppEntryAction = AppEntryAction.APP_CLOSE
 
-    /** The current activity **/
-    private var _current: Activity? = null
-
-    /** Whether the application is in the foreground **/
-    override var isInForeground: Boolean = false
-
-    /** How the application has been entered. **/
-    override var entryState: AppEntryAction = AppEntryAction.APP_OPEN
-
-    /** Whether the next resume is due to the first activity or not **/
-    private var _nextResumeIsFirstActivity: Boolean = false
-
-    private var _activityReferences = 0
-    private var _isActivityChangingConfigurations = false
-
+    private var _appContext: Context? = null
     override val appContext: Context
         get() = _appContext!!
 
-    private var _appContext: Context? = null
 
+    private var _current: Activity? = null
     override var current: Activity?
         get() = _current
         set(value) {
@@ -74,37 +57,45 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
             }
         }
 
+    /** Whether the next resume is due to the first activity or not **/
+    private var _nextResumeIsFirstActivity: Boolean = false
+
+    /** Used to determine when an app goes in focus and out of focus **/
+    private var _activityReferences = 0
+    private var _isActivityChangingConfigurations = false
+
+    /**
+     * Call to "start" this service, expected to be called during initialization of the SDK.
+     *
+     * @param context The context the SDK has been initialized under.
+     */
     fun start(context: Context) {
         _appContext = context
-        if (_application == null) {
-            _application = context.applicationContext as Application
-            _application!!.registerActivityLifecycleCallbacks(this)
 
-            val configuration = object : ComponentCallbacks {
-                override fun onConfigurationChanged(newConfig: Configuration) {
-                    // If Activity contains the configChanges orientation flag, re-create the view this way
-                    if (current != null && AndroidUtils.hasConfigChangeFlag(
-                            current!!,
-                            ActivityInfo.CONFIG_ORIENTATION
-                        )
-                    ) {
-                        onOrientationChanged(newConfig.orientation, current!!)
-                    }
+        val application = context.applicationContext as Application
+        application.registerActivityLifecycleCallbacks(this)
+
+        val configuration = object : ComponentCallbacks {
+            override fun onConfigurationChanged(newConfig: Configuration) {
+                // If Activity contains the configChanges orientation flag, re-create the view this way
+                if (current != null && AndroidUtils.hasConfigChangeFlag(
+                        current!!,
+                        ActivityInfo.CONFIG_ORIENTATION
+                    )
+                ) {
+                    onOrientationChanged(newConfig.orientation, current!!)
                 }
-
-                override fun onLowMemory() {}
             }
 
-            _application!!.registerComponentCallbacks(configuration)
+            override fun onLowMemory() {}
         }
+
+        application.registerComponentCallbacks(configuration)
 
         val isContextActivity = context is Activity
         val isCurrentActivityNull = current == null
 
-        isInForeground = !isCurrentActivityNull || isContextActivity
-        Logging.debug("ApplicationService.init: inForeground=$isInForeground")
-
-        if (isInForeground) {
+        if (!isCurrentActivityNull || isContextActivity) {
             entryState = AppEntryAction.APP_OPEN
             if (isCurrentActivityNull && isContextActivity) {
                 current = context as Activity?
@@ -114,6 +105,8 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
             _nextResumeIsFirstActivity = true
             entryState = AppEntryAction.APP_CLOSE
         }
+
+        Logging.debug("ApplicationService.init: entryState=$entryState")
     }
 
     override fun addApplicationLifecycleHandler(handler: IApplicationLifecycleHandler) {
@@ -191,7 +184,7 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
     override suspend fun waitUntilSystemConditionsAvailable(): Boolean {
         val currentActivity = current
         if (currentActivity == null) {
-            Logging.warn("OSSystemConditionObserver curActivity null")
+            Logging.warn("ApplicationService.waitUntilSystemConditionsAvailable: current is null")
             return false
         }
 
@@ -203,7 +196,7 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
 
                 var lastFragment = manager.fragments.lastOrNull()
                 if (lastFragment != null && lastFragment.isVisible && lastFragment is DialogFragment) {
-                    val channel = Channel<Any?>()
+                    val waiter = Waiter()
 
                     manager.registerFragmentLifecycleCallbacks(
                         object : FragmentManager.FragmentLifecycleCallbacks() {
@@ -211,30 +204,26 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
                                 super.onFragmentDetached(fm, fragmentDetached)
                                 if (fragmentDetached is DialogFragment) {
                                     manager.unregisterFragmentLifecycleCallbacks(this)
-                                    runBlocking {
-                                        channel.send(null)
-                                    }
+                                    waiter.wake()
                                 }
                             }
                         },
                         true
                     )
 
-                    channel.receive()
+                    waiter.waitForWake()
                 }
             }
         } catch (exception: NoClassDefFoundError) {
-            Logging.info("AppCompatActivity is not used in this app, skipping 'isDialogFragmentShowing' check: $exception")
+            Logging.info("ApplicationService.waitUntilSystemConditionsAvailable: AppCompatActivity is not used in this app, skipping 'isDialogFragmentShowing' check: $exception")
         }
 
-        val channel = Channel<Any?>()
+        val waiter = Waiter()
         val systemConditionHandler = object : ISystemConditionHandler {
             override fun systemConditionChanged() {
                 val keyboardUp = DeviceUtils.isKeyboardUp(WeakReference(current))
                 if (!keyboardUp) {
-                    runBlocking {
-                        channel.send(null)
-                    }
+                    waiter.wake()
                 }
             }
         }
@@ -245,8 +234,8 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
         val keyboardUp = DeviceUtils.isKeyboardUp(WeakReference(currentActivity))
         // if the keyboard is up we suspend until it is down
         if (keyboardUp) {
-            Logging.warn("OSSystemConditionObserver keyboard up detected")
-            channel.receive()
+            Logging.warn("ApplicationService.waitUntilSystemConditionsAvailable: keyboard up detected")
+            waiter.waitForWake()
         }
         _systemConditionNotifier.unsubscribe(systemConditionHandler)
 
@@ -256,17 +245,10 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
     override suspend fun waitUntilActivityReady(): Boolean {
         val currentActivity = current ?: return false
 
-        val channel = Channel<Any?>()
-        decorViewReady(
-            currentActivity!!,
-            object : Runnable {
-                override fun run() = runBlocking {
-                    channel.send(null)
-                }
-            }
-        )
+        val waiter = Waiter()
+        decorViewReady(currentActivity) { waiter.wake() }
 
-        channel.receive()
+        waiter.waitForWake()
         return true
     }
 
@@ -277,15 +259,13 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
         val listenerKey = "decorViewReady:$runnable"
         val self = this
         activity.window.decorView.post {
-            self.addActivityLifecycleHandler(object : IActivityLifecycleHandler {
+            self.addActivityLifecycleHandler(object : ActivityLifecycleHandlerBase() {
                 override fun onActivityAvailable(currentActivity: Activity) {
                     self.removeActivityLifecycleHandler(this)
                     if (AndroidUtils.isActivityFullyReady(currentActivity))
                         runnable.run()
                     else decorViewReady(currentActivity, runnable)
                 }
-
-                override fun onActivityStopped(activity: Activity) {}
             })
         }
     }
@@ -299,9 +279,9 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
     private fun onOrientationChanged(orientation: Int, activity: Activity) {
         // Log device orientation change
         if (orientation == Configuration.ORIENTATION_LANDSCAPE)
-            Logging.debug("Configuration Orientation Change: LANDSCAPE ($orientation) on activity: $activity")
+            Logging.debug("ApplicationService.onOrientationChanged: Configuration Orientation Change: LANDSCAPE ($orientation) on activity: $activity")
         else if (orientation == Configuration.ORIENTATION_PORTRAIT)
-            Logging.debug("Configuration Orientation Change: PORTRAIT ($orientation) on activity: $activity")
+            Logging.debug("ApplicationService.onOrientationChanged: Configuration Orientation Change: PORTRAIT ($orientation) on activity: $activity")
 
         // Remove view
         handleLostFocus()
@@ -319,8 +299,6 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
         if (isInForeground) {
             Logging.debug("ApplicationService.handleLostFocus: application is now out of focus")
 
-            // TODO: Should we spin up a worker task for this? Or rely on the listeners to do it.
-            isInForeground = false
             entryState = AppEntryAction.APP_CLOSE
 
             _applicationLifecycleNotifier.fire { it.onUnfocused() }
@@ -333,11 +311,14 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
         if (!isInForeground || _nextResumeIsFirstActivity) {
             Logging.debug("ApplicationService.handleFocus: application is now in focus, nextResumeIsFirstActivity=$_nextResumeIsFirstActivity")
             _nextResumeIsFirstActivity = false
-            isInForeground = true
+
+            // We assume we are called *after* the notification module has determined entry due to notification.
+            if(entryState != AppEntryAction.NOTIFICATION_CLICK)
+                entryState = AppEntryAction.APP_OPEN
+
             _applicationLifecycleNotifier.fire { it.onFocus() }
         } else {
             Logging.debug("ApplicationService.handleFocus: application never lost focus")
-            // TODO: Do we need to fire something to cancel the unfocus processing?
         }
     }
 }

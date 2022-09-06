@@ -28,8 +28,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.onesignal.core.OneSignal
+import com.onesignal.core.internal.common.suspendifyBlocking
 import com.onesignal.notification.internal.open.INotificationOpenedProcessor
-import kotlinx.coroutines.runBlocking
 
 class NotificationDismissReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -37,7 +37,7 @@ class NotificationDismissReceiver : BroadcastReceiver() {
 
         var notificationOpenedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
 
-        runBlocking {
+        suspendifyBlocking {
             notificationOpenedProcessor.processFromContext(context, intent)
         }
     }

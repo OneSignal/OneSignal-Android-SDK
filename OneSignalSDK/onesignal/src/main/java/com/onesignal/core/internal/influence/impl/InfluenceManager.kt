@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.influence.impl
 
-import com.onesignal.core.internal.AppEntryAction
+import com.onesignal.core.internal.application.AppEntryAction
 import com.onesignal.core.internal.influence.IChannelTracker
 import com.onesignal.core.internal.influence.IInfluenceManager
 import com.onesignal.core.internal.influence.Influence

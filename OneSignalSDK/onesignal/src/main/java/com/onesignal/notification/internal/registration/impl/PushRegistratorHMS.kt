@@ -11,8 +11,8 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.notification.internal.registration.IPushRegistrator
+import com.onesignal.onesignal.core.internal.common.suspend.WaiterWithValue
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
@@ -27,7 +27,7 @@ internal class PushRegistratorHMS(
         private const val HMS_CLIENT_APP_ID = "client/app_id"
     }
 
-    private var _channel: Channel<String?>? = null
+    private var _waiter: WaiterWithValue<String?>? = null
 
     override suspend fun registerForPush(): IPushRegistrator.RegisterResult = coroutineScope {
         var result: IPushRegistrator.RegisterResult? = null
@@ -55,14 +55,14 @@ internal class PushRegistratorHMS(
     private suspend fun getHMSTokenTask(context: Context): IPushRegistrator.RegisterResult {
         // Check required to prevent AGConnectServicesConfig or HmsInstanceId used below
         //   from throwing a ClassNotFoundException
-        if (!_deviceService.hasAllHMSLibrariesForPushKit()) {
+        if (!_deviceService.hasAllHMSLibrariesForPushKit) {
             return IPushRegistrator.RegisterResult(
                 null,
                 IPushRegistrator.RegisterStatus.PUSH_STATUS_MISSING_HMS_PUSHKIT_LIBRARY
             )
         }
 
-        _channel = Channel()
+        _waiter = WaiterWithValue()
         val appId = AGConnectServicesConfig.fromContext(context).getString(HMS_CLIENT_APP_ID)
         val hmsInstanceId = HmsInstanceId.getInstance(context)
         var pushToken = hmsInstanceId.getToken(appId, HmsMessaging.DEFAULT_TOKEN_SCOPE)
@@ -78,7 +78,7 @@ internal class PushRegistratorHMS(
             // wait up to 30 seconds for someone to call `fireCallback` with the registration id.
             // if it comes before we will continue immediately.
             withTimeout(30000) {
-                pushToken = _channel?.receive()
+                pushToken = _waiter?.waitForWake()
             }
 
             return if (pushToken != null) {
@@ -98,6 +98,6 @@ internal class PushRegistratorHMS(
     }
 
     override suspend fun fireCallback(id: String?) {
-        _channel?.send(id)
+        _waiter?.wake(id)
     }
 }

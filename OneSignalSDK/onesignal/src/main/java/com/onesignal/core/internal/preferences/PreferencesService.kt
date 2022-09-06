@@ -7,14 +7,12 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
+import com.onesignal.onesignal.core.internal.common.suspend.Waiter
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.Channel.Factory.CONFLATED
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 
 internal class PreferencesService(
     private val _applicationService: IApplicationService,
@@ -27,9 +25,7 @@ internal class PreferencesService(
     )
     private var _queueJob: Deferred<Unit>? = null
 
-    // Use a channel to ensure the IO worker is woken up.  We don't care about the value, and we
-    // use CONFLATED to not wake up the worker more than needed.
-    private val _conflatedChannel = Channel<Any?>(CONFLATED)
+    private val _waiter = Waiter()
 
     override fun start() {
         // fire up an async job that will run "forever" so we don't hold up the other startable services.
@@ -84,7 +80,7 @@ internal class PreferencesService(
             storeMap[key] = value
         }
 
-        runBlocking { _conflatedChannel.send(null) }
+        _waiter.wake()
     }
 
     private fun doWorkAsync() = GlobalScope.async(Dispatchers.IO) {
@@ -100,11 +96,11 @@ internal class PreferencesService(
                     if (prefsToWrite == null) {
                         // the assumption here is there is no context yet, but will be. So ensure
                         // we wake up to try again and persist the preference.
-                        _conflatedChannel.send(null)
+                        _waiter.wake()
                         continue
                     }
 
-                    val editor = prefsToWrite!!.edit()
+                    val editor = prefsToWrite.edit()
 
                     synchronized(storeMap) {
                         for (key in storeMap.keys) {
@@ -133,7 +129,7 @@ internal class PreferencesService(
                     delay(delay)
 
                 // wait to be woken up for the next pass
-                _conflatedChannel.receive()
+                _waiter.waitForWake()
             }
         } catch (e: Throwable) {
             Logging.log(LogLevel.ERROR, "Error with Preference work loop", e)
