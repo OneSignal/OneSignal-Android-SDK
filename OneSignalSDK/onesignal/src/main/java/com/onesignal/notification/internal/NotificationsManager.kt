@@ -23,6 +23,7 @@ import com.onesignal.notification.internal.restoration.INotificationRestoreWorkM
 import com.onesignal.notification.internal.summary.INotificationSummaryManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -74,7 +75,7 @@ internal class NotificationsManager(
         }
     }
 
-    override suspend fun requestPermission(): Boolean? {
+    override suspend fun requestPermission(): Boolean {
         Logging.log(LogLevel.DEBUG, "promptForPushPermissionStatus()")
 
         // TODO: We do not yet handle the case where the activity is shown to the user, the application
@@ -88,11 +89,13 @@ internal class NotificationsManager(
         // something there.  However when they come back the application will be brought into
         // focus and our application lifecycle handler will pick up any change that could have
         // occurred.
-        if (result != null) {
-            setPermissionStatusAndFire(result)
-        }
+        setPermissionStatusAndFire(result)
 
-        return true
+        // yield to force a suspension.  When there is no suspension and invoked via Java the
+        // continuation is never called (TODO: True?)
+        yield()
+
+        return result
     }
 
     private suspend fun setPermissionStatusAndFire(isEnabled: Boolean) {

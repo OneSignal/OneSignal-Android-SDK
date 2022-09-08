@@ -21,7 +21,7 @@ import com.onesignal.core.user.subscriptions.SubscriptionList
  */
 interface IUserManager {
     /**
-     * The external id of the current user.  When null, the current user is a guest user
+     * The external id of the current user.  When null, the current user is a device-scoped user
      * and cannot be retrieved outside of this device/app.
      */
     val externalId: String?
@@ -52,6 +52,8 @@ interface IUserManager {
      * @param label The alias label that you want to set against the current user.
      * @param id The alias id that should be set against the current user. This must be a unique value
      * within the alias label across your entire user base so it can uniquely identify this user.
+     *
+     * @return this user manager to allow for chaining of calls.
      */
     fun addAlias(label: String, id: String): IUserManager
 
@@ -61,6 +63,8 @@ interface IUserManager {
      * @param aliases A map of the alias label -> alias id that should be set against the user. Each
      * alias id must be a unique value within the alias label across your entire user base so it can
      * uniquely identify this user.
+     *
+     * @return this user manager to allow for chaining of calls.
      */
     fun addAliases(aliases: Map<String, String>): IUserManager
 
@@ -68,6 +72,8 @@ interface IUserManager {
      * Remove an alias from the current user.
      *
      * @param label The alias label that should no longer be set for the current user.
+     *
+     * @return this user manager to allow for chaining of calls.
      */
     fun removeAlias(label: String): IUserManager
 
@@ -75,16 +81,17 @@ interface IUserManager {
      * Add a new email subscription to the current user.
      *
      * @param email The email address that the current user has subscribed for.
-     * @param emailAuthHash The optional auth hash for the email. If not using identity verification,
-     * this can be omitted or set to `null`. See [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
+     *
+     * @return this user manager to allow for chaining of calls.
      */
-    fun addEmailSubscription(email: String, emailAuthHash: String? = null): IUserManager
-    fun addEmailSubscription(email: String): IUserManager = addEmailSubscription(email, null)
+    fun addEmailSubscription(email: String): IUserManager
 
     /**
      * Remove an email subscription from the current user.
      *
      * @param email The email address that the current user was subscribed for, and should no longer be.
+     *
+     * @return this user manager to allow for chaining of calls.
      */
     fun removeEmailSubscription(email: String): IUserManager
 
@@ -92,16 +99,17 @@ interface IUserManager {
      * Add a new SMS subscription to the current user.
      *
      * @param sms The phone number that the current user has subscribed for, in [E.164](https://documentation.onesignal.com/docs/sms-faq#what-is-the-e164-format) format.
-     * @param emailAuthHash The optional auth hash for the email. If not using identity verification,
-     * this can be omitted or set to `null`. See [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
+     *
+     * @return this user manager to allow for chaining of calls.
      */
-    fun addSmsSubscription(sms: String, smsAuthHash: String? = null): IUserManager
-    fun addSmsSubscription(sms: String): IUserManager = addSmsSubscription(sms, null)
+    fun addSmsSubscription(sms: String): IUserManager
 
     /**
      * Remove an SMS subscription from the current user.
      *
      * @param sms The sms address that the current user was subscribed for, and should no longer be.
+     *
+     * @return this user manager to allow for chaining of calls.
      */
     fun removeSmsSubscription(sms: String): IUserManager
 
@@ -113,6 +121,8 @@ interface IUserManager {
      *
      * @param key The key of the data tag.
      * @param value THe new value of the data tag.
+     *
+     * @return this user manager to allow for chaining of calls.
      */
     fun setTag(key: String, value: String): IUserManager
 
@@ -123,6 +133,8 @@ interface IUserManager {
      * If the tag key already exists, it will be replaced with the value provided here.
      *
      * @param tags A map of tags, all of which will be added/updated for the current user.
+     *
+     * @return this user manager to allow for chaining of calls.
      */
     fun setTags(tags: Map<String, String>): IUserManager
 
@@ -130,6 +142,8 @@ interface IUserManager {
      * Remove the data tag with the provided key from the current user.
      *
      * @param key The key of the data tag.
+     *
+     * @return this user manager to allow for chaining of calls.
      */
     fun removeTag(key: String): IUserManager
 
@@ -137,6 +151,8 @@ interface IUserManager {
      * Remove multiple tags from the current user.
      *
      * @param keys The collection of keys, all of which will be removed from the current user.
+     *
+     * @return this user manager to allow for chaining of calls.
      */
     fun removeTags(keys: Collection<String>): IUserManager
 
@@ -151,6 +167,8 @@ interface IUserManager {
      * @param key The key of the trigger that is to be set.
      * @param value The value of the trigger. Although this is defined as [Any] its [Any.toString]
      * will be used for evaluation purposes.
+     *
+     * @return this user manager to allow for chaining of calls.
      */
     fun setTrigger(key: String, value: Any): IUserManager
 
@@ -165,6 +183,8 @@ interface IUserManager {
      * @param triggers The map of triggers that are to be added to the current user.  Although the
      * value of the [Map] is defined as [Any] its [Any.toString] will be used for evaluation
      * purposes.
+     *
+     * @return this user manager to allow for chaining of calls.
      */
     fun setTriggers(triggers: Map<String, Any>): IUserManager
 
@@ -172,6 +192,8 @@ interface IUserManager {
      * Remove the trigger with the provided key from the current user.
      *
      * @param key The key of the trigger.
+     *
+     * @return this user manager to allow for chaining of calls.
      */
     fun removeTrigger(key: String): IUserManager
 
@@ -179,11 +201,15 @@ interface IUserManager {
      * Remove multiple triggers from the current user.
      *
      * @param keys The collection of keys, all of which will be removed from the current user.
+     *
+     * @return this user manager to allow for chaining of calls.
      */
     fun removeTriggers(keys: Collection<String>): IUserManager
 
     /**
      * Clear all triggers from the current user.
+     *
+     * @return this user manager to allow for chaining of calls.
      */
     fun clearTriggers(): IUserManager
 
@@ -192,6 +218,8 @@ interface IUserManager {
      * See [Outcomes | OneSignal] (https://documentation.onesignal.com/docs/outcomes)
      *
      * @param name The name of the outcome that has occurred.
+     *
+     * @return this user manager to allow for chaining of calls.
      */
     fun sendOutcome(name: String): IUserManager
 
@@ -200,6 +228,8 @@ interface IUserManager {
      * See [Outcomes | OneSignal] (https://documentation.onesignal.com/docs/outcomes)
      *
      * @param name The name of the unique outcome that has occurred.
+     *
+     * @return this user manager to allow for chaining of calls.
      */
     fun sendUniqueOutcome(name: String): IUserManager
 
@@ -209,6 +239,8 @@ interface IUserManager {
      *
      * @param name The name of the outcome that has occurred.
      * @param value The value tied to the outcome.
+     *
+     * @return this user manager to allow for chaining of calls.
      */
     fun sendOutcomeWithValue(name: String, value: Float): IUserManager
 }

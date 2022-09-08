@@ -6,11 +6,11 @@
 
     <string name="app">App</string>
     <string name="id_colon">Id:</string>
-
-    <string name="switch_user">Switch User</string>
+    <string name="login_user">Login User</string>
+    <string name="logout_user">Logout User</string>
 
     <string name="aliases">Aliases</string>
-    <string name="external_user_id_colon">External User Id:</string>
+    <string name="external_user_id_colon">EUID:</string>
     <string name="no_aliases_added">No Aliases Added</string>
     <string name="add_alias">Add Alias</string>
 
@@ -47,11 +47,12 @@
     <string name="location_shared_description">Location will be shared from device</string>
     <string name="prompt_location">Prompt Location</string>
 
-    <string name="settings">Settings</string>
-    <string name="subscribe_colon">Subscribe:</string>
-    <string name="app_settings_notifications_description">Toggle Push Notifications</string>
+    <string name="subscribe_colon">Notifications:</string>
+    <string name="app_push_notifications_description">Toggle Push Notifications</string>
+    <string name="prompt_push">Prompt Push</string>
+
     <string name="pause_in_app_messages_colon">Pause In-App Messages:</string>
-    <string name="app_settings_pause_in_app_messages_description">Toggle in-app messages</string>
+    <string name="app_iam_pause_in_app_messages_description">Toggle in-app messages</string>
 
     <string name="consent_required">Consent must be given to proceed into the application</string>
     <string name="privacy_consent">Privacy Consent</string>

@@ -12,4 +12,9 @@ internal class DebugManager() : IDebugManager {
     override var alertLevel: LogLevel
         get() = Logging.visualLogLevel
         set(value) { Logging.visualLogLevel = value }
+
+    init {
+        logLevel = LogLevel.WARN
+        alertLevel = LogLevel.NONE
+    }
 }

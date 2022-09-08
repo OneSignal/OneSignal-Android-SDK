@@ -43,6 +43,6 @@ public class MainActivity extends AppCompatActivity {
 
         boolean hasConsent = OneSignal.getRequiresPrivacyConsent();
         if (hasConsent)
-            viewModel.setupSettingsLayout();
+            viewModel.setupLayout();
     }
 }

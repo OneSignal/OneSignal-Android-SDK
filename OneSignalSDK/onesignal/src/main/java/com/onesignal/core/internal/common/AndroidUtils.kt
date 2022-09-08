@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -11,7 +12,9 @@ import android.os.Bundle
 import android.os.Looper
 import android.text.TextUtils
 import androidx.annotation.Keep
+import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.logging.Logging
+import com.onesignal.location.internal.common.LocationConstants
 import java.util.Random
 
 internal object AndroidUtils {
@@ -150,6 +153,60 @@ internal object AndroidUtils {
             Intent.FLAG_ACTIVITY_NEW_TASK
         )
         return intent
+    }
+
+    /**
+     * Determine whether the provided permission is currently granted.
+     *
+     * @param permission The permission to test for.
+     * @param isUserGranted Whether the permission should be checked for user grant (true), or in the manifest (false).
+     * @param applicationService The application service.
+     *
+     * @return true if the permission is granted, false otherwise.
+     */
+    fun hasPermission(permission: String, isUserGranted: Boolean, applicationService: IApplicationService): Boolean {
+        try {
+            val packageInfo: PackageInfo = applicationService.appContext
+                .packageManager
+                .getPackageInfo(
+                    applicationService.appContext.packageName,
+                    PackageManager.GET_PERMISSIONS
+                )
+            val permissionList = listOf(*packageInfo.requestedPermissions)
+
+            return if (!permissionList.contains(permission))
+                false
+            else if (!isUserGranted)
+                true
+            else {
+                val permissionGrant = AndroidSupportV4Compat.ContextCompat.checkSelfPermission(
+                    applicationService.appContext,
+                    permission
+                )
+                permissionGrant != PackageManager.PERMISSION_DENIED
+            }
+        } catch (e: PackageManager.NameNotFoundException) {
+            e.printStackTrace()
+            return false
+        }
+    }
+
+    /**
+     * Filter the provided permissions to only include permissions that have been granted.
+     *
+     * @param permissions The list of permissions to filter.
+     * @param applicationService The application service.
+     *
+     * @return The list of permissions within [permissions] that are granted.
+     */
+    fun filterManifestPermissions(permissions: List<String>, applicationService: IApplicationService): List<String> {
+        var requestPermission: String? = null
+        val packageInfo: PackageInfo = applicationService.appContext
+            .packageManager
+            .getPackageInfo(applicationService.appContext.packageName, PackageManager.GET_PERMISSIONS)
+        val permissionList = listOf(*packageInfo.requestedPermissions)
+
+        return permissions.filter { permissionList.contains(it) }
     }
 
     // Interim method that works around Proguard's overly aggressive assumenosideeffects which
