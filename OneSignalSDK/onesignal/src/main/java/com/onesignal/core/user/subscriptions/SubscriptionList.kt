@@ -1,8 +1,8 @@
 package com.onesignal.core.user.subscriptions
 
 /**
- * A readonly list of subscriptions.  Provides convenience methods on top of a standard list
- * to help navigate the list of subscriptions.
+ * A readonly list of subscriptions.  Wraps a standard [List] to help navigate the list of
+ * subscriptions.  The full list can be accessed via [SubscriptionList.collection].
  */
 class SubscriptionList(val collection: List<ISubscription>) {
 

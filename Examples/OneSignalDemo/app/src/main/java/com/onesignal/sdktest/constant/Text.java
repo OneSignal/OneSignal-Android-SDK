@@ -26,7 +26,7 @@ public class Text {
     public static final String BUTTON_ADD = "ADD";
     public static final String BUTTON_SEND = "SEND";
     public static final String BUTTON_UPDATE = "UPDATE";
-    public static final String BUTTON_SWITCH = "SWITCH";
+    public static final String BUTTON_LOGIN = "LOGIN";
 
     public static final String BUTTON_CANCEL = "CANCEL";
 }

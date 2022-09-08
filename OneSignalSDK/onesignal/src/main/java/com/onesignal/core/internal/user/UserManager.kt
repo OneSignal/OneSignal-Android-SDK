@@ -8,6 +8,7 @@ import com.onesignal.core.internal.models.TriggerModel
 import com.onesignal.core.internal.models.TriggerModelStore
 import com.onesignal.core.user.IUserManager
 import com.onesignal.core.user.subscriptions.SubscriptionList
+import java.util.*
 
 internal interface IUserSwitcher {
     val identityModel: IdentityModel
@@ -33,11 +34,17 @@ internal open class UserManager(
     override val aliases: Map<String, String>
         get() = identityModel.aliases
 
-    override var subscriptions: SubscriptionList = SubscriptionList(listOf())
+    override val subscriptions: SubscriptionList
+        get() = _subscriptionManager.subscriptions
 
     //    private var userModel: UserModel
     override var identityModel: IdentityModel = IdentityModel()
     override var propertiesModel: PropertiesModel = PropertiesModel()
+
+    init {
+        identityModel.id = UUID.randomUUID().toString()
+        _subscriptionManager.load(identityModel)
+    }
 
     override fun setUser(identityModel: IdentityModel, propertiesModel: PropertiesModel) {
         this.identityModel = identityModel
@@ -73,9 +80,9 @@ internal open class UserManager(
         return this
     }
 
-    override fun addEmailSubscription(email: String, emailAuthHash: String?): IUserManager {
-        Logging.log(LogLevel.DEBUG, "addEmailSubscription(email: $email, emailAuthHash: $emailAuthHash)")
-        _subscriptionManager.addEmailSubscription(email, emailAuthHash)
+    override fun addEmailSubscription(email: String): IUserManager {
+        Logging.log(LogLevel.DEBUG, "addEmailSubscription(email: $email)")
+        _subscriptionManager.addEmailSubscription(email)
         return this
     }
 
@@ -85,9 +92,9 @@ internal open class UserManager(
         return this
     }
 
-    override fun addSmsSubscription(sms: String, smsAuthHash: String?): IUserManager {
-        Logging.log(LogLevel.DEBUG, "addSmsSubscription(sms: $sms, smsAuthHash: $smsAuthHash)")
-        _subscriptionManager.addSmsSubscription(sms, smsAuthHash)
+    override fun addSmsSubscription(sms: String): IUserManager {
+        Logging.log(LogLevel.DEBUG, "addSmsSubscription(sms: $sms)")
+        _subscriptionManager.addSmsSubscription(sms)
         return this
     }
 

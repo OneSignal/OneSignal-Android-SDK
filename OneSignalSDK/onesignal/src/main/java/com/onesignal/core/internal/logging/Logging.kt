@@ -2,9 +2,6 @@ package com.onesignal.core.internal.logging
 
 import com.onesignal.core.debug.LogLevel
 
-// This is singleton class that is designed to make OneSignal easy to use.
-//    - No instance management is required from the app developer.
-// This is a wrapper around an instance of OneSignalImp, no logic lives in this class
 internal object Logging {
     private const val TAG = "OneSignal"
 
@@ -64,7 +61,7 @@ internal object Logging {
                 LogLevel.ERROR, LogLevel.FATAL -> android.util.Log.e(TAG, message, throwable)
             }
         }
-
+// TODO: Implement
 //        if (level.compareTo(logLevel) < 1 && OneSignal.getCurrentActivity() != null) {
 //            try {
 //                var fullMessage: String? = "$message\n".trimIndent()

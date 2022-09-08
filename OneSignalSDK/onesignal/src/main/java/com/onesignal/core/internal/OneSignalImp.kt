@@ -7,8 +7,6 @@ import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.core.internal.common.OneSignalUtils
-import com.onesignal.core.internal.common.events.CallbackProducer
-import com.onesignal.core.internal.common.events.ICallbackProducer
 import com.onesignal.core.internal.debug.DebugManager
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.models.ConfigModel
@@ -19,12 +17,13 @@ import com.onesignal.core.internal.models.PropertiesModel
 import com.onesignal.core.internal.models.PropertiesModelStore
 import com.onesignal.core.internal.models.SessionModel
 import com.onesignal.core.internal.models.SessionModelStore
+import com.onesignal.core.internal.operations.CreateUserOperation
+import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.service.IServiceProvider
 import com.onesignal.core.internal.service.ServiceBuilder
 import com.onesignal.core.internal.service.ServiceProvider
 import com.onesignal.core.internal.startup.StartupService
 import com.onesignal.core.internal.user.IUserSwitcher
-import com.onesignal.core.user.IUserIdentityConflictResolver
 import com.onesignal.core.user.IUserManager
 import com.onesignal.iam.IIAMManager
 import com.onesignal.iam.internal.IAMModule
@@ -32,6 +31,7 @@ import com.onesignal.location.ILocationManager
 import com.onesignal.location.internal.LocationModule
 import com.onesignal.notification.INotificationsManager
 import com.onesignal.notification.internal.NotificationModule
+import com.onesignal.notification.internal.pushtoken.IPushTokenManager
 import java.util.UUID
 import kotlinx.coroutines.delay
 
@@ -60,17 +60,17 @@ internal class OneSignalImp() : IOneSignal, IServiceProvider {
     private var _iam: IIAMManager? = null
     private var _location: ILocationManager? = null
     private var _notifications: INotificationsManager? = null
+    private var _pushTokenManager: IPushTokenManager? = null
+    private var _operationRepo: IOperationRepo? = null
     private var _identityModelStore: IdentityModelStore? = null
     private var _propertiesModelStore: PropertiesModelStore? = null
     private var _startupService: StartupService? = null
 
     // Other State
     private val _services: ServiceProvider
-    private var _userConflictResolverNotifier: ICallbackProducer<IUserIdentityConflictResolver> = CallbackProducer()
     private var _configModel: ConfigModel? = null
     private var _sessionModel: SessionModel? = null
     private var _requiresPrivacyConsent: Boolean? = null
-    private var _haveServicesStarted: Boolean = false
 
     init {
         var serviceBuilder = ServiceBuilder()
@@ -83,8 +83,8 @@ internal class OneSignalImp() : IOneSignal, IServiceProvider {
         _services = serviceBuilder.build()
     }
 
-    override fun initWithContext(context: Context) {
-        Logging.log(LogLevel.DEBUG, "initWithContext(context: $context)")
+    override fun initWithContext(context: Context, appId: String?) {
+        Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
         // do not do this again if already initialized
         if (isInitialized)
@@ -99,6 +99,7 @@ internal class OneSignalImp() : IOneSignal, IServiceProvider {
         _configModel = _services.getService<ConfigModelStore>().get()
         _sessionModel = _services.getService<SessionModelStore>().get()
 
+        _configModel!!.appId = appId
         // if privacy consent was set prior to init, set it in the model now
         if (_requiresPrivacyConsent != null)
             _configModel!!.requiresPrivacyConsent = _requiresPrivacyConsent!!
@@ -109,127 +110,74 @@ internal class OneSignalImp() : IOneSignal, IServiceProvider {
         _userSwitcher = _services.getService()
         _iam = _services.getService()
         _notifications = _services.getService()
+        _pushTokenManager = _services.getService()
+        _operationRepo = _services.getService()
         _propertiesModelStore = _services.getService()
         _identityModelStore = _services.getService()
 
+        // Instantiate and call the IStartableServices
+        _startupService = _services.getService()
+        _startupService!!.start()
+
         isInitialized = true
-
-        if (_appId != null) {
-            _configModel!!.appId = _appId!!
-            startServices()
-        }
-    }
-
-    private var _appId: String? = null
-
-    override fun setAppId(appId: String) {
-        Logging.log(LogLevel.DEBUG, "setAppId(appId: $appId)")
-
-        if (!isInitialized) {
-            _appId = appId
-        } else {
-            _configModel!!.appId = _appId!!
-            startServices()
-        }
-    }
-
-    private fun startServices() {
-        if (!_haveServicesStarted) {
-            _haveServicesStarted = true
-            // Instantiate and call the IStartableServices
-            _startupService = _services.getService()
-            _startupService!!.start()
-        }
     }
 
     // This accepts UserIdentity.Anonymous?, so therefore UserAnonymous? might be null
-    override suspend fun login(externalId: String, externalIdHash: String?): IUserManager {
-        Logging.log(
-            LogLevel.DEBUG,
-            "login(externalId: $externalId, externalIdHash: $externalIdHash)"
-        )
+    override suspend fun login(externalId: String, jwtBearerToken: String?) {
+        Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
         if (!isInitialized)
             throw Exception("Must call 'initWithContext' before use")
 
-        var retIdentityModel: IdentityModel? = null
-        var retPropertiesModel: PropertiesModel? = null
+        val sdkId = UUID.randomUUID().toString()
+        val identityModel = IdentityModel()
+        identityModel.id = sdkId
+        identityModel.userId = externalId
+        identityModel.jwtBearerToken = jwtBearerToken
+        _identityModelStore!!.add(externalId, identityModel, fireEvent = false)
 
-        // TODO: Attempt to retrieve user from backend,
-        //       * if exists set identityModel aliases and oneSignalId, and all of properties model.
-        //       * If doesn't exist create user?
-        //       * If invalid auth hash/user throw exception?
+        val propertiesModel = PropertiesModel()
+        propertiesModel.id = sdkId
+        _propertiesModelStore!!.add(externalId, propertiesModel, fireEvent = false)
+
+        // This makes the user effective even though we haven't made the backend call yet. This is
+        // to cover a window where the developer (or user) might not wait for this login method to return
+        // before using the `.user` property.
+        _userSwitcher!!.setUser(identityModel, propertiesModel)
+
+        // TODO: Attempt to retrieve/create user from backend,
+        //       * Update the identityModel and propertyModel with the response in a way that won't
+        //         drive a change being pushed back up.
         delay(1000L) // Simulate call to drive suspension
 
-        // ASSUME BACKEND DOESN'T HAVE USER FOR NOW, CREATE LOCALLY
-        // TODO: Attempt to retrieve user from model stores. Should lookup be by external ID or onesignal id?
-        //       Feels more right to use the onesignal ID as that cannot change.  But the user provides an
-        //       externalID so we would need to keep a cache of externalID->onesignalID mappings in the event
-        //       there is no connectivity and we can't pull the user from the backend.
-        var identityModel = _identityModelStore!!.get(externalId)
-        var propertiesModel = _propertiesModelStore!!.get(externalId)
-
-        if (identityModel == null) {
-            identityModel = IdentityModel()
-            identityModel.id = UUID.randomUUID().toString()
-            identityModel.userId = externalId
-            identityModel.userIdAuthHash = externalIdHash
-            _identityModelStore!!.add(externalId, identityModel)
-        }
-
-        if (propertiesModel == null) {
-            propertiesModel = PropertiesModel()
-            propertiesModel.id = identityModel.id
-            _propertiesModelStore!!.add(externalId, propertiesModel)
-        }
-
-        retIdentityModel = identityModel
-        retPropertiesModel = propertiesModel
-        // TODO: Add repo op to create user on the backend.
-
-        if (retIdentityModel != null && retPropertiesModel != null) {
-            // TODO: Clear anything else out?
-            // TODO: Unhook the old models from the operation store, any changes to them are no longer applicable.
-            // TODO: Hook the new models to the operation store, any changes to these are applicable.
-            _userSwitcher!!.setUser(retIdentityModel, retPropertiesModel)
-        }
-
-        return user
+        //TODO: Remove this dummy code which mimics what we'll do -- set the models from the backend
+        identityModel.set(IdentityModel::oneSignalId.name, UUID.randomUUID(), notify = false)
+        propertiesModel.set(PropertiesModel::tags.name, mapOf("foo" to "bar"), notify = false)
     }
 
-    override suspend fun loginGuest(): IUserManager {
-        Logging.log(LogLevel.DEBUG, "loginGuest()")
+    override fun logout() {
+        Logging.log(LogLevel.DEBUG, "logout()")
 
         if (!isInitialized)
             throw Exception("Must call 'initWithContext' before use")
 
-        var retIdentityModel = IdentityModel()
-        var retPropertiesModel = PropertiesModel()
+        val sdkId = UUID.randomUUID().toString()
+        var identityModel = IdentityModel()
+        identityModel.id = sdkId
+        _identityModelStore!!.add(sdkId, identityModel, fireEvent = false)
 
-        // TODO: Add repo op to create user on the backend.
-        // TODO: Do we do anything else?  Save the anonymous user in the store?  Save the anonymous user in the backend?
-        delay(1000L) // Simulate call to drive suspension
+        var propertiesModel = PropertiesModel()
+        propertiesModel.id = sdkId
+        _propertiesModelStore!!.add(sdkId, propertiesModel, fireEvent = false)
 
-        // TODO: Clear anything else out?
-        // TODO: Unhook the old models from the operation store, any changes to them are no longer applicable.
-        // TODO: Hook the new models to the operation store, any changes to these are applicable.
-        _userSwitcher!!.setUser(retIdentityModel, retPropertiesModel)
+        _userSwitcher!!.setUser(identityModel, propertiesModel)
 
-        return user
-    }
-
-    override fun setUserConflictResolver(handler: IUserIdentityConflictResolver?) {
-        Logging.log(LogLevel.DEBUG, "setUserConflictResolver(handler: $handler)")
-        _userConflictResolverNotifier.set(handler)
-    }
-
-    override fun setUserConflictResolver(handler: (local: IUserManager, remote: IUserManager) -> IUserManager) {
-        Logging.log(LogLevel.DEBUG, "setUserConflictResolver(handler: $handler)")
-        _userConflictResolverNotifier.set(object : IUserIdentityConflictResolver {
-            override fun resolve(local: IUserManager, remote: IUserManager): IUserManager {
-                return handler(local, remote)
-            }
-        })
+        // Send the user create along with the device push token up so the new device-scoped user can
+        // be created and claim this device and "steal" the push subscription.
+        // TODO: Do we still need to create the subscription locally to represent that this
+        //       user it.  But we don't know the subscription ID until *after* it has been sent up (will be returned
+        //       as part of the response).
+        _operationRepo!!.enqueue(CreateUserOperation(_configModel!!.appId!!, sdkId, _pushTokenManager!!.pushToken))
     }
 
     override fun <T> hasService(c: Class<T>): Boolean = _services.hasService(c)

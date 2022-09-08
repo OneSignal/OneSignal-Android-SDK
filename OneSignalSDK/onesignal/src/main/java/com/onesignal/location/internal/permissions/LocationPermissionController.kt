@@ -28,8 +28,9 @@
 package com.onesignal.location.internal.permissions
 
 import com.onesignal.R
+import com.onesignal.core.internal.application.ApplicationLifecycleHandlerBase
 import com.onesignal.core.internal.application.IApplicationService
-import com.onesignal.core.internal.common.suspendifyOnThread
+import com.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.core.internal.permissions.impl.AlertDialogPrepromptForAndroidSettings
 import com.onesignal.core.internal.startup.IStartableService
@@ -38,19 +39,22 @@ import com.onesignal.onesignal.core.internal.common.suspend.WaiterWithValue
 internal class LocationPermissionController(
     private val _application: IApplicationService,
     private val _requestPermission: IRequestPermissionService,
+    private val _applicationService: IApplicationService
 ) : IRequestPermissionService.PermissionCallback,
     IStartableService {
     companion object {
         private const val PERMISSION_TYPE = "LOCATION"
     }
 
-    private val _waiter = WaiterWithValue<Boolean?>()
+    private val _waiter = WaiterWithValue<Boolean>()
+    private var _currPermission: String = ""
 
     override fun start() {
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)
     }
 
-    suspend fun prompt(fallbackToSettings: Boolean, androidPermissionString: String,): Boolean? {
+    suspend fun prompt(fallbackToSettings: Boolean, androidPermissionString: String,): Boolean {
+        _currPermission = androidPermissionString
         _requestPermission.startPrompt(
             fallbackToSettings,
             PERMISSION_TYPE,
@@ -87,8 +91,15 @@ internal class LocationPermissionController(
             activity.getString(R.string.location_permission_settings_message),
             object : AlertDialogPrepromptForAndroidSettings.Callback {
                 override fun onAccept() {
+                    // wait for focus to be regained, and check the current permission status.
+                    _applicationService.addApplicationLifecycleHandler(object : ApplicationLifecycleHandlerBase() {
+                        override fun onFocus() {
+                            super.onFocus()
+                            _applicationService.removeApplicationLifecycleHandler(this)
+                            _waiter.wake(AndroidUtils.hasPermission(_currPermission, true, _applicationService))
+                        }
+                    })
                     NavigateToAndroidSettingsForLocation.show(activity)
-                    _waiter.wake(null)
                 }
                 override fun onDecline() {
                     _waiter.wake(false)

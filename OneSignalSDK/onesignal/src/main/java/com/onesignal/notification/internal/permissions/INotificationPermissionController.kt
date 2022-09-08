@@ -40,5 +40,5 @@ internal interface INotificationPermissionController {
      * does happen, the app will detect the permissions on app focus and drive permission callbacks
      * to notify of the status.
      */
-    suspend fun prompt(fallbackToSettings: Boolean): Boolean?
+    suspend fun prompt(fallbackToSettings: Boolean): Boolean
 }
