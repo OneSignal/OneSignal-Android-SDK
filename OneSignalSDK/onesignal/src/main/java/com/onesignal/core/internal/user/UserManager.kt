@@ -8,7 +8,7 @@ import com.onesignal.core.internal.models.TriggerModel
 import com.onesignal.core.internal.models.TriggerModelStore
 import com.onesignal.core.user.IUserManager
 import com.onesignal.core.user.subscriptions.SubscriptionList
-import java.util.*
+import java.util.UUID
 
 internal interface IUserSwitcher {
     val identityModel: IdentityModel
