@@ -1,7 +1,6 @@
 package com.onesignal.iam.internal.state
 
 import com.onesignal.iam.internal.prompt.impl.InAppMessagePrompt
-import java.util.Date
 
 internal class InAppStateService {
     /**
