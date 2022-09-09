@@ -17,7 +17,7 @@ internal class PushTokenListener(
     private val _configModelStore: ConfigModelStore,
     private val _pushTokenManager: IPushTokenManager,
     private val _subscriptionManager: ISubscriptionManager,
-    private val _notificationStateRefresher: INotificationStateRefresher,
+    private val _notificationStateRefresher: INotificationStateRefresher
 ) : IStartableService, IPushTokenChangedHandler, ISingletonModelStoreChangeHandler<ConfigModel> {
 
     override fun start() {
@@ -26,15 +26,17 @@ internal class PushTokenListener(
     }
 
     override fun onModelUpdated(model: ConfigModel, property: String, oldValue: Any?, newValue: Any?) {
-        if (property != ConfigModel::appId.name)
+        if (property != ConfigModel::appId.name) {
             return
+        }
 
         createSubscriptionIfRequired()
     }
 
     override fun onPushTokenChanged(pushToken: String?) {
-        if (pushToken == null || pushToken.isEmpty())
+        if (pushToken == null || pushToken.isEmpty()) {
             return
+        }
 
         createSubscriptionIfRequired()
         _notificationStateRefresher.refreshNotificationState()
@@ -44,8 +46,9 @@ internal class PushTokenListener(
         val appId = _configModelStore.get().appId
         val pushToken = _pushTokenManager.pushToken
 
-        if (appId == null || pushToken == null || _subscriptionManager.subscriptions.push != null)
+        if (appId == null || pushToken == null || _subscriptionManager.subscriptions.push != null) {
             return
+        }
 
         // TODO: Is is possible for the push token to change and we need to update a subscription?
         _operationRepo.enqueue(CreateAndAddSubscriptionOperation(appId, SubscriptionType.PUSH, true, pushToken))

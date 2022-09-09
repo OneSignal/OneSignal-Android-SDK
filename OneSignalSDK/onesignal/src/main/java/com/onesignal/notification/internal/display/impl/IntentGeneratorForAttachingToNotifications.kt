@@ -15,13 +15,14 @@ internal class IntentGeneratorForAttachingToNotifications(
     private val notificationOpenedClassAndroid22AndOlder: Class<*> = NotificationOpenedActivityAndroid22AndOlder::class.java
 
     fun getNewBaseIntent(
-        notificationId: Int,
+        notificationId: Int
     ): Intent {
         val intent =
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                 getNewBaseIntentAndroidAPI23Plus()
-            else
+            } else {
                 getNewBaseIntentAndroidAPI22AndOlder()
+            }
 
         return intent
             .putExtra(
@@ -61,7 +62,7 @@ internal class IntentGeneratorForAttachingToNotifications(
 
     fun getNewActionPendingIntent(
         requestCode: Int,
-        oneSignalIntent: Intent,
+        oneSignalIntent: Intent
     ): PendingIntent? {
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         return PendingIntent.getActivity(

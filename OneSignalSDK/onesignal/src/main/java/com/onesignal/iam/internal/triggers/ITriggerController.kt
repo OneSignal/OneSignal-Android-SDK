@@ -10,30 +10,32 @@ internal interface ITriggerController : IEventNotifier<ITriggerHandler> {
      * AND conditions. If all of the triggers in an inner array evaluate to true, it means the
      * message should be shown and the function returns true.
      *
+     * [ITriggerHandler.onTriggerCompleted] will be called for any time-based triggers that
+     * *are* currently triggered.
+     *
+     * Any time-based triggers (dynamic triggers) that aren't currently triggered will have
+     * been scheduled, and [ITriggerHandler.onTriggerConditionChanged] will be called once
+     * it's condition has changed.
+     *
      * @return true if the IAM has triggered "now" and should be displayed. False otherwise.
      */
     fun evaluateMessageTriggers(message: InAppMessage): Boolean
 
     /**
-     * Part of redisplay logic
+     * Determine if the provided message contains any of the provided trigger keys.
      *
-     * If trigger key is part of message triggers, then return true, otherwise false
+     * @param message The message to check
+     * @param triggersKeys A collection of the trigger keys to check for.
+     *
+     * @return true if the provided message contains at least one of the [triggersKeys], false otherwise.
      */
-    fun isTriggerOnMessage(
-        message: InAppMessage,
-        newTriggersKeys: Collection<String>
-    ): Boolean
+    fun isTriggerOnMessage(message: InAppMessage, triggersKeys: Collection<String>): Boolean
 
     /**
-     * Part of redisplay logic
+     * Determine if the provided message only has dynamic triggers.
      *
-     * If message has only dynamic trigger return true, otherwise false
+     * @param message The message to check.
+     * @return true if the message only has dynamic triggers, false otherwise.
      */
     fun messageHasOnlyDynamicTriggers(message: InAppMessage): Boolean
-
-    /**
-     * Trigger Set/Delete/Persist Logic
-     */
-    fun addTriggers(key: String, value: Any)
-    fun removeTriggersForKeys(key: String)
 }

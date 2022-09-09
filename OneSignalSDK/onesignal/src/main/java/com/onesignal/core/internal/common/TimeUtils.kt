@@ -10,8 +10,9 @@ internal object TimeUtils {
     fun getTimeZoneOffset(): Int {
         val timezone = Calendar.getInstance().timeZone
         var offset = timezone.rawOffset
-        if (timezone.inDaylightTime(Date()))
+        if (timezone.inDaylightTime(Date())) {
             offset += timezone.dstSavings
+        }
 
         return offset / 1000
     }

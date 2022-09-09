@@ -14,7 +14,6 @@ import android.text.TextUtils
 import androidx.annotation.Keep
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.logging.Logging
-import com.onesignal.location.internal.common.LocationConstants
 import java.util.Random
 
 internal object AndroidUtils {
@@ -174,11 +173,11 @@ internal object AndroidUtils {
                 )
             val permissionList = listOf(*packageInfo.requestedPermissions)
 
-            return if (!permissionList.contains(permission))
+            return if (!permissionList.contains(permission)) {
                 false
-            else if (!isUserGranted)
+            } else if (!isUserGranted) {
                 true
-            else {
+            } else {
                 val permissionGrant = AndroidSupportV4Compat.ContextCompat.checkSelfPermission(
                     applicationService.appContext,
                     permission

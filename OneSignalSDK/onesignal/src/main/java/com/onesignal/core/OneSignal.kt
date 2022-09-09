@@ -132,6 +132,7 @@ object OneSignal {
      */
     @JvmStatic
     suspend fun login(externalId: String) = oneSignal.login(externalId)
+
     @JvmStatic
     suspend fun login(externalId: String, jwtBearerToken: String? = null) = oneSignal.login(externalId, jwtBearerToken)
 

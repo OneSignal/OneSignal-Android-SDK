@@ -56,9 +56,9 @@ internal class HmsLocationController(
                     }
                 }
 
-                if (_lastLocation != null)
+                if (_lastLocation != null) {
                     _event.fire { it.onLocationChanged(_lastLocation!!) }
-                else {
+                } else {
                     var waiter = WaiterWithValue<Boolean>()
                     hmsFusedLocationClient!!.lastLocation
                         .addOnSuccessListener(
@@ -170,8 +170,9 @@ internal class HmsLocationController(
         override fun close() {
             _applicationService.removeApplicationLifecycleHandler(this)
 
-            if (hasExistingRequest)
+            if (hasExistingRequest) {
                 huaweiFusedLocationProviderClient.removeLocationUpdates(this)
+            }
         }
 
         override fun onLocationResult(locationResult: LocationResult) {
@@ -185,8 +186,10 @@ internal class HmsLocationController(
             }
 
             var updateInterval = LocationConstants.BACKGROUND_UPDATE_TIME_MS
-            if (_applicationService.isInForeground) updateInterval =
-                LocationConstants.FOREGROUND_UPDATE_TIME_MS
+            if (_applicationService.isInForeground) {
+                updateInterval =
+                    LocationConstants.FOREGROUND_UPDATE_TIME_MS
+            }
             val locationRequest = LocationRequest.create()
                 .setFastestInterval(updateInterval)
                 .setInterval(updateInterval)

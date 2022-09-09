@@ -102,8 +102,9 @@ internal class HttpClient(
                 con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignalUtils.sdkVersion)
                 con.setRequestProperty("Accept", OS_ACCEPT_HEADER)
 
-                if (jsonBody != null)
+                if (jsonBody != null) {
                     con.doInput = true
+                }
 
                 if (method != null) {
                     con.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
@@ -136,7 +137,7 @@ internal class HttpClient(
 
                 when (httpResponse) {
                     HttpURLConnection.HTTP_NOT_MODIFIED -> {
-                        val cachedResponse = _prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + cacheKey,)
+                        val cachedResponse = _prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + cacheKey)
                         Logging.debug("HttpClient: " + (method ?: "GET") + " - Using Cached response due to 304: " + cachedResponse)
 
                         // TODO: SHOULD RETURN OK INSTEAD OF NOT_MODIFIED TO MAKE TRANSPARENT?
@@ -167,8 +168,9 @@ internal class HttpClient(
                         Logging.debug("HttpClient: Failed request to: $BASE_URL$url")
 
                         var inputStream = con.errorStream
-                        if (inputStream == null)
+                        if (inputStream == null) {
                             inputStream = con.inputStream
+                        }
 
                         var jsonResponse: String? = null
                         if (inputStream != null) {
@@ -177,17 +179,19 @@ internal class HttpClient(
                                 if (scanner.useDelimiter("\\A").hasNext()) scanner.next() else ""
                             scanner.close()
                             Logging.warn("HttpClient: $method RECEIVED JSON: $jsonResponse")
-                        } else
+                        } else {
                             Logging.warn("HttpClient: $method HTTP Code: $httpResponse No response body!")
+                        }
 
                         return@withContext HttpResponse(httpResponse, jsonResponse)
                     }
                 }
             } catch (t: Throwable) {
-                if (t is ConnectException || t is UnknownHostException)
+                if (t is ConnectException || t is UnknownHostException) {
                     Logging.info("HttpClient: Could not send last request, device is offline. Throwable: " + t.javaClass.name)
-                else
+                } else {
                     Logging.warn("HttpClient: $method Error thrown from network stack. ", t)
+                }
 
                 return@withContext HttpResponse(httpResponse, null, t)
             } finally {

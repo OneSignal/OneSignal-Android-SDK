@@ -34,8 +34,9 @@ class ADMMessageHandlerJob : ADMMessageHandlerJobBase() {
 
     override fun onRegistrationError(context: Context?, error: String?) {
         Logging.error("ADM:onRegistrationError: $error")
-        if ("INVALID_SENDER" == error)
+        if ("INVALID_SENDER" == error) {
             Logging.error("Please double check that you have a matching package name (NOTE: Case Sensitive), api_key.txt, and the apk was signed with the same Keystore and Alias.")
+        }
 
         var registerer = OneSignal.getService<IPushRegistratorCallback>()
         suspendifyOnThread {

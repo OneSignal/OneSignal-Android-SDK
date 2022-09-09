@@ -20,11 +20,11 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
     private var restored = false
 
     override fun beginEnqueueingWork(context: Context, shouldDelay: Boolean) {
-
         // Only allow one piece of work to be enqueued.
         synchronized(restored) {
-            if (restored)
+            if (restored) {
                 return
+            }
 
             restored = true
         }
@@ -46,11 +46,13 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
         override suspend fun doWork(): Result {
             val context = applicationContext
 
-            if (!OneSignal.isInitialized)
+            if (!OneSignal.isInitialized) {
                 OneSignal.initWithContext(context)
+            }
 
-            if (!NotificationHelper.areNotificationsEnabled(context))
+            if (!NotificationHelper.areNotificationsEnabled(context)) {
                 return Result.failure()
+            }
 
             Logging.info("Restoring notifications")
 

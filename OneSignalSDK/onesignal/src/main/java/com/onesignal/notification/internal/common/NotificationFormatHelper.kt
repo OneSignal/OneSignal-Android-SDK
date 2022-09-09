@@ -26,8 +26,9 @@ internal object NotificationFormatHelper {
         if (bundle == null || bundle.isEmpty) return null
         val custom = bundle.getString(PAYLOAD_OS_ROOT_CUSTOM, null)
 
-        if (custom != null)
+        if (custom != null) {
             return getOSNotificationIdFromJsonString(custom)
+        }
 
         Logging.debug("Not a OneSignal formatted Bundle. No 'custom' field in the bundle.")
         return null
@@ -43,10 +44,11 @@ internal object NotificationFormatHelper {
     private fun getOSNotificationIdFromJsonString(jsonStr: String?): String? {
         try {
             val customJSON = JSONObject(jsonStr)
-            if (customJSON.has(PAYLOAD_OS_NOTIFICATION_ID))
+            if (customJSON.has(PAYLOAD_OS_NOTIFICATION_ID)) {
                 return customJSON.optString(PAYLOAD_OS_NOTIFICATION_ID, null)
-            else
+            } else {
                 Logging.debug("Not a OneSignal formatted JSON string. No 'i' field in custom.")
+            }
         } catch (e: JSONException) {
             Logging.debug("Not a OneSignal formatted JSON String, error parsing string as JSON.")
         }

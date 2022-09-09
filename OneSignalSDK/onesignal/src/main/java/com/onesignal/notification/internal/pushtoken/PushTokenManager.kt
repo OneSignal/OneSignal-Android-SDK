@@ -8,7 +8,7 @@ import com.onesignal.notification.internal.registration.IPushRegistrator
  * on the current device (not the user).
  */
 internal class PushTokenManager(
-    private val _pushRegistrator: IPushRegistrator,
+    private val _pushRegistrator: IPushRegistrator
 ) : IPushTokenManager {
 
     private val _pushTokenChangedNotifier = EventProducer<IPushTokenChangedHandler>()
@@ -16,8 +16,9 @@ internal class PushTokenManager(
 
     override suspend fun retrievePushToken() {
         // if there's already a push token, nothing to do.
-        if (pushToken != null)
+        if (pushToken != null) {
             return
+        }
 
         val registerResult = _pushRegistrator.registerForPush()
 

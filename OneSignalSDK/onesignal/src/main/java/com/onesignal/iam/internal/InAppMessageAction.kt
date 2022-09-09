@@ -67,8 +67,9 @@ internal class InAppMessageAction(json: JSONObject, promptFactory: IInAppMessage
         pageId = json.optString(PAGE_ID, null)
 
         urlTarget = InAppMessageActionUrlType.fromString(json.optString(URL_TARGET, null))
-        if (urlTarget == null)
+        if (urlTarget == null) {
             urlTarget = InAppMessageActionUrlType.IN_APP_WEBVIEW
+        }
 
         closesMessage = json.optBoolean(CLOSE, true)
         if (json.has(OUTCOMES)) parseOutcomes(json)
@@ -90,8 +91,9 @@ internal class InAppMessageAction(json: JSONObject, promptFactory: IInAppMessage
         for (i in 0 until promptsJsonArray.length()) {
             val promptType = promptsJsonArray.getString(i)
             val prompt = promptFactory.createPrompt(promptType)
-            if (prompt != null)
+            if (prompt != null) {
                 prompts.add(prompt)
+            }
         }
     }
 
@@ -105,8 +107,9 @@ internal class InAppMessageAction(json: JSONObject, promptFactory: IInAppMessage
             val outcomesJson = JSONArray()
             for (outcome in outcomes) outcomesJson.put(outcome.toJSONObject())
             mainObj.put(OUTCOMES, outcomesJson)
-            if (tags != null)
+            if (tags != null) {
                 mainObj.put(TAGS, tags!!.toJSONObject())
+            }
             // Omitted for now until necessary
 //            if (urlTarget != null)
 //                mainObj.put("url_target", urlTarget.toJSONObject());

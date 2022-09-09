@@ -82,9 +82,11 @@ internal object NotificationHelper {
                 notification.group == null ||
                     notification.group == grouplessSummaryKey
                 )
-            if (!isGroupSummary && isGroupless) grouplessStatusBarNotifications.add(
-                statusBarNotification
-            )
+            if (!isGroupSummary && isGroupless) {
+                grouplessStatusBarNotifications.add(
+                    statusBarNotification
+                )
+            }
         }
         return grouplessStatusBarNotifications
     }
@@ -126,8 +128,9 @@ internal object NotificationHelper {
     fun areNotificationsEnabled(context: Context, channelId: String? = null): Boolean {
         try {
             val notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
-            if (!notificationsEnabled)
+            if (!notificationsEnabled) {
                 return false
+            }
 
             // Channels were introduced in O
             if (channelId != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -152,10 +155,12 @@ internal object NotificationHelper {
         if (fcmJson == null) return null
         try {
             val customJSON = JSONObject(fcmJson.getString("custom"))
-            if (customJSON.has("i")) return customJSON.optString(
-                "i",
-                null
-            ) else {
+            if (customJSON.has("i")) {
+                return customJSON.optString(
+                    "i",
+                    null
+                )
+            } else {
                 Logging.debug("Not a OneSignal formatted FCM message. No 'i' field in custom.")
             }
         } catch (e: JSONException) {
@@ -191,10 +196,11 @@ internal object NotificationHelper {
     }
 
     fun getCampaignNameFromNotification(notification: INotification): String {
-        if (notification.templateName?.isEmpty() != true && notification.templateId?.isEmpty() != true)
+        if (notification.templateName?.isEmpty() != true && notification.templateId?.isEmpty() != true) {
             return notification.templateName + " - " + notification.templateId
-        else if (notification.title != null)
+        } else if (notification.title != null) {
             return notification.title!!.substring(0, min(10, notification.title!!.length))
+        }
         return ""
     }
 
@@ -210,12 +216,13 @@ internal object NotificationHelper {
         for (i in 0 until jsonArraySize) {
             try {
                 payload = jsonArray.getJSONObject(i)
-                if (actionSelected == null && payload.has(NotificationConstants.GENERATE_NOTIFICATION_BUNDLE_KEY_ACTION_ID))
+                if (actionSelected == null && payload.has(NotificationConstants.GENERATE_NOTIFICATION_BUNDLE_KEY_ACTION_ID)) {
                     actionSelected = payload.optString(NotificationConstants.GENERATE_NOTIFICATION_BUNDLE_KEY_ACTION_ID, null)
+                }
 
-                if (firstMessage)
+                if (firstMessage) {
                     firstMessage = false
-                else {
+                } else {
                     groupedNotifications.add(
                         com.onesignal.notification.internal.Notification(
                             payload,

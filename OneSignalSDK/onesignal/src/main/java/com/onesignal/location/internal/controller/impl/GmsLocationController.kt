@@ -48,9 +48,9 @@ internal class GmsLocationController(
         withContext(Dispatchers.IO) {
             _startStopMutex.withLock {
                 if (_googleApiClient != null) {
-                    if (_lastLocation != null)
+                    if (_lastLocation != null) {
                         _event.fire { it.onLocationChanged(_lastLocation!!) }
-                    else {
+                    } else {
                         val localLastLocation = getLastLocation()
                         if (localLastLocation != null) {
                             setLocationAndFire(localLastLocation)
@@ -159,8 +159,9 @@ internal class GmsLocationController(
         private var hasExistingRequest = false
 
         init {
-            if (!googleApiClient.isConnected)
+            if (!googleApiClient.isConnected) {
                 throw Exception("googleApiClient not connected, cannot listen!")
+            }
 
             _applicationService.addApplicationLifecycleHandler(this)
             refreshRequest()
@@ -179,8 +180,9 @@ internal class GmsLocationController(
         override fun close() {
             _applicationService.removeApplicationLifecycleHandler(this)
 
-            if (hasExistingRequest)
+            if (hasExistingRequest) {
                 FusedLocationApiWrapper.cancelLocationUpdates(googleApiClient, this)
+            }
         }
 
         private fun refreshRequest() {
@@ -193,10 +195,11 @@ internal class GmsLocationController(
                 FusedLocationApiWrapper.cancelLocationUpdates(googleApiClient, this)
             }
 
-            val updateInterval = if (_applicationService.isInForeground)
+            val updateInterval = if (_applicationService.isInForeground) {
                 LocationConstants.FOREGROUND_UPDATE_TIME_MS
-            else
+            } else {
                 LocationConstants.BACKGROUND_UPDATE_TIME_MS
+            }
 
             val locationRequest = LocationRequest.create()
                 .setFastestInterval(updateInterval)
@@ -221,18 +224,21 @@ internal class GmsLocationController(
 
         fun requestLocationUpdates(googleApiClient: GoogleApiClient, locationRequest: LocationRequest, locationListener: LocationListener) {
             try {
-                if (Looper.myLooper() == null)
+                if (Looper.myLooper() == null) {
                     Looper.prepare()
-                if (googleApiClient.isConnected)
+                }
+                if (googleApiClient.isConnected) {
                     LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, locationListener)
+                }
             } catch (t: Throwable) {
                 Logging.warn("FusedLocationApi.requestLocationUpdates failed!", t)
             }
         }
 
         fun getLastLocation(googleApiClient: GoogleApiClient): Location? {
-            if (googleApiClient.isConnected)
+            if (googleApiClient.isConnected) {
                 return LocationServices.FusedLocationApi.getLastLocation(googleApiClient)
+            }
             return null
         }
     }

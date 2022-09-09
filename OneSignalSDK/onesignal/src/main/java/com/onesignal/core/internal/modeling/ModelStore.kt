@@ -47,7 +47,6 @@ internal open class ModelStore<TModel>(
     }
 
     override fun clear() {
-
         val localList = _models.toList()
         _models.clear()
 

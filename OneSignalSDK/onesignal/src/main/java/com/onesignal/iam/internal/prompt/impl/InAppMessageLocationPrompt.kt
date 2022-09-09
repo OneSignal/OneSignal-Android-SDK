@@ -7,7 +7,6 @@ internal class InAppMessageLocationPrompt(
     private val _locationManager: ILocationManager
 ) : InAppMessagePrompt() {
     override suspend fun handlePrompt(): PromptActionResult? {
-
         val result = _locationManager.requestPermission()
 
         return when (result) {

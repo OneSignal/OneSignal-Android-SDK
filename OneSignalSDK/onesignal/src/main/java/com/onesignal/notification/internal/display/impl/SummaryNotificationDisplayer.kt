@@ -26,7 +26,7 @@ import java.util.Random
 internal class SummaryNotificationDisplayer(
     private val _applicationService: IApplicationService,
     private val _dataController: INotificationDataController,
-    private val _notificationDisplayBuilder: INotificationDisplayBuilder,
+    private val _notificationDisplayBuilder: INotificationDisplayBuilder
 ) : ISummaryNotificationDisplayer {
     private val currentContext: Context
         get() = _applicationService.appContext
@@ -71,7 +71,9 @@ internal class SummaryNotificationDisplayer(
         if (singleNotifWorkArounds) {
             if ((notificationJob.overriddenSound != null) && !notificationJob.overriddenSound!!
                 .equals(notificationJob.orgSound)
-            ) notifBuilder!!.setSound(null)
+            ) {
+                notifBuilder!!.setSound(null)
+            }
         }
         val notification = notifBuilder!!.build()
         if (singleNotifWorkArounds) notifBuilder.setSound(notificationJob.overriddenSound)
@@ -88,7 +90,6 @@ internal class SummaryNotificationDisplayer(
         notifBuilder: NotificationDisplayBuilder.OneSignalNotificationBuilder?,
         groupAlertBehavior: Int
     ) = coroutineScope {
-
         val updateSummary: Boolean = notificationJob.isRestoring
         var fcmJson: JSONObject = notificationJob.jsonPayload!!
         val intentGenerator = IntentGeneratorForAttachingToNotifications(currentContext!!)
@@ -116,18 +117,21 @@ internal class SummaryNotificationDisplayer(
         summaryList = ArrayList()
 
         for (notification in notifications) {
-            if (!updateSummary && notification.androidId == notificationJob.androidId)
+            if (!updateSummary && notification.androidId == notificationJob.androidId) {
                 continue
+            }
 
             var title = notification.title
             if (title == null) title = "" else title += " "
             spannableString = SpannableString(title + notification.message)
-            if (title.length > 0)
+            if (title.length > 0) {
                 spannableString.setSpan(StyleSpan(Typeface.BOLD), 0, title.length, 0)
+            }
 
             summaryList!!.add(spannableString)
-            if (firstFullData == null)
+            if (firstFullData == null) {
                 firstFullData = notification.fullData
+            }
         }
 
         val summaryContentIntent: PendingIntent? = intentGenerator.getNewActionPendingIntent(
@@ -147,15 +151,19 @@ internal class SummaryNotificationDisplayer(
             summaryMessage = summaryMessage?.replace("$[notif_count]", "" + notificationCount)
                 ?: "$notificationCount new messages"
             val summaryBuilder = _notificationDisplayBuilder.getBaseOneSignalNotificationBuilder(notificationJob).compatBuilder
-            if (updateSummary)
+            if (updateSummary) {
                 _notificationDisplayBuilder.removeNotifyOptions(summaryBuilder)
-            else {
-                if (notificationJob.overriddenSound != null) summaryBuilder!!.setSound(
-                    notificationJob.overriddenSound
-                )
-                if (notificationJob.overriddenFlags != null) summaryBuilder!!.setDefaults(
-                    notificationJob.overriddenFlags!!
-                )
+            } else {
+                if (notificationJob.overriddenSound != null) {
+                    summaryBuilder!!.setSound(
+                        notificationJob.overriddenSound
+                    )
+                }
+                if (notificationJob.overriddenFlags != null) {
+                    summaryBuilder!!.setDefaults(
+                        notificationJob.overriddenFlags!!
+                    )
+                }
             }
 
             // The summary is designed to fit all notifications.
@@ -186,17 +194,21 @@ internal class SummaryNotificationDisplayer(
             // Add the latest notification to the summary
             if (!updateSummary) {
                 var line1Title: String? = null
-                if (notificationJob.title != null) line1Title =
-                    notificationJob.title.toString()
+                if (notificationJob.title != null) {
+                    line1Title =
+                        notificationJob.title.toString()
+                }
                 if (line1Title == null) line1Title = "" else line1Title += " "
                 val message: String = notificationJob.body.toString()
                 val spannableString = SpannableString(line1Title + message)
-                if (line1Title.length > 0) spannableString.setSpan(
-                    StyleSpan(Typeface.BOLD),
-                    0,
-                    line1Title.length,
-                    0
-                )
+                if (line1Title.length > 0) {
+                    spannableString.setSpan(
+                        StyleSpan(Typeface.BOLD),
+                        0,
+                        line1Title.length,
+                        0
+                    )
+                }
                 inboxStyle.addLine(spannableString)
             }
             for (line in summaryList!!) inboxStyle.addLine(line)
@@ -259,9 +271,11 @@ internal class SummaryNotificationDisplayer(
         )
         val summaryBuilder = _notificationDisplayBuilder.getBaseOneSignalNotificationBuilder(notificationJob).compatBuilder
         if (notificationJob.overriddenSound != null) summaryBuilder!!.setSound(notificationJob.overriddenSound)
-        if (notificationJob.overriddenFlags != null) summaryBuilder!!.setDefaults(
-            notificationJob.overriddenFlags!!
-        )
+        if (notificationJob.overriddenFlags != null) {
+            summaryBuilder!!.setDefaults(
+                notificationJob.overriddenFlags!!
+            )
+        }
 
         // The summary is designed to fit all notifications.
         //   Default small and large icons are used instead of the payload options to enforce this.
@@ -300,7 +314,8 @@ internal class SummaryNotificationDisplayer(
         group: String
     ): Intent {
         return intentGenerator.getNewBaseIntent(summaryNotificationId).putExtra(
-            NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA, fcmJson.toString()
+            NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA,
+            fcmJson.toString()
         ).putExtra("summary", group)
     }
 }

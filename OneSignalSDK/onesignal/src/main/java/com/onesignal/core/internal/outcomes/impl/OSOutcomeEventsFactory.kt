@@ -15,15 +15,18 @@ internal class OSOutcomeEventsFactory(
     override fun getRepository(): IOutcomeEventsRepository = if (repository != null) validateRepositoryVersion() else createRepository()
 
     private fun validateRepositoryVersion(): IOutcomeEventsRepository {
-        if (!outcomeEventsCache.isOutcomesV2ServiceEnabled && repository is OSOutcomeEventsV1Repository)
+        if (!outcomeEventsCache.isOutcomesV2ServiceEnabled && repository is OSOutcomeEventsV1Repository) {
             return repository!!
-        if (outcomeEventsCache.isOutcomesV2ServiceEnabled && repository is OSOutcomeEventsV2Repository)
+        }
+        if (outcomeEventsCache.isOutcomesV2ServiceEnabled && repository is OSOutcomeEventsV2Repository) {
             return repository!!
+        }
         return createRepository()
     }
 
-    private fun createRepository() = if (outcomeEventsCache.isOutcomesV2ServiceEnabled)
+    private fun createRepository() = if (outcomeEventsCache.isOutcomesV2ServiceEnabled) {
         OSOutcomeEventsV2Repository(outcomeEventsCache, OSOutcomeEventsV2Service(apiClient))
-    else
+    } else {
         OSOutcomeEventsV1Repository(outcomeEventsCache, OSOutcomeEventsV1Service(apiClient))
+    }
 }

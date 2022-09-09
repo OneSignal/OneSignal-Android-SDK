@@ -74,27 +74,7 @@ internal class InAppPreferencesController(
         set(value) = _prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_CACHED_IAMS, value)
 
     // This pattern matches the pattern used by the Date class's toString() method
-    override var lastTimeInAppDismissed: Date?
-        get() {
-            val lastTimeDismissedString: String = _prefs.getString(
-                PreferenceStores.ONESIGNAL,
-                PreferenceOneSignalKeys.PREFS_OS_LAST_TIME_IAM_DISMISSED, null
-            ) ?: return null
-            // This pattern matches the pattern used by the Date class's toString() method
-            val format = SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", Locale.ENGLISH)
-            return try {
-                format.parse(lastTimeDismissedString)
-            } catch (exception: ParseException) {
-                Logging.error("Error parsing last dimissed string", exception)
-                null
-            }
-        }
-        set(value) {
-            val lastTimeDismissedString = value?.toString()
-            _prefs.saveString(
-                PreferenceStores.ONESIGNAL,
-                PreferenceOneSignalKeys.PREFS_OS_LAST_TIME_IAM_DISMISSED,
-                lastTimeDismissedString
-            )
-        }
+    override var lastTimeInAppDismissed: Long?
+        get() = _prefs.getLong(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_LAST_TIME_IAM_DISMISSED, null)
+        set(value) = _prefs.saveLong(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_LAST_TIME_IAM_DISMISSED, value)
 }

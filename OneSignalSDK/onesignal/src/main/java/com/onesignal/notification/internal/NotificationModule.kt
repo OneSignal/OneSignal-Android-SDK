@@ -97,26 +97,28 @@ internal object NotificationModule {
             .provides<INotificationLifecycleService>()
 
         builder.register {
-            if (FirebaseAnalyticsTracker.canTrack())
+            if (FirebaseAnalyticsTracker.canTrack()) {
                 return@register FirebaseAnalyticsTracker(
                     it.getService(IApplicationService::class.java),
                     it.getService(IPreferencesService::class.java),
                     it.getService(ITime::class.java)
                 )
-            else
+            } else {
                 return@register NoAnalyticsTracker()
+            }
         }
             .provides<IAnalyticsTracker>()
 
         builder.register {
             val deviceService = it.getService(IDeviceService::class.java)
-            val service = if (deviceService.isFireOSDeviceType)
+            val service = if (deviceService.isFireOSDeviceType) {
                 PushRegistratorADM(it.getService(IApplicationService::class.java))
-            else if (deviceService.isAndroidDeviceType) {
-                if (deviceService.hasFCMLibrary)
+            } else if (deviceService.isAndroidDeviceType) {
+                if (deviceService.hasFCMLibrary) {
                     PushRegistratorFCM(it.getService(IParamsService::class.java), it.getService(IApplicationService::class.java), it.getService(GooglePlayServicesUpgradePrompt::class.java), deviceService)
-                else
+                } else {
                     PushRegistratorNone()
+                }
             } else {
                 PushRegistratorHMS(deviceService, it.getService(IApplicationService::class.java))
             }

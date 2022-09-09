@@ -1,8 +1,8 @@
 package com.onesignal.core.internal
 
 import android.content.Context
-import com.onesignal.core.debug.IDebugManager
 import com.onesignal.core.IOneSignal
+import com.onesignal.core.debug.IDebugManager
 import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
@@ -32,8 +32,8 @@ import com.onesignal.location.internal.LocationModule
 import com.onesignal.notification.INotificationsManager
 import com.onesignal.notification.internal.NotificationModule
 import com.onesignal.notification.internal.pushtoken.IPushTokenManager
-import java.util.UUID
 import kotlinx.coroutines.delay
+import java.util.UUID
 
 internal class OneSignalImp() : IOneSignal, IServiceProvider {
     override val sdkVersion: String = OneSignalUtils.sdkVersion
@@ -87,8 +87,9 @@ internal class OneSignalImp() : IOneSignal, IServiceProvider {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
         // do not do this again if already initialized
-        if (isInitialized)
+        if (isInitialized) {
             return
+        }
 
         // start the application service. This is called explicitly first because we want
         // to make sure it has the context provided on input, for all other startable services
@@ -101,8 +102,9 @@ internal class OneSignalImp() : IOneSignal, IServiceProvider {
 
         _configModel!!.appId = appId
         // if privacy consent was set prior to init, set it in the model now
-        if (_requiresPrivacyConsent != null)
+        if (_requiresPrivacyConsent != null) {
             _configModel!!.requiresPrivacyConsent = _requiresPrivacyConsent!!
+        }
 
         // "Inject" the services required by this main class
         _location = _services.getService()
@@ -126,8 +128,9 @@ internal class OneSignalImp() : IOneSignal, IServiceProvider {
     override suspend fun login(externalId: String, jwtBearerToken: String?) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
-        if (!isInitialized)
+        if (!isInitialized) {
             throw Exception("Must call 'initWithContext' before use")
+        }
 
         val sdkId = UUID.randomUUID().toString()
         val identityModel = IdentityModel()
@@ -150,7 +153,7 @@ internal class OneSignalImp() : IOneSignal, IServiceProvider {
         //         drive a change being pushed back up.
         delay(1000L) // Simulate call to drive suspension
 
-        //TODO: Remove this dummy code which mimics what we'll do -- set the models from the backend
+        // TODO: Remove this dummy code which mimics what we'll do -- set the models from the backend
         identityModel.set(IdentityModel::oneSignalId.name, UUID.randomUUID(), notify = false)
         propertiesModel.set(PropertiesModel::tags.name, mapOf("foo" to "bar"), notify = false)
     }
@@ -158,8 +161,9 @@ internal class OneSignalImp() : IOneSignal, IServiceProvider {
     override fun logout() {
         Logging.log(LogLevel.DEBUG, "logout()")
 
-        if (!isInitialized)
+        if (!isInitialized) {
             throw Exception("Must call 'initWithContext' before use")
+        }
 
         val sdkId = UUID.randomUUID().toString()
         var identityModel = IdentityModel()

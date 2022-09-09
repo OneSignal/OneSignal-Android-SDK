@@ -30,7 +30,7 @@ import java.util.Arrays
 
 internal class NotificationDisplayBuilder(
     private val _applicationService: IApplicationService,
-    private val _notificationChannelManager: INotificationChannelManager,
+    private val _notificationChannelManager: INotificationChannelManager
 
 ) : INotificationDisplayBuilder {
     private val notificationDismissedClass: Class<*> = NotificationDismissReceiver::class.java
@@ -101,7 +101,9 @@ internal class NotificationDisplayBuilder(
         //    Android 7.0 always displays the app title now in it's own section
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N ||
             fcmJson.optString("title") != ""
-        ) notificationBuilder.setContentTitle(getTitle(fcmJson))
+        ) {
+            notificationBuilder.setContentTitle(getTitle(fcmJson))
+        }
         try {
             val accentColor = getAccentColor(fcmJson)
             if (accentColor != null) notificationBuilder.color = accentColor.toInt()
@@ -119,9 +121,11 @@ internal class NotificationDisplayBuilder(
             notificationBuilder.setLargeIcon(largeIcon)
         }
         val bigPictureIcon = getBitmap(fcmJson.optString("bicon", null))
-        if (bigPictureIcon != null) notificationBuilder.setStyle(
-            NotificationCompat.BigPictureStyle().bigPicture(bigPictureIcon).setSummaryText(message)
-        )
+        if (bigPictureIcon != null) {
+            notificationBuilder.setStyle(
+                NotificationCompat.BigPictureStyle().bigPicture(bigPictureIcon).setSummaryText(message)
+            )
+        }
         if (notificationJob.shownTimeStamp != null) {
             try {
                 notificationBuilder.setWhen(notificationJob.shownTimeStamp!! * 1000L)
@@ -157,12 +161,18 @@ internal class NotificationDisplayBuilder(
             if (fcmJson.has("vib_pt")) {
                 val vibrationPattern: LongArray? = NotificationHelper.parseVibrationPattern(fcmJson)
                 if (vibrationPattern != null) notifBuilder.setVibrate(vibrationPattern)
-            } else notificationDefaults = notificationDefaults or Notification.DEFAULT_VIBRATE
+            } else {
+                notificationDefaults = notificationDefaults or Notification.DEFAULT_VIBRATE
+            }
         }
         if (isSoundEnabled(fcmJson)) {
             val soundUri: Uri? = NotificationHelper.getSoundUri(currentContext!!, fcmJson.optString("sound", null))
-            if (soundUri != null) notifBuilder.setSound(soundUri) else notificationDefaults =
-                notificationDefaults or Notification.DEFAULT_SOUND
+            if (soundUri != null) {
+                notifBuilder.setSound(soundUri)
+            } else {
+                notificationDefaults =
+                    notificationDefaults or Notification.DEFAULT_SOUND
+            }
         }
         notifBuilder.setDefaults(notificationDefaults)
     }
@@ -199,11 +209,17 @@ internal class NotificationDisplayBuilder(
 
     private fun getLargeIcon(fcmJson: JSONObject): Bitmap? {
         var bitmap = getBitmap(fcmJson.optString("licon"))
-        if (bitmap == null) bitmap =
-            getBitmapFromAssetsOrResourceName("ic_onesignal_large_icon_default")
-        return if (bitmap == null) null else resizeBitmapForLargeIconArea(
-            bitmap
-        )
+        if (bitmap == null) {
+            bitmap =
+                getBitmapFromAssetsOrResourceName("ic_onesignal_large_icon_default")
+        }
+        return if (bitmap == null) {
+            null
+        } else {
+            resizeBitmapForLargeIconArea(
+                bitmap
+            )
+        }
     }
 
     override val defaultLargeIcon: Bitmap?
@@ -275,11 +291,15 @@ internal class NotificationDisplayBuilder(
     private fun getBitmap(name: String?): Bitmap? {
         if (name == null) return null
         val trimmedName = name.trim { it <= ' ' }
-        return if (trimmedName.startsWith("http://") || trimmedName.startsWith("https://")) getBitmapFromURL(
-            trimmedName
-        ) else getBitmapFromAssetsOrResourceName(
-            name
-        )
+        return if (trimmedName.startsWith("http://") || trimmedName.startsWith("https://")) {
+            getBitmapFromURL(
+                trimmedName
+            )
+        } else {
+            getBitmapFromAssetsOrResourceName(
+                name
+            )
+        }
     }
 
     private fun getResourceIcon(iconName: String?): Int {
@@ -371,13 +391,17 @@ internal class NotificationDisplayBuilder(
                 buttonIntent.putExtra("action_button", true)
                 bundle.put(NotificationConstants.GENERATE_NOTIFICATION_BUNDLE_KEY_ACTION_ID, button.optString("id"))
                 buttonIntent.putExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA, bundle.toString())
-                if (groupSummary != null) buttonIntent.putExtra(
-                    "summary",
-                    groupSummary
-                ) else if (fcmJson.has("grp")) buttonIntent.putExtra(
-                    "grp",
-                    fcmJson.optString("grp")
-                )
+                if (groupSummary != null) {
+                    buttonIntent.putExtra(
+                        "summary",
+                        groupSummary
+                    )
+                } else if (fcmJson.has("grp")) {
+                    buttonIntent.putExtra(
+                        "grp",
+                        fcmJson.optString("grp")
+                    )
+                }
                 val buttonPIntent: PendingIntent? =
                     intentGenerator.getNewActionPendingIntent(notificationId, buttonIntent)
                 var buttonIcon = 0

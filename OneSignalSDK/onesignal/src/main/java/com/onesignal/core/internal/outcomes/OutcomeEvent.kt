@@ -26,10 +26,12 @@ internal class OutcomeEvent(
     @Throws(JSONException::class)
     fun toJSONObjectForMeasure(): JSONObject {
         val json = JSONObject()
-        if (notificationIds != null && notificationIds.length() > 0) json.put(
-            NOTIFICATION_IDS,
-            notificationIds
-        )
+        if (notificationIds != null && notificationIds.length() > 0) {
+            json.put(
+                NOTIFICATION_IDS,
+                notificationIds
+            )
+        }
         json.put(OUTCOME_ID, name)
         if (weight > 0) json.put(WEIGHT, weight)
         if (timestamp > 0) json.put(TIMESTAMP, timestamp)

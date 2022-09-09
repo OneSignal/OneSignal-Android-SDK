@@ -76,10 +76,14 @@ internal object OneSignalChromeTab {
                 val customTabsIntent = mBuilder.build()
                 customTabsIntent.intent.data = uri
                 customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) context.startActivity(
-                    customTabsIntent.intent,
-                    customTabsIntent.startAnimationBundle
-                ) else context.startActivity(customTabsIntent.intent)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                    context.startActivity(
+                        customTabsIntent.intent,
+                        customTabsIntent.startAnimationBundle
+                    )
+                } else {
+                    context.startActivity(customTabsIntent.intent)
+                }
             }
         }
 

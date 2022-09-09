@@ -83,7 +83,9 @@ internal class NotificationPermissionController(
             )
         } else if (fallbackToSettings) {
             showFallbackAlertDialog()
-        } else return false
+        } else {
+            return false
+        }
 
         // this won't return until onAccept or onReject sends the response on the channel (either
         // through the native prompt or through the fallback)
@@ -96,10 +98,11 @@ internal class NotificationPermissionController(
 
     override fun onReject(fallbackToSettings: Boolean) {
         val fallbackShown =
-            if (fallbackToSettings)
+            if (fallbackToSettings) {
                 showFallbackAlertDialog()
-            else
+            } else {
                 false
+            }
 
         if (!fallbackShown) {
             _waiter.wake(false)

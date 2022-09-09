@@ -31,13 +31,15 @@ internal class InAppMessageRedisplayStats(
         isRedisplayEnabled = true
         val displayLimit = json[DISPLAY_LIMIT]
         val displayDelay = json[DISPLAY_DELAY]
-        if (displayLimit is Int)
+        if (displayLimit is Int) {
             this.displayLimit = displayLimit
+        }
 
-        if (displayDelay is Long)
+        if (displayDelay is Long) {
             this.displayDelay = displayDelay
-        else if (displayDelay is Int)
+        } else if (displayDelay is Int) {
             this.displayDelay = displayDelay.toLong()
+        }
     }
 
     fun setDisplayStats(displayStats: InAppMessageRedisplayStats) {
