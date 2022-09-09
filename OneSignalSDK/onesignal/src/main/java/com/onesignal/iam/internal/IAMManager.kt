@@ -44,7 +44,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.util.Date
 
 internal class IAMManager(
     private val _applicationService: IApplicationService,
@@ -189,7 +188,7 @@ internal class IAMManager(
 
         _fetchIAMMutex.withLock {
             val now = _time.currentTimeMillis
-            if(_lastTimeFetchedIAMs != null && (now - _lastTimeFetchedIAMs!!) < _configModelStore.get().fetchIAMMinInterval) {
+            if (_lastTimeFetchedIAMs != null && (now - _lastTimeFetchedIAMs!!) < _configModelStore.get().fetchIAMMinInterval) {
                 return
             }
 
@@ -304,14 +303,11 @@ internal class IAMManager(
             // If there are IAMs in the queue and nothing showing, show first in the queue
             if (paused) {
                 Logging.verbose("IAMManager.attemptToShowInAppMessage: In app messaging is currently paused, in app messages will not be shown!")
-            }
-            else if (_messageDisplayQueue.isEmpty()) {
+            } else if (_messageDisplayQueue.isEmpty()) {
                 Logging.debug("IAMManager.attemptToShowInAppMessage: There are no IAMs left in the queue!")
-            }
-            else if(_state.inAppMessageIdShowing != null) {
+            } else if (_state.inAppMessageIdShowing != null) {
                 Logging.debug("IAMManager.attemptToShowInAppMessage: There is an IAM currently showing!")
-            }
-            else {
+            } else {
                 Logging.debug("IAMManager.attemptToShowInAppMessage: No IAM showing currently, showing first item in the queue!")
                 messageToDisplay = _messageDisplayQueue.removeAt(0)
 
@@ -322,7 +318,7 @@ internal class IAMManager(
         }
 
         // If there was a message dequeued, display it
-        if(messageToDisplay != null) {
+        if (messageToDisplay != null) {
             var result = _displayer.displayMessage(messageToDisplay!!)
 
             if (result == null) {

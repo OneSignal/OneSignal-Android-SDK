@@ -1,14 +1,9 @@
 package com.onesignal.iam.internal.preferences.impl
 
-import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.iam.internal.preferences.IInAppPreferencesController
-import java.text.ParseException
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 internal class InAppPreferencesController(
     private val _prefs: IPreferencesService

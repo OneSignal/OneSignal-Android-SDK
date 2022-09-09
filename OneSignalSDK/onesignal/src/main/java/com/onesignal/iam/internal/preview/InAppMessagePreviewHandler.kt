@@ -41,7 +41,7 @@ internal class InAppMessagePreviewHandler(
         if (_applicationService.isInForeground) {
             _state.inAppMessageIdShowing = previewUUID
             val result = _iamDisplayer.displayPreviewMessage(previewUUID)
-            if(!result) {
+            if (!result) {
                 _state.inAppMessageIdShowing = null
             }
         } else if (shouldDisplayNotification()) {
@@ -59,7 +59,7 @@ internal class InAppMessagePreviewHandler(
 
         _state.inAppMessageIdShowing = previewUUID
         val result = _iamDisplayer.displayPreviewMessage(previewUUID)
-        if(!result) {
+        if (!result) {
             _state.inAppMessageIdShowing = null
         }
         return false

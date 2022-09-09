@@ -1,5 +1,4 @@
 package com.onesignal.iam.internal.preferences
-import java.util.Date
 
 internal interface IInAppPreferencesController {
     var clickedMessagesId: Set<String>?

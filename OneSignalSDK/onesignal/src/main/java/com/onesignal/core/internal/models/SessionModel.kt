@@ -1,7 +1,6 @@
 package com.onesignal.core.internal.models
 
 import com.onesignal.core.internal.modeling.Model
-import java.util.Date
 
 internal class SessionModel : Model() {
     var startTime: Long

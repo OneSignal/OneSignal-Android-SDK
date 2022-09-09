@@ -16,7 +16,6 @@ import com.onesignal.iam.internal.common.InAppHelper
 import com.onesignal.iam.internal.display.IInAppDisplayer
 import com.onesignal.iam.internal.lifecycle.IInAppLifecycleService
 import com.onesignal.iam.internal.prompt.IInAppMessagePromptFactory
-import com.onesignal.iam.internal.state.InAppStateService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
