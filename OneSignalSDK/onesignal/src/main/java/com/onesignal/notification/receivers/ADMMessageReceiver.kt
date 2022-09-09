@@ -1,7 +1,7 @@
 package com.onesignal.notification.receivers
 
-import com.onesignal.notification.services.ADMMessageHandler
 import com.onesignal.core.internal.logging.Logging
+import com.onesignal.notification.services.ADMMessageHandler
 import com.onesignal.notification.services.ADMMessageHandlerJob
 
 // WARNING: Do not pass 'this' to any methods as it will cause proguard build errors

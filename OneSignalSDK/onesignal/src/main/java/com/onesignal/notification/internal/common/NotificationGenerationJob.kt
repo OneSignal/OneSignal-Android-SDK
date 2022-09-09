@@ -14,10 +14,11 @@ internal class NotificationGenerationJob {
             // copying from the previous one or generating a new one.
             if (value != null && !value!!.hasNotificationId()) {
                 val curNotification = _notification
-                if (curNotification != null && curNotification.hasNotificationId())
+                if (curNotification != null && curNotification.hasNotificationId()) {
                     value.androidNotificationId = curNotification.androidNotificationId
-                else
+                } else {
                     value.androidNotificationId = SecureRandom().nextInt()
+                }
             }
 
             _notification = value
@@ -40,7 +41,8 @@ internal class NotificationGenerationJob {
     }
 
     internal constructor(jsonPayload: JSONObject?, time: ITime) : this(
-        Notification(jsonPayload!!, time), jsonPayload
+        Notification(jsonPayload!!, time),
+        jsonPayload
     )
 
     internal constructor(notification: Notification, jsonPayload: JSONObject?) {

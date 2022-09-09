@@ -7,6 +7,7 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.iam.internal.display.IInAppDisplayer
+import com.onesignal.iam.internal.state.InAppStateService
 import com.onesignal.notification.internal.INotificationActivityOpener
 import com.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.notification.internal.common.NotificationGenerationJob
@@ -24,6 +25,7 @@ internal class InAppMessagePreviewHandler(
     private val _notificationDisplayer: INotificationDisplayer,
     private val _notificationActivityOpener: INotificationActivityOpener,
     private val _notificationLifeCycle: INotificationLifecycleService,
+    private val _state: InAppStateService,
     private val _time: ITime
 ) : IStartableService, INotificationLifecycleCallback {
 
@@ -37,7 +39,11 @@ internal class InAppMessagePreviewHandler(
 
         // If app is in focus display the IAMs preview now
         if (_applicationService.isInForeground) {
-            _iamDisplayer.displayPreviewMessage(previewUUID)
+            _state.inAppMessageIdShowing = previewUUID
+            val result = _iamDisplayer.displayPreviewMessage(previewUUID)
+            if(!result) {
+                _state.inAppMessageIdShowing = null
+            }
         } else if (shouldDisplayNotification()) {
             val generationJob = NotificationGenerationJob(jsonPayload, _time)
             _notificationDisplayer.displayNotification(generationJob)
@@ -51,8 +57,11 @@ internal class InAppMessagePreviewHandler(
 
         _notificationActivityOpener.openDestinationActivity(activity, JSONArray().put(jsonData))
 
-        _iamDisplayer.displayPreviewMessage(previewUUID)
-
+        _state.inAppMessageIdShowing = previewUUID
+        val result = _iamDisplayer.displayPreviewMessage(previewUUID)
+        if(!result) {
+            _state.inAppMessageIdShowing = null
+        }
         return false
     }
 
@@ -63,14 +72,16 @@ internal class InAppMessagePreviewHandler(
             return null
         }
 
-        if (!osCustom.has(NotificationConstants.PUSH_ADDITIONAL_DATA_KEY))
+        if (!osCustom.has(NotificationConstants.PUSH_ADDITIONAL_DATA_KEY)) {
             return null
+        }
 
         return osCustom.optJSONObject(NotificationConstants.PUSH_ADDITIONAL_DATA_KEY)?.let { additionalData ->
-            if (additionalData.has(NotificationConstants.IAM_PREVIEW_KEY))
+            if (additionalData.has(NotificationConstants.IAM_PREVIEW_KEY)) {
                 additionalData.optString(NotificationConstants.IAM_PREVIEW_KEY)
-            else
+            } else {
                 null
+            }
         }
     }
 

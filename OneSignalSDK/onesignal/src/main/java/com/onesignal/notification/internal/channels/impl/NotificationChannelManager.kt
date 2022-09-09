@@ -74,9 +74,13 @@ internal class NotificationChannelManager(
         //   a cold start sync.
         val objChannelPayload = payload.opt("chnl")
         var channelPayload: JSONObject? = null
-        channelPayload = if (objChannelPayload is String) JSONObject(
-            objChannelPayload
-        ) else objChannelPayload as JSONObject
+        channelPayload = if (objChannelPayload is String) {
+            JSONObject(
+                objChannelPayload
+            )
+        } else {
+            objChannelPayload as JSONObject
+        }
         var channel_id = channelPayload!!.optString("id", DEFAULT_CHANNEL_ID)
         // Ensure we don't try to use the system reserved id
         if (channel_id == NotificationChannel.DEFAULT_CHANNEL_ID) channel_id = DEFAULT_CHANNEL_ID
@@ -127,10 +131,12 @@ internal class NotificationChannelManager(
             // Sound will only play if Importance is set to High or Urgent
             val sound = payload.optString("sound", null)
             val uri = NotificationHelper.getSoundUri(context, sound)
-            if (uri != null) channel.setSound(
-                uri,
-                null
-            ) else if ("null" == sound || "nil" == sound) channel.setSound(null, null)
+            if (uri != null) {
+                channel.setSound(
+                    uri,
+                    null
+                )
+            } else if ("null" == sound || "nil" == sound) channel.setSound(null, null)
             // null = None for a sound.
         }
         // Setting sound to null makes it 'None' in the Settings.
@@ -210,9 +216,11 @@ internal class NotificationChannelManager(
         //                       have been deleted from the dashboard and should be removed.
         for (existingChannel in existingChannels) {
             val id = existingChannel.id
-            if (id.startsWith(CHANNEL_PREFIX) && !syncedChannelSet.contains(id)) notificationManager.deleteNotificationChannel(
-                id
-            )
+            if (id.startsWith(CHANNEL_PREFIX) && !syncedChannelSet.contains(id)) {
+                notificationManager.deleteNotificationChannel(
+                    id
+                )
+            }
         }
     }
 

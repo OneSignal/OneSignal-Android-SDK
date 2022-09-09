@@ -61,15 +61,17 @@ object OneSignalHmsEventBridge {
         var data = message.data
         try {
             val messageDataJSON = JSONObject(message.data)
-            if (message.ttl == 0)
+            if (message.ttl == 0) {
                 messageDataJSON.put(HMS_TTL_KEY, NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD)
-            else
+            } else {
                 messageDataJSON.put(HMS_TTL_KEY, message.ttl)
+            }
 
-            if (message.sentTime == 0L)
+            if (message.sentTime == 0L) {
                 messageDataJSON.put(HMS_SENT_TIME_KEY, time.currentTimeMillis)
-            else
+            } else {
                 messageDataJSON.put(HMS_SENT_TIME_KEY, message.sentTime)
+            }
 
             data = messageDataJSON.toString()
         } catch (e: JSONException) {
@@ -80,10 +82,11 @@ object OneSignalHmsEventBridge {
         // for this case OneSignal rely on NotificationOpenedActivityHMS activity
         // Last EMUI (12 to the date) is based on Android 10, so no
         // Activity trampolining restriction exist for HMS devices
-        if (data == null)
+        if (data == null) {
             return
+        }
 
         val bundle = JSONUtils.jsonStringToBundle(data) ?: return
-        bundleProcessor.processBundleFromReceiver(context, bundle,)
+        bundleProcessor.processBundleFromReceiver(context, bundle)
     }
 }

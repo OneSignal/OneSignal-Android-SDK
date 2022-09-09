@@ -9,7 +9,7 @@ internal interface IInAppPreferencesController {
     var savedIAMs: String?
 
     // This pattern matches the pattern used by the Date class's toString() method
-    var lastTimeInAppDismissed: Date?
+    var lastTimeInAppDismissed: Long?
 
     /**
      * Clean up 6 month old IAM ids in [android.content.SharedPreferences]:

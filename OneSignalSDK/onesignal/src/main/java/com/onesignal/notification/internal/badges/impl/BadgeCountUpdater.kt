@@ -32,7 +32,9 @@ internal class BadgeCountUpdater(
             if (bundle != null) {
                 val defaultStr = bundle.getString("com.onesignal.BadgeCount")
                 badgesEnabled = if ("DISABLE" == defaultStr) 0 else 1
-            } else badgesEnabled = 1
+            } else {
+                badgesEnabled = 1
+            }
         } catch (e: PackageManager.NameNotFoundException) {
             badgesEnabled = 0
             Logging.error("Error reading meta-data tag 'com.onesignal.BadgeCount'. Disabling badge setting.", e)
@@ -46,10 +48,11 @@ internal class BadgeCountUpdater(
 
     override fun update() {
         if (!areBadgesEnabled()) return
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             updateStandard()
-        else
+        } else {
             updateFallback()
+        }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)

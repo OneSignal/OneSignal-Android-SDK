@@ -53,8 +53,9 @@ internal class NotificationOpenedProcessorHMS(
     }
 
     private suspend fun handleProcessJsonOpenData(activity: Activity, jsonData: JSONObject) {
-        if (!_lifecycleService.canOpenNotification(activity, jsonData))
+        if (!_lifecycleService.canOpenNotification(activity, jsonData)) {
             return
+        }
 
         _lifecycleService.notificationOpened(activity, JSONUtils.wrapInJsonArray(jsonData), NotificationFormatHelper.getOSNotificationIdFromJson(jsonData)!!)
     }

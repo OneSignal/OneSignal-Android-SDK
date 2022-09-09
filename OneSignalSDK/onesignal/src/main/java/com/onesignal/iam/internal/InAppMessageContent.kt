@@ -8,6 +8,7 @@ internal open class InAppMessageContent constructor(jsonObject: JSONObject) {
     var useHeightMargin: Boolean = true
     var useWidthMargin: Boolean = true
     var isFullBleed: Boolean = false
+
     // The following properties are populated from Javascript events
     var displayLocation: WebViewManager.Position? = null
     var displayDuration: Double? = null

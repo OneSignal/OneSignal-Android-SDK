@@ -3,60 +3,88 @@ package com.onesignal.iam.internal.triggers.impl
 import com.onesignal.core.internal.common.events.EventProducer
 import com.onesignal.core.internal.common.events.IEventNotifier
 import com.onesignal.core.internal.logging.Logging
+import com.onesignal.core.internal.session.ISessionService
+import com.onesignal.core.internal.time.ITime
 import com.onesignal.iam.internal.Trigger
 import com.onesignal.iam.internal.state.InAppStateService
 import com.onesignal.iam.internal.triggers.ITriggerHandler
-import java.util.Date
 import java.util.TimerTask
 import kotlin.math.abs
 
+/**
+ * Controller for dynamic triggers (i.e. time-based).
+ */
 internal class DynamicTriggerController(
-    private val _state: InAppStateService
+    private val _state: InAppStateService,
+    private val _session: ISessionService,
+    private val _time: ITime
+
 ) : IEventNotifier<ITriggerHandler> {
 
     val events = EventProducer<ITriggerHandler>()
     private val scheduledMessages: MutableList<String> = mutableListOf()
 
+    /**
+     * Determine if the provided dynamic trigger should fire.  If it should fire, the
+     * [ITriggerHandler.onTriggerCompleted] will be called just prior to returning. If
+     * it shouldn't fire a timer is scheduled and [ITriggerHandler.onTriggerConditionChanged]
+     * will be called once the timer has expired.
+     *
+     * @param trigger The trigger to evaluate.
+     *
+     * @return true if the trigger currently evaluates to true, false otherwise.
+     */
     fun dynamicTriggerShouldFire(trigger: Trigger): Boolean {
-        if (trigger.value == null)
+        if (trigger.value == null) {
             return false
+        }
 
         synchronized(scheduledMessages) {
-
             // All time-based trigger values should be numbers (either timestamps or offsets)
-            if (trigger.value !is Number) return false
+            if (trigger.value !is Number) {
+                return false
+            }
+
             var currentTimeInterval: Long = 0
             when (trigger.kind) {
                 Trigger.OSTriggerKind.SESSION_TIME ->
-                    currentTimeInterval =
-                        Date().time - sessionLaunchTime.time
+                    currentTimeInterval = _time.currentTimeMillis - _session.startTime
                 Trigger.OSTriggerKind.TIME_SINCE_LAST_IN_APP -> {
-                    if (_state.inAppMessageShowing)
+                    if (_state.inAppMessageIdShowing != null) {
                         return false
+                    }
                     val lastTimeAppDismissed = _state.lastTimeInAppDismissed
                     currentTimeInterval =
-                        if (lastTimeAppDismissed == null)
+                        if (lastTimeAppDismissed == null) {
                             DEFAULT_LAST_IN_APP_TIME_AGO
-                        else Date().time - lastTimeAppDismissed.time
+                        } else {
+                            _time.currentTimeMillis - lastTimeAppDismissed
+                        }
                 }
             }
+
             val triggerId = trigger.triggerId
             val requiredTimeInterval = ((trigger.value as Number?)!!.toDouble() * 1000).toLong()
+
             if (evaluateTimeIntervalWithOperator(
                     requiredTimeInterval.toDouble(),
                     currentTimeInterval.toDouble(),
                     trigger.operatorType
                 )
             ) {
-                events.fire { it.onTriggerCompleted(triggerId!!) }
+                events.fire { it.onTriggerCompleted(triggerId) }
                 return true
             }
+
             val offset = requiredTimeInterval - currentTimeInterval
-            if (offset <= 0L) return false
+            if (offset <= 0L) {
+                return false
+            }
 
             // Prevents re-scheduling timers for messages that we're already waiting on
-            if (scheduledMessages.contains(triggerId))
+            if (scheduledMessages.contains(triggerId)) {
                 return false
+            }
 
             DynamicTriggerTimer.scheduleTrigger(
                 object : TimerTask() {
@@ -65,8 +93,10 @@ internal class DynamicTriggerController(
                         events.fire { it.onTriggerConditionChanged() }
                     }
                 },
-                triggerId, offset
+                triggerId,
+                offset
             )
+
             scheduledMessages.add(triggerId)
         }
         return false
@@ -113,10 +143,6 @@ internal class DynamicTriggerController(
 
         // Assume last time an In-App Message was displayed a very very long time ago.
         private const val DEFAULT_LAST_IN_APP_TIME_AGO: Long = 999999
-        private var sessionLaunchTime = Date()
-        fun resetSessionLaunchTime() {
-            sessionLaunchTime = Date()
-        }
     }
 
     override fun subscribe(handler: ITriggerHandler) = events.subscribe(handler)

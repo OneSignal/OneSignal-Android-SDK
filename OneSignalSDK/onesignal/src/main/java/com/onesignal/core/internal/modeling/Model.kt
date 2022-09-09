@@ -21,7 +21,7 @@ internal open class Model(
 
         _data[name] = newValue
 
-        if(notify) {
+        if (notify) {
             val changeArgs = ModelChangedArgs(this, name, oldValue, newValue)
             _changeNotifier.fire { it.onChanged(changeArgs) }
         }
@@ -32,9 +32,9 @@ internal open class Model(
     }
 
     protected fun <T> get(name: String, create: () -> T): T {
-        return if (_data.containsKey(name))
+        return if (_data.containsKey(name)) {
             _data[name] as T
-        else {
+        } else {
             val defaultValue = create()
             _data[name] = defaultValue as Any?
             defaultValue

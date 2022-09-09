@@ -30,9 +30,13 @@ internal object RootToolsInternalMethods {
     val isRooted: Boolean
         get() {
             val places = arrayOf(
-                "/sbin/", "/system/bin/", "/system/xbin/",
-                "/data/local/xbin/", "/data/local/bin/",
-                "/system/sd/xbin/", "/system/bin/failsafe/",
+                "/sbin/",
+                "/system/bin/",
+                "/system/xbin/",
+                "/data/local/xbin/",
+                "/data/local/bin/",
+                "/system/sd/xbin/",
+                "/system/bin/failsafe/",
                 "/data/local/"
             )
             try {

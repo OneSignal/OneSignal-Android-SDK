@@ -31,8 +31,9 @@ internal open class EventProducer<THandler> : IEventProducer<THandler> {
      */
     fun conditionalFire(callback: (THandler) -> Boolean): Boolean {
         for (s in _subscribers) {
-            if (!callback(s))
+            if (!callback(s)) {
                 return true
+            }
         }
 
         return true

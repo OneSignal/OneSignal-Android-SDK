@@ -99,7 +99,9 @@ internal class NotificationDataController(
                 retColumn,
                 whereStr,
                 whereArgs,
-                null, null, null
+                null,
+                null,
+                null
             ).use {
                 while (it.moveToNext()) {
                     val notificationId =
@@ -158,7 +160,6 @@ internal class NotificationDataController(
         var result = false
 
         withContext(Dispatchers.IO) {
-
             val retColumn =
                 arrayOf<String>(OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID)
             val whereArgs = arrayOf(id!!)
@@ -239,31 +240,36 @@ internal class NotificationDataController(
 
                 values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID, id)
 
-                if (groupId != null)
+                if (groupId != null) {
                     values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID, groupId)
+                }
 
-                if (collapseKey != null)
+                if (collapseKey != null) {
                     values.put(
                         OneSignalDbContract.NotificationTable.COLUMN_NAME_COLLAPSE_ID,
                         collapseKey
                     )
+                }
 
                 values.put(
                     OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED,
                     if (isOpened) 1 else 0
                 )
 
-                if (!isOpened)
+                if (!isOpened) {
                     values.put(
                         OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
                         androidId
                     )
+                }
 
-                if (title != null)
+                if (title != null) {
                     values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_TITLE, title)
+                }
 
-                if (body != null)
+                if (body != null) {
                     values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_MESSAGE, body)
+                }
 
                 values.put(
                     OneSignalDbContract.NotificationTable.COLUMN_NAME_EXPIRE_TIME,
@@ -293,10 +299,10 @@ internal class NotificationDataController(
             var whereArgs: Array<String>? = null
             if (summaryGroup != null) {
                 val isGroupless = summaryGroup == NotificationHelper.grouplessSummaryKey
-                if (isGroupless)
+                if (isGroupless) {
                     whereStr =
                         OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID + " IS NULL"
-                else {
+                } else {
                     whereStr = OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID + " = ?"
                     whereArgs = arrayOf(summaryGroup)
                 }
@@ -307,10 +313,14 @@ internal class NotificationDataController(
                 * will look for the most recent notification instead of all grouped notifications */
                         val mostRecentId = getAndroidIdForGroup(summaryGroup, false).toString()
                         whereStr += " AND " + OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = ?"
-                        whereArgs = if (isGroupless) arrayOf(mostRecentId) else arrayOf(
-                            summaryGroup,
-                            mostRecentId
-                        )
+                        whereArgs = if (isGroupless) {
+                            arrayOf(mostRecentId)
+                        } else {
+                            arrayOf(
+                                summaryGroup,
+                                mostRecentId
+                            )
+                        }
                     }
                 }
             } else {
@@ -319,10 +329,11 @@ internal class NotificationDataController(
             }
 
             val values = ContentValues()
-            if (dismissed)
+            if (dismissed) {
                 values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED, 1)
-            else
+            } else {
                 values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED, 1)
+            }
 
             _databaseProvider.get().update(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
@@ -359,7 +370,6 @@ internal class NotificationDataController(
     }
 
     override suspend fun getAndroidIdFromCollapseKey(collapseKey: String): Int? = coroutineScope {
-
         var androidId: Int? = null
 
         withContext(Dispatchers.IO) {
@@ -401,8 +411,9 @@ internal class NotificationDataController(
                     var notificationsToClear =
                         it.count - maxNumberOfNotificationsInt + notificationsToMakeRoomFor
                     // We have enough room in the notification shade, no need to clear any notifications
-                    if (notificationsToClear < 1)
+                    if (notificationsToClear < 1) {
                         return@use
+                    }
 
                     while (it.moveToNext()) {
                         val existingId = it.getInt(it.getColumnIndex(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID))
@@ -430,7 +441,9 @@ internal class NotificationDataController(
                     OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
                     OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0",
                 whereArgs,
-                null, null, BaseColumns._ID + " DESC" // sort order, new to old);
+                null,
+                null,
+                BaseColumns._ID + " DESC" // sort order, new to old);
             ).use {
                 if (it.count > 1) {
                     it.moveToFirst()
@@ -481,10 +494,11 @@ internal class NotificationDataController(
             OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
             OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND "
 
-        whereStr += if (getSummaryNotification)
+        whereStr += if (getSummaryNotification) {
             OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 1"
-        else
+        } else {
             OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0"
+        }
 
         val whereArgs = if (isGroupless) null else arrayOf(group)
 

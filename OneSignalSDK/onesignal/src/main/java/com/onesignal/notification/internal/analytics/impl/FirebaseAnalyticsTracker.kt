@@ -50,8 +50,9 @@ internal class FirebaseAnalyticsTracker(
     private var mFirebaseAnalyticsInstance: Any? = null
 
     override fun trackInfluenceOpenEvent() {
-        if (!isEnabled() || lastReceivedTime == null || lastReceivedNotificationId == null)
+        if (!isEnabled() || lastReceivedTime == null || lastReceivedNotificationId == null) {
             return
+        }
 
         // Attribute if app was opened in 2 minutes or less after displaying the notification
         val now = _time.currentTimeMillis
@@ -78,11 +79,13 @@ internal class FirebaseAnalyticsTracker(
     }
 
     override fun trackOpenedEvent(notificationId: String, campaign: String) {
-        if (!isEnabled())
+        if (!isEnabled()) {
             return
+        }
 
-        if (lastOpenedTime == null)
+        if (lastOpenedTime == null) {
             lastOpenedTime = AtomicLong()
+        }
 
         lastOpenedTime!!.set(_time.currentTimeMillis)
         try {
@@ -103,8 +106,9 @@ internal class FirebaseAnalyticsTracker(
     }
 
     override fun trackReceivedEvent(notificationId: String, campaign: String) {
-        if (!isEnabled())
+        if (!isEnabled()) {
             return
+        }
 
         try {
             // get the source, medium, campaign params from the openResult

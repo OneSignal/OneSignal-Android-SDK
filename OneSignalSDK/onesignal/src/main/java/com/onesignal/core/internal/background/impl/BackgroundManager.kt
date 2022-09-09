@@ -64,7 +64,7 @@ import java.lang.NullPointerException
 internal class BackgroundManager(
     private val _applicationService: IApplicationService,
     private val _time: ITime,
-    private val _backgroundServices: List<(IBackgroundService)>,
+    private val _backgroundServices: List<(IBackgroundService)>
 ) : IApplicationLifecycleHandler, IBackgroundManager, IStartableService {
 
     override var needsJobReschedule = false
@@ -72,6 +72,7 @@ internal class BackgroundManager(
     private val _lock = Any()
     private var _nextScheduledSyncTimeMs = 0L
     private var backgroundSyncJob: Job? = null
+
     @SuppressLint("NewApi") // can suppress because we are only retrieving the class, not necessarily using it
     private val syncServiceJobClass: Class<*> = SyncJobService::class.java
     private val syncServicePendingIntentClass: Class<*> = SyncService::class.java
@@ -152,10 +153,11 @@ internal class BackgroundManager(
 
     private fun scheduleBackgroundSyncTask(delayMs: Long) {
         synchronized(_lock) {
-            if (useJob())
+            if (useJob()) {
                 scheduleSyncServiceAsJob(delayMs)
-            else
+            } else {
                 scheduleSyncServiceAsAlarm(delayMs)
+            }
         }
     }
 

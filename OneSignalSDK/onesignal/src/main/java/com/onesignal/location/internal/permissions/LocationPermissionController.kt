@@ -53,7 +53,7 @@ internal class LocationPermissionController(
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)
     }
 
-    suspend fun prompt(fallbackToSettings: Boolean, androidPermissionString: String,): Boolean {
+    suspend fun prompt(fallbackToSettings: Boolean, androidPermissionString: String): Boolean {
         _currPermission = androidPermissionString
         _requestPermission.startPrompt(
             fallbackToSettings,
@@ -73,10 +73,11 @@ internal class LocationPermissionController(
 
     override fun onReject(fallbackToSettings: Boolean) {
         val fallbackShown =
-            if (fallbackToSettings)
+            if (fallbackToSettings) {
                 showFallbackAlertDialog()
-            else
+            } else {
                 false
+            }
 
         if (!fallbackShown) {
             _waiter.wake(false)

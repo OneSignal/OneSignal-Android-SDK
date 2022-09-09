@@ -34,9 +34,9 @@ import com.onesignal.notification.internal.restoration.INotificationRestoreWorkM
 
 class BootUpReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-
-        if (!OneSignal.isInitialized)
+        if (!OneSignal.isInitialized) {
             OneSignal.initWithContext(context)
+        }
 
         var restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
 

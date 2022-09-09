@@ -123,9 +123,9 @@ internal abstract class PushRegistratorAbstractGoogle(
             if (retryingKnownToWorkSometimes) {
                 // Wrapping with new Exception so the current line is included in the stack trace.
                 val exception = Exception(e)
-                if (currentRetry >= REGISTRATION_RETRY_COUNT - 1)
+                if (currentRetry >= REGISTRATION_RETRY_COUNT - 1) {
                     Logging.error("Retry count of $REGISTRATION_RETRY_COUNT exceed! Could not get a $providerName Token.", exception)
-                else {
+                } else {
                     Logging.info("'Google Play services' returned $exceptionMessage error. Current retry count: $currentRetry", exception)
 
                     if (currentRetry === 2) {

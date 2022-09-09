@@ -20,8 +20,9 @@ internal class ParamsBackendService(
         Logging.log(LogLevel.DEBUG, "ParamsBackendService(appId: $appId, subscriptionId: $subscriptionId)")
 
         var paramsUrl = "apps/$appId/android_params.js"
-        if (subscriptionId != null)
+        if (subscriptionId != null) {
             paramsUrl += "?player_id=$subscriptionId"
+        }
 
         // retrieve the params in a do-while loop.  If the first call fails we want to retry
         // until we get it right.  The only time we quit on failure is if there's an exception,
@@ -31,15 +32,16 @@ internal class ParamsBackendService(
             Logging.debug("Starting request to get Android parameters.")
             val response = _http.get(paramsUrl, CacheKeys.REMOTE_PARAMS)
 
-            if (response.isSuccess)
+            if (response.isSuccess) {
                 processJson(appId, response.payload!!)
-            else if (response.statusCode == HttpURLConnection.HTTP_FORBIDDEN) {
+            } else if (response.statusCode == HttpURLConnection.HTTP_FORBIDDEN) {
                 Logging.fatal("403 error getting OneSignal params, omitting further retries!")
                 return
             } else {
                 var sleepTime = MIN_WAIT_BETWEEN_RETRIES + androidParamsRetries * INCREASE_BETWEEN_RETRIES
-                if (sleepTime > MAX_WAIT_BETWEEN_RETRIES)
+                if (sleepTime > MAX_WAIT_BETWEEN_RETRIES) {
                     sleepTime = MAX_WAIT_BETWEEN_RETRIES
+                }
 
                 Logging.info("Failed to get Android parameters, trying again in " + sleepTime / 1000 + " seconds.")
 
@@ -78,35 +80,52 @@ internal class ParamsBackendService(
         // Null assignation to avoid remote param override user configuration until backend is done
         // TODO remove the has check when backend has new remote params and sets inside OneSignal.java are removed
         _writeableParams.disableGMSMissingPrompt =
-            if (!responseJson.has(DISABLE_GMS_MISSING_PROMPT)) null else responseJson.optBoolean(
-                DISABLE_GMS_MISSING_PROMPT,
-                false
-            )
+            if (!responseJson.has(DISABLE_GMS_MISSING_PROMPT)) {
+                null
+            } else {
+                responseJson.optBoolean(
+                    DISABLE_GMS_MISSING_PROMPT,
+                    false
+                )
+            }
         _writeableParams.unsubscribeWhenNotificationsDisabled =
-            if (!responseJson.has(UNSUBSCRIBE_ON_NOTIFICATION_DISABLE)) null else responseJson.optBoolean(
-                UNSUBSCRIBE_ON_NOTIFICATION_DISABLE,
-                true
-            )
+            if (!responseJson.has(UNSUBSCRIBE_ON_NOTIFICATION_DISABLE)) {
+                null
+            } else {
+                responseJson.optBoolean(
+                    UNSUBSCRIBE_ON_NOTIFICATION_DISABLE,
+                    true
+                )
+            }
         _writeableParams.locationShared =
-            if (!responseJson.has(LOCATION_SHARED)) null else responseJson.optBoolean(
-                LOCATION_SHARED,
-                true
-            )
+            if (!responseJson.has(LOCATION_SHARED)) {
+                null
+            } else {
+                responseJson.optBoolean(
+                    LOCATION_SHARED,
+                    true
+                )
+            }
         _writeableParams.requiresUserPrivacyConsent =
-            if (!responseJson.has(REQUIRES_USER_PRIVACY_CONSENT)) null else responseJson.optBoolean(
-                REQUIRES_USER_PRIVACY_CONSENT,
-                false
-            )
+            if (!responseJson.has(REQUIRES_USER_PRIVACY_CONSENT)) {
+                null
+            } else {
+                responseJson.optBoolean(
+                    REQUIRES_USER_PRIVACY_CONSENT,
+                    false
+                )
+            }
 
         // Process outcomes params
-        if (responseJson.has(OUTCOME_PARAM))
+        if (responseJson.has(OUTCOME_PARAM)) {
             _writeableParams.influenceParams = processOutcomeJson(
                 responseJson.optJSONObject(
                     OUTCOME_PARAM
                 )
             )
-        else
+        } else {
             _writeableParams.influenceParams = IParamsService.InfluenceParams()
+        }
 
         if (responseJson.has(FCM_PARENT_PARAM)) {
             var projectId: String?
@@ -138,8 +157,9 @@ internal class ParamsBackendService(
         var isUnattributedEnabled: Boolean = false
         var outcomesV2ServiceEnabled: Boolean = false
 
-        if (outcomeJson.has(OUTCOMES_V2_SERVICE_PARAM))
+        if (outcomeJson.has(OUTCOMES_V2_SERVICE_PARAM)) {
             outcomesV2ServiceEnabled = outcomeJson.optBoolean(OUTCOMES_V2_SERVICE_PARAM)
+        }
         if (outcomeJson.has(DIRECT_PARAM)) {
             val direct = outcomeJson.optJSONObject(DIRECT_PARAM)
             isDirectEnabled = direct.optBoolean(ENABLED_PARAM)
@@ -191,7 +211,7 @@ internal class ParamsBackendService(
             isDirectEnabled,
             isIndirectEnabled,
             isUnattributedEnabled,
-            outcomesV2ServiceEnabled,
+            outcomesV2ServiceEnabled
         )
     }
 

@@ -4,7 +4,7 @@ import com.onesignal.core.internal.modeling.Model
 import java.util.Date
 
 internal class SessionModel : Model() {
-    var startTime: Date
+    var startTime: Long
         get() = get(::startTime.name)
         set(value) { set(::startTime.name, value) }
 

@@ -9,11 +9,13 @@ import com.onesignal.core.internal.common.JSONUtils
 import com.onesignal.core.internal.common.events.CallbackProducer
 import com.onesignal.core.internal.common.events.ICallbackProducer
 import com.onesignal.core.internal.common.suspendifyOnThread
+import com.onesignal.core.internal.influence.Influence
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.core.internal.models.ConfigModel
 import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.outcomes.OutcomeEventsController
+import com.onesignal.core.internal.session.ISessionLifecycleHandler
 import com.onesignal.core.internal.session.ISessionService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
@@ -39,6 +41,8 @@ import com.onesignal.iam.internal.state.InAppStateService
 import com.onesignal.iam.internal.triggers.ITriggerController
 import com.onesignal.iam.internal.triggers.ITriggerHandler
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.Date
 
@@ -62,40 +66,45 @@ internal class IAMManager(
     ISubscriptionChangedHandler,
     ISingletonModelStoreChangeHandler<ConfigModel>,
     IInAppLifecycleEventHandler,
-    ITriggerHandler {
+    ITriggerHandler,
+    ISessionLifecycleHandler {
 
     private val _lifecycleCallback: ICallbackProducer<IInAppMessageLifecycleHandler> = CallbackProducer()
     private val _messageClickCallback: ICallbackProducer<IInAppMessageClickHandler> = CallbackProducer()
 
     // IAMs loaded remotely from on_session
     //   If on_session won't be called this will be loaded from cache
-    private var messages: List<InAppMessage> = listOf()
+    private var _messages: List<InAppMessage> = listOf()
 
     // IAMs that have been dismissed by the user
     //   This mean they have already displayed to the user
-    private val dismissedMessages: MutableSet<String> = mutableSetOf()
+    private val _dismissedMessages: MutableSet<String> = mutableSetOf()
 
     // IAMs that have been displayed to the user
     //   This means their impression has been successfully posted to our backend and should not be counted again
-    private val impressionedMessages: MutableSet<String> = mutableSetOf()
+    private val _impressionedMessages: MutableSet<String> = mutableSetOf()
 
     //   This means their impression has been successfully posted to our backend and should not be counted again
-    private val viewedPageIds: MutableSet<String> = mutableSetOf()
+    private val _viewedPageIds: MutableSet<String> = mutableSetOf()
 
     // IAM clicks that have been successfully posted to our backend and should not be counted again
-    private val clickedClickIds: MutableSet<String> = mutableSetOf()
+    private val _clickedClickIds: MutableSet<String> = mutableSetOf()
 
     // Ordered IAMs queued to display, includes the message currently displaying, if any.
-    private val messageDisplayQueue: MutableList<InAppMessage> = mutableListOf()
+    private val _messageDisplayQueue: MutableList<InAppMessage> = mutableListOf()
+    private val _messageDisplayQueueMutex = Mutex()
 
     // IAMs displayed with last displayed time and quantity of displays data
     // This is retrieved from a DB Table that take care of each object to be unique
-    private val redisplayedInAppMessages: MutableList<InAppMessage> = mutableListOf()
+    private val _redisplayedInAppMessages: MutableList<InAppMessage> = mutableListOf()
+
+    private val _fetchIAMMutex = Mutex()
+    private var _lastTimeFetchedIAMs: Long? = null
 
     override var paused: Boolean
         get() = _state.paused
         set(value) {
-            Logging.log(LogLevel.DEBUG, "setPaused(value: $value)")
+            Logging.log(LogLevel.DEBUG, "IAMManager.setPaused(value: $value)")
             _state.paused = value
         }
 
@@ -109,13 +118,14 @@ internal class IAMManager(
         _configModelStore.subscribe(this)
         _lifecycle.subscribe(this)
         _triggerController.subscribe(this)
+        _sessionService.subscribe(this)
 
         suspendifyOnThread {
             // get saved IAMs from database
-            redisplayedInAppMessages.addAll(_repository.listInAppMessages())
+            _redisplayedInAppMessages.addAll(_repository.listInAppMessages())
 
             // reset all messages for redisplay to indicate not shown
-            for (redisplayInAppMessage in redisplayedInAppMessages) {
+            for (redisplayInAppMessage in _redisplayedInAppMessages) {
                 redisplayInAppMessage.isDisplayedInSession = false
             }
 
@@ -125,18 +135,19 @@ internal class IAMManager(
     }
 
     override fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler?) {
-        Logging.log(LogLevel.DEBUG, "setInAppMessageLifecycleHandler(handler: $handler)")
+        Logging.log(LogLevel.DEBUG, "IAMManager.setInAppMessageLifecycleHandler(handler: $handler)")
         _lifecycleCallback.set(handler)
     }
 
     override fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler?) {
-        Logging.log(LogLevel.DEBUG, "setInAppMessageClickHandler(handler: $handler)")
+        Logging.log(LogLevel.DEBUG, "IAMManager.setInAppMessageClickHandler(handler: $handler)")
         _messageClickCallback.set(handler)
     }
 
     override fun onModelUpdated(model: ConfigModel, property: String, oldValue: Any?, newValue: Any?) {
-        if (property != ConfigModel::appId.name)
+        if (property != ConfigModel::appId.name) {
             return
+        }
 
         suspendifyOnThread {
             fetchMessages()
@@ -144,8 +155,9 @@ internal class IAMManager(
     }
 
     override fun onSubscriptionAdded(subscription: ISubscription) {
-        if (subscription !is PushSubscription)
+        if (subscription !is PushSubscription) {
             return
+        }
 
         suspendifyOnThread {
             fetchMessages()
@@ -154,24 +166,40 @@ internal class IAMManager(
 
     override fun onSubscriptionRemoved(subscription: ISubscription) { }
 
-    // called when a new push subscription is added, or the app id is updated
-    // TODO: What about on session start?
+    override fun sessionStarted() {
+        for (redisplayInAppMessage in _redisplayedInAppMessages) {
+            redisplayInAppMessage.isDisplayedInSession = false
+        }
+
+        suspendifyOnThread {
+            fetchMessages()
+        }
+    }
+
+    override fun sessionEnding(influences: List<Influence>) { }
+
+    // called when a new push subscription is added, or the app id is updated, or a new session starts
     private suspend fun fetchMessages() {
         val appId = _configModelStore.get().appId
         val subscriptionId = _subscriptionManager.subscriptions.push?.id
 
-        if (subscriptionId == null || appId == null)
+        if (subscriptionId == null || appId == null) {
             return
+        }
+
+        _fetchIAMMutex.withLock {
+            val now = _time.currentTimeMillis
+            if(_lastTimeFetchedIAMs != null && (now - _lastTimeFetchedIAMs!!) < _configModelStore.get().fetchIAMMinInterval) {
+                return
+            }
+
+            _lastTimeFetchedIAMs = now
+        }
 
         val newMessages = _backend.listInAppMessages(appId, subscriptionId.toString())
 
         if (newMessages != null) {
-            // TODO: I feel like this might be a "new session" thing, not a "fetch IAMs" thing?
-            for (redisplayInAppMessage in messages) {
-                redisplayInAppMessage.isDisplayedInSession = false
-            }
-
-            this.messages = newMessages
+            this._messages = newMessages
             evaluateInAppMessages()
         }
     }
@@ -180,13 +208,13 @@ internal class IAMManager(
      * Iterate through the messages and determine if they should be shown to the user.
      */
     private suspend fun evaluateInAppMessages() {
-        Logging.debug("Starting evaluateInAppMessages")
+        Logging.debug("IAMManager.evaluateInAppMessages()")
 
-        for (message in messages) {
+        for (message in _messages) {
             // Make trigger evaluation first, dynamic trigger might change "trigger changed" flag value for redisplay messages
             if (_triggerController.evaluateMessageTriggers(message)) {
                 setDataForRedisplay(message)
-                if (!dismissedMessages.contains(message.messageId) && !message.isFinished) {
+                if (!_dismissedMessages.contains(message.messageId) && !message.isFinished) {
                     queueMessageForDisplay(message)
                 }
             }
@@ -208,28 +236,28 @@ internal class IAMManager(
      * For click counting, every message has it click id array
      */
     private fun setDataForRedisplay(message: InAppMessage) {
-        val messageDismissed: Boolean = dismissedMessages.contains(message.messageId)
-        val index: Int = redisplayedInAppMessages.indexOf(message)
+        val messageDismissed: Boolean = _dismissedMessages.contains(message.messageId)
+        val index: Int = _redisplayedInAppMessages.indexOf(message)
         if (messageDismissed && index != -1) {
-            val savedIAM: InAppMessage = redisplayedInAppMessages.get(index)
+            val savedIAM: InAppMessage = _redisplayedInAppMessages.get(index)
             message.redisplayStats.setDisplayStats(savedIAM.redisplayStats)
             message.isDisplayedInSession = savedIAM.isDisplayedInSession
 
             val triggerHasChanged: Boolean = hasMessageTriggerChanged(message)
-            Logging.debug("setDataForRedisplay: $message triggerHasChanged: $triggerHasChanged")
+            Logging.debug("IAMManager.setDataForRedisplay: $message triggerHasChanged: $triggerHasChanged")
 
             // Check if conditions are correct for redisplay
             if (triggerHasChanged &&
                 message.redisplayStats.isDelayTimeSatisfied &&
                 message.redisplayStats.shouldDisplayAgain()
             ) {
-                Logging.debug("setDataForRedisplay message available for redisplay: " + message.messageId)
-                dismissedMessages.remove(message.messageId)
-                impressionedMessages.remove(message.messageId)
+                Logging.debug("IAMManager.setDataForRedisplay message available for redisplay: " + message.messageId)
+                _dismissedMessages.remove(message.messageId)
+                _impressionedMessages.remove(message.messageId)
                 // Pages from different IAMs should not impact each other so we can clear the entire
                 // list when an IAM is dismissed or we are re-displaying the same one
-                viewedPageIds.clear()
-                _prefs.viewPageImpressionedIds = viewedPageIds
+                _viewedPageIds.clear()
+                _prefs.viewPageImpressionedIds = _viewedPageIds
                 message.clearClickIds()
             }
         }
@@ -251,46 +279,62 @@ internal class IAMManager(
      * Display message now or add it to the queue to be displayed.
      */
     private suspend fun queueMessageForDisplay(message: InAppMessage) {
-        // Make sure no message is ever added to the queue more than once
-        if (!messageDisplayQueue.contains(message)) {
-            messageDisplayQueue.add(message)
-            Logging.debug("In app message with id: " + message.messageId + ", added to the queue")
+        _messageDisplayQueueMutex.withLock {
+            // Make sure no message is ever added to the queue more than once
+            if (!_messageDisplayQueue.contains(message) && _state.inAppMessageIdShowing != message.messageId) {
+                _messageDisplayQueue.add(message)
+                Logging.debug("IAMManager.queueMessageForDisplay: In app message with id: " + message.messageId + ", added to the queue")
+            }
         }
+
         attemptToShowInAppMessage()
     }
 
     private suspend fun attemptToShowInAppMessage() {
         // We need to wait for system conditions to be the correct ones
         if (!_applicationService.waitUntilSystemConditionsAvailable()) {
-            Logging.warn("In app message not showing due to system condition not correct")
+            Logging.warn("IAMManager.attemptToShowInAppMessage: In app message not showing due to system condition not correct")
             return
         }
 
-        Logging.debug("displayFirstIAMOnQueue: $messageDisplayQueue")
-        // If there are IAMs in the queue and nothing showing, show first in the queue
-        if (messageDisplayQueue.size > 0 && !_state.inAppMessageShowing) {
-            Logging.debug("No IAM showing currently, showing first item in the queue!")
-            displayMessage(messageDisplayQueue.get(0))
-            return
+        var messageToDisplay: InAppMessage? = null
+
+        _messageDisplayQueueMutex.withLock {
+            Logging.debug("IAMManager.attemptToShowInAppMessage: $_messageDisplayQueue")
+            // If there are IAMs in the queue and nothing showing, show first in the queue
+            if (paused) {
+                Logging.verbose("IAMManager.attemptToShowInAppMessage: In app messaging is currently paused, in app messages will not be shown!")
+            }
+            else if (_messageDisplayQueue.isEmpty()) {
+                Logging.debug("IAMManager.attemptToShowInAppMessage: There are no IAMs left in the queue!")
+            }
+            else if(_state.inAppMessageIdShowing != null) {
+                Logging.debug("IAMManager.attemptToShowInAppMessage: There is an IAM currently showing!")
+            }
+            else {
+                Logging.debug("IAMManager.attemptToShowInAppMessage: No IAM showing currently, showing first item in the queue!")
+                messageToDisplay = _messageDisplayQueue.removeAt(0)
+
+                // set the state while the mutex is held so the next one coming in will pick up
+                // the correct state.
+                _state.inAppMessageIdShowing = messageToDisplay!!.messageId
+            }
         }
-        Logging.debug("In app message is currently showing or there are no IAMs left in the queue! isInAppMessageShowing: ${_state.inAppMessageShowing}")
-    }
 
-    private suspend fun displayMessage(message: InAppMessage) {
-        if (_state.paused) {
-            Logging.verbose("In app messaging is currently paused, in app messages will not be shown!")
-            return
-        }
+        // If there was a message dequeued, display it
+        if(messageToDisplay != null) {
+            var result = _displayer.displayMessage(messageToDisplay!!)
 
-        var result = _displayer.displayMessage(message)
-
-        if (result == null) {
-            // Retry displaying the same IAM
-            // Using the queueMessageForDisplay method follows safety checks to prevent issues
-            // like having 2 IAMs showing at once or duplicate IAMs in the queue
-            queueMessageForDisplay(message)
-        } else if (result == false) {
-            messageWasDismissed(message, true)
+            if (result == null) {
+                _state.inAppMessageIdShowing = null
+                // Retry displaying the same IAM
+                // Using the queueMessageForDisplay method follows safety checks to prevent issues
+                // like having 2 IAMs showing at once or duplicate IAMs in the queue
+                queueMessageForDisplay(messageToDisplay!!)
+            } else if (result == false) {
+                _state.inAppMessageIdShowing = null
+                messageWasDismissed(messageToDisplay!!, true)
+            }
         }
     }
 
@@ -299,54 +343,44 @@ internal class IAMManager(
      */
     private suspend fun messageWasDismissed(message: InAppMessage, failed: Boolean = false) {
         if (!message.isPreview) {
-            dismissedMessages.add(message.messageId)
+            _dismissedMessages.add(message.messageId)
 
             // If failed we will retry on next session
             if (!failed) {
-                _prefs.dismissedMessagesId = dismissedMessages
+                _prefs.dismissedMessagesId = _dismissedMessages
 
                 // Don't keep track of last displayed time for a preview
-                _state.lastTimeInAppDismissed = Date()
+                _state.lastTimeInAppDismissed = _time.currentTimeMillis
                 // Only increase IAM display quantity if IAM was truly displayed
                 persistInAppMessage(message)
             }
 
-            Logging.debug("OSInAppMessageController messageWasDismissed dismissedMessages: $dismissedMessages")
+            Logging.debug("IAMManager.messageWasDismissed: dismissedMessages: $_dismissedMessages")
         }
 
         // Remove DIRECT influence due to ClickHandler of ClickAction outcomes
         _sessionService.directInfluenceFromIAMClickFinished()
 
         if (_state.currentPrompt != null) {
-            Logging.debug("Stop evaluateMessageDisplayQueue because prompt is currently displayed")
+            Logging.debug("IAMManager.messageWasDismissed: Stop evaluateMessageDisplayQueue because prompt is currently displayed")
             return
         }
 
         // fire the external callback
         if (!_lifecycleCallback.hasCallback) {
-            Logging.verbose("OSInAppMessageController onMessageDidDismiss: inAppMessageLifecycleHandler is null")
+            Logging.verbose("IAMManager.messageWasDismissed: inAppMessageLifecycleHandler is null")
             return
         }
         _lifecycleCallback.fire { it.onDidDismissInAppMessage(message) }
 
-        _state.inAppMessageShowing = false
-
-        if (message != null && !message.isPreview && messageDisplayQueue.size > 0) {
-            if (!messageDisplayQueue.contains(message)) {
-                Logging.debug("Message already removed from the queue!")
-                return
-            } else {
-                val removedMessageId = messageDisplayQueue.removeAt(0).messageId
-                Logging.debug("In app message with id: $removedMessageId, dismissed (removed) from the queue!")
-            }
-        }
+        _state.inAppMessageIdShowing = null
 
         // Display the next message in the queue, or attempt to add more IAMs to the queue
-        if (messageDisplayQueue.size > 0) {
-            Logging.debug("In app message on queue available: " + messageDisplayQueue[0].messageId)
-            displayMessage(messageDisplayQueue[0])
+        if (_messageDisplayQueue.isNotEmpty()) {
+            Logging.debug("IAMManager.messageWasDismissed: In app message on queue available, attempting to show")
+            attemptToShowInAppMessage()
         } else {
-            Logging.debug("In app message dismissed evaluating messages")
+            Logging.debug("IAMManager.messageWasDismissed: In app message dismissed evaluating messages")
             evaluateInAppMessages()
         }
     }
@@ -360,11 +394,11 @@ internal class IAMManager(
      * - At least one Trigger has changed
      */
     private fun makeRedisplayMessagesAvailableWithTriggers(newTriggersKeys: Collection<String>) {
-        for (message in messages) {
-            if (!message.isTriggerChanged && redisplayedInAppMessages.contains(message) &&
+        for (message in _messages) {
+            if (!message.isTriggerChanged && _redisplayedInAppMessages.contains(message) &&
                 _triggerController.isTriggerOnMessage(message, newTriggersKeys)
             ) {
-                Logging.debug("Trigger changed for message: $message")
+                Logging.debug("IAMManager.makeRedisplayMessagesAvailableWithTriggers: Trigger changed for message: $message")
                 message.isTriggerChanged = true
             }
         }
@@ -382,45 +416,41 @@ internal class IAMManager(
 
         // Update the data to enable future re displays
         // Avoid calling the repository data again
-        val index = redisplayedInAppMessages.indexOf(message)
+        val index = _redisplayedInAppMessages.indexOf(message)
         if (index != -1) {
-            redisplayedInAppMessages.set(index, message)
+            _redisplayedInAppMessages.set(index, message)
         } else {
-            redisplayedInAppMessages.add(message)
+            _redisplayedInAppMessages.add(message)
         }
 
-        Logging.debug("persistInAppMessageForRedisplay: $message with msg array data: $redisplayedInAppMessages")
+        Logging.debug("IAMManager.persistInAppMessage: $message with msg array data: $_redisplayedInAppMessages")
     }
 
     // IAM LIFECYCLE CALLBACKS
     override fun onMessageWillDisplay(message: InAppMessage) {
         if (!_lifecycleCallback.hasCallback) {
-            Logging.verbose("OSInAppMessageController onMessageWillDisplay: inAppMessageLifecycleHandler is null")
+            Logging.verbose("IAMManager.onMessageWillDisplay: inAppMessageLifecycleHandler is null")
             return
         }
         _lifecycleCallback.fire { it.onWillDisplayInAppMessage(message) }
     }
 
     override fun onMessageWasDisplayed(message: InAppMessage) {
-
         if (!_lifecycleCallback.hasCallback) {
-            Logging.verbose("OSInAppMessageController onMessageDidDisplay: inAppMessageLifecycleHandler is null")
+            Logging.verbose("IAMManager.onMessageWasDisplayed: inAppMessageLifecycleHandler is null")
             return
         }
         _lifecycleCallback.fire { it.onDidDisplayInAppMessage(message) }
 
-        if (message.isPreview)
+        if (message.isPreview) {
             return
+        }
 
-        // Check that the messageId is in impressionedMessages so we return early without a second post being made
+        // Check that the messageId is in impressioned messages so we return early without a second post being made
+        if (_impressionedMessages.contains(message.messageId)) return
 
-        // Check that the messageId is in impressionedMessages so we return early without a second post being made
-        if (impressionedMessages.contains(message.messageId)) return
-
-        // Add the messageId to impressionedMessages so no second request is made
-
-        // Add the messageId to impressionedMessages so no second request is made
-        impressionedMessages.add(message.messageId)
+        // Add the messageId to impressioned messages so no second request is made
+        _impressionedMessages.add(message.messageId)
 
         val variantId = InAppHelper.variantIdForMessage(message) ?: return
 
@@ -433,10 +463,10 @@ internal class IAMManager(
             )
 
             if (response.isSuccess) {
-                _prefs.impressionesMessagesId = impressionedMessages
+                _prefs.impressionesMessagesId = _impressionedMessages
             } else {
-                // Post failed, impressioned Messages should be removed and this way another post can be attempted
-                impressionedMessages.remove(message.messageId)
+                // Post failed, impressioned messages should be removed and this way another post can be attempted
+                _impressionedMessages.remove(message.messageId)
             }
         }
     }
@@ -476,7 +506,7 @@ internal class IAMManager(
 
     override fun onMessageWillDismiss(message: InAppMessage) {
         if (!_lifecycleCallback.hasCallback) {
-            Logging.verbose("OSInAppMessageController onMessageWillDismiss: inAppMessageLifecycleHandler is null")
+            Logging.verbose("IAMManager.onMessageWillDismiss: inAppMessageLifecycleHandler is null")
             return
         }
         _lifecycleCallback.fire { it.onWillDismissInAppMessage(message) }
@@ -499,7 +529,7 @@ internal class IAMManager(
      * @see OSInAppMessageController.messageTriggerConditionChanged
      */
     override fun onTriggerCompleted(triggerId: String) {
-        Logging.debug("onTriggerCompleted called with triggerId: $triggerId")
+        Logging.debug("IAMManager.onTriggerCompleted: called with triggerId: $triggerId")
         val triggerIds: MutableSet<String> = HashSet()
         triggerIds.add(triggerId)
         makeRedisplayMessagesAvailableWithTriggers(triggerIds)
@@ -513,7 +543,7 @@ internal class IAMManager(
      * @see OSInAppMessageController.setDataForRedisplay
      */
     override fun onTriggerConditionChanged() {
-        Logging.debug("onTriggerConditionChanged called")
+        Logging.debug("IAMManager.onTriggerConditionChanged()")
 
         suspendifyOnThread {
             // This method is called when a time-based trigger timer fires, meaning the message can
@@ -523,7 +553,7 @@ internal class IAMManager(
     }
 
     override fun onTriggerChanged(newTriggerKey: String) {
-        Logging.debug("onTriggerConditionChanged called")
+        Logging.debug("IAMManager.onTriggerChanged(newTriggerKey: $newTriggerKey)")
 
         makeRedisplayMessagesAvailableWithTriggers(listOf(newTriggerKey))
 
@@ -538,7 +568,7 @@ internal class IAMManager(
 
     private suspend fun beginProcessingPrompts(message: InAppMessage, prompts: List<InAppMessagePrompt>) {
         if (prompts.isNotEmpty()) {
-            Logging.debug("IAM showing prompts from IAM: $message")
+            Logging.debug("IAMManager.beginProcessingPrompts: IAM showing prompts from IAM: $message")
 
             // TODO until we don't fix the activity going forward or back dismissing the IAM, we need to auto dismiss
             _displayer.dismissCurrentInAppMessage()
@@ -572,11 +602,11 @@ internal class IAMManager(
             if (!prompt.hasPrompted()) {
                 _state.currentPrompt = prompt
 
-                Logging.debug("IAM prompt to handle: " + _state.currentPrompt.toString())
+                Logging.debug("IAMManager.showMultiplePrompts: IAM prompt to handle: " + _state.currentPrompt.toString())
                 _state.currentPrompt!!.setPrompted(true)
                 val result = _state.currentPrompt!!.handlePrompt()
                 _state.currentPrompt = null
-                Logging.debug("IAM prompt to handle finished with result: $result")
+                Logging.debug("IAMManager.showMultiplePrompts: IAM prompt to handle finished with result: $result")
 
                 // On preview mode we show informative alert dialogs
                 if (inAppMessage.isPreview && result == InAppMessagePrompt.PromptActionResult.LOCATION_PERMISSIONS_MISSING_MANIFEST) {
@@ -587,35 +617,38 @@ internal class IAMManager(
         }
 
         if (_state.currentPrompt == null) {
-            Logging.debug("No IAM prompt to handle, dismiss message: " + inAppMessage.messageId)
+            Logging.debug("IAMManager.showMultiplePrompts: No IAM prompt to handle, dismiss message: " + inAppMessage.messageId)
             messageWasDismissed(inAppMessage)
         }
     }
 
     private fun fireClickAction(action: InAppMessageAction) {
         if (action.clickUrl != null && action.clickUrl.isNotEmpty()) {
-            if (action.urlTarget == InAppMessageActionUrlType.BROWSER)
+            if (action.urlTarget == InAppMessageActionUrlType.BROWSER) {
                 AndroidUtils.openURLInBrowser(_applicationService.appContext, action.clickUrl)
-            else if (action.urlTarget == InAppMessageActionUrlType.IN_APP_WEBVIEW)
+            } else if (action.urlTarget == InAppMessageActionUrlType.IN_APP_WEBVIEW) {
                 OneSignalChromeTab.open(action.clickUrl, true, _applicationService.appContext)
+            }
         }
     }
 
     /* End IAM Lifecycle methods */
     private fun logInAppMessagePreviewActions(action: InAppMessageAction) {
-        if (action.tags != null)
-            Logging.debug("Tags detected inside of the action click payload, ignoring because action came from IAM preview:: " + action.tags.toString())
+        if (action.tags != null) {
+            Logging.debug("IAMManager.logInAppMessagePreviewActions: Tags detected inside of the action click payload, ignoring because action came from IAM preview:: " + action.tags.toString())
+        }
 
-        if (action.outcomes.size > 0)
-            Logging.debug("Outcomes detected inside of the action click payload, ignoring because action came from IAM preview: " + action.outcomes.toString())
+        if (action.outcomes.size > 0) {
+            Logging.debug("IAMManager.logInAppMessagePreviewActions: Outcomes detected inside of the action click payload, ignoring because action came from IAM preview: " + action.outcomes.toString())
+        }
 
         // TODO: Add more action payload preview logs here in future
     }
 
     private suspend fun firePublicClickHandler(messageId: String, action: InAppMessageAction) {
-
-        if (!_messageClickCallback.hasCallback)
+        if (!_messageClickCallback.hasCallback) {
             return
+        }
 
         // Send public outcome not from handler
         // Check that only on the handler
@@ -633,11 +666,11 @@ internal class IAMManager(
         val messagePrefixedPageId = message.messageId + pageId
 
         // Never send multiple page impressions for the same message UUID unless that page change is from an IAM with redisplay
-        if (viewedPageIds.contains(messagePrefixedPageId)) {
-            Logging.verbose("Already sent page impression for id: $pageId")
+        if (_viewedPageIds.contains(messagePrefixedPageId)) {
+            Logging.verbose("IAMManager: Already sent page impression for id: $pageId")
             return
         }
-        viewedPageIds.add(messagePrefixedPageId)
+        _viewedPageIds.add(messagePrefixedPageId)
         var response = _backend.sendIAMPageImpression(
             _configModelStore.get().appId!!,
             _subscriptionManager.subscriptions.push?.id.toString(),
@@ -647,10 +680,10 @@ internal class IAMManager(
         )
 
         if (response.isSuccess) {
-            _prefs.viewPageImpressionedIds = viewedPageIds
+            _prefs.viewPageImpressionedIds = _viewedPageIds
         } else {
             // Post failed, viewed page should be removed and this way another post can be attempted
-            viewedPageIds.remove(messagePrefixedPageId)
+            _viewedPageIds.remove(messagePrefixedPageId)
         }
     }
 
@@ -662,11 +695,12 @@ internal class IAMManager(
         val clickAvailableByRedisplay = message.redisplayStats.isRedisplayEnabled && clickId != null && message.isClickAvailable(clickId)
 
         // Never count multiple clicks for the same click UUID unless that click is from an IAM with redisplay
-        if (!clickAvailableByRedisplay && clickedClickIds.contains(clickId))
+        if (!clickAvailableByRedisplay && _clickedClickIds.contains(clickId)) {
             return
+        }
 
         if (clickId != null) {
-            clickedClickIds.add(clickId)
+            _clickedClickIds.add(clickId)
             // Track clickId per IAM
             message.addClickId(clickId)
         }
@@ -682,9 +716,9 @@ internal class IAMManager(
 
         if (response.isSuccess) {
             // Persist success click to disk. Id already added to set before making the network call
-            _prefs.clickedMessagesId = clickedClickIds
+            _prefs.clickedMessagesId = _clickedClickIds
         } else {
-            clickedClickIds.remove(clickId)
+            _clickedClickIds.remove(clickId)
 
             if (clickId != null) {
                 message.removeClickId(clickId)

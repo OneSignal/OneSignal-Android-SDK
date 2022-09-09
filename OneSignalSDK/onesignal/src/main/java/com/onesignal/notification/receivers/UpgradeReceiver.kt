@@ -35,16 +35,17 @@ import com.onesignal.notification.internal.restoration.INotificationRestoreWorkM
 
 class UpgradeReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-
         // TODO: Now that we arent restoring like we use to, think we can remove this? Ill do some
         //  testing and look at the issue but maybe someone has a answer or rems what directly
         //  was causing this issue
         // Return early if using Android 7.0 due to upgrade restore crash (#263)
-        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.N)
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.N) {
             return
+        }
 
-        if (!OneSignal.isInitialized)
+        if (!OneSignal.isInitialized) {
             OneSignal.initWithContext(context)
+        }
 
         var restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
 

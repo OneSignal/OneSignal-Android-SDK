@@ -51,21 +51,23 @@ internal class LocationManager(
     override suspend fun requestPermission(): Boolean {
         Logging.log(LogLevel.DEBUG, "LocationManager.requestPermission()")
 
-        if (!isLocationShared)
+        if (!isLocationShared) {
             return false
+        }
 
         var result: Boolean
         val hasFinePermissionGranted = AndroidUtils.hasPermission(LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING, true, _applicationService)
         var hasCoarsePermissionGranted: Boolean = false
         var hasBackgroundPermissionGranted: Boolean = false
 
-        if(!hasFinePermissionGranted) {
+        if (!hasFinePermissionGranted) {
             hasCoarsePermissionGranted = AndroidUtils.hasPermission(LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING, true, _applicationService)
             _capturer.locationCoarse = true
         }
 
-        if (Build.VERSION.SDK_INT >= 29)
+        if (Build.VERSION.SDK_INT >= 29) {
             hasBackgroundPermissionGranted = AndroidUtils.hasPermission(LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING, true, _applicationService)
+        }
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             if (!hasFinePermissionGranted && !hasCoarsePermissionGranted) {
@@ -80,9 +82,13 @@ internal class LocationManager(
             if (!hasFinePermissionGranted) {
                 var requestPermission: String? = null
                 var permissionList = AndroidUtils.filterManifestPermissions(
-                    listOf(LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING,
+                    listOf(
+                        LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING,
                         LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING,
-                        LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING), _applicationService)
+                        LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING
+                    ),
+                    _applicationService
+                )
 
                 if (permissionList.contains(LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING)) {
                     // ACCESS_FINE_LOCATION permission defined on Manifest, prompt for permission

@@ -110,8 +110,9 @@ internal class NotificationDisplayer(
         applyNotificationExtender(notificationJob, notifBuilder)
 
         // Keeps notification from playing sound + vibrating again
-        if (notificationJob.isRestoring)
+        if (notificationJob.isRestoring) {
             _notificationDisplayBuilder.removeNotifyOptions(notifBuilder)
+        }
 
         val makeRoomFor = if (group == null) 1 else 2
         _notificationLimitManager.clearOldestOverLimit(makeRoomFor)
@@ -135,8 +136,9 @@ internal class NotificationDisplayer(
                     grouplessNotifs.size + 1,
                     _notificationDisplayBuilder.getGroupAlertBehavior()
                 )
-            } else
+            } else {
                 _summaryNotificationDisplayer.createSummaryNotification(notificationJob, oneSignalNotificationBuilder, _notificationDisplayBuilder.getGroupAlertBehavior())
+            }
         } else {
             notification = createGenericPendingIntentsForNotif(
                 notifBuilder,
@@ -157,9 +159,11 @@ internal class NotificationDisplayer(
             NotificationManagerCompat.from(currentContext!!).notify(notificationId, notification)
         }
 
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationHelper.areNotificationsEnabled(currentContext!!, notification.channelId)
-        else true
+        } else {
+            true
+        }
     }
 
     private fun createGenericPendingIntentsForNotif(
@@ -234,8 +238,10 @@ internal class NotificationDisplayer(
             jsonBgImage = JSONObject(jsonStrBgImage)
             bg_image = getBitmap(jsonBgImage.optString("img", null))
         }
-        if (bg_image == null) bg_image =
-            getBitmapFromAssetsOrResourceName("onesignal_bgimage_default_image")
+        if (bg_image == null) {
+            bg_image =
+                getBitmapFromAssetsOrResourceName("onesignal_bgimage_default_image")
+        }
         if (bg_image != null) {
             val customView =
                 RemoteViews(currentContext!!.packageName, R.layout.onesignal_bgimage_notif_layout)
@@ -256,8 +262,10 @@ internal class NotificationDisplayer(
                 "onesignal_bgimage_notif_body_color"
             )
             var alignSetting: String? = null
-            if (jsonBgImage != null && jsonBgImage.has("img_align")) alignSetting =
-                jsonBgImage.getString("img_align") else {
+            if (jsonBgImage != null && jsonBgImage.has("img_align")) {
+                alignSetting =
+                    jsonBgImage.getString("img_align")
+            } else {
                 val iAlignSetting = contextResources!!.getIdentifier(
                     "onesignal_bgimage_notif_image_align",
                     "string",
@@ -282,7 +290,9 @@ internal class NotificationDisplayer(
                     View.VISIBLE
                 ) // visible
                 customView.setViewVisibility(R.id.os_bgimage_notif_bgimage, View.GONE) // gone
-            } else customView.setImageViewBitmap(R.id.os_bgimage_notif_bgimage, bg_image)
+            } else {
+                customView.setImageViewBitmap(R.id.os_bgimage_notif_bgimage, bg_image)
+            }
             notifBuilder!!.setContent(customView)
 
             // Remove style to prevent expanding by the user.
@@ -299,15 +309,20 @@ internal class NotificationDisplayer(
         colorDefaultResource: String
     ) {
         val color = safeGetColorFromHex(fcmJson, colorPayloadKey)
-        if (color != null) customView.setTextColor(viewId, color) else {
+        if (color != null) {
+            customView.setTextColor(viewId, color)
+        } else {
             val colorId =
                 contextResources!!.getIdentifier(colorDefaultResource, "color", packageName)
-            if (colorId != 0) customView.setTextColor(
-                viewId,
-                AndroidSupportV4Compat.ContextCompat.getColor(
-                    currentContext!!, colorId
+            if (colorId != 0) {
+                customView.setTextColor(
+                    viewId,
+                    AndroidSupportV4Compat.ContextCompat.getColor(
+                        currentContext!!,
+                        colorId
+                    )
                 )
-            )
+            }
         }
     }
 
@@ -357,11 +372,15 @@ internal class NotificationDisplayer(
     private fun getBitmap(name: String?): Bitmap? {
         if (name == null) return null
         val trimmedName = name.trim { it <= ' ' }
-        return if (trimmedName.startsWith("http://") || trimmedName.startsWith("https://")) getBitmapFromURL(
-            trimmedName
-        ) else getBitmapFromAssetsOrResourceName(
-            name
-        )
+        return if (trimmedName.startsWith("http://") || trimmedName.startsWith("https://")) {
+            getBitmapFromURL(
+                trimmedName
+            )
+        } else {
+            getBitmapFromAssetsOrResourceName(
+                name
+            )
+        }
     }
 
     private fun getResourceIcon(iconName: String?): Int {

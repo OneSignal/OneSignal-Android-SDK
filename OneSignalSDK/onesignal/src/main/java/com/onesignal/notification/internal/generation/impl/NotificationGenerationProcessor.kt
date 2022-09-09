@@ -10,8 +10,8 @@ import com.onesignal.core.internal.time.ITime
 import com.onesignal.notification.internal.Notification
 import com.onesignal.notification.internal.NotificationReceivedEvent
 import com.onesignal.notification.internal.common.NotificationConstants
-import com.onesignal.notification.internal.data.INotificationDataController
 import com.onesignal.notification.internal.common.NotificationGenerationJob
+import com.onesignal.notification.internal.data.INotificationDataController
 import com.onesignal.notification.internal.display.INotificationDisplayer
 import com.onesignal.notification.internal.generation.INotificationGenerationProcessor
 import com.onesignal.notification.internal.lifecycle.INotificationLifecycleService
@@ -33,7 +33,7 @@ internal class NotificationGenerationProcessor(
     private val _notificationSummaryManager: INotificationSummaryManager,
     private val _lifecycleService: INotificationLifecycleService,
     private val _sessionService: ISessionService,
-    private val _time: ITime,
+    private val _time: ITime
 ) : INotificationGenerationProcessor {
 
     override suspend fun processNotificationData(
@@ -43,7 +43,6 @@ internal class NotificationGenerationProcessor(
         isRestoring: Boolean,
         timestamp: Long
     ) {
-
         if (!_lifecycleService.canReceiveNotification(jsonPayload)) {
             // Return early, we don't want the extender service or etc. to fire for IAM previews
             return
@@ -52,8 +51,9 @@ internal class NotificationGenerationProcessor(
         var notification = Notification(null, jsonPayload, androidNotificationId, _time)
 
         // When restoring it will always be seen as a duplicate, because we are restoring...
-        if (!isRestoring && isDuplicateNotification(notification))
+        if (!isRestoring && isDuplicateNotification(notification)) {
             return
+        }
 
         val notificationJob = NotificationGenerationJob()
         notificationJob.shownTimeStamp = timestamp
@@ -109,8 +109,9 @@ internal class NotificationGenerationProcessor(
 
         // Delay to prevent CPU spikes
         // Normally more than one notification is restored at a time
-        if (isRestoring)
+        if (isRestoring) {
             delay(100)
+        }
     }
 
     /**
@@ -244,8 +245,9 @@ internal class NotificationGenerationProcessor(
     }
 
     private suspend fun markNotificationAsDismissed(notifiJob: NotificationGenerationJob) {
-        if (!notifiJob.isNotificationToDisplay)
+        if (!notifiJob.isNotificationToDisplay) {
             return
+        }
 
         Logging.debug("Marking restored or disabled notifications as dismissed: $notifiJob")
 
@@ -258,8 +260,9 @@ internal class NotificationGenerationProcessor(
 
     private suspend fun processCollapseKey(notificationJob: NotificationGenerationJob) {
         if (notificationJob.isRestoring) return
-        if (!notificationJob.jsonPayload!!.has("collapse_key") || "do_not_collapse" == notificationJob.jsonPayload!!.optString("collapse_key"))
+        if (!notificationJob.jsonPayload!!.has("collapse_key") || "do_not_collapse" == notificationJob.jsonPayload!!.optString("collapse_key")) {
             return
+        }
 
         val collapseId = notificationJob.jsonPayload!!.optString("collapse_key")
 

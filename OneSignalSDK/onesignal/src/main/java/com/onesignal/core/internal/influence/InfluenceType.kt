@@ -4,7 +4,7 @@ internal enum class InfluenceType {
     DIRECT,
     INDIRECT,
     UNATTRIBUTED,
-    DISABLED,
+    DISABLED
     ;
 
     fun isAttributed() = isDirect() || isIndirect()

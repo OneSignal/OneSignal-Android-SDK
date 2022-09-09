@@ -71,8 +71,9 @@ internal class NotificationListener(
         val deviceType = _deviceService.deviceType
 
         for (i in 0 until data.length()) {
-            if (_postedOpenedNotifIds.contains(notificationId))
+            if (_postedOpenedNotifIds.contains(notificationId)) {
                 continue
+            }
             _postedOpenedNotifIds.add(notificationId)
 
             _backend.updateNotificationAsOpened(appId, notificationId, subscriptionId, deviceType)

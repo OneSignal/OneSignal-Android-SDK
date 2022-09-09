@@ -56,8 +56,9 @@ internal class NotificationOpenedProcessor(
 ) : INotificationOpenedProcessor {
 
     override suspend fun processFromContext(context: Context, intent: Intent) {
-        if (!isOneSignalIntent(intent))
+        if (!isOneSignalIntent(intent)) {
             return
+        }
 
         handleDismissFromActionButtonPress(context, intent)
         processIntent(context, intent)
@@ -96,8 +97,9 @@ internal class NotificationOpenedProcessor(
         var intentExtras: NotificationIntentExtras? = null
         if (!dismissed) {
             intentExtras = processToOpenIntent(context, intent, summaryGroup)
-            if (intentExtras == null)
+            if (intentExtras == null) {
                 return
+            }
         }
 
         markNotificationsConsumed(context, intent, dismissed)
@@ -105,16 +107,18 @@ internal class NotificationOpenedProcessor(
         // Notification is not a summary type but a single notification part of a group.
         if (summaryGroup == null) {
             val group = intent.getStringExtra("grp")
-            if (group != null)
+            if (group != null) {
                 _summaryManager.updateSummaryNotificationAfterChildRemoved(group, dismissed)
+            }
         }
         Logging.debug("processIntent from context: $context and intent: $intent")
-        if (intent.extras != null)
+        if (intent.extras != null) {
             Logging.debug("""processIntent intent extras: ${intent.extras}""")
+        }
         if (!dismissed) {
-            if (context !is Activity)
+            if (context !is Activity) {
                 Logging.error("NotificationOpenedProcessor processIntent from an non Activity context: $context")
-            else {
+            } else {
                 _lifecycleService.notificationOpened(context, intentExtras!!.dataArray, NotificationFormatHelper.getOSNotificationIdFromJson(intentExtras.jsonData)!!)
             }
         }
@@ -130,10 +134,11 @@ internal class NotificationOpenedProcessor(
         try {
             jsonData = JSONObject(intent.getStringExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA))
 
-            if (context !is Activity)
+            if (context !is Activity) {
                 Logging.error("NotificationOpenedProcessor processIntent from an non Activity context: $context")
-            else if (!_lifecycleService.canOpenNotification(context, jsonData))
+            } else if (!_lifecycleService.canOpenNotification(context, jsonData)) {
                 return null
+            }
 
             jsonData.put(
                 NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID,
@@ -148,14 +153,14 @@ internal class NotificationOpenedProcessor(
         }
 
         // We just opened a summary notification.
-        if (summaryGroup != null)
+        if (summaryGroup != null) {
             addChildNotifications(dataArray!!, summaryGroup)
+        }
 
         return NotificationIntentExtras(dataArray!!, jsonData!!)
     }
 
     private suspend fun addChildNotifications(dataArray: JSONArray, summaryGroup: String) {
-
         val childNotifications = _dataController.listNotificationsForGroup(summaryGroup)
         for (childNotification in childNotifications)
             dataArray!!.put(JSONObject(childNotification.fullData))
@@ -182,9 +187,9 @@ internal class NotificationOpenedProcessor(
      */
     private suspend fun clearStatusBarNotifications(context: Context, summaryGroup: String?) {
         // Handling for clearing the notification when opened
-        if (summaryGroup != null)
+        if (summaryGroup != null) {
             _summaryManager.clearNotificationOnSummaryClick(summaryGroup)
-        else {
+        } else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 // The summary group is null, represents the last notification in the groupless group
                 // Check that no more groupless notifications exist in the group and cancel the group
@@ -202,12 +207,17 @@ internal class NotificationOpenedProcessor(
     private fun newContentValuesWithConsumed(intent: Intent): ContentValues {
         val values = ContentValues()
         val dismissed = intent.getBooleanExtra("dismissed", false)
-        if (dismissed) values.put(
-            OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED,
-            1
-        ) else values.put(
-            OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED, 1
-        )
+        if (dismissed) {
+            values.put(
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED,
+                1
+            )
+        } else {
+            values.put(
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED,
+                1
+            )
+        }
         return values
     }
 }
