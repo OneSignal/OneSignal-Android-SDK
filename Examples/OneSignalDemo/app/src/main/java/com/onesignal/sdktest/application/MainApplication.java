@@ -12,7 +12,6 @@ import com.onesignal.iam.IInAppMessageAction;
 import com.onesignal.iam.IInAppMessageClickHandler;
 import com.onesignal.iam.IInAppMessageLifecycleHandler;
 import com.onesignal.core.debug.LogLevel;
-import com.onesignal.core.internal.logging.Logging;
 import com.onesignal.notification.INotification;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.constant.Tag;
@@ -26,8 +25,7 @@ public class MainApplication extends MultiDexApplication {
     @Override
     public void onCreate() {
         super.onCreate();
-
-        Logging.setLogLevel(LogLevel.DEBUG);
+        OneSignal.getDebug().setLogLevel(LogLevel.DEBUG);
 
         // OneSignal Initialization
         String appId = SharedPreferenceUtil.getOneSignalAppId(this);
@@ -37,46 +35,45 @@ public class MainApplication extends MultiDexApplication {
             SharedPreferenceUtil.cacheOneSignalAppId(this, appId);
         }
 
-        OneSignal.setAppId(appId);
-        OneSignal.initWithContext(this);
+        OneSignal.initWithContext(this, appId);
 
         OneSignal.getIam().setInAppMessageLifecycleHandler(new IInAppMessageLifecycleHandler() {
             @Override
             public void onWillDisplayInAppMessage(@NonNull IInAppMessage message) {
-                Logging.log(LogLevel.VERBOSE, "MainApplication onWillDisplayInAppMessage");
+                Log.v("MainApplication", "onWillDisplayInAppMessage");
             }
 
             @Override
             public void onDidDisplayInAppMessage(@NonNull IInAppMessage message) {
-                Logging.log(LogLevel.VERBOSE, "MainApplication onDidDisplayInAppMessage");
+                Log.v("MainApplication", "onDidDisplayInAppMessage");
             }
 
             @Override
             public void onWillDismissInAppMessage(@NonNull IInAppMessage message) {
-                Logging.log(LogLevel.VERBOSE, "MainApplication onWillDismissInAppMessage");
+                Log.v("MainApplication", "onWillDismissInAppMessage");
             }
 
             @Override
             public void onDidDismissInAppMessage(@NonNull IInAppMessage message) {
-                Logging.log(LogLevel.VERBOSE, "MainApplication onDidDismissInAppMessage");
+                Log.v("MainApplication", "onDidDismissInAppMessage");
             }
         });
 
         OneSignal.getIam().setInAppMessageClickHandler(new IInAppMessageClickHandler() {
             @Override
             public void inAppMessageClicked(@Nullable IInAppMessageAction result) {
-                Logging.log(LogLevel.VERBOSE, "MainApplication inAppMessageClicked");
+                Log.v("MainApplication", "inAppMessageClicked");
             }
         });
 
         OneSignal.getNotifications().setNotificationOpenedHandler(result ->
                 {
-                    Logging.log(LogLevel.VERBOSE, "INotificationOpenedResult: " + result.toString());
+                    Log.v("MainApplication", "INotificationOpenedResult: " + result);
                 });
 
         OneSignal.getNotifications().setNotificationWillShowInForegroundHandler(notificationReceivedEvent ->
                 {
-                    Logging.log(LogLevel.VERBOSE, "NotificationWillShowInForegroundHandler fired!" +
+                    Log.v("MainApplication", "NotificationWillShowInForegroundHandler fired!" +
                     " with notification event: " + notificationReceivedEvent.toString());
 
                     INotification notification = notificationReceivedEvent.getNotification();

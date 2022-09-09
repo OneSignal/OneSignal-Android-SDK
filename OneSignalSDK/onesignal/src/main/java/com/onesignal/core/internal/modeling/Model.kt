@@ -15,14 +15,16 @@ internal open class Model(
 
     private val _data: HashMap<String, Any?> = HashMap()
 
-    protected fun <T> set(name: String, value: T) {
+    fun <T> set(name: String, value: T, notify: Boolean = true) {
         val oldValue = _data[name]
         val newValue = value as Any?
 
         _data[name] = newValue
 
-        val changeArgs = ModelChangedArgs(this, name, oldValue, newValue)
-        _changeNotifier.fire { it.onChanged(changeArgs) }
+        if(notify) {
+            val changeArgs = ModelChangedArgs(this, name, oldValue, newValue)
+            _changeNotifier.fire { it.onChanged(changeArgs) }
+        }
     }
 
     protected fun <T> get(name: String): T {

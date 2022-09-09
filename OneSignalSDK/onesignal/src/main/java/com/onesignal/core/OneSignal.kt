@@ -4,7 +4,6 @@ import android.content.Context
 import com.onesignal.core.debug.IDebugManager
 import com.onesignal.core.internal.OneSignalImp
 import com.onesignal.core.internal.service.IServiceProvider
-import com.onesignal.core.user.IUserIdentityConflictResolver
 import com.onesignal.core.user.IUserManager
 import com.onesignal.iam.IIAMManager
 import com.onesignal.location.ILocationManager
@@ -23,7 +22,7 @@ import com.onesignal.notification.INotificationsManager
 */
 object OneSignal {
     /**
-     * Whether the SDK has been initialized.
+     * Whether the SDK has been initialized (i.e. [initWithContext] has been called).
      */
     @JvmStatic
     val isInitialized: Boolean
@@ -37,32 +36,33 @@ object OneSignal {
         get() = oneSignal.sdkVersion
 
     /**
-     * The user manager for accessing user-scoped
-     * management.
+     * The user manager for accessing user-scoped management.  Initialized only after [initWithContext]
+     * has been called, and initialized with a device-scoped user until (or if) [login] has been
+     * called.
      */
     @JvmStatic
     val user: IUserManager
         get() = oneSignal.user
 
     /**
-     * The notification manager for accessing device-scoped
-     * notification management.
+     * The notification manager for accessing device-scoped notification management. Initialized
+     * only after [initWithContext] has been called.
      */
     @JvmStatic
     val notifications: INotificationsManager
         get() = oneSignal.notifications
 
     /**
-     * The location manager for accessing device-scoped
-     * location management.
+     * The location manager for accessing device-scoped location management. Initialized
+     * only after [initWithContext] has been called.
      */
     @JvmStatic
     val location: ILocationManager
         get() = oneSignal.location
 
     /**
-     * The In App Messaging manager for accessing device-scoped
-     * IAP management.
+     * The In App Messaging manager for accessing device-scoped IAP management. Initialized
+     * only after [initWithContext] has been called.
      */
     @JvmStatic
     val iam: IIAMManager
@@ -70,7 +70,7 @@ object OneSignal {
 
     /**
      * Access to debug the SDK in the additional information is required to diagnose any
-     * SDK-related issues.
+     * SDK-related issues.  Initialized immediately (can be used prior to [initWithContext]).
      *
      * WARNING: This should not be used in a production setting.
      */
@@ -102,65 +102,66 @@ object OneSignal {
      * Initialize the OneSignal SDK.  This should be called during startup of the application.
      *
      * @param context The Android context the SDK should use.
-     */
-    @JvmStatic
-    fun initWithContext(context: Context) {
-        oneSignal.initWithContext(context)
-    }
-
-    /**
-     * Set the application ID the OneSignal SDK will be operating against.  This should be called
-     * during startup of the application.  It can also be called again if the application ID needs
-     * to be changed.  Changing the application ID will automatically log out any current user,
-     * it's like starting over.
-     *
      * @param appId The application ID the OneSignal SDK is bound to.
      */
     @JvmStatic
-    fun setAppId(appId: String) {
-        oneSignal.setAppId(appId)
+    fun initWithContext(context: Context, appId: String) {
+        oneSignal.initWithContext(context, appId)
     }
 
     /**
-     * Login the SDK into OneSignal under the user identified by the [externalId] provided. The act of
+     * Login to OneSignal under the user identified by the [externalId] provided. The act of
      * logging a user into the OneSignal SDK will switch the [user] context to that specific user.
      *
      * * If the [externalId] exists the user will be retrieved and the context set from that
-     *   user information. If operations have already been performed under a guest user the
-     *   [IUserIdentityConflictResolver] specified in [setUserConflictResolver] will be called
-     *   to determine how to proceed (defaulting to honor the remote user entirely).
+     *   user information. If operations have already been performed under a guest user, they
+     *   *will not* be applied to the now logged in user (they will be lost).
      * * If the [externalId] does not exist the user will be created and the context set from
      *   the current local state. If operations have already been performed under a guest user
-     *   those operations will be applied to the newly created user.
+     *   those operations *will* be applied to the newly created user.
      *
      * *Push Notifications and In App Messaging*
      * Logging in a new user will automatically transfer push notification and in app messaging
      * subscriptions from the current user (if there is one) to the newly logged in user.  This is
-     * because both Push and IAM are owned by the OS.
+     * because both Push and IAM are owned by the device.
+     *
+     * @param externalId The external ID of the user that is to be logged in.
+     * @param jwtBearerToken The optional JWT bearer token generated by your backend to establish
+     * trust for the login operation.  Required when identity verification has been enabled. See
+     * [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
      */
     @JvmStatic
-    suspend fun login(externalId: String): IUserManager = oneSignal.login(externalId)
+    suspend fun login(externalId: String) = oneSignal.login(externalId)
     @JvmStatic
-    suspend fun login(externalId: String, externalIdHash: String? = null): IUserManager = oneSignal.login(externalId, externalIdHash)
+    suspend fun login(externalId: String, jwtBearerToken: String? = null) = oneSignal.login(externalId, jwtBearerToken)
 
     /**
-     * Log the SDK into OneSignal as a guest user. A guest user has no user identity that can later
+     * Logout the user previously logged in via [login]. The [user] property now references
+     * a new device-scoped user. A device-scoped user has no user identity that can later
      * be retrieved, except through this device as long as the app remains installed and the app
      * data is not cleared.
      */
     @JvmStatic
-    suspend fun loginGuest(): IUserManager = oneSignal.loginGuest()
-
-    @JvmStatic
-    fun setUserConflictResolver(handler: IUserIdentityConflictResolver) = oneSignal.setUserConflictResolver(handler)
-
-    @JvmStatic
-    fun setUserConflictResolver(handler: (local: IUserManager, remote: IUserManager) -> IUserManager) = oneSignal.setUserConflictResolver(handler)
+    fun logout() = oneSignal.logout()
 
     private val oneSignal: IOneSignal by lazy {
         OneSignalImp()
     }
 
+    /**
+     * Used to initialize the SDK when driven through user action. It is assumed [initWithContext]
+     * has been called by the app developer, providing the appId, which has been cached for
+     * this purpose.
+     */
+    @JvmStatic
+    internal fun initWithContext(context: Context) {
+        oneSignal.initWithContext(context, null)
+    }
+
+    /**
+     * Used to retrieve services from the SDK when constructor dependency injection is not an
+     * option.
+     */
     internal val services: IServiceProvider
         get() = oneSignal as IServiceProvider
 

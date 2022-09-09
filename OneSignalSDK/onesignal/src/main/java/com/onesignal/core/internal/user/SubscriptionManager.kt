@@ -19,9 +19,9 @@ internal interface ISubscriptionManager : IEventNotifier<ISubscriptionChangedHan
     var subscriptions: SubscriptionList
 
     fun load(identity: IdentityModel)
-    fun addEmailSubscription(email: String, emailAuthHash: String?)
+    fun addEmailSubscription(email: String)
     fun addPushSubscription(id: String, pushToken: String)
-    fun addSmsSubscription(sms: String, smsAuthHash: String?)
+    fun addSmsSubscription(sms: String)
     fun removeEmailSubscription(email: String)
     fun removeSmsSubscription(sms: String)
 
@@ -49,7 +49,7 @@ internal open class SubscriptionManager(
 
         for (s in _subscriptionModelStore.list()) {
             // TODO: Better way to find subscriptions for a user?
-            if (s.startsWith(identity.oneSignalId.toString())) {
+            if (s.startsWith(identity.id)) {
                 val model = _subscriptionModelStore.get(s)
 
                 when (model?.type) {
@@ -69,7 +69,7 @@ internal open class SubscriptionManager(
 
         this.subscriptions = SubscriptionList(subs)
     }
-    override fun addEmailSubscription(email: String, emailAuthHash: String?) {
+    override fun addEmailSubscription(email: String) {
         var emailSub = EmailSubscription(UUID.randomUUID(), email)
         val subscriptions = subscriptions.collection.toMutableList()
         subscriptions.add(emailSub)
@@ -80,7 +80,7 @@ internal open class SubscriptionManager(
         emailSubModel.enabled = true
         emailSubModel.type = SubscriptionType.EMAIL
         emailSubModel.address = emailSub.email
-        _subscriptionModelStore.add(identity.oneSignalId.toString() + "-" + emailSub.id, emailSubModel)
+        _subscriptionModelStore.add(identity.id + "-" + emailSub.id, emailSubModel)
 
         _events.fire { it.onSubscriptionAdded(emailSub) }
     }
@@ -93,7 +93,7 @@ internal open class SubscriptionManager(
         }
     }
 
-    override fun addSmsSubscription(sms: String, smsAuthHash: String?) {
+    override fun addSmsSubscription(sms: String) {
         var smsSub = SmsSubscription(UUID.randomUUID(), sms)
         val subscriptions = subscriptions.collection.toMutableList()
         subscriptions.add(smsSub)
@@ -104,7 +104,7 @@ internal open class SubscriptionManager(
         smsSubModel.enabled = true
         smsSubModel.type = SubscriptionType.SMS
         smsSubModel.address = smsSub.number
-        _subscriptionModelStore.add(identity.oneSignalId.toString() + "-" + smsSub.id, smsSubModel)
+        _subscriptionModelStore.add(identity.id + "-" + smsSub.id, smsSubModel)
 
         _events.fire { it.onSubscriptionAdded(smsSub) }
     }
@@ -129,7 +129,7 @@ internal open class SubscriptionManager(
         pushSubModel.enabled = pushSub.enabled
         pushSubModel.type = SubscriptionType.PUSH
         pushSubModel.address = pushSub.pushToken
-        _subscriptionModelStore.add(identity.oneSignalId.toString() + "-" + pushSub.id, pushSubModel, false)
+        _subscriptionModelStore.add(identity.id + "-" + pushSub.id, pushSubModel, false)
 
         _events.fire { it.onSubscriptionAdded(pushSub) }
     }
@@ -137,7 +137,7 @@ internal open class SubscriptionManager(
     override fun setSubscriptionEnablement(subscription: ISubscription, enabled: Boolean) {
         Logging.log(LogLevel.DEBUG, "setSubscriptionEnablement(subscription: $subscription, enabled: $enabled)")
 
-        val subscriptionModel = _subscriptionModelStore.get(identity.oneSignalId.toString() + "-" + subscription.id)
+        val subscriptionModel = _subscriptionModelStore.get(identity.id + "-" + subscription.id)
 
         if (subscriptionModel != null) {
             subscriptionModel.enabled = enabled
@@ -171,7 +171,7 @@ internal open class SubscriptionManager(
         subscriptions.remove(subscription)
         this.subscriptions = SubscriptionList(subscriptions)
 
-        _subscriptionModelStore.remove(identity.oneSignalId.toString() + "-" + subscription.id)
+        _subscriptionModelStore.remove(identity.id + "-" + subscription.id)
 
         _events.fire { it.onSubscriptionRemoved(subscription) }
     }

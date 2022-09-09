@@ -1,16 +1,15 @@
 package com.onesignal.location.internal
 
-import android.content.pm.PackageInfo
-import android.content.pm.PackageManager
 import android.os.Build
 import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.application.IApplicationService
-import com.onesignal.core.internal.common.AndroidSupportV4Compat
+import com.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.location.ILocationManager
 import com.onesignal.location.internal.capture.ILocationCapturer
+import com.onesignal.location.internal.common.LocationConstants
 import com.onesignal.location.internal.common.LocationUtils
 import com.onesignal.location.internal.controller.ILocationController
 import com.onesignal.location.internal.permissions.LocationPermissionController
@@ -49,96 +48,80 @@ internal class LocationManager(
      *
      * For all cases we are calling prompt listeners.
      */
-    override suspend fun requestPermission(): Boolean? {
+    override suspend fun requestPermission(): Boolean {
         Logging.log(LogLevel.DEBUG, "LocationManager.requestPermission()")
 
         if (!isLocationShared)
             return false
 
-        var result: Boolean? = null
+        var result: Boolean
+        val hasFinePermissionGranted = AndroidUtils.hasPermission(LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING, true, _applicationService)
+        var hasCoarsePermissionGranted: Boolean = false
+        var hasBackgroundPermissionGranted: Boolean = false
 
-        var locationBackgroundPermission = PackageManager.PERMISSION_DENIED
-        var locationCoarsePermission = PackageManager.PERMISSION_DENIED
-        val locationFinePermission = AndroidSupportV4Compat.ContextCompat.checkSelfPermission(
-            _applicationService.appContext,
-            "android.permission.ACCESS_FINE_LOCATION"
-        )
-
-        if (locationFinePermission == PackageManager.PERMISSION_DENIED) {
-            locationCoarsePermission = AndroidSupportV4Compat.ContextCompat.checkSelfPermission(
-                _applicationService.appContext,
-                "android.permission.ACCESS_COARSE_LOCATION"
-            )
-
+        if(!hasFinePermissionGranted) {
+            hasCoarsePermissionGranted = AndroidUtils.hasPermission(LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING, true, _applicationService)
             _capturer.locationCoarse = true
         }
 
         if (Build.VERSION.SDK_INT >= 29)
-            locationBackgroundPermission = AndroidSupportV4Compat.ContextCompat.checkSelfPermission(_applicationService.appContext, "android.permission.ACCESS_BACKGROUND_LOCATION")
+            hasBackgroundPermissionGranted = AndroidUtils.hasPermission(LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING, true, _applicationService)
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            if (locationFinePermission != PackageManager.PERMISSION_GRANTED && locationCoarsePermission != PackageManager.PERMISSION_GRANTED) {
+            if (!hasFinePermissionGranted && !hasCoarsePermissionGranted) {
                 // Permission missing on manifest
                 Logging.error("Location permissions not added on AndroidManifest file < M")
-                return null
+                return false
             }
 
             startGetLocation()
             result = true
         } else { // Android 6.0+
-            if (locationFinePermission != PackageManager.PERMISSION_GRANTED) {
-                try {
-                    var requestPermission: String? = null
-                    val packageInfo: PackageInfo = _applicationService.appContext
-                        .packageManager
-                        .getPackageInfo(_applicationService.appContext.packageName, PackageManager.GET_PERMISSIONS)
-                    val permissionList = listOf(*packageInfo.requestedPermissions)
+            if (!hasFinePermissionGranted) {
+                var requestPermission: String? = null
+                var permissionList = AndroidUtils.filterManifestPermissions(
+                    listOf(LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING,
+                        LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING,
+                        LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING), _applicationService)
 
-                    if (permissionList.contains("android.permission.ACCESS_FINE_LOCATION")) {
-                        // ACCESS_FINE_LOCATION permission defined on Manifest, prompt for permission
+                if (permissionList.contains(LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING)) {
+                    // ACCESS_FINE_LOCATION permission defined on Manifest, prompt for permission
+                    // If permission already given prompt will return positive, otherwise will prompt again or show settings
+                    requestPermission = LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING
+                } else if (permissionList.contains(LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING)) {
+                    if (!hasCoarsePermissionGranted) {
+                        // ACCESS_COARSE_LOCATION permission defined on Manifest, prompt for permission
                         // If permission already given prompt will return positive, otherwise will prompt again or show settings
-                        requestPermission = "android.permission.ACCESS_FINE_LOCATION"
-                    } else if (permissionList.contains("android.permission.ACCESS_COARSE_LOCATION")) {
-                        if (locationCoarsePermission != PackageManager.PERMISSION_GRANTED) {
-                            // ACCESS_COARSE_LOCATION permission defined on Manifest, prompt for permission
-                            // If permission already given prompt will return positive, otherwise will prompt again or show settings
-                            requestPermission = "android.permission.ACCESS_COARSE_LOCATION"
-                        } else if (Build.VERSION.SDK_INT >= 29 && permissionList.contains("android.permission.ACCESS_BACKGROUND_LOCATION")) {
-                            // ACCESS_BACKGROUND_LOCATION permission defined on Manifest, prompt for permission
-                            requestPermission = "android.permission.ACCESS_BACKGROUND_LOCATION"
-                        }
-                    } else {
-                        Logging.info("Location permissions not added on AndroidManifest file >= M")
+                        requestPermission = LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING
+                    } else if (Build.VERSION.SDK_INT >= 29 && permissionList.contains(LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING)) {
+                        // ACCESS_BACKGROUND_LOCATION permission defined on Manifest, prompt for permission
+                        requestPermission = LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING
                     }
-
-                    // We handle the following cases:
-                    //  1 - If needed and available then prompt for permissions
-                    //       - Request permission can be ACCESS_COARSE_LOCATION or ACCESS_FINE_LOCATION
-                    //  2 - If the permission were already granted then start getting location
-                    //  3 - If permission wasn't granted then trigger fail flow
-                    //
-                    // For each case, we call the prompt handlers
-                    if (requestPermission != null) {
-                        result = _locationPermissionController.prompt(true, requestPermission)
-                        if (result == true) {
-                            startGetLocation()
-                        }
-                    } else if (locationCoarsePermission == PackageManager.PERMISSION_GRANTED) {
-                        startGetLocation()
-                        result = true
-                    } else {
-                        result = false
-                    }
-                } catch (e: PackageManager.NameNotFoundException) {
-                    e.printStackTrace()
-                    result = null
+                } else {
+                    Logging.info("Location permissions not added on AndroidManifest file >= M")
                 }
-            } else if (Build.VERSION.SDK_INT >= 29 && locationBackgroundPermission != PackageManager.PERMISSION_GRANTED) {
+
+                // We handle the following cases:
+                //  1 - If needed and available then prompt for permissions
+                //       - Request permission can be ACCESS_COARSE_LOCATION or ACCESS_FINE_LOCATION
+                //  2 - If the permission were already granted then start getting location
+                //  3 - If permission wasn't granted then trigger fail flow
+                //
+                // For each case, we call the prompt handlers
+                result = if (requestPermission != null) {
+                    _locationPermissionController.prompt(true, requestPermission)
+                } else {
+                    hasCoarsePermissionGranted
+                }
+            } else if (Build.VERSION.SDK_INT >= 29 && !hasBackgroundPermissionGranted) {
                 result = backgroundLocationPermissionLogic()
             } else {
-                startGetLocation()
                 result = true
             }
+        }
+
+        if (result) {
+            startGetLocation()
         }
 
         // if result is null that means the user has gone to app settings and may or may not do
@@ -153,35 +136,15 @@ internal class LocationManager(
      * On Android 11 and greater, background location should be asked after fine and coarse permission
      * If background permission is asked at the same time as fine and coarse then both permission request are ignored
      */
-    private suspend fun backgroundLocationPermissionLogic(): Boolean? {
-        try {
-            var requestPermission: String? = null
-            val packageInfo = _applicationService.appContext.packageManager.getPackageInfo(
-                _applicationService.appContext.packageName,
-                PackageManager.GET_PERMISSIONS
-            )
-            val permissionList = listOf(*packageInfo.requestedPermissions)
-            if (permissionList.contains("android.permission.ACCESS_BACKGROUND_LOCATION")) {
-                // ACCESS_BACKGROUND_LOCATION permission defined on Manifest, prompt for permission
-                requestPermission = "android.permission.ACCESS_BACKGROUND_LOCATION"
-            }
-            val result = if (requestPermission != null) {
-                _locationPermissionController.prompt(true, requestPermission)
-            } else {
-                // Fine permission already granted
-                true
-            }
+    private suspend fun backgroundLocationPermissionLogic(): Boolean {
+        val hasManifestPermission = AndroidUtils.hasPermission(LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING, false, _applicationService)
 
-            if (result == true) {
-                startGetLocation()
-            }
-
-            return result
-        } catch (e: PackageManager.NameNotFoundException) {
-            e.printStackTrace()
+        return if (hasManifestPermission) {
+            _locationPermissionController.prompt(true, LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING)
+        } else {
+            // Fine permission already granted
+            true
         }
-
-        return false
     }
 
     // Started from this class or PermissionActivity

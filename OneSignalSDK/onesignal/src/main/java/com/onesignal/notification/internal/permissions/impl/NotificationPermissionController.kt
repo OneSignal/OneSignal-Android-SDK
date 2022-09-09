@@ -30,6 +30,7 @@ package com.onesignal.notification.internal.permissions.impl
 import android.os.Build
 import androidx.annotation.ChecksSdkIntAtLeast
 import com.onesignal.R
+import com.onesignal.core.internal.application.ApplicationLifecycleHandlerBase
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.core.internal.permissions.IRequestPermissionService
@@ -40,11 +41,12 @@ import com.onesignal.onesignal.core.internal.common.suspend.WaiterWithValue
 
 internal class NotificationPermissionController(
     private val _application: IApplicationService,
-    private val _requestPermission: IRequestPermissionService
+    private val _requestPermission: IRequestPermissionService,
+    private val _applicationService: IApplicationService
 ) : IRequestPermissionService.PermissionCallback,
     INotificationPermissionController {
 
-    private val _waiter = WaiterWithValue<Boolean?>()
+    private val _waiter = WaiterWithValue<Boolean>()
 
     init {
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)
@@ -67,7 +69,7 @@ internal class NotificationPermissionController(
      * does happen, the app will detect the permissions on app focus and drive permission callbacks
      * to notify of the status.
      */
-    override suspend fun prompt(fallbackToSettings: Boolean): Boolean? {
+    override suspend fun prompt(fallbackToSettings: Boolean): Boolean {
         if (notificationsEnabled()) {
             return true
         }
@@ -114,8 +116,15 @@ internal class NotificationPermissionController(
             activity.getString(R.string.notification_permission_settings_message),
             object : AlertDialogPrepromptForAndroidSettings.Callback {
                 override fun onAccept() {
+                    // wait for focus to be regained, and check the current permission status.
+                    _applicationService.addApplicationLifecycleHandler(object : ApplicationLifecycleHandlerBase() {
+                        override fun onFocus() {
+                            super.onFocus()
+                            _applicationService.removeApplicationLifecycleHandler(this)
+                            _waiter.wake(AndroidUtils.hasPermission(ANDROID_PERMISSION_STRING, true, _applicationService))
+                        }
+                    })
                     NavigateToAndroidSettingsForNotifications.show(activity)
-                    _waiter.wake(null)
                 }
                 override fun onDecline() {
                     _waiter.wake(false)

@@ -48,7 +48,7 @@ public class Dialog {
     }
 
     public enum DialogAction {
-        SWITCH,
+        LOGIN,
         ADD,
         UPDATE
     }
@@ -64,7 +64,7 @@ public class Dialog {
         final EditText updateAlertDialogEditText = updateAlertDialogView.findViewById(R.id.update_alert_dialog_edit_text);
         final ProgressBar updateAlertDialogProgressBar = updateAlertDialogView.findViewById(R.id.update_alert_dialog_progress_bar);
 
-        String hintTitle = "New " + field.getTitle();
+        String hintTitle = action == DialogAction.LOGIN ? field.getTitle() : "New " + field.getTitle();
         updateAlertDialogTextInputLayout.setHint(hintTitle);
         updateAlertDialogEditText.setText(content);
 
@@ -85,8 +85,8 @@ public class Dialog {
             case UPDATE:
                 buttonText = Text.BUTTON_UPDATE;
                 break;
-            case SWITCH:
-                buttonText = Text.BUTTON_SWITCH;
+            case LOGIN:
+                buttonText = Text.BUTTON_LOGIN;
                 break;
         }
         updateAlertDialog.setPositiveButton(buttonText, new DialogInterface.OnClickListener() {

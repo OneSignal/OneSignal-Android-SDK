@@ -19,7 +19,6 @@ import android.util.Pair;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Switch;
@@ -149,12 +148,12 @@ public class MainActivityViewModel implements ActivityViewModel {
     private Switch locationSharedSwitch;
     private Button promptLocationButton;
 
-    // Settings
-    private TextView settingTitleTextView;
+    // Push
     private RelativeLayout subscriptionRelativeLayout;
     private TextView subscriptionTextView;
     private TextView subscriptionDescriptionTextView;
     private Switch subscriptionSwitch;
+    private Button promptPushButton;
     private RelativeLayout pauseInAppMessagesRelativeLayout;
     private TextView pauseInAppMessagesTextView;
     private TextView pauseInAppMessagesDescriptionTextView;
@@ -210,6 +209,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         appIdRelativeLayout = getActivity().findViewById(R.id.main_activity_account_details_app_id_relative_layout);
         appIdTitleTextView = getActivity().findViewById(R.id.main_activity_account_details_app_id_title_text_view);
         appIdTextView = getActivity().findViewById(R.id.main_activity_account_details_app_id_text_view);
+        revokeConsentButton = getActivity().findViewById(R.id.main_activity_app_revoke_consent_button);
         switchUserButton = getActivity().findViewById(R.id.main_activity_switch_user_button);
 
         aliasTitleTextView = getActivity().findViewById(R.id.main_activity_aliases_title_text_view);
@@ -256,16 +256,16 @@ public class MainActivityViewModel implements ActivityViewModel {
         locationSharedSwitch = getActivity().findViewById(R.id.main_activity_location_shared_switch);
         promptLocationButton = getActivity().findViewById(R.id.main_activity_location_prompt_location_button);
 
-        settingTitleTextView = getActivity().findViewById(R.id.main_activity_settings_title_text_view);
-        subscriptionRelativeLayout = getActivity().findViewById(R.id.main_activity_settings_subscription_relative_layout);
-        subscriptionTextView = getActivity().findViewById(R.id.main_activity_settings_subscription_text_view);
-        subscriptionDescriptionTextView = getActivity().findViewById(R.id.main_activity_settings_subscription_info_text_view);
-        subscriptionSwitch = getActivity().findViewById(R.id.main_activity_settings_subscription_switch);
-        pauseInAppMessagesRelativeLayout = getActivity().findViewById(R.id.main_activity_settings_pause_in_app_messages_relative_layout);
-        pauseInAppMessagesTextView = getActivity().findViewById(R.id.main_activity_settings_pause_in_app_messages_text_view);
-        pauseInAppMessagesDescriptionTextView = getActivity().findViewById(R.id.main_activity_settings_pause_in_app_messages_info_text_view);
-        pauseInAppMessagesSwitch = getActivity().findViewById(R.id.main_activity_settings_pause_in_app_messages_switch);
-        revokeConsentButton = getActivity().findViewById(R.id.main_activity_settings_revoke_consent_button);
+        subscriptionRelativeLayout = getActivity().findViewById(R.id.main_activity_push_subscription_relative_layout);
+        subscriptionTextView = getActivity().findViewById(R.id.main_activity_push_subscription_text_view);
+        subscriptionDescriptionTextView = getActivity().findViewById(R.id.main_activity_push_subscription_info_text_view);
+        subscriptionSwitch = getActivity().findViewById(R.id.main_activity_push_subscription_switch);
+        promptPushButton = getActivity().findViewById(R.id.main_activity_push_prompt_push_button);
+
+        pauseInAppMessagesRelativeLayout = getActivity().findViewById(R.id.main_activity_iam_pause_in_app_messages_relative_layout);
+        pauseInAppMessagesTextView = getActivity().findViewById(R.id.main_activity_iam_pause_in_app_messages_text_view);
+        pauseInAppMessagesDescriptionTextView = getActivity().findViewById(R.id.main_activity_iam_pause_in_app_messages_info_text_view);
+        pauseInAppMessagesSwitch = getActivity().findViewById(R.id.main_activity_iam_pause_in_app_messages_switch);
 
         Button navigateNextActivity = getActivity().findViewById(R.id.main_activity_navigate_button);
         navigateNextActivity.setOnClickListener(v -> {
@@ -318,7 +318,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         font.applyFont(locationSharedTextView, font.saralaBold);
         font.applyFont(locationSharedDescriptionTextView, font.saralaRegular);
         font.applyFont(promptLocationButton, font.saralaBold);
-        font.applyFont(settingTitleTextView, font.saralaBold);
+        font.applyFont(promptPushButton, font.saralaBold);
         font.applyFont(subscriptionTextView, font.saralaBold);
         font.applyFont(subscriptionDescriptionTextView, font.saralaRegular);
         font.applyFont(pauseInAppMessagesTextView, font.saralaBold);
@@ -352,21 +352,8 @@ public class MainActivityViewModel implements ActivityViewModel {
 
     @Override
     public void onPermissionChanged(@Nullable IPermissionStateChanges stateChanges) {
-        boolean isSubscribed = OneSignal.getUser().getSubscriptions().getPush() != null;
-        boolean isPermissionEnabled = stateChanges.getTo().getNotificationsEnabled();
-
-        subscriptionSwitch.setEnabled(isPermissionEnabled);
-        subscriptionSwitch.setChecked(isSubscribed);
+        refreshSubscriptionState();
     }
-
-    // TODO()
-//
-//    @Override
-//    public void onOSSubscriptionChanged(OSSubscriptionStateChanges stateChanges) {
-//        boolean isSubscribed = stateChanges.getTo().isSubscribed();
-//        subscriptionSwitch.setChecked(isSubscribed);
-//        SharedPreferenceUtil.cacheLocationSharedStatus(context, isSubscribed);
-//    }
 
     private void setupConsentLayout(boolean hasConsent) {
         int consentVisibility = hasConsent ? View.GONE : View.VISIBLE;
@@ -382,20 +369,17 @@ public class MainActivityViewModel implements ActivityViewModel {
     }
 
     private void postPrivacyConsentSetup() {
+        setupLayout();
+        refreshState();
+    }
+
+    public void setupLayout() {
         setupScrollView();
         setupAppLayout();
-        setupAliasLayout();
-        setupEmailLayout();
-        setupSMSLayout();
-        setupTagsLayout();
-        setupPushNotificationLayout();
-        setupOutcomeLayout();
-        setupTriggersLayout();
-        setupInAppMessagingLayout();
+        setupUserLayout();
         setupLocationLayout();
-        setupSettingsLayout();
-
-        refreshState();
+        setupPushNotificationLayout();
+        setupInAppMessagingLayout();
     }
 
     private void setupScrollView() {
@@ -409,29 +393,20 @@ public class MainActivityViewModel implements ActivityViewModel {
     }
 
     private void setupAppLayout() {
-        appIdRelativeLayout.setOnClickListener(v -> dialog.createUpdateAlertDialog(getOneSignalAppId(), Dialog.DialogAction.UPDATE, ProfileUtil.FieldType.APP_ID, new UpdateAlertDialogCallback() {
-            @Override
-            public void onSuccess(String update) {
-                OneSignal.setAppId(update);
-                appIdTextView.setText(update);
-                SharedPreferenceUtil.cacheOneSignalAppId(getActivity(), update);
-                // TODO: Shouldn't need to do this anymore intentTo.resetApplication();
-            }
-
-            @Override
-            public void onFailure() {
-
-            }
-        }));
-
-        switchUserButton.setOnClickListener(v -> dialog.createUpdateAlertDialog(OneSignal.getUser().getExternalId(), Dialog.DialogAction.SWITCH, ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
+        revokeConsentButton.setOnClickListener(v -> togglePrivacyConsent(false));
+        switchUserButton.setOnClickListener(v -> dialog.createUpdateAlertDialog(OneSignal.getUser().getExternalId(), Dialog.DialogAction.LOGIN, ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
             @Override
             public void onSuccess(String update) {
                 if(update == null || update.isEmpty()) {
-                    OneSignal.loginGuest(Continue.with(r -> refreshState()));
+                    OneSignal.logout();
+                    switchUserButton.setText(R.string.login_user);
+                    refreshState();
                 }
                 else {
-                    OneSignal.login(update, Continue.with(r -> refreshState()));
+                    OneSignal.login(update, Continue.with(r -> {
+                        switchUserButton.setText(R.string.logout_user);
+                        refreshState();
+                    }));
                 }
             }
 
@@ -440,6 +415,15 @@ public class MainActivityViewModel implements ActivityViewModel {
 
             }
         }));
+    }
+
+    private void setupUserLayout() {
+        setupAliasLayout();
+        setupEmailLayout();
+        setupSMSLayout();
+        setupTagsLayout();
+        setupOutcomeLayout();
+        setupTriggersLayout();
     }
 
     private void setupAliasLayout() {
@@ -465,8 +449,6 @@ public class MainActivityViewModel implements ActivityViewModel {
                 refreshAliasRecyclerView();
             }
         }));
-
-        setupExternalUserIdButton();
     }
 
     private void setupAliasesRecyclerView() {
@@ -501,28 +483,6 @@ public class MainActivityViewModel implements ActivityViewModel {
                 aliasesRecyclerViewAdapter.notifyDataSetChanged();
             }
         });
-    }
-
-    private void setupExternalUserIdButton() {
-        // TODO: Can no longer set external ID after the fact
-//        externalUserIdRelativeLayout.setOnClickListener(v -> {
-//            String externalUserId2 = getExternalUserIdFromOS();
-//            userExternalUserIdTextView.setText(externalUserId2 == null ? "" : externalUserId2);
-//
-//            dialog.createUpdateAlertDialog(externalUserId2, Dialog.DialogAction.UPDATE, ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
-//                @Override
-//                public void onSuccess(String externalUserId) {
-//                    OneSignal.getUser().setExternalId(externalUserId);
-//                    userExternalUserIdTextView.setText(externalUserId);
-//                    SharedPreferenceUtil.cacheUserExternalUserId(context, externalUserId);
-//                }
-//
-//                @Override
-//                public void onFailure() {
-//
-//                }
-//            });
-//        });
     }
 
     private void setupEmailLayout() {
@@ -567,89 +527,6 @@ public class MainActivityViewModel implements ActivityViewModel {
                 refreshSMSRecyclerView();
             }
         }));
-    }
-
-    private void setupLocationLayout() {
-        setupLocationSharedSwitch();
-        setupPromptLocationButton();
-    }
-
-    private void setupLocationSharedSwitch() {
-        locationSharedRelativeLayout.setOnClickListener(v -> {
-            boolean isLocationShared = !locationSharedSwitch.isChecked();
-            locationSharedSwitch.setChecked(isLocationShared);
-            SharedPreferenceUtil.cacheLocationSharedStatus(context, isLocationShared);
-        });
-
-        boolean isLocationShared = SharedPreferenceUtil.getCachedLocationSharedStatus(context);
-        locationSharedSwitch.setChecked(isLocationShared);
-        locationSharedSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                SharedPreferenceUtil.cacheLocationSharedStatus(context, isChecked);
-                OneSignal.getLocation().setLocationShared(isChecked);
-            }
-        });
-    }
-
-    private void setupPromptLocationButton() {
-        promptLocationButton.setOnClickListener(v -> {
-            OneSignal.getLocation().requestPermission(Continue.none());
-        });
-    }
-
-    public void setupSettingsLayout() {
-        setupSubscriptionSwitch();
-        setupPauseInAppMessagesSwitch();
-        setupRevokeConsentButton();
-    }
-
-    private void setupSubscriptionSwitch() {
-        boolean isPermissionEnabled = OneSignal.getNotifications().getPermissionStatus().getNotificationsEnabled();
-        boolean isSubscribed = OneSignal.getUser().getSubscriptions().getPush() != null;
-
-        subscriptionSwitch.setEnabled(isPermissionEnabled);
-        subscriptionSwitch.setChecked(isSubscribed);
-
-        // Add a listener to try to enable push notifications if currently disabled.
-        subscriptionRelativeLayout.setOnClickListener(v -> {
-            boolean isPermissionEnabled1 = OneSignal.getNotifications().getPermissionStatus().getNotificationsEnabled();
-            if(!isPermissionEnabled1) {
-                OneSignal.getNotifications().requestPermission(Continue.with(r -> {
-                    // TODO: I think this will fire the change listener, which handles this code so might
-                    //       not need to do anything here?
-                    if(r.isSuccess()) {
-                        subscriptionSwitch.setEnabled(r.getData());
-                    }
-                }));
-            }
-        });
-
-        // Add a listener to toggle the push notification enablement for the current user. The assumption is this
-        // can only fire if the subscription switch is enabled (push notifications are enabled).
-        subscriptionSwitch.setOnClickListener(v -> {
-            IPushSubscription subscription = OneSignal.getUser().getSubscriptions().getPush();
-            if (subscription != null) {
-                subscription.setEnabled(subscriptionSwitch.isChecked());
-            }
-        });
-    }
-
-    private void setupPauseInAppMessagesSwitch() {
-        pauseInAppMessagesRelativeLayout.setOnClickListener(v -> {
-            boolean isInAppMessagesPaused = pauseInAppMessagesSwitch.isChecked();
-            pauseInAppMessagesSwitch.setChecked(!isInAppMessagesPaused);
-        });
-
-        pauseInAppMessagesSwitch.setChecked(SharedPreferenceUtil.getCachedInAppMessagingPausedStatus(context));
-        pauseInAppMessagesSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            OneSignal.getIam().setPaused(isChecked);
-            SharedPreferenceUtil.cacheInAppMessagingPausedStatus(context, isChecked);
-        });
-    }
-
-    private void setupRevokeConsentButton() {
-        revokeConsentButton.setOnClickListener(v -> togglePrivacyConsent(false));
     }
 
     private void setupTagsLayout() {
@@ -764,15 +641,6 @@ public class MainActivityViewModel implements ActivityViewModel {
         });
     }
 
-    private void setupPushNotificationLayout() {
-        recyclerViewBuilder.setupRecyclerView(pushNotificationRecyclerView, 16, false, true);
-        GridLayoutManager gridLayoutManager = new GridLayoutManager(getActivity(), 2);
-        pushNotificationRecyclerView.setLayoutManager(gridLayoutManager);
-
-        pushNotificationRecyclerViewAdapter = new NotificationRecyclerViewAdapter(context, Notification.values());
-        pushNotificationRecyclerView.setAdapter(pushNotificationRecyclerViewAdapter);
-    }
-
     private void setupOutcomeLayout() {
         sendOutcomeButton.setOnClickListener(v -> dialog.createSendOutcomeAlertDialog("Select an Outcome Type...", new SendOutcomeAlertDialogCallback() {
             @Override
@@ -864,7 +732,99 @@ public class MainActivityViewModel implements ActivityViewModel {
         });
     }
 
+    private void setupLocationLayout() {
+        setupLocationSharedSwitch();
+        setupPromptLocationButton();
+    }
+
+    private void setupLocationSharedSwitch() {
+        locationSharedRelativeLayout.setOnClickListener(v -> {
+            boolean isLocationShared = !locationSharedSwitch.isChecked();
+            locationSharedSwitch.setChecked(isLocationShared);
+            SharedPreferenceUtil.cacheLocationSharedStatus(context, isLocationShared);
+        });
+
+        boolean isLocationShared = SharedPreferenceUtil.getCachedLocationSharedStatus(context);
+        locationSharedSwitch.setChecked(isLocationShared);
+        locationSharedSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            SharedPreferenceUtil.cacheLocationSharedStatus(context, isChecked);
+            OneSignal.getLocation().setLocationShared(isChecked);
+        });
+    }
+
+    private void setupPromptLocationButton() {
+        promptLocationButton.setOnClickListener(v -> {
+            OneSignal.getLocation().requestPermission(Continue.none());
+        });
+    }
+
+    private void setupPushNotificationLayout() {
+        setupSubscriptionSwitch();
+        setupPromptPushButton();
+        setupSendNotificationsLayout();
+    }
+
+    private void setupSubscriptionSwitch() {
+        refreshSubscriptionState();
+
+        subscriptionRelativeLayout.setOnClickListener(v -> {
+            boolean isSubscriptionEnabled = !subscriptionSwitch.isChecked();
+            subscriptionSwitch.setChecked(isSubscriptionEnabled);
+        });
+
+        // Add a listener to toggle the push notification enablement for the push subscription.
+        subscriptionSwitch.setOnClickListener(v -> {
+            IPushSubscription subscription = OneSignal.getUser().getSubscriptions().getPush();
+            if (subscription != null) {
+                subscription.setEnabled(subscriptionSwitch.isChecked());
+            }
+        });
+    }
+
+    private void setupPromptPushButton() {
+        promptPushButton.setOnClickListener(v -> {
+            OneSignal.getNotifications().requestPermission(Continue.with(r -> refreshSubscriptionState()));
+        });
+    }
+
+    private void refreshSubscriptionState() {
+        boolean isPermissionEnabled = OneSignal.getNotifications().getPermissionStatus().getNotificationsEnabled();
+        IPushSubscription pushSubscription = OneSignal.getUser().getSubscriptions().getPush();
+        boolean isSubscribed = pushSubscription != null && pushSubscription.getEnabled();
+
+        subscriptionRelativeLayout.setEnabled(isPermissionEnabled);
+        subscriptionSwitch.setEnabled(isPermissionEnabled);
+        subscriptionSwitch.setChecked(isSubscribed);
+    }
+
+    private void setupSendNotificationsLayout() {
+        recyclerViewBuilder.setupRecyclerView(pushNotificationRecyclerView, 16, false, true);
+        GridLayoutManager gridLayoutManager = new GridLayoutManager(getActivity(), 2);
+        pushNotificationRecyclerView.setLayoutManager(gridLayoutManager);
+
+        pushNotificationRecyclerViewAdapter = new NotificationRecyclerViewAdapter(context, Notification.values());
+        pushNotificationRecyclerView.setAdapter(pushNotificationRecyclerViewAdapter);
+    }
+
     private void setupInAppMessagingLayout() {
+        setupPauseInAppMessagesSwitch();
+        setupSendIAMsLayout();
+    }
+
+    private void setupPauseInAppMessagesSwitch() {
+        pauseInAppMessagesRelativeLayout.setOnClickListener(v -> {
+            boolean isInAppMessagesPaused = pauseInAppMessagesSwitch.isChecked();
+            pauseInAppMessagesSwitch.setChecked(!isInAppMessagesPaused);
+        });
+
+        pauseInAppMessagesSwitch.setChecked(SharedPreferenceUtil.getCachedInAppMessagingPausedStatus(context));
+        pauseInAppMessagesSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            OneSignal.getIam().setPaused(isChecked);
+            SharedPreferenceUtil.cacheInAppMessagingPausedStatus(context, isChecked);
+        });
+    }
+
+    private void setupSendIAMsLayout() {
         recyclerViewBuilder.setupRecyclerView(inAppMessagingRecyclerView, 4, false, true);
         GridLayoutManager gridLayoutManager = new GridLayoutManager(getActivity(), 2);
         inAppMessagingRecyclerView.setLayoutManager(gridLayoutManager);
