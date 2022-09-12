@@ -19,9 +19,15 @@ internal object ViewUtils {
     // Due to differences in accounting for keyboard, navigation bar, and status bar between
     //   Android versions have different implementation here
     fun getWindowHeight(activity: Activity): Int {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) getWindowHeightAPI23Plus(activity) else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) getWindowHeightLollipop(
-            activity
-        ) else getDisplaySizeY(activity)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            getWindowHeightAPI23Plus(activity)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            getWindowHeightLollipop(
+                activity
+            )
+        } else {
+            getDisplaySizeY(activity)
+        }
     }
 
     private fun getDisplaySizeY(activity: Activity): Int {
@@ -43,9 +49,13 @@ internal object ViewUtils {
 
     private fun getWindowHeightLollipop(activity: Activity): Int {
         // getDisplaySizeY - works correctly expect for landscape due to a bug.
-        return if (activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) getWindowVisibleDisplayFrame(
-            activity
-        ).height() else getDisplaySizeY(activity)
+        return if (activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            getWindowVisibleDisplayFrame(
+                activity
+            ).height()
+        } else {
+            getDisplaySizeY(activity)
+        }
         //  getWindowVisibleDisplayFrame - Doesn't work for portrait as it subtracts the keyboard height.
     }
 

@@ -71,9 +71,9 @@ internal class TrackGooglePurchase(
     private var isWaitingForPurchasesRequest = false
 
     override fun start() {
-
-        if (!canTrack(_applicationService.appContext))
+        if (!canTrack(_applicationService.appContext)) {
             return
+        }
 
         try {
             val purchaseTokensString = _prefs.getString(PreferenceStores.PLAYER_PURCHASES, PreferencePlayerPurchasesKeys.PREFS_PURCHASE_TOKENS, "[]")
@@ -83,8 +83,9 @@ internal class TrackGooglePurchase(
                 purchaseTokens.add(jsonPurchaseTokens[i].toString())
 
             newAsExisting = jsonPurchaseTokens.length() == 0
-            if (newAsExisting)
+            if (newAsExisting) {
                 newAsExisting = _prefs.getBool(PreferenceStores.PLAYER_PURCHASES, PreferencePlayerPurchasesKeys.PREFS_EXISTING_PURCHASES, true)!!
+            }
         } catch (e: JSONException) {
             e.printStackTrace()
         }
@@ -124,8 +125,9 @@ internal class TrackGooglePurchase(
             val serviceIntent = Intent("com.android.vending.billing.InAppBillingService.BIND")
             serviceIntent.setPackage("com.android.vending")
             _applicationService.appContext.bindService(serviceIntent, serviceConn, Context.BIND_AUTO_CREATE)
-        } else if (mIInAppBillingService != null)
+        } else if (mIInAppBillingService != null) {
             queryBoughtItems()
+        }
     }
 
     private fun queryBoughtItems() {
@@ -162,10 +164,12 @@ internal class TrackGooglePurchase(
                             skusToAdd.add(sku)
                         }
                     }
-                    if (skusToAdd.size > 0) sendPurchases(
-                        skusToAdd,
-                        newPurchaseTokens
-                    ) else if (purchaseDataList.size == 0) {
+                    if (skusToAdd.size > 0) {
+                        sendPurchases(
+                            skusToAdd,
+                            newPurchaseTokens
+                        )
+                    } else if (purchaseDataList.size == 0) {
                         newAsExisting = false
                         _prefs.saveBool(PreferenceStores.PLAYER_PURCHASES, PreferencePlayerPurchasesKeys.PREFS_EXISTING_PURCHASES, false)
                     }
@@ -234,11 +238,15 @@ internal class TrackGooglePurchase(
         private var iapEnabled = -99
         private var IInAppBillingServiceClass: Class<*>? = null
         fun canTrack(context: Context): Boolean {
-            if (iapEnabled == -99) iapEnabled =
-                context.checkCallingOrSelfPermission("com.android.vending.BILLING")
+            if (iapEnabled == -99) {
+                iapEnabled =
+                    context.checkCallingOrSelfPermission("com.android.vending.BILLING")
+            }
             try {
-                if (iapEnabled == PackageManager.PERMISSION_GRANTED) IInAppBillingServiceClass =
-                    Class.forName("com.android.vending.billing.IInAppBillingService")
+                if (iapEnabled == PackageManager.PERMISSION_GRANTED) {
+                    IInAppBillingServiceClass =
+                        Class.forName("com.android.vending.billing.IInAppBillingService")
+                }
             } catch (t: Throwable) {
                 iapEnabled = 0
                 return false

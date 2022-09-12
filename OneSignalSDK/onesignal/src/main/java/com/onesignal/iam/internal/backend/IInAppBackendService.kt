@@ -68,7 +68,7 @@ internal interface IInAppBackendService {
         appId: String,
         subscriptionId: String,
         variantId: String?,
-        messageId: String,
+        messageId: String
     ): HttpResponse
 
     /**

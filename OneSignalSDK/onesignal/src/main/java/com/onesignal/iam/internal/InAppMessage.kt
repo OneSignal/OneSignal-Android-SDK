@@ -95,11 +95,13 @@ internal class InAppMessage(
         variants = parseVariants(json.getJSONObject(IAM_VARIANTS))
         triggers = parseTriggerJson(json.getJSONArray(IAM_TRIGGERS))
         endTime = parseEndTimeJson(json)
-        if (json.has(HAS_LIQUID))
+        if (json.has(HAS_LIQUID)) {
             hasLiquid = json.getBoolean(HAS_LIQUID)
+        }
 
-        if (json.has(IAM_REDISPLAY_STATS))
+        if (json.has(IAM_REDISPLAY_STATS)) {
             redisplayStats = InAppMessageRedisplayStats(json.getJSONObject(IAM_REDISPLAY_STATS), time)
+        }
     }
 
     private fun parseEndTimeJson(json: JSONObject): Date? {

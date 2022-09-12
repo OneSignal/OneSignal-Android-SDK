@@ -38,10 +38,11 @@ internal class PushRegistratorHMS(
             } catch (e: ApiException) {
                 Logging.error("HMS ApiException getting Huawei push token!", e)
                 val pushStatus: IPushRegistrator.RegisterStatus =
-                    if (e.statusCode == CommonCode.ErrorCode.ARGUMENTS_INVALID)
+                    if (e.statusCode == CommonCode.ErrorCode.ARGUMENTS_INVALID) {
                         IPushRegistrator.RegisterStatus.PUSH_STATUS_HMS_ARGUMENTS_INVALID
-                    else
+                    } else {
                         IPushRegistrator.RegisterStatus.PUSH_STATUS_HMS_API_EXCEPTION_OTHER
+                    }
 
                 IPushRegistrator.RegisterResult(null, pushStatus)
             }

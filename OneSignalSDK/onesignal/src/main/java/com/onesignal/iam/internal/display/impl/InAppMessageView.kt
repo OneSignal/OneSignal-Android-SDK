@@ -147,9 +147,11 @@ internal class InAppMessageView(
             //  not being ready to be shown yet
             // When preparing the IAM, the correct height will be set and handle this job, so
             //  all bases are covered and the draggableRelativeLayout will never have the wrong height
-            if (draggableRelativeLayout != null) draggableRelativeLayout!!.setParams(
-                createDraggableLayoutParams(pageHeight, displayPosition, disableDragDismiss)
-            )
+            if (draggableRelativeLayout != null) {
+                draggableRelativeLayout!!.setParams(
+                    createDraggableLayoutParams(pageHeight, displayPosition, disableDragDismiss)
+                )
+            }
         }
     }
 
@@ -242,8 +244,9 @@ internal class InAppMessageView(
         webViewLayoutParams: DraggableRelativeLayout.Params
     ) {
         withContext(Dispatchers.Main) {
-            if (webView == null)
+            if (webView == null) {
                 return@withContext
+            }
 
             webView!!.layoutParams = relativeLayoutParams
             val context = currentActivity!!.applicationContext
@@ -312,9 +315,11 @@ internal class InAppMessageView(
         draggableParams: DraggableRelativeLayout.Params
     ) {
         draggableRelativeLayout = DraggableRelativeLayout(context)
-        if (relativeLayoutParams != null) draggableRelativeLayout!!.setLayoutParams(
-            relativeLayoutParams
-        )
+        if (relativeLayoutParams != null) {
+            draggableRelativeLayout!!.setLayoutParams(
+                relativeLayoutParams
+            )
+        }
         draggableRelativeLayout!!.setParams(draggableParams)
         draggableRelativeLayout!!.setListener(object : DraggableRelativeLayout.DraggableListener {
             override fun onDismiss() {
@@ -367,8 +372,12 @@ internal class InAppMessageView(
 
         // Set the initial elevation of the CardView to 0dp if using Android 6 API 23
         //  Fixes bug when animating a elevated CardView class
-        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.M) cardView.cardElevation =
-            0f else cardView.cardElevation = ViewUtils.dpToPx(5).toFloat()
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.M) {
+            cardView.cardElevation =
+                0f
+        } else {
+            cardView.cardElevation = ViewUtils.dpToPx(5).toFloat()
+        }
         cardView.radius = ViewUtils.dpToPx(8).toFloat()
         cardView.clipChildren = false
         cardView.clipToPadding = false
@@ -381,8 +390,9 @@ internal class InAppMessageView(
      * Schedule dismiss behavior, if IAM has a dismiss after X number of seconds timer.
      */
     private suspend fun startDismissTimerIfNeeded() {
-        if (displayDuration <= 0 || isDismissTimerSet)
+        if (displayDuration <= 0 || isDismissTimerSet) {
             return
+        }
 
         isDismissTimerSet = true
         delay(displayDuration.toLong() * 1000)
@@ -435,9 +445,9 @@ internal class InAppMessageView(
     private suspend fun finishAfterDelay() {
         withContext(Dispatchers.Main) {
             delay(ACTIVITY_FINISH_AFTER_DISMISS_DELAY_MS.toLong())
-            if (hasBackground && parentRelativeLayout != null)
+            if (hasBackground && parentRelativeLayout != null) {
                 animateAndDismissLayout(parentRelativeLayout!!)
-            else {
+            } else {
                 cleanupViewsAfterDismiss()
             }
         }
@@ -460,11 +470,13 @@ internal class InAppMessageView(
             // Dismissed before the dismiss delay
             cancelDismissTimer = true
         }
-        if (draggableRelativeLayout != null)
+        if (draggableRelativeLayout != null) {
             draggableRelativeLayout!!.removeAllViews()
+        }
 
-        if (popupWindow != null)
+        if (popupWindow != null) {
             popupWindow!!.dismiss()
+        }
 
         dereferenceViews()
     }

@@ -45,15 +45,17 @@ internal class PreferencesService(
     override fun saveStringSet(store: String, key: String, value: Set<String>?) = save(store, key, value)
 
     private fun get(store: String, key: String, type: Class<*>, defValue: Any?): Any? {
-        if (!_prefsToApply.containsKey(store))
+        if (!_prefsToApply.containsKey(store)) {
             throw Exception("Store not found: $store")
+        }
 
         val storeMap = _prefsToApply[store]!!
 
         synchronized(storeMap) {
             val cachedValue = storeMap[key]
-            if (cachedValue != null || storeMap.containsKey(key))
+            if (cachedValue != null || storeMap.containsKey(key)) {
                 return cachedValue
+            }
         }
 
         val prefs = getSharedPrefsByName(store)
@@ -72,8 +74,9 @@ internal class PreferencesService(
     }
 
     private fun save(store: String, key: String, value: Any?) {
-        if (!_prefsToApply.containsKey(store))
+        if (!_prefsToApply.containsKey(store)) {
             throw Exception("Store not found: $store")
+        }
 
         val storeMap = _prefsToApply[store]!!
         synchronized(storeMap) {
@@ -125,8 +128,9 @@ internal class PreferencesService(
                 val delay = lastSyncTime - newTime + WRITE_CALL_DELAY_TO_BUFFER_MS
                 lastSyncTime = newTime
 
-                if (delay > 0)
+                if (delay > 0) {
                     delay(delay)
+                }
 
                 // wait to be woken up for the next pass
                 _waiter.waitForWake()

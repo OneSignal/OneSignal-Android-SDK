@@ -13,33 +13,27 @@ import java.text.DecimalFormat
 import java.util.concurrent.ConcurrentHashMap
 
 internal class TriggerController(
-    private val _triggerModelStore: TriggerModelStore,
+    triggerModelStore: TriggerModelStore,
     private var _dynamicTriggerController: DynamicTriggerController
 ) : ITriggerController, IModelStoreChangeHandler<TriggerModel> {
 
     val triggers: ConcurrentHashMap<String?, Any?> = ConcurrentHashMap()
 
     init {
-        _triggerModelStore.subscribe(this)
+        triggerModelStore.subscribe(this)
     }
 
-    /**
-     * This function evaluates all of the triggers for a message. The triggers are organized in
-     * a 2D array where the outer array represents OR conditions and the inner array represents
-     * AND conditions. If all of the triggers in an inner array evaluate to true, it means the
-     * message should be shown and the function returns true.
-     *
-     * @return true if the IAM has triggered "now" and should be displayed. False otherwise.
-     */
     override fun evaluateMessageTriggers(message: InAppMessage): Boolean {
         // If there are no triggers then we display the In-App when a new session is triggered
-        if (message.triggers.isEmpty())
+        if (message.triggers.isEmpty()) {
             return true
+        }
 
         // Outer loop represents OR conditions
         for (andConditions in message.triggers) {
-            if (evaluateAndTriggers(andConditions))
+            if (evaluateAndTriggers(andConditions)) {
                 return true
+            }
         }
 
         return false
@@ -47,8 +41,9 @@ internal class TriggerController(
 
     private fun evaluateAndTriggers(andConditions: List<Trigger>): Boolean {
         for (trigger in andConditions) {
-            if (!evaluateTrigger(trigger))
+            if (!evaluateTrigger(trigger)) {
                 return false
+            }
         }
 
         return true
@@ -56,34 +51,43 @@ internal class TriggerController(
 
     private fun evaluateTrigger(trigger: Trigger): Boolean {
         // Assume all unknown trigger kinds to be false to be safe.
-        if (trigger.kind == Trigger.OSTriggerKind.UNKNOWN)
+        if (trigger.kind == Trigger.OSTriggerKind.UNKNOWN) {
             return false
+        }
 
-        if (trigger.kind != Trigger.OSTriggerKind.CUSTOM)
+        if (trigger.kind != Trigger.OSTriggerKind.CUSTOM) {
             return _dynamicTriggerController.dynamicTriggerShouldFire(trigger)
+        }
 
         val operatorType = trigger.operatorType
         val deviceValue = triggers[trigger.property]
             ?: // If we don't have a local value for this trigger, can only be true in two cases;
             // 1. If operator is Not Exists
+            // 2. Checking to make sure the key doesn't equal a specific value, other than null of course.
             return if (operatorType == Trigger.OSTriggerOperator.NOT_EXISTS) true else operatorType == Trigger.OSTriggerOperator.NOT_EQUAL_TO && trigger.value != null
 
-        // 2. Checking to make sure the key doesn't equal a specific value, other than null of course.
-
         // We have local value at this point, we can evaluate existence checks
-        if (operatorType == Trigger.OSTriggerOperator.EXISTS) return true
-        if (operatorType == Trigger.OSTriggerOperator.NOT_EXISTS) return false
-        if (operatorType == Trigger.OSTriggerOperator.CONTAINS) return deviceValue is Collection<*> && deviceValue.contains(
-            trigger.value
-        )
+        if (operatorType == Trigger.OSTriggerOperator.EXISTS) {
+            return true
+        }
+        if (operatorType == Trigger.OSTriggerOperator.NOT_EXISTS) {
+            return false
+        }
+        if (operatorType == Trigger.OSTriggerOperator.CONTAINS) {
+            return deviceValue is Collection<*> && deviceValue.contains(trigger.value)
+        }
         if (deviceValue is String &&
             trigger.value is String &&
             triggerMatchesStringValue((trigger.value as String?)!!, deviceValue, operatorType)
-        ) return true
+        ) {
+            return true
+        }
         if (trigger.value is Number &&
             deviceValue is Number &&
             triggerMatchesNumericValue((trigger.value as Number?)!!, deviceValue, operatorType)
-        ) return true
+        ) {
+            return true
+        }
 
         return triggerMatchesFlex(trigger.value, deviceValue, operatorType)
     }
@@ -124,11 +128,15 @@ internal class TriggerController(
         }
         return if (deviceValue is String &&
             triggerValue is Number
-        ) triggerMatchesNumericValueFlex(
-            triggerValue,
-            deviceValue,
-            operator
-        ) else false
+        ) {
+            triggerMatchesNumericValueFlex(
+                triggerValue,
+                deviceValue,
+                operator
+            )
+        } else {
+            false
+        }
     }
 
     private fun triggerMatchesNumericValueFlex(
@@ -136,8 +144,7 @@ internal class TriggerController(
         deviceValue: String,
         operator: Trigger.OSTriggerOperator
     ): Boolean {
-        val deviceDoubleValue: Double
-        deviceDoubleValue = try {
+        val deviceDoubleValue: Double = try {
             deviceValue.toDouble()
         } catch (e: NumberFormatException) {
             return false
@@ -163,21 +170,15 @@ internal class TriggerController(
             Trigger.OSTriggerOperator.GREATER_THAN -> deviceDoubleValue > triggerDoubleValue
             Trigger.OSTriggerOperator.LESS_THAN_OR_EQUAL_TO -> deviceDoubleValue < triggerDoubleValue || deviceDoubleValue == triggerDoubleValue
             Trigger.OSTriggerOperator.GREATER_THAN_OR_EQUAL_TO -> deviceDoubleValue > triggerDoubleValue || deviceDoubleValue == triggerDoubleValue
-            else -> false
         }
     }
 
-    /**
-     * Part of redisplay logic
-     *
-     * If trigger key is part of message triggers, then return true, otherwise false
-     */
-    override fun isTriggerOnMessage(
-        message: InAppMessage,
-        newTriggersKeys: Collection<String>
-    ): Boolean {
-        if (message.triggers == null) return false
-        for (triggerKey in newTriggersKeys) {
+    override fun isTriggerOnMessage(message: InAppMessage, triggersKeys: Collection<String>): Boolean {
+        if (message.triggers == null) {
+            return false
+        }
+
+        for (triggerKey in triggersKeys) {
             for (andConditions in message.triggers) {
                 for (trigger in andConditions) {
                     // Dynamic triggers depends on triggerId
@@ -192,17 +193,14 @@ internal class TriggerController(
         return false
     }
 
-    /**
-     * Part of redisplay logic
-     *
-     * If message has only dynamic trigger return true, otherwise false
-     */
     override fun messageHasOnlyDynamicTriggers(message: InAppMessage): Boolean {
         if (message.triggers == null || message.triggers.isEmpty()) return false
         for (andConditions in message.triggers) {
             for (trigger in andConditions) {
-                if (trigger.kind == Trigger.OSTriggerKind.CUSTOM || trigger.kind == Trigger.OSTriggerKind.UNKNOWN) // At least one trigger is not dynamic
+                if (trigger.kind == Trigger.OSTriggerKind.CUSTOM || trigger.kind == Trigger.OSTriggerKind.UNKNOWN) {
+                    // At least one trigger is not dynamic
                     return false
+                }
             }
         }
         return true
@@ -222,16 +220,13 @@ internal class TriggerController(
         removeTriggersForKeys(model.key)
     }
 
-    /**
-     * Trigger Set/Delete/Persist Logic
-     */
-    override fun addTriggers(key: String, value: Any) {
+    private fun addTriggers(key: String, value: Any) {
         synchronized(triggers) {
             triggers[key] = value
         }
     }
 
-    override fun removeTriggersForKeys(key: String) {
+    private fun removeTriggersForKeys(key: String) {
         synchronized(triggers) { triggers.remove(key) }
     }
 

@@ -39,6 +39,11 @@ internal class ConfigModel : Model() {
     var operationRepoCachePath: String = "" // todo
 
     /**
+     * The minimum number of milliseconds required to pass to allow the fetching of IAM to occur.
+     */
+    var fetchIAMMinInterval: Long = 30000
+
+    /**
      * The current AppID
      */
     var appId: String?

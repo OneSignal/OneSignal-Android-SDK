@@ -13,14 +13,14 @@ import java.util.TreeMap
 internal class NotificationLimitManager(
     private val _dataController: INotificationDataController,
     private val _applicationService: IApplicationService,
-    private val _notificationSummaryManager: INotificationSummaryManager,
+    private val _notificationSummaryManager: INotificationSummaryManager
 ) : INotificationLimitManager {
 
     override suspend fun clearOldestOverLimit(notificationsToMakeRoomFor: Int) {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 clearOldestOverLimitStandard(notificationsToMakeRoomFor)
-            else {
+            } else {
                 _dataController.clearOldestOverLimitFallback(notificationsToMakeRoomFor, INotificationLimitManager.Constants.maxNumberOfNotifications)
             }
         } catch (t: Throwable) {

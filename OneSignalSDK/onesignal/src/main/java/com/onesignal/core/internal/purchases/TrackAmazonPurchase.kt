@@ -66,8 +66,9 @@ internal class TrackAmazonPurchase(
     private var registerListenerOnMainThread = false
 
     override fun start() {
-        if (!canTrack())
+        if (!canTrack()) {
             return
+        }
 
         try {
             // 2.0.1
@@ -170,8 +171,9 @@ internal class TrackAmazonPurchase(
                             val iso = marketToCurrencyCode(currentMarket)
                             var priceStr = product.price
 
-                            if (!priceStr.matches("^[0-9]".toRegex()))
+                            if (!priceStr.matches("^[0-9]".toRegex())) {
                                 priceStr = priceStr.substring(1)
+                            }
 
                             val price = BigDecimal(priceStr)
 
@@ -181,9 +183,11 @@ internal class TrackAmazonPurchase(
                         _operationRepo.enqueue(TrackPurchaseOperation(_configModelStore.get().appId!!, _userSwitcher.identityModel.oneSignalId.toString(), false, purchasesToReport))
                     }
                 }
-            } else if (orgPurchasingListener != null) orgPurchasingListener!!.onProductDataResponse(
-                response
-            )
+            } else if (orgPurchasingListener != null) {
+                orgPurchasingListener!!.onProductDataResponse(
+                    response
+                )
+            }
         }
 
         override fun onPurchaseResponse(response: PurchaseResponse) {
@@ -198,9 +202,11 @@ internal class TrackAmazonPurchase(
         }
 
         override fun onPurchaseUpdatesResponse(response: PurchaseUpdatesResponse) {
-            if (orgPurchasingListener != null) orgPurchasingListener!!.onPurchaseUpdatesResponse(
-                response
-            )
+            if (orgPurchasingListener != null) {
+                orgPurchasingListener!!.onPurchaseUpdatesResponse(
+                    response
+                )
+            }
         }
 
         override fun onUserDataResponse(response: UserDataResponse) {

@@ -58,12 +58,15 @@ internal class DraggableRelativeLayout(context: Context?) : RelativeLayout(conte
             params.offScreenYPos = -params.messageHeight - MARGIN_PX_SIZE
             params.dismissingYVelocity = -params.dismissingYVelocity
             params.dismissingYPos = params.offScreenYPos / 3
-        } else params.dismissingYPos = params.messageHeight / 3 + params.maxYPos * 2
+        } else {
+            params.dismissingYPos = params.messageHeight / 3 + params.maxYPos * 2
+        }
     }
 
     private fun createDragHelper() {
         mDragHelper = ViewDragHelper.create(
-            this, 1.0f,
+            this,
+            1.0f,
             object : ViewDragHelper.Callback() {
                 private var lastYPos = 0
                 override fun tryCaptureView(child: View, pointerId: Int): Boolean {
@@ -115,7 +118,9 @@ internal class DraggableRelativeLayout(context: Context?) : RelativeLayout(conte
                             params!!.maxXPos,
                             settleDestY
                         )
-                    ) ViewCompat.postInvalidateOnAnimation(this@DraggableRelativeLayout)
+                    ) {
+                        ViewCompat.postInvalidateOnAnimation(this@DraggableRelativeLayout)
+                    }
                 }
             }
         )

@@ -36,8 +36,9 @@ internal class RequestPermissionService(
         androidPermissionString: String?,
         callbackClass: Class<*>
     ) {
-        if (waiting)
+        if (waiting) {
             return
+        }
 
         fallbackToSettings = fallbackCondition
 
@@ -47,9 +48,9 @@ internal class RequestPermissionService(
         // available.
         _application.addActivityLifecycleHandler(object : IActivityLifecycleHandler {
             override fun onActivityAvailable(activity: Activity) {
-                if (activity.javaClass == PermissionsActivity::class.java)
+                if (activity.javaClass == PermissionsActivity::class.java) {
                     _application.removeActivityLifecycleHandler(this)
-                else {
+                } else {
                     val intent = Intent(activity, PermissionsActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
                     intent.putExtra(PermissionsActivity.INTENT_EXTRA_PERMISSION_TYPE, permissionRequestType)

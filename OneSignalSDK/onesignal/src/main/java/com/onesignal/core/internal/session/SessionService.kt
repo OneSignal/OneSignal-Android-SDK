@@ -17,9 +17,8 @@ import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.models.SessionModel
 import com.onesignal.core.internal.models.SessionModelStore
 import com.onesignal.core.internal.startup.IStartableService
+import com.onesignal.core.internal.time.ITime
 import org.json.JSONArray
-import java.util.Calendar
-import java.util.Date
 import java.util.UUID
 
 internal class SessionService(
@@ -27,7 +26,11 @@ internal class SessionService(
     private val _configModelStore: ConfigModelStore,
     private val _sessionModelStore: SessionModelStore,
     private val _influenceManager: IInfluenceManager,
+    private val _time: ITime
 ) : ISessionService, IStartableService, IApplicationLifecycleHandler, IEventNotifier<ISessionLifecycleHandler> {
+
+    override val startTime: Long
+        get() = _session!!.startTime
 
     override val influences: List<Influence>
         get() = _influenceManager.influences
@@ -36,7 +39,7 @@ internal class SessionService(
         get() = _influenceManager.sessionInfluences
 
     private val _sessionLifeCycleNotifier: EventProducer<ISessionLifecycleHandler> = EventProducer()
-    private var _focusOutTime: Date = Calendar.getInstance().time
+    private var _focusOutTime: Long = 0
     private var _session: SessionModel? = null
     private var _config: ConfigModel? = null
 
@@ -44,15 +47,14 @@ internal class SessionService(
         _session = _sessionModelStore.get()
         _config = _configModelStore.get()
         _applicationService.addApplicationLifecycleHandler(this)
-
-        // TODO: Determine if we need to create a new session
+        createNewSession()
     }
 
     override fun onFocus() {
         Logging.log(LogLevel.DEBUG, "SessionService.onFocus()")
-        val now: Date = Calendar.getInstance().time
 
-        var dt = now.time - _focusOutTime.time
+        val now = _time.currentTimeMillis
+        var dt = now - _focusOutTime
 
         if (dt > (_config!!.sessionFocusTimeout * 60 * 1000)) {
             Logging.debug("Session timeout reached")
@@ -68,13 +70,13 @@ internal class SessionService(
 
     override fun onUnfocused() {
         Logging.log(LogLevel.DEBUG, "SessionService.onUnfocused()")
-        _focusOutTime = Calendar.getInstance().time
+        _focusOutTime = _time.currentTimeMillis
     }
 
     private fun createNewSession() {
         // no reason to maintain old session models, just overwrite
         _session!!.id = UUID.randomUUID().toString()
-        _session!!.startTime = Calendar.getInstance().time
+        _session!!.startTime = _time.currentTimeMillis
         _session!!.unfocusedDuration = 0.0
 
         Logging.debug("New session started at ${_session!!.startTime}")
@@ -88,8 +90,9 @@ internal class SessionService(
     override fun onNotificationReceived(notificationId: String) {
         Logging.debug("SessionService.onNotificationReceived notificationId: $notificationId")
 
-        if (notificationId.isEmpty())
+        if (notificationId.isEmpty()) {
             return
+        }
 
         _influenceManager.notificationChannelTracker.saveLastId(notificationId)
     }
@@ -104,8 +107,9 @@ internal class SessionService(
     override fun onDirectInfluenceFromNotificationOpen(entryAction: AppEntryAction, notificationId: String?) {
         Logging.debug("SessionService.onDirectInfluenceFromNotificationOpen entryAction: $entryAction, notificationId: $notificationId")
 
-        if (notificationId == null || notificationId.isEmpty())
+        if (notificationId == null || notificationId.isEmpty()) {
             return
+        }
 
         attemptSessionUpgrade(entryAction, notificationId)
     }
@@ -134,12 +138,16 @@ internal class SessionService(
             val lastIds = channelTracker.lastReceivedIds
             Logging.debug("OneSignal SessionManager restartSessionIfNeeded lastIds: $lastIds")
             val influence = channelTracker.currentSessionInfluence
-            var updated: Boolean = if (lastIds.length() > 0) setSession(
-                channelTracker,
-                InfluenceType.INDIRECT,
-                null,
-                lastIds
-            ) else setSession(channelTracker, InfluenceType.UNATTRIBUTED, null, null)
+            var updated: Boolean = if (lastIds.length() > 0) {
+                setSession(
+                    channelTracker,
+                    InfluenceType.INDIRECT,
+                    null,
+                    lastIds
+                )
+            } else {
+                setSession(channelTracker, InfluenceType.UNATTRIBUTED, null, null)
+            }
             if (updated) updatedInfluences.add(influence)
         }
         sendSessionEndingWithInfluences(updatedInfluences)
@@ -147,8 +155,9 @@ internal class SessionService(
 
     // Call when the session for the app changes, caches the state, and broadcasts the session that just ended
     private fun setSession(channelTracker: IChannelTracker, influenceType: InfluenceType, directNotificationId: String?, indirectNotificationIds: JSONArray?): Boolean {
-        if (!willChangeSession(channelTracker, influenceType, directNotificationId, indirectNotificationIds))
+        if (!willChangeSession(channelTracker, influenceType, directNotificationId, indirectNotificationIds)) {
             return false
+        }
         Logging.debug(
             """
             OSChannelTracker changed: ${channelTracker.idTag}
@@ -169,8 +178,9 @@ internal class SessionService(
     }
 
     private fun willChangeSession(channelTracker: IChannelTracker, influenceType: InfluenceType, directNotificationId: String?, indirectNotificationIds: JSONArray?): Boolean {
-        if (influenceType != channelTracker.influenceType)
+        if (influenceType != channelTracker.influenceType) {
             return true
+        }
 
         val channelInfluenceType = channelTracker.influenceType
 
@@ -179,9 +189,10 @@ internal class SessionService(
             channelTracker.directId != directNotificationId
         ) {
             true
-        } else
+        } else {
             channelInfluenceType?.isIndirect() == true && channelTracker.indirectIds != null && channelTracker.indirectIds!!.length() > 0 &&
                 !JSONUtils.compareJSONArrays(channelTracker.indirectIds, indirectNotificationIds)
+        }
 
         // Allow updating an indirect session to a new indirect when a new notification is received
     }

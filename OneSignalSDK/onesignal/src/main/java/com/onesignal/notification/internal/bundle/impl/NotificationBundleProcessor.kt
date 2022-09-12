@@ -14,7 +14,7 @@ import org.json.JSONObject
 
 internal class NotificationBundleProcessor(
     private val _workManager: INotificationGenerationWorkManager,
-    private val _time: ITime,
+    private val _time: ITime
 ) : INotificationBundleProcessor {
 
     // Format our short keys into more readable ones.
@@ -24,9 +24,13 @@ internal class NotificationBundleProcessor(
             val customJSON = JSONObject(fcmBundle.getString("custom"))
             val additionalDataJSON: JSONObject
             additionalDataJSON =
-                if (customJSON.has(PUSH_ADDITIONAL_DATA_KEY)) customJSON.getJSONObject(
-                    PUSH_ADDITIONAL_DATA_KEY
-                ) else JSONObject()
+                if (customJSON.has(PUSH_ADDITIONAL_DATA_KEY)) {
+                    customJSON.getJSONObject(
+                        PUSH_ADDITIONAL_DATA_KEY
+                    )
+                } else {
+                    JSONObject()
+                }
             val buttons = JSONArray(fcmBundle.getString(PUSH_MINIFIED_BUTTONS_LIST))
             fcmBundle.remove(PUSH_MINIFIED_BUTTONS_LIST)
             for (i in 0 until buttons.length()) {
@@ -37,7 +41,9 @@ internal class NotificationBundleProcessor(
                 if (button.has(PUSH_MINIFIED_BUTTON_ID)) {
                     buttonId = button.getString(PUSH_MINIFIED_BUTTON_ID)
                     button.remove(PUSH_MINIFIED_BUTTON_ID)
-                } else buttonId = buttonText
+                } else {
+                    buttonId = buttonText
+                }
                 button.put("id", buttonId)
                 button.put("text", buttonText)
                 if (button.has(PUSH_MINIFIED_BUTTON_ICON)) {
@@ -47,10 +53,12 @@ internal class NotificationBundleProcessor(
             }
             additionalDataJSON.put("actionButtons", buttons)
             additionalDataJSON.put(NotificationConstants.GENERATE_NOTIFICATION_BUNDLE_KEY_ACTION_ID, DEFAULT_ACTION)
-            if (!customJSON.has(PUSH_ADDITIONAL_DATA_KEY)) customJSON.put(
-                PUSH_ADDITIONAL_DATA_KEY,
-                additionalDataJSON
-            )
+            if (!customJSON.has(PUSH_ADDITIONAL_DATA_KEY)) {
+                customJSON.put(
+                    PUSH_ADDITIONAL_DATA_KEY,
+                    additionalDataJSON
+                )
+            }
             fcmBundle.putString("custom", customJSON.toString())
         } catch (e: JSONException) {
             e.printStackTrace()
@@ -60,8 +68,7 @@ internal class NotificationBundleProcessor(
     /**
      * Process bundle passed from FCM / HMS / ADM broadcast receiver
      */
-    override fun processBundleFromReceiver(context: Context, bundle: Bundle,): INotificationBundleProcessor.ProcessedBundleResult? {
-
+    override fun processBundleFromReceiver(context: Context, bundle: Bundle): INotificationBundleProcessor.ProcessedBundleResult? {
         val bundleResult = INotificationBundleProcessor.ProcessedBundleResult()
 
         // Not a OneSignal FCM message
@@ -79,10 +86,12 @@ internal class NotificationBundleProcessor(
 
         val osNotificationId = NotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload)
         var androidNotificationId = 0
-        if (bundle.containsKey(ANDROID_NOTIFICATION_ID)) androidNotificationId =
-            bundle.getInt(
-                ANDROID_NOTIFICATION_ID
-            )
+        if (bundle.containsKey(ANDROID_NOTIFICATION_ID)) {
+            androidNotificationId =
+                bundle.getInt(
+                    ANDROID_NOTIFICATION_ID
+                )
+        }
 
         val processed = _workManager.beginEnqueueingWork(
             context,

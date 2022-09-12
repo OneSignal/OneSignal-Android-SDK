@@ -40,20 +40,23 @@ internal class NotificationTracker(dataRepository: InfluenceDataRepository, time
 
     override fun initInfluencedTypeFromCache() {
         influenceType = dataRepository.notificationCachedInfluenceType.also {
-            if (it.isIndirect())
+            if (it.isIndirect()) {
                 indirectIds = lastReceivedIds
-            else if (it.isDirect())
+            } else if (it.isDirect()) {
                 directId = dataRepository.cachedNotificationOpenId
+            }
         }
         Logging.debug("OneSignal NotificationTracker initInfluencedTypeFromCache: $this")
     }
 
     override fun addSessionData(jsonObject: JSONObject, influence: Influence) {
-        if (influence.influenceType.isAttributed()) try {
-            jsonObject.put(InfluenceConstants.DIRECT_TAG, influence.influenceType.isDirect())
-            jsonObject.put(InfluenceConstants.NOTIFICATIONS_IDS, influence.ids)
-        } catch (exception: JSONException) {
-            Logging.error("Generating notification tracker addSessionData JSONObject ", exception)
+        if (influence.influenceType.isAttributed()) {
+            try {
+                jsonObject.put(InfluenceConstants.DIRECT_TAG, influence.influenceType.isDirect())
+                jsonObject.put(InfluenceConstants.NOTIFICATIONS_IDS, influence.ids)
+            } catch (exception: JSONException) {
+                Logging.error("Generating notification tracker addSessionData JSONObject ", exception)
+            }
         }
     }
 

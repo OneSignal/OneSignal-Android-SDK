@@ -51,9 +51,13 @@ internal class AndroidSupportV4Compat {
         }
 
         fun getColor(context: Context, id: Int): Int {
-            return if (Build.VERSION.SDK_INT > 22) context.getColor(id) else context.resources.getColor(
-                id
-            )
+            return if (Build.VERSION.SDK_INT > 22) {
+                context.getColor(id)
+            } else {
+                context.resources.getColor(
+                    id
+                )
+            }
         }
     }
 
@@ -78,9 +82,11 @@ internal class AndroidSupportV4Compat {
     @TargetApi(23)
     internal object ActivityCompatApi23 {
         fun requestPermissions(activity: Activity, permissions: Array<String?>?, requestCode: Int) {
-            if (activity is RequestPermissionsRequestCodeValidator) (activity as RequestPermissionsRequestCodeValidator).validateRequestPermissionsRequestCode(
-                requestCode
-            )
+            if (activity is RequestPermissionsRequestCodeValidator) {
+                (activity as RequestPermissionsRequestCodeValidator).validateRequestPermissionsRequestCode(
+                    requestCode
+                )
+            }
             activity.requestPermissions(permissions!!, requestCode)
         }
 

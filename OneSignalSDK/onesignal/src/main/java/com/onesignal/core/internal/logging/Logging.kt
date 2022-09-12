@@ -7,6 +7,7 @@ internal object Logging {
 
     @JvmStatic
     var logLevel = LogLevel.WARN
+
     @JvmStatic
     var visualLogLevel = LogLevel.WARN
 

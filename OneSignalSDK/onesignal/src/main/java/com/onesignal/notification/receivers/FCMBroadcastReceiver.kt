@@ -17,8 +17,9 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
         // Do not process token update messages here.
         // They are also non-ordered broadcasts.
         val bundle = intent.extras
-        if (bundle == null || "google.com/iid" == bundle.getString("from"))
+        if (bundle == null || "google.com/iid" == bundle.getString("from")) {
             return
+        }
 
         OneSignal.initWithContext(context)
 
@@ -41,8 +42,9 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
     }
 
     private fun setSuccessfulResultCode() {
-        if (isOrderedBroadcast)
+        if (isOrderedBroadcast) {
             resultCode = Activity.RESULT_OK
+        }
     }
 
     private fun setAbort() {

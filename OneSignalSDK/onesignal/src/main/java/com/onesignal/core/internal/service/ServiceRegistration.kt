@@ -57,13 +57,19 @@ internal class ServiceRegistrationReflection<T>(
                             val clazz = argType.upperBounds.first()
                             if (clazz is Class<*>) {
                                 paramList.add(provider.getAllServices(clazz))
-                            } else paramList.add(null)
+                            } else {
+                                paramList.add(null)
+                            }
                         } else if (argType is Class<*>) {
                             paramList.add(provider.getAllServices(argType))
-                        } else paramList.add(null)
+                        } else {
+                            paramList.add(null)
+                        }
                     } else if (param is Class<*>) {
                         paramList.add(provider.getService(param) as T)
-                    } else paramList.add(null)
+                    } else {
+                        paramList.add(null)
+                    }
                 }
 
                 // The spread operator '*' will populate java varargs from the array
@@ -93,7 +99,9 @@ internal class ServiceRegistrationReflection<T>(
                         Logging.debug("Constructor $constructor could not find service: $argType")
                         return false
                     }
-                } else return false
+                } else {
+                    return false
+                }
             } else if (param is Class<*>) {
                 if (!provider.hasService(param)) {
                     Logging.debug("Constructor $constructor could not find service: $param")
@@ -117,14 +125,15 @@ internal class ServiceRegistrationSingleton<T>(
 }
 
 internal class ServiceRegistrationLambda<T>(
-    private val create: ((IServiceProvider) -> T),
+    private val create: ((IServiceProvider) -> T)
 ) : ServiceRegistration<T>() {
 
     private var obj: T? = null
 
     override fun resolve(provider: IServiceProvider): Any? {
-        if (obj != null)
+        if (obj != null) {
             return obj
+        }
 
         obj = create(provider)
 

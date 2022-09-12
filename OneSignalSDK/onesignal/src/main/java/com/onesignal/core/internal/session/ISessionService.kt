@@ -5,6 +5,7 @@ import com.onesignal.core.internal.common.events.IEventNotifier
 import com.onesignal.core.internal.influence.Influence
 
 internal interface ISessionService : IEventNotifier<ISessionLifecycleHandler> {
+    val startTime: Long
     val influences: List<Influence>
     val sessionInfluences: List<Influence>
 

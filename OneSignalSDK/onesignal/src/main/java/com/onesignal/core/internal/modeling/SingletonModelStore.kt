@@ -6,15 +6,16 @@ package com.onesignal.core.internal.modeling
 internal open class SingletonModelStore<TModel>(
     val name: String,
     private val create: () -> TModel,
-    val store: IModelStore<TModel>,
+    val store: IModelStore<TModel>
 ) : ISingletonModelStore<TModel>, IModelChangedHandler where TModel : Model {
 
     private val _subscribers: MutableList<ISingletonModelStoreChangeHandler<TModel>> = mutableListOf()
 
     override fun get(): TModel {
         val model = store.get(name)
-        if (model != null)
+        if (model != null) {
             return model
+        }
 
         val createdModel = create()
         createdModel.subscribe(this)

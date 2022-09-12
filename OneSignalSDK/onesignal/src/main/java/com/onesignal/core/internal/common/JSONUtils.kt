@@ -60,12 +60,13 @@ internal object JSONUtils {
             val key = keys.next()
             try {
                 val value = jsonObject.opt(key)
-                if (value is JSONArray || value is JSONObject)
+                if (value is JSONArray || value is JSONObject) {
                     Logging.error("Omitting key '$key'! sendTags DO NOT supported nested values!")
-                else if (jsonObject.isNull(key) || "" == value) {
+                } else if (jsonObject.isNull(key) || "" == value) {
                     result[key] = ""
-                } else
+                } else {
                     result[key] = value.toString()
+                }
             } catch (t: Throwable) {
             }
         }
@@ -146,12 +147,17 @@ internal object JSONUtils {
     //   returns in the same JSON output.
     fun normalizeType(`object`: Any): Any? {
         val clazz: Class<*> = `object`.javaClass
-        if (clazz == Int::class.java)
+        if (clazz == Int::class.java) {
             return (`object` as Int?)?.let { java.lang.Long.valueOf(it.toLong()) }
-        return if (clazz == Float::class.java) (`object` as Float?)?.let {
-            java.lang.Double.valueOf(
-                it.toDouble()
-            )
-        } else `object`
+        }
+        return if (clazz == Float::class.java) {
+            (`object` as Float?)?.let {
+                java.lang.Double.valueOf(
+                    it.toDouble()
+                )
+            }
+        } else {
+            `object`
+        }
     }
 }

@@ -23,8 +23,9 @@ internal class NotificationSummaryManager(
     override suspend fun updatePossibleDependentSummaryOnDismiss(androidNotificationId: Int) {
         val groupId = _dataController.getGroupId(androidNotificationId)
 
-        if (groupId != null)
+        if (groupId != null) {
             internalUpdateSummaryNotificationAfterChildRemoved(groupId, true)
+        }
     }
 
     // Called from an opened / dismissed / cancel event of a single notification to update it's parent the summary notification.
@@ -33,7 +34,6 @@ internal class NotificationSummaryManager(
     }
 
     private suspend fun internalUpdateSummaryNotificationAfterChildRemoved(group: String, dismissed: Boolean) {
-
         var notifications = _dataController.listNotificationsForGroup(group)
 
         val notificationsInGroup = notifications.count()
@@ -93,7 +93,6 @@ internal class NotificationSummaryManager(
         if (mostRecentId != null) {
             val shouldDismissAll = _paramsService.clearGroupOnSummaryClick
             if (shouldDismissAll) {
-
                 val groupId = if (group == NotificationHelper.grouplessSummaryKey) {
                     // If the group is groupless, obtain the hardcoded groupless summary id
                     NotificationHelper.grouplessSummaryId
@@ -103,8 +102,9 @@ internal class NotificationSummaryManager(
                 }
 
                 // Clear the entire notification summary
-                if (groupId != null)
+                if (groupId != null) {
                     notificationManager.cancel(groupId)
+                }
             } else {
                 // Clear the most recent notification from the status bar summary
                 _dataController.markAsDismissed(mostRecentId)

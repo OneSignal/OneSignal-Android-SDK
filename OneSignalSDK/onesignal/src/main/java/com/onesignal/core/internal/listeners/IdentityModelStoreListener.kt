@@ -1,6 +1,5 @@
 package com.onesignal.core.internal.listeners
 
-import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.models.IdentityModel
 import com.onesignal.core.internal.models.IdentityModelStore

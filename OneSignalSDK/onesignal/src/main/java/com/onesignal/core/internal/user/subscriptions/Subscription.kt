@@ -11,5 +11,5 @@ internal abstract class Subscription(
     /**
      * The unique identifier for this subscription.
      */
-    override val id: UUID,
+    override val id: UUID
 ) : ISubscription

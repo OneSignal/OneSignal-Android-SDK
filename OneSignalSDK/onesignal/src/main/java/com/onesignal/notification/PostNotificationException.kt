@@ -11,4 +11,4 @@ class PostNotificationException(
      * The response payload received as part of the unsuccessful request.
      */
     val json: JSONObject
-    ) : Exception()
+) : Exception()

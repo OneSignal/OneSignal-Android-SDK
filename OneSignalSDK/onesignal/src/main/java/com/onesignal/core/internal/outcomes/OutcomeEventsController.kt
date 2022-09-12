@@ -34,8 +34,9 @@ internal class OutcomeEventsController(
         unattributedUniqueOutcomeEventsSentOnSession = mutableSetOf()
         val tempUnattributedUniqueOutcomeEventsSentSet: Set<String>? =
             outcomeEventsFactory.getRepository().getUnattributedUniqueOutcomeEventsSent()
-        if (tempUnattributedUniqueOutcomeEventsSentSet != null)
+        if (tempUnattributedUniqueOutcomeEventsSentSet != null) {
             unattributedUniqueOutcomeEventsSentOnSession = tempUnattributedUniqueOutcomeEventsSentSet.toMutableSet()
+        }
     }
 
     /**
@@ -114,7 +115,7 @@ internal class OutcomeEventsController(
      */
     private suspend fun sendUniqueOutcomeEvent(
         name: String,
-        sessionInfluences: List<Influence>,
+        sessionInfluences: List<Influence>
     ): OutcomeEvent? {
         val influences: List<Influence> = removeDisabledInfluences(sessionInfluences)
         if (influences.isEmpty()) {
@@ -169,7 +170,7 @@ internal class OutcomeEventsController(
     private suspend fun sendAndCreateOutcomeEvent(
         name: String,
         weight: Float,
-        influences: List<Influence>,
+        influences: List<Influence>
     ): OutcomeEvent? {
         val timestampSeconds: Long = _time.currentTimeMillis / 1000
         val deviceType: Int = _deviceService.deviceType
@@ -250,9 +251,13 @@ Outcome event was cached and will be reattempted on app cold start"""
     }
 
     private fun saveUniqueOutcome(eventParams: OutcomeEventParams) {
-        if (eventParams.isUnattributed()) saveUnattributedUniqueOutcomeEvents() else saveAttributedUniqueOutcomeNotifications(
-            eventParams
-        )
+        if (eventParams.isUnattributed()) {
+            saveUnattributedUniqueOutcomeEvents()
+        } else {
+            saveAttributedUniqueOutcomeNotifications(
+                eventParams
+            )
+        }
     }
 
     /**

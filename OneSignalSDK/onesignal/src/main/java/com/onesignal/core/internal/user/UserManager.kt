@@ -8,7 +8,7 @@ import com.onesignal.core.internal.models.TriggerModel
 import com.onesignal.core.internal.models.TriggerModelStore
 import com.onesignal.core.user.IUserManager
 import com.onesignal.core.user.subscriptions.SubscriptionList
-import java.util.*
+import java.util.UUID
 
 internal interface IUserSwitcher {
     val identityModel: IdentityModel
@@ -18,7 +18,7 @@ internal interface IUserSwitcher {
 
 internal open class UserManager(
     private val _subscriptionManager: ISubscriptionManager,
-    private val _triggerModelStore: TriggerModelStore,
+    private val _triggerModelStore: TriggerModelStore
 ) : IUserManager, IUserSwitcher {
 
     override val externalId: String?
@@ -160,9 +160,9 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "setTrigger(key: $key, value: $value)")
 
         var triggerModel = _triggerModelStore.get(key)
-        if (triggerModel != null)
+        if (triggerModel != null) {
             triggerModel.value = value
-        else {
+        } else {
             triggerModel = TriggerModel()
             triggerModel.key = key
             triggerModel.value = value

@@ -116,12 +116,15 @@ internal class WebViewManager(
         private fun getDisplayLocation(jsonObject: JSONObject): Position {
             var displayLocation = Position.FULL_SCREEN
             try {
-                if (jsonObject.has(IAM_DISPLAY_LOCATION_KEY) && jsonObject[IAM_DISPLAY_LOCATION_KEY] != "") displayLocation =
-                    Position.valueOf(
-                        jsonObject.optString(
-                            IAM_DISPLAY_LOCATION_KEY, "FULL_SCREEN"
-                        ).uppercase(Locale.getDefault())
-                    )
+                if (jsonObject.has(IAM_DISPLAY_LOCATION_KEY) && jsonObject[IAM_DISPLAY_LOCATION_KEY] != "") {
+                    displayLocation =
+                        Position.valueOf(
+                            jsonObject.optString(
+                                IAM_DISPLAY_LOCATION_KEY,
+                                "FULL_SCREEN"
+                            ).uppercase(Locale.getDefault())
+                        )
+                }
             } catch (e: JSONException) {
                 e.printStackTrace()
             }
@@ -236,13 +239,14 @@ internal class WebViewManager(
         Logging.debug("In app message activity available currentActivityName: $currentActivityName lastActivityName: $lastActivityName")
 
         suspendifyOnMain {
-            if (lastActivityName == null)
+            if (lastActivityName == null) {
                 showMessageView(null)
-            else if (lastActivityName != currentActivityName) {
+            } else if (lastActivityName != currentActivityName) {
                 if (!closing) {
                     // Navigate to new activity while displaying current IAM
-                    if (messageView != null)
+                    if (messageView != null) {
                         messageView!!.removeAllViews()
+                    }
                     showMessageView(lastPageHeight)
                 }
             } else {
@@ -260,8 +264,9 @@ internal class WebViewManager(
      messageView: $messageView
             """.trimIndent()
         )
-        if (messageView != null && activity.localClassName == currentActivityName)
+        if (messageView != null && activity.localClassName == currentActivityName) {
             messageView!!.removeAllViews()
+        }
     }
 
     private suspend fun showMessageView(newHeight: Int?) {
@@ -318,10 +323,12 @@ internal class WebViewManager(
         // This is due to a bug with hardware rending so ensure it is disabled.
         // Tested on other version of Android and it is specific to only Android 4.4
         //    On both the emulator and real devices.
-        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.KITKAT) webView.setLayerType(
-            View.LAYER_TYPE_SOFTWARE,
-            null
-        )
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.KITKAT) {
+            webView.setLayerType(
+                View.LAYER_TYPE_SOFTWARE,
+                null
+            )
+        }
     }
 
     // This sets the WebView view port sizes to the max screen sizes so the initialize

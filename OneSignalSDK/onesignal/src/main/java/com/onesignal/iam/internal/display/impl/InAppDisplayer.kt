@@ -16,7 +16,6 @@ import com.onesignal.iam.internal.common.InAppHelper
 import com.onesignal.iam.internal.display.IInAppDisplayer
 import com.onesignal.iam.internal.lifecycle.IInAppLifecycleService
 import com.onesignal.iam.internal.prompt.IInAppMessagePromptFactory
-import com.onesignal.iam.internal.state.InAppStateService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -36,7 +35,6 @@ internal class InAppDisplayer(
     private val _applicationService: IApplicationService,
     private val _lifecycle: IInAppLifecycleService,
     private val _promptFactory: IInAppMessagePromptFactory,
-    private val _state: InAppStateService,
     private val _backend: IInAppBackendService,
     private val _sessionService: ISessionService,
     private val _configModelStore: ConfigModelStore,
@@ -45,7 +43,6 @@ internal class InAppDisplayer(
     private var lastInstance: WebViewManager? = null
 
     override suspend fun displayMessage(message: InAppMessage): Boolean? {
-        _state.inAppMessageShowing = true
         var response = _backend.getIAMData(_configModelStore.get().appId!!, message.messageId, InAppHelper.variantIdForMessage(message))
 
         if (response.content != null) {
@@ -54,7 +51,6 @@ internal class InAppDisplayer(
             showMessageContent(message, response.content!!)
             return true
         } else {
-            _state.inAppMessageShowing = false
             return if (response.shouldRetry) {
                 // Retry displaying the same IAM
                 // Using the queueMessageForDisplay method follows safety checks to prevent issues
@@ -67,12 +63,10 @@ internal class InAppDisplayer(
     }
 
     override suspend fun displayPreviewMessage(previewUUID: String): Boolean {
-        _state.inAppMessageShowing = true
         val message = InAppMessage(true, _time)
         val content = _backend.getIAMPreviewData(_configModelStore.get().appId!!, previewUUID)
 
         return if (content == null) {
-            _state.inAppMessageShowing = false
             false
         } else {
             message.displayDuration = content.displayDuration!!

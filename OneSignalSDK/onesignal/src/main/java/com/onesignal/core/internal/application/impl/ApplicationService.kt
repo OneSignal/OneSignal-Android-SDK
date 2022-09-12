@@ -13,7 +13,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
-import com.onesignal.core.internal.application.*
+import com.onesignal.core.internal.application.ActivityLifecycleHandlerBase
+import com.onesignal.core.internal.application.AppEntryAction
+import com.onesignal.core.internal.application.IActivityLifecycleHandler
+import com.onesignal.core.internal.application.IApplicationLifecycleHandler
+import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.core.internal.common.DeviceUtils
 import com.onesignal.core.internal.common.events.EventProducer
@@ -34,7 +38,6 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
     private var _appContext: Context? = null
     override val appContext: Context
         get() = _appContext!!
-
 
     private var _current: Activity? = null
     override var current: Activity?
@@ -119,8 +122,9 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
 
     override fun addActivityLifecycleHandler(handler: IActivityLifecycleHandler) {
         _activityLifecycleNotifier.subscribe(handler)
-        if (current != null)
+        if (current != null) {
             handler.onActivityAvailable(current!!)
+        }
     }
 
     override fun removeActivityLifecycleHandler(handler: IActivityLifecycleHandler) {
@@ -149,8 +153,9 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
         // new activity is finished the original activity is simply resumed (it's
         // already been created).  For this case, we make sure current is set
         // to the now current activity.
-        if (current != activity)
+        if (current != activity) {
             current = activity
+        }
     }
 
     override fun onActivityPaused(activity: Activity) {
@@ -262,9 +267,11 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
             self.addActivityLifecycleHandler(object : ActivityLifecycleHandlerBase() {
                 override fun onActivityAvailable(currentActivity: Activity) {
                     self.removeActivityLifecycleHandler(this)
-                    if (AndroidUtils.isActivityFullyReady(currentActivity))
+                    if (AndroidUtils.isActivityFullyReady(currentActivity)) {
                         runnable.run()
-                    else decorViewReady(currentActivity, runnable)
+                    } else {
+                        decorViewReady(currentActivity, runnable)
+                    }
                 }
             })
         }
@@ -278,10 +285,11 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
      */
     private fun onOrientationChanged(orientation: Int, activity: Activity) {
         // Log device orientation change
-        if (orientation == Configuration.ORIENTATION_LANDSCAPE)
+        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
             Logging.debug("ApplicationService.onOrientationChanged: Configuration Orientation Change: LANDSCAPE ($orientation) on activity: $activity")
-        else if (orientation == Configuration.ORIENTATION_PORTRAIT)
+        } else if (orientation == Configuration.ORIENTATION_PORTRAIT) {
             Logging.debug("ApplicationService.onOrientationChanged: Configuration Orientation Change: PORTRAIT ($orientation) on activity: $activity")
+        }
 
         // Remove view
         handleLostFocus()
@@ -313,8 +321,9 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
             _nextResumeIsFirstActivity = false
 
             // We assume we are called *after* the notification module has determined entry due to notification.
-            if(entryState != AppEntryAction.NOTIFICATION_CLICK)
+            if (entryState != AppEntryAction.NOTIFICATION_CLICK) {
                 entryState = AppEntryAction.APP_OPEN
+            }
 
             _applicationLifecycleNotifier.fire { it.onFocus() }
         } else {

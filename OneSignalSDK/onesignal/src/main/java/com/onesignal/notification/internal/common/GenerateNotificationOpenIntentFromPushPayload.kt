@@ -19,7 +19,7 @@ internal object GenerateNotificationOpenIntentFromPushPayload {
     fun create(context: Context, fcmPayload: JSONObject): GenerateNotificationOpenIntent {
         val behavior = OSNotificationOpenBehaviorFromPushPayload(
             context,
-            fcmPayload,
+            fcmPayload
         )
 
         return GenerateNotificationOpenIntent(
@@ -30,7 +30,7 @@ internal object GenerateNotificationOpenIntentFromPushPayload {
     }
 
     private fun openBrowserIntent(
-        uri: Uri?,
+        uri: Uri?
     ): Intent? {
         if (uri == null) return null
         return AndroidUtils.openURLInBrowserIntent(uri)

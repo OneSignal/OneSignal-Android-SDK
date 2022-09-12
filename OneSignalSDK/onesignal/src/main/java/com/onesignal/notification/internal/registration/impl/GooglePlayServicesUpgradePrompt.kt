@@ -39,16 +39,19 @@ internal class GooglePlayServicesUpgradePrompt(
         }
 
     suspend fun showUpdateGPSDialog() {
-        if (!_deviceService.isAndroidDeviceType)
+        if (!_deviceService.isAndroidDeviceType) {
             return
+        }
 
-        if (!isGooglePlayStoreInstalled || _params.disableGMSMissingPrompt == true)
+        if (!isGooglePlayStoreInstalled || _params.disableGMSMissingPrompt == true) {
             return
+        }
 
         val userSelectedSkip = _prefs.getBool(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_GT_DO_NOT_SHOW_MISSING_GPS, false)!!
 
-        if (userSelectedSkip)
+        if (userSelectedSkip) {
             return
+        }
 
         withContext(Dispatchers.Main) {
             val activity = _applicationService.current ?: return@withContext

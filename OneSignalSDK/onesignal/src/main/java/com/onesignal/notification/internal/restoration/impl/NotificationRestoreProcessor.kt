@@ -45,8 +45,9 @@ internal class NotificationRestoreProcessor(
             false
         )
 
-        if (delay > 0)
+        if (delay > 0) {
             delay(delay.toLong())
+        }
     }
 
     /**

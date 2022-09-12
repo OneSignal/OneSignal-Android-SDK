@@ -23,20 +23,23 @@ internal abstract class ModelStoreListener<TModel>(
 
     override fun onAdded(model: TModel) {
         val operation = getAddOperation(model)
-        if (operation != null)
+        if (operation != null) {
             opRepo.enqueue(operation)
+        }
     }
 
     override fun onUpdated(model: TModel, property: String, oldValue: Any?, newValue: Any?) {
         val operation = getUpdateOperation(model, property, oldValue, newValue)
-        if (operation != null)
+        if (operation != null) {
             opRepo.enqueue(operation)
+        }
     }
 
     override fun onRemoved(model: TModel) {
         val operation = getRemoveOperation(model)
-        if (operation != null)
+        if (operation != null) {
             opRepo.enqueue(operation)
+        }
     }
 
     abstract fun getAddOperation(model: TModel): Operation?

@@ -35,5 +35,5 @@ internal class TrackPurchaseOperation(
 internal class PurchaseInfo(
     val sku: String,
     val iso: String,
-    val amount: BigDecimal,
+    val amount: BigDecimal
 )

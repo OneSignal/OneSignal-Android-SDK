@@ -29,8 +29,9 @@ internal class RefreshParamsService(
     }
 
     override fun onModelUpdated(model: ConfigModel, property: String, oldValue: Any?, newValue: Any?) {
-        if (property != ConfigModel::appId.name)
+        if (property != ConfigModel::appId.name) {
             return
+        }
 
         fetchParams()
     }
@@ -38,8 +39,9 @@ internal class RefreshParamsService(
     private fun fetchParams() {
         val appId = _configModelStore.get().appId
 
-        if (appId == null || appId.isEmpty())
+        if (appId == null || appId.isEmpty()) {
             return
+        }
 
         suspendifyOnThread {
             Logging.log(LogLevel.DEBUG, "StartupService fetching parameters for appId: $appId")

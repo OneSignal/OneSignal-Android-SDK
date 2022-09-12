@@ -14,35 +14,44 @@ internal interface IApiService {
 
     /** POST /user/by/{aliasLabel}/{aliasId}/identity **/
     suspend fun setUserIdentityAsync(aliasLabel: String, aliasId: String, identity: Any): Any
+
     /** GET /user/by/{aliasLabel}/{aliasId}/identity **/
     suspend fun getUserIdentityAsync(aliasLabel: String, aliasId: String): Any
 
     /** PUT /user/identity/{aliasLabel}/{aliasId} **/
     suspend fun updateUserAliasAsync(aliasLabel: String, aliasId: String, newAliasId: String)
+
     /** DELETE /user/identity/{aliasLabel}/{aliasId} **/
     suspend fun deleteUserAliasAsync(aliasLabel: String, aliasId: String)
 
     /** POST /user/by/{aliasLabel}/{aliasId}/subscription **/
     suspend fun createSubscriptionAsync(aliasLabel: String, aliasId: String, subscription: Any?)
+
     /** DELETE /subscription/{subscriptionId} **/
     suspend fun deleteSubscriptionAsync(subscriptionId: String)
+
     /** GET /subscription/{subscriptionId}/identity **/
     suspend fun getIdentityFromSubscriptionAsync(subscriptionId: String)
+
     /** POST /subscription/{subscriptionId}/identity **/
     suspend fun createIdentityForSubscriptionAsync(subscriptionId: String)
+
     /** PATCH /subscription/{subscriptionId}/identity **/
     suspend fun updateIdentityForSubscriptionAsync(subscriptionId: String)
+
     /** DELETE /subscription/{subscriptionId}/properties **/
     suspend fun deleteSubscriptionPropertiesAsync(subscriptionId: String)
 
     /** GET /user/by/{aliasLabel}/{aliasId}/iams **/
     suspend fun listIAMsByUserAsync(aliasLabel: String, aliasId: String)
+
     /** GET /subscription/{subscriptionId}/iams **/
     suspend fun listIAMsBySubscriptionAsync(subscriptionId: String)
 
     /** EXISTING ENDPOINTS **/
     /** GET players/{playerId}?app_id={appId} **/
     suspend fun getSubscriptionAsync()
+
     /** PUT players/{playerId} **/
     suspend fun updateSubscriptionAsync()
 

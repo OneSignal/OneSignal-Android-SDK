@@ -44,7 +44,6 @@ internal class InAppBackendService(
     }
 
     override suspend fun getIAMData(appId: String, messageId: String, variantId: String?): GetIAMDataResponse {
-
         val htmlPath = htmlPathForMessage(messageId, variantId, appId)
             ?: throw Exception("variantId not valid: $variantId")
 
@@ -90,9 +89,8 @@ internal class InAppBackendService(
         variantId: String?,
         messageId: String,
         clickId: String?,
-        isFirstClick: Boolean,
+        isFirstClick: Boolean
     ): HttpResponse {
-
         val json: JSONObject = object : JSONObject() {
             init {
                 put("app_id", appId)

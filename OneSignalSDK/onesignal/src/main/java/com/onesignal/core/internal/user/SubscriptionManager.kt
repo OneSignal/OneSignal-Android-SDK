@@ -34,7 +34,7 @@ internal interface ISubscriptionChangedHandler {
 }
 
 internal open class SubscriptionManager(
-    private val _subscriptionModelStore: SubscriptionModelStore,
+    private val _subscriptionModelStore: SubscriptionModelStore
 ) : ISubscriptionManager {
 
     private val _events = EventProducer<ISubscriptionChangedHandler>()
