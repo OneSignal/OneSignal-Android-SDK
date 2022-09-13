@@ -430,6 +430,26 @@ public class GenerateNotificationRunner {
       assertEquals(4, getNotificationsInGroup("os_group_undefined").size());
    }
 
+   @Test
+   @Config(sdk = Build.VERSION_CODES.N, shadows = { ShadowGenerateNotification.class })
+   public void testGrouplessSummaryNotificationIsDismissedOnClear() throws Exception {
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.initWithContext(blankActivity.getApplicationContext());
+      threadAndTaskWait();
+
+      // Add 4 groupless notifications
+      postNotificationWithOptionalGroup(4, null);
+      threadAndTaskWait();
+
+      // Obtain the posted notifications
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      assertEquals(5, postedNotifs.size());
+      // Clear OneSignal Notifications
+      OneSignal.clearOneSignalNotifications();
+      threadAndTaskWait();
+      assertEquals(0, postedNotifs.size());
+   }
+
     @Test
     @Config(sdk = Build.VERSION_CODES.LOLLIPOP, shadows = { ShadowGenerateNotification.class })
     public void testNotifDismissAllOnGroupSummaryClickForAndroidUnderM() throws Exception {

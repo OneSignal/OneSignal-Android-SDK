@@ -715,6 +715,8 @@ class GenerateNotification {
       String group = OneSignalNotificationManager.getGrouplessSummaryKey();
       String summaryMessage = grouplessNotifCount + " new messages";
       int summaryNotificationId = OneSignalNotificationManager.getGrouplessSummaryId();
+      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(currentContext);
+      createSummaryIdDatabaseEntry(dbHelper, group, summaryNotificationId);
 
       PendingIntent summaryContentIntent = intentGenerator.getNewActionPendingIntent(
           random.nextInt(),
