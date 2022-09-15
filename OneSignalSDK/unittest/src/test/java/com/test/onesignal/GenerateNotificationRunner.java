@@ -449,34 +449,6 @@ public class GenerateNotificationRunner {
       assertEquals(0, postedNotifs.size());
    }
 
-   @Test
-   @Config(sdk = Build.VERSION_CODES.N, shadows = { ShadowGenerateNotification.class })
-   public void testIndividualGrouplessSummaryNotificationDismissal() throws Exception {
-      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
-      OneSignal.initWithContext(blankActivity.getApplicationContext());
-      threadAndTaskWait();
-
-      // Add 4 groupless notifications
-      postNotificationWithOptionalGroup(4, null);
-      threadAndTaskWait();
-
-      // Obtain the posted notifications
-      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
-      Iterator<Map.Entry<Integer, PostedNotification>> iterator = postedNotifs.entrySet().iterator();
-      Map.Entry<Integer, PostedNotification> entry = iterator.next();
-      Map.Entry<Integer, PostedNotification> entry2 = iterator.next();
-      Map.Entry<Integer, PostedNotification> entry3 = iterator.next();
-      Map.Entry<Integer, PostedNotification> entry4 = iterator.next();
-      Integer id4 = entry4.getKey();
-      assertNotNull(id4);
-
-      assertEquals(5, postedNotifs.size());
-      // Clear a OneSignal Notification
-      OneSignal.removeNotification(id4);
-      threadAndTaskWait();
-      assertEquals(4, postedNotifs.size());
-   }
-
     @Test
     @Config(sdk = Build.VERSION_CODES.LOLLIPOP, shadows = { ShadowGenerateNotification.class })
     public void testNotifDismissAllOnGroupSummaryClickForAndroidUnderM() throws Exception {
