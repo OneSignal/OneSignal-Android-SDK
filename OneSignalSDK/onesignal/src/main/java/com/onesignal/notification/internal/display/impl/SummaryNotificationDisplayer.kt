@@ -261,6 +261,7 @@ internal class SummaryNotificationDisplayer(
         val group: String = NotificationHelper.grouplessSummaryKey
         val summaryMessage = "$grouplessNotifCount new messages"
         val summaryNotificationId: Int = NotificationHelper.grouplessSummaryId
+        _dataController.createSummaryNotification(summaryNotificationId!!, group)
         val summaryContentIntent: PendingIntent? = intentGenerator.getNewActionPendingIntent(
             random.nextInt(),
             createBaseSummaryIntent(summaryNotificationId, intentGenerator, fcmJson, group)
