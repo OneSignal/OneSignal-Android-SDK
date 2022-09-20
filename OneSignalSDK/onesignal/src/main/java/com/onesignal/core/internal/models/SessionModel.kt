@@ -4,10 +4,10 @@ import com.onesignal.core.internal.modeling.Model
 
 internal class SessionModel : Model() {
     var startTime: Long
-        get() = get(::startTime.name)
-        set(value) { set(::startTime.name, value) }
+        get() = getProperty(::startTime.name)
+        set(value) { setProperty(::startTime.name, value) }
 
     var unfocusedDuration: Double
-        get() = get(::unfocusedDuration.name) { 0.0 }
-        set(value) { set(::unfocusedDuration.name, value) }
+        get() = getProperty(::unfocusedDuration.name) { 0.0 }
+        set(value) { setProperty(::unfocusedDuration.name, value) }
 }

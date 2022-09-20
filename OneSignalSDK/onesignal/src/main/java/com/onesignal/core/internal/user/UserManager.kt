@@ -1,82 +1,79 @@
 package com.onesignal.core.internal.user
 
 import com.onesignal.core.debug.LogLevel
+import com.onesignal.core.internal.backend.IdentityConstants
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.models.IdentityModel
+import com.onesignal.core.internal.models.IdentityModelStore
 import com.onesignal.core.internal.models.PropertiesModel
+import com.onesignal.core.internal.models.PropertiesModelStore
 import com.onesignal.core.internal.models.TriggerModel
 import com.onesignal.core.internal.models.TriggerModelStore
 import com.onesignal.core.user.IUserManager
 import com.onesignal.core.user.subscriptions.SubscriptionList
-import java.util.UUID
-
-internal interface IUserSwitcher {
-    val identityModel: IdentityModel
-    val propertiesModel: PropertiesModel
-    fun setUser(identityModel: IdentityModel, propertiesModel: PropertiesModel)
-}
 
 internal open class UserManager(
     private val _subscriptionManager: ISubscriptionManager,
+    private val _identityModelStore: IdentityModelStore,
+    private val _propertiesModelStore: PropertiesModelStore,
     private val _triggerModelStore: TriggerModelStore
-) : IUserManager, IUserSwitcher {
+) : IUserManager {
 
     override val externalId: String?
-        get() = identityModel.userId
+        get() = _identityModel.externalId
 
     override var language: String
-        get() = propertiesModel.language
-        set(value) { propertiesModel.language = value }
+        get() = _propertiesModel.language
+        set(value) { _propertiesModel.language = value }
 
     override val tags: Map<String, String>
-        get() = propertiesModel.tags
+        get() = _propertiesModel.tags
 
     override val aliases: Map<String, String>
-        get() = identityModel.aliases
+        get() = _identityModel.filter { it.key != IdentityModel::id.name }.toMap()
 
     override val subscriptions: SubscriptionList
         get() = _subscriptionManager.subscriptions
 
-    //    private var userModel: UserModel
-    override var identityModel: IdentityModel = IdentityModel()
-    override var propertiesModel: PropertiesModel = PropertiesModel()
+    private val _identityModel: IdentityModel
+        get() = _identityModelStore.get()
 
-    init {
-        identityModel.id = UUID.randomUUID().toString()
-        _subscriptionManager.load(identityModel)
-    }
-
-    override fun setUser(identityModel: IdentityModel, propertiesModel: PropertiesModel) {
-        this.identityModel = identityModel
-        this.propertiesModel = propertiesModel
-        _subscriptionManager.load(identityModel)
-    }
+    private val _propertiesModel: PropertiesModel
+        get() = _propertiesModelStore.get()
 
     override fun addAlias(label: String, id: String): com.onesignal.core.user.IUserManager {
         Logging.log(LogLevel.DEBUG, "setAlias(label: $label, id: $id)")
-        val aliases = identityModel.aliases.toMutableMap()
-        aliases[label] = id
-        identityModel.aliases = aliases
+
+        if (label == IdentityConstants.ONESIGNAL_ID) {
+            throw Exception("Cannot remove '${IdentityConstants.ONESIGNAL_ID}' alias")
+        }
+
+        _identityModel[label] = id
         return this
     }
 
     override fun addAliases(aliases: Map<String, String>): IUserManager {
         Logging.log(LogLevel.DEBUG, "addAliases(aliases: $aliases")
-        val existingAliases = identityModel.aliases.toMutableMap()
 
-        aliases.forEach {
-            existingAliases[it.key] = it.value
+        if (aliases.keys.any { it == IdentityConstants.ONESIGNAL_ID }) {
+            throw Exception("Cannot remove '${IdentityConstants.ONESIGNAL_ID}' alias")
         }
 
-        identityModel.aliases = aliases
+        aliases.forEach {
+            _identityModel[it.key] = it.value
+        }
+
         return this
     }
 
     override fun removeAlias(label: String): IUserManager {
         Logging.log(LogLevel.DEBUG, "removeAlias(label: $label)")
-        val aliases = identityModel.aliases.toMutableMap()
-        aliases.remove(label)
-        identityModel.aliases = aliases
+
+        if (label == IdentityConstants.ONESIGNAL_ID) {
+            throw Exception("Cannot remove '${IdentityConstants.ONESIGNAL_ID}' alias")
+        }
+
+        _identityModel.remove(label)
         return this
     }
 
@@ -106,45 +103,33 @@ internal open class UserManager(
 
     override fun setTag(key: String, value: String): IUserManager {
         Logging.log(LogLevel.DEBUG, "setTag(key: $key, value: $value)")
-
-        val tags = propertiesModel.tags.toMutableMap()
-        tags[key] = value
-        propertiesModel.tags = tags
+        _propertiesModel.tags[key] = value
         return this
     }
 
     override fun setTags(tags: Map<String, String>): IUserManager {
         Logging.log(LogLevel.DEBUG, "setTags(tags: $tags)")
 
-        val tagCollection = propertiesModel.tags.toMutableMap()
-
         tags.forEach {
-            tagCollection[it.key] = it.value
+            _propertiesModel.tags[it.key] = it.value
         }
 
-        propertiesModel.tags = tagCollection
         return this
     }
 
     override fun removeTag(key: String): IUserManager {
         Logging.log(LogLevel.DEBUG, "removeTag(key: $key)")
-
-        val tags = propertiesModel.tags.toMutableMap()
-        tags.remove(key)
-        propertiesModel.tags = tags
+        _propertiesModel.tags.remove(key)
         return this
     }
 
     override fun removeTags(keys: Collection<String>): IUserManager {
         Logging.log(LogLevel.DEBUG, "removeTags(keys: $keys)")
 
-        val tagCollection = propertiesModel.tags.toMutableMap()
-
         keys.forEach {
-            tagCollection.remove(it)
+            _propertiesModel.tags.remove(it)
         }
 
-        propertiesModel.tags = tagCollection
         return this
     }
 
@@ -164,9 +149,10 @@ internal open class UserManager(
             triggerModel.value = value
         } else {
             triggerModel = TriggerModel()
+            triggerModel.id = key
             triggerModel.key = key
             triggerModel.value = value
-            _triggerModelStore.add(key, triggerModel)
+            _triggerModelStore.add(triggerModel)
         }
 
         return this

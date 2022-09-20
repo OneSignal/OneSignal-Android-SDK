@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.outcomes.impl
 
-import com.onesignal.core.internal.backend.http.IHttpClient
+import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.outcomes.IOutcomeEventsCache
 import com.onesignal.core.internal.outcomes.IOutcomeEventsFactory
 import com.onesignal.core.internal.outcomes.IOutcomeEventsRepository

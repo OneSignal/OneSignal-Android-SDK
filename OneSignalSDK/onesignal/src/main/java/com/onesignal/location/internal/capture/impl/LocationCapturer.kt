@@ -3,8 +3,8 @@ package com.onesignal.location.internal.capture.impl
 import android.location.Location
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.logging.Logging
+import com.onesignal.core.internal.models.PropertiesModelStore
 import com.onesignal.core.internal.time.ITime
-import com.onesignal.core.internal.user.IUserSwitcher
 import com.onesignal.location.internal.capture.ILocationCapturer
 import com.onesignal.location.internal.common.LocationPoint
 import com.onesignal.location.internal.controller.ILocationController
@@ -17,7 +17,7 @@ internal class LocationCapturer(
     private val _applicationService: IApplicationService,
     private val _time: ITime,
     private val _prefs: ILocationPreferencesService,
-    private val _userSwitcher: IUserSwitcher,
+    private val _propertiesModelStore: PropertiesModelStore,
     private val _controller: ILocationController
 ) : ILocationUpdatedHandler, ILocationCapturer {
 
@@ -60,7 +60,7 @@ internal class LocationCapturer(
             point.log = location.longitude
         }
 
-        var userProperties = _userSwitcher.propertiesModel
+        var userProperties = _propertiesModelStore.get()
         userProperties.locationLongitude = point.log
         userProperties.locationLatitude = point.lat
         userProperties.locationAccuracy = point.accuracy

@@ -28,7 +28,7 @@ internal class RefreshParamsService(
         fetchParams()
     }
 
-    override fun onModelUpdated(model: ConfigModel, property: String, oldValue: Any?, newValue: Any?) {
+    override fun onModelUpdated(model: ConfigModel, path: String, property: String, oldValue: Any?, newValue: Any?) {
         if (property != ConfigModel::appId.name) {
             return
         }
@@ -36,10 +36,14 @@ internal class RefreshParamsService(
         fetchParams()
     }
 
+    override fun onModelReplaced(model: ConfigModel) {
+        // TODO("Not yet implemented")
+    }
+
     private fun fetchParams() {
         val appId = _configModelStore.get().appId
 
-        if (appId == null || appId.isEmpty()) {
+        if (appId.isEmpty()) {
             return
         }
 

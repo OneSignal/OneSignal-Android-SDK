@@ -1,9 +1,9 @@
 package com.onesignal.iam.internal.backend.impl
 
-import com.onesignal.core.internal.backend.http.HttpResponse
-import com.onesignal.core.internal.backend.http.IHttpClient
 import com.onesignal.core.internal.common.NetworkUtils
 import com.onesignal.core.internal.device.IDeviceService
+import com.onesignal.core.internal.http.HttpResponse
+import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.iam.internal.InAppMessage
 import com.onesignal.iam.internal.InAppMessageContent

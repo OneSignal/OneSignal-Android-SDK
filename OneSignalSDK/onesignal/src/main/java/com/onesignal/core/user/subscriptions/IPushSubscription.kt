@@ -9,7 +9,7 @@ interface IPushSubscription : ISubscription {
     /**
      * The token which identifies the device/app that notifications are to be sent.
      */
-    val pushToken: String
+    val pushToken: String?
 
     /**
      *  Whether this subscription is current enabled. When enabled, the user is able to

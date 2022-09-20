@@ -3,28 +3,27 @@ package com.onesignal.core.internal.listeners
 import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.models.IdentityModel
 import com.onesignal.core.internal.models.IdentityModelStore
-import com.onesignal.core.internal.operations.CreateUserOperation
-import com.onesignal.core.internal.operations.DeleteUserOperation
+import com.onesignal.core.internal.operations.DeleteAliasOperation
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.Operation
-import com.onesignal.core.internal.operations.UpdateUserOperation
+import com.onesignal.core.internal.operations.SetAliasOperation
 
 internal class IdentityModelStoreListener(
     store: IdentityModelStore,
     opRepo: IOperationRepo,
     private val _configModelStore: ConfigModelStore
-) : ModelStoreListener<IdentityModel>(store, opRepo) {
+) : SingletonModelStoreListener<IdentityModel>(store, opRepo) {
 
-    override fun getAddOperation(model: IdentityModel): Operation? {
-        // TODO: Snapshot the model to prevent it from changing while the operation has been queued.
-        return CreateUserOperation(_configModelStore.get().appId!!, model.id, null)
+    override fun getReplaceOperation(model: IdentityModel): Operation? {
+        // when the identity model is replaced, nothing to do on the backend. Already handled via login process.
+        return null
     }
 
-    override fun getRemoveOperation(model: IdentityModel): Operation? {
-        return DeleteUserOperation(model.id)
-    }
-
-    override fun getUpdateOperation(model: IdentityModel, property: String, oldValue: Any?, newValue: Any?): Operation? {
-        return UpdateUserOperation(model.id, property, newValue)
+    override fun getUpdateOperation(model: IdentityModel, path: String, property: String, oldValue: Any?, newValue: Any?): Operation {
+        return if (newValue != null && newValue is String) {
+            SetAliasOperation(_configModelStore.get().appId, model.onesignalId, property, newValue)
+        } else {
+            DeleteAliasOperation(_configModelStore.get().appId, model.onesignalId, property)
+        }
     }
 }

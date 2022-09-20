@@ -7,13 +7,13 @@ internal class TriggerModel : Model() {
      * The key of this trigger
      */
     var key: String
-        get() = get(::key.name) { "" }
-        set(value) { set(::key.name, value) }
+        get() = getProperty(::key.name) { "" }
+        set(value) { setProperty(::key.name, value) }
 
     /**
      * The value of this trigger
      */
     var value: Any
-        get() = get(::value.name) { "" }
-        set(value) { set(::value.name, value) }
+        get() = getProperty(::value.name) { "" }
+        set(value) { setProperty(::value.name, value) }
 }

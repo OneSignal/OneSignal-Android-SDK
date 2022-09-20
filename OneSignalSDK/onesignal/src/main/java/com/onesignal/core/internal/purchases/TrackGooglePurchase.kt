@@ -37,6 +37,7 @@ import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.models.ConfigModelStore
+import com.onesignal.core.internal.models.IdentityModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.PurchaseInfo
 import com.onesignal.core.internal.operations.TrackPurchaseOperation
@@ -44,7 +45,6 @@ import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferencePlayerPurchasesKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.core.internal.startup.IStartableService
-import com.onesignal.core.internal.user.IUserSwitcher
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -57,7 +57,7 @@ internal class TrackGooglePurchase(
     private val _prefs: IPreferencesService,
     private val _operationRepo: IOperationRepo,
     private val _configModelStore: ConfigModelStore,
-    private val _userSwitcher: IUserSwitcher
+    private val _identityModelStore: IdentityModelStore
 ) : IStartableService, IApplicationLifecycleHandler {
     private var mServiceConn: ServiceConnection? = null
     private var mIInAppBillingService: Any? = null
@@ -221,7 +221,7 @@ internal class TrackGooglePurchase(
 
                 // New purchases to report. If successful then mark them as tracked.
                 if (purchasesToReport.isNotEmpty()) {
-                    _operationRepo.enqueue(TrackPurchaseOperation(_configModelStore.get().appId!!, _userSwitcher.identityModel.oneSignalId.toString(), newAsExisting, purchasesToReport))
+                    _operationRepo.enqueue(TrackPurchaseOperation(_configModelStore.get().appId, _identityModelStore.get().onesignalId, newAsExisting, BigDecimal(0), purchasesToReport))
                     purchaseTokens.addAll(newPurchaseTokens)
                     _prefs.saveString(PreferenceStores.PLAYER_PURCHASES, PreferencePlayerPurchasesKeys.PREFS_PURCHASE_TOKENS, purchaseTokens.toString())
                     _prefs.saveBool(PreferenceStores.PLAYER_PURCHASES, PreferencePlayerPurchasesKeys.PREFS_EXISTING_PURCHASES, true)
