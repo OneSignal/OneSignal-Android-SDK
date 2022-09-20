@@ -1,6 +1,6 @@
 package com.onesignal.notification.internal.backend
 
-import com.onesignal.core.internal.backend.http.HttpResponse
+import com.onesignal.core.internal.http.HttpResponse
 import org.json.JSONObject
 
 /**

@@ -1,10 +1,11 @@
 package com.onesignal.core.internal.user
 
 import com.onesignal.core.debug.LogLevel
+import com.onesignal.core.internal.common.IDManager
 import com.onesignal.core.internal.common.events.EventProducer
 import com.onesignal.core.internal.common.events.IEventNotifier
 import com.onesignal.core.internal.logging.Logging
-import com.onesignal.core.internal.models.IdentityModel
+import com.onesignal.core.internal.modeling.IModelStoreChangeHandler
 import com.onesignal.core.internal.models.SubscriptionModel
 import com.onesignal.core.internal.models.SubscriptionModelStore
 import com.onesignal.core.internal.models.SubscriptionType
@@ -13,166 +14,175 @@ import com.onesignal.core.internal.user.subscriptions.PushSubscription
 import com.onesignal.core.internal.user.subscriptions.SmsSubscription
 import com.onesignal.core.user.subscriptions.ISubscription
 import com.onesignal.core.user.subscriptions.SubscriptionList
-import java.util.UUID
 
 internal interface ISubscriptionManager : IEventNotifier<ISubscriptionChangedHandler> {
     var subscriptions: SubscriptionList
 
-    fun load(identity: IdentityModel)
     fun addEmailSubscription(email: String)
-    fun addPushSubscription(id: String, pushToken: String)
+    fun addOrUpdatePushSubscription(pushToken: String?)
     fun addSmsSubscription(sms: String)
     fun removeEmailSubscription(email: String)
     fun removeSmsSubscription(sms: String)
-
-    fun setSubscriptionEnablement(subscription: ISubscription, enabled: Boolean)
 }
 
 internal interface ISubscriptionChangedHandler {
     fun onSubscriptionAdded(subscription: ISubscription)
+    fun onSubscriptionUpdated(subscription: ISubscription)
     fun onSubscriptionRemoved(subscription: ISubscription)
 }
 
-internal open class SubscriptionManager(
+/**
+ * The subscription manager is responsible for managing the external representation of the
+ * user's subscriptions.  It handles the addition/removal/update of the external representations,
+ * as well as responding to internal subscription model changes.
+ *
+ * In general the subscription manager relies on and reacts to the subscription model store.  Adding
+ * a subscription for example will add the subscription to the model store, then utilizing the
+ * [IModelStoreChangeHandler.onAdded] callback to refresh the appropriate subscription from the
+ * subscription model.
+ */
+internal class SubscriptionManager(
     private val _subscriptionModelStore: SubscriptionModelStore
-) : ISubscriptionManager {
+) : ISubscriptionManager, IModelStoreChangeHandler<SubscriptionModel> {
 
     private val _events = EventProducer<ISubscriptionChangedHandler>()
     override var subscriptions: SubscriptionList = SubscriptionList(listOf())
 
-    private var identity: IdentityModel = IdentityModel()
+    init {
+        _subscriptionModelStore.subscribe(this)
+    }
 
-    override fun load(identity: IdentityModel) {
-        this.identity = identity
+    override fun addEmailSubscription(email: String) {
+        addSubscriptionToModels(SubscriptionType.EMAIL, email)
+    }
 
-        var subs = mutableListOf<ISubscription>()
+    override fun addSmsSubscription(sms: String) {
+        addSubscriptionToModels(SubscriptionType.SMS, sms)
+    }
 
-        for (s in _subscriptionModelStore.list()) {
-            // TODO: Better way to find subscriptions for a user?
-            if (s.startsWith(identity.id)) {
-                val model = _subscriptionModelStore.get(s)
+    override fun addOrUpdatePushSubscription(pushToken: String?) {
+        var pushSub = subscriptions.push
 
-                when (model?.type) {
-                    SubscriptionType.EMAIL -> {
-                        subs.add(EmailSubscription(UUID.fromString(model.id), model.address))
-                    }
-                    SubscriptionType.SMS -> {
-                        subs.add(SmsSubscription(UUID.fromString(model.id), model.address))
-                    }
-                    SubscriptionType.PUSH -> {
-                        // TODO: Determine if is this device, set bool appropriately
-                        subs.add(PushSubscription(UUID.fromString(model.id), model.enabled, model.address, this))
-                    }
-                }
+        if (pushSub == null) {
+            addSubscriptionToModels(SubscriptionType.PUSH, pushToken ?: "")
+        } else {
+            updateSubscriptionModel(pushSub) {
+                it.address = pushToken ?: ""
             }
         }
-
-        this.subscriptions = SubscriptionList(subs)
-    }
-    override fun addEmailSubscription(email: String) {
-        var emailSub = EmailSubscription(UUID.randomUUID(), email)
-        val subscriptions = subscriptions.collection.toMutableList()
-        subscriptions.add(emailSub)
-        this.subscriptions = SubscriptionList(subscriptions)
-
-        var emailSubModel = SubscriptionModel()
-        emailSubModel.id = emailSub.id.toString()
-        emailSubModel.enabled = true
-        emailSubModel.type = SubscriptionType.EMAIL
-        emailSubModel.address = emailSub.email
-        _subscriptionModelStore.add(identity.id + "-" + emailSub.id, emailSubModel)
-
-        _events.fire { it.onSubscriptionAdded(emailSub) }
     }
 
     override fun removeEmailSubscription(email: String) {
         val subscriptionToRem = subscriptions.emails.firstOrNull { it is EmailSubscription && it.email == email }
 
         if (subscriptionToRem != null) {
-            removeSubscription(subscriptionToRem)
+            removeSubscriptionFromModels(subscriptionToRem)
         }
-    }
-
-    override fun addSmsSubscription(sms: String) {
-        var smsSub = SmsSubscription(UUID.randomUUID(), sms)
-        val subscriptions = subscriptions.collection.toMutableList()
-        subscriptions.add(smsSub)
-        this.subscriptions = SubscriptionList(subscriptions)
-
-        var smsSubModel = SubscriptionModel()
-        smsSubModel.id = smsSub.id.toString()
-        smsSubModel.enabled = true
-        smsSubModel.type = SubscriptionType.SMS
-        smsSubModel.address = smsSub.number
-        _subscriptionModelStore.add(identity.id + "-" + smsSub.id, smsSubModel)
-
-        _events.fire { it.onSubscriptionAdded(smsSub) }
     }
 
     override fun removeSmsSubscription(sms: String) {
-        val subscriptionToRem = subscriptions.smss.firstOrNull { it.number == sms }
+        val subscriptionToRem = subscriptions.smss.firstOrNull { it is SmsSubscription && it.number == sms }
 
         if (subscriptionToRem != null) {
-            removeSubscription(subscriptionToRem)
+            removeSubscriptionFromModels(subscriptionToRem)
         }
     }
 
-    override fun addPushSubscription(id: String, pushToken: String) {
-        var pushSub = PushSubscription(UUID.fromString(id), true, pushToken, this)
+    private fun addSubscriptionToModels(type: SubscriptionType, address: String) {
+        Logging.log(LogLevel.DEBUG, "SubscriptionManager.addSubscription(type: $type, address: $address)")
 
-        val subscriptions = subscriptions.collection.toMutableList()
-        subscriptions.add(pushSub)
-        this.subscriptions = SubscriptionList(subscriptions)
+        var subscriptionModel = SubscriptionModel()
+        subscriptionModel.id = IDManager.createLocalId()
+        subscriptionModel.enabled = true
+        subscriptionModel.type = type
+        subscriptionModel.address = address
 
-        var pushSubModel = SubscriptionModel()
-        pushSubModel.id = pushSub.id.toString()
-        pushSubModel.enabled = pushSub.enabled
-        pushSubModel.type = SubscriptionType.PUSH
-        pushSubModel.address = pushSub.pushToken
-        _subscriptionModelStore.add(identity.id + "-" + pushSub.id, pushSubModel, false)
-
-        _events.fire { it.onSubscriptionAdded(pushSub) }
+        _subscriptionModelStore.add(subscriptionModel)
     }
 
-    override fun setSubscriptionEnablement(subscription: ISubscription, enabled: Boolean) {
-        Logging.log(LogLevel.DEBUG, "setSubscriptionEnablement(subscription: $subscription, enabled: $enabled)")
+    private fun removeSubscriptionFromModels(subscription: ISubscription) {
+        Logging.log(LogLevel.DEBUG, "SubscriptionManager.removeSubscription(subscription: $subscription)")
 
-        val subscriptionModel = _subscriptionModelStore.get(identity.id + "-" + subscription.id)
+        _subscriptionModelStore.remove(subscription.id.toString())
+    }
 
-        if (subscriptionModel != null) {
-            subscriptionModel.enabled = enabled
-        }
+    private fun updateSubscriptionModel(subscription: ISubscription, update: (SubscriptionModel) -> Unit) {
+        Logging.log(LogLevel.DEBUG, "SubscriptionManager.updateSubscriptionModel(subscription: $subscription)")
 
-        // remove the old subscription and add a new one with the proper enablement
-        val subscriptions = subscriptions.collection.toMutableList()
-        subscriptions.remove(subscription)
-        when (subscription) {
-            is SmsSubscription -> {
-                subscriptions.add(SmsSubscription(subscription.id, subscription.number))
-            }
-            is EmailSubscription -> {
-                subscriptions.add(EmailSubscription(subscription.id, subscription.email))
-            }
-            is PushSubscription -> {
-                subscriptions.add(PushSubscription(subscription.id, subscription.enabled, subscription.pushToken, this))
-            }
-        }
-        this.subscriptions = SubscriptionList(subscriptions)
+        val subscriptionModel = _subscriptionModelStore.get(subscription.id.toString()) ?: return
+        update(subscriptionModel)
     }
 
     override fun subscribe(handler: ISubscriptionChangedHandler) = _events.subscribe(handler)
 
     override fun unsubscribe(handler: ISubscriptionChangedHandler) = _events.unsubscribe(handler)
 
-    private fun removeSubscription(subscription: ISubscription) {
-        Logging.log(LogLevel.DEBUG, "removeSubscription(subscription: $subscription)")
+    /**
+     * Called when the model store has added a new subscription. The subscription list must be updated
+     * to reflect the added subscription.
+     */
+    override fun onAdded(model: SubscriptionModel) {
+        createSubscriptionAndAddToSubscriptionList(model)
+    }
 
+    /**
+     * Called when a subscription model has been updated. The subscription list must be updated
+     * to reflect the update subscription.
+     */
+    override fun onUpdated(model: SubscriptionModel, property: String, oldValue: Any?, newValue: Any?) {
+        val subscription = subscriptions.collection.firstOrNull { it.id.toString() == model.id }
+
+        if (subscription == null) {
+            // this shouldn't happen, but create a new subscription if a model was updated and we
+            // don't yet have a representation for it in the subscription list.
+            createSubscriptionAndAddToSubscriptionList(model)
+        } else {
+            // the model has already been updated, so fire the update event
+            _events.fire { it.onSubscriptionUpdated(subscription) }
+        }
+    }
+
+    /**
+     * Called when a subscription model has been removed. The subscription list must be updated
+     * to reflect the subscription removed.
+     */
+    override fun onRemoved(model: SubscriptionModel) {
+        val subscription = subscriptions.collection.firstOrNull { it.id.toString() == model.id }
+
+        if (subscription != null) {
+            removeSubscriptionFromSubscriptionList(subscription)
+        }
+    }
+
+    private fun createSubscriptionAndAddToSubscriptionList(subscriptionModel: SubscriptionModel) {
+        val subscription = createSubscriptionFromModel(subscriptionModel)
+
+        val subscriptions = this.subscriptions.collection.toMutableList()
+        subscriptions.add(subscription)
+        this.subscriptions = SubscriptionList(subscriptions)
+
+        _events.fire { it.onSubscriptionAdded(subscription) }
+    }
+
+    private fun removeSubscriptionFromSubscriptionList(subscription: ISubscription) {
         val subscriptions = subscriptions.collection.toMutableList()
         subscriptions.remove(subscription)
         this.subscriptions = SubscriptionList(subscriptions)
 
-        _subscriptionModelStore.remove(identity.id + "-" + subscription.id)
-
         _events.fire { it.onSubscriptionRemoved(subscription) }
+    }
+
+    private fun createSubscriptionFromModel(subscriptionModel: SubscriptionModel): ISubscription {
+        return when (subscriptionModel.type) {
+            SubscriptionType.SMS -> {
+                SmsSubscription(subscriptionModel)
+            }
+            SubscriptionType.EMAIL -> {
+                EmailSubscription(subscriptionModel)
+            }
+            SubscriptionType.PUSH -> {
+                PushSubscription(subscriptionModel)
+            }
+        }
     }
 }

@@ -6,6 +6,7 @@ import com.onesignal.core.debug.IDebugManager
 import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
+import com.onesignal.core.internal.common.IDManager
 import com.onesignal.core.internal.common.OneSignalUtils
 import com.onesignal.core.internal.debug.DebugManager
 import com.onesignal.core.internal.logging.Logging
@@ -17,13 +18,15 @@ import com.onesignal.core.internal.models.PropertiesModel
 import com.onesignal.core.internal.models.PropertiesModelStore
 import com.onesignal.core.internal.models.SessionModel
 import com.onesignal.core.internal.models.SessionModelStore
+import com.onesignal.core.internal.models.SubscriptionModel
+import com.onesignal.core.internal.models.SubscriptionModelStore
+import com.onesignal.core.internal.models.SubscriptionType
 import com.onesignal.core.internal.operations.CreateUserOperation
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.service.IServiceProvider
 import com.onesignal.core.internal.service.ServiceBuilder
 import com.onesignal.core.internal.service.ServiceProvider
 import com.onesignal.core.internal.startup.StartupService
-import com.onesignal.core.internal.user.IUserSwitcher
 import com.onesignal.core.user.IUserManager
 import com.onesignal.iam.IIAMManager
 import com.onesignal.iam.internal.IAMModule
@@ -31,39 +34,59 @@ import com.onesignal.location.ILocationManager
 import com.onesignal.location.internal.LocationModule
 import com.onesignal.notification.INotificationsManager
 import com.onesignal.notification.internal.NotificationModule
-import com.onesignal.notification.internal.pushtoken.IPushTokenManager
-import kotlinx.coroutines.delay
-import java.util.UUID
 
-internal class OneSignalImp() : IOneSignal, IServiceProvider {
+internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val sdkVersion: String = OneSignalUtils.sdkVersion
     override var isInitialized: Boolean = false
 
     override var requiresPrivacyConsent: Boolean
-        get() = _requiresPrivacyConsent == true
+        get() = _configModel?.requiresPrivacyConsent ?: (_requiresPrivacyConsent == true)
         set(value) {
             _requiresPrivacyConsent = value
             _configModel?.requiresPrivacyConsent = value
         }
 
-    override var privacyConsent: Boolean = false
+    override var privacyConsent: Boolean
+        get() = _configModel?.givenPrivacyConsent ?: (_givenPrivacyConsent == true)
+        set(value) {
+            _givenPrivacyConsent = value
+            _configModel?.givenPrivacyConsent = value
+        }
 
+    override val debug: IDebugManager = DebugManager()
     override val notifications: INotificationsManager get() = if (isInitialized) _notifications!! else throw Exception("Must call 'initWithContext' before use")
     override val location: ILocationManager get() = if (isInitialized) _location!! else throw Exception("Must call 'initWithContext' before use")
-    override val user: IUserManager get() = if (isInitialized) _user!! else throw Exception("Must call 'initWithContext' before use")
     override val iam: IIAMManager get() = if (isInitialized) _iam!! else throw Exception("Must call 'initWithContext' before use")
-    override val debug: IDebugManager = DebugManager()
+    override val user: IUserManager
+        get() {
+            if (!isInitialized) {
+                throw Exception("Must call 'initWithContext' before use")
+            }
+
+            if (!_hasCreatedBackendUser) {
+                synchronized(_hasCreatedBackendUser) {
+                    // check again now that we are synchronized.
+                    if (!_hasCreatedBackendUser) {
+                        // Create the new user in the backend as an operation
+                        _operationRepo!!.enqueue(CreateUserOperation(_configModel!!.appId, _identityModelStore!!.get().onesignalId, _identityModelStore!!.get().externalId))
+                        _hasCreatedBackendUser = true
+                    }
+                }
+            }
+
+            return _user!!
+        }
 
     // Services required by this class
     private var _user: IUserManager? = null
-    private var _userSwitcher: IUserSwitcher? = null
+    private var _hasCreatedBackendUser: Boolean = false
     private var _iam: IIAMManager? = null
     private var _location: ILocationManager? = null
     private var _notifications: INotificationsManager? = null
-    private var _pushTokenManager: IPushTokenManager? = null
     private var _operationRepo: IOperationRepo? = null
     private var _identityModelStore: IdentityModelStore? = null
     private var _propertiesModelStore: PropertiesModelStore? = null
+    private var _subscriptionModelStore: SubscriptionModelStore? = null
     private var _startupService: StartupService? = null
 
     // Other State
@@ -71,6 +94,7 @@ internal class OneSignalImp() : IOneSignal, IServiceProvider {
     private var _configModel: ConfigModel? = null
     private var _sessionModel: SessionModel? = null
     private var _requiresPrivacyConsent: Boolean? = null
+    private var _givenPrivacyConsent: Boolean? = null
 
     init {
         var serviceBuilder = ServiceBuilder()
@@ -100,25 +124,38 @@ internal class OneSignalImp() : IOneSignal, IServiceProvider {
         _configModel = _services.getService<ConfigModelStore>().get()
         _sessionModel = _services.getService<SessionModelStore>().get()
 
-        _configModel!!.appId = appId
-        // if privacy consent was set prior to init, set it in the model now
+        // if the app id was specified as input, update the config model with it
+        if (appId != null) {
+            _configModel!!.appId = appId
+        }
+
+        // if requires privacy consent was set prior to init, set it in the model now
         if (_requiresPrivacyConsent != null) {
             _configModel!!.requiresPrivacyConsent = _requiresPrivacyConsent!!
+        }
+
+        // if privacy consent was set prior to init, set it in the model now
+        if (_givenPrivacyConsent != null) {
+            _configModel!!.givenPrivacyConsent = _givenPrivacyConsent!!
         }
 
         // "Inject" the services required by this main class
         _location = _services.getService()
         _user = _services.getService()
-        _userSwitcher = _services.getService()
         _iam = _services.getService()
         _notifications = _services.getService()
-        _pushTokenManager = _services.getService()
         _operationRepo = _services.getService()
         _propertiesModelStore = _services.getService()
         _identityModelStore = _services.getService()
+        _subscriptionModelStore = _services.getService()
 
         // Instantiate and call the IStartableServices
         _startupService = _services.getService()
+        _startupService!!.bootstrap()
+
+        // TODO: Only do this if nothing persisted
+        createAndSwitchToNewUser()
+
         _startupService!!.start()
 
         isInitialized = true
@@ -132,30 +169,18 @@ internal class OneSignalImp() : IOneSignal, IServiceProvider {
             throw Exception("Must call 'initWithContext' before use")
         }
 
-        val sdkId = UUID.randomUUID().toString()
-        val identityModel = IdentityModel()
-        identityModel.id = sdkId
-        identityModel.userId = externalId
-        identityModel.jwtBearerToken = jwtBearerToken
-        _identityModelStore!!.add(externalId, identityModel, fireEvent = false)
+        synchronized(_hasCreatedBackendUser) {
+            createAndSwitchToNewUser { identityModel, _ ->
+                identityModel.externalId = externalId
+            }
 
-        val propertiesModel = PropertiesModel()
-        propertiesModel.id = sdkId
-        _propertiesModelStore!!.add(externalId, propertiesModel, fireEvent = false)
+            _hasCreatedBackendUser = true
+        }
 
-        // This makes the user effective even though we haven't made the backend call yet. This is
-        // to cover a window where the developer (or user) might not wait for this login method to return
-        // before using the `.user` property.
-        _userSwitcher!!.setUser(identityModel, propertiesModel)
+        // TODO: Set JWT Token for all future requests.
 
-        // TODO: Attempt to retrieve/create user from backend,
-        //       * Update the identityModel and propertyModel with the response in a way that won't
-        //         drive a change being pushed back up.
-        delay(1000L) // Simulate call to drive suspension
-
-        // TODO: Remove this dummy code which mimics what we'll do -- set the models from the backend
-        identityModel.set(IdentityModel::oneSignalId.name, UUID.randomUUID(), notify = false)
-        propertiesModel.set(PropertiesModel::tags.name, mapOf("foo" to "bar"), notify = false)
+        // Create the new user in the backend as an operation
+        _operationRepo!!.execute(CreateUserOperation(_configModel!!.appId, _identityModelStore!!.get().onesignalId, _identityModelStore!!.get().externalId))
     }
 
     override fun logout() {
@@ -165,23 +190,49 @@ internal class OneSignalImp() : IOneSignal, IServiceProvider {
             throw Exception("Must call 'initWithContext' before use")
         }
 
-        val sdkId = UUID.randomUUID().toString()
+        synchronized(_hasCreatedBackendUser) {
+            if (!_hasCreatedBackendUser) {
+                return
+            }
+
+            createAndSwitchToNewUser()
+            _hasCreatedBackendUser = false
+        }
+
+        // TODO: remove JWT Token for all future requests.
+    }
+
+    private fun createAndSwitchToNewUser(modify: ((identityModel: IdentityModel, propertiesModel: PropertiesModel) -> Unit)? = null) {
+        // create a new identity and properties model locally
+        val sdkId = IDManager.createLocalId()
         var identityModel = IdentityModel()
-        identityModel.id = sdkId
-        _identityModelStore!!.add(sdkId, identityModel, fireEvent = false)
+        identityModel.onesignalId = sdkId
 
         var propertiesModel = PropertiesModel()
-        propertiesModel.id = sdkId
-        _propertiesModelStore!!.add(sdkId, propertiesModel, fireEvent = false)
+        propertiesModel.onesignalId = sdkId
 
-        _userSwitcher!!.setUser(identityModel, propertiesModel)
+        if (modify != null) {
+            modify(identityModel, propertiesModel)
+        }
 
-        // Send the user create along with the device push token up so the new device-scoped user can
-        // be created and claim this device and "steal" the push subscription.
-        // TODO: Do we still need to create the subscription locally to represent that this
-        //       user it.  But we don't know the subscription ID until *after* it has been sent up (will be returned
-        //       as part of the response).
-        _operationRepo!!.enqueue(CreateUserOperation(_configModel!!.appId!!, sdkId, _pushTokenManager!!.pushToken))
+        val subscriptions = mutableListOf<SubscriptionModel>()
+
+        // Create the push subscription for this device under the new user, copying the current
+        // user's push subscription if one exists.
+        val currentPushSubscription = _subscriptionModelStore!!.list().firstOrNull { it.type == SubscriptionType.PUSH }
+        val newPushSubscription = SubscriptionModel()
+
+        newPushSubscription.id = IDManager.createLocalId()
+        newPushSubscription.type = SubscriptionType.PUSH
+        newPushSubscription.enabled = currentPushSubscription?.enabled ?: true
+        newPushSubscription.address = currentPushSubscription?.address ?: ""
+
+        subscriptions.add(newPushSubscription)
+
+        // The next 3 lines makes this user the effective user locally.
+        _identityModelStore!!.replace(identityModel)
+        _propertiesModelStore!!.replace(propertiesModel)
+        _subscriptionModelStore!!.replaceAll(subscriptions)
     }
 
     override fun <T> hasService(c: Class<T>): Boolean = _services.hasService(c)

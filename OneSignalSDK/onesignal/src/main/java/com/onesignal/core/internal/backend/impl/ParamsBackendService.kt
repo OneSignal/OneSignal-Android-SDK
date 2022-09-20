@@ -1,8 +1,9 @@
-package com.onesignal.core.internal.backend
+package com.onesignal.core.internal.backend.impl
 
 import com.onesignal.core.debug.LogLevel
-import com.onesignal.core.internal.backend.http.CacheKeys
-import com.onesignal.core.internal.backend.http.IHttpClient
+import com.onesignal.core.internal.backend.IParamsBackendService
+import com.onesignal.core.internal.http.CacheKeys
+import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.params.IParamsService
 import com.onesignal.core.internal.params.IWriteableParamsService

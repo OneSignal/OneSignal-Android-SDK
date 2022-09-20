@@ -38,11 +38,11 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.suspendifyOnMain
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.models.ConfigModelStore
+import com.onesignal.core.internal.models.IdentityModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.PurchaseInfo
 import com.onesignal.core.internal.operations.TrackPurchaseOperation
 import com.onesignal.core.internal.startup.IStartableService
-import com.onesignal.core.internal.user.IUserSwitcher
 import java.lang.ClassCastException
 import java.lang.Exception
 import java.lang.NullPointerException
@@ -55,7 +55,7 @@ internal class TrackAmazonPurchase(
     private val _applicationService: IApplicationService,
     private val _operationRepo: IOperationRepo,
     private val _configModelStore: ConfigModelStore,
-    private val _userSwitcher: IUserSwitcher
+    private val _identityModelStore: IdentityModelStore
 ) : IStartableService, IApplicationLifecycleHandler {
     private var canTrack = false
     private var osPurchasingListener: OSPurchasingListener? = null
@@ -79,7 +79,7 @@ internal class TrackAmazonPurchase(
             }
             val locListenerHandlerField = listenerHandlerClass.getDeclaredField("f")
             locListenerHandlerField.isAccessible = true
-            osPurchasingListener = OSPurchasingListener(_operationRepo, _configModelStore, _userSwitcher)
+            osPurchasingListener = OSPurchasingListener(_operationRepo, _configModelStore, _identityModelStore)
             osPurchasingListener!!.orgPurchasingListener = locListenerHandlerField.get(listenerHandlerObject) as PurchasingListener
 
             listenerHandlerField = locListenerHandlerField
@@ -131,7 +131,7 @@ internal class TrackAmazonPurchase(
     private inner class OSPurchasingListener(
         private val _operationRepo: IOperationRepo,
         private val _configModelStore: ConfigModelStore,
-        private val _userSwitcher: IUserSwitcher
+        private val _identityModelStore: IdentityModelStore
     ) : PurchasingListener {
         var orgPurchasingListener: PurchasingListener? = null
         private var lastRequestId: RequestId? = null
@@ -170,7 +170,8 @@ internal class TrackAmazonPurchase(
                             purchasesToReport.add(PurchaseInfo(sku, iso, price))
                         }
 
-                        _operationRepo.enqueue(TrackPurchaseOperation(_configModelStore.get().appId!!, _userSwitcher.identityModel.oneSignalId.toString(), false, purchasesToReport))
+                        // TODO: amount spent?
+                        _operationRepo.enqueue(TrackPurchaseOperation(_configModelStore.get().appId, _identityModelStore.get().onesignalId, false, BigDecimal(0), purchasesToReport))
                     }
                 }
             } else if (orgPurchasingListener != null) {

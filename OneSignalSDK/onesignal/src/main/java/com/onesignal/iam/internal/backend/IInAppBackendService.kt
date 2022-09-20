@@ -1,6 +1,6 @@
 package com.onesignal.iam.internal.backend
 
-import com.onesignal.core.internal.backend.http.HttpResponse
+import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.iam.internal.InAppMessage
 import com.onesignal.iam.internal.InAppMessageContent
 

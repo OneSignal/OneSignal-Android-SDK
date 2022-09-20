@@ -1,4 +1,4 @@
-package com.onesignal.core.internal.backend.http
+package com.onesignal.core.internal.http
 
 import java.net.HttpURLConnection
 

@@ -88,9 +88,6 @@ public class MainActivityViewModel implements ActivityViewModel {
 
     // Alias
     private TextView aliasTitleTextView;
-    private RelativeLayout externalUserIdRelativeLayout;
-    private TextView externalUserIdTitleTextView;
-    private TextView userExternalUserIdTextView;
     private RecyclerView aliasesRecyclerView;
     private PairRecyclerViewAdapter aliasesRecyclerViewAdapter;
     private TextView noAliasesTextView;
@@ -164,6 +161,7 @@ public class MainActivityViewModel implements ActivityViewModel {
 
     private Context context;
 
+    private Boolean isLoggedIn = false;
     private HashMap<String, Object> aliasSet;
     private ArrayList<Map.Entry> aliasArrayList;
     private ArrayList<Object> emailArrayList;
@@ -213,9 +211,6 @@ public class MainActivityViewModel implements ActivityViewModel {
         switchUserButton = getActivity().findViewById(R.id.main_activity_switch_user_button);
 
         aliasTitleTextView = getActivity().findViewById(R.id.main_activity_aliases_title_text_view);
-        externalUserIdRelativeLayout = getActivity().findViewById(R.id.main_activity_account_details_external_user_id_relative_layout);
-        externalUserIdTitleTextView = getActivity().findViewById(R.id.main_activity_account_details_external_user_id_text_view);
-        userExternalUserIdTextView = getActivity().findViewById(R.id.main_activity_account_details_user_external_user_id_text_view);
         noAliasesTextView = getActivity().findViewById(R.id.main_activity_aliases_no_aliases_text_view);
         addAliasButton = getActivity().findViewById(R.id.main_activity_add_alias_button);
         aliasesRecyclerView = getActivity().findViewById(R.id.main_activity_aliases_recycler_view);
@@ -302,8 +297,6 @@ public class MainActivityViewModel implements ActivityViewModel {
         font.applyFont(noEmailsTextView, font.saralaBold);
         font.applyFont(smsHeaderTextView, font.saralaBold);
         font.applyFont(noSmssTextView, font.saralaBold);
-        font.applyFont(externalUserIdTitleTextView, font.saralaBold);
-        font.applyFont(userExternalUserIdTextView, font.saralaRegular);
         font.applyFont(tagsTitleTextView, font.saralaBold);
         font.applyFont(noTagsTextView, font.saralaBold);
         font.applyFont(addTagButton, font.saralaBold);
@@ -394,27 +387,33 @@ public class MainActivityViewModel implements ActivityViewModel {
 
     private void setupAppLayout() {
         revokeConsentButton.setOnClickListener(v -> togglePrivacyConsent(false));
-        switchUserButton.setOnClickListener(v -> dialog.createUpdateAlertDialog(OneSignal.getUser().getExternalId(), Dialog.DialogAction.LOGIN, ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
-            @Override
-            public void onSuccess(String update) {
-                if(update == null || update.isEmpty()) {
-                    OneSignal.logout();
-                    switchUserButton.setText(R.string.login_user);
-                    refreshState();
-                }
-                else {
-                    OneSignal.login(update, Continue.with(r -> {
-                        switchUserButton.setText(R.string.logout_user);
-                        refreshState();
-                    }));
-                }
+        switchUserButton.setOnClickListener(v -> {
+            if(isLoggedIn) {
+                OneSignal.logout();
+                isLoggedIn = false;
+                switchUserButton.setText(R.string.login_user);
+                refreshState();
             }
+            else {
+                dialog.createUpdateAlertDialog(OneSignal.getUser().getExternalId(), Dialog.DialogAction.LOGIN, ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
+                    @Override
+                    public void onSuccess(String update) {
+                        if (update != null && !update.isEmpty()) {
+                            OneSignal.login(update, Continue.with(r -> {
+                                isLoggedIn = true;
+                                switchUserButton.setText(R.string.logout_user);
+                                refreshState();
+                            }));
+                        }
+                    }
 
-            @Override
-            public void onFailure() {
+                    @Override
+                    public void onFailure() {
 
+                    }
+                });
             }
-        }));
+        });
     }
 
     private void setupUserLayout() {
@@ -866,10 +865,6 @@ public class MainActivityViewModel implements ActivityViewModel {
     private  void refreshState() {
         // appId
         appIdTextView.setText(getOneSignalAppId());
-
-        // externalId
-        String externalUserId = OneSignal.getUser().getExternalId();
-        userExternalUserIdTextView.setText(externalUserId == null ? "" : externalUserId);
 
         // aliases
         aliasSet.clear();

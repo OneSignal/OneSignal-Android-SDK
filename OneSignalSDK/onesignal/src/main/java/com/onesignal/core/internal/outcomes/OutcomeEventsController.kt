@@ -72,7 +72,7 @@ internal class OutcomeEventsController(
 
     private suspend fun sendSavedOutcomeEvent(event: OutcomeEventParams) {
         val deviceType: Int = _deviceService.deviceType
-        val appId: String = _configModelStore.get().appId!!
+        val appId: String = _configModelStore.get().appId
 
         val response = outcomeEventsFactory.getRepository().requestMeasureOutcomeEvent(appId, deviceType, event)
 
@@ -174,7 +174,7 @@ internal class OutcomeEventsController(
     ): OutcomeEvent? {
         val timestampSeconds: Long = _time.currentTimeMillis / 1000
         val deviceType: Int = _deviceService.deviceType
-        val appId: String = _configModelStore.get().appId!!
+        val appId: String = _configModelStore.get().appId
         var directSourceBody: OutcomeSourceBody? = null
         var indirectSourceBody: OutcomeSourceBody? = null
         var unattributed = false

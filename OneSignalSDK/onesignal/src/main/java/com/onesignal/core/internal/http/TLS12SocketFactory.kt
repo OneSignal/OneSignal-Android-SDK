@@ -1,4 +1,4 @@
-package com.onesignal.core.internal.backend.http
+package com.onesignal.core.internal.http
 
 import java.io.IOException
 import java.net.InetAddress

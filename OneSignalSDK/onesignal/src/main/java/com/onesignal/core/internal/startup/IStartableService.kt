@@ -27,3 +27,11 @@ internal interface IStartableService {
      */
     fun start()
 }
+
+internal interface IBootstrapService {
+    /**
+     * Called when the service is to be started.  The appId and appContext have already been
+     * established.
+     */
+    fun bootstrap()
+}

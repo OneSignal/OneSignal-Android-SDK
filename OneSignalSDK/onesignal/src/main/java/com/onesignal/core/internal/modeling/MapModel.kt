@@ -1,0 +1,64 @@
+package com.onesignal.core.internal.modeling
+
+/**
+ * A Map Model is a [MutableMap] that has a key of type string and a generically-specified
+ * value.  It is a [Model] which hooks the map into the model framework and allows for:
+ *
+ * 1. The transparent persistence of the map.
+ * 2. Change notification propagation for any adds, removes, or updates to the map.
+ */
+internal open class MapModel<V>(
+    parentModel: Model? = null,
+    parentProperty: String? = null
+) : Model(parentModel, parentProperty), MutableMap<String, V> {
+
+    override val size: Int
+        get() = data.size
+
+    override val entries: MutableSet<MutableMap.MutableEntry<String, V>>
+        get() = data.entries.filterIsInstance<MutableMap.MutableEntry<String, V>>().toMutableSet()
+
+    override val keys: MutableSet<String>
+        get() = data.keys
+
+    override val values: MutableCollection<V>
+        get() = data.values.map { it as V }.toMutableList()
+
+    override fun containsKey(key: String): Boolean {
+        return data.containsKey(key)
+    }
+
+    override fun containsValue(value: V): Boolean {
+        return data.containsValue(value)
+    }
+
+    override fun isEmpty(): Boolean {
+        return data.isEmpty()
+    }
+
+    override fun get(key: String): V {
+        return getProperty(key)
+    }
+
+    override fun clear() {
+        for (property in data.keys)
+            setProperty(property, null)
+    }
+
+    override fun put(key: String, value: V): V {
+        setProperty(key, value)
+        return value
+    }
+
+    override fun putAll(from: Map<out String, V>) {
+        for (item in from) {
+            setProperty(item.key, item.value)
+        }
+    }
+
+    override fun remove(key: String): V {
+        val value = getProperty<V>(key)
+        setProperty(key, null)
+        return value
+    }
+}

@@ -1,7 +1,7 @@
 package com.onesignal.notification.internal.backend.impl
 
-import com.onesignal.core.internal.backend.http.HttpResponse
-import com.onesignal.core.internal.backend.http.IHttpClient
+import com.onesignal.core.internal.http.HttpResponse
+import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.notification.internal.backend.INotificationBackendService
 import org.json.JSONObject
 

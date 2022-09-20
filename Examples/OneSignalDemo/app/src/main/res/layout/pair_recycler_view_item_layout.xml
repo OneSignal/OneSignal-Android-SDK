@@ -10,8 +10,8 @@
         android:layout_height="wrap_content"
         android:paddingTop="8dp"
         android:paddingBottom="8dp"
-        android:paddingStart="24dp"
-        android:paddingEnd="24dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         android:background="@drawable/ripple_selector_red_white">
 
         <TextView
@@ -21,8 +21,8 @@
             android:layout_alignParentStart="true"
             android:layout_alignParentLeft="true"
             android:layout_centerVertical="true"
-            android:layout_toStartOf="@id/pair_recycler_view_item_value_text_view"
-            android:layout_toLeftOf="@id/pair_recycler_view_item_value_text_view"
+            android:paddingEnd="4dp"
+            android:paddingRight="4dp"
             android:textSize="16sp"
             android:textColor="@color/colorDarkText"
             android:textStyle="bold" />
@@ -34,9 +34,14 @@
             android:layout_alignParentEnd="true"
             android:layout_alignParentRight="true"
             android:layout_centerVertical="true"
+            android:paddingStart="4dp"
+            android:paddingLeft="4dp"
+            android:layout_toEndOf="@id/pair_recycler_view_item_key_text_view"
+            android:layout_toRightOf="@id/pair_recycler_view_item_key_text_view"
+            android:textAlignment="textEnd"
+            android:gravity="end"
             android:textSize="16sp"
-            android:textColor="@color/colorDarkText"
-            android:textStyle="bold" />
+            android:textColor="@color/colorDarkText" />
 
     </RelativeLayout>
 

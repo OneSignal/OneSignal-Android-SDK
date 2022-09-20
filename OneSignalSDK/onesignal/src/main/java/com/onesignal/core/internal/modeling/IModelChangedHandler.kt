@@ -16,6 +16,18 @@ internal class ModelChangedArgs(
     val model: Model,
 
     /**
+     * The path to the property, from the root, that has changed.  When the root model has
+     * changed, [path] and [property] will be identical.  When it's a nested property that
+     * has changed, [path] will contain a "dot notation" path to the property:
+     *
+     * * If a map property on the root model gets a new KVP, this will be `mapProperty.new_key`
+     * * If a complex property on the root model, this will be `complexProperty.simpleProperty`
+     * * If a map property on a complex property on the root model gets a new KVP, this will be `complexProperty.mapProperty.new_key`
+     *
+     */
+    val path: String,
+
+    /**
      * The property that was changed.
      */
     val property: String,

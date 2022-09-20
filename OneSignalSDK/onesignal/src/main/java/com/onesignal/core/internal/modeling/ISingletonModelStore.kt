@@ -16,4 +16,9 @@ internal interface ISingletonModelStore<TModel> :
      * @return The single model managed by this store.
      */
     fun get(): TModel
+
+    /**
+     * Entirely replace the existing model with the new model provided.
+     */
+    fun replace(model: TModel, fireEvent: Boolean = true)
 }

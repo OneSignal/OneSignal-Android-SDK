@@ -307,43 +307,6 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
 
-                        <!-- External User Id -->
-
-                        <RelativeLayout
-                            android:id="@+id/main_activity_account_details_external_user_id_relative_layout"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/ripple_selector_red_white"
-                            android:paddingStart="12dp"
-                            android:paddingTop="12dp"
-                            android:paddingEnd="12dp"
-                            android:paddingBottom="12dp">
-
-                            <TextView
-                                android:id="@+id/main_activity_account_details_external_user_id_text_view"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_alignParentStart="true"
-                                android:layout_alignParentLeft="true"
-                                android:layout_centerVertical="true"
-                                android:layout_toStartOf="@id/main_activity_account_details_user_external_user_id_text_view"
-                                android:layout_toLeftOf="@id/main_activity_account_details_user_external_user_id_text_view"
-                                android:text="@string/external_user_id_colon"
-                                android:textColor="@color/colorDarkText"
-                                android:textSize="16sp" />
-
-                            <TextView
-                                android:id="@+id/main_activity_account_details_user_external_user_id_text_view"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_alignParentEnd="true"
-                                android:layout_alignParentRight="true"
-                                android:layout_centerVertical="true"
-                                android:textColor="@color/colorDarkText"
-                                android:textSize="16sp" />
-
-                        </RelativeLayout>
-
                         <androidx.recyclerview.widget.RecyclerView
                             android:id="@+id/main_activity_aliases_recycler_view"
                             android:layout_width="match_parent"

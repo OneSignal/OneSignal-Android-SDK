@@ -1,9 +1,11 @@
 package com.onesignal.core.internal.user.subscriptions
 
+import com.onesignal.core.internal.models.SubscriptionModel
 import com.onesignal.core.user.subscriptions.ISmsSubscription
-import java.util.UUID
 
 internal class SmsSubscription(
-    id: UUID,
+    model: SubscriptionModel
+) : Subscription(model), ISmsSubscription {
     override val number: String
-) : Subscription(id), ISmsSubscription
+        get() = model.address
+}
