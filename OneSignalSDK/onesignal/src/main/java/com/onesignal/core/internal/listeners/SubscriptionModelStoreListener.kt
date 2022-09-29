@@ -25,7 +25,7 @@ internal class SubscriptionModelStoreListener(
         return DeleteSubscriptionOperation(_configModelStore.get().appId, _identityModelStore.get().onesignalId, model.id)
     }
 
-    override fun getUpdateOperation(model: SubscriptionModel, property: String, oldValue: Any?, newValue: Any?): Operation {
+    override fun getUpdateOperation(model: SubscriptionModel, path: String, property: String, oldValue: Any?, newValue: Any?): Operation {
         return UpdateSubscriptionOperation(_configModelStore.get().appId, _identityModelStore.get().onesignalId, model.id, model.enabled, model.address)
     }
 }

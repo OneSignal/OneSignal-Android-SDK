@@ -13,14 +13,17 @@ internal interface IModelStoreChangeHandler<TModel> where TModel : Model {
     fun onAdded(model: TModel)
 
     /**
-     * Called when a model has been updated.
+     * Called when a model has been updated.  This callback wraps [IModelChangedHandler.onChanged]
+     * so users of the model store does not need to manage subscriptions to each individual [Model]
+     * within the store.
      *
      * @param model The model that has been updated (includes the updates).
+     * @param path The path to the property of the model that has been updated.
      * @param property The property of the model that has been updated.
      * @param oldValue The old value of the property that has changed.
      * @param newValue The new value of the property that has changed.
      */
-    fun onUpdated(model: TModel, property: String, oldValue: Any?, newValue: Any?)
+    fun onUpdated(model: TModel, path: String, property: String, oldValue: Any?, newValue: Any?)
 
     /**
      * Called when a model has been removed from the model store.

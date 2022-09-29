@@ -1,6 +1,5 @@
 package com.onesignal.core.internal.params
 
-import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.backend.IParamsBackendService
 import com.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.core.internal.logging.Logging
@@ -48,7 +47,7 @@ internal class RefreshParamsService(
         }
 
         suspendifyOnThread {
-            Logging.log(LogLevel.DEBUG, "StartupService fetching parameters for appId: $appId")
+            Logging.debug("RefreshParamsService: fetching parameters for appId: $appId")
 
             _paramsBackendService.fetchAndSaveRemoteParams(appId, _subscriptionManager.subscriptions.push?.id.toString())
         }

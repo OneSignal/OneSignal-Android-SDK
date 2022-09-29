@@ -6,8 +6,12 @@ import java.util.*
  * Manages IDs that are initially generated locally, then regenerated on the backend. Generally when
  * resources are created they are first created with a locally generated ID.  Once the resource
  * has been created on the backend that local ID is replaced with the backend one.
+ *
+ * The [IDManager] is able to handle IDs created locally in one application instance, and detected
+ * as local/translated in a subsequent application instance.
  */
 internal object IDManager {
+    private const val LOCAL_PREFIX = "local-"
     private val _localIdMap = mutableMapOf<String, String?>()
 
     /**
@@ -16,7 +20,7 @@ internal object IDManager {
      * @return A new locally generated ID.
      */
     fun createLocalId(): String {
-        val newID = "local-${UUID.randomUUID()}"
+        val newID = "$LOCAL_PREFIX${UUID.randomUUID()}"
         _localIdMap[newID] = null
         return newID
     }
@@ -39,7 +43,7 @@ internal object IDManager {
      * @return true if the [id] provided was created via [createLocalId], but has not yet had
      * a backend-generated ID set via [setLocalToBackendIdTranslation].
      */
-    fun isIdLocalOnly(id: String): Boolean = _localIdMap.containsKey(id)
+    fun isIdLocalOnly(id: String): Boolean = id.startsWith(LOCAL_PREFIX)
 
     /**
      * Retrieve the provided ID.  Will retrieve the backend-generated ID if there is one, falling

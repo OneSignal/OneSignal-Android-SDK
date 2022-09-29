@@ -1,13 +1,21 @@
 package com.onesignal.core.internal.modeling
 
-import com.onesignal.core.internal.common.events.IEventNotifier
-
+/**
+ * Implement [IModelChangedHandler] and subscribe implementation via [Model.subscribe] to
+ * be notified when the [Model] has changed.
+ */
 internal interface IModelChangedHandler {
+
+    /**
+     * Called when the subscribed model has been changed.
+     *
+     * @param args Information related to what has changed.
+     */
     fun onChanged(args: ModelChangedArgs)
 }
 
 /**
- * The arguments passed to the [IEventNotifier] handler when subscribed via [Model.subscribe]
+ * The arguments passed to the [IModelChangedHandler] handler when subscribed via [Model.subscribe]
  */
 internal class ModelChangedArgs(
     /**
@@ -16,7 +24,7 @@ internal class ModelChangedArgs(
     val model: Model,
 
     /**
-     * The path to the property, from the root, that has changed.  When the root model has
+     * The path to the property, from the root [Model], that has changed.  When the root model has
      * changed, [path] and [property] will be identical.  When it's a nested property that
      * has changed, [path] will contain a "dot notation" path to the property:
      *

@@ -387,6 +387,12 @@ public class MainActivityViewModel implements ActivityViewModel {
 
     private void setupAppLayout() {
         revokeConsentButton.setOnClickListener(v -> togglePrivacyConsent(false));
+
+        if(OneSignal.getUser().getAliases().containsKey("external_id")) {
+            isLoggedIn = true;
+            switchUserButton.setText(R.string.logout_user);
+        }
+
         switchUserButton.setOnClickListener(v -> {
             if(isLoggedIn) {
                 OneSignal.logout();
@@ -529,8 +535,6 @@ public class MainActivityViewModel implements ActivityViewModel {
     }
 
     private void setupTagsLayout() {
-        animate.toggleAnimationView(true, View.GONE, tagsRecyclerView, noTagsTextView);
-
         setupTagRecyclerView();
 
         addTagButton.setOnClickListener(v -> dialog.createAddPairAlertDialog("Add Tag", ProfileUtil.FieldType.TAG, new AddPairAlertDialogCallback() {

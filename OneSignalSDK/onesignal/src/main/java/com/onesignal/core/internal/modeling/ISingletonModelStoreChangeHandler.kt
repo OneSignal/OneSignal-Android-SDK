@@ -14,9 +14,12 @@ internal interface ISingletonModelStoreChangeHandler<TModel> where TModel : Mode
     fun onModelReplaced(model: TModel)
 
     /**
-     * Called when a property within the model has been updated.
+     * Called when a property within the model has been updated. This callback wraps [IModelChangedHandler.onChanged]
+     * so users of the model store does not need to manage subscriptions to the individual [Model]
+     * within the store.
      *
      * @param model The model that has been updated (includes the updates).
+     * @param path The path to the property of the model that has been updated.
      * @param property The property of the model that has been updated.
      * @param oldValue The old value of the property that has changed.
      * @param newValue The new value of the property that has changed.

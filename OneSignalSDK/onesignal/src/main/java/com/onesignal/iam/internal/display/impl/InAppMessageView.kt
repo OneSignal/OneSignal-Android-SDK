@@ -465,7 +465,7 @@ internal class InAppMessageView(
      * Remove all views and dismiss PopupWindow
      */
     fun removeAllViews() {
-        Logging.debug("InAppMessageView removing views")
+        Logging.debug("InAppMessageView.removeAllViews()")
         if (isDismissTimerSet) {
             // Dismissed before the dismiss delay
             cancelDismissTimer = true

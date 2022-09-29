@@ -7,7 +7,6 @@ import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.onesignal.core.OneSignal
-import com.onesignal.core.internal.logging.Logging
 import com.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.notification.internal.restoration.INotificationRestoreProcessor
 import com.onesignal.notification.internal.restoration.INotificationRestoreWorkManager
@@ -53,8 +52,6 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
             if (!NotificationHelper.areNotificationsEnabled(context)) {
                 return Result.failure()
             }
-
-            Logging.info("Restoring notifications")
 
             val processor = OneSignal.getService<INotificationRestoreProcessor>()
 

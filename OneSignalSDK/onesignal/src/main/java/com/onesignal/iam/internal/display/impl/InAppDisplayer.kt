@@ -84,7 +84,7 @@ internal class InAppDisplayer(
      */
     private suspend fun showMessageContent(message: InAppMessage, content: InAppMessageContent) {
         val currentActivity = _applicationService.current
-        Logging.debug("in app message showMessageContent on currentActivity: $currentActivity")
+        Logging.debug("InAppDisplayer.showMessageContent: in app message on currentActivity: $currentActivity")
 
         /* IMPORTANT
          * This is the starting route for grabbing the current Activity and passing it to InAppMessageView */
