@@ -10,14 +10,14 @@ internal enum class SubscriptionType {
 
 internal class SubscriptionModel : Model() {
     var enabled: Boolean
-        get() = get(::enabled.name)
-        set(value) { set(::enabled.name, value) }
+        get() = getProperty(::enabled.name)
+        set(value) { setProperty(::enabled.name, value) }
 
     var type: SubscriptionType
-        get() = get(::type.name)
-        set(value) { set(::type.name, value) }
+        get() = getProperty(::type.name)
+        set(value) { setProperty(::type.name, value) }
 
     var address: String
-        get() = get(::address.name)
-        set(value) { set(::address.name, value) }
+        get() = getProperty(::address.name)
+        set(value) { setProperty(::address.name, value) }
 }

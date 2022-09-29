@@ -1,45 +1,82 @@
 package com.onesignal.core.internal.models
 
+import com.onesignal.core.internal.modeling.MapModel
 import com.onesignal.core.internal.modeling.Model
 
 internal class PropertiesModel : Model() {
+    /**
+     * The OneSignal id for the user that is associated with these properties.
+     */
+    var onesignalId: String
+        get() = getProperty(::onesignalId.name)
+        set(value) { setProperty(::onesignalId.name, value) }
+
+    /**
+     * The language for this user.
+     */
     var language: String
-        get() = get(::language.name) { "en" }
-        set(value) { set(::language.name, value) }
+        get() = getProperty(::language.name) { "en" }
+        set(value) { setProperty(::language.name, value) }
 
+    /**
+     * The country code for this user.
+     */
     var country: String
-        get() = get(::country.name) { "US" }
-        set(value) { set(::country.name, value) }
+        get() = getProperty(::country.name) { "US" }
+        set(value) { setProperty(::country.name, value) }
 
+    /**
+     * The timezone for this user.
+     */
     var timezone: UInt?
-        get() = get(::timezone.name)
-        set(value) { set(::timezone.name, value) }
+        get() = getProperty(::timezone.name)
+        set(value) { setProperty(::timezone.name, value) }
 
-    var tags: Map<String, String>
-        get() = get(::tags.name) { mapOf() }
-        set(value) { set(::tags.name, value) }
+    /**
+     * The data tags for this user.
+     */
+    val tags: MapModel<String>
+        get() = getProperty(::tags.name) { MapModel(this, ::tags.name) }
 
+    /**
+     * The user's last known location latitude reading.
+     */
     var locationLatitude: Double?
-        get() = get(::locationLatitude.name)
-        set(value) { set(::locationLatitude.name, value) }
+        get() = getProperty(::locationLatitude.name)
+        set(value) { setProperty(::locationLatitude.name, value) }
 
+    /**
+     * The user's last known location longitude reading.
+     */
     var locationLongitude: Double?
-        get() = get(::locationLongitude.name)
-        set(value) { set(::locationLongitude.name, value) }
+        get() = getProperty(::locationLongitude.name)
+        set(value) { setProperty(::locationLongitude.name, value) }
 
+    /**
+     * The user's last location accuracy reading.
+     */
     var locationAccuracy: Float?
-        get() = get(::locationAccuracy.name)
-        set(value) { set(::locationAccuracy.name, value) }
+        get() = getProperty(::locationAccuracy.name)
+        set(value) { setProperty(::locationAccuracy.name, value) }
 
+    /**
+     * The user's last location type reading (0 - COARSE, 1 - FINE).
+     */
     var locationType: Int?
-        get() = get(::locationType.name)
-        set(value) { set(::locationType.name, value) }
+        get() = getProperty(::locationType.name)
+        set(value) { setProperty(::locationType.name, value) }
 
+    /**
+     * Whether the user's last location reading was done with the app in the background.
+     */
     var locationBackground: Boolean?
-        get() = get(::locationBackground.name)
-        set(value) { set(::locationBackground.name, value) }
+        get() = getProperty(::locationBackground.name)
+        set(value) { setProperty(::locationBackground.name, value) }
 
+    /**
+     * When the user's last location reading was.
+     */
     var locationTimestamp: Long?
-        get() = get(::locationTimestamp.name)
-        set(value) { set(::locationTimestamp.name, value) }
+        get() = getProperty(::locationTimestamp.name)
+        set(value) { setProperty(::locationTimestamp.name, value) }
 }

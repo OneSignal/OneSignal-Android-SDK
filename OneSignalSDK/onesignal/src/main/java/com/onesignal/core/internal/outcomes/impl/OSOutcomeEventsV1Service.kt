@@ -1,7 +1,7 @@
 package com.onesignal.core.internal.outcomes.impl
 
-import com.onesignal.core.internal.backend.http.HttpResponse
-import com.onesignal.core.internal.backend.http.IHttpClient
+import com.onesignal.core.internal.http.HttpResponse
+import com.onesignal.core.internal.http.IHttpClient
 import org.json.JSONObject
 
 internal class OSOutcomeEventsV1Service(client: IHttpClient) : OSOutcomeEventsClient(client) {

@@ -2,16 +2,22 @@ package com.onesignal.core.internal
 
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
+import com.onesignal.core.internal.backend.IIdentityBackendService
 import com.onesignal.core.internal.backend.IParamsBackendService
-import com.onesignal.core.internal.backend.ParamsBackendService
-import com.onesignal.core.internal.backend.http.HttpClient
-import com.onesignal.core.internal.backend.http.IHttpClient
+import com.onesignal.core.internal.backend.ISubscriptionBackendService
+import com.onesignal.core.internal.backend.IUserBackendService
+import com.onesignal.core.internal.backend.impl.IdentityBackendService
+import com.onesignal.core.internal.backend.impl.ParamsBackendService
+import com.onesignal.core.internal.backend.impl.SubscriptionBackendService
+import com.onesignal.core.internal.backend.impl.UserBackendService
 import com.onesignal.core.internal.background.IBackgroundManager
 import com.onesignal.core.internal.background.impl.BackgroundManager
 import com.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.core.internal.database.impl.DatabaseProvider
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.device.impl.DeviceService
+import com.onesignal.core.internal.http.HttpClient
+import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.influence.IInfluenceManager
 import com.onesignal.core.internal.influence.impl.InfluenceManager
 import com.onesignal.core.internal.listeners.IdentityModelStoreListener
@@ -25,10 +31,10 @@ import com.onesignal.core.internal.models.SubscriptionModelStore
 import com.onesignal.core.internal.models.TriggerModelStore
 import com.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.core.internal.operations.IOperationRepo
-import com.onesignal.core.internal.operations.OperationRepo
-import com.onesignal.core.internal.operations.executors.PropertyOperationExecutor
-import com.onesignal.core.internal.operations.executors.SubscriptionOperationExecutor
-import com.onesignal.core.internal.operations.executors.UserOperationExecutor
+import com.onesignal.core.internal.operations.impl.IdentityOperationExecutor
+import com.onesignal.core.internal.operations.impl.OperationRepo
+import com.onesignal.core.internal.operations.impl.SubscriptionOperationExecutor
+import com.onesignal.core.internal.operations.impl.UserOperationExecutor
 import com.onesignal.core.internal.outcomes.IOutcomeEventsCache
 import com.onesignal.core.internal.outcomes.IOutcomeEventsFactory
 import com.onesignal.core.internal.outcomes.OutcomeEventsController
@@ -47,12 +53,12 @@ import com.onesignal.core.internal.purchases.TrackGooglePurchase
 import com.onesignal.core.internal.service.ServiceBuilder
 import com.onesignal.core.internal.session.ISessionService
 import com.onesignal.core.internal.session.SessionService
+import com.onesignal.core.internal.startup.IBootstrapService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.startup.StartupService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.core.internal.time.Time
 import com.onesignal.core.internal.user.ISubscriptionManager
-import com.onesignal.core.internal.user.IUserSwitcher
 import com.onesignal.core.internal.user.SubscriptionManager
 import com.onesignal.core.internal.user.UserManager
 import com.onesignal.core.user.IUserManager
@@ -71,6 +77,7 @@ internal object CoreModule {
         builder.register<StartupService>().provides<StartupService>()
 
         // Params (Config)
+        builder.register<ConfigModelStore>().provides<ConfigModelStore>()
         builder.register<ParamsService>()
             .provides<IParamsService>()
             .provides<IWriteableParamsService>()
@@ -81,9 +88,6 @@ internal object CoreModule {
         builder.register<OperationRepo>()
             .provides<IOperationRepo>()
             .provides<IStartableService>()
-        builder.register<PropertyOperationExecutor>().provides<IOperationExecutor>()
-        builder.register<SubscriptionOperationExecutor>().provides<IOperationExecutor>()
-        builder.register<UserOperationExecutor>().provides<IOperationExecutor>()
 
         // Permissions
         builder.register<RequestPermissionService>()
@@ -99,6 +103,7 @@ internal object CoreModule {
         builder.register<InfluenceManager>().provides<IInfluenceManager>()
 
         // Session
+        builder.register<SessionModelStore>().provides<SessionModelStore>()
         builder.register<SessionService>()
             .provides<ISessionService>()
             .provides<IStartableService>()
@@ -108,27 +113,33 @@ internal object CoreModule {
             .provides<IBackgroundManager>()
             .provides<IStartableService>()
 
-        // Model Stores
-        builder.register<IdentityModelStore>().provides<IdentityModelStore>()
-        builder.register<PropertiesModelStore>().provides<PropertiesModelStore>()
-        builder.register<SubscriptionModelStore>().provides<SubscriptionModelStore>()
+        // Triggers
         builder.register<TriggerModelStore>().provides<TriggerModelStore>()
-        builder.register<ConfigModelStore>().provides<ConfigModelStore>()
-        builder.register<SessionModelStore>().provides<SessionModelStore>()
-
-        // Model Store -> Operation Listeners
-        builder.register<IdentityModelStoreListener>().provides<IStartableService>()
-        builder.register<SubscriptionModelStoreListener>().provides<IStartableService>()
-        builder.register<PropertiesModelStoreListener>().provides<IStartableService>()
 
         // Purchase Tracking
         builder.register<TrackAmazonPurchase>().provides<IStartableService>()
         builder.register<TrackGooglePurchase>().provides<IStartableService>()
 
-        // User
+        // Properties
+        builder.register<PropertiesModelStore>().provides<PropertiesModelStore>()
+        builder.register<PropertiesModelStoreListener>().provides<IBootstrapService>()
+
+        // Identity
+        builder.register<IdentityModelStore>().provides<IdentityModelStore>()
+        builder.register<IdentityModelStoreListener>().provides<IBootstrapService>()
+        builder.register<IdentityBackendService>().provides<IIdentityBackendService>()
+        builder.register<IdentityOperationExecutor>().provides<IOperationExecutor>()
+
+        // Subscriptions
+        builder.register<SubscriptionModelStore>().provides<SubscriptionModelStore>()
+        builder.register<SubscriptionModelStoreListener>().provides<IBootstrapService>()
+        builder.register<SubscriptionBackendService>().provides<ISubscriptionBackendService>()
+        builder.register<SubscriptionOperationExecutor>().provides<IOperationExecutor>()
         builder.register<SubscriptionManager>().provides<ISubscriptionManager>()
-        builder.register<UserManager>()
-            .provides<IUserManager>()
-            .provides<IUserSwitcher>()
+
+        // User
+        builder.register<UserBackendService>().provides<IUserBackendService>()
+        builder.register<UserOperationExecutor>().provides<IOperationExecutor>()
+        builder.register<UserManager>().provides<IUserManager>()
     }
 }

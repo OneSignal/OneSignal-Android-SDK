@@ -16,7 +16,7 @@ internal interface IModelStore<TModel> : IEventNotifier<IModelStoreChangeHandler
      *
      * @return The collection of keys.
      */
-    fun list(): Collection<String>
+    fun list(): Collection<TModel>
 
     /**
      * Add a new model to this model store.  Once added, any changes to the
@@ -24,11 +24,10 @@ internal interface IModelStore<TModel> : IEventNotifier<IModelStoreChangeHandler
      * subscribed to this model store.  This same instance is also retrievable
      * via [get].
      *
-     * @param id The unique identifier for the model being added.
      * @param model The model being added to the model store.
-     * @param fireChange Whether an event should be fired, defaults to true.
+     * @param fireEvent Whether an event should be fired, defaults to true.
      */
-    fun add(id: String, model: TModel, fireEvent: Boolean = true)
+    fun add(model: TModel, fireEvent: Boolean = true)
 
     /**
      * Retrieve the model associated to the id provided.
@@ -43,11 +42,20 @@ internal interface IModelStore<TModel> : IEventNotifier<IModelStoreChangeHandler
      * Remove the model associated to the id provided from the model store.
      *
      * @param id The unique identifier to the model to remove.
+     * @param fireEvent Whether an event should be fired, defaults to true.
      */
-    fun remove(id: String)
+    fun remove(id: String, fireEvent: Boolean = true)
 
     /**
-     * Clear all models within the model store.
+     * Remove all models from the store.
      */
-    fun clear()
+    fun clear(fireEvent: Boolean = true)
+
+    /**
+     * Replace all models in the store with the provided models.
+     *
+     * @param models The models to track in the model store.
+     * @param fireEvent Whether an event should be fired, defaults to true.
+     */
+    fun replaceAll(models: List<TModel>, fireEvent: Boolean = true)
 }

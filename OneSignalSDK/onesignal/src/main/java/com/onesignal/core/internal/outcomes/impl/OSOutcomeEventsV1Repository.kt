@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.outcomes.impl
 
-import com.onesignal.core.internal.backend.http.HttpResponse
+import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.influence.InfluenceType
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.outcomes.IOutcomeEventsBackend

@@ -143,7 +143,7 @@ internal class IAMManager(
         _messageClickCallback.set(handler)
     }
 
-    override fun onModelUpdated(model: ConfigModel, property: String, oldValue: Any?, newValue: Any?) {
+    override fun onModelUpdated(model: ConfigModel, path: String, property: String, oldValue: Any?, newValue: Any?) {
         if (property != ConfigModel::appId.name) {
             return
         }
@@ -161,6 +161,10 @@ internal class IAMManager(
         suspendifyOnThread {
             fetchMessages()
         }
+    }
+
+    override fun onSubscriptionUpdated(subscription: ISubscription) {
+        // nothing to do when a subscription is updated.
     }
 
     override fun onSubscriptionRemoved(subscription: ISubscription) { }
@@ -182,7 +186,7 @@ internal class IAMManager(
         val appId = _configModelStore.get().appId
         val subscriptionId = _subscriptionManager.subscriptions.push?.id
 
-        if (subscriptionId == null || appId == null) {
+        if (subscriptionId == null || appId.isEmpty()) {
             return
         }
 
@@ -452,7 +456,7 @@ internal class IAMManager(
 
         suspendifyOnThread {
             val response = _backend.sendIAMImpression(
-                _configModelStore.get().appId!!,
+                _configModelStore.get().appId,
                 _subscriptionManager.subscriptions.push?.id.toString(),
                 variantId,
                 message.messageId
@@ -668,7 +672,7 @@ internal class IAMManager(
         }
         _viewedPageIds.add(messagePrefixedPageId)
         var response = _backend.sendIAMPageImpression(
-            _configModelStore.get().appId!!,
+            _configModelStore.get().appId,
             _subscriptionManager.subscriptions.push?.id.toString(),
             variantId,
             message.messageId,
@@ -702,7 +706,7 @@ internal class IAMManager(
         }
 
         val response = _backend.sendIAMClick(
-            _configModelStore.get().appId!!,
+            _configModelStore.get().appId,
             _subscriptionManager.subscriptions.push?.id.toString(),
             variantId,
             message.messageId,
@@ -730,5 +734,9 @@ internal class IAMManager(
             .setMessage(message)
             .setPositiveButton(android.R.string.ok) { _, _ -> suspendifyOnThread { showMultiplePrompts(inAppMessage, prompts) } }
             .show()
+    }
+
+    override fun onModelReplaced(model: ConfigModel) {
+        // TODO("Not yet implemented")
     }
 }

@@ -18,9 +18,21 @@ internal open class SingletonModelStore<TModel>(
         }
 
         val createdModel = create()
+        createdModel.id = name
         createdModel.subscribe(this)
-        store.add(name, createdModel)
+        store.add(createdModel)
         return createdModel
+    }
+
+    override fun replace(model: TModel, fireEvent: Boolean) {
+        val oldModel = get()
+        oldModel.data.clear()
+        oldModel.data.putAll(model.data)
+        oldModel.setProperty(Model::id.name, name)
+
+        for (s in _subscribers) {
+            s.onModelReplaced(oldModel)
+        }
     }
 
     override fun subscribe(handler: ISingletonModelStoreChangeHandler<TModel>) {
@@ -33,7 +45,7 @@ internal open class SingletonModelStore<TModel>(
 
     override fun onChanged(args: ModelChangedArgs) {
         for (s in _subscribers) {
-            s.onModelUpdated(args.model as TModel, args.property, args.oldValue, args.newValue)
+            s.onModelUpdated(args.model as TModel, args.path, args.property, args.oldValue, args.newValue)
         }
     }
 }

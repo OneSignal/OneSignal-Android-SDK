@@ -1,34 +1,25 @@
 package com.onesignal.core.internal.models
 
-import com.onesignal.core.internal.modeling.Model
-import java.util.UUID
+import com.onesignal.core.internal.backend.IdentityConstants
+import com.onesignal.core.internal.modeling.MapModel
 
-internal class IdentityModel : Model() {
+/**
+ * The identity model as a [MapModel] i.e. a simple key-value pair where the key represents
+ * the alias label and the value represents the alias ID for that alias label.  This model
+ * provides simple access to more well-defined aliases.
+ */
+internal class IdentityModel : MapModel<String>() {
     /**
-     * The (OneSignal backend provided) identifier that uniquely identifies this user.
+     * The OneSignal id for this identity
      */
-    var oneSignalId: UUID?
-        get() = get(::oneSignalId.name)
-        set(value) { set(::oneSignalId.name, value) }
+    var onesignalId: String
+        get() = getProperty(IdentityConstants.ONESIGNAL_ID)
+        set(value) { setProperty(IdentityConstants.ONESIGNAL_ID, value) }
 
     /**
      * The (developer managed) identifier that uniquely identifies this user.
      */
-    var userId: String?
-        get() = get(::userId.name)
-        set(value) { set(::userId.name, value) }
-
-    /**
-     * The (developer managed) JWT bearer token for this user.
-     */
-    var jwtBearerToken: String?
-        get() = get(::jwtBearerToken.name)
-        set(value) { set(::jwtBearerToken.name, value) }
-
-    /**
-     * The complete collection of aliases that uniquely identify this user.
-     */
-    var aliases: Map<String, String>
-        get() = get(::aliases.name) { mapOf() }
-        set(value) { set(::aliases.name, value) }
+    var externalId: String?
+        get() = getProperty(IdentityConstants.EXTERNAL_ID)
+        set(value) { setProperty(IdentityConstants.EXTERNAL_ID, value) }
 }
