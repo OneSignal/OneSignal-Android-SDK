@@ -1,4 +1,4 @@
-package com.onesignal.core.internal.outcomes
+package com.onesignal.core.internal.outcomes.impl
 
 import org.json.JSONException
 import org.json.JSONObject
@@ -24,7 +24,7 @@ internal class OutcomeEventParams constructor(
     fun isUnattributed() = outcomeSource == null || outcomeSource.directBody == null && outcomeSource.indirectBody == null
 
     override fun toString(): String {
-        return "OSOutcomeEventParams{" +
+        return "OutcomeEventParams{" +
             "outcomeId='" + outcomeId + '\'' +
             ", outcomeSource=" + outcomeSource +
             ", weight=" + weight +

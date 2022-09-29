@@ -1,70 +1,62 @@
-package com.onesignal.core.internal.outcomes
+package com.onesignal.core.internal.outcomes.impl
 
 import android.os.Process
-import com.onesignal.core.internal.database.impl.OneSignalDbContract
+import com.onesignal.core.internal.http.HttpResponse
+import com.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.core.internal.device.IDeviceService
+import com.onesignal.core.internal.influence.IInfluenceManager
 import com.onesignal.core.internal.influence.Influence
 import com.onesignal.core.internal.influence.InfluenceChannel
 import com.onesignal.core.internal.influence.InfluenceType
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.models.ConfigModelStore
+import com.onesignal.core.internal.outcomes.IOutcomeEventsController
+import com.onesignal.core.internal.session.ISessionLifecycleHandler
 import com.onesignal.core.internal.session.ISessionService
+import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
-import com.onesignal.iam.internal.InAppMessageOutcome
 
 internal class OutcomeEventsController(
     private val _session: ISessionService,
-    private val outcomeEventsFactory: IOutcomeEventsFactory,
+    private val _influenceManager: IInfluenceManager,
+    private val _outcomeEventsCache: IOutcomeEventsCache,
+    private val _outcomeEventsPreferences: IOutcomeEventsPreferences,
+    private val _outcomeEventsBackend: IOutcomeEventsBackend,
     private val _configModelStore: ConfigModelStore,
     private val _time: ITime,
     private val _deviceService: IDeviceService
-) {
+) : IOutcomeEventsController, IStartableService, ISessionLifecycleHandler {
     // Keeps track of unique outcome events sent for UNATTRIBUTED sessions on a per session level
-    private var unattributedUniqueOutcomeEventsSentOnSession: MutableSet<String>? = null
+    private var unattributedUniqueOutcomeEventsSentOnSession: MutableSet<String> = mutableSetOf()
 
     init {
-        initUniqueOutcomeEventsSentSets()
+        unattributedUniqueOutcomeEventsSentOnSession =
+            _outcomeEventsPreferences.unattributedUniqueOutcomeEventsSentByChannel?.toMutableSet() ?: mutableSetOf()
+        _session.subscribe(this)
     }
 
-    /**
-     * Init the sets used for tracking attributed and unattributed unique outcome events
-     */
-    private fun initUniqueOutcomeEventsSentSets() {
-        // Get all cached UNATTRIBUTED unique outcomes
-        unattributedUniqueOutcomeEventsSentOnSession = mutableSetOf()
-        val tempUnattributedUniqueOutcomeEventsSentSet: Set<String>? =
-            outcomeEventsFactory.getRepository().getUnattributedUniqueOutcomeEventsSent()
-        if (tempUnattributedUniqueOutcomeEventsSentSet != null) {
-            unattributedUniqueOutcomeEventsSentOnSession = tempUnattributedUniqueOutcomeEventsSentSet.toMutableSet()
+    override fun start() {
+        suspendifyOnThread {
+            sendSavedOutcomes()
+            _outcomeEventsCache.cleanCachedUniqueOutcomeEventNotifications()
         }
     }
 
-    /**
-     * Clean unattributed unique outcome events sent so they can be sent after a new session
-     */
-    fun cleanOutcomes() {
-        Logging.debug("OneSignal cleanOutcomes for session")
+    override fun sessionStarted() {
+        Logging.debug("OutcomeEventsController.sessionStarted: Cleaning outcomes for new session")
         unattributedUniqueOutcomeEventsSentOnSession = mutableSetOf()
         saveUnattributedUniqueOutcomeEvents()
     }
 
-    /**
-     * Deletes cached unique outcome notifications whose ids do not exist inside of the NotificationTable.TABLE_NAME
-     */
-    suspend fun cleanCachedUniqueOutcomes() {
-        outcomeEventsFactory.getRepository().cleanCachedUniqueOutcomeEventNotifications(
-            OneSignalDbContract.NotificationTable.TABLE_NAME,
-            OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID
-        )
-    }
+    override fun sessionResumed() { }
 
     /**
      * Any outcomes cached in local DB will be reattempted to be sent again
      * Cached outcomes come from the failure callback of the network request
      */
-    suspend fun sendSavedOutcomes() {
+    private suspend fun sendSavedOutcomes() {
         val outcomeEvents: List<OutcomeEventParams> =
-            outcomeEventsFactory.getRepository().getSavedOutcomeEvents()
+            _outcomeEventsCache.getAllEventsToSend()
         for (event in outcomeEvents) {
             sendSavedOutcomeEvent(event)
         }
@@ -74,38 +66,25 @@ internal class OutcomeEventsController(
         val deviceType: Int = _deviceService.deviceType
         val appId: String = _configModelStore.get().appId
 
-        val response = outcomeEventsFactory.getRepository().requestMeasureOutcomeEvent(appId, deviceType, event)
+        val response = requestMeasureOutcomeEvent(appId, deviceType, event)
 
         if (response?.isSuccess == true) {
-            outcomeEventsFactory.getRepository().removeEvent(event)
+            _outcomeEventsCache.deleteOldOutcomeEvent(event)
         }
     }
 
-    suspend fun sendClickActionOutcomes(outcomes: List<InAppMessageOutcome>) {
-        for (outcome in outcomes) {
-            val name: String = outcome.name
-            if (outcome.isUnique) {
-                sendUniqueOutcomeEvent(name)
-            } else if (outcome.weight > 0) {
-                sendOutcomeEventWithValue(name, outcome.weight)
-            } else {
-                sendOutcomeEvent(name)
-            }
-        }
-    }
-
-    suspend fun sendUniqueOutcomeEvent(name: String): OutcomeEvent? {
-        val sessionResult: List<Influence> = _session.influences
+    override suspend fun sendUniqueOutcomeEvent(name: String): OutcomeEvent? {
+        val sessionResult: List<Influence> = _influenceManager.influences
         return sendUniqueOutcomeEvent(name, sessionResult)
     }
 
-    suspend fun sendOutcomeEvent(name: String): OutcomeEvent? {
-        val influences: List<Influence> = _session.influences
+    override suspend fun sendOutcomeEvent(name: String): OutcomeEvent? {
+        val influences: List<Influence> = _influenceManager.influences
         return sendAndCreateOutcomeEvent(name, 0f, influences)
     }
 
-    suspend fun sendOutcomeEventWithValue(name: String, weight: Float): OutcomeEvent? {
-        val influences: List<Influence> = _session.influences
+    override suspend fun sendOutcomeEventWithValue(name: String, weight: Float): OutcomeEvent? {
+        val influences: List<Influence> = _influenceManager.influences
         return sendAndCreateOutcomeEvent(name, weight, influences)
     }
 
@@ -119,7 +98,7 @@ internal class OutcomeEventsController(
     ): OutcomeEvent? {
         val influences: List<Influence> = removeDisabledInfluences(sessionInfluences)
         if (influences.isEmpty()) {
-            Logging.debug("Unique Outcome disabled for current session")
+            Logging.debug("OutcomeEventsController.sendUniqueOutcomeEvent: Unique Outcome disabled for current session")
             return null
         }
         var attributed = false
@@ -150,7 +129,7 @@ internal class OutcomeEventsController(
             return sendAndCreateOutcomeEvent(name, 0f, uniqueInfluences)
         } else {
             // Make sure unique outcome has not been sent for current unattributed session
-            if (unattributedUniqueOutcomeEventsSentOnSession!!.contains(name)) {
+            if (unattributedUniqueOutcomeEventsSentOnSession.contains(name)) {
                 Logging.debug(
                     """
                         Measure endpoint will not send because unique outcome already sent for: 
@@ -162,7 +141,7 @@ internal class OutcomeEventsController(
                 // Return null to determine not a failure, but not a success in terms of the request made
                 return null
             }
-            unattributedUniqueOutcomeEventsSentOnSession!!.add(name)
+            unattributedUniqueOutcomeEventsSentOnSession.add(name)
             return sendAndCreateOutcomeEvent(name, 0f, influences)
         }
     }
@@ -182,48 +161,46 @@ internal class OutcomeEventsController(
             when (influence.influenceType) {
                 InfluenceType.DIRECT -> directSourceBody = setSourceChannelIds(
                     influence,
-                    if (directSourceBody == null) OutcomeSourceBody() else directSourceBody
+                    directSourceBody ?: OutcomeSourceBody()
                 )
                 InfluenceType.INDIRECT -> indirectSourceBody = setSourceChannelIds(
                     influence,
-                    if (indirectSourceBody == null) OutcomeSourceBody() else indirectSourceBody
+                    indirectSourceBody ?: OutcomeSourceBody()
                 )
                 InfluenceType.UNATTRIBUTED -> unattributed = true
                 InfluenceType.DISABLED -> {
-                    Logging.verbose("Outcomes disabled for channel: " + influence.influenceChannel)
+                    Logging.verbose("OutcomeEventsController.sendAndCreateOutcomeEvent: Outcomes disabled for channel: " + influence.influenceChannel)
                     return null // finish method
                 }
             }
         }
         if (directSourceBody == null && indirectSourceBody == null && !unattributed) {
             // Disabled for all channels
-            Logging.verbose("Outcomes disabled for all channels")
+            Logging.verbose("OutcomeEventsController.sendAndCreateOutcomeEvent: Outcomes disabled for all channels")
             return null
         }
 
         val source = OutcomeSource(directSourceBody, indirectSourceBody)
         val eventParams = OutcomeEventParams(name, source, weight, 0)
 
-        val response = outcomeEventsFactory.getRepository().requestMeasureOutcomeEvent(appId, deviceType, eventParams)
+        val response = requestMeasureOutcomeEvent(appId, deviceType, eventParams)
 
         if (response?.isSuccess == true) {
             saveUniqueOutcome(eventParams)
 
             // The only case where an actual success has occurred and the OutcomeEvent should be sent back
-            return OutcomeEvent.fromOutcomeEventParamsV2toOutcomeEventV1(eventParams)
+            return OutcomeEvent.fromOutcomeEventParamstoOutcomeEvent(eventParams)
         } else {
-            Thread({
-                Thread.currentThread().priority = Process.THREAD_PRIORITY_BACKGROUND
-                // Only if we need to save and retry the outcome, then we will save the timestamp for future sending
-                eventParams.timestamp = timestampSeconds
-                outcomeEventsFactory.getRepository().saveOutcomeEvent(eventParams)
-            }, OS_SAVE_OUTCOMES).start()
             Logging.warn(
-                """Sending outcome with name: $name failed with status code: ${response?.statusCode} and response: $response
+                """OutcomeEventsController.sendAndCreateOutcomeEvent: Sending outcome with name: $name failed with status code: ${response?.statusCode} and response: $response
 Outcome event was cached and will be reattempted on app cold start"""
             )
 
-            // Return null within the callback to determine not a failure, but not a success in terms of the request made
+            // Only if we need to save and retry the outcome, then we will save the timestamp for future sending
+            eventParams.timestamp = timestampSeconds
+            _outcomeEventsCache.saveOutcomeEvent(eventParams)
+
+            // Return null to determine not a failure, but not a success in terms of the request made
             return null
         }
     }
@@ -243,7 +220,7 @@ Outcome event was cached and will be reattempted on app cold start"""
         val availableInfluences: MutableList<Influence> = influences.toMutableList()
         for (influence in influences) {
             if (influence.influenceType.isDisabled()) {
-                Logging.debug("Outcomes disabled for channel: " + influence.influenceChannel.toString())
+                Logging.debug("OutcomeEventsController.removeDisabledInfluences: Outcomes disabled for channel: " + influence.influenceChannel.toString())
                 availableInfluences.remove(influence)
             }
         }
@@ -264,35 +241,36 @@ Outcome event was cached and will be reattempted on app cold start"""
      * Save the ATTRIBUTED JSONArray of notification ids with unique outcome names to SQL
      */
     private fun saveAttributedUniqueOutcomeNotifications(eventParams: OutcomeEventParams) {
-        Thread({
-            Thread.currentThread().priority = Process.THREAD_PRIORITY_BACKGROUND
-            outcomeEventsFactory.getRepository().saveUniqueOutcomeNotifications(eventParams)
-        }, OS_SAVE_UNIQUE_OUTCOME_NOTIFICATIONS).start()
+        suspendifyOnThread(Process.THREAD_PRIORITY_BACKGROUND) {
+            _outcomeEventsCache.saveUniqueOutcomeEventParams(eventParams)
+        }
     }
 
     /**
      * Save the current set of UNATTRIBUTED unique outcome names to SharedPrefs
      */
     private fun saveUnattributedUniqueOutcomeEvents() {
-        outcomeEventsFactory.getRepository()
-            .saveUnattributedUniqueOutcomeEventsSent(unattributedUniqueOutcomeEventsSentOnSession!!)
+        _outcomeEventsPreferences.unattributedUniqueOutcomeEventsSentByChannel = unattributedUniqueOutcomeEventsSentOnSession
     }
 
     /**
      * Get the unique notifications that have not been cached/sent before with the current unique outcome name
      */
-    private fun getUniqueIds(name: String, influences: List<Influence>): List<Influence>? {
+    private suspend fun getUniqueIds(name: String, influences: List<Influence>): List<Influence>? {
         val uniqueInfluences: List<Influence> =
-            outcomeEventsFactory.getRepository().getNotCachedUniqueOutcome(name, influences)
-        return if (uniqueInfluences.size > 0) uniqueInfluences else null
+            _outcomeEventsCache.getNotCachedUniqueInfluencesForOutcome(name, influences)
+        return uniqueInfluences.ifEmpty { null }
     }
 
-    companion object {
-        private const val OS_SAVE_OUTCOMES = "OS_SAVE_OUTCOMES"
-        private const val OS_SEND_SAVED_OUTCOMES = "OS_SEND_SAVED_OUTCOMES"
-        private const val OS_SAVE_UNIQUE_OUTCOME_NOTIFICATIONS =
-            "OS_SAVE_UNIQUE_OUTCOME_NOTIFICATIONS"
-        private const val OS_DELETE_CACHED_UNIQUE_OUTCOMES_NOTIFICATIONS_THREAD =
-            "OS_DELETE_CACHED_UNIQUE_OUTCOMES_NOTIFICATIONS_THREAD"
+    private suspend fun requestMeasureOutcomeEvent(appId: String, deviceType: Int, eventParams: OutcomeEventParams): HttpResponse? {
+        val event = OutcomeEvent.fromOutcomeEventParamstoOutcomeEvent(eventParams)
+        val direct = when (event.session) {
+            InfluenceType.DIRECT -> true
+            InfluenceType.INDIRECT -> false
+            InfluenceType.UNATTRIBUTED -> null
+            else -> null
+        }
+
+        return _outcomeEventsBackend.sendOutcomeEvent(appId, deviceType, direct, event)
     }
 }

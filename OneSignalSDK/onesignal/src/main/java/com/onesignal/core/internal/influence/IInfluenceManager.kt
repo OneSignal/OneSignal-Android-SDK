@@ -1,19 +1,45 @@
 package com.onesignal.core.internal.influence
 
-import com.onesignal.core.internal.application.AppEntryAction
-import com.onesignal.core.internal.params.IParamsService
 import org.json.JSONObject
 
 internal interface IInfluenceManager {
-    val influences: List<Influence>
-    val sessionInfluences: List<Influence>
-    val iAMChannelTracker: IChannelTracker
-    val notificationChannelTracker: IChannelTracker
-    val channels: List<IChannelTracker>
 
-    fun initFromCache()
-    fun saveInfluenceParams(influenceParams: IParamsService.InfluenceParams)
+    /**
+     * The influences being tracked.
+     */
+    val influences: List<Influence>
+
+    // TODO: This needs to be called by FocusTimeController.
     fun addSessionData(jsonObject: JSONObject, influences: List<Influence>)
-    fun getChannelByEntryAction(entryAction: AppEntryAction): IChannelTracker?
-    fun getChannelsToResetByEntryAction(entryAction: AppEntryAction): List<IChannelTracker>
+
+    /**
+     * Indicate a notification has been received by the SDK.
+     *
+     * @param notificationId The ID of the notification that has been received.
+     */
+    fun onNotificationReceived(notificationId: String)
+
+    /**
+     * Indicate a notification has directly influenced the user.
+     *
+     * @param
+     */
+    fun onDirectInfluenceFromNotification(notificationId: String)
+
+    /**
+     * Indicate an IAM has been received by the SDK.
+     *
+     * @param messageId The ID of the IAM that has been received.
+     */
+    fun onInAppMessageDisplayed(messageId: String)
+
+    /**
+     * Indicate an IAM has directly influenced the user.
+     */
+    fun onDirectInfluenceFromIAM(messageId: String)
+
+    /**
+     * Indicate the IAM has been dismissed.
+     */
+    fun onInAppMessageDismissed()
 }

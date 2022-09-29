@@ -1,15 +1,6 @@
-package com.onesignal.core.internal.outcomes
+package com.onesignal.core.internal.outcomes.impl
 
 internal object OutcomeConstants {
-
-    // OSOutcomeEventsCache Constants
-    const val PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT = "PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT"
-
-    // OSOutcomeEventsRepository Constants
-    const val APP_ID = "app_id"
-    const val DEVICE_TYPE = "device_type"
-    const val DIRECT_PARAM = "direct"
-
     // OSOutcomeEventParams Constants
     const val OUTCOME_ID = "id"
     const val OUTCOME_SOURCES = "sources"

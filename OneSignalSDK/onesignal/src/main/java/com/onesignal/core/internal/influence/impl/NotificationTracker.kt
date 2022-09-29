@@ -46,7 +46,7 @@ internal class NotificationTracker(dataRepository: InfluenceDataRepository, time
                 directId = dataRepository.cachedNotificationOpenId
             }
         }
-        Logging.debug("OneSignal NotificationTracker initInfluencedTypeFromCache: $this")
+        Logging.debug("NotificationTracker.initInfluencedTypeFromCache: $this")
     }
 
     override fun addSessionData(jsonObject: JSONObject, influence: Influence) {

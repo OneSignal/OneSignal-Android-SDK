@@ -1,4 +1,4 @@
-package com.onesignal.core.internal.outcomes
+package com.onesignal.core.internal.outcomes.impl
 
 import org.json.JSONException
 import org.json.JSONObject
@@ -28,7 +28,7 @@ internal class OutcomeSource(
     }
 
     override fun toString(): String {
-        return "OSOutcomeSource{" +
+        return "OutcomeSource{" +
             "directBody=" + directBody +
             ", indirectBody=" + indirectBody +
             '}'

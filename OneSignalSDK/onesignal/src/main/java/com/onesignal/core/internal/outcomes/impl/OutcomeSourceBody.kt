@@ -1,4 +1,4 @@
-package com.onesignal.core.internal.outcomes
+package com.onesignal.core.internal.outcomes.impl
 
 import org.json.JSONArray
 import org.json.JSONException
@@ -12,7 +12,7 @@ internal class OutcomeSourceBody @JvmOverloads constructor(var notificationIds: 
         .put(OutcomeConstants.IAM_IDS, inAppMessagesIds)
 
     override fun toString(): String {
-        return "OSOutcomeSourceBody{" +
+        return "OutcomeSourceBody{" +
             "notificationIds=" + notificationIds +
             ", inAppMessagesIds=" + inAppMessagesIds +
             '}'
