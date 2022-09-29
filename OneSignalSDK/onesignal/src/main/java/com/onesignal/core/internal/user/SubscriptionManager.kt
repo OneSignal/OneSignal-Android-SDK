@@ -49,6 +49,10 @@ internal class SubscriptionManager(
     override var subscriptions: SubscriptionList = SubscriptionList(listOf())
 
     init {
+        for (subscriptionModel in _subscriptionModelStore.list()) {
+            createSubscriptionAndAddToSubscriptionList(subscriptionModel)
+        }
+
         _subscriptionModelStore.subscribe(this)
     }
 
@@ -109,7 +113,7 @@ internal class SubscriptionManager(
     private fun updateSubscriptionModel(subscription: ISubscription, update: (SubscriptionModel) -> Unit) {
         Logging.log(LogLevel.DEBUG, "SubscriptionManager.updateSubscriptionModel(subscription: $subscription)")
 
-        val subscriptionModel = _subscriptionModelStore.get(subscription.id.toString()) ?: return
+        val subscriptionModel = _subscriptionModelStore.get(subscription.id) ?: return
         update(subscriptionModel)
     }
 
@@ -129,8 +133,8 @@ internal class SubscriptionManager(
      * Called when a subscription model has been updated. The subscription list must be updated
      * to reflect the update subscription.
      */
-    override fun onUpdated(model: SubscriptionModel, property: String, oldValue: Any?, newValue: Any?) {
-        val subscription = subscriptions.collection.firstOrNull { it.id.toString() == model.id }
+    override fun onUpdated(model: SubscriptionModel, path: String, property: String, oldValue: Any?, newValue: Any?) {
+        val subscription = subscriptions.collection.firstOrNull { it.id == model.id }
 
         if (subscription == null) {
             // this shouldn't happen, but create a new subscription if a model was updated and we

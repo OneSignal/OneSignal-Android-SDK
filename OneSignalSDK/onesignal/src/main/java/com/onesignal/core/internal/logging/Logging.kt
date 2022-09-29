@@ -53,12 +53,13 @@ internal object Logging {
 
     @JvmStatic
     fun log(level: LogLevel, message: String, throwable: Throwable?) {
+        val fullMessage = "[${Thread.currentThread().name}] $message"
         if (level.compareTo(logLevel) < 1) {
             when (level) {
-                LogLevel.VERBOSE -> android.util.Log.v(TAG, message, throwable)
-                LogLevel.DEBUG -> android.util.Log.d(TAG, message, throwable)
-                LogLevel.INFO -> android.util.Log.i(TAG, message, throwable)
-                LogLevel.WARN -> android.util.Log.w(TAG, message, throwable)
+                LogLevel.VERBOSE -> android.util.Log.v(TAG, fullMessage, throwable)
+                LogLevel.DEBUG -> android.util.Log.d(TAG, fullMessage, throwable)
+                LogLevel.INFO -> android.util.Log.i(TAG, fullMessage, throwable)
+                LogLevel.WARN -> android.util.Log.w(TAG, fullMessage, throwable)
                 LogLevel.ERROR, LogLevel.FATAL -> android.util.Log.e(TAG, message, throwable)
             }
         }

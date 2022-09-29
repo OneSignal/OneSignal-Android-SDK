@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.operations
 
-import org.json.JSONObject
+import com.onesignal.core.internal.modeling.Model
 
 /**
  * An [Operation] can be enqueued and executed on the [IOperationRepo]. Each concrete-class
@@ -9,7 +9,15 @@ import org.json.JSONObject
  * performed by an [IOperationExecutor]. [IOperationExecutor] identifies itself as being
  * able to execute an [Operation] through [IOperationExecutor.operations].
  */
-internal abstract class Operation(val name: String) {
+internal abstract class Operation(name: String) : Model() {
+    var name: String
+        get() = getProperty(::name.name)
+        private set(value) { setProperty(::name.name, value) }
+
+    init {
+        this.name = name
+    }
+
     /**
      * The key of this operation for when the starting operation has a [groupComparisonType]
      * of [GroupComparisonType.CREATE]
@@ -33,15 +41,8 @@ internal abstract class Operation(val name: String) {
      */
     abstract val canStartExecute: Boolean
 
-    /**
-     * The JSON representation of this operation.
-     */
-    abstract fun toJSON(): JSONObject
-
     override fun toString(): String {
-        return toJSON()
-            .put(::name.name, name)
-            .toString()
+        return toJSON().toString()
     }
 }
 

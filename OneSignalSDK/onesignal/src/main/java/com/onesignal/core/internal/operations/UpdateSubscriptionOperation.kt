@@ -3,33 +3,40 @@ package com.onesignal.core.internal.operations
 import com.onesignal.core.internal.common.IDManager
 import com.onesignal.core.internal.models.SubscriptionType
 import com.onesignal.core.internal.operations.impl.SubscriptionOperationExecutor
-import org.json.JSONObject
 
 /**
  * An [Operation] to update an existing subscription in the OneSignal backend.
  */
-internal class UpdateSubscriptionOperation(
+internal class UpdateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.UPDATE_SUBSCRIPTION) {
     /**
      * The application ID this subscription that is to be deleted.
      */
-    val appId: String,
+    var appId: String
+        get() = getProperty(::appId.name)
+        private set(value) { setProperty(::appId.name, value) }
 
     /**
      * The user ID this subscription will be associated with. This ID *may* be locally generated
      * and should go through [IDManager] to ensure correct processing.
      */
-    val onesignalId: String,
+    var onesignalId: String
+        get() = getProperty(::onesignalId.name)
+        private set(value) { setProperty(::onesignalId.name, value) }
 
     /**
      * The subscription ID that is to be deleted. This ID *may* be locally generated
      * and should go through [IDManager] to ensure correct processing.
      */
-    val subscriptionId: String,
+    var subscriptionId: String
+        get() = getProperty(::subscriptionId.name)
+        private set(value) { setProperty(::subscriptionId.name, value) }
 
     /**
      * Whether this subscription is currently enabled.
      */
-    val enabled: Boolean,
+    var enabled: Boolean
+        get() = getProperty(::enabled.name)
+        private set(value) { setProperty(::enabled.name, value) }
 
     /**
      * The address-specific information for this subscription. Its contents depends on the type
@@ -39,20 +46,20 @@ internal class UpdateSubscriptionOperation(
      * * [SubscriptionType.SMS]: A phone number in E.164 format.
      * * [SubscriptionType.PUSH]: The push token.
      */
-    val address: String
-) : Operation(SubscriptionOperationExecutor.UPDATE_SUBSCRIPTION) {
+    var address: String
+        get() = getProperty(::address.name)
+        private set(value) { setProperty(::address.name, value) }
 
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Subscription.$subscriptionId"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.ALTER
     override val canStartExecute: Boolean get() = !IDManager.isIdLocalOnly(onesignalId) && !IDManager.isIdLocalOnly(onesignalId)
 
-    override fun toJSON(): JSONObject {
-        return JSONObject()
-            .put(::appId.name, appId)
-            .put(::onesignalId.name, onesignalId)
-            .put(::subscriptionId.name, subscriptionId)
-            .put(::enabled.name, enabled)
-            .put(::address.name, address)
+    constructor(appId: String, onesignalId: String, subscriptionId: String, enabled: Boolean, address: String) : this() {
+        this.appId = appId
+        this.onesignalId = onesignalId
+        this.subscriptionId = subscriptionId
+        this.enabled = enabled
+        this.address = address
     }
 }
