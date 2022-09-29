@@ -1,6 +1,5 @@
 package com.onesignal.core.internal.influence.impl
 
-import com.onesignal.core.internal.influence.IChannelTracker
 import com.onesignal.core.internal.influence.Influence
 import com.onesignal.core.internal.influence.InfluenceType
 import com.onesignal.core.internal.logging.Logging
@@ -76,7 +75,7 @@ internal abstract class ChannelTracker internal constructor(protected var dataRe
             val ids = JSONArray()
             try {
                 val lastChannelObjectReceived = lastChannelObjects
-                Logging.debug("OneSignal ChannelTracker getLastReceivedIds lastChannelObjectReceived: $lastChannelObjectReceived")
+                Logging.debug("ChannelTracker.getLastReceivedIds: lastChannelObjectReceived: $lastChannelObjectReceived")
                 val attributionWindow = indirectAttributionWindow * 60 * 1000L
                 val currentTime = timeProvider.currentTimeMillis
                 for (i in 0 until lastChannelObjectReceived.length()) {
@@ -89,7 +88,7 @@ internal abstract class ChannelTracker internal constructor(protected var dataRe
                     }
                 }
             } catch (exception: JSONException) {
-                Logging.error("Generating tracker getLastReceivedIds JSONObject ", exception)
+                Logging.error("ChannelTracker.getLastReceivedIds: Generating tracker getLastReceivedIds JSONObject ", exception)
             }
             return ids
         }
@@ -99,18 +98,18 @@ internal abstract class ChannelTracker internal constructor(protected var dataRe
         indirectIds = lastReceivedIds
         influenceType = if (indirectIds?.length() ?: 0 > 0) InfluenceType.INDIRECT else InfluenceType.UNATTRIBUTED
         cacheState()
-        Logging.debug("OneSignal OSChannelTracker resetAndInitInfluence: $idTag finish with influenceType: $influenceType")
+        Logging.debug("ChannelTracker.resetAndInitInfluence: $idTag finish with influenceType: $influenceType")
     }
 
     /**
      * Save state of last ids received
      */
     override fun saveLastId(id: String?) {
-        Logging.debug("OneSignal OSChannelTracker for: $idTag saveLastId: $id")
+        Logging.debug("ChannelTracker.saveLastId(id: $id): idTag=$idTag")
         if (id == null || id.isEmpty()) return
 
         val lastChannelObjectsReceived = getLastChannelObjectsReceivedByNewId(id)
-        Logging.debug("OneSignal OSChannelTracker for: $idTag saveLastId with lastChannelObjectsReceived: $lastChannelObjectsReceived")
+        Logging.debug("ChannelTracker.saveLastId: for $idTag saveLastId with lastChannelObjectsReceived: $lastChannelObjectsReceived")
 
         try {
             timeProvider.run {
@@ -121,7 +120,7 @@ internal abstract class ChannelTracker internal constructor(protected var dataRe
                 lastChannelObjectsReceived.put(newInfluenceId)
             }
         } catch (exception: JSONException) {
-            Logging.error("Generating tracker newInfluenceId JSONObject ", exception)
+            Logging.error("ChannelTracker.saveLastId: Generating tracker newInfluenceId JSONObject ", exception)
             // We don't have new data, stop logic
             return
         }
@@ -138,16 +137,16 @@ internal abstract class ChannelTracker internal constructor(protected var dataRe
                 try {
                     channelObjectToSave.put(lastChannelObjectsReceived[i])
                 } catch (exception: JSONException) {
-                    Logging.error("Generating tracker lastChannelObjectsReceived get JSONObject ", exception)
+                    Logging.error("ChannelTracker.saveLastId: Generating tracker lastChannelObjectsReceived get JSONObject ", exception)
                 }
             }
         }
-        Logging.debug("OneSignal OSChannelTracker for: $idTag with channelObjectToSave: $channelObjectToSave")
+        Logging.debug("ChannelTracker.saveLastId: for $idTag with channelObjectToSave: $channelObjectToSave")
         saveChannelObjects(channelObjectToSave)
     }
 
     override fun toString(): String {
-        return "OSChannelTracker{" +
+        return "ChannelTracker{" +
             "tag=" + idTag +
             ", influenceType=" + influenceType +
             ", indirectIds=" + indirectIds +

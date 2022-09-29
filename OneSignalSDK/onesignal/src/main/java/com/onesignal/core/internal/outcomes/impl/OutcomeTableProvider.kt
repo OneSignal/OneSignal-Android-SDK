@@ -7,7 +7,7 @@ import com.onesignal.core.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_O
 import com.onesignal.core.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V3
 import com.onesignal.core.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2
 
-internal class OSOutcomeTableProvider {
+internal class OutcomeTableProvider {
     /**
      * On the outcome table this adds the new weight column and drops params column.
      */

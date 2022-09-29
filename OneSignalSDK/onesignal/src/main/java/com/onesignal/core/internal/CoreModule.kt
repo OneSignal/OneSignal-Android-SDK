@@ -35,11 +35,14 @@ import com.onesignal.core.internal.operations.impl.IdentityOperationExecutor
 import com.onesignal.core.internal.operations.impl.OperationRepo
 import com.onesignal.core.internal.operations.impl.SubscriptionOperationExecutor
 import com.onesignal.core.internal.operations.impl.UserOperationExecutor
-import com.onesignal.core.internal.outcomes.IOutcomeEventsCache
-import com.onesignal.core.internal.outcomes.IOutcomeEventsFactory
-import com.onesignal.core.internal.outcomes.OutcomeEventsController
-import com.onesignal.core.internal.outcomes.impl.OSOutcomeEventsCache
-import com.onesignal.core.internal.outcomes.impl.OSOutcomeEventsFactory
+import com.onesignal.core.internal.outcomes.IOutcomeEventsController
+import com.onesignal.core.internal.outcomes.impl.IOutcomeEventsBackend
+import com.onesignal.core.internal.outcomes.impl.IOutcomeEventsCache
+import com.onesignal.core.internal.outcomes.impl.IOutcomeEventsPreferences
+import com.onesignal.core.internal.outcomes.impl.OutcomeEventsBackend
+import com.onesignal.core.internal.outcomes.impl.OutcomeEventsCache
+import com.onesignal.core.internal.outcomes.impl.OutcomeEventsController
+import com.onesignal.core.internal.outcomes.impl.OutcomeEventsPreferences
 import com.onesignal.core.internal.params.IParamsService
 import com.onesignal.core.internal.params.IWriteableParamsService
 import com.onesignal.core.internal.params.ParamsService
@@ -95,9 +98,12 @@ internal object CoreModule {
             .provides<IRequestPermissionService>()
 
         // Outcomes
-        builder.register<OutcomeEventsController>().provides<OutcomeEventsController>()
-        builder.register<OSOutcomeEventsFactory>().provides<IOutcomeEventsFactory>()
-        builder.register<OSOutcomeEventsCache>().provides<IOutcomeEventsCache>()
+        builder.register<OutcomeEventsPreferences>().provides<IOutcomeEventsPreferences>()
+        builder.register<OutcomeEventsCache>().provides<IOutcomeEventsCache>()
+        builder.register<OutcomeEventsBackend>().provides<IOutcomeEventsBackend>()
+        builder.register<OutcomeEventsController>()
+            .provides<IOutcomeEventsController>()
+            .provides<IStartableService>()
 
         // Influence
         builder.register<InfluenceManager>().provides<IInfluenceManager>()

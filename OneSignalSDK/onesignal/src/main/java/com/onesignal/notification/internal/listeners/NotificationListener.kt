@@ -5,8 +5,8 @@ import com.onesignal.core.internal.application.AppEntryAction
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.JSONUtils
 import com.onesignal.core.internal.device.IDeviceService
+import com.onesignal.core.internal.influence.IInfluenceManager
 import com.onesignal.core.internal.models.ConfigModelStore
-import com.onesignal.core.internal.session.ISessionService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.core.internal.user.ISubscriptionManager
@@ -28,7 +28,7 @@ internal class NotificationListener(
     private val _applicationService: IApplicationService,
     private val _notificationLifecycleService: INotificationLifecycleService,
     private val _configModelStore: ConfigModelStore,
-    private val _sessionService: ISessionService,
+    private val _influenceManager: IInfluenceManager,
     private val _subscriptionManager: ISubscriptionManager,
     private val _deviceService: IDeviceService,
     private val _backend: INotificationBackendService,
@@ -47,7 +47,7 @@ internal class NotificationListener(
     override suspend fun onNotificationReceived(notificationJob: NotificationGenerationJob) {
         _receiveReceiptWorkManager.enqueueReceiveReceipt(notificationJob.apiNotificationId)
 
-        _sessionService.onNotificationReceived(notificationJob.apiNotificationId)
+        _influenceManager.onNotificationReceived(notificationJob.apiNotificationId)
 
         try {
             val jsonObject = JSONObject(notificationJob.jsonPayload.toString())
@@ -85,7 +85,7 @@ internal class NotificationListener(
         if (shouldInitDirectSessionFromNotificationOpen(activity)) {
             // We want to set the app entry state to NOTIFICATION_CLICK when coming from background
             _applicationService.entryState = AppEntryAction.NOTIFICATION_CLICK
-            _sessionService.onDirectInfluenceFromNotificationOpen(AppEntryAction.NOTIFICATION_CLICK, notificationId)
+            _influenceManager.onDirectInfluenceFromNotification(notificationId)
         }
 
         _activityOpener.openDestinationActivity(activity, data)

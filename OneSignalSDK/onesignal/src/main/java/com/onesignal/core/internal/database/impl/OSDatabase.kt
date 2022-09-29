@@ -13,7 +13,7 @@ import android.os.SystemClock
 import android.provider.BaseColumns
 import com.onesignal.core.internal.database.IDatabase
 import com.onesignal.core.internal.logging.Logging
-import com.onesignal.core.internal.outcomes.impl.OSOutcomeTableProvider
+import com.onesignal.core.internal.outcomes.impl.OutcomeTableProvider
 import com.onesignal.core.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V1
 import com.onesignal.core.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V3
 import com.onesignal.core.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V1
@@ -23,7 +23,7 @@ import java.lang.IllegalStateException
 import java.util.ArrayList
 
 internal class OSDatabase(
-    private val _outcomeTableProvider: OSOutcomeTableProvider,
+    private val _outcomeTableProvider: OutcomeTableProvider,
     context: Context?
 ) : SQLiteOpenHelper(context, DATABASE_NAME, null, dbVersion), IDatabase {
 

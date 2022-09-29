@@ -59,7 +59,7 @@ internal class InAppMessageTracker(dataRepository: InfluenceDataRepository, time
         influenceType = dataRepository.iamCachedInfluenceType.also {
             if (it.isIndirect()) indirectIds = lastReceivedIds
         }
-        Logging.debug("OneSignal InAppMessageTracker initInfluencedTypeFromCache: $this")
+        Logging.debug("InAppMessageTracker.initInfluencedTypeFromCache: $this")
     }
 
     override fun addSessionData(jsonObject: JSONObject, influence: Influence) {
