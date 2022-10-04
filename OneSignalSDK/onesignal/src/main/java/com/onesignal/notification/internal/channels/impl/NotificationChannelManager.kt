@@ -9,6 +9,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationManagerCompat
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.notification.internal.channels.INotificationChannelManager
 import com.onesignal.notification.internal.common.NotificationGenerationJob
@@ -24,7 +25,8 @@ import java.util.HashSet
 import java.util.regex.Pattern
 
 internal class NotificationChannelManager(
-    private val _applicationService: IApplicationService
+    private val _applicationService: IApplicationService,
+    private val _languageContext: ILanguageContext
 ) : INotificationChannelManager {
     companion object {
         // Can't create a channel with the id 'miscellaneous' as an exception is thrown.
@@ -87,9 +89,8 @@ internal class NotificationChannelManager(
         var payloadWithText = channelPayload
         if (channelPayload.has("langs")) {
             val langList = channelPayload.getJSONObject("langs")
-            // TODO: Language context
-//            val language = LanguageContext.getInstance().language
-//            if (langList.has(language)) payloadWithText = langList.optJSONObject(language)
+            val language = _languageContext.language
+            if (langList.has(language)) payloadWithText = langList.optJSONObject(language)
         }
         val channel_name = payloadWithText!!.optString("nm", "Miscellaneous")
         val importance = priorityToImportance(payload.optInt("pri", 6))

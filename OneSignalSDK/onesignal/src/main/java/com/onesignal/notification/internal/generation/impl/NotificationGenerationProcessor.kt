@@ -4,7 +4,7 @@ import android.content.Context
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.core.internal.logging.Logging
-import com.onesignal.core.internal.params.IParamsService
+import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.session.ISessionService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.notification.internal.Notification
@@ -28,7 +28,7 @@ import org.json.JSONObject
 internal class NotificationGenerationProcessor(
     private val _applicationService: IApplicationService,
     private val _notificationDisplayer: INotificationDisplayer,
-    private val _paramsService: IParamsService,
+    private val _configModelStore: ConfigModelStore,
     private val _dataController: INotificationDataController,
     private val _notificationSummaryManager: INotificationSummaryManager,
     private val _lifecycleService: INotificationLifecycleService,
@@ -163,7 +163,7 @@ internal class NotificationGenerationProcessor(
 
     // If available TTL times comes in seconds, by default is 3 days in seconds
     private fun isNotificationWithinTTL(notification: Notification): Boolean {
-        val useTtl = _paramsService.restoreTTLFilter
+        val useTtl = _configModelStore.get().restoreTTLFilter
         if (!useTtl) return true
         val currentTimeInSeconds = _time.currentTimeMillis / 1000
         val sentTime = notification.sentTime

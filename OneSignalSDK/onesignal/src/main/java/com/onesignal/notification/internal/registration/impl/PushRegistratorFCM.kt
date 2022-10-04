@@ -8,7 +8,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.logging.Logging
-import com.onesignal.core.internal.params.IParamsService
+import com.onesignal.core.internal.models.ConfigModelStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -20,11 +20,11 @@ import java.lang.reflect.InvocationTargetException
 import java.util.concurrent.ExecutionException
 
 internal class PushRegistratorFCM(
-    var _paramsService: IParamsService,
+    var _configModelStore: ConfigModelStore,
     val _applicationService: IApplicationService,
     upgradePrompt: GooglePlayServicesUpgradePrompt,
     deviceService: IDeviceService
-) : PushRegistratorAbstractGoogle(deviceService, _paramsService, upgradePrompt) {
+) : PushRegistratorAbstractGoogle(deviceService, _configModelStore, upgradePrompt) {
 
     companion object {
         private const val FCM_APP_NAME = "ONESIGNAL_SDK_FCM_APP_NAME"
@@ -48,7 +48,7 @@ internal class PushRegistratorFCM(
         get() = "FCM"
 
     init {
-        val fcpParams = _paramsService.fcmParams
+        val fcpParams = _configModelStore.get().fcmParams
 
         this.projectId = fcpParams.projectId ?: FCM_DEFAULT_PROJECT_ID
         this.appId = fcpParams.appId ?: FCM_DEFAULT_APP_ID

@@ -1,7 +1,6 @@
 package com.onesignal.core.internal.influence.impl
 
 import com.onesignal.core.internal.influence.InfluenceType
-import com.onesignal.core.internal.params.IParamsService
 import org.json.JSONArray
 import org.json.JSONException
 
@@ -50,5 +49,4 @@ internal interface IInfluenceDataRepository {
     fun cacheNotificationOpenId(id: String?)
     fun saveNotifications(notifications: JSONArray)
     fun saveIAMs(iams: JSONArray)
-    fun saveInfluenceParams(influenceParams: IParamsService.InfluenceParams)
 }

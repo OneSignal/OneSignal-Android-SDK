@@ -8,7 +8,7 @@ import com.google.android.gms.common.GoogleApiAvailability
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.core.internal.device.IDeviceService
-import com.onesignal.core.internal.params.IParamsService
+import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
@@ -18,7 +18,7 @@ import kotlinx.coroutines.withContext
 internal class GooglePlayServicesUpgradePrompt(
     private val _applicationService: IApplicationService,
     private val _deviceService: IDeviceService,
-    private val _params: IParamsService,
+    private val _configModelStore: ConfigModelStore,
     private val _prefs: IPreferencesService
 ) {
     // Google Play Store might not be installed, ignore exception if so
@@ -43,7 +43,7 @@ internal class GooglePlayServicesUpgradePrompt(
             return
         }
 
-        if (!isGooglePlayStoreInstalled || _params.disableGMSMissingPrompt == true) {
+        if (!isGooglePlayStoreInstalled || _configModelStore.get().disableGMSMissingPrompt) {
             return
         }
 

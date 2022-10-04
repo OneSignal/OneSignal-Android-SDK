@@ -1,7 +1,7 @@
 package com.onesignal.notification.internal.summary.impl
 
 import com.onesignal.core.internal.application.IApplicationService
-import com.onesignal.core.internal.params.IParamsService
+import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.notification.internal.common.NotificationGenerationJob
 import com.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.notification.internal.data.INotificationDataController
@@ -15,7 +15,7 @@ internal class NotificationSummaryManager(
     private val _applicationService: IApplicationService,
     private val _dataController: INotificationDataController,
     private val _summaryNotificationDisplayer: ISummaryNotificationDisplayer,
-    private val _paramsService: IParamsService,
+    private val _configModelStore: ConfigModelStore,
     private val _notificationRestoreProcessor: INotificationRestoreProcessor
 ) : INotificationSummaryManager {
 
@@ -91,7 +91,7 @@ internal class NotificationSummaryManager(
         // Obtain the most recent notification id
         val mostRecentId = _dataController.getAndroidIdForGroup(group, false)
         if (mostRecentId != null) {
-            val shouldDismissAll = _paramsService.clearGroupOnSummaryClick
+            val shouldDismissAll = _configModelStore.get().clearGroupOnSummaryClick
             if (shouldDismissAll) {
                 val groupId = if (group == NotificationHelper.grouplessSummaryKey) {
                     // If the group is groupless, obtain the hardcoded groupless summary id

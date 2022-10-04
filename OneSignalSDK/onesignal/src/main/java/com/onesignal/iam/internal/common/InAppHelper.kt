@@ -1,14 +1,13 @@
 package com.onesignal.iam.internal.common
 
+import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.iam.internal.InAppMessage
 
 internal object InAppHelper {
     private val PREFERRED_VARIANT_ORDER: List<String> = listOf("android", "app", "all")
 
-    fun variantIdForMessage(message: InAppMessage): String? {
-        // TODO: Language context stuff
-//        val language: String = languageContext.getLanguage()
-        var language = "en"
+    fun variantIdForMessage(message: InAppMessage, languageContext: ILanguageContext): String? {
+        val language: String = languageContext.language
         for (variant in PREFERRED_VARIANT_ORDER) {
             if (!message.variants.containsKey(variant)) continue
             val variantMap = message.variants[variant]!!

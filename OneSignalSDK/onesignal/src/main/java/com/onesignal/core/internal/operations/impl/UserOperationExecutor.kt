@@ -113,7 +113,7 @@ internal class UserOperationExecutor(
 
                 // TODO: hydrate the models from the backend create response.  Temporarily inject dummy stuff to
                 //       show that it's working.
-                propertiesModel.setProperty(PropertiesModel::language.name, "en", notify = false)
+//                propertiesModel.setProperty(PropertiesModel::language.name, "en", notify = false)
                 propertiesModel.setProperty(PropertiesModel::country.name, "US", notify = false)
                 propertiesModel.tags.setProperty("foo", UUID.randomUUID().toString(), notify = false)
                 _propertiesModelStore.persist()

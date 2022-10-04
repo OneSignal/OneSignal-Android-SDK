@@ -13,10 +13,10 @@ internal class PropertiesModel : Model() {
         set(value) { setProperty(::onesignalId.name, value) }
 
     /**
-     * The language for this user.
+     * The language for this user. When `null` the device default will be used.
      */
-    var language: String
-        get() = getProperty(::language.name) { "en" }
+    var language: String?
+        get() = getProperty(::language.name)
         set(value) { setProperty(::language.name, value) }
 
     /**

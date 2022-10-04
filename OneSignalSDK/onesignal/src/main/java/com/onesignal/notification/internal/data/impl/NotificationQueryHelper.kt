@@ -1,12 +1,12 @@
 package com.onesignal.notification.internal.data.impl
 
 import com.onesignal.core.internal.database.impl.OneSignalDbContract
-import com.onesignal.core.internal.params.IParamsService
+import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.notification.internal.data.INotificationQueryHelper
 
 internal class NotificationQueryHelper(
-    private val _paramsService: IParamsService,
+    private val _configModelStore: ConfigModelStore,
     private val _time: ITime
 ) : INotificationQueryHelper {
 
@@ -19,7 +19,7 @@ internal class NotificationQueryHelper(
                 OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
                 OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0"
         )
-        val useTtl = _paramsService.restoreTTLFilter
+        val useTtl = _configModelStore.get().restoreTTLFilter
         if (useTtl) {
             val expireTimeWhere =
                 " AND " + OneSignalDbContract.NotificationTable.COLUMN_NAME_EXPIRE_TIME + " > " + currentTimeSec

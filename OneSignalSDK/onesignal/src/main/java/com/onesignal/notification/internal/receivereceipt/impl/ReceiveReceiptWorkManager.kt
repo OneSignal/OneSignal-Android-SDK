@@ -14,14 +14,12 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.models.ConfigModelStore
-import com.onesignal.core.internal.params.IParamsService
 import com.onesignal.core.internal.user.ISubscriptionManager
 import com.onesignal.notification.internal.receivereceipt.IReceiveReceiptProcessor
 import com.onesignal.notification.internal.receivereceipt.IReceiveReceiptWorkManager
 import java.util.concurrent.TimeUnit
 
 internal class ReceiveReceiptWorkManager(
-    private val _paramsService: IParamsService,
     private val _applicationService: IApplicationService,
     private val _configModelStore: ConfigModelStore,
     private val _subscriptionManager: ISubscriptionManager
@@ -31,7 +29,7 @@ internal class ReceiveReceiptWorkManager(
     private val maxDelay = 25
 
     override fun enqueueReceiveReceipt(notificationId: String) {
-        if (!_paramsService.receiveReceiptEnabled) {
+        if (!_configModelStore.get().receiveReceiptEnabled) {
             Logging.debug("sendReceiveReceipt disabled")
             return
         }
