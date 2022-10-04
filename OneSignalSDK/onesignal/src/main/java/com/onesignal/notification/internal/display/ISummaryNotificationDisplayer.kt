@@ -25,7 +25,7 @@ internal interface ISummaryNotificationDisplayer {
         notificationJob: NotificationGenerationJob,
         notifBuilder: NotificationCompat.Builder?
     ): Notification
-    fun createGrouplessSummaryNotification(
+    suspend fun createGrouplessSummaryNotification(
         notificationJob: NotificationGenerationJob,
         intentGenerator: IntentGeneratorForAttachingToNotifications,
         grouplessNotifCount: Int,

@@ -1,5 +1,8 @@
-package com.onesignal.core.internal.influence
+package com.onesignal.core.internal.influence.impl
 
+import com.onesignal.core.internal.influence.Influence
+import com.onesignal.core.internal.influence.InfluenceChannel
+import com.onesignal.core.internal.influence.InfluenceType
 import org.json.JSONArray
 
 internal interface IChannelTracker {

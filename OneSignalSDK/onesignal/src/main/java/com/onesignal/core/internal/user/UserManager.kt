@@ -2,6 +2,7 @@ package com.onesignal.core.internal.user
 
 import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.backend.IdentityConstants
+import com.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.models.IdentityModel
 import com.onesignal.core.internal.models.IdentityModelStore
@@ -9,6 +10,7 @@ import com.onesignal.core.internal.models.PropertiesModel
 import com.onesignal.core.internal.models.PropertiesModelStore
 import com.onesignal.core.internal.models.TriggerModel
 import com.onesignal.core.internal.models.TriggerModelStore
+import com.onesignal.core.internal.outcomes.IOutcomeEventsController
 import com.onesignal.core.user.IUserManager
 import com.onesignal.core.user.subscriptions.SubscriptionList
 
@@ -16,7 +18,8 @@ internal open class UserManager(
     private val _subscriptionManager: ISubscriptionManager,
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
-    private val _triggerModelStore: TriggerModelStore
+    private val _triggerModelStore: TriggerModelStore,
+    private val _outcomeController: IOutcomeEventsController
 ) : IUserManager {
 
     override val externalId: String?
@@ -182,19 +185,31 @@ internal open class UserManager(
 
     override fun sendOutcome(name: String): IUserManager {
         Logging.log(LogLevel.DEBUG, "sendOutcome(name: $name)")
-        // TODO("Not yet implemented")
+
+        suspendifyOnThread {
+            _outcomeController.sendOutcomeEvent(name)
+        }
+
         return this
     }
 
     override fun sendUniqueOutcome(name: String): IUserManager {
         Logging.log(LogLevel.DEBUG, "sendUniqueOutcome(name: $name)")
-        // TODO("Not yet implemented")
+
+        suspendifyOnThread {
+            _outcomeController.sendUniqueOutcomeEvent(name)
+        }
+
         return this
     }
 
     override fun sendOutcomeWithValue(name: String, value: Float): IUserManager {
         Logging.log(LogLevel.DEBUG, "sendOutcomeWithValue(name: $name, value: $value)")
-        // TODO("Not yet implemented")
+
+        suspendifyOnThread {
+            _outcomeController.sendOutcomeEventWithValue(name, value)
+        }
+
         return this
     }
 }

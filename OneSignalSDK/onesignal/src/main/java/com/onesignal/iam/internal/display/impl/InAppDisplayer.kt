@@ -5,9 +5,9 @@ import android.app.Activity
 import android.os.Build
 import android.util.Base64
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.influence.IInfluenceManager
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.models.ConfigModelStore
-import com.onesignal.core.internal.session.ISessionService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.iam.internal.InAppMessage
 import com.onesignal.iam.internal.InAppMessageContent
@@ -36,7 +36,7 @@ internal class InAppDisplayer(
     private val _lifecycle: IInAppLifecycleService,
     private val _promptFactory: IInAppMessagePromptFactory,
     private val _backend: IInAppBackendService,
-    private val _sessionService: ISessionService,
+    private val _influenceManager: IInfluenceManager,
     private val _configModelStore: ConfigModelStore,
     private val _time: ITime
 ) : IInAppDisplayer {
@@ -47,7 +47,7 @@ internal class InAppDisplayer(
 
         if (response.content != null) {
             message.displayDuration = response.content!!.displayDuration!!
-            _sessionService.onInAppMessageReceived(message.messageId)
+            _influenceManager.onInAppMessageDisplayed(message.messageId)
             showMessageContent(message, response.content!!)
             return true
         } else {

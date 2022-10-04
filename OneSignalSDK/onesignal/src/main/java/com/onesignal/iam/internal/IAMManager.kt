@@ -9,12 +9,12 @@ import com.onesignal.core.internal.common.JSONUtils
 import com.onesignal.core.internal.common.events.CallbackProducer
 import com.onesignal.core.internal.common.events.ICallbackProducer
 import com.onesignal.core.internal.common.suspendifyOnThread
-import com.onesignal.core.internal.influence.Influence
+import com.onesignal.core.internal.influence.IInfluenceManager
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.core.internal.models.ConfigModel
 import com.onesignal.core.internal.models.ConfigModelStore
-import com.onesignal.core.internal.outcomes.OutcomeEventsController
+import com.onesignal.core.internal.outcomes.IOutcomeEventsController
 import com.onesignal.core.internal.session.ISessionLifecycleHandler
 import com.onesignal.core.internal.session.ISessionService
 import com.onesignal.core.internal.startup.IStartableService
@@ -48,10 +48,11 @@ import kotlinx.coroutines.withContext
 internal class IAMManager(
     private val _applicationService: IApplicationService,
     private val _sessionService: ISessionService,
+    private val _influenceManager: IInfluenceManager,
     private val _configModelStore: ConfigModelStore,
     private val _userManager: IUserManager,
     private val _subscriptionManager: ISubscriptionManager,
-    private val _outcomeEventsController: OutcomeEventsController,
+    private val _outcomeEventsController: IOutcomeEventsController,
     private val _state: InAppStateService,
     private val _prefs: IInAppPreferencesController,
     private val _repository: IInAppRepository,
@@ -180,7 +181,7 @@ internal class IAMManager(
         }
     }
 
-    override fun sessionEnding(influences: List<Influence>) { }
+    override fun sessionResumed() { }
 
     // called when a new push subscription is added, or the app id is updated, or a new session starts
     private suspend fun fetchMessages() {
@@ -360,7 +361,7 @@ internal class IAMManager(
         }
 
         // Remove DIRECT influence due to ClickHandler of ClickAction outcomes
-        _sessionService.directInfluenceFromIAMClickFinished()
+        _influenceManager.onInAppMessageDismissed()
 
         if (_state.currentPrompt != null) {
             Logging.debug("IAMManager.messageWasDismissed: Stop evaluateMessageDisplayQueue because prompt is currently displayed")
@@ -578,8 +579,18 @@ internal class IAMManager(
     }
 
     private suspend fun fireOutcomesForClick(messageId: String, outcomes: List<InAppMessageOutcome>) {
-        _sessionService.directInfluenceFromIAMClick(messageId)
-        _outcomeEventsController.sendClickActionOutcomes(outcomes)
+        _influenceManager.onDirectInfluenceFromIAM(messageId)
+
+        for (outcome in outcomes) {
+            val name: String = outcome.name
+            if (outcome.isUnique) {
+                _outcomeEventsController.sendUniqueOutcomeEvent(name)
+            } else if (outcome.weight > 0) {
+                _outcomeEventsController.sendOutcomeEventWithValue(name, outcome.weight)
+            } else {
+                _outcomeEventsController.sendOutcomeEvent(name)
+            }
+        }
     }
 
     private fun fireTagCallForClick(action: InAppMessageAction) {
@@ -654,7 +665,7 @@ internal class IAMManager(
         // Send public outcome not from handler
         // Check that only on the handler
         // Any outcome sent on this callback should count as DIRECT from this IAM
-        _sessionService.directInfluenceFromIAMClick(messageId)
+        _influenceManager.onDirectInfluenceFromIAM(messageId)
 
         withContext(Dispatchers.Main) {
             _messageClickCallback.fire { it.inAppMessageClicked(action) }

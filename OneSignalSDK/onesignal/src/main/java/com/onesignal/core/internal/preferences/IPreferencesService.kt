@@ -80,11 +80,11 @@ internal object PreferenceOneSignalKeys {
     // Remote params - Receive Receipts (aka Confirmed Deliveries)
     const val PREFS_OS_RECEIVE_RECEIPTS_ENABLED = "PREFS_OS_RECEIVE_RECEIPTS_ENABLED"
 
-    // Remote params - Outcomes V2 service enabled
-    const val PREFS_OS_OUTCOMES_V2 = "PREFS_OS_OUTCOMES_V2"
-
     // On Focus Influence
     const val PREFS_OS_ATTRIBUTED_INFLUENCES = "PREFS_OS_ATTRIBUTED_INFLUENCES"
+
+    // Outcomes
+    const val PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT = "PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT"
 
     // Email
     const val PREFS_OS_EMAIL_ID = "OS_EMAIL_ID"

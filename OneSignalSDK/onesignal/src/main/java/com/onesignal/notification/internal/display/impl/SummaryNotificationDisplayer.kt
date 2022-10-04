@@ -249,7 +249,7 @@ internal class SummaryNotificationDisplayer(
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
-    override fun createGrouplessSummaryNotification(
+    override suspend fun createGrouplessSummaryNotification(
         notificationJob: NotificationGenerationJob,
         intentGenerator: IntentGeneratorForAttachingToNotifications,
         grouplessNotifCount: Int,

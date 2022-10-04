@@ -1,17 +1,18 @@
-package com.onesignal.core.internal.outcomes
+package com.onesignal.core.internal.outcomes.impl
 
 import com.onesignal.core.internal.influence.InfluenceType
+import com.onesignal.core.internal.outcomes.IOutcomeEvent
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
 internal class OutcomeEvent(
-    val session: InfluenceType,
-    val notificationIds: JSONArray?,
-    val name: String,
-    val timestamp: Long,
-    val weight: Float
-) {
+    override val session: InfluenceType,
+    override val notificationIds: JSONArray?,
+    override val name: String,
+    override val timestamp: Long,
+    override val weight: Float
+) : IOutcomeEvent {
     @Throws(JSONException::class)
     fun toJSONObject(): JSONObject {
         val json = JSONObject()
@@ -20,21 +21,6 @@ internal class OutcomeEvent(
         json.put(OUTCOME_ID, name)
         json.put(TIMESTAMP, timestamp)
         json.put(WEIGHT, weight)
-        return json
-    }
-
-    @Throws(JSONException::class)
-    fun toJSONObjectForMeasure(): JSONObject {
-        val json = JSONObject()
-        if (notificationIds != null && notificationIds.length() > 0) {
-            json.put(
-                NOTIFICATION_IDS,
-                notificationIds
-            )
-        }
-        json.put(OUTCOME_ID, name)
-        if (weight > 0) json.put(WEIGHT, weight)
-        if (timestamp > 0) json.put(TIMESTAMP, timestamp)
         return json
     }
 
@@ -72,7 +58,7 @@ internal class OutcomeEvent(
         /**
          * Creates an OutcomeEvent from an OSOutcomeEventParams in order to work on V1 from V2
          */
-        fun fromOutcomeEventParamsV2toOutcomeEventV1(outcomeEventParams: OutcomeEventParams): OutcomeEvent {
+        fun fromOutcomeEventParamstoOutcomeEvent(outcomeEventParams: OutcomeEventParams): OutcomeEvent {
             var influenceType = InfluenceType.UNATTRIBUTED
             var notificationId: JSONArray? = null
             if (outcomeEventParams.outcomeSource != null) {
