@@ -1,9 +1,9 @@
-package com.onesignal.core.internal.language
+package com.onesignal.core.internal.language.impl
 
 import java.util.Locale
 
-internal class LanguageProviderDevice : ILanguageProvider {
-    override val language: String
+internal class LanguageProviderDevice {
+    val language: String
         get() {
             return when (val language = Locale.getDefault().language) {
                 HEBREW_INCORRECT -> HEBREW_CORRECTED

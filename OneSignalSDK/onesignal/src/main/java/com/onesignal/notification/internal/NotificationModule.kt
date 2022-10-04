@@ -2,7 +2,7 @@ package com.onesignal.notification.internal
 
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.device.IDeviceService
-import com.onesignal.core.internal.params.IParamsService
+import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.service.ServiceBuilder
 import com.onesignal.core.internal.startup.IStartableService
@@ -38,8 +38,8 @@ import com.onesignal.notification.internal.lifecycle.impl.NotificationLifecycleS
 import com.onesignal.notification.internal.limiting.INotificationLimitManager
 import com.onesignal.notification.internal.limiting.impl.NotificationLimitManager
 import com.onesignal.notification.internal.listeners.ApplicationListener
+import com.onesignal.notification.internal.listeners.ConfigModelStoreListener
 import com.onesignal.notification.internal.listeners.NotificationListener
-import com.onesignal.notification.internal.listeners.ParamsListener
 import com.onesignal.notification.internal.listeners.PushTokenListener
 import com.onesignal.notification.internal.open.INotificationOpenedProcessor
 import com.onesignal.notification.internal.open.INotificationOpenedProcessorHMS
@@ -115,7 +115,7 @@ internal object NotificationModule {
                 PushRegistratorADM(it.getService(IApplicationService::class.java))
             } else if (deviceService.isAndroidDeviceType) {
                 if (deviceService.hasFCMLibrary) {
-                    PushRegistratorFCM(it.getService(IParamsService::class.java), it.getService(IApplicationService::class.java), it.getService(GooglePlayServicesUpgradePrompt::class.java), deviceService)
+                    PushRegistratorFCM(it.getService(ConfigModelStore::class.java), it.getService(IApplicationService::class.java), it.getService(GooglePlayServicesUpgradePrompt::class.java), deviceService)
                 } else {
                     PushRegistratorNone()
                 }
@@ -134,7 +134,7 @@ internal object NotificationModule {
 
         // Startable services
         builder.register<ApplicationListener>().provides<IStartableService>()
-        builder.register<ParamsListener>().provides<IStartableService>()
+        builder.register<ConfigModelStoreListener>().provides<IStartableService>()
         builder.register<NotificationListener>().provides<IStartableService>()
         builder.register<PushTokenListener>().provides<IStartableService>()
 

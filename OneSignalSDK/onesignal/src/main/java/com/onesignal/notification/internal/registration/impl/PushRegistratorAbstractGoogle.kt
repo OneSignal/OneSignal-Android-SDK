@@ -29,7 +29,7 @@ package com.onesignal.notification.internal.registration.impl
 import com.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.logging.Logging
-import com.onesignal.core.internal.params.IParamsService
+import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.notification.internal.registration.IPushRegistrator
 import kotlinx.coroutines.delay
 import java.io.IOException
@@ -40,7 +40,7 @@ import java.io.IOException
  */
 internal abstract class PushRegistratorAbstractGoogle(
     private val _deviceService: IDeviceService,
-    private val _paramsService: IParamsService,
+    private var _configModelStore: ConfigModelStore,
     private val _upgradePrompt: GooglePlayServicesUpgradePrompt
 ) :
     IPushRegistrator, IPushRegistratorCallback {
@@ -50,14 +50,14 @@ internal abstract class PushRegistratorAbstractGoogle(
     abstract suspend fun getToken(senderId: String): String
 
     override suspend fun registerForPush(): IPushRegistrator.RegisterResult {
-        return if (!isValidProjectNumber(_paramsService.googleProjectNumber)) {
+        return if (!isValidProjectNumber(_configModelStore.get().googleProjectNumber)) {
             Logging.error("Missing Google Project number!\nPlease enter a Google Project number / Sender ID on under App Settings > Android > Configuration on the OneSignal dashboard.")
             IPushRegistrator.RegisterResult(
                 null,
                 IPushRegistrator.RegisterStatus.PUSH_STATUS_INVALID_FCM_SENDER_ID
             )
         } else {
-            internalRegisterForPush(_paramsService.googleProjectNumber!!)
+            internalRegisterForPush(_configModelStore.get().googleProjectNumber!!)
         }
     }
 

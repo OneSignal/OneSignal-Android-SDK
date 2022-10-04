@@ -1,9 +1,9 @@
 package com.onesignal.core.internal.outcomes.impl
 
 import android.os.Process
-import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.core.internal.device.IDeviceService
+import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.influence.IInfluenceManager
 import com.onesignal.core.internal.influence.Influence
 import com.onesignal.core.internal.influence.InfluenceChannel

@@ -6,6 +6,7 @@ import android.os.Build
 import android.util.Base64
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.influence.IInfluenceManager
+import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.time.ITime
@@ -38,12 +39,13 @@ internal class InAppDisplayer(
     private val _backend: IInAppBackendService,
     private val _influenceManager: IInfluenceManager,
     private val _configModelStore: ConfigModelStore,
+    private val _languageContext: ILanguageContext,
     private val _time: ITime
 ) : IInAppDisplayer {
     private var lastInstance: WebViewManager? = null
 
     override suspend fun displayMessage(message: InAppMessage): Boolean? {
-        var response = _backend.getIAMData(_configModelStore.get().appId, message.messageId, InAppHelper.variantIdForMessage(message))
+        var response = _backend.getIAMData(_configModelStore.get().appId, message.messageId, InAppHelper.variantIdForMessage(message, _languageContext))
 
         if (response.content != null) {
             message.displayDuration = response.content!!.displayDuration!!
