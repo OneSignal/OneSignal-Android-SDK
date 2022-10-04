@@ -32,6 +32,7 @@ import com.onesignal.core.internal.models.TriggerModelStore
 import com.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.impl.IdentityOperationExecutor
+import com.onesignal.core.internal.operations.impl.OperationModelStore
 import com.onesignal.core.internal.operations.impl.OperationRepo
 import com.onesignal.core.internal.operations.impl.SubscriptionOperationExecutor
 import com.onesignal.core.internal.operations.impl.UserOperationExecutor
@@ -88,6 +89,7 @@ internal object CoreModule {
         builder.register<RefreshParamsService>().provides<IStartableService>()
 
         // Operations
+        builder.register<OperationModelStore>().provides<OperationModelStore>()
         builder.register<OperationRepo>()
             .provides<IOperationRepo>()
             .provides<IStartableService>()

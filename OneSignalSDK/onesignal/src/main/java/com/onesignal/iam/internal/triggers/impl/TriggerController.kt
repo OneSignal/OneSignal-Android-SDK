@@ -211,7 +211,7 @@ internal class TriggerController(
         _dynamicTriggerController.events.fire { it.onTriggerChanged(model.key) }
     }
 
-    override fun onUpdated(model: TriggerModel, property: String, oldValue: Any?, newValue: Any?) {
+    override fun onUpdated(model: TriggerModel, path: String, property: String, oldValue: Any?, newValue: Any?) {
         addTriggers(model.key, model.value)
         _dynamicTriggerController.events.fire { it.onTriggerChanged(model.key) }
     }

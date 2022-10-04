@@ -13,14 +13,18 @@ import com.onesignal.core.OneSignal
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.core.internal.logging.Logging
+import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.params.IParamsService
+import com.onesignal.core.internal.user.ISubscriptionManager
 import com.onesignal.notification.internal.receivereceipt.IReceiveReceiptProcessor
 import com.onesignal.notification.internal.receivereceipt.IReceiveReceiptWorkManager
 import java.util.concurrent.TimeUnit
 
 internal class ReceiveReceiptWorkManager(
     private val _paramsService: IParamsService,
-    private val _applicationService: IApplicationService
+    private val _applicationService: IApplicationService,
+    private val _configModelStore: ConfigModelStore,
+    private val _subscriptionManager: ISubscriptionManager
 ) : IReceiveReceiptWorkManager {
 
     private val minDelay = 0
@@ -31,9 +35,19 @@ internal class ReceiveReceiptWorkManager(
             Logging.debug("sendReceiveReceipt disabled")
             return
         }
+
+        val appId: String = _configModelStore.get().appId
+        val subscriptionId: String? = _subscriptionManager.subscriptions.push?.id
+
+        if (subscriptionId == null || appId.isEmpty()) {
+            Logging.debug("ReceiveReceiptWorkManager: No push subscription or appId!")
+        }
+
         val delay: Int = AndroidUtils.getRandomDelay(minDelay, maxDelay)
         val inputData = Data.Builder()
             .putString(OS_NOTIFICATION_ID, notificationId)
+            .putString(OS_APP_ID, appId)
+            .putString(OS_SUBSCRIPTION_ID, subscriptionId)
             .build()
         val constraints = buildConstraints()
         val workRequest = OneTimeWorkRequest.Builder(ReceiveReceiptWorker::class.java)
@@ -61,13 +75,17 @@ internal class ReceiveReceiptWorkManager(
 
         override suspend fun doWork(): Result {
             val inputData = inputData
-            val notificationId = inputData.getString(OS_NOTIFICATION_ID)
-            _receiveReceiptProcessor.sendReceiveReceipt(notificationId!!)
+            val notificationId = inputData.getString(OS_NOTIFICATION_ID)!!
+            val appId = inputData.getString(OS_APP_ID)!!
+            val subscriptionId = inputData.getString(OS_SUBSCRIPTION_ID)!!
+            _receiveReceiptProcessor.sendReceiveReceipt(appId, subscriptionId, notificationId)
             return Result.success()
         }
     }
 
     companion object {
         private const val OS_NOTIFICATION_ID = "os_notification_id"
+        private const val OS_APP_ID = "os_app_id"
+        private const val OS_SUBSCRIPTION_ID = "os_subscription_id"
     }
 }

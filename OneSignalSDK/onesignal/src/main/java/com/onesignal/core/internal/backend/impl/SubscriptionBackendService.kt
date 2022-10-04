@@ -24,7 +24,11 @@ internal class SubscriptionBackendService(
 ) : ISubscriptionBackendService {
 
     override suspend fun createSubscription(appId: String, aliasLabel: String, aliasValue: String, type: SubscriptionObjectType, enabled: Boolean, address: String): String {
-        // TODO: To Implement, temporarily using players endpoint
+        // TODO: To Implement, temporarily using players endpoint when PUSH
+        if (type == SubscriptionObjectType.SMS || type == SubscriptionObjectType.EMAIL) {
+            return UUID.randomUUID().toString()
+        }
+
         val json = JSONObject()
         try {
             json.put("app_id", appId)

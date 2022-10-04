@@ -1,11 +1,12 @@
 package com.onesignal.core.internal.models
 
-import com.onesignal.core.internal.modeling.ModelStore
+import com.onesignal.core.internal.modeling.SimpleModelStore
 import com.onesignal.core.internal.modeling.SingletonModelStore
+import com.onesignal.core.internal.preferences.IPreferencesService
 
-internal class ConfigModelStore : SingletonModelStore<ConfigModel>("config", { ConfigModel() }, ModelStore())
-internal class SessionModelStore : SingletonModelStore<SessionModel>("session", { SessionModel() }, ModelStore())
-internal class IdentityModelStore : SingletonModelStore<IdentityModel>("identity", { IdentityModel() }, ModelStore())
-internal class PropertiesModelStore : SingletonModelStore<PropertiesModel>("properties", { PropertiesModel() }, ModelStore())
-internal class SubscriptionModelStore : ModelStore<SubscriptionModel>()
-internal class TriggerModelStore : ModelStore<TriggerModel>(persist = false)
+internal class ConfigModelStore(prefs: IPreferencesService) : SingletonModelStore<ConfigModel>(SimpleModelStore({ ConfigModel() }, "config", prefs))
+internal class SessionModelStore(prefs: IPreferencesService) : SingletonModelStore<SessionModel>(SimpleModelStore({ SessionModel() }, "session", prefs))
+internal class IdentityModelStore(prefs: IPreferencesService) : SingletonModelStore<IdentityModel>(SimpleModelStore({ IdentityModel() }, "identity", prefs))
+internal class PropertiesModelStore(prefs: IPreferencesService) : SingletonModelStore<PropertiesModel>(SimpleModelStore({ PropertiesModel() }, "properties", prefs))
+internal class SubscriptionModelStore(prefs: IPreferencesService) : SimpleModelStore<SubscriptionModel>({ SubscriptionModel() }, "subscriptions", prefs)
+internal class TriggerModelStore : SimpleModelStore<TriggerModel>({ TriggerModel() })

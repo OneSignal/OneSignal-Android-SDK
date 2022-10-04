@@ -6,6 +6,7 @@ import com.onesignal.core.debug.IDebugManager
 import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
+import com.onesignal.core.internal.backend.IdentityConstants
 import com.onesignal.core.internal.common.IDManager
 import com.onesignal.core.internal.common.OneSignalUtils
 import com.onesignal.core.internal.debug.DebugManager
@@ -153,8 +154,12 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         _startupService = _services.getService()
         _startupService!!.bootstrap()
 
-        // TODO: Only do this if nothing persisted
-        createAndSwitchToNewUser()
+        if (_identityModelStore!!.get().hasProperty(IdentityConstants.ONESIGNAL_ID)) {
+            Logging.debug("initWithContext: using cached user ${_identityModelStore!!.get().onesignalId}")
+            _hasCreatedBackendUser = true
+        } else {
+            createAndSwitchToNewUser()
+        }
 
         _startupService!!.start()
 
@@ -203,8 +208,11 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     }
 
     private fun createAndSwitchToNewUser(modify: ((identityModel: IdentityModel, propertiesModel: PropertiesModel) -> Unit)? = null) {
+        Logging.debug("createAndSwitchToNewUser()")
+
         // create a new identity and properties model locally
         val sdkId = IDManager.createLocalId()
+
         var identityModel = IdentityModel()
         identityModel.onesignalId = sdkId
 
@@ -229,7 +237,11 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
         subscriptions.add(newPushSubscription)
 
-        // The next 3 lines makes this user the effective user locally.
+        // The next 4 lines makes this user the effective user locally.  We clear the subscriptions
+        // first without firing the event because we don't want to drive deleting the cleared subscriptions
+        // on the backend.  Once cleared we can then setup the new identity/properties model, and add
+        // the new user's subscriptions.
+        _subscriptionModelStore!!.clear(fireEvent = false)
         _identityModelStore!!.replace(identityModel)
         _propertiesModelStore!!.replace(propertiesModel)
         _subscriptionModelStore!!.replaceAll(subscriptions)

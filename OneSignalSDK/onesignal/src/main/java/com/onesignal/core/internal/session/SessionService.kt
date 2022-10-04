@@ -43,15 +43,14 @@ internal class SessionService(
         var dt = now - _focusOutTime
 
         if (dt > (_config!!.sessionFocusTimeout * 60 * 1000)) {
-            Logging.debug("Session timeout reached")
+            Logging.debug("SessionService: Session timeout reached")
             createNewSession()
         } else if (dt < 0) {
             // user is messing with system clock
-            Logging.debug("System clock changed to earlier than focus out time")
+            Logging.debug("SessionService: System clock changed to earlier than focus out time")
             createNewSession()
         } else { // just add to the unfocused duration
             _session!!.unfocusedDuration += dt
-            _sessionLifeCycleNotifier.fire { it.sessionResumed() }
         }
     }
 
@@ -62,11 +61,11 @@ internal class SessionService(
 
     private fun createNewSession() {
         // no reason to maintain old session models, just overwrite
-        _session!!.id = UUID.randomUUID().toString()
+        _session!!.sessionId = UUID.randomUUID().toString()
         _session!!.startTime = _time.currentTimeMillis
         _session!!.unfocusedDuration = 0.0
 
-        Logging.debug("New session started at ${_session!!.startTime}")
+        Logging.debug("SessionService: New session started at ${_session!!.startTime}")
         _sessionLifeCycleNotifier.fire { it.sessionStarted() }
     }
 

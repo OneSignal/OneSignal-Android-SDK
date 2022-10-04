@@ -69,7 +69,7 @@ internal class UserOperationExecutor(
 
         if (createUserOperation.externalId != null) {
             val mutableIdentities = identities.toMutableMap()
-            mutableIdentities[IdentityConstants.EXTERNAL_ID] = createUserOperation.externalId
+            mutableIdentities[IdentityConstants.EXTERNAL_ID] = createUserOperation.externalId!!
             identities = mutableIdentities
         }
 
@@ -105,6 +105,7 @@ internal class UserOperationExecutor(
                 identityModel.setProperty(IdentityConstants.ONESIGNAL_ID, backendOneSignalId, false)
 
                 // TODO: hydrate any additional aliases from the backend...
+                _identityModelStore.persist()
             }
 
             if (propertiesModel.onesignalId == createUserOperation.onesignalId) {
@@ -115,6 +116,7 @@ internal class UserOperationExecutor(
                 propertiesModel.setProperty(PropertiesModel::language.name, "en", notify = false)
                 propertiesModel.setProperty(PropertiesModel::country.name, "US", notify = false)
                 propertiesModel.tags.setProperty("foo", UUID.randomUUID().toString(), notify = false)
+                _propertiesModelStore.persist()
             }
 
             // TODO: assumption that the response.subscriptionIDs will associate to the input subscriptionList...to confirm
@@ -130,6 +132,7 @@ internal class UserOperationExecutor(
                 val subscriptionModel = _subscriptionsModelStore.get(subscriptionList[index].id)
                 subscriptionModel?.setProperty(SubscriptionModel::id.name, backendSubscriptionId, false)
             }
+            _subscriptionsModelStore.persist()
         } catch (ex: BackendException) {
         }
     }
@@ -304,15 +307,15 @@ internal class UserOperationExecutor(
 
     private fun createPropertiesFromOperation(operation: SetPropertyOperation, propertiesObject: PropertiesObject): PropertiesObject {
         return when (operation.property) {
-            PropertiesModel::language.name -> PropertiesObject(propertiesObject.tags, operation.value as String?, propertiesObject.timezoneId, propertiesObject.country, propertiesObject.latitude, propertiesObject.longitude, propertiesObject.locationAccuracy, propertiesObject.locationType, propertiesObject.locationBackground, propertiesObject.locationTimestamp)
-            PropertiesModel::timezone.name -> PropertiesObject(propertiesObject.tags, propertiesObject.language, operation.value as String?, propertiesObject.country, propertiesObject.latitude, propertiesObject.longitude, propertiesObject.locationAccuracy, propertiesObject.locationType, propertiesObject.locationBackground, propertiesObject.locationTimestamp)
-            PropertiesModel::country.name -> PropertiesObject(propertiesObject.tags, propertiesObject.language, propertiesObject.timezoneId, operation.value as String?, propertiesObject.latitude, propertiesObject.longitude, propertiesObject.locationAccuracy, propertiesObject.locationType, propertiesObject.locationBackground, propertiesObject.locationTimestamp)
-            PropertiesModel::locationLatitude.name -> PropertiesObject(propertiesObject.tags, propertiesObject.language, propertiesObject.timezoneId, propertiesObject.country, operation.value as Double?, propertiesObject.longitude, propertiesObject.locationAccuracy, propertiesObject.locationType, propertiesObject.locationBackground, propertiesObject.locationTimestamp)
-            PropertiesModel::locationLongitude.name -> PropertiesObject(propertiesObject.tags, propertiesObject.language, propertiesObject.timezoneId, propertiesObject.country, propertiesObject.latitude, operation.value as Double?, propertiesObject.locationAccuracy, propertiesObject.locationType, propertiesObject.locationBackground, propertiesObject.locationTimestamp)
-            PropertiesModel::locationAccuracy.name -> PropertiesObject(propertiesObject.tags, propertiesObject.language, propertiesObject.timezoneId, propertiesObject.country, propertiesObject.latitude, propertiesObject.longitude, operation.value as Float?, propertiesObject.locationType, propertiesObject.locationBackground, propertiesObject.locationTimestamp)
-            PropertiesModel::locationType.name -> PropertiesObject(propertiesObject.tags, propertiesObject.language, propertiesObject.timezoneId, propertiesObject.country, propertiesObject.latitude, propertiesObject.longitude, propertiesObject.locationAccuracy, operation.value as Int?, propertiesObject.locationBackground, propertiesObject.locationTimestamp)
-            PropertiesModel::locationBackground.name -> PropertiesObject(propertiesObject.tags, propertiesObject.language, propertiesObject.timezoneId, propertiesObject.country, propertiesObject.latitude, propertiesObject.longitude, propertiesObject.locationAccuracy, propertiesObject.locationType, operation.value as Boolean?, propertiesObject.locationTimestamp)
-            PropertiesModel::locationTimestamp.name -> PropertiesObject(propertiesObject.tags, propertiesObject.language, propertiesObject.timezoneId, propertiesObject.country, propertiesObject.latitude, propertiesObject.longitude, propertiesObject.locationAccuracy, propertiesObject.locationType, propertiesObject.locationBackground, operation.value as Long?)
+            PropertiesModel::language.name -> PropertiesObject(propertiesObject.tags, operation.value?.toString(), propertiesObject.timezoneId, propertiesObject.country, propertiesObject.latitude, propertiesObject.longitude, propertiesObject.locationAccuracy, propertiesObject.locationType, propertiesObject.locationBackground, propertiesObject.locationTimestamp)
+            PropertiesModel::timezone.name -> PropertiesObject(propertiesObject.tags, propertiesObject.language, operation.value?.toString(), propertiesObject.country, propertiesObject.latitude, propertiesObject.longitude, propertiesObject.locationAccuracy, propertiesObject.locationType, propertiesObject.locationBackground, propertiesObject.locationTimestamp)
+            PropertiesModel::country.name -> PropertiesObject(propertiesObject.tags, propertiesObject.language, propertiesObject.timezoneId, operation.value?.toString(), propertiesObject.latitude, propertiesObject.longitude, propertiesObject.locationAccuracy, propertiesObject.locationType, propertiesObject.locationBackground, propertiesObject.locationTimestamp)
+            PropertiesModel::locationLatitude.name -> PropertiesObject(propertiesObject.tags, propertiesObject.language, propertiesObject.timezoneId, propertiesObject.country, operation.value?.toString()?.toDouble(), propertiesObject.longitude, propertiesObject.locationAccuracy, propertiesObject.locationType, propertiesObject.locationBackground, propertiesObject.locationTimestamp)
+            PropertiesModel::locationLongitude.name -> PropertiesObject(propertiesObject.tags, propertiesObject.language, propertiesObject.timezoneId, propertiesObject.country, propertiesObject.latitude, operation.value?.toString()?.toDouble(), propertiesObject.locationAccuracy, propertiesObject.locationType, propertiesObject.locationBackground, propertiesObject.locationTimestamp)
+            PropertiesModel::locationAccuracy.name -> PropertiesObject(propertiesObject.tags, propertiesObject.language, propertiesObject.timezoneId, propertiesObject.country, propertiesObject.latitude, propertiesObject.longitude, operation.value?.toString()?.toFloat(), propertiesObject.locationType, propertiesObject.locationBackground, propertiesObject.locationTimestamp)
+            PropertiesModel::locationType.name -> PropertiesObject(propertiesObject.tags, propertiesObject.language, propertiesObject.timezoneId, propertiesObject.country, propertiesObject.latitude, propertiesObject.longitude, propertiesObject.locationAccuracy, operation.value?.toString()?.toInt(), propertiesObject.locationBackground, propertiesObject.locationTimestamp)
+            PropertiesModel::locationBackground.name -> PropertiesObject(propertiesObject.tags, propertiesObject.language, propertiesObject.timezoneId, propertiesObject.country, propertiesObject.latitude, propertiesObject.longitude, propertiesObject.locationAccuracy, propertiesObject.locationType, operation.value?.toString()?.toBoolean(), propertiesObject.locationTimestamp)
+            PropertiesModel::locationTimestamp.name -> PropertiesObject(propertiesObject.tags, propertiesObject.language, propertiesObject.timezoneId, propertiesObject.country, propertiesObject.latitude, propertiesObject.longitude, propertiesObject.locationAccuracy, propertiesObject.locationType, propertiesObject.locationBackground, operation.value?.toString()?.toLong())
             else -> PropertiesObject(propertiesObject.tags, propertiesObject.language, propertiesObject.timezoneId, propertiesObject.country, propertiesObject.latitude, propertiesObject.longitude, propertiesObject.locationAccuracy, propertiesObject.locationType, propertiesObject.locationBackground, propertiesObject.locationTimestamp)
         }
     }

@@ -2,44 +2,49 @@ package com.onesignal.core.internal.operations
 
 import com.onesignal.core.internal.common.IDManager
 import com.onesignal.core.internal.operations.impl.UserOperationExecutor
-import org.json.JSONObject
 
 /**
  * An [Operation] to update a property related to a specific user.
  */
-internal class SetPropertyOperation(
+internal class SetPropertyOperation() : Operation(UserOperationExecutor.SET_PROPERTY) {
     /**
      * The OneSignal appId the purchase was captured under.
      */
-    val appId: String,
+    var appId: String
+        get() = getProperty(::appId.name)
+        private set(value) { setProperty(::appId.name, value) }
 
     /**
      * The OneSignal ID the purchase was captured under. This ID *may* be locally generated
      * and should go through [IDManager] to ensure correct processing.
      */
-    val onesignalId: String,
+    var onesignalId: String
+        get() = getProperty(::onesignalId.name)
+        private set(value) { setProperty(::onesignalId.name, value) }
 
     /**
      * The property that is to be updated against the user.
      */
-    val property: String,
+    var property: String
+        get() = getProperty(::property.name)
+        private set(value) { setProperty(::property.name, value) }
 
     /**
      * The value of that property to update it to.
      */
-    val value: Any?
-) : Operation(UserOperationExecutor.SET_PROPERTY) {
+    var value: Any?
+        get() = getProperty(::value.name)
+        private set(value) { setProperty(::value.name, value) }
 
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String get() = createComparisonKey
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.ALTER
     override val canStartExecute: Boolean get() = !IDManager.isIdLocalOnly(onesignalId)
 
-    override fun toJSON(): JSONObject {
-        return JSONObject()
-            .put(::appId.name, appId)
-            .put(::onesignalId.name, onesignalId)
-            .put(::property.name, property)
-            .put(::value.name, value)
+    constructor(appId: String, onesignalId: String, property: String, value: Any?) : this() {
+        this.appId = appId
+        this.onesignalId = onesignalId
+        this.property = property
+        this.value = value
     }
 }

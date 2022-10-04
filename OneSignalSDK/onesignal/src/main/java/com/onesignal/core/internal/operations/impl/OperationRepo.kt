@@ -11,9 +11,11 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import java.util.UUID
 
 internal class OperationRepo(
-    executors: List<IOperationExecutor>
+    executors: List<IOperationExecutor>,
+    private val _operationModelStore: OperationModelStore
 ) : IOperationRepo, IStartableService {
 
     private val _executorsMap: Map<String, IOperationExecutor>
@@ -29,6 +31,10 @@ internal class OperationRepo(
             }
         }
         _executorsMap = executorsMap
+
+        for (operation in _operationModelStore.list()) {
+            enqueue(operation, false)
+        }
     }
 
     override fun start() {
@@ -39,8 +45,17 @@ internal class OperationRepo(
     override fun enqueue(operation: Operation, force: Boolean) {
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueue(operation: $operation, force: $force)")
 
+        var isNew = false
+        if (!operation.hasProperty(Operation::id.name)) {
+            isNew = true
+            operation.id = UUID.randomUUID().toString()
+        }
+
         synchronized(_queue) {
             _queue.add(operation)
+            if (isNew) {
+                _operationModelStore.add(operation)
+            }
         }
     }
 
@@ -72,7 +87,7 @@ internal class OperationRepo(
 
                     if (startingOp != null) {
                         _queue.remove(startingOp)
-
+                        _operationModelStore.remove(startingOp!!.id)
                         ops = pickGroupableOperations(startingOp!!)
                     }
                 }
@@ -125,6 +140,7 @@ internal class OperationRepo(
 
                 if (itemKey == startingKey) {
                     _queue.remove(item)
+                    _operationModelStore.remove(item.id)
                     ops.add(item)
                 }
             }

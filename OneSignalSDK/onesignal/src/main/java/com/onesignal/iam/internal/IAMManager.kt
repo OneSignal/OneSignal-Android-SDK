@@ -121,6 +121,7 @@ internal class IAMManager(
         _sessionService.subscribe(this)
 
         suspendifyOnThread {
+            Logging.debug("IAMManager: Initializing In App Messages")
             // get saved IAMs from database
             _redisplayedInAppMessages.addAll(_repository.listInAppMessages())
 
