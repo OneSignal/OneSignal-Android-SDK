@@ -45,7 +45,7 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
         set(value) {
             _current = value
 
-            Logging.debug("_current is NOW: " + if (_current != null) "" + _current?.javaClass?.name + ":" + _current else "null")
+            Logging.debug("ApplicationService: current activity=$current")
 
             if (value != null) {
                 _activityLifecycleNotifier.fire { it.onActivityAvailable(value) }

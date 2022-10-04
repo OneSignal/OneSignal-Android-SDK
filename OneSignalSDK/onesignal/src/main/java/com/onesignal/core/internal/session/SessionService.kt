@@ -57,11 +57,11 @@ internal class SessionService(
         var dt = now - _focusOutTime
 
         if (dt > (_config!!.sessionFocusTimeout * 60 * 1000)) {
-            Logging.debug("Session timeout reached")
+            Logging.debug("SessionService: Session timeout reached")
             createNewSession()
         } else if (dt < 0) {
             // user is messing with system clock
-            Logging.debug("System clock changed to earlier than focus out time")
+            Logging.debug("SessionService: System clock changed to earlier than focus out time")
             createNewSession()
         } else { // just add to the unfocused duration
             _session!!.unfocusedDuration += dt
@@ -75,11 +75,11 @@ internal class SessionService(
 
     private fun createNewSession() {
         // no reason to maintain old session models, just overwrite
-        _session!!.id = UUID.randomUUID().toString()
+        _session!!.sessionId = UUID.randomUUID().toString()
         _session!!.startTime = _time.currentTimeMillis
         _session!!.unfocusedDuration = 0.0
 
-        Logging.debug("New session started at ${_session!!.startTime}")
+        Logging.debug("SessionService: New session started at ${_session!!.startTime}")
         _sessionLifeCycleNotifier.fire { it.sessionStarted() }
     }
 
@@ -132,11 +132,11 @@ internal class SessionService(
     fun restartSessionIfNeeded(entryAction: AppEntryAction) {
         val channelTrackers: List<IChannelTracker> = _influenceManager.getChannelsToResetByEntryAction(entryAction)
         val updatedInfluences: MutableList<Influence> = ArrayList()
-        Logging.debug("OneSignal SessionManager restartSessionIfNeeded with entryAction: $entryAction\n channelTrackers: $channelTrackers")
+        Logging.debug("SessionService.restartSessionIfNeeded(entryAction: $entryAction)\n channelTrackers: $channelTrackers")
 
         for (channelTracker in channelTrackers) {
             val lastIds = channelTracker.lastReceivedIds
-            Logging.debug("OneSignal SessionManager restartSessionIfNeeded lastIds: $lastIds")
+            Logging.debug("SessionService.restartSessionIfNeeded: lastIds: $lastIds")
             val influence = channelTracker.currentSessionInfluence
             var updated: Boolean = if (lastIds.length() > 0) {
                 setSession(
@@ -172,7 +172,7 @@ internal class SessionService(
         channelTracker.directId = directNotificationId
         channelTracker.indirectIds = indirectNotificationIds
         channelTracker.cacheState()
-        Logging.debug("Trackers changed to: " + _influenceManager.channels.toString())
+        Logging.debug("SessionService: Trackers changed to: " + _influenceManager.channels.toString())
         // Session changed
         return true
     }
@@ -198,7 +198,7 @@ internal class SessionService(
     }
 
     private fun attemptSessionUpgrade(entryAction: AppEntryAction, directId: String?) {
-        Logging.debug("OneSignal SessionManager attemptSessionUpgrade with entryAction: $entryAction")
+        Logging.debug("SessionService.attemptSessionUpgrade(entryAction: $entryAction, directId: $directId)")
         val channelTrackerByAction = _influenceManager.getChannelByEntryAction(entryAction)
         val channelTrackersToReset = _influenceManager.getChannelsToResetByEntryAction(entryAction)
         val influencesToEnd: MutableList<Influence> = ArrayList()
@@ -212,7 +212,7 @@ internal class SessionService(
         }
 
         if (updated) {
-            Logging.debug("OneSignal SessionManager attemptSessionUpgrade channel updated, search for ending direct influences on channels: $channelTrackersToReset")
+            Logging.debug("SessionService.attemptSessionUpgrade: channel updated, search for ending direct influences on channels: $channelTrackersToReset")
             influencesToEnd.add(lastInfluence!!)
             // Only one session influence channel can be DIRECT at the same time
             // Reset other DIRECT channels, they will init an INDIRECT influence
@@ -225,7 +225,7 @@ internal class SessionService(
             }
         }
 
-        Logging.debug("OneSignal SessionManager attemptSessionUpgrade try UNATTRIBUTED to INDIRECT upgrade")
+        Logging.debug("SessionService.attemptSessionUpgrade: try UNATTRIBUTED to INDIRECT upgrade")
         // We will try to override the UNATTRIBUTED session with INDIRECT
         for (channelTracker in channelTrackersToReset) {
             if (channelTracker.influenceType?.isUnattributed() == true) {
@@ -242,12 +242,12 @@ internal class SessionService(
             }
         }
 
-        Logging.debug("Trackers after update attempt: " + _influenceManager.channels.toString())
+        Logging.debug("SessionService.attemptSessionUpgrade: Trackers after update attempt: " + _influenceManager.channels.toString())
         sendSessionEndingWithInfluences(influencesToEnd)
     }
 
     private fun sendSessionEndingWithInfluences(endingInfluences: List<Influence>) {
-        Logging.debug("OneSignal SessionManager sendSessionEndingWithInfluences with influences: $endingInfluences")
+        Logging.debug("SessionService.sendSessionEndingWithInfluences(endingInfluences:: $endingInfluences)")
 
         // Only end session if there are influences available to end
         if (endingInfluences.isNotEmpty()) {

@@ -1,7 +1,6 @@
 package com.onesignal.notification.internal
 
 import android.app.Activity
-import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.events.EventProducer
 import com.onesignal.core.internal.common.suspendifyOnThread
@@ -76,7 +75,7 @@ internal class NotificationsManager(
     }
 
     override suspend fun requestPermission(): Boolean {
-        Logging.log(LogLevel.DEBUG, "promptForPushPermissionStatus()")
+        Logging.debug("NotificationsManager.requestPermission()")
 
         // TODO: We do not yet handle the case where the activity is shown to the user, the application
         //       is killed, the app is re-opened (showing the permission activity), and the
@@ -125,7 +124,7 @@ internal class NotificationsManager(
      * @param callback a {@link PostNotificationResponseHandler} object to receive the request result
      */
     override suspend fun postNotification(json: JSONObject): JSONObject {
-        Logging.log(LogLevel.DEBUG, "postNotification(json: $json)")
+        Logging.debug("NotificationsManager.postNotification(json: $json)")
 
         // app_id will not be set if init was never called.
         val appId = if (json.has("app_id")) {
@@ -164,14 +163,14 @@ internal class NotificationsManager(
      * @param id
      */
     override suspend fun removeNotification(id: Int) {
-        Logging.log(LogLevel.DEBUG, "removeNotification(id: $id)")
+        Logging.debug("NotificationsManager.removeNotification(id: $id)")
         if (_notificationDataController.markAsDismissed(id)) {
             _summaryManager.updatePossibleDependentSummaryOnDismiss(id)
         }
     }
 
     override suspend fun removeGroupedNotifications(group: String) {
-        Logging.log(LogLevel.DEBUG, "removeGroupedNotifications(group: $group)")
+        Logging.debug("NotificationsManager.removeGroupedNotifications(group: $group)")
         _notificationDataController.markAsDismissedForGroup(group)
     }
 
@@ -181,7 +180,7 @@ internal class NotificationsManager(
      * your app is restarted.
      */
     override suspend fun clearAll() {
-        Logging.log(LogLevel.DEBUG, "clearAll()")
+        Logging.debug("NotificationsManager.clearAll()")
         _notificationDataController.markAsDismissedForOutstanding()
     }
 
@@ -202,7 +201,7 @@ internal class NotificationsManager(
      *                 the permission changes within
      */
     override fun addPushPermissionHandler(handler: IPermissionChangedHandler) {
-        Logging.log(LogLevel.DEBUG, "addPushPermissionHandler(handler: $handler)")
+        Logging.debug("NotificationsManager.addPushPermissionHandler(handler: $handler)")
         _permissionChangedNotifier.subscribe(handler)
     }
 
@@ -212,7 +211,7 @@ internal class NotificationsManager(
      * @param handler The previously added handler that should be removed.
      */
     override fun removePushPermissionHandler(handler: IPermissionChangedHandler) {
-        Logging.log(LogLevel.DEBUG, "removePushPermissionHandler(handler: $handler)")
+        Logging.debug("NotificationsManager.removePushPermissionHandler(handler: $handler)")
         _permissionChangedNotifier.unsubscribe(handler)
     }
 
@@ -226,7 +225,7 @@ internal class NotificationsManager(
      * @param handler: The handler that is to be called when the even occurs.
      */
     override fun setNotificationWillShowInForegroundHandler(handler: INotificationWillShowInForegroundHandler) {
-        Logging.log(LogLevel.DEBUG, "setNotificationWillShowInForegroundHandler(handler: $handler)")
+        Logging.debug("NotificationsManager.setNotificationWillShowInForegroundHandler(handler: $handler)")
         _notificationLifecycleService.setExternalWillShowInForegroundHandler(handler)
     }
 
@@ -236,7 +235,7 @@ internal class NotificationsManager(
      * @param handler The handler that is to be called when the event occurs.
      */
     override fun setNotificationOpenedHandler(handler: INotificationOpenedHandler) {
-        Logging.log(LogLevel.DEBUG, "setNotificationOpenedHandler(handler: $handler)")
+        Logging.debug("NotificationsManager.setNotificationOpenedHandler(handler: $handler)")
         _notificationLifecycleService.setExternalNotificationOpenedHandler(handler)
     }
 

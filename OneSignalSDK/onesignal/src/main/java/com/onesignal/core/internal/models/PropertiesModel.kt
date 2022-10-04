@@ -2,6 +2,7 @@ package com.onesignal.core.internal.models
 
 import com.onesignal.core.internal.modeling.MapModel
 import com.onesignal.core.internal.modeling.Model
+import org.json.JSONObject
 
 internal class PropertiesModel : Model() {
     /**
@@ -79,4 +80,14 @@ internal class PropertiesModel : Model() {
     var locationTimestamp: Long?
         get() = getProperty(::locationTimestamp.name)
         set(value) { setProperty(::locationTimestamp.name, value) }
+
+    override fun createModelForProperty(property: String, jsonObject: JSONObject): Model? {
+        if (property == ::tags.name) {
+            val model = MapModel<String>(this, ::tags.name)
+            model.initializeFromJson(jsonObject)
+            return model
+        }
+
+        return null
+    }
 }

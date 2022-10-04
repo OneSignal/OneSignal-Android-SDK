@@ -1,15 +1,21 @@
 package com.onesignal.core.internal.modeling
 
 import com.onesignal.core.internal.common.events.IEventNotifier
+import org.json.JSONObject
 
 /**
- * A model store provides access to the underlying models.  A model is
- * automatically persisted locally across the application lifecycle by
- * the model store itself.  A model store is a key store, each model
- * in the model store must have a unique identifier for retrieving
- * a specific model.
+ * A model store provides access to the underlying models.  A model store is a key store, each model
+ * in the model store must have a unique [Model.id] for retrieving a specific model.
  */
 internal interface IModelStore<TModel> : IEventNotifier<IModelStoreChangeHandler<TModel>> where TModel : Model {
+
+    /**
+     * Create a new instance of the model and add it to the store. The new instance is *not* added
+     * to the model store, because it may not yet have an [Model.id] which is required.
+     *
+     * @param jsonObject The optional [JSONObject] to initialize the new model with.
+     */
+    fun create(jsonObject: JSONObject? = null): TModel
 
     /**
      * List the keys of the models that are owned by this model store.

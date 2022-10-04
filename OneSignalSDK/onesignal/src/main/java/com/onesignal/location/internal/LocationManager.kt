@@ -155,13 +155,13 @@ internal class LocationManager(
 
     // Started from this class or PermissionActivity
     private suspend fun startGetLocation() {
-        Logging.debug("LocationController startGetLocation") // with lastLocation: " + lastLocation)
+        Logging.debug("LocationManager.startGetLocation()") // with lastLocation: " + lastLocation)
         try {
             if (!_locationController!!.start()) {
-                Logging.warn("LocationController startGetLocation not possible, no location dependency found")
+                Logging.warn("LocationManager.startGetLocation: not possible, no location dependency found")
             }
         } catch (t: Throwable) {
-            Logging.warn("Location permission exists but there was an error initializing: ", t)
+            Logging.warn("LocationManager.startGetLocation: Location permission exists but there was an error initializing: ", t)
         }
     }
 }

@@ -30,7 +30,7 @@ internal class ParamsBackendService(
         // in which case there's some fatal error and things need to shut down.
         var androidParamsRetries = 0
         do {
-            Logging.debug("Starting request to get Android parameters.")
+            Logging.debug("ParamsBackendService: Starting request to get Android parameters.")
             val response = _http.get(paramsUrl, CacheKeys.REMOTE_PARAMS)
 
             if (response.isSuccess) {

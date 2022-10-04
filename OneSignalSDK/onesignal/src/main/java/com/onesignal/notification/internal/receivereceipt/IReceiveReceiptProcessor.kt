@@ -10,7 +10,9 @@ internal interface IReceiveReceiptProcessor {
     /**
      * Send the receive receipt to the backend on the current thread.
      *
+     * @param appId The id of the application the notification was received under.
+     * @param subscriptionId The id of the subscription the notification was received under.
      * @param notificationId The id of the notification that has been received.
      */
-    suspend fun sendReceiveReceipt(notificationId: String)
+    suspend fun sendReceiveReceipt(appId: String, subscriptionId: String, notificationId: String)
 }

@@ -3,10 +3,9 @@ package com.onesignal.core.internal.modeling
 import com.onesignal.core.internal.common.events.IEventNotifier
 
 /**
- * A model store that expects to only store a single instance
- * of a model. It behaves like an [IModelStore] with the exception that
- * there are no IDs, and there is an expectation that the (one) model
- * always exists.
+ * A model store that expects to only contain a single [Model] within it.  It behaves like an
+ * [IModelStore] with the exception that there are no IDs, and there is an expectation that the
+ * (one) model always exists.
  */
 internal interface ISingletonModelStore<TModel> :
     IEventNotifier<ISingletonModelStoreChangeHandler<TModel>> where TModel : Model {
@@ -18,7 +17,10 @@ internal interface ISingletonModelStore<TModel> :
     fun get(): TModel
 
     /**
-     * Entirely replace the existing model with the new model provided.
+     * Replace the existing model with the new model provided.
+     *
+     * @param model A model that contains all the data for the new effective model.
+     * @param fireEvent Whether an event should be fired for this update action.
      */
     fun replace(model: TModel, fireEvent: Boolean = true)
 }
