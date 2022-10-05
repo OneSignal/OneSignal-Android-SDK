@@ -3,6 +3,7 @@ package com.onesignal.core.internal.user
 import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.backend.IdentityConstants
 import com.onesignal.core.internal.common.suspendifyOnThread
+import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.models.IdentityModel
 import com.onesignal.core.internal.models.IdentityModelStore
@@ -19,6 +20,7 @@ internal open class UserManager(
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
     private val _triggerModelStore: TriggerModelStore,
+    private val _languageContext: ILanguageContext,
     private val _outcomeController: IOutcomeEventsController
 ) : IUserManager {
 
@@ -26,8 +28,8 @@ internal open class UserManager(
         get() = _identityModel.externalId
 
     override var language: String
-        get() = _propertiesModel.language
-        set(value) { _propertiesModel.language = value }
+        get() = _languageContext.language
+        set(value) { _languageContext.language = value }
 
     override val tags: Map<String, String>
         get() = _propertiesModel.tags

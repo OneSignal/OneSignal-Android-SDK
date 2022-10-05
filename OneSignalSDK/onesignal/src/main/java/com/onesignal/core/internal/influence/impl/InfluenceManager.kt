@@ -8,8 +8,7 @@ import com.onesignal.core.internal.influence.Influence
 import com.onesignal.core.internal.influence.InfluenceChannel
 import com.onesignal.core.internal.influence.InfluenceType
 import com.onesignal.core.internal.logging.Logging
-import com.onesignal.core.internal.params.IParamsChangedHandler
-import com.onesignal.core.internal.params.IParamsService
+import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.session.ISessionLifecycleHandler
 import com.onesignal.core.internal.session.ISessionService
@@ -21,12 +20,12 @@ import java.util.concurrent.ConcurrentHashMap
 internal class InfluenceManager(
     private val _sessionService: ISessionService,
     private val _applicationService: IApplicationService,
-    private val _paramsService: IParamsService,
+    private val _configModelStore: ConfigModelStore,
     preferences: IPreferencesService,
     timeProvider: ITime
-) : IInfluenceManager, ISessionLifecycleHandler, IParamsChangedHandler {
+) : IInfluenceManager, ISessionLifecycleHandler {
     private val trackers = ConcurrentHashMap<String, ChannelTracker>()
-    private val dataRepository: InfluenceDataRepository = InfluenceDataRepository(preferences)
+    private val dataRepository: InfluenceDataRepository = InfluenceDataRepository(preferences, _configModelStore)
 
     override val influences: List<Influence>
         get() = trackers.values.map { it.currentSessionInfluence }
@@ -50,15 +49,10 @@ internal class InfluenceManager(
         trackers[InfluenceConstants.NOTIFICATION_TAG] = NotificationTracker(dataRepository, timeProvider)
 
         _sessionService.subscribe(this)
-        _paramsService.subscribe(this)
 
         trackers.values.forEach {
             it.initInfluencedTypeFromCache()
         }
-    }
-
-    override fun onParamsChanged() {
-        dataRepository.saveInfluenceParams(_paramsService.influenceParams)
     }
 
     override fun sessionStarted() {

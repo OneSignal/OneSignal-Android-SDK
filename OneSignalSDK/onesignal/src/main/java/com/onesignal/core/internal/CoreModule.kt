@@ -20,6 +20,9 @@ import com.onesignal.core.internal.http.HttpClient
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.influence.IInfluenceManager
 import com.onesignal.core.internal.influence.impl.InfluenceManager
+import com.onesignal.core.internal.language.ILanguageContext
+import com.onesignal.core.internal.language.impl.LanguageContext
+import com.onesignal.core.internal.listeners.ConfigModelStoreListener
 import com.onesignal.core.internal.listeners.IdentityModelStoreListener
 import com.onesignal.core.internal.listeners.PropertiesModelStoreListener
 import com.onesignal.core.internal.listeners.SubscriptionModelStoreListener
@@ -44,10 +47,6 @@ import com.onesignal.core.internal.outcomes.impl.OutcomeEventsBackend
 import com.onesignal.core.internal.outcomes.impl.OutcomeEventsCache
 import com.onesignal.core.internal.outcomes.impl.OutcomeEventsController
 import com.onesignal.core.internal.outcomes.impl.OutcomeEventsPreferences
-import com.onesignal.core.internal.params.IParamsService
-import com.onesignal.core.internal.params.IWriteableParamsService
-import com.onesignal.core.internal.params.ParamsService
-import com.onesignal.core.internal.params.RefreshParamsService
 import com.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
@@ -82,11 +81,8 @@ internal object CoreModule {
 
         // Params (Config)
         builder.register<ConfigModelStore>().provides<ConfigModelStore>()
-        builder.register<ParamsService>()
-            .provides<IParamsService>()
-            .provides<IWriteableParamsService>()
         builder.register<ParamsBackendService>().provides<IParamsBackendService>()
-        builder.register<RefreshParamsService>().provides<IStartableService>()
+        builder.register<ConfigModelStoreListener>().provides<IStartableService>()
 
         // Operations
         builder.register<OperationModelStore>().provides<OperationModelStore>()
@@ -109,6 +105,9 @@ internal object CoreModule {
 
         // Influence
         builder.register<InfluenceManager>().provides<IInfluenceManager>()
+
+        // Language
+        builder.register<LanguageContext>().provides<ILanguageContext>()
 
         // Session
         builder.register<SessionModelStore>().provides<SessionModelStore>()

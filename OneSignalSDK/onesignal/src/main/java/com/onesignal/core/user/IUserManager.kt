@@ -27,7 +27,8 @@ interface IUserManager {
     val externalId: String?
 
     /**
-     * The language string for the current user.
+     * The 2-character language either as a detected language or explicitly set for this user. See
+     * See [Supported Languages | OneSignal](https://documentation.onesignal.com/docs/language-localization#what-languages-are-supported)
      */
     var language: String
 

@@ -10,6 +10,7 @@ import com.onesignal.core.internal.common.events.CallbackProducer
 import com.onesignal.core.internal.common.events.ICallbackProducer
 import com.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.core.internal.influence.IInfluenceManager
+import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.core.internal.models.ConfigModel
@@ -60,6 +61,7 @@ internal class IAMManager(
     private val _triggerController: ITriggerController,
     private val _displayer: IInAppDisplayer,
     private val _lifecycle: IInAppLifecycleService,
+    private val _languageContext: ILanguageContext,
     private val _time: ITime
 ) : IIAMManager,
     IStartableService,
@@ -121,7 +123,6 @@ internal class IAMManager(
         _sessionService.subscribe(this)
 
         suspendifyOnThread {
-            Logging.debug("IAMManager: Initializing In App Messages")
             // get saved IAMs from database
             _redisplayedInAppMessages.addAll(_repository.listInAppMessages())
 
@@ -454,7 +455,7 @@ internal class IAMManager(
         // Add the messageId to impressioned messages so no second request is made
         _impressionedMessages.add(message.messageId)
 
-        val variantId = InAppHelper.variantIdForMessage(message) ?: return
+        val variantId = InAppHelper.variantIdForMessage(message, _languageContext) ?: return
 
         suspendifyOnThread {
             val response = _backend.sendIAMImpression(
@@ -673,7 +674,7 @@ internal class IAMManager(
     }
 
     private suspend fun fireRESTCallForPageChange(message: InAppMessage, page: InAppMessagePage) {
-        val variantId = InAppHelper.variantIdForMessage(message) ?: return
+        val variantId = InAppHelper.variantIdForMessage(message, _languageContext) ?: return
         val pageId = page.pageId
         val messagePrefixedPageId = message.messageId + pageId
 
@@ -700,7 +701,7 @@ internal class IAMManager(
     }
 
     private suspend fun fireRESTCallForClick(message: InAppMessage, action: InAppMessageAction) {
-        val variantId = InAppHelper.variantIdForMessage(message) ?: return
+        val variantId = InAppHelper.variantIdForMessage(message, _languageContext) ?: return
         val clickId = action.clickId
 
         // If IAM has redisplay the clickId may be available

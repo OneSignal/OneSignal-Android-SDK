@@ -36,7 +36,7 @@ import androidx.core.app.NotificationManagerCompat
 import com.onesignal.core.internal.common.JSONUtils
 import com.onesignal.core.internal.database.impl.OneSignalDbContract
 import com.onesignal.core.internal.logging.Logging
-import com.onesignal.core.internal.params.IParamsService
+import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.notification.internal.common.NotificationFormatHelper
 import com.onesignal.notification.internal.common.NotificationHelper
@@ -51,7 +51,7 @@ import org.json.JSONObject
 internal class NotificationOpenedProcessor(
     private val _summaryManager: INotificationSummaryManager,
     private val _dataController: INotificationDataController,
-    private val _paramsService: IParamsService,
+    private val _configModelStore: ConfigModelStore,
     private val _lifecycleService: INotificationLifecycleService
 ) : INotificationOpenedProcessor {
 
@@ -178,7 +178,7 @@ internal class NotificationOpenedProcessor(
             intent.getIntExtra(NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0),
             dismissed,
             summaryGroup,
-            _paramsService.clearGroupOnSummaryClick
+            _configModelStore.get().clearGroupOnSummaryClick
         )
     }
 

@@ -1,7 +1,7 @@
 package com.onesignal.core.internal.influence.impl
 
 import com.onesignal.core.internal.influence.InfluenceType
-import com.onesignal.core.internal.params.IParamsService
+import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceStores
 import org.json.JSONArray
@@ -10,7 +10,10 @@ import org.json.JSONException
 /**
  * Setter and Getter of Notifications received
  */
-internal class InfluenceDataRepository(private val preferences: IPreferencesService) :
+internal class InfluenceDataRepository(
+    private val preferences: IPreferencesService,
+    private val _configModelStore: ConfigModelStore
+) :
     IInfluenceDataRepository {
     /**
      * Cache a influence type enum for Notification as a string
@@ -121,89 +124,23 @@ internal class InfluenceDataRepository(private val preferences: IPreferencesServ
         }
 
     override val notificationLimit: Int
-        get() = preferences.getInt(
-            PreferenceStores.ONESIGNAL,
-            InfluenceConstants.PREFS_OS_NOTIFICATION_LIMIT,
-            IParamsService.InfluenceParams.DEFAULT_NOTIFICATION_LIMIT
-        )!!
+        get() = _configModelStore.get().influenceParams.notificationLimit
 
     override val iamLimit: Int
-        get() = preferences.getInt(
-            PreferenceStores.ONESIGNAL,
-            InfluenceConstants.PREFS_OS_IAM_LIMIT,
-            IParamsService.InfluenceParams.DEFAULT_NOTIFICATION_LIMIT
-        )!!
+        get() = _configModelStore.get().influenceParams.iamLimit
 
     override val notificationIndirectAttributionWindow: Int
-        get() = preferences.getInt(
-            PreferenceStores.ONESIGNAL,
-            InfluenceConstants.PREFS_OS_NOTIFICATION_INDIRECT_ATTRIBUTION_WINDOW,
-            IParamsService.InfluenceParams.DEFAULT_INDIRECT_ATTRIBUTION_WINDOW
-        )!!
+        get() = _configModelStore.get().influenceParams.indirectNotificationAttributionWindow
 
     override val iamIndirectAttributionWindow: Int
-        get() = preferences.getInt(
-            PreferenceStores.ONESIGNAL,
-            InfluenceConstants.PREFS_OS_IAM_INDIRECT_ATTRIBUTION_WINDOW,
-            IParamsService.InfluenceParams.DEFAULT_INDIRECT_ATTRIBUTION_WINDOW
-        )!!
+        get() = _configModelStore.get().influenceParams.indirectIAMAttributionWindow
 
     override val isDirectInfluenceEnabled: Boolean
-        get() = preferences.getBool(
-            PreferenceStores.ONESIGNAL,
-            InfluenceConstants.PREFS_OS_DIRECT_ENABLED,
-            false
-        )!!
+        get() = _configModelStore.get().influenceParams.isDirectEnabled
 
     override val isIndirectInfluenceEnabled: Boolean
-        get() = preferences.getBool(
-            PreferenceStores.ONESIGNAL,
-            InfluenceConstants.PREFS_OS_INDIRECT_ENABLED,
-            false
-        )!!
+        get() = _configModelStore.get().influenceParams.isIndirectEnabled
 
     override val isUnattributedInfluenceEnabled: Boolean
-        get() = preferences.getBool(
-            PreferenceStores.ONESIGNAL,
-            InfluenceConstants.PREFS_OS_UNATTRIBUTED_ENABLED,
-            false
-        )!!
-
-    override fun saveInfluenceParams(influenceParams: IParamsService.InfluenceParams) {
-        preferences.saveBool(
-            PreferenceStores.ONESIGNAL,
-            InfluenceConstants.PREFS_OS_DIRECT_ENABLED,
-            influenceParams.isDirectEnabled
-        )
-        preferences.saveBool(
-            PreferenceStores.ONESIGNAL,
-            InfluenceConstants.PREFS_OS_INDIRECT_ENABLED,
-            influenceParams.isIndirectEnabled
-        )
-        preferences.saveBool(
-            PreferenceStores.ONESIGNAL,
-            InfluenceConstants.PREFS_OS_UNATTRIBUTED_ENABLED,
-            influenceParams.isUnattributedEnabled
-        )
-        preferences.saveInt(
-            PreferenceStores.ONESIGNAL,
-            InfluenceConstants.PREFS_OS_NOTIFICATION_LIMIT,
-            influenceParams.notificationLimit
-        )
-        preferences.saveInt(
-            PreferenceStores.ONESIGNAL,
-            InfluenceConstants.PREFS_OS_NOTIFICATION_INDIRECT_ATTRIBUTION_WINDOW,
-            influenceParams.indirectNotificationAttributionWindow
-        )
-        preferences.saveInt(
-            PreferenceStores.ONESIGNAL,
-            InfluenceConstants.PREFS_OS_IAM_LIMIT,
-            influenceParams.iamLimit
-        )
-        preferences.saveInt(
-            PreferenceStores.ONESIGNAL,
-            InfluenceConstants.PREFS_OS_IAM_INDIRECT_ATTRIBUTION_WINDOW,
-            influenceParams.indirectIAMAttributionWindow
-        )
-    }
+        get() = _configModelStore.get().influenceParams.isUnattributedEnabled
 }
