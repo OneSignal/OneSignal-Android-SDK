@@ -176,7 +176,14 @@ internal class UserOperationExecutor(
                         onesignalId = operation.onesignalId
                     }
 
-                    deltasObject = PropertiesDeltasObject(operation.sessionTime, operation.sessionCount, deltasObject.amountSpent, deltasObject.purchases)
+                    // The session count we pass up is essentially the number of `TrackSessionOperation`
+                    // operations we come across in this group, while the session time we pass up is
+                    // the total session time across all `TrackSessionOperation` operations
+                    // that exist in this group.
+                    val sessionTime = if (deltasObject.sessionTime != null) deltasObject.sessionTime!! + operation.sessionTime else operation.sessionTime
+                    val sessionCount = if (deltasObject.sessionCounts != null) deltasObject.sessionCounts!! + 1 else 1
+
+                    deltasObject = PropertiesDeltasObject(sessionTime, sessionCount, deltasObject.amountSpent, deltasObject.purchases)
                 }
                 is TrackPurchaseOperation -> {
                     if (appId == null) {
@@ -184,12 +191,17 @@ internal class UserOperationExecutor(
                         onesignalId = operation.onesignalId
                     }
 
-                    val purchasesArray = mutableListOf<PurchaseObject>()
+                    // The amount spent we pass up is the total amount spent across all `TrackPurchaseOperation`
+                    // operations that exist in this group, while the purchases is the union of all
+                    // `TrackPurchaseOperation` operations that exist in this group.
+                    val amountSpent = if (deltasObject.amountSpent != null) deltasObject.amountSpent!! + operation.amountSpent else operation.amountSpent
+                    val purchasesArray = if (deltasObject.purchases != null) deltasObject.purchases!!.toMutableList() else mutableListOf()
+
                     for (purchase in operation.purchases) {
                         purchasesArray.add(PurchaseObject(purchase.sku, purchase.iso, purchase.amount))
                     }
 
-                    deltasObject = PropertiesDeltasObject(deltasObject.sessionTime, deltasObject.sessionCounts, operation.amountSpent, purchasesArray)
+                    deltasObject = PropertiesDeltasObject(deltasObject.sessionTime, deltasObject.sessionCounts, amountSpent, purchasesArray)
                 }
             }
         }
