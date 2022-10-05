@@ -173,7 +173,7 @@ internal class IAMManager(
 
     override fun onSubscriptionRemoved(subscription: ISubscription) { }
 
-    override fun sessionStarted() {
+    override fun onSessionStarted() {
         for (redisplayInAppMessage in _redisplayedInAppMessages) {
             redisplayInAppMessage.isDisplayedInSession = false
         }
@@ -183,7 +183,8 @@ internal class IAMManager(
         }
     }
 
-    override fun sessionResumed() { }
+    override fun onSessionActive() { }
+    override fun onSessionEnded(duration: Long) { }
 
     // called when a new push subscription is added, or the app id is updated, or a new session starts
     private suspend fun fetchMessages() {

@@ -42,13 +42,14 @@ internal class OutcomeEventsController(
         }
     }
 
-    override fun sessionStarted() {
+    override fun onSessionStarted() {
         Logging.debug("OutcomeEventsController.sessionStarted: Cleaning outcomes for new session")
         unattributedUniqueOutcomeEventsSentOnSession = mutableSetOf()
         saveUnattributedUniqueOutcomeEvents()
     }
 
-    override fun sessionResumed() { }
+    override fun onSessionActive() { }
+    override fun onSessionEnded(duration: Long) { }
 
     /**
      * Any outcomes cached in local DB will be reattempted to be sent again

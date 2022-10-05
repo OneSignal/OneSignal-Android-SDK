@@ -94,7 +94,7 @@ internal class BackgroundManager(
         var minDelay: Long? = null
 
         for (backgroundService in _backgroundServices) {
-            val scheduleIn = backgroundService.scheduleIn
+            val scheduleIn = backgroundService.scheduleBackgroundRunIn
             if (scheduleIn != null) {
                 if (minDelay == null || scheduleIn < minDelay) {
                     minDelay = scheduleIn
@@ -122,7 +122,7 @@ internal class BackgroundManager(
             synchronized(_lock) { _nextScheduledSyncTimeMs = 0L }
 
             for (backgroundService in _backgroundServices) {
-                backgroundService.run()
+                backgroundService.backgroundRun()
             }
 
             scheduleBackground()
