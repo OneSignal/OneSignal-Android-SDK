@@ -15,17 +15,16 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.notification.internal.common.NotificationGenerationJob
 import com.onesignal.notification.internal.common.NotificationHelper
-import com.onesignal.notification.internal.data.INotificationDataController
+import com.onesignal.notification.internal.data.INotificationRepository
 import com.onesignal.notification.internal.display.INotificationDisplayBuilder
 import com.onesignal.notification.internal.display.ISummaryNotificationDisplayer
-import kotlinx.coroutines.coroutineScope
 import org.json.JSONObject
 import java.security.SecureRandom
 import java.util.Random
 
 internal class SummaryNotificationDisplayer(
     private val _applicationService: IApplicationService,
-    private val _dataController: INotificationDataController,
+    private val _dataController: INotificationRepository,
     private val _notificationDisplayBuilder: INotificationDisplayBuilder
 ) : ISummaryNotificationDisplayer {
     private val currentContext: Context
@@ -89,7 +88,7 @@ internal class SummaryNotificationDisplayer(
         notificationJob: NotificationGenerationJob,
         notifBuilder: NotificationDisplayBuilder.OneSignalNotificationBuilder?,
         groupAlertBehavior: Int
-    ) = coroutineScope {
+    ) {
         val updateSummary: Boolean = notificationJob.isRestoring
         var fcmJson: JSONObject = notificationJob.jsonPayload!!
         val intentGenerator = IntentGeneratorForAttachingToNotifications(currentContext!!)

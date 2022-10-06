@@ -4,14 +4,14 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.notification.internal.common.NotificationHelper
-import com.onesignal.notification.internal.data.INotificationDataController
+import com.onesignal.notification.internal.data.INotificationRepository
 import com.onesignal.notification.internal.limiting.INotificationLimitManager
 import com.onesignal.notification.internal.summary.INotificationSummaryManager
 import java.util.SortedMap
 import java.util.TreeMap
 
 internal class NotificationLimitManager(
-    private val _dataController: INotificationDataController,
+    private val _dataController: INotificationRepository,
     private val _applicationService: IApplicationService,
     private val _notificationSummaryManager: INotificationSummaryManager
 ) : INotificationLimitManager {

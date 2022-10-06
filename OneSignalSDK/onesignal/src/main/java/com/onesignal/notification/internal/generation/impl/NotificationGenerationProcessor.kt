@@ -11,7 +11,7 @@ import com.onesignal.notification.internal.Notification
 import com.onesignal.notification.internal.NotificationReceivedEvent
 import com.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.notification.internal.common.NotificationGenerationJob
-import com.onesignal.notification.internal.data.INotificationDataController
+import com.onesignal.notification.internal.data.INotificationRepository
 import com.onesignal.notification.internal.display.INotificationDisplayer
 import com.onesignal.notification.internal.generation.INotificationGenerationProcessor
 import com.onesignal.notification.internal.lifecycle.INotificationLifecycleService
@@ -29,7 +29,7 @@ internal class NotificationGenerationProcessor(
     private val _applicationService: IApplicationService,
     private val _notificationDisplayer: INotificationDisplayer,
     private val _configModelStore: ConfigModelStore,
-    private val _dataController: INotificationDataController,
+    private val _dataController: INotificationRepository,
     private val _notificationSummaryManager: INotificationSummaryManager,
     private val _lifecycleService: INotificationLifecycleService,
     private val _sessionService: ISessionService,

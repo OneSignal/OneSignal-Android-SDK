@@ -39,9 +39,9 @@ public class OneSignalNotificationSender {
                     {
                         Log.d(Tag.DEBUG, "Success sending notification: " + r.getData().toString());
                     }
-                    else
+                    else if(r.getThrowable() != null)
                     {
-                        Log.d(Tag.ERROR, "Failure sending notification: " + r.getData().toString());
+                        Log.d(Tag.ERROR, "Failure sending notification: ", r.getThrowable());
                     }
                 }));
             } catch (JSONException e) {

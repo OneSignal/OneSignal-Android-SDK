@@ -9,7 +9,19 @@ internal class DatabaseProvider(
     private val _application: IApplicationService
 ) : IDatabaseProvider {
 
-    override fun get(): IDatabase {
-        return OSDatabase(OutcomeTableProvider(), _application.appContext)
-    }
+    private val _lock = Any()
+    private var _osDatabase: OSDatabase? = null
+
+    override val os: IDatabase
+        get() {
+            if (_osDatabase == null) {
+                synchronized(_lock) {
+                    if (_osDatabase == null) {
+                        _osDatabase = OSDatabase(OutcomeTableProvider(), _application.appContext)
+                    }
+                }
+            }
+
+            return _osDatabase!!
+        }
 }

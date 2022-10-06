@@ -19,7 +19,7 @@ import com.onesignal.core.internal.time.ITime
 internal class OutcomeEventsController(
     private val _session: ISessionService,
     private val _influenceManager: IInfluenceManager,
-    private val _outcomeEventsCache: IOutcomeEventsCache,
+    private val _outcomeEventsCache: IOutcomeEventsRepository,
     private val _outcomeEventsPreferences: IOutcomeEventsPreferences,
     private val _outcomeEventsBackend: IOutcomeEventsBackend,
     private val _configModelStore: ConfigModelStore,
