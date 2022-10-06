@@ -16,8 +16,8 @@ import com.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.core.internal.database.impl.DatabaseProvider
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.device.impl.DeviceService
-import com.onesignal.core.internal.http.HttpClient
 import com.onesignal.core.internal.http.IHttpClient
+import com.onesignal.core.internal.http.impl.HttpClient
 import com.onesignal.core.internal.influence.IInfluenceManager
 import com.onesignal.core.internal.influence.impl.InfluenceManager
 import com.onesignal.core.internal.language.ILanguageContext
@@ -40,10 +40,10 @@ import com.onesignal.core.internal.operations.impl.OperationRepo
 import com.onesignal.core.internal.operations.impl.SubscriptionOperationExecutor
 import com.onesignal.core.internal.operations.impl.UserOperationExecutor
 import com.onesignal.core.internal.outcomes.IOutcomeEventsController
-import com.onesignal.core.internal.outcomes.impl.IOutcomeEventsBackend
+import com.onesignal.core.internal.outcomes.impl.IOutcomeEventsBackendService
 import com.onesignal.core.internal.outcomes.impl.IOutcomeEventsCache
 import com.onesignal.core.internal.outcomes.impl.IOutcomeEventsPreferences
-import com.onesignal.core.internal.outcomes.impl.OutcomeEventsBackend
+import com.onesignal.core.internal.outcomes.impl.OutcomeEventsBackendService
 import com.onesignal.core.internal.outcomes.impl.OutcomeEventsCache
 import com.onesignal.core.internal.outcomes.impl.OutcomeEventsController
 import com.onesignal.core.internal.outcomes.impl.OutcomeEventsPreferences
@@ -98,7 +98,7 @@ internal object CoreModule {
         // Outcomes
         builder.register<OutcomeEventsPreferences>().provides<IOutcomeEventsPreferences>()
         builder.register<OutcomeEventsCache>().provides<IOutcomeEventsCache>()
-        builder.register<OutcomeEventsBackend>().provides<IOutcomeEventsBackend>()
+        builder.register<OutcomeEventsBackendService>().provides<IOutcomeEventsBackendService>()
         builder.register<OutcomeEventsController>()
             .provides<IOutcomeEventsController>()
             .provides<IStartableService>()

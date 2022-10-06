@@ -2,6 +2,7 @@ package com.onesignal.notification.internal
 
 import android.app.Activity
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.backend.BackendException
 import com.onesignal.core.internal.common.events.EventProducer
 import com.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.core.internal.logging.Logging
@@ -134,22 +135,22 @@ internal class NotificationsManager(
             config.appId ?: return JSONObject().put("error", "Missing app_id")
         }
 
-        var response = _backend.postNotification(appId, json)
-        if (response.isSuccess) {
-            val jsonObject = JSONObject(response.payload!!)
+        try {
+            var jsonObject = _backend.postNotification(appId, json)
+
             if (!jsonObject.has("errors")) {
                 return jsonObject
             } else {
                 throw PostNotificationException(jsonObject)
             }
-        } else {
-            val jsonObject = if (response.payload != null) {
-                JSONObject(response.payload)
+        } catch (ex: BackendException) {
+            val jsonObject = if (ex.response != null) {
+                JSONObject(ex.response)
             } else {
                 JSONObject("{\"error\": \"HTTP no response error\"}")
             }
 
-            throw PostNotificationException(JSONObject(response.payload!!))
+            throw PostNotificationException(jsonObject)
         }
     }
 
