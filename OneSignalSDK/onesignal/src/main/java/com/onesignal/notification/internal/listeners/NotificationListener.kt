@@ -3,9 +3,11 @@ package com.onesignal.notification.internal.listeners
 import android.app.Activity
 import com.onesignal.core.internal.application.AppEntryAction
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.backend.BackendException
 import com.onesignal.core.internal.common.JSONUtils
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.influence.IInfluenceManager
+import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
@@ -76,7 +78,16 @@ internal class NotificationListener(
             }
             _postedOpenedNotifIds.add(notificationId)
 
-            _backend.updateNotificationAsOpened(appId, notificationId, subscriptionId, deviceType)
+            try {
+                _backend.updateNotificationAsOpened(
+                    appId,
+                    notificationId,
+                    subscriptionId,
+                    deviceType
+                )
+            } catch (ex: BackendException) {
+                Logging.error("Notification opened confirmation failed with statusCode: ${ex.statusCode} response: ${ex.response}")
+            }
         }
 
         val openResult = NotificationHelper.generateNotificationOpenedResult(data, _time)

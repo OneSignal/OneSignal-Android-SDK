@@ -1,6 +1,6 @@
 package com.onesignal.iam.internal.backend
 
-import com.onesignal.core.internal.http.HttpResponse
+import com.onesignal.core.internal.backend.BackendException
 import com.onesignal.iam.internal.InAppMessage
 import com.onesignal.iam.internal.InAppMessageContent
 
@@ -40,6 +40,8 @@ internal interface IInAppBackendService {
     /**
      * Indicate an IAM was clicked on by the user.
      *
+     * If there is a non-successful response from the backend, a [BackendException] will be thrown with response data.
+     *
      * @param appId The ID of the application the IAM came from.
      * @param subscriptionId The ID of the subscription the IAM was delivered to.
      * @param variantId The ID of the variant that was shown to the user.
@@ -54,10 +56,12 @@ internal interface IInAppBackendService {
         messageId: String,
         clickId: String?,
         isFirstClick: Boolean
-    ): HttpResponse
+    )
 
     /**
      * Indicate an impression against an IAM.
+     *
+     * If there is a non-successful response from the backend, a [BackendException] will be thrown with response data.
      *
      * @param appId The ID of the application the IAM came from.
      * @param subscriptionId The ID of the subscription the IAM was delivered to.
@@ -69,10 +73,12 @@ internal interface IInAppBackendService {
         subscriptionId: String,
         variantId: String?,
         messageId: String
-    ): HttpResponse
+    )
 
     /**
      * Indicate an impression against an IAM page.
+     *
+     * If there is a non-successful response from the backend, a [BackendException] will be thrown with response data.
      *
      * @param appId The ID of the application the IAM came from.
      * @param subscriptionId The ID of the subscription the IAM was delivered to.
@@ -86,7 +92,7 @@ internal interface IInAppBackendService {
         variantId: String?,
         messageId: String,
         pageId: String?
-    ): HttpResponse
+    )
 }
 
 internal class GetIAMDataResponse(

@@ -1,18 +1,18 @@
 package com.onesignal.core.internal.outcomes.impl
 
-import com.onesignal.core.internal.http.HttpResponse
+import com.onesignal.core.internal.backend.BackendException
 import com.onesignal.core.internal.http.IHttpClient
 import org.json.JSONObject
 
-internal class OutcomeEventsBackend(private val _http: IHttpClient) : IOutcomeEventsBackend {
+internal class OutcomeEventsBackendService(private val _http: IHttpClient) : IOutcomeEventsBackendService {
 
-    override suspend fun sendOutcomeEvent(appId: String, deviceType: Int, direct: Boolean?, event: OutcomeEvent): HttpResponse {
+    override suspend fun sendOutcomeEvent(appId: String, deviceType: Int, direct: Boolean?, event: OutcomeEvent) {
         val jsonObject = JSONObject()
             .put("app_id", appId)
             .put("device_type", deviceType)
 
         if (direct != null) {
-            jsonObject.put("direct", direct!!)
+            jsonObject.put("direct", direct)
         }
 
         if (event.notificationIds != null && event.notificationIds.length() > 0) {
@@ -28,6 +28,10 @@ internal class OutcomeEventsBackend(private val _http: IHttpClient) : IOutcomeEv
             jsonObject.put("timestamp", event.timestamp)
         }
 
-        return _http.post("outcomes/measure", jsonObject)
+        val response = _http.post("outcomes/measure", jsonObject)
+
+        if (!response.isSuccess) {
+            throw BackendException(response.statusCode, response.payload)
+        }
     }
 }

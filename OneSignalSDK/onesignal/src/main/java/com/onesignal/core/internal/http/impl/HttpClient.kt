@@ -1,10 +1,13 @@
-package com.onesignal.core.internal.http
+package com.onesignal.core.internal.http.impl
 
 import android.net.TrafficStats
 import android.os.Build
 import com.onesignal.core.internal.common.JSONUtils
 import com.onesignal.core.internal.common.OneSignalUtils
+import com.onesignal.core.internal.http.HttpResponse
+import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.logging.Logging
+import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
@@ -22,7 +25,8 @@ import java.util.Scanner
 import javax.net.ssl.HttpsURLConnection
 
 internal class HttpClient(
-    private val _prefs: IPreferencesService
+    private val _prefs: IPreferencesService,
+    private val _configModelStore: ConfigModelStore
 ) : IHttpClient {
     override suspend fun post(url: String, body: JSONObject): HttpResponse {
         return makeRequest(url, "POST", body, TIMEOUT, null)
@@ -51,9 +55,11 @@ internal class HttpClient(
         timeout: Int,
         cacheKey: String?
     ): HttpResponse {
-        // TODO: Implement If not a GET request, check if the user provided privacy consent if the application is set to require user privacy consent
-//        if (method != null && OneSignal.shouldLogUserPrivacyConsentErrorMessageForMethodName(null))
-//            return
+        // If privacy consent is required but not yet given, any non-GET request should be blocked.
+        if (method != null && _configModelStore.get().requiresPrivacyConsent == true && _configModelStore.get().givenPrivacyConsent != true) {
+            Logging.warn("$method `$url` was called before the user provided privacy consent. Your application is set to require the user's privacy consent before the OneSignal SDK can be initialized. Please ensure the user has provided consent before calling this method. You can check the latest OneSignal consent status by calling OneSignal.privacyConsent")
+            return HttpResponse(0, null, null)
+        }
 
         try {
             return withTimeout(getThreadTimeout(timeout).toLong()) {
@@ -74,7 +80,7 @@ internal class HttpClient(
         timeout: Int,
         cacheKey: String?
     ): HttpResponse {
-        val result = withContext(Dispatchers.IO) {
+        return withContext(Dispatchers.IO) {
             var httpResponse = -1
             var con: HttpURLConnection? = null
 
@@ -198,8 +204,6 @@ internal class HttpClient(
                 con?.disconnect()
             }
         }
-
-        return result as HttpResponse
     }
 
     @Throws(IOException::class)

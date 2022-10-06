@@ -1,5 +1,6 @@
 package com.onesignal.notification.internal.receivereceipt.impl
 
+import com.onesignal.core.internal.backend.BackendException
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.notification.internal.backend.INotificationBackendService
@@ -13,11 +14,10 @@ internal class ReceiveReceiptProcessor(
     override suspend fun sendReceiveReceipt(appId: String, subscriptionId: String, notificationId: String) {
         val deviceType = _deviceService.deviceType
 
-        val response = _backend.updateNotificationAsReceived(appId, notificationId, subscriptionId, deviceType)
-        if (response.isSuccess) {
-            Logging.debug("Receive receipt sent for notificationID: $notificationId")
-        } else {
-            Logging.error("Receive receipt failed with statusCode: ${response.statusCode} response: ${response.payload}")
+        try {
+            _backend.updateNotificationAsReceived(appId, notificationId, subscriptionId, deviceType)
+        } catch (ex: BackendException) {
+            Logging.error("Receive receipt failed with statusCode: ${ex.statusCode} response: ${ex.response}")
         }
     }
 }

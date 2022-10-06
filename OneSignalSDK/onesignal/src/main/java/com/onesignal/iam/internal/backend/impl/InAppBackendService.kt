@@ -1,8 +1,8 @@
 package com.onesignal.iam.internal.backend.impl
 
+import com.onesignal.core.internal.backend.BackendException
 import com.onesignal.core.internal.common.NetworkUtils
 import com.onesignal.core.internal.device.IDeviceService
-import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.iam.internal.InAppMessage
@@ -90,7 +90,7 @@ internal class InAppBackendService(
         messageId: String,
         clickId: String?,
         isFirstClick: Boolean
-    ): HttpResponse {
+    ) {
         val json: JSONObject = object : JSONObject() {
             init {
                 put("app_id", appId)
@@ -112,9 +112,9 @@ internal class InAppBackendService(
                 response.statusCode,
                 response.payload
             )
-        }
 
-        return response
+            throw BackendException(response.statusCode, response.payload)
+        }
     }
 
     override suspend fun sendIAMPageImpression(
@@ -123,7 +123,7 @@ internal class InAppBackendService(
         variantId: String?,
         messageId: String,
         pageId: String?
-    ): HttpResponse {
+    ) {
         val json: JSONObject = object : JSONObject() {
             init {
                 put("app_id", appId)
@@ -140,9 +140,8 @@ internal class InAppBackendService(
             printHttpSuccessForInAppMessageRequest("page impression", response.payload!!)
         } else {
             printHttpErrorForInAppMessageRequest("page impression", response.statusCode, response.payload)
+            throw BackendException(response.statusCode, response.payload)
         }
-
-        return response
     }
 
     override suspend fun sendIAMImpression(
@@ -150,7 +149,7 @@ internal class InAppBackendService(
         subscriptionId: String,
         variantId: String?,
         messageId: String
-    ): HttpResponse {
+    ) {
         val json: JSONObject = object : JSONObject() {
             init {
                 put("app_id", appId)
@@ -167,9 +166,8 @@ internal class InAppBackendService(
             printHttpSuccessForInAppMessageRequest("impression", response.payload!!)
         } else {
             printHttpErrorForInAppMessageRequest("impression", response.statusCode, response.payload)
+            throw BackendException(response.statusCode, response.payload)
         }
-
-        return response
     }
 
     private fun htmlPathForMessage(messageId: String, variantId: String?, appId: String): String? {
