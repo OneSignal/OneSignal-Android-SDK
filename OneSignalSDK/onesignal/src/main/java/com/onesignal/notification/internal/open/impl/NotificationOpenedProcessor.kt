@@ -40,7 +40,7 @@ import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.notification.internal.common.NotificationConstants
 import com.onesignal.notification.internal.common.NotificationFormatHelper
 import com.onesignal.notification.internal.common.NotificationHelper
-import com.onesignal.notification.internal.data.INotificationDataController
+import com.onesignal.notification.internal.data.INotificationRepository
 import com.onesignal.notification.internal.lifecycle.INotificationLifecycleService
 import com.onesignal.notification.internal.open.INotificationOpenedProcessor
 import com.onesignal.notification.internal.summary.INotificationSummaryManager
@@ -50,7 +50,7 @@ import org.json.JSONObject
 
 internal class NotificationOpenedProcessor(
     private val _summaryManager: INotificationSummaryManager,
-    private val _dataController: INotificationDataController,
+    private val _dataController: INotificationRepository,
     private val _configModelStore: ConfigModelStore,
     private val _lifecycleService: INotificationLifecycleService
 ) : INotificationOpenedProcessor {

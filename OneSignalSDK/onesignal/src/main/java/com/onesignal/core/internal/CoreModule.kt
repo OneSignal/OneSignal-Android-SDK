@@ -42,13 +42,13 @@ import com.onesignal.core.internal.operations.impl.OperationRepo
 import com.onesignal.core.internal.operations.impl.SubscriptionOperationExecutor
 import com.onesignal.core.internal.operations.impl.UserOperationExecutor
 import com.onesignal.core.internal.outcomes.IOutcomeEventsController
-import com.onesignal.core.internal.outcomes.impl.IOutcomeEventsBackendService
-import com.onesignal.core.internal.outcomes.impl.IOutcomeEventsCache
+import com.onesignal.core.internal.outcomes.impl.IOutcomeEventsBackend
 import com.onesignal.core.internal.outcomes.impl.IOutcomeEventsPreferences
-import com.onesignal.core.internal.outcomes.impl.OutcomeEventsBackendService
-import com.onesignal.core.internal.outcomes.impl.OutcomeEventsCache
+import com.onesignal.core.internal.outcomes.impl.IOutcomeEventsRepository
+import com.onesignal.core.internal.outcomes.impl.OutcomeEventsBackend
 import com.onesignal.core.internal.outcomes.impl.OutcomeEventsController
 import com.onesignal.core.internal.outcomes.impl.OutcomeEventsPreferences
+import com.onesignal.core.internal.outcomes.impl.OutcomeEventsRepository
 import com.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
@@ -99,8 +99,8 @@ internal object CoreModule {
 
         // Outcomes
         builder.register<OutcomeEventsPreferences>().provides<IOutcomeEventsPreferences>()
-        builder.register<OutcomeEventsCache>().provides<IOutcomeEventsCache>()
-        builder.register<OutcomeEventsBackendService>().provides<IOutcomeEventsBackendService>()
+        builder.register<OutcomeEventsRepository>().provides<IOutcomeEventsRepository>()
+        builder.register<OutcomeEventsBackend>().provides<IOutcomeEventsBackend>()
         builder.register<OutcomeEventsController>()
             .provides<IOutcomeEventsController>()
             .provides<IStartableService>()

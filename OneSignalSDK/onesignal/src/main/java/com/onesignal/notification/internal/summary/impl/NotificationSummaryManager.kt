@@ -4,7 +4,7 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.notification.internal.common.NotificationGenerationJob
 import com.onesignal.notification.internal.common.NotificationHelper
-import com.onesignal.notification.internal.data.INotificationDataController
+import com.onesignal.notification.internal.data.INotificationRepository
 import com.onesignal.notification.internal.display.ISummaryNotificationDisplayer
 import com.onesignal.notification.internal.restoration.INotificationRestoreProcessor
 import com.onesignal.notification.internal.summary.INotificationSummaryManager
@@ -13,7 +13,7 @@ import org.json.JSONObject
 
 internal class NotificationSummaryManager(
     private val _applicationService: IApplicationService,
-    private val _dataController: INotificationDataController,
+    private val _dataController: INotificationRepository,
     private val _summaryNotificationDisplayer: ISummaryNotificationDisplayer,
     private val _configModelStore: ConfigModelStore,
     private val _notificationRestoreProcessor: INotificationRestoreProcessor

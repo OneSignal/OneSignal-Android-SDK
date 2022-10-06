@@ -14,16 +14,16 @@ import org.json.JSONArray
 import org.json.JSONException
 import java.util.Locale
 
-internal class OutcomeEventsCache(
-    private val dbHelper: IDatabaseProvider
-) : IOutcomeEventsCache {
+internal class OutcomeEventsRepository(
+    private val _databaseProvider: IDatabaseProvider
+) : IOutcomeEventsRepository {
 
     /**
      * Delete event from the DB
      */
     override suspend fun deleteOldOutcomeEvent(event: OutcomeEventParams) {
         withContext(Dispatchers.IO) {
-            dbHelper.get().delete(
+            _databaseProvider.os.delete(
                 OutcomeEventsTable.TABLE_NAME,
                 OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + " = ?",
                 arrayOf(event.timestamp.toString())
@@ -76,14 +76,20 @@ internal class OutcomeEventsCache(
                 put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS, notificationIds.toString())
                 put(OutcomeEventsTable.COLUMN_NAME_IAM_IDS, iamIds.toString())
                 // Save influence types
-                put(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE, notificationInfluenceType.toString().toLowerCase())
-                put(OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE, iamInfluenceType.toString().toLowerCase())
+                put(
+                    OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE,
+                    notificationInfluenceType.toString().lowercase(Locale.ROOT)
+                )
+                put(
+                    OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE,
+                    iamInfluenceType.toString().lowercase(Locale.ROOT)
+                )
                 // Save outcome data
                 put(OutcomeEventsTable.COLUMN_NAME_NAME, eventParams.outcomeId)
                 put(OutcomeEventsTable.COLUMN_NAME_WEIGHT, eventParams.weight)
                 put(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP, eventParams.timestamp)
             }.also { values ->
-                dbHelper.get().insert(OutcomeEventsTable.TABLE_NAME, null, values)
+                _databaseProvider.os.insert(OutcomeEventsTable.TABLE_NAME, null, values)
             }
         }
     }
@@ -95,41 +101,33 @@ internal class OutcomeEventsCache(
     override suspend fun getAllEventsToSend(): List<OutcomeEventParams> {
         val events: MutableList<OutcomeEventParams> = ArrayList()
         withContext(Dispatchers.IO) {
-            dbHelper.get().query(
-                OutcomeEventsTable.TABLE_NAME,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ).use {
-                if (it.moveToFirst()) {
+            _databaseProvider.os.query(OutcomeEventsTable.TABLE_NAME) { cursor ->
+                if (cursor.moveToFirst()) {
                     do {
                         // Retrieve influence types
                         val notificationInfluenceTypeString =
-                            it.getString(it.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE))
+                            cursor.getString(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE)
                         val notificationInfluenceType =
                             fromString(notificationInfluenceTypeString)
                         val iamInfluenceTypeString =
-                            it.getString(it.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE))
+                            cursor.getString(OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE)
                         val iamInfluenceType = fromString(iamInfluenceTypeString)
 
                         // Retrieve influence ids
                         val notificationIds =
-                            it.getString(it.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS))
+                            cursor.getOptString(OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS)
                                 ?: "[]"
                         val iamIds =
-                            it.getString(it.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_IAM_IDS))
+                            cursor.getOptString(OutcomeEventsTable.COLUMN_NAME_IAM_IDS)
                                 ?: "[]"
 
                         // Retrieve Outcome data
                         val name =
-                            it.getString(it.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_NAME))
+                            cursor.getString(OutcomeEventsTable.COLUMN_NAME_NAME)
                         val weight =
-                            it.getFloat(it.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_WEIGHT))
+                            cursor.getFloat(OutcomeEventsTable.COLUMN_NAME_WEIGHT)
                         val timestamp =
-                            it.getLong(it.getColumnIndex(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP))
+                            cursor.getLong(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP)
 
                         try {
                             val directSourceBody = OutcomeSourceBody()
@@ -158,7 +156,7 @@ internal class OutcomeEventsCache(
                                 e
                             )
                         }
-                    } while (it.moveToNext())
+                    } while (cursor.moveToNext())
                 }
             }
         }
@@ -237,20 +235,29 @@ internal class OutcomeEventsCache(
      */
     override suspend fun saveUniqueOutcomeEventParams(eventParams: OutcomeEventParams) {
         Logging.debug("OutcomeEventsCache.saveUniqueOutcomeEventParams(eventParams: $eventParams)")
-        val outcomeName = eventParams.outcomeId
-        val cachedUniqueOutcomes: MutableList<CachedUniqueOutcome> = ArrayList()
-        val directBody = eventParams.outcomeSource?.directBody
-        val indirectBody = eventParams.outcomeSource?.indirectBody
-        addIdsToListFromSource(cachedUniqueOutcomes, directBody)
-        addIdsToListFromSource(cachedUniqueOutcomes, indirectBody)
 
-        for (uniqueOutcome in cachedUniqueOutcomes) {
-            ContentValues().apply {
-                put(CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID, uniqueOutcome.influenceId)
-                put(CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE, uniqueOutcome.channel.toString())
-                put(CachedUniqueOutcomeTable.COLUMN_NAME_NAME, outcomeName)
-            }.also { values ->
-                dbHelper.get().insert(CachedUniqueOutcomeTable.TABLE_NAME, null, values)
+        withContext(Dispatchers.IO) {
+            val outcomeName = eventParams.outcomeId
+            val cachedUniqueOutcomes: MutableList<CachedUniqueOutcome> = ArrayList()
+            val directBody = eventParams.outcomeSource?.directBody
+            val indirectBody = eventParams.outcomeSource?.indirectBody
+            addIdsToListFromSource(cachedUniqueOutcomes, directBody)
+            addIdsToListFromSource(cachedUniqueOutcomes, indirectBody)
+
+            for (uniqueOutcome in cachedUniqueOutcomes) {
+                ContentValues().apply {
+                    put(
+                        CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID,
+                        uniqueOutcome.influenceId
+                    )
+                    put(
+                        CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE,
+                        uniqueOutcome.channel.toString()
+                    )
+                    put(CachedUniqueOutcomeTable.COLUMN_NAME_NAME, outcomeName)
+                }.also { values ->
+                    _databaseProvider.os.insert(CachedUniqueOutcomeTable.TABLE_NAME, null, values)
+                }
             }
         }
     }
@@ -261,44 +268,43 @@ internal class OutcomeEventsCache(
     override suspend fun getNotCachedUniqueInfluencesForOutcome(name: String, influences: List<Influence>): List<Influence> {
         val uniqueInfluences: MutableList<Influence> = ArrayList()
 
-        try {
-            for (influence in influences) {
-                val availableInfluenceIds = JSONArray()
-                val influenceIds = influence.ids ?: continue
+        withContext(Dispatchers.IO) {
+            try {
+                for (influence in influences) {
+                    val availableInfluenceIds = JSONArray()
+                    val influenceIds = influence.ids ?: continue
 
-                for (i in 0 until influenceIds.length()) {
-                    val channelInfluenceId = influenceIds.getString(i)
-                    val channel = influence.influenceChannel
-                    val columns = arrayOf<String>()
-                    val where = CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID + " = ? AND " +
-                        CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE + " = ? AND " +
-                        CachedUniqueOutcomeTable.COLUMN_NAME_NAME + " = ?"
-                    val args = arrayOf(channelInfluenceId, channel.toString(), name)
-                    dbHelper.get().query(
-                        CachedUniqueOutcomeTable.TABLE_NAME,
-                        columns,
-                        where,
-                        args,
-                        null,
-                        null,
-                        null,
-                        "1"
-                    ).use {
-                        // Item is not cached, we can use the influence id, add it to the JSONArray
-                        if (it.count == 0) availableInfluenceIds.put(channelInfluenceId)
+                    for (i in 0 until influenceIds.length()) {
+                        val channelInfluenceId = influenceIds.getString(i)
+                        val channel = influence.influenceChannel
+                        val columns = arrayOf<String>()
+                        val where = CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID + " = ? AND " +
+                            CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE + " = ? AND " +
+                            CachedUniqueOutcomeTable.COLUMN_NAME_NAME + " = ?"
+                        val args = arrayOf(channelInfluenceId, channel.toString(), name)
+                        _databaseProvider.os.query(
+                            CachedUniqueOutcomeTable.TABLE_NAME,
+                            columns = columns,
+                            whereClause = where,
+                            whereArgs = args,
+                            limit = "1"
+                        ) {
+                            // Item is not cached, we can use the influence id, add it to the JSONArray
+                            if (it.count == 0) availableInfluenceIds.put(channelInfluenceId)
+                        }
+                    }
+
+                    if (availableInfluenceIds.length() > 0) {
+                        influence.copy().apply {
+                            ids = availableInfluenceIds
+                        }.also { newInfluence ->
+                            uniqueInfluences.add(newInfluence)
+                        }
                     }
                 }
-
-                if (availableInfluenceIds.length() > 0) {
-                    influence.copy().apply {
-                        ids = availableInfluenceIds
-                    }.also { newInfluence ->
-                        uniqueInfluences.add(newInfluence)
-                    }
-                }
+            } catch (e: JSONException) {
+                e.printStackTrace()
             }
-        } catch (e: JSONException) {
-            e.printStackTrace()
         }
 
         return uniqueInfluences
@@ -316,9 +322,9 @@ internal class OutcomeEventsCache(
                 "SELECT NULL FROM " + notificationTableName + " n " +
                 "WHERE" + " n." + notificationIdColumnName + " = " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_INFLUENCE_ID +
                 " AND " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_TYPE + " = \"" + InfluenceChannel.NOTIFICATION.toString()
-                .toLowerCase(Locale.ROOT) +
+                .lowercase(Locale.ROOT) +
                 "\")"
-            dbHelper.get().delete(
+            _databaseProvider.os.delete(
                 OutcomesDbContract.CACHE_UNIQUE_OUTCOME_TABLE,
                 whereStr,
                 null

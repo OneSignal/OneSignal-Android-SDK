@@ -69,16 +69,11 @@ internal class BadgeCountUpdater(
     private fun updateFallback() {
         var notificationCount: Int = 0
 
-        _databaseProvider.get().query(
+        _databaseProvider.os.query(
             OneSignalDbContract.NotificationTable.TABLE_NAME,
-            null,
-            _queryHelper.recentUninteractedWithNotificationsWhere().toString(),
-            null, // Where args
-            null, // group by
-            null, // filter by row groups
-            null, // sort order, new to old
-            INotificationLimitManager.Constants.maxNumberOfNotifications.toString()
-        ).use {
+            whereClause = _queryHelper.recentUninteractedWithNotificationsWhere().toString(),
+            limit = INotificationLimitManager.Constants.maxNumberOfNotifications.toString()
+        ) {
             notificationCount = it.count
         }
         updateCount(notificationCount)
