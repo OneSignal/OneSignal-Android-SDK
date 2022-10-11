@@ -11,6 +11,7 @@ import com.onesignal.core.internal.backend.impl.ParamsBackendService
 import com.onesignal.core.internal.backend.impl.SubscriptionBackendService
 import com.onesignal.core.internal.backend.impl.UserBackendService
 import com.onesignal.core.internal.background.IBackgroundManager
+import com.onesignal.core.internal.background.IBackgroundService
 import com.onesignal.core.internal.background.impl.BackgroundManager
 import com.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.core.internal.database.impl.DatabaseProvider
@@ -25,6 +26,7 @@ import com.onesignal.core.internal.language.impl.LanguageContext
 import com.onesignal.core.internal.listeners.ConfigModelStoreListener
 import com.onesignal.core.internal.listeners.IdentityModelStoreListener
 import com.onesignal.core.internal.listeners.PropertiesModelStoreListener
+import com.onesignal.core.internal.listeners.SessionListener
 import com.onesignal.core.internal.listeners.SubscriptionModelStoreListener
 import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.models.IdentityModelStore
@@ -55,7 +57,7 @@ import com.onesignal.core.internal.purchases.TrackAmazonPurchase
 import com.onesignal.core.internal.purchases.TrackGooglePurchase
 import com.onesignal.core.internal.service.ServiceBuilder
 import com.onesignal.core.internal.session.ISessionService
-import com.onesignal.core.internal.session.SessionService
+import com.onesignal.core.internal.session.impl.SessionService
 import com.onesignal.core.internal.startup.IBootstrapService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.startup.StartupService
@@ -114,6 +116,8 @@ internal object CoreModule {
         builder.register<SessionService>()
             .provides<ISessionService>()
             .provides<IStartableService>()
+            .provides<IBackgroundService>()
+        builder.register<SessionListener>().provides<IStartableService>()
 
         // Background
         builder.register<BackgroundManager>()

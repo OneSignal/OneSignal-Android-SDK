@@ -55,12 +55,15 @@ internal class InfluenceManager(
         }
     }
 
-    override fun sessionStarted() {
+    override fun onSessionStarted() {
         restartSessionTrackersIfNeeded(_applicationService.entryState)
     }
 
-    override fun sessionResumed() {
+    override fun onSessionActive() {
         attemptSessionUpgrade(_applicationService.entryState)
+    }
+
+    override fun onSessionEnded(duration: Long) {
     }
 
     override fun addSessionData(jsonObject: JSONObject, influences: List<Influence>) {
