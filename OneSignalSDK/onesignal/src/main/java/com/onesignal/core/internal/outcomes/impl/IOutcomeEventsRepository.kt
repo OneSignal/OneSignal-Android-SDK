@@ -5,7 +5,7 @@ import com.onesignal.core.internal.influence.Influence
 /**
  * The caching interface for outcomes.
  */
-internal interface IOutcomeEventsCache {
+internal interface IOutcomeEventsRepository {
     /**
      * Delete event previously saved via [saveOutcomeEvent]
      */

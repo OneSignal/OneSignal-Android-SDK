@@ -28,8 +28,10 @@ internal class NotificationBackendService(
     }
 
     override suspend fun postNotification(appId: String, json: JSONObject): HttpResponse {
-        val jsonBody = JSONObject()
-        jsonBody.put("app_id", appId)
-        return _httpClient.post("notifications/", jsonBody)
+        if (!json.has("app_id")) {
+            json.put("app_id", appId)
+        }
+
+        return _httpClient.post("notifications/", json)
     }
 }

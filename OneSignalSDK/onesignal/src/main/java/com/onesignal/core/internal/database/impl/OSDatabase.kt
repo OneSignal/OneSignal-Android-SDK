@@ -11,6 +11,7 @@ import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteOpenHelper
 import android.os.SystemClock
 import android.provider.BaseColumns
+import com.onesignal.core.internal.database.ICursor
 import com.onesignal.core.internal.database.IDatabase
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.outcomes.impl.OutcomeTableProvider
@@ -80,46 +81,43 @@ internal class OSDatabase(
     override fun query(
         table: String,
         columns: Array<String>?,
-        selection: String?,
-        selectionArgs: Array<String>?,
-        groupBy: String?,
-        having: String?,
-        orderBy: String?
-    ): Cursor {
-        synchronized(LOCK) {
-            return getSQLiteDatabaseWithRetries().query(
-                table,
-                columns,
-                selection,
-                selectionArgs,
-                groupBy,
-                having,
-                orderBy
-            )
-        }
-    }
-
-    override fun query(
-        table: String,
-        columns: Array<String>?,
-        selection: String?,
-        selectionArgs: Array<String>?,
+        whereClause: String?,
+        whereArgs: Array<String>?,
         groupBy: String?,
         having: String?,
         orderBy: String?,
-        limit: String?
-    ): Cursor {
+        limit: String?,
+        action: (ICursor) -> Unit
+    ) {
+        val cursor: Cursor
         synchronized(LOCK) {
-            return getSQLiteDatabaseWithRetries().query(
-                table,
-                columns,
-                selection,
-                selectionArgs,
-                groupBy,
-                having,
-                orderBy,
-                limit
-            )
+            if (limit == null) {
+                cursor = getSQLiteDatabaseWithRetries().query(
+                    table,
+                    columns,
+                    whereClause,
+                    whereArgs,
+                    groupBy,
+                    having,
+                    orderBy
+                )
+            } else {
+                cursor = getSQLiteDatabaseWithRetries().query(
+                    table,
+                    columns,
+                    whereClause,
+                    whereArgs,
+                    groupBy,
+                    having,
+                    orderBy,
+                    limit
+                )
+            }
+        }
+
+        cursor.use {
+            val dbCursor = DatabaseCursor(it)
+            action(dbCursor)
         }
     }
 
@@ -141,14 +139,12 @@ internal class OSDatabase(
                     e
                 )
             } finally {
-                if (writableDb != null) {
-                    try {
-                        writableDb.endTransaction() // May throw if transaction was never opened or DB is full.
-                    } catch (e: IllegalStateException) {
-                        Logging.error("Error closing transaction! ", e)
-                    } catch (e: SQLiteException) {
-                        Logging.error("Error closing transaction! ", e)
-                    }
+                try {
+                    writableDb.endTransaction() // May throw if transaction was never opened or DB is full.
+                } catch (e: IllegalStateException) {
+                    Logging.error("Error closing transaction! ", e)
+                } catch (e: SQLiteException) {
+                    Logging.error("Error closing transaction! ", e)
                 }
             }
         }
@@ -173,14 +169,12 @@ internal class OSDatabase(
                     e
                 )
             } finally {
-                if (writableDb != null) {
-                    try {
-                        writableDb.endTransaction() // May throw if transaction was never opened or DB is full.
-                    } catch (e: IllegalStateException) {
-                        Logging.error("Error closing transaction! ", e)
-                    } catch (e: SQLiteException) {
-                        Logging.error("Error closing transaction! ", e)
-                    }
+                try {
+                    writableDb.endTransaction() // May throw if transaction was never opened or DB is full.
+                } catch (e: IllegalStateException) {
+                    Logging.error("Error closing transaction! ", e)
+                } catch (e: SQLiteException) {
+                    Logging.error("Error closing transaction! ", e)
                 }
             }
         }
@@ -193,7 +187,7 @@ internal class OSDatabase(
         whereArgs: Array<String>?
     ): Int {
         var result = 0
-        if (values == null || values.toString().isEmpty()) return result
+        if (values.toString().isEmpty()) return result
         synchronized(LOCK) {
             val writableDb = getSQLiteDatabaseWithRetries()
             try {
@@ -211,14 +205,12 @@ internal class OSDatabase(
                     e
                 )
             } finally {
-                if (writableDb != null) {
-                    try {
-                        writableDb.endTransaction() // May throw if transaction was never opened or DB is full.
-                    } catch (e: IllegalStateException) {
-                        Logging.error("Error closing transaction! ", e)
-                    } catch (e: SQLiteException) {
-                        Logging.error("Error closing transaction! ", e)
-                    }
+                try {
+                    writableDb.endTransaction() // May throw if transaction was never opened or DB is full.
+                } catch (e: IllegalStateException) {
+                    Logging.error("Error closing transaction! ", e)
+                } catch (e: SQLiteException) {
+                    Logging.error("Error closing transaction! ", e)
                 }
             }
         }
@@ -243,14 +235,12 @@ internal class OSDatabase(
                     e
                 )
             } finally {
-                if (writableDb != null) {
-                    try {
-                        writableDb.endTransaction() // May throw if transaction was never opened or DB is full.
-                    } catch (e: IllegalStateException) {
-                        Logging.error("Error closing transaction! ", e)
-                    } catch (e: SQLiteException) {
-                        Logging.error("Error closing transaction! ", e)
-                    }
+                try {
+                    writableDb.endTransaction() // May throw if transaction was never opened or DB is full.
+                } catch (e: IllegalStateException) {
+                    Logging.error("Error closing transaction! ", e)
+                } catch (e: SQLiteException) {
+                    Logging.error("Error closing transaction! ", e)
                 }
             }
         }
@@ -357,16 +347,13 @@ internal class OSDatabase(
     override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         Logging.warn("SDK version rolled back! Clearing $DATABASE_NAME as it could be in an unexpected state.")
 
-        val cursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table'", null)
-        try {
-            val tables: MutableList<String> = ArrayList(cursor.count)
-            while (cursor.moveToNext()) tables.add(cursor.getString(0))
+        db.rawQuery("SELECT name FROM sqlite_master WHERE type='table'", null).use {
+            val tables: MutableList<String> = ArrayList(it.count)
+            while (it.moveToNext()) tables.add(it.getString(0))
             for (table in tables) {
                 if (table.startsWith("sqlite_")) continue
                 db.execSQL("DROP TABLE IF EXISTS $table")
             }
-        } finally {
-            cursor.close()
         }
         onCreate(db)
     }

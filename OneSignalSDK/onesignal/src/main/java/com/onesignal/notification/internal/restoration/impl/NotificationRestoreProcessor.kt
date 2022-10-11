@@ -5,7 +5,7 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.notification.internal.badges.IBadgeCountUpdater
 import com.onesignal.notification.internal.common.NotificationHelper
-import com.onesignal.notification.internal.data.INotificationDataController
+import com.onesignal.notification.internal.data.INotificationRepository
 import com.onesignal.notification.internal.generation.INotificationGenerationWorkManager
 import com.onesignal.notification.internal.restoration.INotificationRestoreProcessor
 import kotlinx.coroutines.delay
@@ -14,7 +14,7 @@ import org.json.JSONObject
 internal class NotificationRestoreProcessor(
     private val _applicationService: IApplicationService,
     private val _workManager: INotificationGenerationWorkManager,
-    private val _dataController: INotificationDataController,
+    private val _dataController: INotificationRepository,
     private val _badgeCountUpdater: IBadgeCountUpdater
 ) : INotificationRestoreProcessor {
     override suspend fun process() {
@@ -34,7 +34,7 @@ internal class NotificationRestoreProcessor(
         }
     }
 
-    override suspend fun processNotification(notification: INotificationDataController.NotificationData, delay: Int) {
+    override suspend fun processNotification(notification: INotificationRepository.NotificationData, delay: Int) {
         _workManager.beginEnqueueingWork(
             _applicationService.appContext,
             notification.id,
