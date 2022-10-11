@@ -19,10 +19,10 @@ import com.onesignal.notification.internal.bundle.INotificationBundleProcessor
 import com.onesignal.notification.internal.bundle.impl.NotificationBundleProcessor
 import com.onesignal.notification.internal.channels.INotificationChannelManager
 import com.onesignal.notification.internal.channels.impl.NotificationChannelManager
-import com.onesignal.notification.internal.data.INotificationDataController
 import com.onesignal.notification.internal.data.INotificationQueryHelper
-import com.onesignal.notification.internal.data.impl.NotificationDataController
+import com.onesignal.notification.internal.data.INotificationRepository
 import com.onesignal.notification.internal.data.impl.NotificationQueryHelper
+import com.onesignal.notification.internal.data.impl.NotificationRepository
 import com.onesignal.notification.internal.display.INotificationDisplayBuilder
 import com.onesignal.notification.internal.display.INotificationDisplayer
 import com.onesignal.notification.internal.display.ISummaryNotificationDisplayer
@@ -74,7 +74,7 @@ internal object NotificationModule {
         builder.register<NotificationRestoreWorkManager>().provides<INotificationRestoreWorkManager>()
         builder.register<NotificationQueryHelper>().provides<INotificationQueryHelper>()
         builder.register<BadgeCountUpdater>().provides<IBadgeCountUpdater>()
-        builder.register<NotificationDataController>().provides<INotificationDataController>()
+        builder.register<NotificationRepository>().provides<INotificationRepository>()
         builder.register<NotificationGenerationWorkManager>().provides<INotificationGenerationWorkManager>()
         builder.register<NotificationBundleProcessor>().provides<INotificationBundleProcessor>()
         builder.register<NotificationChannelManager>().provides<INotificationChannelManager>()

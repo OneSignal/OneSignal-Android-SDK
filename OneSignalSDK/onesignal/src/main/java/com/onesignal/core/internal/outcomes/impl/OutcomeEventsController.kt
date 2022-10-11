@@ -19,7 +19,7 @@ import com.onesignal.core.internal.time.ITime
 internal class OutcomeEventsController(
     private val _session: ISessionService,
     private val _influenceManager: IInfluenceManager,
-    private val _outcomeEventsCache: IOutcomeEventsCache,
+    private val _outcomeEventsCache: IOutcomeEventsRepository,
     private val _outcomeEventsPreferences: IOutcomeEventsPreferences,
     private val _outcomeEventsBackend: IOutcomeEventsBackendService,
     private val _configModelStore: ConfigModelStore,
@@ -42,13 +42,14 @@ internal class OutcomeEventsController(
         }
     }
 
-    override fun sessionStarted() {
+    override fun onSessionStarted() {
         Logging.debug("OutcomeEventsController.sessionStarted: Cleaning outcomes for new session")
         unattributedUniqueOutcomeEventsSentOnSession = mutableSetOf()
         saveUnattributedUniqueOutcomeEvents()
     }
 
-    override fun sessionResumed() { }
+    override fun onSessionActive() { }
+    override fun onSessionEnded(duration: Long) { }
 
     /**
      * Any outcomes cached in local DB will be reattempted to be sent again

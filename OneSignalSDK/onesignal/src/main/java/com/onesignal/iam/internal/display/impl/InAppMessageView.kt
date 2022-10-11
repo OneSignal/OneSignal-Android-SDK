@@ -249,9 +249,8 @@ internal class InAppMessageView(
             }
 
             webView!!.layoutParams = relativeLayoutParams
-            val context = currentActivity!!.applicationContext
-            setUpDraggableLayout(context, draggableRelativeLayoutParams, webViewLayoutParams)
-            setUpParentRelativeLayout(context)
+            setUpDraggableLayout(currentActivity!!, draggableRelativeLayoutParams, webViewLayoutParams)
+            setUpParentRelativeLayout(currentActivity!!)
             createPopupWindow(parentRelativeLayout!!)
             if (messageController != null) {
                 animateInAppMessage(displayLocation, draggableRelativeLayout!!, parentRelativeLayout!!)

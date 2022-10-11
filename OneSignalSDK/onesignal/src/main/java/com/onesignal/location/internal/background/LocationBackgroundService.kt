@@ -17,7 +17,7 @@ internal class LocationBackgroundService(
     private val _capturer: ILocationCapturer,
     private val _time: ITime
 ) : IBackgroundService {
-    override val scheduleIn: Long?
+    override val scheduleBackgroundRunIn: Long?
         get() {
             if (!_locationManager.isLocationShared) {
                 Logging.debug("LocationController scheduleUpdate not possible, location shared not enabled")
@@ -35,7 +35,7 @@ internal class LocationBackgroundService(
             return scheduleTime
         }
 
-    override suspend fun run() {
+    override suspend fun backgroundRun() {
         _capturer.captureLastLocation()
     }
 }

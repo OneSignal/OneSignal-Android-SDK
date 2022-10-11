@@ -1,5 +1,6 @@
 package com.onesignal.sdktest.application;
 
+import android.os.StrictMode;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -13,6 +14,7 @@ import com.onesignal.iam.IInAppMessageClickHandler;
 import com.onesignal.iam.IInAppMessageLifecycleHandler;
 import com.onesignal.core.debug.LogLevel;
 import com.onesignal.notification.INotification;
+import com.onesignal.sdktest.BuildConfig;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.constant.Text;
@@ -21,6 +23,12 @@ import com.onesignal.sdktest.util.SharedPreferenceUtil;
 import org.json.JSONObject;
 
 public class MainApplication extends MultiDexApplication {
+
+    public MainApplication() {
+        // run strict mode default in debug mode to surface any potential issues easier
+        if(BuildConfig.DEBUG)
+            StrictMode.enableDefaults();
+    }
 
     @Override
     public void onCreate() {

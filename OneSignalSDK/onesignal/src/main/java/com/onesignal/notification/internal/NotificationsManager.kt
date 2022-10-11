@@ -16,7 +16,7 @@ import com.onesignal.notification.PostNotificationException
 import com.onesignal.notification.internal.backend.INotificationBackendService
 import com.onesignal.notification.internal.common.GenerateNotificationOpenIntentFromPushPayload
 import com.onesignal.notification.internal.common.NotificationHelper
-import com.onesignal.notification.internal.data.INotificationDataController
+import com.onesignal.notification.internal.data.INotificationRepository
 import com.onesignal.notification.internal.lifecycle.INotificationLifecycleService
 import com.onesignal.notification.internal.permissions.INotificationPermissionController
 import com.onesignal.notification.internal.restoration.INotificationRestoreWorkManager
@@ -47,7 +47,7 @@ internal class NotificationsManager(
     private val _notificationPermissionController: INotificationPermissionController,
     private val _notificationRestoreWorkManager: INotificationRestoreWorkManager,
     private val _notificationLifecycleService: INotificationLifecycleService,
-    private val _notificationDataController: INotificationDataController,
+    private val _notificationDataController: INotificationRepository,
     private val _summaryManager: INotificationSummaryManager
 ) : INotificationsManager,
     INotificationActivityOpener,

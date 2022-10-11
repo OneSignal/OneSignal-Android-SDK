@@ -11,6 +11,7 @@ import com.onesignal.core.internal.backend.impl.ParamsBackendService
 import com.onesignal.core.internal.backend.impl.SubscriptionBackendService
 import com.onesignal.core.internal.backend.impl.UserBackendService
 import com.onesignal.core.internal.background.IBackgroundManager
+import com.onesignal.core.internal.background.IBackgroundService
 import com.onesignal.core.internal.background.impl.BackgroundManager
 import com.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.core.internal.database.impl.DatabaseProvider
@@ -25,6 +26,7 @@ import com.onesignal.core.internal.language.impl.LanguageContext
 import com.onesignal.core.internal.listeners.ConfigModelStoreListener
 import com.onesignal.core.internal.listeners.IdentityModelStoreListener
 import com.onesignal.core.internal.listeners.PropertiesModelStoreListener
+import com.onesignal.core.internal.listeners.SessionListener
 import com.onesignal.core.internal.listeners.SubscriptionModelStoreListener
 import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.models.IdentityModelStore
@@ -41,12 +43,12 @@ import com.onesignal.core.internal.operations.impl.SubscriptionOperationExecutor
 import com.onesignal.core.internal.operations.impl.UserOperationExecutor
 import com.onesignal.core.internal.outcomes.IOutcomeEventsController
 import com.onesignal.core.internal.outcomes.impl.IOutcomeEventsBackendService
-import com.onesignal.core.internal.outcomes.impl.IOutcomeEventsCache
 import com.onesignal.core.internal.outcomes.impl.IOutcomeEventsPreferences
+import com.onesignal.core.internal.outcomes.impl.IOutcomeEventsRepository
 import com.onesignal.core.internal.outcomes.impl.OutcomeEventsBackendService
-import com.onesignal.core.internal.outcomes.impl.OutcomeEventsCache
 import com.onesignal.core.internal.outcomes.impl.OutcomeEventsController
 import com.onesignal.core.internal.outcomes.impl.OutcomeEventsPreferences
+import com.onesignal.core.internal.outcomes.impl.OutcomeEventsRepository
 import com.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
@@ -55,7 +57,7 @@ import com.onesignal.core.internal.purchases.TrackAmazonPurchase
 import com.onesignal.core.internal.purchases.TrackGooglePurchase
 import com.onesignal.core.internal.service.ServiceBuilder
 import com.onesignal.core.internal.session.ISessionService
-import com.onesignal.core.internal.session.SessionService
+import com.onesignal.core.internal.session.impl.SessionService
 import com.onesignal.core.internal.startup.IBootstrapService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.startup.StartupService
@@ -97,7 +99,7 @@ internal object CoreModule {
 
         // Outcomes
         builder.register<OutcomeEventsPreferences>().provides<IOutcomeEventsPreferences>()
-        builder.register<OutcomeEventsCache>().provides<IOutcomeEventsCache>()
+        builder.register<OutcomeEventsRepository>().provides<IOutcomeEventsRepository>()
         builder.register<OutcomeEventsBackendService>().provides<IOutcomeEventsBackendService>()
         builder.register<OutcomeEventsController>()
             .provides<IOutcomeEventsController>()
@@ -114,6 +116,8 @@ internal object CoreModule {
         builder.register<SessionService>()
             .provides<ISessionService>()
             .provides<IStartableService>()
+            .provides<IBackgroundService>()
+        builder.register<SessionListener>().provides<IStartableService>()
 
         // Background
         builder.register<BackgroundManager>()

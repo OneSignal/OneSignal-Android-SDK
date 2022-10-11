@@ -37,10 +37,11 @@ internal class NotificationBackendService(
     }
 
     override suspend fun postNotification(appId: String, json: JSONObject): JSONObject {
-        val jsonBody = JSONObject()
-        jsonBody.put("app_id", appId)
+        if (!json.has("app_id")) {
+            json.put("app_id", appId)
+        }
 
-        var response = _httpClient.post("notifications/", jsonBody)
+        var response = _httpClient.post("notifications/", json)
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload)

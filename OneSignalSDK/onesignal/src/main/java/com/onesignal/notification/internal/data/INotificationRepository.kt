@@ -1,6 +1,6 @@
 package com.onesignal.notification.internal.data
 
-internal interface INotificationDataController {
+internal interface INotificationRepository {
 
     suspend fun createSummaryNotification(androidId: Int, groupId: String)
 
