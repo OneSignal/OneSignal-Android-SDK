@@ -726,6 +726,7 @@ public class OneSignal {
    }
 
    public static void init(Context context, String googleProjectNumber, String oneSignalAppId, NotificationOpenedHandler notificationOpenedHandler, NotificationReceivedHandler notificationReceivedHandler) {
+      System.out.println("🌶 init!!!");
       mInitBuilder = createInitBuilder(notificationOpenedHandler, notificationReceivedHandler);
       OneSignal.setAppContext(context);
       setupPrivacyConsent(context);
