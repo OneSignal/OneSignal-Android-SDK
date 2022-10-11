@@ -4,6 +4,7 @@ import android.app.AlertDialog
 import com.onesignal.R
 import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.backend.BackendException
 import com.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.core.internal.common.JSONUtils
 import com.onesignal.core.internal.common.events.CallbackProducer
@@ -459,16 +460,16 @@ internal class IAMManager(
         val variantId = InAppHelper.variantIdForMessage(message, _languageContext) ?: return
 
         suspendifyOnThread {
-            val response = _backend.sendIAMImpression(
-                _configModelStore.get().appId,
-                _subscriptionManager.subscriptions.push?.id.toString(),
-                variantId,
-                message.messageId
-            )
+            try {
+                _backend.sendIAMImpression(
+                    _configModelStore.get().appId,
+                    _subscriptionManager.subscriptions.push?.id.toString(),
+                    variantId,
+                    message.messageId
+                )
 
-            if (response.isSuccess) {
                 _prefs.impressionesMessagesId = _impressionedMessages
-            } else {
+            } catch (ex: BackendException) {
                 // Post failed, impressioned messages should be removed and this way another post can be attempted
                 _impressionedMessages.remove(message.messageId)
             }
@@ -685,17 +686,18 @@ internal class IAMManager(
             return
         }
         _viewedPageIds.add(messagePrefixedPageId)
-        var response = _backend.sendIAMPageImpression(
-            _configModelStore.get().appId,
-            _subscriptionManager.subscriptions.push?.id.toString(),
-            variantId,
-            message.messageId,
-            pageId
-        )
 
-        if (response.isSuccess) {
+        try {
+            _backend.sendIAMPageImpression(
+                _configModelStore.get().appId,
+                _subscriptionManager.subscriptions.push?.id.toString(),
+                variantId,
+                message.messageId,
+                pageId
+            )
+
             _prefs.viewPageImpressionedIds = _viewedPageIds
-        } else {
+        } catch (ex: BackendException) {
             // Post failed, viewed page should be removed and this way another post can be attempted
             _viewedPageIds.remove(messagePrefixedPageId)
         }
@@ -719,19 +721,19 @@ internal class IAMManager(
             message.addClickId(clickId)
         }
 
-        val response = _backend.sendIAMClick(
-            _configModelStore.get().appId,
-            _subscriptionManager.subscriptions.push?.id.toString(),
-            variantId,
-            message.messageId,
-            clickId,
-            action.isFirstClick
-        )
+        try {
+            _backend.sendIAMClick(
+                _configModelStore.get().appId,
+                _subscriptionManager.subscriptions.push?.id.toString(),
+                variantId,
+                message.messageId,
+                clickId,
+                action.isFirstClick
+            )
 
-        if (response.isSuccess) {
             // Persist success click to disk. Id already added to set before making the network call
             _prefs.clickedMessagesId = _clickedClickIds
-        } else {
+        } catch (ex: BackendException) {
             _clickedClickIds.remove(clickId)
 
             if (clickId != null) {

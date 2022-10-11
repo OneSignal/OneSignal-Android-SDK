@@ -1,9 +1,9 @@
 package com.onesignal.core.internal.outcomes.impl
 
 import android.os.Process
+import com.onesignal.core.internal.backend.BackendException
 import com.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.core.internal.device.IDeviceService
-import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.influence.IInfluenceManager
 import com.onesignal.core.internal.influence.Influence
 import com.onesignal.core.internal.influence.InfluenceChannel
@@ -21,7 +21,7 @@ internal class OutcomeEventsController(
     private val _influenceManager: IInfluenceManager,
     private val _outcomeEventsCache: IOutcomeEventsRepository,
     private val _outcomeEventsPreferences: IOutcomeEventsPreferences,
-    private val _outcomeEventsBackend: IOutcomeEventsBackend,
+    private val _outcomeEventsBackend: IOutcomeEventsBackendService,
     private val _configModelStore: ConfigModelStore,
     private val _time: ITime,
     private val _deviceService: IDeviceService
@@ -67,10 +67,15 @@ internal class OutcomeEventsController(
         val deviceType: Int = _deviceService.deviceType
         val appId: String = _configModelStore.get().appId
 
-        val response = requestMeasureOutcomeEvent(appId, deviceType, event)
+        try {
+            requestMeasureOutcomeEvent(appId, deviceType, event)
 
-        if (response?.isSuccess == true) {
             _outcomeEventsCache.deleteOldOutcomeEvent(event)
+        } catch (ex: BackendException) {
+            Logging.warn(
+                """OutcomeEventsController.sendSavedOutcomeEvent: Sending outcome with name: ${event.outcomeId} failed with status code: ${ex.statusCode} and response: ${ex.response}
+Outcome event was cached and will be reattempted on app cold start"""
+            )
         }
     }
 
@@ -184,16 +189,16 @@ internal class OutcomeEventsController(
         val source = OutcomeSource(directSourceBody, indirectSourceBody)
         val eventParams = OutcomeEventParams(name, source, weight, 0)
 
-        val response = requestMeasureOutcomeEvent(appId, deviceType, eventParams)
+        try {
+            requestMeasureOutcomeEvent(appId, deviceType, eventParams)
 
-        if (response?.isSuccess == true) {
             saveUniqueOutcome(eventParams)
 
             // The only case where an actual success has occurred and the OutcomeEvent should be sent back
             return OutcomeEvent.fromOutcomeEventParamstoOutcomeEvent(eventParams)
-        } else {
+        } catch (ex: BackendException) {
             Logging.warn(
-                """OutcomeEventsController.sendAndCreateOutcomeEvent: Sending outcome with name: $name failed with status code: ${response?.statusCode} and response: $response
+                """OutcomeEventsController.sendAndCreateOutcomeEvent: Sending outcome with name: $name failed with status code: ${ex.statusCode} and response: ${ex.response}
 Outcome event was cached and will be reattempted on app cold start"""
             )
 
@@ -263,7 +268,7 @@ Outcome event was cached and will be reattempted on app cold start"""
         return uniqueInfluences.ifEmpty { null }
     }
 
-    private suspend fun requestMeasureOutcomeEvent(appId: String, deviceType: Int, eventParams: OutcomeEventParams): HttpResponse? {
+    private suspend fun requestMeasureOutcomeEvent(appId: String, deviceType: Int, eventParams: OutcomeEventParams) {
         val event = OutcomeEvent.fromOutcomeEventParamstoOutcomeEvent(eventParams)
         val direct = when (event.session) {
             InfluenceType.DIRECT -> true
@@ -272,6 +277,6 @@ Outcome event was cached and will be reattempted on app cold start"""
             else -> null
         }
 
-        return _outcomeEventsBackend.sendOutcomeEvent(appId, deviceType, direct, event)
+        _outcomeEventsBackend.sendOutcomeEvent(appId, deviceType, direct, event)
     }
 }
