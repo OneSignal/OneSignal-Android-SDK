@@ -15,19 +15,12 @@ buildscript {
         kotlinVersion = '1.4.32'
         ktlintVersion = '11.0.0'
         detektVersion = '1.21.0'
-        onesignalGradlePluginVersion = '[0.14.0, 0.99.99]'
     }
 
     repositories {
         google()
         mavenCentral()
-
-        // OneSignal-Gradle-Plugin - Local testing
-        // maven { url uri('../../repo') }
-
-        // OneSignal-Gradle-Plugin - Public version
         gradlePluginPortal()
-
         // Huawei maven
         maven { url 'https://developer.huawei.com/repo/' }
     }
@@ -39,12 +32,6 @@ buildscript {
 
         classpath "org.jlleitschuh.gradle:ktlint-gradle:$ktlintVersion"
         classpath "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:$detektVersion"
-
-        // OneSignal-Gradle-Plugin - Local testing
-        // classpath 'com.onesignal:onesignal-gradle-plugin:[0.8.1, 0.99.99]'
-
-        // OneSignal-Gradle-Plugin - Public version
-        classpath "gradle.plugin.com.onesignal:onesignal-gradle-plugin:$onesignalGradlePluginVersion"
     }
 }
 
