@@ -23,10 +23,11 @@ import com.onesignal.notification.internal.common.NotificationConstants
 import java.lang.IllegalStateException
 import java.util.ArrayList
 
-internal class OSDatabase(
+internal open class OSDatabase(
     private val _outcomeTableProvider: OutcomeTableProvider,
-    context: Context?
-) : SQLiteOpenHelper(context, DATABASE_NAME, null, dbVersion), IDatabase {
+    context: Context?,
+    version: Int = dbVersion
+) : SQLiteOpenHelper(context, DATABASE_NAME, null, version), IDatabase {
 
     /**
      * Should be used in the event that we don't want to retry getting the a [SQLiteDatabase] instance
@@ -260,7 +261,7 @@ internal class OSDatabase(
         Logging.debug("OneSignal Database onUpgrade from: $oldVersion to: $newVersion")
 
         try {
-            internalOnUpgrade(db, oldVersion)
+            internalOnUpgrade(db, oldVersion, newVersion)
         } catch (e: SQLiteException) {
             // This could throw if rolling back then forward again.
             //   However this shouldn't happen as we clearing the database on onDowngrade
@@ -269,16 +270,16 @@ internal class OSDatabase(
     }
 
     @Synchronized
-    private fun internalOnUpgrade(db: SQLiteDatabase, oldVersion: Int) {
-        if (oldVersion < 2) upgradeToV2(db)
-        if (oldVersion < 3) upgradeToV3(db)
-        if (oldVersion < 4) upgradeToV4(db)
-        if (oldVersion < 5) upgradeToV5(db)
+    private fun internalOnUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2 && newVersion >= 2) upgradeToV2(db)
+        if (oldVersion < 3 && newVersion >= 3) upgradeToV3(db)
+        if (oldVersion < 4 && newVersion >= 4) upgradeToV4(db)
+        if (oldVersion < 5 && newVersion >= 5) upgradeToV5(db)
 
         // Specifically running only when going from 5 to 6+ is intentional
-        if (oldVersion == 5) upgradeFromV5ToV6(db)
-        if (oldVersion < 7) upgradeToV7(db)
-        if (oldVersion < 8) upgradeToV8(db)
+        if (oldVersion == 5 && newVersion >= 6) upgradeFromV5ToV6(db)
+        if (oldVersion < 7 && newVersion >= 7) upgradeToV7(db)
+        if (oldVersion < 8 && newVersion >= 8) upgradeToV8(db)
     }
 
     // Add collapse_id field and index
