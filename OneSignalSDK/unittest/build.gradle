@@ -1,6 +1,6 @@
 ext {
     buildVersions = [
-            minSdkVersion: 17,
+            minSdkVersion: 19,
             versionCode: 1,
             versionName: '1.0'
     ]
