@@ -1,21 +1,21 @@
 /**
  * Modified MIT License
- *
- * Copyright 2022 OneSignal
- *
+ * <p>
+ * Copyright 2023 OneSignal
+ * <p>
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- *
+ * <p>
  * 1. The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- *
+ * <p>
  * 2. All copies of substantial portions of the Software may only be used in connection
  * with services provided by OneSignal.
- *
+ * <p>
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,26 +25,35 @@
  * THE SOFTWARE.
  */
 
-package com.onesignal.notification.internal.permissions.impl
+package com.onesignal
 
-import android.content.Context
-import android.content.Intent
+import kotlin.concurrent.thread
 
-internal object NavigateToAndroidSettingsForNotifications {
-    fun show(context: Context) {
-        val intent = Intent()
-        intent.action = "android.settings.APP_NOTIFICATION_SETTINGS"
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+/**
+ * Provides a public API to allow changing which thread callbacks and observers
+ * should fire on.
+ *
+ * Initial motivation for this is to allow the OneSignal-Unity-SDK to config
+ * the SDK to fire off the main thread. This is to avoid cases where Unity may
+ * cause the main UI thread to wait on a background thread when calling back
+ * into Unity.
+ *
+ * Usage: CallbackThreadManager.preference = UseThread.Background
+ */
+class CallbackThreadManager {
+    enum class UseThread {
+        MainUI,
+        Background
+    }
 
-        // for Android 5-7
-        intent.putExtra("app_package", context.getPackageName())
-        val applicationInfo = ApplicationInfoHelper.getInfo(context)
-        if (applicationInfo != null) {
-            intent.putExtra("app_uid", applicationInfo.uid)
+    companion object {
+        var preference = UseThread.MainUI
+
+        fun runOnPreferred(runnable: Runnable) {
+            when (preference) {
+                UseThread.MainUI -> OSUtils.runOnMainUIThread(runnable)
+                UseThread.Background -> thread { runnable.run() }
+            }
         }
-
-        // for Android 8 and above
-        intent.putExtra("android.provider.extra.APP_PACKAGE", context.getPackageName())
-        context.startActivity(intent)
     }
 }
