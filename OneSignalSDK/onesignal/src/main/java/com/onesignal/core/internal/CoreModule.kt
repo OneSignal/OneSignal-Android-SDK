@@ -19,6 +19,8 @@ import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.device.impl.DeviceService
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.http.impl.HttpClient
+import com.onesignal.core.internal.http.impl.HttpConnectionFactory
+import com.onesignal.core.internal.http.impl.IHttpConnectionFactory
 import com.onesignal.core.internal.influence.IInfluenceManager
 import com.onesignal.core.internal.influence.impl.InfluenceManager
 import com.onesignal.core.internal.language.ILanguageContext
@@ -74,6 +76,7 @@ internal object CoreModule {
         builder.register<PreferencesService>()
             .provides<IPreferencesService>()
             .provides<IStartableService>()
+        builder.register<HttpConnectionFactory>().provides<IHttpConnectionFactory>()
         builder.register<HttpClient>().provides<IHttpClient>()
         builder.register<ApplicationService>().provides<IApplicationService>()
         builder.register<DeviceService>().provides<IDeviceService>()

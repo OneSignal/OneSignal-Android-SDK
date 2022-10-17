@@ -12,19 +12,19 @@ import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
-import java.io.IOException
 import java.net.ConnectException
 import java.net.HttpURLConnection
-import java.net.URL
 import java.net.UnknownHostException
 import java.util.Scanner
 import javax.net.ssl.HttpsURLConnection
 
 internal class HttpClient(
+    private val _connectionFactory: IHttpConnectionFactory,
     private val _prefs: IPreferencesService,
     private val _configModelStore: ConfigModelStore
 ) : IHttpClient {
@@ -80,7 +80,9 @@ internal class HttpClient(
         timeout: Int,
         cacheKey: String?
     ): HttpResponse {
-        return withContext(Dispatchers.IO) {
+        var retVal: HttpResponse? = null
+
+        val job = GlobalScope.launch(Dispatchers.IO) {
             var httpResponse = -1
             var con: HttpURLConnection? = null
 
@@ -89,8 +91,8 @@ internal class HttpClient(
             }
 
             try {
-                Logging.debug("HttpClient: Making request to: $BASE_URL$url")
-                con = newHttpURLConnection(url)
+                Logging.debug("HttpClient: Making request to: $url")
+                con = _connectionFactory.newHttpURLConnection(url)
 
                 // https://github.com/OneSignal/OneSignal-Android-SDK/issues/1465
                 // Android 4.4 and older devices fail to register to onesignal.com to due it's TLS1.2+ requirement
@@ -139,7 +141,7 @@ internal class HttpClient(
 
                 // Network request is made from getResponseCode()
                 httpResponse = con.responseCode
-                Logging.verbose("HttpClient: After con.getResponseCode to: " + BASE_URL + url)
+                Logging.verbose("HttpClient: After con.getResponseCode to: $url")
 
                 when (httpResponse) {
                     HttpURLConnection.HTTP_NOT_MODIFIED -> {
@@ -147,10 +149,10 @@ internal class HttpClient(
                         Logging.debug("HttpClient: " + (method ?: "GET") + " - Using Cached response due to 304: " + cachedResponse)
 
                         // TODO: SHOULD RETURN OK INSTEAD OF NOT_MODIFIED TO MAKE TRANSPARENT?
-                        return@withContext HttpResponse(httpResponse, cachedResponse)
+                        retVal = HttpResponse(httpResponse, cachedResponse)
                     }
                     HttpURLConnection.HTTP_ACCEPTED, HttpURLConnection.HTTP_OK -> {
-                        Logging.debug("HttpClient: Successfully finished request to: $BASE_URL$url")
+                        Logging.debug("HttpClient: Successfully finished request to: $url")
 
                         val inputStream = con.inputStream
                         val scanner = Scanner(inputStream, "UTF-8")
@@ -168,10 +170,10 @@ internal class HttpClient(
                             }
                         }
 
-                        return@withContext HttpResponse(httpResponse, json)
+                        retVal = HttpResponse(httpResponse, json)
                     }
                     else -> {
-                        Logging.debug("HttpClient: Failed request to: $BASE_URL$url")
+                        Logging.debug("HttpClient: Failed request to: $url")
 
                         var inputStream = con.errorStream
                         if (inputStream == null) {
@@ -189,7 +191,7 @@ internal class HttpClient(
                             Logging.warn("HttpClient: $method HTTP Code: $httpResponse No response body!")
                         }
 
-                        return@withContext HttpResponse(httpResponse, jsonResponse)
+                        retVal = HttpResponse(httpResponse, jsonResponse)
                     }
                 }
             } catch (t: Throwable) {
@@ -199,16 +201,14 @@ internal class HttpClient(
                     Logging.warn("HttpClient: $method Error thrown from network stack. ", t)
                 }
 
-                return@withContext HttpResponse(httpResponse, null, t)
+                retVal = HttpResponse(httpResponse, null, t)
             } finally {
                 con?.disconnect()
             }
         }
-    }
 
-    @Throws(IOException::class)
-    private fun newHttpURLConnection(url: String): HttpURLConnection {
-        return URL(BASE_URL + url).openConnection() as HttpURLConnection
+        job.join()
+        return retVal!!
     }
 
     private fun getThreadTimeout(timeout: Int): Int {
@@ -218,7 +218,6 @@ internal class HttpClient(
     companion object {
         private const val OS_API_VERSION = "1"
         private const val OS_ACCEPT_HEADER = "application/vnd.onesignal.v$OS_API_VERSION+json"
-        private const val BASE_URL = "https://api.onesignal.com/"
         private const val GET_TIMEOUT = 60000
         private const val TIMEOUT = 120000
         private const val THREAD_ID = 10000
