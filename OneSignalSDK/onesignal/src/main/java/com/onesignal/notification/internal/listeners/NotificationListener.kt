@@ -67,7 +67,7 @@ internal class NotificationListener(
         data: JSONArray,
         notificationId: String
     ) {
-        val config = _configModelStore.get()
+        val config = _configModelStore.model
         val appId: String = config.appId ?: ""
         val subscriptionId: String = _subscriptionManager.subscriptions.push?.id.toString()
         val deviceType = _deviceService.deviceType

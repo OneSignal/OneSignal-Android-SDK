@@ -60,7 +60,7 @@ internal class LocationCapturer(
             point.log = location.longitude
         }
 
-        var userProperties = _propertiesModelStore.get()
+        var userProperties = _propertiesModelStore.model
         userProperties.locationLongitude = point.log
         userProperties.locationLatitude = point.lat
         userProperties.locationAccuracy = point.accuracy

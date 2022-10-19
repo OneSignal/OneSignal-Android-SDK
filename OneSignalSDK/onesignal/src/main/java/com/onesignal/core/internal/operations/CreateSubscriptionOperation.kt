@@ -58,17 +58,25 @@ internal class CreateSubscriptionOperation() : Operation(SubscriptionOperationEx
         get() = getProperty(::address.name)
         private set(value) { setProperty(::address.name, value) }
 
+    /**
+     * The status of this subscription.
+     */
+    var status: Int
+        get() = getProperty(::status.name)
+        private set(value) { setProperty(::status.name, value) }
+
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Subscription.$subscriptionId"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.ALTER
     override val canStartExecute: Boolean get() = !IDManager.isIdLocalOnly(onesignalId)
 
-    constructor(appId: String, onesignalId: String, subscriptionId: String, type: SubscriptionType, enabled: Boolean, address: String) : this() {
+    constructor(appId: String, onesignalId: String, subscriptionId: String, type: SubscriptionType, enabled: Boolean, address: String, status: Int) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
         this.subscriptionId = subscriptionId
         this.type = type
         this.enabled = enabled
         this.address = address
+        this.status = status
     }
 }

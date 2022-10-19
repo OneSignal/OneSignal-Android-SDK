@@ -17,6 +17,7 @@ import com.onesignal.core.internal.common.OneSignalUtils
 import com.onesignal.core.internal.common.RootToolsInternalMethods
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.logging.Logging
+import com.onesignal.core.internal.modeling.ModelChangeTags
 import com.onesignal.core.internal.models.IdentityModelStore
 import com.onesignal.core.internal.models.PropertiesModel
 import com.onesignal.core.internal.models.PropertiesModelStore
@@ -98,25 +99,23 @@ internal class UserOperationExecutor(
 
             IDManager.setLocalToBackendIdTranslation(createUserOperation.onesignalId, backendOneSignalId)
 
-            val identityModel = _identityModelStore.get()
-            val propertiesModel = _propertiesModelStore.get()
+            val identityModel = _identityModelStore.model
+            val propertiesModel = _propertiesModelStore.model
 
             if (identityModel.onesignalId == createUserOperation.onesignalId) {
-                identityModel.setProperty(IdentityConstants.ONESIGNAL_ID, backendOneSignalId, false)
+                identityModel.setProperty(IdentityConstants.ONESIGNAL_ID, backendOneSignalId, ModelChangeTags.HYDRATE)
 
                 // TODO: hydrate any additional aliases from the backend...
-                _identityModelStore.persist()
             }
 
             if (propertiesModel.onesignalId == createUserOperation.onesignalId) {
-                propertiesModel.setProperty(PropertiesModel::onesignalId.name, backendOneSignalId, notify = false)
+                propertiesModel.setProperty(PropertiesModel::onesignalId.name, backendOneSignalId, ModelChangeTags.HYDRATE)
 
                 // TODO: hydrate the models from the backend create response.  Temporarily inject dummy stuff to
                 //       show that it's working.
 //                propertiesModel.setProperty(PropertiesModel::language.name, "en", notify = false)
-                propertiesModel.setProperty(PropertiesModel::country.name, "US", notify = false)
-                propertiesModel.tags.setProperty("foo", UUID.randomUUID().toString(), notify = false)
-                _propertiesModelStore.persist()
+                propertiesModel.setProperty(PropertiesModel::country.name, "US", ModelChangeTags.HYDRATE)
+                propertiesModel.tags.setProperty("foo", UUID.randomUUID().toString(), ModelChangeTags.HYDRATE)
             }
 
             // TODO: assumption that the response.subscriptionIDs will associate to the input subscriptionList...to confirm
@@ -130,9 +129,8 @@ internal class UserOperationExecutor(
                 IDManager.setLocalToBackendIdTranslation(subscriptionList[index].id, backendSubscriptionId)
 
                 val subscriptionModel = _subscriptionsModelStore.get(subscriptionList[index].id)
-                subscriptionModel?.setProperty(SubscriptionModel::id.name, backendSubscriptionId, false)
+                subscriptionModel?.setProperty(SubscriptionModel::id.name, backendSubscriptionId, ModelChangeTags.HYDRATE)
             }
-            _subscriptionsModelStore.persist()
         } catch (ex: BackendException) {
         }
     }

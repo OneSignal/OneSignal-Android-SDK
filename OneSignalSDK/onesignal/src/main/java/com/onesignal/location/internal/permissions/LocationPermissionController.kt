@@ -31,22 +31,30 @@ import com.onesignal.R
 import com.onesignal.core.internal.application.ApplicationLifecycleHandlerBase
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.AndroidUtils
+import com.onesignal.core.internal.common.events.EventProducer
+import com.onesignal.core.internal.common.events.IEventNotifier
 import com.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.core.internal.permissions.impl.AlertDialogPrepromptForAndroidSettings
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.onesignal.core.internal.common.suspend.WaiterWithValue
+
+internal interface ILocationPermissionChangedHandler {
+    fun onLocationPermissionChanged(enabled: Boolean)
+}
 
 internal class LocationPermissionController(
     private val _application: IApplicationService,
     private val _requestPermission: IRequestPermissionService,
     private val _applicationService: IApplicationService
 ) : IRequestPermissionService.PermissionCallback,
-    IStartableService {
+    IStartableService,
+    IEventNotifier<ILocationPermissionChangedHandler> {
     companion object {
         private const val PERMISSION_TYPE = "LOCATION"
     }
 
     private val _waiter = WaiterWithValue<Boolean>()
+    private val _events = EventProducer<ILocationPermissionChangedHandler>()
     private var _currPermission: String = ""
 
     override fun start() {
@@ -69,6 +77,7 @@ internal class LocationPermissionController(
 
     override fun onAccept() {
         _waiter.wake(true)
+        _events.fire { it.onLocationPermissionChanged(true) }
     }
 
     override fun onReject(fallbackToSettings: Boolean) {
@@ -81,6 +90,7 @@ internal class LocationPermissionController(
 
         if (!fallbackShown) {
             _waiter.wake(false)
+            _events.fire { it.onLocationPermissionChanged(false) }
         }
     }
 
@@ -97,16 +107,22 @@ internal class LocationPermissionController(
                         override fun onFocus() {
                             super.onFocus()
                             _applicationService.removeApplicationLifecycleHandler(this)
-                            _waiter.wake(AndroidUtils.hasPermission(_currPermission, true, _applicationService))
+                            val hasPermission = AndroidUtils.hasPermission(_currPermission, true, _applicationService)
+                            _waiter.wake(hasPermission)
+                            _events.fire { it.onLocationPermissionChanged(hasPermission) }
                         }
                     })
                     NavigateToAndroidSettingsForLocation.show(activity)
                 }
                 override fun onDecline() {
                     _waiter.wake(false)
+                    _events.fire { it.onLocationPermissionChanged(false) }
                 }
             }
         )
         return true
     }
+
+    override fun subscribe(handler: ILocationPermissionChangedHandler) = _events.subscribe(handler)
+    override fun unsubscribe(handler: ILocationPermissionChangedHandler) = _events.subscribe(handler)
 }
