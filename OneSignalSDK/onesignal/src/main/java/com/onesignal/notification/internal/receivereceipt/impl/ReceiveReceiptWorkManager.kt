@@ -29,12 +29,12 @@ internal class ReceiveReceiptWorkManager(
     private val maxDelay = 25
 
     override fun enqueueReceiveReceipt(notificationId: String) {
-        if (!_configModelStore.get().receiveReceiptEnabled) {
+        if (!_configModelStore.model.receiveReceiptEnabled) {
             Logging.debug("sendReceiveReceipt disabled")
             return
         }
 
-        val appId: String = _configModelStore.get().appId
+        val appId: String = _configModelStore.model.appId
         val subscriptionId: String? = _subscriptionManager.subscriptions.push?.id
 
         if (subscriptionId == null || appId.isEmpty()) {

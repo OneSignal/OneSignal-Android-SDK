@@ -124,23 +124,23 @@ internal class InfluenceDataRepository(
         }
 
     override val notificationLimit: Int
-        get() = _configModelStore.get().influenceParams.notificationLimit
+        get() = _configModelStore.model.influenceParams.notificationLimit
 
     override val iamLimit: Int
-        get() = _configModelStore.get().influenceParams.iamLimit
+        get() = _configModelStore.model.influenceParams.iamLimit
 
     override val notificationIndirectAttributionWindow: Int
-        get() = _configModelStore.get().influenceParams.indirectNotificationAttributionWindow
+        get() = _configModelStore.model.influenceParams.indirectNotificationAttributionWindow
 
     override val iamIndirectAttributionWindow: Int
-        get() = _configModelStore.get().influenceParams.indirectIAMAttributionWindow
+        get() = _configModelStore.model.influenceParams.indirectIAMAttributionWindow
 
     override val isDirectInfluenceEnabled: Boolean
-        get() = _configModelStore.get().influenceParams.isDirectEnabled
+        get() = _configModelStore.model.influenceParams.isDirectEnabled
 
     override val isIndirectInfluenceEnabled: Boolean
-        get() = _configModelStore.get().influenceParams.isIndirectEnabled
+        get() = _configModelStore.model.influenceParams.isIndirectEnabled
 
     override val isUnattributedInfluenceEnabled: Boolean
-        get() = _configModelStore.get().influenceParams.isUnattributedEnabled
+        get() = _configModelStore.model.influenceParams.isUnattributedEnabled
 }

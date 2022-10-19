@@ -43,7 +43,7 @@ internal class GooglePlayServicesUpgradePrompt(
             return
         }
 
-        if (!isGooglePlayStoreInstalled || _configModelStore.get().disableGMSMissingPrompt) {
+        if (!isGooglePlayStoreInstalled || _configModelStore.model.disableGMSMissingPrompt) {
             return
         }
 

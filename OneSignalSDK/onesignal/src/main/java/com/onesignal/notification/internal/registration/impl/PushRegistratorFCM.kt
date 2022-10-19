@@ -48,7 +48,7 @@ internal class PushRegistratorFCM(
         get() = "FCM"
 
     init {
-        val fcpParams = _configModelStore.get().fcmParams
+        val fcpParams = _configModelStore.model.fcmParams
 
         this.projectId = fcpParams.projectId ?: FCM_DEFAULT_PROJECT_ID
         this.appId = fcpParams.appId ?: FCM_DEFAULT_APP_ID

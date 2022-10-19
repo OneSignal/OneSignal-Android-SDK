@@ -10,8 +10,9 @@ internal interface IModelChangedHandler {
      * Called when the subscribed model has been changed.
      *
      * @param args Information related to what has changed.
+     * @param tag The tag which identifies how/why the model was changed.
      */
-    fun onChanged(args: ModelChangedArgs)
+    fun onChanged(args: ModelChangedArgs, tag: String)
 }
 
 /**

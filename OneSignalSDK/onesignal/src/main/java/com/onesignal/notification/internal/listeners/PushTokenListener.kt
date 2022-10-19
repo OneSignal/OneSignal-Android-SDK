@@ -5,6 +5,7 @@ import com.onesignal.core.internal.user.ISubscriptionManager
 import com.onesignal.notification.internal.INotificationStateRefresher
 import com.onesignal.notification.internal.pushtoken.IPushTokenChangedHandler
 import com.onesignal.notification.internal.pushtoken.IPushTokenManager
+import com.onesignal.notification.internal.registration.IPushRegistrator
 
 internal class PushTokenListener(
     private val _pushTokenManager: IPushTokenManager,
@@ -16,12 +17,8 @@ internal class PushTokenListener(
         _pushTokenManager.subscribe(this)
     }
 
-    override fun onPushTokenChanged(pushToken: String?) {
-        if (pushToken == null || pushToken.isEmpty()) {
-            return
-        }
-
-        _subscriptionManager.addOrUpdatePushSubscription(_pushTokenManager.pushToken)
+    override fun onPushTokenChanged(pushToken: String?, pushTokenStatus: IPushRegistrator.RegisterStatus) {
+        _subscriptionManager.addOrUpdatePushSubscription(pushToken, pushTokenStatus.value)
         _notificationStateRefresher.refreshNotificationState()
     }
 }

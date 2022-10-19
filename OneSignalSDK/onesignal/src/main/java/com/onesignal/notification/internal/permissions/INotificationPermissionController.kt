@@ -27,7 +27,9 @@
 
 package com.onesignal.notification.internal.permissions
 
-internal interface INotificationPermissionController {
+import com.onesignal.core.internal.common.events.IEventNotifier
+
+internal interface INotificationPermissionController : IEventNotifier<INotificationPermissionChangedHandler> {
     /**
      * Prompt the user for notification permission.  Note it is possible the application
      * will be killed while the permission prompt is being displayed to the user. When the
@@ -41,4 +43,8 @@ internal interface INotificationPermissionController {
      * to notify of the status.
      */
     suspend fun prompt(fallbackToSettings: Boolean): Boolean
+}
+
+internal interface INotificationPermissionChangedHandler {
+    fun onNotificationPermissionChanged(enabled: Boolean)
 }
