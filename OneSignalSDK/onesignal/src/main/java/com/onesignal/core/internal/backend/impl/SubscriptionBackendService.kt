@@ -23,7 +23,7 @@ internal class SubscriptionBackendService(
     private val _http: IHttpClient
 ) : ISubscriptionBackendService {
 
-    override suspend fun createSubscription(appId: String, aliasLabel: String, aliasValue: String, type: SubscriptionObjectType, enabled: Boolean, address: String): String {
+    override suspend fun createSubscription(appId: String, aliasLabel: String, aliasValue: String, type: SubscriptionObjectType, enabled: Boolean, address: String, status: Int): String {
         // TODO: To Implement, temporarily using players endpoint when PUSH
         if (type == SubscriptionObjectType.SMS || type == SubscriptionObjectType.EMAIL) {
             return UUID.randomUUID().toString()
@@ -70,7 +70,7 @@ internal class SubscriptionBackendService(
         return responseJSON.getString("id")
     }
 
-    override suspend fun updateSubscription(appId: String, subscriptionId: String, enabled: Boolean, address: String) {
+    override suspend fun updateSubscription(appId: String, subscriptionId: String, enabled: Boolean, address: String, status: Int) {
         // TODO: To Implement
     }
 

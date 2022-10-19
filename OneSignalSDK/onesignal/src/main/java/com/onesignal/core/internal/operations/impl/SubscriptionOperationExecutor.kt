@@ -8,6 +8,7 @@ import com.onesignal.core.internal.backend.SubscriptionObjectType
 import com.onesignal.core.internal.common.IDManager
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.logging.Logging
+import com.onesignal.core.internal.modeling.ModelChangeTags
 import com.onesignal.core.internal.models.SubscriptionModel
 import com.onesignal.core.internal.models.SubscriptionModelStore
 import com.onesignal.core.internal.models.SubscriptionType
@@ -49,8 +50,9 @@ internal class SubscriptionOperationExecutor(
         // the effective enabled/address for this subscription is the last update performed, if there is one. If there
         // isn't one we fall back to whatever is in the create operation.
         val lastUpdateOperation = operations.lastOrNull { it is UpdateSubscriptionOperation } as UpdateSubscriptionOperation?
-        var enabled = lastUpdateOperation?.enabled ?: createOperation.enabled
-        var address = lastUpdateOperation?.address ?: createOperation.address
+        val enabled = lastUpdateOperation?.enabled ?: createOperation.enabled
+        val address = lastUpdateOperation?.address ?: createOperation.address
+        val status = lastUpdateOperation?.status ?: createOperation.status
 
         // translate the subscription type to the subscription object type.
         val subscriptionType: SubscriptionObjectType = when (createOperation.type) {
@@ -72,7 +74,8 @@ internal class SubscriptionOperationExecutor(
                 IDManager.retrieveId(createOperation.onesignalId),
                 subscriptionType,
                 enabled,
-                address
+                address,
+                status
             )
 
             // Add the "local-to-backend" ID translation to the IdentifierTranslator for any operations that were
@@ -81,7 +84,7 @@ internal class SubscriptionOperationExecutor(
             IDManager.setLocalToBackendIdTranslation(createOperation.subscriptionId, backendSubscriptionId)
 
             val subscriptionModel = _subscriptionModelStore.get(createOperation.subscriptionId)
-            subscriptionModel?.setProperty(SubscriptionModel::id.name, backendSubscriptionId, false)
+            subscriptionModel?.setProperty(SubscriptionModel::id.name, backendSubscriptionId, ModelChangeTags.HYDRATE)
         } catch (ex: BackendException) {
             // TODO: Error handling
         }
@@ -95,7 +98,8 @@ internal class SubscriptionOperationExecutor(
                 lastOperation.appId,
                 IDManager.retrieveId(lastOperation.subscriptionId),
                 lastOperation.enabled,
-                lastOperation.address
+                lastOperation.address,
+                lastOperation.status
             )
         } catch (ex: BackendException) {
             // TODO: Need a concept of retrying on network error, and other error handling

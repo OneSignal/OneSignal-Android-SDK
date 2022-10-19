@@ -6,6 +6,7 @@ import com.onesignal.core.internal.common.events.EventProducer
 import com.onesignal.core.internal.common.events.IEventNotifier
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.modeling.IModelStoreChangeHandler
+import com.onesignal.core.internal.modeling.ModelChangedArgs
 import com.onesignal.core.internal.models.SubscriptionModel
 import com.onesignal.core.internal.models.SubscriptionModelStore
 import com.onesignal.core.internal.models.SubscriptionType
@@ -19,16 +20,14 @@ internal interface ISubscriptionManager : IEventNotifier<ISubscriptionChangedHan
     var subscriptions: SubscriptionList
 
     fun addEmailSubscription(email: String)
-    fun addOrUpdatePushSubscription(pushToken: String?)
+    fun addOrUpdatePushSubscription(pushToken: String?, pushTokenStatus: Int?)
     fun addSmsSubscription(sms: String)
     fun removeEmailSubscription(email: String)
     fun removeSmsSubscription(sms: String)
 }
 
 internal interface ISubscriptionChangedHandler {
-    fun onSubscriptionAdded(subscription: ISubscription)
-    fun onSubscriptionUpdated(subscription: ISubscription)
-    fun onSubscriptionRemoved(subscription: ISubscription)
+    fun onSubscriptionsChanged()
 }
 
 /**
@@ -38,7 +37,7 @@ internal interface ISubscriptionChangedHandler {
  *
  * In general the subscription manager relies on and reacts to the subscription model store.  Adding
  * a subscription for example will add the subscription to the model store, then utilizing the
- * [IModelStoreChangeHandler.onAdded] callback to refresh the appropriate subscription from the
+ * [IModelStoreChangeHandler.onModelAdded] callback to refresh the appropriate subscription from the
  * subscription model.
  */
 internal class SubscriptionManager(
@@ -64,14 +63,15 @@ internal class SubscriptionManager(
         addSubscriptionToModels(SubscriptionType.SMS, sms)
     }
 
-    override fun addOrUpdatePushSubscription(pushToken: String?) {
+    override fun addOrUpdatePushSubscription(pushToken: String?, pushTokenStatus: Int?) {
         var pushSub = subscriptions.push
 
         if (pushSub == null) {
-            addSubscriptionToModels(SubscriptionType.PUSH, pushToken ?: "")
+            addSubscriptionToModels(SubscriptionType.PUSH, pushToken ?: "", pushTokenStatus)
         } else {
             updateSubscriptionModel(pushSub) {
                 it.address = pushToken ?: ""
+                it.status = pushTokenStatus ?: SubscriptionModel.STATUS_SUBSCRIBED
             }
         }
     }
@@ -92,14 +92,15 @@ internal class SubscriptionManager(
         }
     }
 
-    private fun addSubscriptionToModels(type: SubscriptionType, address: String) {
+    private fun addSubscriptionToModels(type: SubscriptionType, address: String, status: Int? = null) {
         Logging.log(LogLevel.DEBUG, "SubscriptionManager.addSubscription(type: $type, address: $address)")
 
-        var subscriptionModel = SubscriptionModel()
+        val subscriptionModel = SubscriptionModel()
         subscriptionModel.id = IDManager.createLocalId()
         subscriptionModel.enabled = true
         subscriptionModel.type = type
         subscriptionModel.address = address
+        subscriptionModel.status = status ?: SubscriptionModel.STATUS_SUBSCRIBED
 
         _subscriptionModelStore.add(subscriptionModel)
     }
@@ -107,7 +108,7 @@ internal class SubscriptionManager(
     private fun removeSubscriptionFromModels(subscription: ISubscription) {
         Logging.log(LogLevel.DEBUG, "SubscriptionManager.removeSubscription(subscription: $subscription)")
 
-        _subscriptionModelStore.remove(subscription.id.toString())
+        _subscriptionModelStore.remove(subscription.id)
     }
 
     private fun updateSubscriptionModel(subscription: ISubscription, update: (SubscriptionModel) -> Unit) {
@@ -125,7 +126,7 @@ internal class SubscriptionManager(
      * Called when the model store has added a new subscription. The subscription list must be updated
      * to reflect the added subscription.
      */
-    override fun onAdded(model: SubscriptionModel) {
+    override fun onModelAdded(model: SubscriptionModel, tag: String) {
         createSubscriptionAndAddToSubscriptionList(model)
     }
 
@@ -133,16 +134,16 @@ internal class SubscriptionManager(
      * Called when a subscription model has been updated. The subscription list must be updated
      * to reflect the update subscription.
      */
-    override fun onUpdated(model: SubscriptionModel, path: String, property: String, oldValue: Any?, newValue: Any?) {
-        val subscription = subscriptions.collection.firstOrNull { it.id == model.id }
+    override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
+        val subscription = subscriptions.collection.firstOrNull { it.id == args.model.id }
 
         if (subscription == null) {
             // this shouldn't happen, but create a new subscription if a model was updated and we
             // don't yet have a representation for it in the subscription list.
-            createSubscriptionAndAddToSubscriptionList(model)
+            createSubscriptionAndAddToSubscriptionList(args.model as SubscriptionModel)
         } else {
             // the model has already been updated, so fire the update event
-            _events.fire { it.onSubscriptionUpdated(subscription) }
+            _events.fire { it.onSubscriptionsChanged() }
         }
     }
 
@@ -150,8 +151,8 @@ internal class SubscriptionManager(
      * Called when a subscription model has been removed. The subscription list must be updated
      * to reflect the subscription removed.
      */
-    override fun onRemoved(model: SubscriptionModel) {
-        val subscription = subscriptions.collection.firstOrNull { it.id.toString() == model.id }
+    override fun onModelRemoved(model: SubscriptionModel, tag: String) {
+        val subscription = subscriptions.collection.firstOrNull { it.id == model.id }
 
         if (subscription != null) {
             removeSubscriptionFromSubscriptionList(subscription)
@@ -165,7 +166,7 @@ internal class SubscriptionManager(
         subscriptions.add(subscription)
         this.subscriptions = SubscriptionList(subscriptions)
 
-        _events.fire { it.onSubscriptionAdded(subscription) }
+        _events.fire { it.onSubscriptionsChanged() }
     }
 
     private fun removeSubscriptionFromSubscriptionList(subscription: ISubscription) {
@@ -173,7 +174,7 @@ internal class SubscriptionManager(
         subscriptions.remove(subscription)
         this.subscriptions = SubscriptionList(subscriptions)
 
-        _events.fire { it.onSubscriptionRemoved(subscription) }
+        _events.fire { it.onSubscriptionsChanged() }
     }
 
     private fun createSubscriptionFromModel(subscriptionModel: SubscriptionModel): ISubscription {

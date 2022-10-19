@@ -178,7 +178,7 @@ internal class NotificationOpenedProcessor(
             intent.getIntExtra(NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0),
             dismissed,
             summaryGroup,
-            _configModelStore.get().clearGroupOnSummaryClick
+            _configModelStore.model.clearGroupOnSummaryClick
         )
     }
 

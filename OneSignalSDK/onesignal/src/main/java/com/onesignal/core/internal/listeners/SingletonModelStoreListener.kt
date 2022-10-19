@@ -3,6 +3,8 @@ package com.onesignal.core.internal.listeners
 import com.onesignal.core.internal.modeling.ISingletonModelStore
 import com.onesignal.core.internal.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.core.internal.modeling.Model
+import com.onesignal.core.internal.modeling.ModelChangeTags
+import com.onesignal.core.internal.modeling.ModelChangedArgs
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.core.internal.startup.IBootstrapService
@@ -21,15 +23,23 @@ internal abstract class SingletonModelStoreListener<TModel>(
         store.unsubscribe(this)
     }
 
-    override fun onModelReplaced(model: TModel) {
+    override fun onModelReplaced(model: TModel, tag: String) {
+        if (tag != ModelChangeTags.NORMAL) {
+            return
+        }
+
         val operation = getReplaceOperation(model)
         if (operation != null) {
             opRepo.enqueue(operation)
         }
     }
 
-    override fun onModelUpdated(model: TModel, path: String, property: String, oldValue: Any?, newValue: Any?) {
-        val operation = getUpdateOperation(model, path, property, oldValue, newValue)
+    override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
+        if (tag != ModelChangeTags.NORMAL) {
+            return
+        }
+
+        val operation = getUpdateOperation(args.model as TModel, args.path, args.property, args.oldValue, args.newValue)
         if (operation != null) {
             opRepo.enqueue(operation)
         }
