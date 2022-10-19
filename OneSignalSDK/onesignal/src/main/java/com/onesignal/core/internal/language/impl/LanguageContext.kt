@@ -10,6 +10,6 @@ internal class LanguageContext(
     private var _deviceLanguageProvider = LanguageProviderDevice()
 
     override var language: String
-        get() = _propertiesModelStore.get().language ?: _deviceLanguageProvider.language
-        set(value) { _propertiesModelStore.get().language = value }
+        get() = _propertiesModelStore.model.language ?: _deviceLanguageProvider.language
+        set(value) { _propertiesModelStore.model.language = value }
 }

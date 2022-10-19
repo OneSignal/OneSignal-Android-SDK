@@ -2,6 +2,8 @@ package com.onesignal.notification.internal.listeners
 
 import com.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.core.internal.modeling.ISingletonModelStoreChangeHandler
+import com.onesignal.core.internal.modeling.ModelChangeTags
+import com.onesignal.core.internal.modeling.ModelChangedArgs
 import com.onesignal.core.internal.models.ConfigModel
 import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.startup.IStartableService
@@ -18,7 +20,13 @@ internal class ConfigModelStoreListener(
         _configModelStore.subscribe(this)
     }
 
-    override fun onModelReplaced(model: ConfigModel) {
+    override fun onModelReplaced(model: ConfigModel, tag: String) {
+        // we only need to do things when the config model was replaced
+        // via a hydration from the backend.
+        if (tag != ModelChangeTags.HYDRATE) {
+            return
+        }
+
         // Refresh the notification permissions whenever we come back into focus
         _channelManager.processChannelList(model.notificationChannels)
 
@@ -27,6 +35,6 @@ internal class ConfigModelStoreListener(
         }
     }
 
-    override fun onModelUpdated(model: ConfigModel, path: String, property: String, oldValue: Any?, newValue: Any?) {
+    override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
     }
 }

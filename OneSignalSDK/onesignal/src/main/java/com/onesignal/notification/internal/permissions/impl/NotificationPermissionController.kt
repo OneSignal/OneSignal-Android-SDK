@@ -33,11 +33,14 @@ import com.onesignal.R
 import com.onesignal.core.internal.application.ApplicationLifecycleHandlerBase
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.AndroidUtils
+import com.onesignal.core.internal.common.events.EventProducer
 import com.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.core.internal.permissions.impl.AlertDialogPrepromptForAndroidSettings
 import com.onesignal.notification.internal.common.NotificationHelper
+import com.onesignal.notification.internal.permissions.INotificationPermissionChangedHandler
 import com.onesignal.notification.internal.permissions.INotificationPermissionController
 import com.onesignal.onesignal.core.internal.common.suspend.WaiterWithValue
+import kotlinx.coroutines.yield
 
 internal class NotificationPermissionController(
     private val _application: IApplicationService,
@@ -47,6 +50,7 @@ internal class NotificationPermissionController(
     INotificationPermissionController {
 
     private val _waiter = WaiterWithValue<Boolean>()
+    private val _events = EventProducer<INotificationPermissionChangedHandler>()
 
     init {
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)
@@ -70,6 +74,10 @@ internal class NotificationPermissionController(
      * to notify of the status.
      */
     override suspend fun prompt(fallbackToSettings: Boolean): Boolean {
+        // yield to force a suspension.  When there is no suspension the continuation will
+        // never be called
+        yield()
+
         if (notificationsEnabled()) {
             return true
         }
@@ -92,8 +100,12 @@ internal class NotificationPermissionController(
         return _waiter.waitForWake()
     }
 
+    override fun subscribe(handler: INotificationPermissionChangedHandler) = _events.subscribe(handler)
+    override fun unsubscribe(handler: INotificationPermissionChangedHandler) = _events.subscribe(handler)
+
     override fun onAccept() {
         _waiter.wake(true)
+        _events.fire { it.onNotificationPermissionChanged(true) }
     }
 
     override fun onReject(fallbackToSettings: Boolean) {
@@ -106,6 +118,7 @@ internal class NotificationPermissionController(
 
         if (!fallbackShown) {
             _waiter.wake(false)
+            _events.fire { it.onNotificationPermissionChanged(false) }
         }
     }
 
@@ -124,13 +137,16 @@ internal class NotificationPermissionController(
                         override fun onFocus() {
                             super.onFocus()
                             _applicationService.removeApplicationLifecycleHandler(this)
-                            _waiter.wake(AndroidUtils.hasPermission(ANDROID_PERMISSION_STRING, true, _applicationService))
+                            val hasPermission = AndroidUtils.hasPermission(ANDROID_PERMISSION_STRING, true, _applicationService)
+                            _waiter.wake(hasPermission)
+                            _events.fire { it.onNotificationPermissionChanged(hasPermission) }
                         }
                     })
                     NavigateToAndroidSettingsForNotifications.show(activity)
                 }
                 override fun onDecline() {
                     _waiter.wake(false)
+                    _events.fire { it.onNotificationPermissionChanged(false) }
                 }
             }
         )

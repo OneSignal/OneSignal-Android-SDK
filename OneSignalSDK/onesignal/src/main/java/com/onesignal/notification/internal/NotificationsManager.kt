@@ -4,6 +4,7 @@ import android.app.Activity
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.backend.BackendException
 import com.onesignal.core.internal.common.events.EventProducer
+import com.onesignal.core.internal.common.suspendifyOnMain
 import com.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.models.ConfigModelStore
@@ -18,12 +19,10 @@ import com.onesignal.notification.internal.common.GenerateNotificationOpenIntent
 import com.onesignal.notification.internal.common.NotificationHelper
 import com.onesignal.notification.internal.data.INotificationRepository
 import com.onesignal.notification.internal.lifecycle.INotificationLifecycleService
+import com.onesignal.notification.internal.permissions.INotificationPermissionChangedHandler
 import com.onesignal.notification.internal.permissions.INotificationPermissionController
 import com.onesignal.notification.internal.restoration.INotificationRestoreWorkManager
 import com.onesignal.notification.internal.summary.INotificationSummaryManager
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.yield
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -51,7 +50,8 @@ internal class NotificationsManager(
     private val _summaryManager: INotificationSummaryManager
 ) : INotificationsManager,
     INotificationActivityOpener,
-    INotificationStateRefresher {
+    INotificationStateRefresher,
+    INotificationPermissionChangedHandler {
 
     override var permissionStatus: IPermissionState = PermissionState(false)
     override var unsubscribeWhenNotificationsAreDisabled: Boolean = false
@@ -59,52 +59,42 @@ internal class NotificationsManager(
     private val _permissionChangedNotifier = EventProducer<IPermissionChangedHandler>()
 
     init {
+        _notificationPermissionController.subscribe(this)
         suspendifyOnThread {
             _notificationDataController.deleteExpiredNotifications()
         }
     }
 
+    /**
+     * Called when app calls [requestPermission] and the user accepts/denies permission.
+     */
+    override fun onNotificationPermissionChanged(enabled: Boolean) {
+        setPermissionStatusAndFire(enabled)
+    }
+
+    /**
+     * Called when app has gained focus and the notification state should be refreshed.
+     */
     override fun refreshNotificationState() {
         // ensure all notifications for this app have been restored to the notification panel
         _notificationRestoreWorkManager.beginEnqueueingWork(_applicationService.appContext, false)
 
         val isEnabled = NotificationHelper.areNotificationsEnabled(_applicationService.appContext)
-
-        suspendifyOnThread {
-            setPermissionStatusAndFire(isEnabled)
-        }
+        setPermissionStatusAndFire(isEnabled)
     }
 
     override suspend fun requestPermission(): Boolean {
         Logging.debug("NotificationsManager.requestPermission()")
-
-        // TODO: We do not yet handle the case where the activity is shown to the user, the application
-        //       is killed, the app is re-opened (showing the permission activity), and the
-        //       user makes a decision. Because the app is killed this flow is dead.
-        //       NotificationPermissionController does still get the callback, the way it is structured,
-        //       so we just need to figure out how to get it to tell us outside of us calling (weird).
-        val result = _notificationPermissionController.prompt(true)
-
-        // if result is null that means the user has gone to app settings and may or may not do
-        // something there.  However when they come back the application will be brought into
-        // focus and our application lifecycle handler will pick up any change that could have
-        // occurred.
-        setPermissionStatusAndFire(result)
-
-        // yield to force a suspension.  When there is no suspension and invoked via Java the
-        // continuation is never called (TODO: True?)
-        yield()
-
-        return result
+        return _notificationPermissionController.prompt(true)
     }
 
-    private suspend fun setPermissionStatusAndFire(isEnabled: Boolean) {
+    private fun setPermissionStatusAndFire(isEnabled: Boolean) {
         val oldPermissionStatus = permissionStatus
         permissionStatus = PermissionState(isEnabled)
 
         if (oldPermissionStatus.notificationsEnabled != isEnabled) {
             // switch over to the main thread for the firing of the event
-            withContext(Dispatchers.Main) {
+            suspendifyOnMain {
                 val changes = PermissionStateChanges(oldPermissionStatus, permissionStatus)
                 _permissionChangedNotifier.fire { it.onPermissionChanged(changes) }
             }
@@ -131,8 +121,7 @@ internal class NotificationsManager(
         val appId = if (json.has("app_id")) {
             json.getString("app_id")
         } else {
-            val config = _configModelStore.get()
-            config.appId ?: return JSONObject().put("error", "Missing app_id")
+            _configModelStore.model.appId
         }
 
         try {

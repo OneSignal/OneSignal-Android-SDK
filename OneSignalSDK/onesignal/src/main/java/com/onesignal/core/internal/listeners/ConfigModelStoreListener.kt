@@ -5,6 +5,8 @@ import com.onesignal.core.internal.backend.IParamsBackendService
 import com.onesignal.core.internal.common.suspendifyOnThread
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.modeling.ISingletonModelStoreChangeHandler
+import com.onesignal.core.internal.modeling.ModelChangeTags
+import com.onesignal.core.internal.modeling.ModelChangedArgs
 import com.onesignal.core.internal.models.ConfigModel
 import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.models.InfluenceConfigModel
@@ -31,19 +33,24 @@ internal class ConfigModelStoreListener(
         fetchParams()
     }
 
-    override fun onModelUpdated(model: ConfigModel, path: String, property: String, oldValue: Any?, newValue: Any?) {
-        if (property != ConfigModel::appId.name) {
+    override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
+        if (args.property != ConfigModel::appId.name) {
             return
         }
 
         fetchParams()
     }
 
-    override fun onModelReplaced(model: ConfigModel) {
+    override fun onModelReplaced(model: ConfigModel, tag: String) {
+        if (tag != ModelChangeTags.NORMAL) {
+            return
+        }
+
+        fetchParams()
     }
 
     private fun fetchParams() {
-        val appId = _configModelStore.get().appId
+        val appId = _configModelStore.model.appId
 
         if (appId.isEmpty()) {
             return
@@ -68,10 +75,11 @@ internal class ConfigModelStoreListener(
                     config.googleProjectNumber = params.googleProjectNumber
                     config.clearGroupOnSummaryClick = params.clearGroupOnSummaryClick ?: true
                     config.receiveReceiptEnabled = params.receiveReceiptEnabled ?: false
-                    config.disableGMSMissingPrompt = params.disableGMSMissingPrompt ?: _configModelStore.get().disableGMSMissingPrompt
-                    config.unsubscribeWhenNotificationsDisabled = params.unsubscribeWhenNotificationsDisabled ?: _configModelStore.get().unsubscribeWhenNotificationsDisabled
-                    config.locationShared = params.locationShared ?: _configModelStore.get().locationShared
-                    config.requiresPrivacyConsent = params.requiresUserPrivacyConsent ?: _configModelStore.get().requiresPrivacyConsent
+                    config.disableGMSMissingPrompt = params.disableGMSMissingPrompt ?: _configModelStore.model.disableGMSMissingPrompt
+                    config.unsubscribeWhenNotificationsDisabled = params.unsubscribeWhenNotificationsDisabled ?: _configModelStore.model.unsubscribeWhenNotificationsDisabled
+                    config.locationShared = params.locationShared ?: _configModelStore.model.locationShared
+                    config.requiresPrivacyConsent = params.requiresUserPrivacyConsent ?: _configModelStore.model.requiresPrivacyConsent
+                    config.givenPrivacyConsent = _configModelStore.model.givenPrivacyConsent
 
                     config.influenceParams.notificationLimit = params.influenceParams.notificationLimit ?: InfluenceConfigModel.DEFAULT_NOTIFICATION_LIMIT
                     config.influenceParams.indirectNotificationAttributionWindow = params.influenceParams.indirectNotificationAttributionWindow ?: InfluenceConfigModel.DEFAULT_INDIRECT_ATTRIBUTION_WINDOW
@@ -86,7 +94,7 @@ internal class ConfigModelStoreListener(
                     config.fcmParams.appId = params.fcmParams.appId
                     config.fcmParams.apiKey = params.fcmParams.apiKey
 
-                    _configModelStore.replace(config)
+                    _configModelStore.replace(config, ModelChangeTags.HYDRATE)
                     success = true
                 } catch (ex: BackendException) {
                     if (ex.statusCode == HttpURLConnection.HTTP_FORBIDDEN) {

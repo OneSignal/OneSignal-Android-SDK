@@ -17,45 +17,37 @@ internal open class SingletonModelStore<TModel>(
         store.subscribe(this)
     }
 
-    override fun get(): TModel {
-        val model = store.get(_singletonId)
-        if (model != null) {
-            return model
+    override val model: TModel
+        get() {
+            val model = store.get(_singletonId)
+            if (model != null) {
+                return model
+            }
+
+            val createdModel = store.create()
+            createdModel.id = _singletonId
+            store.add(createdModel)
+            return createdModel
         }
 
-        val createdModel = store.create()
-        createdModel.id = _singletonId
-        store.add(createdModel)
-        return createdModel
-    }
-
-    override fun replace(model: TModel, fireEvent: Boolean) {
-        val existingModel = get()
-        existingModel.initializeFromModel(model)
-        existingModel.setProperty(Model::id.name, _singletonId, notify = false)
-
-        _changeSubscription.fire { it.onModelReplaced(existingModel) }
-    }
-
-    /**
-     * Persist the singleton model store.
-     */
-    fun persist() {
-        store.persist()
+    override fun replace(model: TModel, tag: String) {
+        val existingModel = this.model
+        existingModel.initializeFromModel(_singletonId, model)
+        _changeSubscription.fire { it.onModelReplaced(existingModel, tag) }
     }
 
     override fun subscribe(handler: ISingletonModelStoreChangeHandler<TModel>) = _changeSubscription.subscribe(handler)
     override fun unsubscribe(handler: ISingletonModelStoreChangeHandler<TModel>) = _changeSubscription.unsubscribe(handler)
 
-    override fun onAdded(model: TModel) {
+    override fun onModelAdded(model: TModel, tag: String) {
         // singleton is assumed to always exist. It gets added transparently therefore no event.
     }
 
-    override fun onUpdated(model: TModel, path: String, property: String, oldValue: Any?, newValue: Any?) {
-        _changeSubscription.fire { it.onModelUpdated(model, path, property, oldValue, newValue) }
+    override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
+        _changeSubscription.fire { it.onModelUpdated(args, tag) }
     }
 
-    override fun onRemoved(model: TModel) {
+    override fun onModelRemoved(model: TModel, tag: String) {
         // singleton is assumed to always exist. It never gets removed therefore no event.
     }
 }

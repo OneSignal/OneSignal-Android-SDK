@@ -41,10 +41,10 @@ internal open class UserManager(
         get() = _subscriptionManager.subscriptions
 
     private val _identityModel: IdentityModel
-        get() = _identityModelStore.get()
+        get() = _identityModelStore.model
 
     private val _propertiesModel: PropertiesModel
-        get() = _propertiesModelStore.get()
+        get() = _propertiesModelStore.model
 
     override fun addAlias(label: String, id: String): com.onesignal.core.user.IUserManager {
         Logging.log(LogLevel.DEBUG, "setAlias(label: $label, id: $id)")

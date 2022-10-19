@@ -221,7 +221,7 @@ internal class TrackGooglePurchase(
 
                 // New purchases to report. If successful then mark them as tracked.
                 if (purchasesToReport.isNotEmpty()) {
-                    _operationRepo.enqueue(TrackPurchaseOperation(_configModelStore.get().appId, _identityModelStore.get().onesignalId, newAsExisting, BigDecimal(0), purchasesToReport))
+                    _operationRepo.enqueue(TrackPurchaseOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, newAsExisting, BigDecimal(0), purchasesToReport))
                     purchaseTokens.addAll(newPurchaseTokens)
                     _prefs.saveString(PreferenceStores.PLAYER_PURCHASES, PreferencePlayerPurchasesKeys.PREFS_PURCHASE_TOKENS, purchaseTokens.toString())
                     _prefs.saveBool(PreferenceStores.PLAYER_PURCHASES, PreferencePlayerPurchasesKeys.PREFS_EXISTING_PURCHASES, true)

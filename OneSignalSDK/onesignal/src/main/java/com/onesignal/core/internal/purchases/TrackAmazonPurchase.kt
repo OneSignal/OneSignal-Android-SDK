@@ -171,7 +171,7 @@ internal class TrackAmazonPurchase(
                         }
 
                         // TODO: amount spent?
-                        _operationRepo.enqueue(TrackPurchaseOperation(_configModelStore.get().appId, _identityModelStore.get().onesignalId, false, BigDecimal(0), purchasesToReport))
+                        _operationRepo.enqueue(TrackPurchaseOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, false, BigDecimal(0), purchasesToReport))
                     }
                 }
             } else if (orgPurchasingListener != null) {
