@@ -1,5 +1,6 @@
 package com.onesignal.iam.internal
 
+import android.os.Build
 import com.onesignal.core.internal.service.ServiceBuilder
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.iam.IIAMManager
@@ -24,31 +25,37 @@ import com.onesignal.iam.internal.triggers.impl.TriggerController
 
 internal object IAMModule {
     fun register(builder: ServiceBuilder) {
-        // Low level services
-        builder.register<InAppStateService>().provides<InAppStateService>()
-        builder.register<InAppHydrator>().provides<InAppHydrator>()
-        builder.register<InAppPreferencesController>().provides<IInAppPreferencesController>()
-        builder.register<InAppRepository>().provides<IInAppRepository>()
-        builder.register<InAppBackendService>().provides<IInAppBackendService>()
-        builder.register<IAMLifecycleService>().provides<IInAppLifecycleService>()
+        // Make sure only Android 4.4 devices and higher can use IAMs
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            builder.register<DummyIAMManager>()
+                   .provides<IIAMManager>()
+        }
+        else {
+            // Low level services
+            builder.register<InAppStateService>().provides<InAppStateService>()
+            builder.register<InAppHydrator>().provides<InAppHydrator>()
+            builder.register<InAppPreferencesController>().provides<IInAppPreferencesController>()
+            builder.register<InAppRepository>().provides<IInAppRepository>()
+            builder.register<InAppBackendService>().provides<IInAppBackendService>()
+            builder.register<IAMLifecycleService>().provides<IInAppLifecycleService>()
 
-        // Triggers
-        builder.register<TriggerController>().provides<ITriggerController>()
-        builder.register<DynamicTriggerController>().provides<DynamicTriggerController>() // observer
+            // Triggers
+            builder.register<TriggerController>().provides<ITriggerController>()
+            builder.register<DynamicTriggerController>()
+                .provides<DynamicTriggerController>() // observer
 
-        // Display
-        builder.register<InAppDisplayer>().provides<IInAppDisplayer>()
+            // Display
+            builder.register<InAppDisplayer>().provides<IInAppDisplayer>()
 
-        // Previews
-        builder.register<InAppMessagePreviewHandler>().provides<IStartableService>()
+            // Previews
+            builder.register<InAppMessagePreviewHandler>().provides<IStartableService>()
 
-        // Prompts
-        builder.register<InAppMessagePromptFactory>().provides<IInAppMessagePromptFactory>()
+            // Prompts
+            builder.register<InAppMessagePromptFactory>().provides<IInAppMessagePromptFactory>()
 
-        builder.register<IAMManager>()
-            .provides<IIAMManager>()
-            .provides<IStartableService>()
-
-        // TODO: Only Android 4.4 can use IAMS (see OSInAppMessageDummyController)
+            builder.register<IAMManager>()
+                .provides<IIAMManager>()
+                .provides<IStartableService>()
+        }
     }
 }

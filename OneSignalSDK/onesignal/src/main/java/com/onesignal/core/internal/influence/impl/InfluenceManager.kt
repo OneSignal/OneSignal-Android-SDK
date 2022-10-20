@@ -66,17 +66,6 @@ internal class InfluenceManager(
     override fun onSessionEnded(duration: Long) {
     }
 
-    override fun addSessionData(jsonObject: JSONObject, influences: List<Influence>) {
-        influences.forEach {
-            when (it.influenceChannel) {
-                InfluenceChannel.NOTIFICATION -> trackers[InfluenceConstants.NOTIFICATION_TAG]!!.addSessionData(jsonObject, it)
-                InfluenceChannel.IAM -> {
-                    // IAM doesn't influence session
-                }
-            }
-        }
-    }
-
     private fun getChannelByEntryAction(entryAction: AppEntryAction): IChannelTracker? {
         return if (entryAction.isNotificationClick) notificationChannelTracker else null
     }
@@ -248,6 +237,5 @@ internal class InfluenceManager(
         }
 
         Logging.debug("InfluenceManager.attemptSessionUpgrade: Trackers after update attempt: $channels")
-        // TODO: FocusTimeController needs the influencesToEnd data.
     }
 }
