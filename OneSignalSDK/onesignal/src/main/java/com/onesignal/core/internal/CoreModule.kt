@@ -59,6 +59,7 @@ import com.onesignal.core.internal.purchases.TrackAmazonPurchase
 import com.onesignal.core.internal.purchases.TrackGooglePurchase
 import com.onesignal.core.internal.service.ServiceBuilder
 import com.onesignal.core.internal.session.ISessionService
+import com.onesignal.core.internal.session.SessionManager
 import com.onesignal.core.internal.session.impl.SessionService
 import com.onesignal.core.internal.startup.IBootstrapService
 import com.onesignal.core.internal.startup.IStartableService
@@ -68,6 +69,7 @@ import com.onesignal.core.internal.time.Time
 import com.onesignal.core.internal.user.ISubscriptionManager
 import com.onesignal.core.internal.user.SubscriptionManager
 import com.onesignal.core.internal.user.UserManager
+import com.onesignal.core.session.ISessionManager
 import com.onesignal.core.user.IUserManager
 
 internal object CoreModule {
@@ -121,6 +123,7 @@ internal object CoreModule {
             .provides<IStartableService>()
             .provides<IBackgroundService>()
         builder.register<SessionListener>().provides<IStartableService>()
+        builder.register<SessionManager>().provides<ISessionManager>()
 
         // Background
         builder.register<BackgroundManager>()
