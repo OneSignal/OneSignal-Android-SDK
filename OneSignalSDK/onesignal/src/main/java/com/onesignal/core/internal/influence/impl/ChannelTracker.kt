@@ -21,7 +21,6 @@ internal abstract class ChannelTracker internal constructor(protected var dataRe
     abstract fun getLastChannelObjectsReceivedByNewId(id: String?): JSONArray
     abstract fun saveChannelObjects(channelObjects: JSONArray)
     abstract fun initInfluencedTypeFromCache()
-    abstract fun addSessionData(jsonObject: JSONObject, influence: Influence)
 
     private val isDirectSessionEnabled: Boolean
         get() = dataRepository.isDirectInfluenceEnabled
