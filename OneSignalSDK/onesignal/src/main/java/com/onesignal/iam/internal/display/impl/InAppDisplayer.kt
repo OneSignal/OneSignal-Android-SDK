@@ -45,7 +45,7 @@ internal class InAppDisplayer(
     private var lastInstance: WebViewManager? = null
 
     override suspend fun displayMessage(message: InAppMessage): Boolean? {
-        var response = _backend.getIAMData(_configModelStore.get().appId, message.messageId, InAppHelper.variantIdForMessage(message, _languageContext))
+        var response = _backend.getIAMData(_configModelStore.model.appId, message.messageId, InAppHelper.variantIdForMessage(message, _languageContext))
 
         if (response.content != null) {
             message.displayDuration = response.content!!.displayDuration!!
@@ -66,7 +66,7 @@ internal class InAppDisplayer(
 
     override suspend fun displayPreviewMessage(previewUUID: String): Boolean {
         val message = InAppMessage(true, _time)
-        val content = _backend.getIAMPreviewData(_configModelStore.get().appId, previewUUID)
+        val content = _backend.getIAMPreviewData(_configModelStore.model.appId, previewUUID)
 
         return if (content == null) {
             false

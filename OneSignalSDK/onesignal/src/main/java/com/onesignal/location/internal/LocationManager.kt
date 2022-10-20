@@ -12,6 +12,7 @@ import com.onesignal.location.internal.capture.ILocationCapturer
 import com.onesignal.location.internal.common.LocationConstants
 import com.onesignal.location.internal.common.LocationUtils
 import com.onesignal.location.internal.controller.ILocationController
+import com.onesignal.location.internal.permissions.ILocationPermissionChangedHandler
 import com.onesignal.location.internal.permissions.LocationPermissionController
 
 internal class LocationManager(
@@ -19,12 +20,21 @@ internal class LocationManager(
     private val _capturer: ILocationCapturer,
     private val _locationController: ILocationController,
     private val _locationPermissionController: LocationPermissionController
-) : ILocationManager, IStartableService {
+) : ILocationManager, IStartableService, ILocationPermissionChangedHandler {
 
     override var isLocationShared: Boolean = false
 
     override fun start() {
+        _locationPermissionController.subscribe(this)
         if (LocationUtils.hasLocationPermission(_applicationService.appContext)) {
+            suspendifyOnThread {
+                startGetLocation()
+            }
+        }
+    }
+
+    override fun onLocationPermissionChanged(enabled: Boolean) {
+        if (enabled) {
             suspendifyOnThread {
                 startGetLocation()
             }
@@ -123,17 +133,10 @@ internal class LocationManager(
                 result = backgroundLocationPermissionLogic()
             } else {
                 result = true
+                startGetLocation()
             }
         }
 
-        if (result) {
-            startGetLocation()
-        }
-
-        // if result is null that means the user has gone to app settings and may or may not do
-        // something there.  However when they come back the application will be brought into
-        // focus and our application lifecycle handler will pick up any change that could have
-        // occurred.
         return result
     }
 
@@ -157,7 +160,7 @@ internal class LocationManager(
     private suspend fun startGetLocation() {
         Logging.debug("LocationManager.startGetLocation()") // with lastLocation: " + lastLocation)
         try {
-            if (!_locationController!!.start()) {
+            if (!_locationController.start()) {
                 Logging.warn("LocationManager.startGetLocation: not possible, no location dependency found")
             }
         } catch (t: Throwable) {

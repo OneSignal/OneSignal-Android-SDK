@@ -18,14 +18,14 @@ internal class SubscriptionModelStoreListener(
 ) : ModelStoreListener<SubscriptionModel>(store, opRepo) {
 
     override fun getAddOperation(model: SubscriptionModel): Operation {
-        return CreateSubscriptionOperation(_configModelStore.get().appId, _identityModelStore.get().onesignalId, model.id, model.type, model.enabled, model.address)
+        return CreateSubscriptionOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, model.id, model.type, model.enabled, model.address, model.status)
     }
 
     override fun getRemoveOperation(model: SubscriptionModel): Operation {
-        return DeleteSubscriptionOperation(_configModelStore.get().appId, _identityModelStore.get().onesignalId, model.id)
+        return DeleteSubscriptionOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, model.id)
     }
 
     override fun getUpdateOperation(model: SubscriptionModel, path: String, property: String, oldValue: Any?, newValue: Any?): Operation {
-        return UpdateSubscriptionOperation(_configModelStore.get().appId, _identityModelStore.get().onesignalId, model.id, model.enabled, model.address)
+        return UpdateSubscriptionOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, model.id, model.enabled, model.address, model.status)
     }
 }

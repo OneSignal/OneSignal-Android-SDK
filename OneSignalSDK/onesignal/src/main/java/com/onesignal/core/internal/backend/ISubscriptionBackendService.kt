@@ -13,10 +13,11 @@ internal interface ISubscriptionBackendService {
      * @param type The type of subscription to create.
      * @param enabled Whether this subscription is enabled.
      * @param address The subscription address.
+     * @param status The subscription status.
      *
      * @return The ID of the subscription created.
      */
-    suspend fun createSubscription(appId: String, aliasLabel: String, aliasValue: String, type: SubscriptionObjectType, enabled: Boolean, address: String): String
+    suspend fun createSubscription(appId: String, aliasLabel: String, aliasValue: String, type: SubscriptionObjectType, enabled: Boolean, address: String, status: Int): String
 
     /**
      * Update an existing subscription with the properties provided.
@@ -25,8 +26,9 @@ internal interface ISubscriptionBackendService {
      * @param subscriptionId The ID of the subscription to update.
      * @param enabled Whether this subscription is enabled.
      * @param address The subscription address.
+     * @param status The subscription status.
      */
-    suspend fun updateSubscription(appId: String, subscriptionId: String, enabled: Boolean, address: String)
+    suspend fun updateSubscription(appId: String, subscriptionId: String, enabled: Boolean, address: String, status: Int)
 
     /**
      * Delete an existing subscription.

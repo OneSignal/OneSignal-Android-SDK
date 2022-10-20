@@ -163,7 +163,7 @@ internal class NotificationGenerationProcessor(
 
     // If available TTL times comes in seconds, by default is 3 days in seconds
     private fun isNotificationWithinTTL(notification: Notification): Boolean {
-        val useTtl = _configModelStore.get().restoreTTLFilter
+        val useTtl = _configModelStore.model.restoreTTLFilter
         if (!useTtl) return true
         val currentTimeInSeconds = _time.currentTimeMillis / 1000
         val sentTime = notification.sentTime

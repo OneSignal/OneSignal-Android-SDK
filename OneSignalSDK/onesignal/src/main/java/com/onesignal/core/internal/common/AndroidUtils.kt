@@ -12,6 +12,9 @@ import android.os.Bundle
 import android.os.Looper
 import android.text.TextUtils
 import androidx.annotation.Keep
+import androidx.core.app.JobIntentService
+import androidx.core.app.NotificationManagerCompat
+import androidx.legacy.content.WakefulBroadcastReceiver
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.logging.Logging
 import java.util.Random
@@ -117,6 +120,33 @@ internal object AndroidUtils {
             e.printStackTrace()
         }
         return Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1
+    }
+
+    fun hasJobIntentService(): Boolean {
+        return try {
+            // noinspection ConstantConditions
+            JobIntentService::class.java != null
+        } catch (e: Throwable) {
+            false
+        }
+    }
+
+    fun hasWakefulBroadcastReceiver(): Boolean {
+        return try {
+            // noinspection ConstantConditions
+            WakefulBroadcastReceiver::class.java != null
+        } catch (e: Throwable) {
+            false
+        }
+    }
+
+    fun hasNotificationManagerCompat(): Boolean {
+        return try {
+            // noinspection ConstantConditions
+            NotificationManagerCompat::class.java != null
+        } catch (e: Throwable) {
+            false
+        }
     }
 
     fun openURLInBrowser(appContext: Context, url: String) {

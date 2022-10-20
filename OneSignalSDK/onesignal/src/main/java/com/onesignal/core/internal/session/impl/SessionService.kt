@@ -48,8 +48,8 @@ internal class SessionService(
     private var _config: ConfigModel? = null
 
     override fun start() {
-        _session = _sessionModelStore.get()
-        _config = _configModelStore.get()
+        _session = _sessionModelStore.model
+        _config = _configModelStore.model
         _applicationService.addApplicationLifecycleHandler(this)
     }
 

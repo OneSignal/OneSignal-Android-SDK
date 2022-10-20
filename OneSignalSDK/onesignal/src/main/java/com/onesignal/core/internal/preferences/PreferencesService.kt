@@ -60,13 +60,17 @@ internal class PreferencesService(
 
         val prefs = getSharedPrefsByName(store)
         if (prefs != null) {
-            return when (type) {
-                String::class.java -> prefs.getString(key, defValue as String?)
-                Boolean::class.java -> prefs.getBoolean(key, (defValue as Boolean?) ?: false)
-                Int::class.java -> prefs.getInt(key, (defValue as Int?) ?: 0)
-                Long::class.java -> prefs.getLong(key, (defValue as Long?) ?: 0)
-                Set::class.java -> prefs.getStringSet(key, defValue as Set<String>?)
-                else -> null
+            try {
+                return when (type) {
+                    String::class.java -> prefs.getString(key, defValue as String?)
+                    Boolean::class.java -> prefs.getBoolean(key, (defValue as Boolean?) ?: false)
+                    Int::class.java -> prefs.getInt(key, (defValue as Int?) ?: 0)
+                    Long::class.java -> prefs.getLong(key, (defValue as Long?) ?: 0)
+                    Set::class.java -> prefs.getStringSet(key, defValue as Set<String>?)
+                    else -> null
+                }
+            } catch (ex: Exception) {
+                // any issues retrieving the preference, return the default value.
             }
         }
 
