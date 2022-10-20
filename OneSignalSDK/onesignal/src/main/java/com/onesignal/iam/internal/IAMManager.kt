@@ -124,6 +124,8 @@ internal class IAMManager(
         _sessionService.subscribe(this)
 
         suspendifyOnThread {
+            _repository.cleanCachedInAppMessages()
+
             // get saved IAMs from database
             _redisplayedInAppMessages.addAll(_repository.listInAppMessages())
 

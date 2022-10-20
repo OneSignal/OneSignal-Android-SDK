@@ -1,16 +1,11 @@
 package com.onesignal.core.internal.influence
 
-import org.json.JSONObject
-
 internal interface IInfluenceManager {
 
     /**
      * The influences being tracked.
      */
     val influences: List<Influence>
-
-    // TODO: This needs to be called by FocusTimeController.
-    fun addSessionData(jsonObject: JSONObject, influences: List<Influence>)
 
     /**
      * Indicate a notification has been received by the SDK.

@@ -1,13 +1,11 @@
 package com.onesignal.core.internal.influence.impl
 
-import com.onesignal.core.internal.influence.Influence
 import com.onesignal.core.internal.influence.InfluenceChannel
 import com.onesignal.core.internal.influence.InfluenceType
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.time.ITime
 import org.json.JSONArray
 import org.json.JSONException
-import org.json.JSONObject
 
 internal class InAppMessageTracker(dataRepository: InfluenceDataRepository, timeProvider: ITime) : ChannelTracker(dataRepository, timeProvider) {
     override val idTag: String
@@ -60,10 +58,6 @@ internal class InAppMessageTracker(dataRepository: InfluenceDataRepository, time
             if (it.isIndirect()) indirectIds = lastReceivedIds
         }
         Logging.debug("InAppMessageTracker.initInfluencedTypeFromCache: $this")
-    }
-
-    override fun addSessionData(jsonObject: JSONObject, influence: Influence) {
-        // In app message don't influence the session
     }
 
     override fun cacheState() {
