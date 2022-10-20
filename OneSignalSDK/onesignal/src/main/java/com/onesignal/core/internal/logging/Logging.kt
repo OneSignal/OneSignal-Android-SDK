@@ -1,15 +1,22 @@
 package com.onesignal.core.internal.logging
 
+import android.app.AlertDialog
 import com.onesignal.core.debug.LogLevel
+import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.common.suspendifyOnMain
+import java.io.PrintWriter
+import java.io.StringWriter
 
 internal object Logging {
     private const val TAG = "OneSignal"
+
+    var applicationService: IApplicationService? = null
 
     @JvmStatic
     var logLevel = LogLevel.WARN
 
     @JvmStatic
-    var visualLogLevel = LogLevel.WARN
+    var visualLogLevel = LogLevel.NONE
 
     @JvmStatic
     fun atLogLevel(level: LogLevel): Boolean {
@@ -63,27 +70,32 @@ internal object Logging {
                 LogLevel.ERROR, LogLevel.FATAL -> android.util.Log.e(TAG, message, throwable)
             }
         }
-// TODO: Implement
-//        if (level.compareTo(logLevel) < 1 && OneSignal.getCurrentActivity() != null) {
-//            try {
-//                var fullMessage: String? = "$message\n".trimIndent()
-//                if (throwable != null) {
-//                    fullMessage += throwable.message
-//                    val sw = StringWriter()
-//                    val pw = PrintWriter(sw)
-//                    throwable.printStackTrace(pw)
-//                    fullMessage += sw.toString()
-//                }
-//                val finalFullMessage = fullMessage
-//                OSUtils.runOnMainUIThread(Runnable {
-//                    if (OneSignal.getCurrentActivity() != null) AlertDialog.Builder(OneSignal.getCurrentActivity())
-//                            .setTitle(level.toString())
-//                            .setMessage(finalFullMessage)
-//                            .show()
-//                })
-//            } catch (t: Throwable) {
-//                android.util.Log.e(TAG, "Error showing logging message.", t)
-//            }
-//        }
+
+        if (level.compareTo(visualLogLevel) < 1 && applicationService?.current != null) {
+            try {
+                var fullMessage: String? = "$message\n".trimIndent()
+                if (throwable != null) {
+                    fullMessage += throwable.message
+                    val sw = StringWriter()
+                    val pw = PrintWriter(sw)
+                    throwable.printStackTrace(pw)
+                    fullMessage += sw.toString()
+                }
+                val finalFullMessage = fullMessage
+
+                suspendifyOnMain {
+                    val currentActivity = applicationService?.current
+                    if (currentActivity != null) {
+                        AlertDialog.Builder(currentActivity)
+                            .setTitle(level.toString())
+                            .setMessage(finalFullMessage)
+                            .show()
+                    }
+                }
+
+            } catch (t: Throwable) {
+                android.util.Log.e(TAG, "Error showing logging message.", t)
+            }
+        }
     }
 }
