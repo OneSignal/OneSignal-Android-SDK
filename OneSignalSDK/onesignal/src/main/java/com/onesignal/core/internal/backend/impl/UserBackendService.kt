@@ -7,6 +7,7 @@ import com.onesignal.core.internal.backend.IdentityConstants
 import com.onesignal.core.internal.backend.PropertiesDeltasObject
 import com.onesignal.core.internal.backend.PropertiesObject
 import com.onesignal.core.internal.backend.SubscriptionObject
+import com.onesignal.core.internal.models.SubscriptionModel
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.*
@@ -34,7 +35,7 @@ internal class UserBackendService(
         // TODO: Temporarily using players endpoint via subscription backend to register the subscription, so we can drive push/IAMs.
         val subscriptionIDs = mutableListOf<String>()
         for (subscription in subscriptions) {
-            val subscriptionId = _subscriptionBackend.createSubscription(appId, "", "", subscription.type, subscription.enabled ?: true, subscription.token ?: "")
+            val subscriptionId = _subscriptionBackend.createSubscription(appId, "", "", subscription.type, subscription.enabled ?: true, subscription.token ?: "", subscription.notificationTypes ?: SubscriptionModel.STATUS_SUBSCRIBED)
             subscriptionIDs.add(subscriptionId)
         }
 

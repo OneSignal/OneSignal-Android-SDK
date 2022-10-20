@@ -39,10 +39,10 @@ internal class SessionListener(
     }
 
     override fun onSessionEnded(duration: Long) {
-        _operationRepo.enqueue(TrackSessionOperation(_configModelStore.get().appId, _identityModelStore.get().onesignalId, duration))
+        _operationRepo.enqueue(TrackSessionOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, duration))
 
         suspendifyOnThread {
-            _outcomeEventsController.sendOutcomeEvent("__os_session_end")
+            _outcomeEventsController.sendOutcomeEvent("os__session_duration")
         }
     }
 }

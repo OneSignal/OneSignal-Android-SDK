@@ -2,8 +2,8 @@ package com.onesignal.core.internal.modeling
 
 /**
  * A Map Model is a [MutableMap] that has a key of type string and a generically-specified
- * value.  It is a [Model] which hooks the map into the model framework and allows for change
- * notification propagation for any adds, removes, or updates to the map.
+ * value.  It is a [Model] which hooks the [MutableMap] into the model framework and allows for change
+ * notification propagation for any adds, removes, or updates to the [MutableMap].
  */
 internal open class MapModel<V>(
     parentModel: Model? = null,

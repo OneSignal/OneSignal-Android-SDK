@@ -91,7 +91,7 @@ internal class NotificationSummaryManager(
         // Obtain the most recent notification id
         val mostRecentId = _dataController.getAndroidIdForGroup(group, false)
         if (mostRecentId != null) {
-            val shouldDismissAll = _configModelStore.get().clearGroupOnSummaryClick
+            val shouldDismissAll = _configModelStore.model.clearGroupOnSummaryClick
             if (shouldDismissAll) {
                 val groupId = if (group == NotificationHelper.grouplessSummaryKey) {
                     // If the group is groupless, obtain the hardcoded groupless summary id

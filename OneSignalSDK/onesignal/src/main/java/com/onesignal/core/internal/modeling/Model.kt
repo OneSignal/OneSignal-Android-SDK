@@ -33,7 +33,7 @@ import org.json.JSONObject
  * [MutableMap] and [Model].
  *
  * Deserialization
- * -----------------------------
+ * ---------------
  * When deserializing a flat [Model] nothing specific is required.  However if the [Model]
  * is nested the [createModelForProperty] and/or [createListForProperty] needs to be implemented
  * to aide in the deserialization process.
@@ -85,15 +85,15 @@ internal open class Model(
             if (jsonValue is JSONObject) {
                 val childModel = createModelForProperty(property, jsonValue)
                 if (childModel != null) {
-                    setProperty(property, childModel, notify = false)
+                    data[property] = childModel
                 }
             } else if (jsonValue is JSONArray) {
                 val listOfItems = createListForProperty(property, jsonValue)
                 if (listOfItems != null) {
-                    setProperty(property, listOfItems, notify = false)
+                    data[property] = listOfItems
                 }
             } else {
-                setProperty(property, jsonObject.get(property), notify = false)
+                data[property] = jsonObject.get(property)
             }
         }
     }
@@ -102,11 +102,13 @@ internal open class Model(
      * Initialize this model from a [Model].  The model provided will be replicated
      * within this model.
      *
+     * @param id The id of the model to initialze to.
      * @param model The model to initialize this model from.
      */
-    fun initializeFromModel(model: Model) {
+    fun initializeFromModel(id: String, model: Model) {
         data.clear()
         data.putAll(model.data)
+        data[::id.name] = id
     }
 
     /**
@@ -143,9 +145,9 @@ internal open class Model(
      *
      * @param name: The name of the property that is to be set.
      * @param value: The value of the property to set it to.
-     * @param notify: Whether to notify subscribers of the change.
+     * @param tag The tag which identifies how/why the property is being set.
      */
-    fun <T> setProperty(name: String, value: T, notify: Boolean = true) {
+    fun <T> setProperty(name: String, value: T, tag: String = ModelChangeTags.NORMAL) {
         val oldValue = data[name]
         val newValue = value as Any?
 
@@ -159,9 +161,7 @@ internal open class Model(
             data.remove(name)
         }
 
-        if (notify) {
-            notifyChanged(name, name, oldValue, newValue)
-        }
+        notifyChanged(name, name, tag, oldValue, newValue)
     }
 
     /**
@@ -194,15 +194,15 @@ internal open class Model(
         }
     }
 
-    private fun notifyChanged(path: String, property: String, oldValue: Any?, newValue: Any?) {
+    private fun notifyChanged(path: String, property: String, tag: String, oldValue: Any?, newValue: Any?) {
         // if there are any changed listeners for this specific model, notify them.
         val changeArgs = ModelChangedArgs(this, path, property, oldValue, newValue)
-        _changeNotifier.fire { it.onChanged(changeArgs) }
+        _changeNotifier.fire { it.onChanged(changeArgs, tag) }
 
         // if there is a parent model, propagate the change up to the parent for it's own processing.
         if (_parentModel != null) {
             val parentPath = "$_parentProperty.$path"
-            _parentModel.notifyChanged(parentPath, property, oldValue, newValue)
+            _parentModel.notifyChanged(parentPath, property, tag, oldValue, newValue)
         }
     }
 

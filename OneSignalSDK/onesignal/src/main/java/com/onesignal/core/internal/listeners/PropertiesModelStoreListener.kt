@@ -23,12 +23,12 @@ internal class PropertiesModelStoreListener(
     override fun getUpdateOperation(model: PropertiesModel, path: String, property: String, oldValue: Any?, newValue: Any?): Operation? {
         if (path.startsWith(PropertiesModel::tags.name)) {
             return if (newValue != null && newValue is String) {
-                SetTagOperation(_configModelStore.get().appId, model.onesignalId, property, newValue)
+                SetTagOperation(_configModelStore.model.appId, model.onesignalId, property, newValue)
             } else {
-                DeleteTagOperation(_configModelStore.get().appId, model.onesignalId, property)
+                DeleteTagOperation(_configModelStore.model.appId, model.onesignalId, property)
             }
         }
 
-        return SetPropertyOperation(_configModelStore.get().appId, model.onesignalId, property, newValue)
+        return SetPropertyOperation(_configModelStore.model.appId, model.onesignalId, property, newValue)
     }
 }

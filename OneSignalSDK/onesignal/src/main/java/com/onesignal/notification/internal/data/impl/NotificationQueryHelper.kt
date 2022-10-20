@@ -19,7 +19,7 @@ internal class NotificationQueryHelper(
                 OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
                 OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0"
         )
-        val useTtl = _configModelStore.get().restoreTTLFilter
+        val useTtl = _configModelStore.model.restoreTTLFilter
         if (useTtl) {
             val expireTimeWhere =
                 " AND " + OneSignalDbContract.NotificationTable.COLUMN_NAME_EXPIRE_TIME + " > " + currentTimeSec

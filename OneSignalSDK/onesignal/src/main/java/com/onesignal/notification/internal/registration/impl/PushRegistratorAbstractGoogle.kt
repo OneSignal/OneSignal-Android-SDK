@@ -50,14 +50,19 @@ internal abstract class PushRegistratorAbstractGoogle(
     abstract suspend fun getToken(senderId: String): String
 
     override suspend fun registerForPush(): IPushRegistrator.RegisterResult {
-        return if (!isValidProjectNumber(_configModelStore.get().googleProjectNumber)) {
+        if (!_deviceService.hasFCMLibrary) {
+            Logging.fatal("The Firebase FCM library is missing! Please make sure to include it in your project.")
+            return IPushRegistrator.RegisterResult(null, IPushRegistrator.RegisterStatus.PUSH_STATUS_MISSING_FIREBASE_FCM_LIBRARY)
+        }
+
+        return if (!isValidProjectNumber(_configModelStore.model.googleProjectNumber)) {
             Logging.error("Missing Google Project number!\nPlease enter a Google Project number / Sender ID on under App Settings > Android > Configuration on the OneSignal dashboard.")
             IPushRegistrator.RegisterResult(
                 null,
                 IPushRegistrator.RegisterStatus.PUSH_STATUS_INVALID_FCM_SENDER_ID
             )
         } else {
-            internalRegisterForPush(_configModelStore.get().googleProjectNumber!!)
+            internalRegisterForPush(_configModelStore.model.googleProjectNumber!!)
         }
     }
 
