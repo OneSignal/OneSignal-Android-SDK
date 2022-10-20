@@ -4,6 +4,7 @@ import android.content.Context
 import com.onesignal.core.OneSignal.login
 import com.onesignal.core.OneSignal.user
 import com.onesignal.core.debug.IDebugManager
+import com.onesignal.core.session.ISessionManager
 import com.onesignal.core.user.IUserManager
 import com.onesignal.iam.IIAMManager
 import com.onesignal.location.ILocationManager
@@ -25,6 +26,11 @@ interface IOneSignal {
      * management.
      */
     val user: IUserManager
+
+    /**
+     * The session manager for accessing session-scoped management.
+     */
+    val session: ISessionManager
 
     /**
      * The notification manager for accessing device-scoped
@@ -65,6 +71,11 @@ interface IOneSignal {
      * the application has opted into data privacy protections. See [requiresPrivacyConsent].
      */
     var privacyConsent: Boolean
+
+    /**
+     * Whether to disable the "GMS is missing" prompt to the user.
+     */
+    var disableGMSMissingPrompt: Boolean
 
     /**
      * Initialize the OneSignal SDK.  This should be called during startup of the application.
