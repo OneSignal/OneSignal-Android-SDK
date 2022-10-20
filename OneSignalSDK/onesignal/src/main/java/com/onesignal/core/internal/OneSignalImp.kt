@@ -11,6 +11,7 @@ import com.onesignal.core.internal.common.IDManager
 import com.onesignal.core.internal.common.OneSignalUtils
 import com.onesignal.core.internal.debug.DebugManager
 import com.onesignal.core.internal.logging.Logging
+import com.onesignal.core.internal.modeling.ModelChangeTags
 import com.onesignal.core.internal.models.ConfigModel
 import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.models.IdentityModel
@@ -69,7 +70,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                     // check again now that we are synchronized.
                     if (!_hasCreatedBackendUser) {
                         // Create the new user in the backend as an operation
-                        _operationRepo!!.enqueue(CreateUserOperation(_configModel!!.appId, _identityModelStore!!.get().onesignalId, _identityModelStore!!.get().externalId))
+                        _operationRepo!!.enqueue(CreateUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId, _identityModelStore!!.model.externalId))
                         _hasCreatedBackendUser = true
                     }
                 }
@@ -122,8 +123,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         (_services.getService<IApplicationService>() as ApplicationService).start(context)
 
         // get the current config model, if there is one
-        _configModel = _services.getService<ConfigModelStore>().get()
-        _sessionModel = _services.getService<SessionModelStore>().get()
+        _configModel = _services.getService<ConfigModelStore>().model
+        _sessionModel = _services.getService<SessionModelStore>().model
 
         // if the app id was specified as input, update the config model with it
         if (appId != null) {
@@ -154,8 +155,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         _startupService = _services.getService()
         _startupService!!.bootstrap()
 
-        if (_identityModelStore!!.get().hasProperty(IdentityConstants.ONESIGNAL_ID)) {
-            Logging.debug("initWithContext: using cached user ${_identityModelStore!!.get().onesignalId}")
+        if (_identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)) {
+            Logging.debug("initWithContext: using cached user ${_identityModelStore!!.model.onesignalId}")
             _hasCreatedBackendUser = true
         } else {
             createAndSwitchToNewUser()
@@ -185,7 +186,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         // TODO: Set JWT Token for all future requests.
 
         // Create the new user in the backend as an operation
-        _operationRepo!!.execute(CreateUserOperation(_configModel!!.appId, _identityModelStore!!.get().onesignalId, _identityModelStore!!.get().externalId))
+        _operationRepo!!.execute(CreateUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId, _identityModelStore!!.model.externalId))
     }
 
     override fun logout() {
@@ -238,10 +239,10 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         subscriptions.add(newPushSubscription)
 
         // The next 4 lines makes this user the effective user locally.  We clear the subscriptions
-        // first without firing the event because we don't want to drive deleting the cleared subscriptions
+        // first as an internal change because we don't want to drive deleting the cleared subscriptions
         // on the backend.  Once cleared we can then setup the new identity/properties model, and add
-        // the new user's subscriptions.
-        _subscriptionModelStore!!.clear(fireEvent = false)
+        // the new user's subscriptions as a "normal" change, which will drive changes to the backend.
+        _subscriptionModelStore!!.clear(ModelChangeTags.NO_PROPOGATE)
         _identityModelStore!!.replace(identityModel)
         _propertiesModelStore!!.replace(propertiesModel)
         _subscriptionModelStore!!.replaceAll(subscriptions)

@@ -2,6 +2,7 @@ package com.onesignal.iam.internal.triggers.impl
 
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.modeling.IModelStoreChangeHandler
+import com.onesignal.core.internal.modeling.ModelChangedArgs
 import com.onesignal.core.internal.models.TriggerModel
 import com.onesignal.core.internal.models.TriggerModelStore
 import com.onesignal.iam.internal.InAppMessage
@@ -206,17 +207,18 @@ internal class TriggerController(
         return true
     }
 
-    override fun onAdded(model: TriggerModel) {
+    override fun onModelAdded(model: TriggerModel, tag: String) {
         addTriggers(model.key, model.value)
         _dynamicTriggerController.events.fire { it.onTriggerChanged(model.key) }
     }
 
-    override fun onUpdated(model: TriggerModel, path: String, property: String, oldValue: Any?, newValue: Any?) {
+    override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
+        val model = args.model as TriggerModel
         addTriggers(model.key, model.value)
         _dynamicTriggerController.events.fire { it.onTriggerChanged(model.key) }
     }
 
-    override fun onRemoved(model: TriggerModel) {
+    override fun onModelRemoved(model: TriggerModel, tag: String) {
         removeTriggersForKeys(model.key)
     }
 

@@ -1,6 +1,7 @@
 package com.onesignal.core.internal.device.impl
 
 import android.content.pm.PackageManager
+import android.os.Build
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.location.LocationListener
 import com.google.firebase.messaging.FirebaseMessaging
@@ -80,6 +81,32 @@ internal class DeviceService(private val _applicationService: IApplicationServic
                 // Google Play Store might not be installed, ignore exception if so
             }
             return false
+        }
+
+    override val androidSupportLibraryStatus: IDeviceService.AndroidSupportLibraryStatus
+        get() {
+            val hasWakefulBroadcastReceiver: Boolean = AndroidUtils.hasWakefulBroadcastReceiver()
+            val hasNotificationManagerCompat: Boolean = AndroidUtils.hasNotificationManagerCompat()
+            if (!hasWakefulBroadcastReceiver && !hasNotificationManagerCompat) {
+                return IDeviceService.AndroidSupportLibraryStatus.MISSING
+            }
+
+            if (!hasWakefulBroadcastReceiver || !hasNotificationManagerCompat) {
+                return IDeviceService.AndroidSupportLibraryStatus.OUTDATED
+            }
+
+            // If running on Android O and targeting O we need version 26.0.0 for
+            //   the new compat NotificationCompat.Builder constructor.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+                AndroidUtils.getTargetSdkVersion(_applicationService.appContext) >= Build.VERSION_CODES.O
+            ) {
+                // Class was added in 26.0.0-beta2
+                if (!AndroidUtils.hasJobIntentService()) {
+                    return IDeviceService.AndroidSupportLibraryStatus.OUTDATED
+                }
+            }
+
+            return IDeviceService.AndroidSupportLibraryStatus.OK
         }
 
     private fun supportsGooglePush(): Boolean {

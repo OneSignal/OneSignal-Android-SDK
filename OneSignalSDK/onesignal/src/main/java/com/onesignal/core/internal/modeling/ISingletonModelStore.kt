@@ -10,17 +10,15 @@ import com.onesignal.core.internal.common.events.IEventNotifier
 internal interface ISingletonModelStore<TModel> :
     IEventNotifier<ISingletonModelStoreChangeHandler<TModel>> where TModel : Model {
     /**
-     * Retrieve the model managed by this singleton model store.
-     *
-     * @return The single model managed by this store.
+     * The model managed by this singleton model store.
      */
-    fun get(): TModel
+    val model: TModel
 
     /**
      * Replace the existing model with the new model provided.
      *
      * @param model A model that contains all the data for the new effective model.
-     * @param fireEvent Whether an event should be fired for this update action.
+     * @param tag The tag which identifies how/why the model is being replaced.
      */
-    fun replace(model: TModel, fireEvent: Boolean = true)
+    fun replace(model: TModel, tag: String = ModelChangeTags.NORMAL)
 }

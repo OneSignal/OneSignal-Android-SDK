@@ -35,13 +35,13 @@ internal abstract class ModelStore<TModel>(
     private val _changeSubscription: EventProducer<IModelStoreChangeHandler<TModel>> = EventProducer()
     private val _models: MutableList<TModel> = mutableListOf()
 
-    override fun add(model: TModel, fireEvent: Boolean) {
+    override fun add(model: TModel, tag: String) {
         val oldModel = _models.firstOrNull { it.id == model.id }
         if (oldModel != null) {
-            removeItem(oldModel, fireEvent)
+            removeItem(oldModel, tag)
         }
 
-        addItem(model, fireEvent)
+        addItem(model, tag)
     }
 
     override fun list(): Collection<TModel> {
@@ -52,34 +52,39 @@ internal abstract class ModelStore<TModel>(
         return _models.firstOrNull { it.id == id }
     }
 
-    override fun remove(id: String, fireEvent: Boolean) {
+    override fun remove(id: String, tag: String) {
         val model = _models.firstOrNull { it.id == id } ?: return
-        removeItem(model, fireEvent)
+        removeItem(model, tag)
     }
 
-    override fun onChanged(args: ModelChangedArgs) {
+    override fun onChanged(args: ModelChangedArgs, tag: String) {
         persist()
-        _changeSubscription.fire { it.onUpdated(args.model as TModel, args.path, args.property, args.oldValue, args.newValue) }
+
+        _changeSubscription.fire { it.onModelUpdated(args, tag) }
     }
 
-    override fun replaceAll(models: List<TModel>, fireEvent: Boolean) {
-        clear(fireEvent)
+    override fun replaceAll(models: List<TModel>, tag: String) {
+        clear(tag)
 
         for (model in models) {
-            add(model, fireEvent)
+            add(model, tag)
         }
     }
 
-    override fun clear(fireEvent: Boolean) {
+    override fun clear(tag: String) {
         val localList = _models.toList()
         _models.clear()
 
+        persist()
+
         for (item in localList) {
-            removeItem(item, fireEvent)
+            // no longer listen for changes to this model
+            item.unsubscribe(this)
+            _changeSubscription.fire { it.onModelRemoved(item, tag) }
         }
     }
 
-    private fun addItem(model: TModel, fireEvent: Boolean) {
+    private fun addItem(model: TModel, tag: String) {
         _models.add(model)
 
         // listen for changes to this model
@@ -87,12 +92,10 @@ internal abstract class ModelStore<TModel>(
 
         persist()
 
-        if (fireEvent) {
-            _changeSubscription.fire { it.onAdded(model) }
-        }
+        _changeSubscription.fire { it.onModelAdded(model, tag) }
     }
 
-    private fun removeItem(model: TModel, fireEvent: Boolean) {
+    private fun removeItem(model: TModel, tag: String) {
         _models.remove(model)
 
         // no longer listen for changes to this model
@@ -100,9 +103,7 @@ internal abstract class ModelStore<TModel>(
 
         persist()
 
-        if (fireEvent) {
-            _changeSubscription.fire { it.onRemoved(model) }
-        }
+        _changeSubscription.fire { it.onModelRemoved(model, tag) }
     }
 
     protected fun load() {
@@ -118,10 +119,7 @@ internal abstract class ModelStore<TModel>(
         }
     }
 
-    /**
-     * Persist this model store.
-     */
-    fun persist() {
+    private fun persist() {
         if (name != null && _prefs != null) {
             val jsonArray = JSONArray()
             for (model in _models) {

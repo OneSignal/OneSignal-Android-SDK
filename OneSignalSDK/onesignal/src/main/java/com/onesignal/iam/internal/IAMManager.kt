@@ -6,6 +6,7 @@ import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.backend.BackendException
 import com.onesignal.core.internal.common.AndroidUtils
+import com.onesignal.core.internal.common.IDManager
 import com.onesignal.core.internal.common.JSONUtils
 import com.onesignal.core.internal.common.events.CallbackProducer
 import com.onesignal.core.internal.common.events.ICallbackProducer
@@ -14,6 +15,7 @@ import com.onesignal.core.internal.influence.IInfluenceManager
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.modeling.ISingletonModelStoreChangeHandler
+import com.onesignal.core.internal.modeling.ModelChangedArgs
 import com.onesignal.core.internal.models.ConfigModel
 import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.outcomes.IOutcomeEventsController
@@ -23,9 +25,7 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.core.internal.user.ISubscriptionChangedHandler
 import com.onesignal.core.internal.user.ISubscriptionManager
-import com.onesignal.core.internal.user.subscriptions.PushSubscription
 import com.onesignal.core.user.IUserManager
-import com.onesignal.core.user.subscriptions.ISubscription
 import com.onesignal.iam.IIAMManager
 import com.onesignal.iam.IInAppMessageClickHandler
 import com.onesignal.iam.IInAppMessageLifecycleHandler
@@ -147,8 +147,8 @@ internal class IAMManager(
         _messageClickCallback.set(handler)
     }
 
-    override fun onModelUpdated(model: ConfigModel, path: String, property: String, oldValue: Any?, newValue: Any?) {
-        if (property != ConfigModel::appId.name) {
+    override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
+        if (args.property != ConfigModel::appId.name) {
             return
         }
 
@@ -157,8 +157,14 @@ internal class IAMManager(
         }
     }
 
-    override fun onSubscriptionAdded(subscription: ISubscription) {
-        if (subscription !is PushSubscription) {
+    override fun onModelReplaced(model: ConfigModel, tag: String) {
+        suspendifyOnThread {
+            fetchMessages()
+        }
+    }
+
+    override fun onSubscriptionsChanged() {
+        if (_subscriptionManager.subscriptions.push == null) {
             return
         }
 
@@ -166,12 +172,6 @@ internal class IAMManager(
             fetchMessages()
         }
     }
-
-    override fun onSubscriptionUpdated(subscription: ISubscription) {
-        // nothing to do when a subscription is updated.
-    }
-
-    override fun onSubscriptionRemoved(subscription: ISubscription) { }
 
     override fun onSessionStarted() {
         for (redisplayInAppMessage in _redisplayedInAppMessages) {
@@ -188,16 +188,16 @@ internal class IAMManager(
 
     // called when a new push subscription is added, or the app id is updated, or a new session starts
     private suspend fun fetchMessages() {
-        val appId = _configModelStore.get().appId
+        val appId = _configModelStore.model.appId
         val subscriptionId = _subscriptionManager.subscriptions.push?.id
 
-        if (subscriptionId == null || appId.isEmpty()) {
+        if (subscriptionId == null || IDManager.isIdLocalOnly(subscriptionId) || appId.isEmpty()) {
             return
         }
 
         _fetchIAMMutex.withLock {
             val now = _time.currentTimeMillis
-            if (_lastTimeFetchedIAMs != null && (now - _lastTimeFetchedIAMs!!) < _configModelStore.get().fetchIAMMinInterval) {
+            if (_lastTimeFetchedIAMs != null && (now - _lastTimeFetchedIAMs!!) < _configModelStore.model.fetchIAMMinInterval) {
                 return
             }
 
@@ -462,7 +462,7 @@ internal class IAMManager(
         suspendifyOnThread {
             try {
                 _backend.sendIAMImpression(
-                    _configModelStore.get().appId,
+                    _configModelStore.model.appId,
                     _subscriptionManager.subscriptions.push?.id.toString(),
                     variantId,
                     message.messageId
@@ -689,7 +689,7 @@ internal class IAMManager(
 
         try {
             _backend.sendIAMPageImpression(
-                _configModelStore.get().appId,
+                _configModelStore.model.appId,
                 _subscriptionManager.subscriptions.push?.id.toString(),
                 variantId,
                 message.messageId,
@@ -723,7 +723,7 @@ internal class IAMManager(
 
         try {
             _backend.sendIAMClick(
-                _configModelStore.get().appId,
+                _configModelStore.model.appId,
                 _subscriptionManager.subscriptions.push?.id.toString(),
                 variantId,
                 message.messageId,
@@ -750,9 +750,5 @@ internal class IAMManager(
             .setMessage(message)
             .setPositiveButton(android.R.string.ok) { _, _ -> suspendifyOnThread { showMultiplePrompts(inAppMessage, prompts) } }
             .show()
-    }
-
-    override fun onModelReplaced(model: ConfigModel) {
-        // TODO("Not yet implemented")
     }
 }

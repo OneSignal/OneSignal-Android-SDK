@@ -21,9 +21,9 @@ internal class IdentityModelStoreListener(
 
     override fun getUpdateOperation(model: IdentityModel, path: String, property: String, oldValue: Any?, newValue: Any?): Operation {
         return if (newValue != null && newValue is String) {
-            SetAliasOperation(_configModelStore.get().appId, model.onesignalId, property, newValue)
+            SetAliasOperation(_configModelStore.model.appId, model.onesignalId, property, newValue)
         } else {
-            DeleteAliasOperation(_configModelStore.get().appId, model.onesignalId, property)
+            DeleteAliasOperation(_configModelStore.model.appId, model.onesignalId, property)
         }
     }
 }

@@ -13,4 +13,11 @@ internal interface IDeviceService {
     val isGMSInstalledAndEnabled: Boolean
     val hasAllHMSLibrariesForPushKit: Boolean
     val hasFCMLibrary: Boolean
+    val androidSupportLibraryStatus: AndroidSupportLibraryStatus
+
+    enum class AndroidSupportLibraryStatus {
+        MISSING,
+        OUTDATED,
+        OK
+    }
 }
