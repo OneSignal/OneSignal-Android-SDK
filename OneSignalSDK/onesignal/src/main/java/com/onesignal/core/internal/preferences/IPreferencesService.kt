@@ -1,109 +1,199 @@
 package com.onesignal.core.internal.preferences
 
+/**
+ * Provides access to the low level preferences.  There are one or more preference
+ * stores, identified by [PreferenceStores], each store contains a key for each
+ * preference.  Each key has a known data type, it's value can be fetched/stored as
+ * needed.  Stored preferences will persist across the lifetime of the app installation.
+ */
 internal interface IPreferencesService {
+    /**
+     * Retrieve a [String] value identified by the [store] and [key] provided.
+     *
+     * @param store The name of the preference store.
+     * @param key The key to retrieve.
+     * @param defValue The optional default value to return, if the [key] was not previously saved.
+     *
+     * @return the value in the preference store, or [defValue] if not previously saved.
+     */
     fun getString(store: String, key: String, defValue: String? = null): String?
+
+    /**
+     * Retrieve a [Boolean] value identified by the [store] and [key] provided.
+     *
+     * @param store The name of the preference store.
+     * @param key The key to retrieve.
+     * @param defValue The optional default value to return, if the [key] was not previously saved.
+     *
+     * @return the value in the preference store, or [defValue] if not previously saved.
+     */
     fun getBool(store: String, key: String, defValue: Boolean? = null): Boolean?
+
+    /**
+     * Retrieve a [Int] value identified by the [store] and [key] provided.
+     *
+     * @param store The name of the preference store.
+     * @param key The key to retrieve.
+     * @param defValue The optional default value to return, if the [key] was not previously saved.
+     *
+     * @return the value in the preference store, or [defValue] if not previously saved.
+     */
     fun getInt(store: String, key: String, defValue: Int? = null): Int?
+
+    /**
+     * Retrieve a [Long] value identified by the [store] and [key] provided.
+     *
+     * @param store The name of the preference store.
+     * @param key The key to retrieve.
+     * @param defValue The optional default value to return, if the [key] was not previously saved.
+     *
+     * @return the value in the preference store, or [defValue] if not previously saved.
+     */
     fun getLong(store: String, key: String, defValue: Long? = null): Long?
+
+    /**
+     * Retrieve a [Set] of [String] value identified by the [store] and [key] provided.
+     *
+     * @param store The name of the preference store.
+     * @param key The key to retrieve.
+     * @param defValue The optional default value to return, if the [key] was not previously saved.
+     *
+     * @return the value in the preference store, or [defValue] if not previously saved.
+     */
     fun getStringSet(store: String, key: String, defValue: Set<String>? = null): Set<String>?
 
+    /**
+     * Save a [String] value identified by the [store] and [key] provided.
+     *
+     * @param store The name of the preference store.
+     * @param key The key to retrieve.
+     * @param value The value to save.
+     */
     fun saveString(store: String, key: String, value: String?)
+
+    /**
+     * Save a [Boolean] value identified by the [store] and [key] provided.
+     *
+     * @param store The name of the preference store.
+     * @param key The key to retrieve.
+     * @param value The value to save.
+     */
     fun saveBool(store: String, key: String, value: Boolean?)
+
+    /**
+     * Save a [Int] value identified by the [store] and [key] provided.
+     *
+     * @param store The name of the preference store.
+     * @param key The key to retrieve.
+     * @param value The value to save.
+     */
     fun saveInt(store: String, key: String, value: Int?)
+
+    /**
+     * Save a [Long] value identified by the [store] and [key] provided.
+     *
+     * @param store The name of the preference store.
+     * @param key The key to retrieve.
+     * @param value The value to save.
+     */
     fun saveLong(store: String, key: String, value: Long?)
+
+    /**
+     * Save a [Set] of [String] value identified by the [store] and [key] provided.
+     *
+     * @param store The name of the preference store.
+     * @param key The key to retrieve.
+     * @param value The value to save.
+     */
     fun saveStringSet(store: String, key: String, value: Set<String>?)
 }
 
 internal object PreferenceStores {
+    /**
+     * The default OneSignal store, keys defined in [PreferenceOneSignalKeys].
+     */
     const val ONESIGNAL = "OneSignal"
+
+    /**
+     * The player purchase store, keys defined in [PreferencePlayerPurchasesKeys].
+     */
     const val PLAYER_PURCHASES = "GTPlayerPurchases"
-    const val TRIGGERS = "OneSignalTriggers"
 }
 
 internal object PreferencePlayerPurchasesKeys {
     // Player Purchase Keys
+    /**
+     * (String) The purchase tokens that have been tracked.
+     */
     const val PREFS_PURCHASE_TOKENS = "purchaseTokens"
+
+    /**
+     * (Boolean) Whether new purchases should be treated as existing.
+     */
     const val PREFS_EXISTING_PURCHASES = "ExistingPurchases"
 }
 
-internal object PreferenceTriggerKeys
-
 internal object PreferenceOneSignalKeys {
-    // TODO: Remove this once the tasks below have been finished...
-    //  1. Fix all of the SharedPreference Keys so they are organized by usage with comments
-    //  ex.
-    //   // In-App Messaging
-    //   public static final String PREFS_OS_CACHED_IAMS = "PREFS_OS_CACHED_IAMS";
-    //   public static final String PREFS_OS_DISMISSED_IAMS = "PREFS_OS_DISPLAYED_IAMS";
-    //   public static final String PREFS_OS_IMPRESSIONED_IAMS = "PREFS_OS_IMPRESSIONED_IAMS";
-    //   public static final String PREFS_OS_CLICKED_CLICK_IDS_IAMS = "PREFS_OS_CLICKED_CLICK_IDS_IAMS";
-    //  2. Match keys with value names
-    //  ex.
-    //   public static final String PREFS_OS_LAST_LOCATION_TIME = "OS_LAST_LOCATION_TIME";
-    //  3. Follow syntax and make new names relevant (specific and as short as possible)
-    //  ex.
-    //   Start with prefix "PREFS_OS_" + "LAST_LOCATION_TIME"
-    // Unorganized Keys
+    // Location
+    /**
+     * (Long) The last time the device location was captured, in Unix time milliseconds.
+     */
     const val PREFS_OS_LAST_LOCATION_TIME = "OS_LAST_LOCATION_TIME"
-    const val PREFS_GT_SOUND_ENABLED = "GT_SOUND_ENABLED"
-    const val PREFS_OS_LAST_SESSION_TIME = "OS_LAST_SESSION_TIME"
-    const val PREFS_GT_VIBRATE_ENABLED = "GT_VIBRATE_ENABLED"
-    const val PREFS_OS_FILTER_OTHER_GCM_RECEIVERS = "OS_FILTER_OTHER_GCM_RECEIVERS"
-    const val PREFS_GT_APP_ID = "GT_APP_ID"
-    const val PREFS_GT_PLAYER_ID = "GT_PLAYER_ID"
-    const val PREFS_GT_UNSENT_ACTIVE_TIME = "GT_UNSENT_ACTIVE_TIME"
-    const val PREFS_OS_UNSENT_ATTRIBUTED_ACTIVE_TIME = "OS_UNSENT_ATTRIBUTED_ACTIVE_TIME"
-    const val PREFS_ONESIGNAL_USERSTATE_DEPENDVALYES_ = "ONESIGNAL_USERSTATE_DEPENDVALYES_"
-    const val PREFS_ONESIGNAL_USERSTATE_SYNCVALYES_ = "ONESIGNAL_USERSTATE_SYNCVALYES_"
-    const val PREFS_ONESIGNAL_ACCEPTED_NOTIFICATION_LAST = "ONESIGNAL_ACCEPTED_NOTIFICATION_LAST"
-    const val PREFS_ONESIGNAL_SUBSCRIPTION_LAST = "ONESIGNAL_SUBSCRIPTION_LAST"
-    const val PREFS_ONESIGNAL_PLAYER_ID_LAST = "ONESIGNAL_PLAYER_ID_LAST"
-    const val PREFS_ONESIGNAL_PUSH_TOKEN_LAST = "ONESIGNAL_PUSH_TOKEN_LAST"
-    const val PREFS_ONESIGNAL_PERMISSION_ACCEPTED_LAST = "ONESIGNAL_PERMISSION_ACCEPTED_LAST"
-    const val PREFS_GT_DO_NOT_SHOW_MISSING_GPS = "GT_DO_NOT_SHOW_MISSING_GPS"
-    const val PREFS_ONESIGNAL_SUBSCRIPTION = "ONESIGNAL_SUBSCRIPTION"
-    const val PREFS_ONESIGNAL_SYNCED_SUBSCRIPTION = "ONESIGNAL_SYNCED_SUBSCRIPTION"
-    const val PREFS_GT_REGISTRATION_ID = "GT_REGISTRATION_ID"
-    const val PREFS_ONESIGNAL_USER_PROVIDED_CONSENT = "ONESIGNAL_USER_PROVIDED_CONSENT"
+
+    // HTTP
+    /**
+     * (String) A prefix key for retrieving the ETAG for a given HTTP GET cache key. The cache
+     * key should be appended to this prefix.
+     */
     const val PREFS_OS_ETAG_PREFIX = "PREFS_OS_ETAG_PREFIX_"
+
+    /**
+     * (String) A prefix key for retrieving the response for a given HTTP GET cache key. The cache
+     * key should be appended to this prefix.
+     */
     const val PREFS_OS_HTTP_CACHE_PREFIX = "PREFS_OS_HTTP_CACHE_PREFIX_"
 
-    // Remote params
-    const val PREFS_GT_FIREBASE_TRACKING_ENABLED = "GT_FIREBASE_TRACKING_ENABLED"
-    const val PREFS_OS_RESTORE_TTL_FILTER = "OS_RESTORE_TTL_FILTER"
-    const val PREFS_OS_CLEAR_GROUP_SUMMARY_CLICK = "OS_CLEAR_GROUP_SUMMARY_CLICK"
-    const val PREFS_OS_UNSUBSCRIBE_WHEN_NOTIFICATIONS_DISABLED = "PREFS_OS_UNSUBSCRIBE_WHEN_NOTIFICATIONS_DISABLED"
-    const val PREFS_OS_DISABLE_GMS_MISSING_PROMPT = "PREFS_OS_DISABLE_GMS_MISSING_PROMPT"
-    const val PREFS_OS_REQUIRES_USER_PRIVACY_CONSENT = "PREFS_OS_REQUIRES_USER_PRIVACY_CONSENT"
-    const val PREFS_OS_LOCATION_SHARED = "PREFS_OS_LOCATION_SHARED"
-
-    // Remote params - Receive Receipts (aka Confirmed Deliveries)
-    const val PREFS_OS_RECEIVE_RECEIPTS_ENABLED = "PREFS_OS_RECEIVE_RECEIPTS_ENABLED"
-
-    // On Focus Influence
-    const val PREFS_OS_ATTRIBUTED_INFLUENCES = "PREFS_OS_ATTRIBUTED_INFLUENCES"
-
     // Outcomes
+    /**
+     * (String Set) The set of unattributed outcome events that have occurred to ensure uniqueness when requested.
+     */
     const val PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT = "PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT"
 
-    // Email
-    const val PREFS_OS_EMAIL_ID = "OS_EMAIL_ID"
-    const val PREFS_ONESIGNAL_EMAIL_ID_LAST = "PREFS_ONESIGNAL_EMAIL_ID_LAST"
-    const val PREFS_ONESIGNAL_EMAIL_ADDRESS_LAST = "PREFS_ONESIGNAL_EMAIL_ADDRESS_LAST"
-
-    // SMS
-    const val PREFS_OS_SMS_ID = "PREFS_OS_SMS_ID"
-    const val PREFS_OS_SMS_ID_LAST = "PREFS_OS_SMS_ID_LAST"
-    const val PREFS_OS_SMS_NUMBER_LAST = "PREFS_OS_SMS_NUMBER_LAST"
-
     // In-App Messaging
+    /**
+     * (String) The serialized IAMs TODO: This isn't currently used, determine if actually needed for cold start IAM fetch delay
+     */
     const val PREFS_OS_CACHED_IAMS = "PREFS_OS_CACHED_IAMS"
+
+    /**
+     * (String Set) The set of IAM IDs that have been dismissed on this device.
+     */
     const val PREFS_OS_DISMISSED_IAMS = "PREFS_OS_DISPLAYED_IAMS"
+
+    /**
+     * (String Set) The set of IAM IDs that have impressed (displayed) on the device.
+     */
     const val PREFS_OS_IMPRESSIONED_IAMS = "PREFS_OS_IMPRESSIONED_IAMS"
+
+    /**
+     * (String Set) The set of click IDs that the device has clicked on.
+     */
     const val PREFS_OS_CLICKED_CLICK_IDS_IAMS = "PREFS_OS_CLICKED_CLICK_IDS_IAMS"
+
+    /**
+     * (String Set) The set of page IDs that have impressed (displayed) on the device.
+     */
     const val PREFS_OS_PAGE_IMPRESSIONED_IAMS = "PREFS_OS_PAGE_IMPRESSIONED_IAMS"
+
+    /**
+     * (Long) The last time an IAM was dismissed, in unix time milliseconds.
+     */
     const val PREFS_OS_LAST_TIME_IAM_DISMISSED = "PREFS_OS_LAST_TIME_IAM_DISMISSED"
 
     // Models
+    /**
+     * (String) A prefix key for retrieving a specific model store contents.  The name of the model
+     * store should be appended to this prefix.
+     */
     const val MODEL_STORE_PREFIX = "MODEL_STORE_"
 }

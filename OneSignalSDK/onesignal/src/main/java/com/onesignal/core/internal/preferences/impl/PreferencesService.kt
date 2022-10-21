@@ -1,10 +1,12 @@
-package com.onesignal.core.internal.preferences
+package com.onesignal.core.internal.preferences.impl
 
 import android.content.Context
 import android.content.SharedPreferences
 import com.onesignal.core.debug.LogLevel
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.logging.Logging
+import com.onesignal.core.internal.preferences.IPreferencesService
+import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.onesignal.core.internal.common.suspend.Waiter
@@ -20,8 +22,7 @@ internal class PreferencesService(
 ) : IPreferencesService, IStartableService {
     private val _prefsToApply: Map<String, MutableMap<String, Any?>> = mapOf(
         PreferenceStores.ONESIGNAL to mutableMapOf(),
-        PreferenceStores.PLAYER_PURCHASES to mutableMapOf(),
-        PreferenceStores.TRIGGERS to mutableMapOf()
+        PreferenceStores.PLAYER_PURCHASES to mutableMapOf()
     )
     private var _queueJob: Deferred<Unit>? = null
 
