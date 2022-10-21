@@ -41,6 +41,13 @@ internal class ConfigModel : Model() {
         set(value) { setProperty(::disableGMSMissingPrompt.name, value) }
 
     /**
+     * Whether to disable the "GMS is missing" prompt to the user.
+     */
+    var userRejectedGMSUpdate: Boolean
+        get() = getProperty(::userRejectedGMSUpdate.name) { false }
+        set(value) { setProperty(::userRejectedGMSUpdate.name, value) }
+
+    /**
      * Whether to automatically unsubscribe from OneSignal when notifications have been disabled.
      */
     var unsubscribeWhenNotificationsDisabled: Boolean
