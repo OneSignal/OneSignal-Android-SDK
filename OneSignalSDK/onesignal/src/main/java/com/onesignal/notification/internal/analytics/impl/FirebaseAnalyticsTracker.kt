@@ -29,9 +29,7 @@ package com.onesignal.notification.internal.analytics.impl
 import android.content.Context
 import android.os.Bundle
 import com.onesignal.core.internal.application.IApplicationService
-import com.onesignal.core.internal.preferences.IPreferencesService
-import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
-import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.notification.internal.analytics.IAnalyticsTracker
 import java.lang.reflect.Method
@@ -39,9 +37,14 @@ import java.util.concurrent.atomic.AtomicLong
 
 internal class FirebaseAnalyticsTracker(
     private val _applicationService: IApplicationService,
-    private val _preferences: IPreferencesService,
+    private val _configModelStore: ConfigModelStore,
     private val _time: ITime
 ) : IAnalyticsTracker {
+
+    private val isEnabled: Boolean
+        get() {
+            return _configModelStore.model.firebaseAnalytics
+        }
 
     private var lastReceivedTime: AtomicLong? = null
     private var lastOpenedTime: AtomicLong? = null
@@ -50,7 +53,7 @@ internal class FirebaseAnalyticsTracker(
     private var mFirebaseAnalyticsInstance: Any? = null
 
     override fun trackInfluenceOpenEvent() {
-        if (!isEnabled() || lastReceivedTime == null || lastReceivedNotificationId == null) {
+        if (!isEnabled || lastReceivedTime == null || lastReceivedNotificationId == null) {
             return
         }
 
@@ -79,7 +82,7 @@ internal class FirebaseAnalyticsTracker(
     }
 
     override fun trackOpenedEvent(notificationId: String, campaign: String) {
-        if (!isEnabled()) {
+        if (!isEnabled) {
             return
         }
 
@@ -106,7 +109,7 @@ internal class FirebaseAnalyticsTracker(
     }
 
     override fun trackReceivedEvent(notificationId: String, campaign: String) {
-        if (!isEnabled()) {
+        if (!isEnabled) {
             return
         }
 
@@ -141,10 +144,6 @@ internal class FirebaseAnalyticsTracker(
             }
         }
         return mFirebaseAnalyticsInstance
-    }
-
-    private fun isEnabled(): Boolean {
-        return _preferences.getBool(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_GT_FIREBASE_TRACKING_ENABLED, false)!!
     }
 
     companion object {

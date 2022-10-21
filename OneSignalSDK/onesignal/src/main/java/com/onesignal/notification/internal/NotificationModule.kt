@@ -3,7 +3,6 @@ package com.onesignal.notification.internal
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.models.ConfigModelStore
-import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.service.ServiceBuilder
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
@@ -100,7 +99,7 @@ internal object NotificationModule {
             if (FirebaseAnalyticsTracker.canTrack()) {
                 return@register FirebaseAnalyticsTracker(
                     it.getService(IApplicationService::class.java),
-                    it.getService(IPreferencesService::class.java),
+                    it.getService(ConfigModelStore::class.java),
                     it.getService(ITime::class.java)
                 )
             } else {
