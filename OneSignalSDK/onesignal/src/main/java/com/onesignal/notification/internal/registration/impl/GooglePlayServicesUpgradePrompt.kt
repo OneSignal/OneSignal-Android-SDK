@@ -9,17 +9,13 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.models.ConfigModelStore
-import com.onesignal.core.internal.preferences.IPreferencesService
-import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
-import com.onesignal.core.internal.preferences.PreferenceStores
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 internal class GooglePlayServicesUpgradePrompt(
     private val _applicationService: IApplicationService,
     private val _deviceService: IDeviceService,
-    private val _configModelStore: ConfigModelStore,
-    private val _prefs: IPreferencesService
+    private val _configModelStore: ConfigModelStore
 ) {
     // Google Play Store might not be installed, ignore exception if so
     private val isGooglePlayStoreInstalled: Boolean
@@ -43,13 +39,7 @@ internal class GooglePlayServicesUpgradePrompt(
             return
         }
 
-        if (!isGooglePlayStoreInstalled || _configModelStore.model.disableGMSMissingPrompt) {
-            return
-        }
-
-        val userSelectedSkip = _prefs.getBool(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_GT_DO_NOT_SHOW_MISSING_GPS, false)!!
-
-        if (userSelectedSkip) {
+        if (!isGooglePlayStoreInstalled || _configModelStore.model.disableGMSMissingPrompt || _configModelStore.model.userRejectedGMSUpdate) {
             return
         }
 
@@ -82,7 +72,7 @@ internal class GooglePlayServicesUpgradePrompt(
             builder.setMessage(alertBodyText)
                 .setPositiveButton(alertButtonUpdate) { dialog, which -> openPlayStoreToApp(activity) }
                 .setNegativeButton(alertButtonSkip) { dialog, which ->
-                    _prefs.saveBool(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_GT_DO_NOT_SHOW_MISSING_GPS, true)
+                    _configModelStore.model.userRejectedGMSUpdate = true
                 }.setNeutralButton(alertButtonClose, null).create().show()
         }
     }
