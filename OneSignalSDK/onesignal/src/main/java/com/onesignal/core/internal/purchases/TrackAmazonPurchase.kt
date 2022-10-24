@@ -165,6 +165,7 @@ internal class TrackAmazonPurchase(
                     ProductDataResponse.RequestStatus.SUCCESSFUL -> {
                         val purchasesToReport = mutableListOf<PurchaseInfo>()
                         val products = response.productData
+                        var amountSpent = BigDecimal(0)
                         for (key in products.keys) {
                             val product = products[key]
                             val sku = product!!.sku
@@ -177,11 +178,11 @@ internal class TrackAmazonPurchase(
 
                             val price = BigDecimal(priceStr)
 
+                            amountSpent += price
                             purchasesToReport.add(PurchaseInfo(sku, iso, price))
                         }
 
-                        // TODO: amount spent?
-                        _operationRepo.enqueue(TrackPurchaseOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, false, BigDecimal(0), purchasesToReport))
+                        _operationRepo.enqueue(TrackPurchaseOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, false, amountSpent, purchasesToReport))
                     }
                 }
             } else if (orgPurchasingListener != null) {
