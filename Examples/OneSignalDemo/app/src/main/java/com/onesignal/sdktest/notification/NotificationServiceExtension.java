@@ -2,8 +2,8 @@ package com.onesignal.sdktest.notification;
 
 import android.content.Context;
 
-import com.onesignal.core.debug.LogLevel;
-import com.onesignal.core.internal.logging.Logging;
+import com.onesignal.debug.LogLevel;
+import com.onesignal.debug.internal.logging.Logging;
 import com.onesignal.notification.IActionButton;
 import com.onesignal.notification.IMutableNotification;
 import com.onesignal.notification.INotification;
