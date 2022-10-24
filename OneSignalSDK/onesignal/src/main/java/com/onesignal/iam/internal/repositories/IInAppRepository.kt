@@ -24,6 +24,5 @@ internal interface IInAppRepository {
     /**
      * Clean up (delete) all stale in app messages.
      */
-    // TODO: This needs to be driven
     suspend fun cleanCachedInAppMessages()
 }
