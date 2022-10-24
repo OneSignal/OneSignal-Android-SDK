@@ -5,9 +5,9 @@ import com.onesignal.core.user.subscriptions.SubscriptionList
 
 /**
  * The OneSignal user manager is responsible for managing the current user state.  When
- * an app starts up for the first time, it is defaulted to having a user with an [identity]
- * of [Identity.Anonymous].  Once the application knows the identity of the user using their
- * app they should call [OneSignal.login] providing that identity to OneSignal, at which
+ * an app starts up for the first time, it is defaulted to having a guest user that is only
+ * accessible by the current device.  Once the application knows the identity of the user using their
+ * app, they should call [OneSignal.login] providing that identity to OneSignal, at which
  * point all state in here will reflect the state of that known user.
  *
  * The current user is persisted across the application lifecycle, even when the application
@@ -213,35 +213,4 @@ interface IUserManager {
      * @return this user manager to allow for chaining of calls.
      */
     fun clearTriggers(): IUserManager
-
-    /**
-     * Send an outcome with the provided name, captured against the current user (ish).
-     * See [Outcomes | OneSignal] (https://documentation.onesignal.com/docs/outcomes)
-     *
-     * @param name The name of the outcome that has occurred.
-     *
-     * @return this user manager to allow for chaining of calls.
-     */
-    fun sendOutcome(name: String): IUserManager
-
-    /**
-     * Send a unique outcome with the provided name, captured against the current user (ish).
-     * See [Outcomes | OneSignal] (https://documentation.onesignal.com/docs/outcomes)
-     *
-     * @param name The name of the unique outcome that has occurred.
-     *
-     * @return this user manager to allow for chaining of calls.
-     */
-    fun sendUniqueOutcome(name: String): IUserManager
-
-    /**
-     * Send an outcome with the provided name and value, captured against the current user (ish).
-     * See [Outcomes | OneSignal] (https://documentation.onesignal.com/docs/outcomes)
-     *
-     * @param name The name of the outcome that has occurred.
-     * @param value The value tied to the outcome.
-     *
-     * @return this user manager to allow for chaining of calls.
-     */
-    fun sendOutcomeWithValue(name: String, value: Float): IUserManager
 }
