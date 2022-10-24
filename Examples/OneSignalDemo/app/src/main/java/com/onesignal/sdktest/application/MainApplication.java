@@ -7,12 +7,12 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.multidex.MultiDexApplication;
 
-import com.onesignal.core.OneSignal;
+import com.onesignal.OneSignal;
 import com.onesignal.iam.IInAppMessage;
 import com.onesignal.iam.IInAppMessageAction;
 import com.onesignal.iam.IInAppMessageClickHandler;
 import com.onesignal.iam.IInAppMessageLifecycleHandler;
-import com.onesignal.core.debug.LogLevel;
+import com.onesignal.debug.LogLevel;
 import com.onesignal.notification.INotification;
 import com.onesignal.sdktest.BuildConfig;
 import com.onesignal.sdktest.R;

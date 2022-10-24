@@ -1,9 +1,9 @@
 package com.onesignal.core.internal.startup
 
-import com.onesignal.core.OneSignal
+import com.onesignal.OneSignal
 import com.onesignal.core.internal.application.IApplicationService
-import com.onesignal.core.internal.models.ConfigModel
-import com.onesignal.core.internal.models.ConfigModelStore
+import com.onesignal.core.internal.config.ConfigModel
+import com.onesignal.core.internal.config.ConfigModelStore
 
 /**
  * Implement and provide this interface as part of service registration to indicate the service
@@ -19,7 +19,7 @@ import com.onesignal.core.internal.models.ConfigModelStore
  * must be instantiated immediately and will add their appropriate hooks to then respond to changes
  * in the system.
  */
-internal interface IStartableService {
+interface IStartableService {
 
     /**
      * Called when the service is to be started.  The appId and appContext have already been

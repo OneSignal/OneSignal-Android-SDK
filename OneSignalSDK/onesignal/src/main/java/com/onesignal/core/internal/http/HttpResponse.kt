@@ -5,7 +5,7 @@ import java.net.HttpURLConnection
 /**
  * The response returned by a method in [IHttpClient].
  */
-internal class HttpResponse(
+class HttpResponse(
     /**
      * The status code of the response ([HttpURLConnection.HTTP_OK] as an example).
      */

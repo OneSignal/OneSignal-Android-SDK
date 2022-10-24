@@ -1,19 +1,22 @@
 package com.onesignal.core.internal.operations.impl
 
-import com.onesignal.core.internal.modeling.ModelStore
-import com.onesignal.core.internal.operations.CreateSubscriptionOperation
-import com.onesignal.core.internal.operations.CreateUserOperation
-import com.onesignal.core.internal.operations.DeleteAliasOperation
-import com.onesignal.core.internal.operations.DeleteSubscriptionOperation
-import com.onesignal.core.internal.operations.DeleteTagOperation
+import com.onesignal.common.modeling.ModelStore
 import com.onesignal.core.internal.operations.Operation
-import com.onesignal.core.internal.operations.SetAliasOperation
-import com.onesignal.core.internal.operations.SetPropertyOperation
-import com.onesignal.core.internal.operations.SetTagOperation
-import com.onesignal.core.internal.operations.TrackPurchaseOperation
-import com.onesignal.core.internal.operations.TrackSessionOperation
-import com.onesignal.core.internal.operations.UpdateSubscriptionOperation
 import com.onesignal.core.internal.preferences.IPreferencesService
+import com.onesignal.user.internal.operations.CreateSubscriptionOperation
+import com.onesignal.user.internal.operations.CreateUserOperation
+import com.onesignal.user.internal.operations.DeleteAliasOperation
+import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
+import com.onesignal.user.internal.operations.DeleteTagOperation
+import com.onesignal.user.internal.operations.SetAliasOperation
+import com.onesignal.user.internal.operations.SetPropertyOperation
+import com.onesignal.user.internal.operations.SetTagOperation
+import com.onesignal.user.internal.operations.TrackPurchaseOperation
+import com.onesignal.user.internal.operations.TrackSessionOperation
+import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
+import com.onesignal.user.internal.operations.impl.executors.IdentityOperationExecutor
+import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
+import com.onesignal.user.internal.operations.impl.executors.UserOperationExecutor
 import org.json.JSONObject
 
 internal class OperationModelStore(prefs: IPreferencesService) : ModelStore<Operation>("operations", prefs) {

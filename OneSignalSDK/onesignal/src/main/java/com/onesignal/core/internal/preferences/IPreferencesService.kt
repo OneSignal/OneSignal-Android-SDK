@@ -6,7 +6,7 @@ package com.onesignal.core.internal.preferences
  * preference.  Each key has a known data type, it's value can be fetched/stored as
  * needed.  Stored preferences will persist across the lifetime of the app installation.
  */
-internal interface IPreferencesService {
+interface IPreferencesService {
     /**
      * Retrieve a [String] value identified by the [store] and [key] provided.
      *
@@ -108,7 +108,7 @@ internal interface IPreferencesService {
     fun saveStringSet(store: String, key: String, value: Set<String>?)
 }
 
-internal object PreferenceStores {
+object PreferenceStores {
     /**
      * The default OneSignal store, keys defined in [PreferenceOneSignalKeys].
      */
@@ -120,7 +120,7 @@ internal object PreferenceStores {
     const val PLAYER_PURCHASES = "GTPlayerPurchases"
 }
 
-internal object PreferencePlayerPurchasesKeys {
+object PreferencePlayerPurchasesKeys {
     // Player Purchase Keys
     /**
      * (String) The purchase tokens that have been tracked.
@@ -133,7 +133,7 @@ internal object PreferencePlayerPurchasesKeys {
     const val PREFS_EXISTING_PURCHASES = "ExistingPurchases"
 }
 
-internal object PreferenceOneSignalKeys {
+object PreferenceOneSignalKeys {
     // Location
     /**
      * (Long) The last time the device location was captured, in Unix time milliseconds.

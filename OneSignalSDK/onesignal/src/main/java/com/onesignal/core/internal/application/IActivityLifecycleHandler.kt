@@ -8,7 +8,7 @@ import android.app.Application.ActivityLifecycleCallbacks
  * will be notified throughout the activity lifecycle.  This should be used over the Android-provided
  * [ActivityLifecycleCallbacks], it provides an abstraction more specific to the OneSignal SDK
  */
-internal interface IActivityLifecycleHandler {
+interface IActivityLifecycleHandler {
 
     /**
      * Called when an activity is made available to the application.
@@ -25,7 +25,7 @@ internal interface IActivityLifecycleHandler {
  * A base implementation of [IActivityLifecycleHandler] that is a no-op. Concrete implementations
  * can use this if they only want to override a subset of the callbacks that make up this interface.
  */
-internal open class ActivityLifecycleHandlerBase : IActivityLifecycleHandler {
+open class ActivityLifecycleHandlerBase : IActivityLifecycleHandler {
     override fun onActivityAvailable(activity: Activity) {}
     override fun onActivityStopped(activity: Activity) {}
 }

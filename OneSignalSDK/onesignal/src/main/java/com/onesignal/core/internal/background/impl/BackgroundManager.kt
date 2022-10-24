@@ -37,21 +37,20 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.annotation.RequiresApi
+import com.onesignal.common.AndroidSupportV4Compat
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.background.IBackgroundManager
 import com.onesignal.core.internal.background.IBackgroundService
-import com.onesignal.core.internal.common.AndroidSupportV4Compat
-import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.core.services.SyncJobService
 import com.onesignal.core.services.SyncService
+import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import java.lang.NullPointerException
 
 /**
  * This schedules a job to fire later in the background preform player REST calls to make a(n);
