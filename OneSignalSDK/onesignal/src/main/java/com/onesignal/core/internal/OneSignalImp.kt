@@ -99,7 +99,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     private var _givenPrivacyConsent: Boolean? = null
 
     init {
-        var serviceBuilder = ServiceBuilder()
+        val serviceBuilder = ServiceBuilder()
 
         CoreModule.register(serviceBuilder)
         NotificationModule.register(serviceBuilder)
@@ -120,7 +120,11 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         // start the application service. This is called explicitly first because we want
         // to make sure it has the context provided on input, for all other startable services
         // to depend on if needed.
-        (_services.getService<IApplicationService>() as ApplicationService).start(context)
+        val applicationService = _services.getService<IApplicationService>()
+        (applicationService as ApplicationService).start(context)
+
+        // Give the logging singleton access to the application service to support visual logging.
+        Logging.applicationService = applicationService
 
         // get the current config model, if there is one
         _configModel = _services.getService<ConfigModelStore>().model
