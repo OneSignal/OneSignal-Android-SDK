@@ -2,8 +2,8 @@ package com.onesignal.core.internal.database.impl
 
 import android.provider.BaseColumns
 
-internal class OneSignalDbContract {
-    internal object NotificationTable : BaseColumns {
+class OneSignalDbContract {
+    object NotificationTable : BaseColumns {
         const val TABLE_NAME = "notification"
         const val COLUMN_NAME_NOTIFICATION_ID = "notification_id" // OneSignal Notification Id
         const val COLUMN_NAME_ANDROID_NOTIFICATION_ID = "android_notification_id"
@@ -33,7 +33,7 @@ internal class OneSignalDbContract {
             "CREATE INDEX notification_expire_time_idx ON notification(expire_time); "
     }
 
-    internal object InAppMessageTable : BaseColumns {
+    object InAppMessageTable : BaseColumns {
         const val TABLE_NAME = "in_app_message"
         const val COLUMN_NAME_MESSAGE_ID = "message_id" // OneSignal IAM Ids
         const val COLUMN_NAME_DISPLAY_QUANTITY = "display_quantity"

@@ -29,10 +29,10 @@ package com.onesignal.core.services
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
-import com.onesignal.core.OneSignal
+import com.onesignal.OneSignal
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.background.IBackgroundManager
-import com.onesignal.core.internal.common.suspendifyOnThread
-import com.onesignal.core.internal.logging.Logging
+import com.onesignal.debug.internal.logging.Logging
 
 class SyncService : Service() {
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {

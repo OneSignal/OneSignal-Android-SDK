@@ -1,12 +1,12 @@
 package com.onesignal.core.internal.operations.impl
 
-import com.onesignal.core.debug.LogLevel
-import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.core.internal.startup.IStartableService
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async

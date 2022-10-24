@@ -2,14 +2,14 @@ package com.onesignal.core.internal.preferences.impl
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.onesignal.core.debug.LogLevel
+import com.onesignal.common.threading.Waiter
 import com.onesignal.core.internal.application.IApplicationService
-import com.onesignal.core.internal.logging.Logging
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
-import com.onesignal.onesignal.core.internal.common.suspend.Waiter
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
