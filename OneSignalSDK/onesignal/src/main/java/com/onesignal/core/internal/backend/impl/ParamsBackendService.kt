@@ -1,18 +1,18 @@
 package com.onesignal.core.internal.backend.impl
 
-import com.onesignal.core.debug.LogLevel
-import com.onesignal.core.internal.backend.BackendException
+import com.onesignal.common.exceptions.BackendException
+import com.onesignal.common.expand
+import com.onesignal.common.safeBool
+import com.onesignal.common.safeInt
+import com.onesignal.common.safeString
 import com.onesignal.core.internal.backend.FCMParamsObject
 import com.onesignal.core.internal.backend.IParamsBackendService
 import com.onesignal.core.internal.backend.InfluenceParamsObject
 import com.onesignal.core.internal.backend.ParamsObject
-import com.onesignal.core.internal.common.expand
-import com.onesignal.core.internal.common.safeBool
-import com.onesignal.core.internal.common.safeInt
-import com.onesignal.core.internal.common.safeString
 import com.onesignal.core.internal.http.CacheKeys
 import com.onesignal.core.internal.http.IHttpClient
-import com.onesignal.core.internal.logging.Logging
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.internal.logging.Logging
 import org.json.JSONObject
 
 internal class ParamsBackendService(

@@ -1,15 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="location_permission_missing_title">App Missing Permission</string>
-    <string name="location_permission_missing_message">Looks like this app doesn\'t have location services configured. Please see OneSignal docs for more information.</string>
-
     <string name="permission_not_available_title">%s Not Available</string>
     <string name="permission_not_available_message">You have previously denied %s. Please go to settings to enable.</string>
     <string name="permission_not_available_open_settings_option">Settings</string>
-
-    <string name="location_permission_name_for_title">Location</string>
-    <string name="location_permission_settings_message">sharing your device location</string>
-
-    <string name="notification_permission_name_for_title">Notifications</string>
-    <string name="notification_permission_settings_message">Notifications</string>
 </resources>

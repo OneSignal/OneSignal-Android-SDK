@@ -2,20 +2,15 @@ package com.onesignal.core.internal.device.impl
 
 import android.content.pm.PackageManager
 import android.os.Build
-import com.google.android.gms.common.GoogleApiAvailability
-import com.google.android.gms.location.LocationListener
-import com.google.firebase.messaging.FirebaseMessaging
-import com.huawei.agconnect.config.AGConnectServicesConfig
-import com.huawei.hms.aaid.HmsInstanceId
-import com.huawei.hms.api.HuaweiApiAvailability
-import com.huawei.hms.location.LocationCallback
+import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.application.IApplicationService
-import com.onesignal.core.internal.common.AndroidUtils
 import com.onesignal.core.internal.device.IDeviceService
 
-internal class DeviceService(private val _applicationService: IApplicationService) : IDeviceService {
+internal class DeviceService(private val _applicationService: IApplicationService) :
+    IDeviceService {
     companion object {
         private const val HMS_CORE_SERVICES_PACKAGE = "com.huawei.hwid" // = HuaweiApiAvailability.SERVICES_PACKAGE
+        private const val GOOGLE_PLAY_SERVICES_PACKAGE = "com.google.android.gms" // = GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE
         private const val HMS_AVAILABLE_SUCCESSFUL = 0
         private const val DEVICE_TYPE_ANDROID = 1
         private const val DEVICE_TYPE_FIREOS = 2
@@ -30,12 +25,6 @@ internal class DeviceService(private val _applicationService: IApplicationServic
 
     override val isHuaweiDeviceType: Boolean
         get() = deviceType == DEVICE_TYPE_HUAWEI
-
-    override val isGooglePlayServicesAvailable: Boolean
-        get() = isAndroidDeviceType && hasGMSLocationLibrary()
-
-    override val isHMSAvailable: Boolean
-        get() = isHuaweiDeviceType && hasHMSLocationLibrary()
 
     /**
      * Device type is determined by the push channel(s) the device supports.
@@ -72,7 +61,7 @@ internal class DeviceService(private val _applicationService: IApplicationServic
             try {
                 val pm: PackageManager = _applicationService.appContext.getPackageManager()
                 val info = pm.getPackageInfo(
-                    GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE,
+                    GOOGLE_PLAY_SERVICES_PACKAGE,
                     PackageManager.GET_META_DATA
                 )
                 val label = info.applicationInfo.loadLabel(pm) as String
@@ -128,7 +117,7 @@ internal class DeviceService(private val _applicationService: IApplicationServic
     // Or if we get back "SERVICE_VERSION_UPDATE_REQUIRED" then we may want to count that as successful too.
     override val isGMSInstalledAndEnabled: Boolean
         get() {
-            return packageInstalledAndEnabled(GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE)
+            return packageInstalledAndEnabled(GOOGLE_PLAY_SERVICES_PACKAGE)
         }
 
     private fun packageInstalledAndEnabled(packageName: String): Boolean {
@@ -141,27 +130,12 @@ internal class DeviceService(private val _applicationService: IApplicationServic
         }
     }
 
-    private fun hasGMSLocationLibrary(): Boolean {
-        return try {
-            AndroidUtils.opaqueHasClass(LocationListener::class.java)
-        } catch (e: NoClassDefFoundError) {
-            false
-        }
-    }
-
-    private fun hasHMSLocationLibrary(): Boolean {
-        return try {
-            AndroidUtils.opaqueHasClass(LocationCallback::class.java)
-        } catch (e: NoClassDefFoundError) {
-            false
-        }
-    }
-
     override val hasFCMLibrary: Boolean
         get() {
             return try {
-                AndroidUtils.opaqueHasClass(FirebaseMessaging::class.java)
-            } catch (e: NoClassDefFoundError) {
+                Class.forName("com.google.firebase.messaging.FirebaseMessaging")
+                true
+            } catch (e: ClassNotFoundException) {
                 false
             }
         }
@@ -175,8 +149,19 @@ internal class DeviceService(private val _applicationService: IApplicationServic
         }
 
     private fun isHMSCoreInstalledAndEnabled(): Boolean {
-        val availability = HuaweiApiAvailability.getInstance()
-        return availability.isHuaweiMobileServicesAvailable(_applicationService.appContext) == HMS_AVAILABLE_SUCCESSFUL
+        // we use reflection so we don't depend on the library directly.
+        return try {
+            val clazz = Class.forName("com.huawei.hms.api.HuaweiApiAvailability")
+            val newInstanceMethod = clazz.getMethod("getInstance")
+            val isHuaweiMobileServicesAvailableMethod = clazz.getMethod("isHuaweiMobileServicesAvailable")
+            val availabilityInstance = newInstanceMethod.invoke(null)
+
+            val result = isHuaweiMobileServicesAvailableMethod.invoke(availabilityInstance, _applicationService.appContext) as Int
+
+            return result == HMS_AVAILABLE_SUCCESSFUL
+        } catch (e: ClassNotFoundException) {
+            false
+        }
     }
 
     override val hasAllHMSLibrariesForPushKit: Boolean
@@ -188,24 +173,27 @@ internal class DeviceService(private val _applicationService: IApplicationServic
 
     private fun hasHMSAGConnectLibrary(): Boolean {
         return try {
-            AndroidUtils.opaqueHasClass(AGConnectServicesConfig::class.java)
-        } catch (e: NoClassDefFoundError) {
+            Class.forName("com.huawei.agconnect.config.AGConnectServicesConfig")
+            true
+        } catch (e: ClassNotFoundException) {
             false
         }
     }
 
     private fun hasHMSPushKitLibrary(): Boolean {
         return try {
-            AndroidUtils.opaqueHasClass(HmsInstanceId::class.java)
-        } catch (e: NoClassDefFoundError) {
+            Class.forName("com.huawei.hms.aaid.HmsInstanceId")
+            true
+        } catch (e: ClassNotFoundException) {
             false
         }
     }
 
     private fun hasHMSAvailabilityLibrary(): Boolean {
         return try {
-            AndroidUtils.opaqueHasClass(HuaweiApiAvailability::class.java)
-        } catch (e: NoClassDefFoundError) {
+            Class.forName("com.huawei.hms.api.HuaweiApiAvailability")
+            true
+        } catch (e: ClassNotFoundException) {
             false
         }
     }

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- At a minimum the location module requires course permission, the app has the option
+         to also include ACCESS_FINE_LOCATION and/or ACCESS_BACKGROUND_LOCATION -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+</manifest>

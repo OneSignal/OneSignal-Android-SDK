@@ -7,7 +7,7 @@ import android.content.ContentValues
  * over the database.  The operations are synchronous on the calling thread, it is up to the
  * caller to offload data operations to a non-main thread.
  */
-internal interface IDatabase {
+interface IDatabase {
 
     /**
      * Query for the underlying data.

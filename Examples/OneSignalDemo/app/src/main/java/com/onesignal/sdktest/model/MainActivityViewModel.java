@@ -24,12 +24,12 @@ import android.widget.RelativeLayout;
 import android.widget.Switch;
 import android.widget.TextView;
 
-import com.onesignal.core.Continue;
-import com.onesignal.core.OneSignal;
+import com.onesignal.Continue;
+import com.onesignal.OneSignal;
 import com.onesignal.notification.IPermissionStateChanges;
-import com.onesignal.core.user.subscriptions.IEmailSubscription;
-import com.onesignal.core.user.subscriptions.IPushSubscription;
-import com.onesignal.core.user.subscriptions.ISmsSubscription;
+import com.onesignal.user.subscriptions.IEmailSubscription;
+import com.onesignal.user.subscriptions.IPushSubscription;
+import com.onesignal.user.subscriptions.ISmsSubscription;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.activity.SecondaryActivity;
 import com.onesignal.sdktest.adapter.InAppMessageRecyclerViewAdapter;

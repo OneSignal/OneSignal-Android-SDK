@@ -2,9 +2,9 @@ package com.onesignal.sdktest.notification;
 
 import android.util.Log;
 
-import com.onesignal.core.Continue;
-import com.onesignal.core.OneSignal;
-import com.onesignal.core.user.subscriptions.IPushSubscription;
+import com.onesignal.Continue;
+import com.onesignal.OneSignal;
+import com.onesignal.user.subscriptions.IPushSubscription;
 import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.type.Notification;
 

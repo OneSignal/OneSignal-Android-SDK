@@ -3,7 +3,11 @@ package com.onesignal.core.internal.application
 import android.app.Activity
 import android.content.Context
 
-internal interface IApplicationService {
+/**
+ * The application service provides the ability to view various application-specific
+ * information and subscribe to application events.
+ */
+interface IApplicationService {
 
     /**
      * The application context
