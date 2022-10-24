@@ -1,5 +1,7 @@
 package com.onesignal.core
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import kotlinx.coroutines.Dispatchers
 import java.util.function.Consumer
 import kotlin.coroutines.Continuation
@@ -57,6 +59,7 @@ object Continue {
      * @return The [Continuation] which should be provided to the Kotlin coroutine, and will be executed
      * once that coroutine has completed.
      */
+    @RequiresApi(Build.VERSION_CODES.N)
     @JvmOverloads
     @JvmStatic
     fun <R> with(onFinished: Consumer<ContinueResult<R>>, context: CoroutineContext = Dispatchers.Main): Continuation<R> {

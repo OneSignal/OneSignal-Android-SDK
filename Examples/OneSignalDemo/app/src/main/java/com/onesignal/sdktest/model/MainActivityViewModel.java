@@ -650,10 +650,10 @@ public class MainActivityViewModel implements ActivityViewModel {
             public boolean onSuccess(OutcomeEvent outcomeEvent, String name, String value) {
                 switch (outcomeEvent) {
                     case OUTCOME:
-                        OneSignal.getUser().sendOutcome(name);
+                        OneSignal.getSession().sendOutcome(name);
                         break;
                     case UNIQUE_OUTCOME:
-                        OneSignal.getUser().sendUniqueOutcome(name);
+                        OneSignal.getSession().sendUniqueOutcome(name);
                         break;
                     case OUTCOME_WITH_VALUE:
                         if (value.isEmpty()) {
@@ -661,7 +661,7 @@ public class MainActivityViewModel implements ActivityViewModel {
                             return false;
                         }
 
-                        OneSignal.getUser().sendOutcomeWithValue(name, Float.parseFloat(value));
+                        OneSignal.getSession().sendOutcomeWithValue(name, Float.parseFloat(value));
                         break;
                 }
 
