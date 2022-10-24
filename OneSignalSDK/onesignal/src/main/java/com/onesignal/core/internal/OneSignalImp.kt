@@ -29,6 +29,7 @@ import com.onesignal.core.internal.service.IServiceProvider
 import com.onesignal.core.internal.service.ServiceBuilder
 import com.onesignal.core.internal.service.ServiceProvider
 import com.onesignal.core.internal.startup.StartupService
+import com.onesignal.core.session.ISessionManager
 import com.onesignal.core.user.IUserManager
 import com.onesignal.iam.IIAMManager
 import com.onesignal.iam.internal.IAMModule
@@ -55,7 +56,15 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             _configModel?.givenPrivacyConsent = value
         }
 
+    override var disableGMSMissingPrompt: Boolean
+        get() = _configModel?.disableGMSMissingPrompt ?: (_disableGMSMissingPrompt == true)
+        set(value) {
+            _disableGMSMissingPrompt = value
+            _configModel?.disableGMSMissingPrompt = value
+        }
+
     override val debug: IDebugManager = DebugManager()
+    override val session: ISessionManager get() = if (isInitialized) _session!! else throw Exception("Must call 'initWithContext' before use")
     override val notifications: INotificationsManager get() = if (isInitialized) _notifications!! else throw Exception("Must call 'initWithContext' before use")
     override val location: ILocationManager get() = if (isInitialized) _location!! else throw Exception("Must call 'initWithContext' before use")
     override val iam: IIAMManager get() = if (isInitialized) _iam!! else throw Exception("Must call 'initWithContext' before use")
@@ -82,6 +91,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     // Services required by this class
     private var _user: IUserManager? = null
     private var _hasCreatedBackendUser: Boolean = false
+    private var _session: ISessionManager? = null
     private var _iam: IIAMManager? = null
     private var _location: ILocationManager? = null
     private var _notifications: INotificationsManager? = null
@@ -97,6 +107,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     private var _sessionModel: SessionModel? = null
     private var _requiresPrivacyConsent: Boolean? = null
     private var _givenPrivacyConsent: Boolean? = null
+    private var _disableGMSMissingPrompt: Boolean? = null
 
     init {
         val serviceBuilder = ServiceBuilder()
@@ -145,9 +156,14 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             _configModel!!.givenPrivacyConsent = _givenPrivacyConsent!!
         }
 
+        if (_disableGMSMissingPrompt != null) {
+            _configModel!!.disableGMSMissingPrompt = _disableGMSMissingPrompt!!
+        }
+
         // "Inject" the services required by this main class
         _location = _services.getService()
         _user = _services.getService()
+        _session = _services.getService()
         _iam = _services.getService()
         _notifications = _services.getService()
         _operationRepo = _services.getService()
