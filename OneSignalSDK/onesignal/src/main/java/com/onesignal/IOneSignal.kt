@@ -113,5 +113,5 @@ interface IOneSignal {
      * be retrieved, except through this device as long as the app remains installed and the app
      * data is not cleared.
      */
-    fun logout()
+    suspend fun logout()
 }

@@ -178,7 +178,7 @@ object OneSignal {
      * data is not cleared.
      */
     @JvmStatic
-    fun logout() = oneSignal.logout()
+    suspend fun logout() = oneSignal.logout()
 
     private val oneSignal: IOneSignal by lazy {
         OneSignalImp()

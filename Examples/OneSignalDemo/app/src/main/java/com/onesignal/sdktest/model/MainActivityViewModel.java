@@ -395,10 +395,11 @@ public class MainActivityViewModel implements ActivityViewModel {
 
         switchUserButton.setOnClickListener(v -> {
             if(isLoggedIn) {
-                OneSignal.logout();
-                isLoggedIn = false;
-                switchUserButton.setText(R.string.login_user);
-                refreshState();
+                OneSignal.logout(Continue.with(r -> {
+                    isLoggedIn = false;
+                    switchUserButton.setText(R.string.login_user);
+                    refreshState();
+                }));
             }
             else {
                 dialog.createUpdateAlertDialog(OneSignal.getUser().getExternalId(), Dialog.DialogAction.LOGIN, ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {

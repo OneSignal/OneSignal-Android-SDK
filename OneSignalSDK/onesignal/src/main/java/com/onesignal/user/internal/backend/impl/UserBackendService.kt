@@ -58,6 +58,22 @@ internal class UserBackendService(
         // TODO: To Implement: Call backend with jsonObject and deserialize response
     }
 
+    override suspend fun getUser(appId: String, aliasLabel: String, aliasValue: String): CreateUserResponse {
+//        val response = _http.get("apps/$appId/user/by/$aliasLabel/$aliasValue")
+//
+//        if(!response.isSuccess) {
+//            throw BackendException(response.statusCode, response.payload)
+//        }
+
+        // TODO: Implement
+//        val jsonObject = JSONObject(response.payload)
+
+        val language: String? = null
+        val timezoneId: UInt? = null
+        val country: String? = null
+        return CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to aliasValue), PropertiesObject(mapOf(), language, timezoneId, country), listOf())
+    }
+
     private fun createPropertiesJSON(properties: PropertiesObject): JSONObject {
         val propertiesObject = JSONObject()
 
