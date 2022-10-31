@@ -7,7 +7,7 @@ import android.app.Application.ActivityLifecycleCallbacks
  * will be notified throughout the application lifecycle.  This should be used over the Android-provided
  * [ActivityLifecycleCallbacks], it provides an abstraction more specific to the OneSignal SDK
  */
-internal interface IApplicationLifecycleHandler {
+interface IApplicationLifecycleHandler {
 
     /**
      * Called when the application is brought into the foreground.
@@ -24,7 +24,7 @@ internal interface IApplicationLifecycleHandler {
  * A base implementation of [IApplicationLifecycleHandler] that is a no-op. Concrete implementations
  * can use this if they only want to override a subset of the callbacks that make up this interface.
  */
-internal open class ApplicationLifecycleHandlerBase : IApplicationLifecycleHandler {
+open class ApplicationLifecycleHandlerBase : IApplicationLifecycleHandler {
     override fun onFocus() {}
     override fun onUnfocused() {}
 }

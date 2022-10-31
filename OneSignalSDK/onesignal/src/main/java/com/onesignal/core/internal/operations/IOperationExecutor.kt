@@ -7,7 +7,7 @@ package com.onesignal.core.internal.operations
  * find the best [IOperationExecutor] and call [IOperationExecutor.execute]
  * to execute a group of operations in batch.
  */
-internal interface IOperationExecutor {
+interface IOperationExecutor {
 
     /**
      * The list of operations that this executor can handle execution.

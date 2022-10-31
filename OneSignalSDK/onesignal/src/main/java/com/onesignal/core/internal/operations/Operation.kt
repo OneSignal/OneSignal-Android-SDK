@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.operations
 
-import com.onesignal.core.internal.modeling.Model
+import com.onesignal.common.modeling.Model
 
 /**
  * An [Operation] can be enqueued and executed on the [IOperationRepo]. Each concrete-class
@@ -9,7 +9,7 @@ import com.onesignal.core.internal.modeling.Model
  * performed by an [IOperationExecutor]. [IOperationExecutor] identifies itself as being
  * able to execute an [Operation] through [IOperationExecutor.operations].
  */
-internal abstract class Operation(name: String) : Model() {
+abstract class Operation(name: String) : Model() {
     var name: String
         get() = getProperty(::name.name)
         private set(value) { setProperty(::name.name, value) }
@@ -46,7 +46,7 @@ internal abstract class Operation(name: String) : Model() {
     }
 }
 
-internal enum class GroupComparisonType {
+enum class GroupComparisonType {
     CREATE,
     ALTER,
     NONE

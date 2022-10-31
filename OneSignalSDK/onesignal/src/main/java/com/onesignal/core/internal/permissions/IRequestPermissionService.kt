@@ -3,7 +3,7 @@ package com.onesignal.core.internal.permissions
 /**
  * A service for requesting permission from the user.
  */
-internal interface IRequestPermissionService {
+interface IRequestPermissionService {
     interface PermissionCallback {
         fun onAccept()
         fun onReject(fallbackToSettings: Boolean)
