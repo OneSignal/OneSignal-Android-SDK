@@ -13,17 +13,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import com.onesignal.common.AndroidUtils
+import com.onesignal.common.DeviceUtils
+import com.onesignal.common.events.EventProducer
+import com.onesignal.common.events.IEventProducer
+import com.onesignal.common.threading.Waiter
 import com.onesignal.core.internal.application.ActivityLifecycleHandlerBase
 import com.onesignal.core.internal.application.AppEntryAction
 import com.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
-import com.onesignal.core.internal.common.AndroidUtils
-import com.onesignal.core.internal.common.DeviceUtils
-import com.onesignal.core.internal.common.events.EventProducer
-import com.onesignal.core.internal.common.events.IEventProducer
-import com.onesignal.core.internal.logging.Logging
-import com.onesignal.onesignal.core.internal.common.suspend.Waiter
+import com.onesignal.debug.internal.logging.Logging
 import java.lang.ref.WeakReference
 
 internal class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, OnGlobalLayoutListener {

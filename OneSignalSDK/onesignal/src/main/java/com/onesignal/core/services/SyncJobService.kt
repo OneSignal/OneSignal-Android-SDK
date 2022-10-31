@@ -30,10 +30,10 @@ import android.app.job.JobParameters
 import android.app.job.JobService
 import android.os.Build
 import androidx.annotation.RequiresApi
-import com.onesignal.core.OneSignal
+import com.onesignal.OneSignal
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.background.IBackgroundManager
-import com.onesignal.core.internal.common.suspendifyOnThread
-import com.onesignal.core.internal.logging.Logging
+import com.onesignal.debug.internal.logging.Logging
 
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 class SyncJobService : JobService() {

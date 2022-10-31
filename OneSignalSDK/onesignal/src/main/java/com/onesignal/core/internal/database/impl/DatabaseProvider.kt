@@ -3,7 +3,7 @@ package com.onesignal.core.internal.database.impl
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.database.IDatabase
 import com.onesignal.core.internal.database.IDatabaseProvider
-import com.onesignal.core.internal.outcomes.impl.OutcomeTableProvider
+import com.onesignal.session.internal.outcomes.impl.OutcomeTableProvider
 
 internal class DatabaseProvider(
     private val _application: IApplicationService
