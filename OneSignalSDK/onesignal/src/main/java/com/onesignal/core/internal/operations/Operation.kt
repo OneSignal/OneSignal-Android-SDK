@@ -41,6 +41,14 @@ abstract class Operation(name: String) : Model() {
      */
     abstract val canStartExecute: Boolean
 
+    /**
+     * Called when an operation has resolved a local ID to a backend ID (i.e. successfully
+     * created a backend resource).  Any IDs within the operation that could be local IDs should
+     * be translated at this time.  Within the map the key is the local Id, the value is the remote
+     * Id.
+     */
+    open fun translateIds(map: Map<String, String>) { }
+
     override fun toString(): String {
         return toJSON().toString()
     }

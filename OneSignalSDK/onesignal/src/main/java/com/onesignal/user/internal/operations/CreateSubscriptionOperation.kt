@@ -20,7 +20,7 @@ class CreateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.CR
 
     /**
      * The user ID this subscription will be associated with. This ID *may* be locally generated
-     * and should go through [IDManager] to ensure correct processing.
+     * and can be checked via [IDManager.isLocalId] to ensure correct processing.
      */
     var onesignalId: String
         get() = getProperty(::onesignalId.name)
@@ -70,7 +70,7 @@ class CreateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.CR
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Subscription.$subscriptionId"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.ALTER
-    override val canStartExecute: Boolean get() = !IDManager.isIdLocalOnly(onesignalId)
+    override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
 
     constructor(appId: String, onesignalId: String, subscriptionId: String, type: SubscriptionType, enabled: Boolean, address: String, status: Int) : this() {
         this.appId = appId
@@ -80,5 +80,11 @@ class CreateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.CR
         this.enabled = enabled
         this.address = address
         this.status = status
+    }
+
+    override fun translateIds(map: Map<String, String>) {
+        if (map.containsKey(onesignalId)) {
+            onesignalId = map[onesignalId]!!
+        }
     }
 }
