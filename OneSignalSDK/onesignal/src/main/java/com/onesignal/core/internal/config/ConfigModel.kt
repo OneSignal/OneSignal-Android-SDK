@@ -62,6 +62,14 @@ class ConfigModel : Model() {
         set(value) { setProperty(::sessionFocusTimeout.name, value) }
 
     /**
+     * The minimum number of milliseconds required to pass before executing another operation on
+     * the queue.
+     */
+    var opRepoExecutionInterval: Long
+        get() = getProperty(::opRepoExecutionInterval.name) { 5000 }
+        set(value) { setProperty(::opRepoExecutionInterval.name, value) }
+
+    /**
      * The minimum number of milliseconds required to pass to allow the fetching of IAM to occur.
      */
     var fetchIAMMinInterval: Long
@@ -79,7 +87,7 @@ class ConfigModel : Model() {
      * Whether the current application is an enterprise-level
      */
     var enterprise: Boolean
-        get() = getProperty(::enterprise.name)
+        get() = getProperty(::enterprise.name) { false }
         set(value) { setProperty(::enterprise.name, value) }
 
     /**
@@ -107,14 +115,14 @@ class ConfigModel : Model() {
      * Whether to honor TTL for notifications
      */
     var restoreTTLFilter: Boolean
-        get() = getProperty(::restoreTTLFilter.name) { false }
+        get() = getProperty(::restoreTTLFilter.name) { true }
         set(value) { setProperty(::restoreTTLFilter.name, value) }
 
     /**
      * Whether to track notification receive receipts
      */
     var receiveReceiptEnabled: Boolean
-        get() = getProperty(::receiveReceiptEnabled.name) { true }
+        get() = getProperty(::receiveReceiptEnabled.name) { false }
         set(value) { setProperty(::receiveReceiptEnabled.name, value) }
 
     /**

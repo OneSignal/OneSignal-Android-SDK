@@ -1,8 +1,8 @@
 package com.onesignal.notification.internal
 
 import android.app.Activity
-import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.events.EventProducer
+import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.threading.suspendifyOnMain
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.IApplicationService
