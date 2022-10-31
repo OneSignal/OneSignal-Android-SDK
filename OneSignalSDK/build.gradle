@@ -5,17 +5,19 @@ buildscript {
     ext {
         buildVersions = [
                 compileSdkVersion: 31,
-                targetSdkVersion: 31
+                targetSdkVersion: 31,
+                minSdkVersion: 16
         ]
-        androidGradlePluginVersion = '7.0.4'
+        androidGradlePluginVersion = '7.2.0'
         googleServicesGradlePluginVersion = '4.3.10'
         huaweiAgconnectVersion = '1.6.2.300'
         huaweiHMSPushVersion = '6.3.0.304'
         huaweiHMSLocationVersion = '4.0.0.300'
-        kotlinVersion = '1.6.21'
+        kotlinVersion = '1.7.10'
         kotestVersion = '5.5.0'
         ktlintVersion = '11.0.0'
         detektVersion = '1.21.0'
+        junitVersion = '4.13.2'
     }
 
     repositories {
@@ -30,7 +32,6 @@ buildscript {
         classpath "com.google.gms:google-services:$googleServicesGradlePluginVersion"
         classpath "com.huawei.agconnect:agcp:$huaweiAgconnectVersion"
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
-
         classpath "org.jlleitschuh.gradle:ktlint-gradle:$ktlintVersion"
         classpath "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:$detektVersion"
     }

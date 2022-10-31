@@ -6,7 +6,7 @@ import org.json.JSONObject
  * Provides CRUD operations to a backend service.  All methods are implemented as
  * coroutines and will automatically switch over to a IO thread for its processing.
  */
-internal interface IHttpClient {
+interface IHttpClient {
     /**
      * Make a POST request to the provided [url] with the provided [body].
      *

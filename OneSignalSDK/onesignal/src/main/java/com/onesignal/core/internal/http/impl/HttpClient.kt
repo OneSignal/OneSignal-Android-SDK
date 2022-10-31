@@ -2,15 +2,15 @@ package com.onesignal.core.internal.http.impl
 
 import android.net.TrafficStats
 import android.os.Build
-import com.onesignal.core.internal.common.JSONUtils
-import com.onesignal.core.internal.common.OneSignalUtils
+import com.onesignal.common.JSONUtils
+import com.onesignal.common.OneSignalUtils
+import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.http.IHttpClient
-import com.onesignal.core.internal.logging.Logging
-import com.onesignal.core.internal.models.ConfigModelStore
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.TimeoutCancellationException

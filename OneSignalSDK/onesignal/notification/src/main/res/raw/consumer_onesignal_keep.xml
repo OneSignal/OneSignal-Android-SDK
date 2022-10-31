@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- Keep OneSignal's .aar resource files even when tools:shrinkMode="strict" is set in the app's keep.xml file.
+     Also documented file names to use as defaults. -->
+<!-- onesignal_bgimage_notif_layout is always kept as it's id used directly in code.  -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+           tools:keep="@drawable/ic_os_notification_fallback_white_24dp,
+                       @drawable/ic_stat_onesignal_default,
+                       @drawable/ic_onesignal_large_icon_default,
+                       @raw/onesignal_default_sound"
+           tools:discard="@raw/consumer_onesignal_keep" />
+
+<!-- Discard above doesn't seem to be working, file is added to .APK anyway but is only a packed size of 47 bytes.
+     XML comments are always omitted from the .APK. -->

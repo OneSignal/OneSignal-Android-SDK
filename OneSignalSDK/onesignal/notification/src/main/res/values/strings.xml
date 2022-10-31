@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_permission_name_for_title">Notifications</string>
+    <string name="notification_permission_settings_message">Notifications</string>
+</resources>

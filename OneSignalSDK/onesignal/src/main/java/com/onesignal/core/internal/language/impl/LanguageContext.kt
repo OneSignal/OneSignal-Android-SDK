@@ -1,7 +1,7 @@
 package com.onesignal.core.internal.language.impl
 
 import com.onesignal.core.internal.language.ILanguageContext
-import com.onesignal.core.internal.models.PropertiesModelStore
+import com.onesignal.user.internal.properties.PropertiesModelStore
 
 internal class LanguageContext(
     private val _propertiesModelStore: PropertiesModelStore

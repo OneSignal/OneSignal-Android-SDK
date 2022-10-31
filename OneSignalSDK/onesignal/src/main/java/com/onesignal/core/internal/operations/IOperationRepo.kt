@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.operations
 
-internal interface IOperationRepo {
+interface IOperationRepo {
     /**
      * Enqueue an operation onto the operation repo.
      *

@@ -13,15 +13,12 @@ import android.os.SystemClock
 import android.provider.BaseColumns
 import com.onesignal.core.internal.database.ICursor
 import com.onesignal.core.internal.database.IDatabase
-import com.onesignal.core.internal.logging.Logging
-import com.onesignal.core.internal.outcomes.impl.OutcomeTableProvider
-import com.onesignal.core.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V1
-import com.onesignal.core.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V3
-import com.onesignal.core.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V1
-import com.onesignal.core.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2
-import com.onesignal.notification.internal.common.NotificationConstants
-import java.lang.IllegalStateException
-import java.util.ArrayList
+import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.session.internal.outcomes.impl.OutcomeTableProvider
+import com.onesignal.session.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V1
+import com.onesignal.session.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V3
+import com.onesignal.session.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V1
+import com.onesignal.session.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2
 
 internal open class OSDatabase(
     private val _outcomeTableProvider: OutcomeTableProvider,
@@ -304,7 +301,7 @@ internal open class OSDatabase(
             db,
             "UPDATE " + OneSignalDbContract.NotificationTable.TABLE_NAME.toString() + " " +
                 "SET " + OneSignalDbContract.NotificationTable.COLUMN_NAME_EXPIRE_TIME.toString() + " = " +
-                OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME.toString() + " + " + NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD.toString() + ";"
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME.toString() + " + " + DEFAULT_TTL_IF_NOT_IN_PAYLOAD.toString() + ";"
         )
         safeExecSQL(db, OneSignalDbContract.NotificationTable.INDEX_CREATE_EXPIRE_TIME)
     }
@@ -404,5 +401,7 @@ internal open class OSDatabase(
             OneSignalDbContract.NotificationTable.INDEX_CREATE_CREATED_TIME,
             OneSignalDbContract.NotificationTable.INDEX_CREATE_EXPIRE_TIME
         )
+
+        const val DEFAULT_TTL_IF_NOT_IN_PAYLOAD = 259_200
     }
 }

@@ -4,7 +4,7 @@ package com.onesignal.core.internal.database
  * The data cursor that is provided on the [IDatabase.query] lambda. It provides access
  * to the data retrieved by the query.
  */
-internal interface ICursor {
+interface ICursor {
     /**
      * The number of records this cursor can traverse.
      */
