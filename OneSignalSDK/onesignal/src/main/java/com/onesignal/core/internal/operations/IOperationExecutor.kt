@@ -21,5 +21,40 @@ interface IOperationExecutor {
      * control.  Subsequent operations in the list existed on the operation repo *and* were considered
      * a match to be executed alongside the starting operation.
      */
-    suspend fun execute(operations: List<Operation>)
+    suspend fun execute(operations: List<Operation>): ExecutionResponse
+}
+
+class ExecutionResponse(
+    /**
+     * The result of the execution
+     */
+    val result: ExecutionResult,
+
+    /**
+     * The map of id translations that should be applied to any outstanding operations.
+     * Within the map the key is the local Id, the value is the remote Id.
+     */
+    val idTranslations: Map<String, String>? = null
+)
+
+enum class ExecutionResult {
+    /**
+     * The operation was executed successfully.
+     */
+    SUCCESS,
+
+    /**
+     * The operation group failed but the starting op should be retried split from the group.
+     */
+    SUCCESS_STARTING_ONLY,
+
+    /**
+     * The operation failed but should be retried.
+     */
+    FAIL_RETRY,
+
+    /**
+     * The operation failed and should not be tried again.
+     */
+    FAIL_NORETRY
 }

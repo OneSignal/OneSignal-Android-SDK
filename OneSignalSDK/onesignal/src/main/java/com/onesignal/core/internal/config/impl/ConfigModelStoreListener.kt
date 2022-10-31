@@ -8,7 +8,6 @@ import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.backend.IParamsBackendService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
-import com.onesignal.core.internal.config.InfluenceConfigModel
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
@@ -67,28 +66,28 @@ internal class ConfigModelStoreListener(
 
                     val config = ConfigModel()
                     config.appId = appId
-                    config.enterprise = params.enterprise ?: false
-                    config.useIdentityVerification = params.useIdentityVerification ?: false
+                    config.enterprise = params.enterprise ?: _configModelStore.model.enterprise
+                    config.useIdentityVerification = params.useIdentityVerification ?: _configModelStore.model.useIdentityVerification
                     config.notificationChannels = params.notificationChannels
-                    config.firebaseAnalytics = params.firebaseAnalytics ?: false
-                    config.restoreTTLFilter = params.restoreTTLFilter ?: true
+                    config.firebaseAnalytics = params.firebaseAnalytics ?: _configModelStore.model.firebaseAnalytics
+                    config.restoreTTLFilter = params.restoreTTLFilter ?: _configModelStore.model.restoreTTLFilter
                     config.googleProjectNumber = params.googleProjectNumber
-                    config.clearGroupOnSummaryClick = params.clearGroupOnSummaryClick ?: true
-                    config.receiveReceiptEnabled = params.receiveReceiptEnabled ?: false
+                    config.clearGroupOnSummaryClick = params.clearGroupOnSummaryClick ?: _configModelStore.model.clearGroupOnSummaryClick
+                    config.receiveReceiptEnabled = params.receiveReceiptEnabled ?: _configModelStore.model.receiveReceiptEnabled
                     config.disableGMSMissingPrompt = params.disableGMSMissingPrompt ?: _configModelStore.model.disableGMSMissingPrompt
                     config.unsubscribeWhenNotificationsDisabled = params.unsubscribeWhenNotificationsDisabled ?: _configModelStore.model.unsubscribeWhenNotificationsDisabled
                     config.locationShared = params.locationShared ?: _configModelStore.model.locationShared
                     config.requiresPrivacyConsent = params.requiresUserPrivacyConsent ?: _configModelStore.model.requiresPrivacyConsent
+                    config.opRepoExecutionInterval = params.opRepoExecutionInterval ?: _configModelStore.model.opRepoExecutionInterval
                     config.givenPrivacyConsent = _configModelStore.model.givenPrivacyConsent
 
-                    config.influenceParams.notificationLimit = params.influenceParams.notificationLimit ?: InfluenceConfigModel.DEFAULT_NOTIFICATION_LIMIT
-                    config.influenceParams.indirectNotificationAttributionWindow = params.influenceParams.indirectNotificationAttributionWindow ?: InfluenceConfigModel.DEFAULT_INDIRECT_ATTRIBUTION_WINDOW
-                    config.influenceParams.iamLimit = params.influenceParams.iamLimit ?: InfluenceConfigModel.DEFAULT_NOTIFICATION_LIMIT
-                    config.influenceParams.indirectIAMAttributionWindow = params.influenceParams.indirectIAMAttributionWindow ?: InfluenceConfigModel.DEFAULT_INDIRECT_ATTRIBUTION_WINDOW
-
-                    config.influenceParams.isDirectEnabled = params.influenceParams.isDirectEnabled ?: false
-                    config.influenceParams.isIndirectEnabled = params.influenceParams.isIndirectEnabled ?: false
-                    config.influenceParams.isUnattributedEnabled = params.influenceParams.isUnattributedEnabled ?: false
+                    config.influenceParams.notificationLimit = params.influenceParams.notificationLimit ?: _configModelStore.model.influenceParams.notificationLimit
+                    config.influenceParams.indirectNotificationAttributionWindow = params.influenceParams.indirectNotificationAttributionWindow ?: _configModelStore.model.influenceParams.indirectNotificationAttributionWindow
+                    config.influenceParams.iamLimit = params.influenceParams.iamLimit ?: _configModelStore.model.influenceParams.iamLimit
+                    config.influenceParams.indirectIAMAttributionWindow = params.influenceParams.indirectIAMAttributionWindow ?: _configModelStore.model.influenceParams.indirectIAMAttributionWindow
+                    config.influenceParams.isDirectEnabled = params.influenceParams.isDirectEnabled ?: _configModelStore.model.influenceParams.isDirectEnabled
+                    config.influenceParams.isIndirectEnabled = params.influenceParams.isIndirectEnabled ?: _configModelStore.model.influenceParams.isIndirectEnabled
+                    config.influenceParams.isUnattributedEnabled = params.influenceParams.isUnattributedEnabled ?: _configModelStore.model.influenceParams.isUnattributedEnabled
 
                     config.fcmParams.projectId = params.fcmParams.projectId
                     config.fcmParams.appId = params.fcmParams.appId

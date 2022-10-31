@@ -13,8 +13,10 @@ import com.onesignal.user.internal.backend.impl.SubscriptionBackendService
 import com.onesignal.user.internal.backend.impl.UserBackendService
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.impl.executors.IdentityOperationExecutor
+import com.onesignal.user.internal.operations.impl.executors.LoginUserOperationExecutor
+import com.onesignal.user.internal.operations.impl.executors.RefreshUserOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
-import com.onesignal.user.internal.operations.impl.executors.UserOperationExecutor
+import com.onesignal.user.internal.operations.impl.executors.UpdateUserOperationExecutor
 import com.onesignal.user.internal.operations.impl.listeners.IdentityModelStoreListener
 import com.onesignal.user.internal.operations.impl.listeners.PropertiesModelStoreListener
 import com.onesignal.user.internal.operations.impl.listeners.SubscriptionModelStoreListener
@@ -37,18 +39,26 @@ internal class UserModule : IModule {
         builder.register<IdentityModelStore>().provides<IdentityModelStore>()
         builder.register<IdentityModelStoreListener>().provides<IBootstrapService>()
         builder.register<IdentityBackendService>().provides<IIdentityBackendService>()
-        builder.register<IdentityOperationExecutor>().provides<IOperationExecutor>()
+        builder.register<IdentityOperationExecutor>()
+            .provides<IdentityOperationExecutor>()
+            .provides<IOperationExecutor>()
 
         // Subscriptions
         builder.register<SubscriptionModelStore>().provides<SubscriptionModelStore>()
         builder.register<SubscriptionModelStoreListener>().provides<IBootstrapService>()
         builder.register<SubscriptionBackendService>().provides<ISubscriptionBackendService>()
-        builder.register<SubscriptionOperationExecutor>().provides<IOperationExecutor>()
+        builder.register<SubscriptionOperationExecutor>()
+            .provides<SubscriptionOperationExecutor>()
+            .provides<IOperationExecutor>()
         builder.register<SubscriptionManager>().provides<ISubscriptionManager>()
 
         // User
         builder.register<UserBackendService>().provides<IUserBackendService>()
-        builder.register<UserOperationExecutor>().provides<IOperationExecutor>()
+        builder.register<UpdateUserOperationExecutor>()
+            .provides<UpdateUserOperationExecutor>()
+            .provides<IOperationExecutor>()
+        builder.register<LoginUserOperationExecutor>().provides<IOperationExecutor>()
+        builder.register<RefreshUserOperationExecutor>().provides<IOperationExecutor>()
         builder.register<UserManager>().provides<IUserManager>()
     }
 }

@@ -10,7 +10,10 @@ import com.onesignal.user.internal.backend.IdentityConstants
  */
 class IdentityModel : MapModel<String>() {
     /**
-     * The OneSignal id for this identity
+     * The OneSignal id for this identity.
+     *
+     * WARNING: This *might* be a local id, depending on whether the user has been successfully
+     * created on the backend or not.
      */
     var onesignalId: String
         get() = getProperty(IdentityConstants.ONESIGNAL_ID)

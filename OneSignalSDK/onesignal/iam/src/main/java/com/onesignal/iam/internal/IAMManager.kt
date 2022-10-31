@@ -4,9 +4,9 @@ import android.app.AlertDialog
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.IDManager
 import com.onesignal.common.JSONUtils
-import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.events.CallbackProducer
 import com.onesignal.common.events.ICallbackProducer
+import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.common.threading.suspendifyOnThread
@@ -193,7 +193,7 @@ internal class IAMManager(
         val appId = _configModelStore.model.appId
         val subscriptionId = _subscriptionManager.subscriptions.push?.id
 
-        if (subscriptionId == null || IDManager.isIdLocalOnly(subscriptionId) || appId.isEmpty()) {
+        if (subscriptionId == null || IDManager.isLocalId(subscriptionId) || appId.isEmpty()) {
             return
         }
 

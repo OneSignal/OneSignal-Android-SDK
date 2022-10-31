@@ -4,7 +4,7 @@ import com.onesignal.common.IDManager
 import com.onesignal.common.modeling.Model
 import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.Operation
-import com.onesignal.user.internal.operations.impl.executors.UserOperationExecutor
+import com.onesignal.user.internal.operations.impl.executors.UpdateUserOperationExecutor
 import org.json.JSONArray
 import java.math.BigDecimal
 
@@ -12,7 +12,7 @@ import java.math.BigDecimal
  * An [Operation] to track the purchase of one or more items within an app by a specific
  * user.
  */
-class TrackPurchaseOperation() : Operation(UserOperationExecutor.TRACK_PURCHASE) {
+class TrackPurchaseOperation() : Operation(UpdateUserOperationExecutor.TRACK_PURCHASE) {
     /**
      * The OneSignal appId the purchase was captured under.
      */
@@ -22,7 +22,7 @@ class TrackPurchaseOperation() : Operation(UserOperationExecutor.TRACK_PURCHASE)
 
     /**
      * The OneSignal ID the purchase was captured under. This ID *may* be locally generated
-     * and should go through [IDManager] to ensure correct processing.
+     * and can be checked via [IDManager.isLocalId] to ensure correct processing.
      */
     var onesignalId: String
         get() = getProperty(::onesignalId.name)
@@ -52,7 +52,7 @@ class TrackPurchaseOperation() : Operation(UserOperationExecutor.TRACK_PURCHASE)
     override val createComparisonKey: String get() = ""
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.ALTER
-    override val canStartExecute: Boolean get() = !IDManager.isIdLocalOnly(onesignalId)
+    override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
 
     constructor(appId: String, onesignalId: String, treatNewAsExisting: Boolean, amountSpent: BigDecimal, purchases: List<PurchaseInfo>) : this() {
         this.appId = appId
@@ -60,6 +60,12 @@ class TrackPurchaseOperation() : Operation(UserOperationExecutor.TRACK_PURCHASE)
         this.treatNewAsExisting = treatNewAsExisting
         this.amountSpent = amountSpent
         this.purchases = purchases
+    }
+
+    override fun translateIds(map: Map<String, String>) {
+        if (map.containsKey(onesignalId)) {
+            onesignalId = map[onesignalId]!!
+        }
     }
 
     override fun createListForProperty(property: String, jsonArray: JSONArray): List<*>? {
