@@ -1,9 +1,11 @@
 package com.onesignal.core.internal.backend.impl
 
+import com.onesignal.common.IDManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.expand
 import com.onesignal.common.safeBool
 import com.onesignal.common.safeInt
+import com.onesignal.common.safeLong
 import com.onesignal.common.safeString
 import com.onesignal.core.internal.backend.FCMParamsObject
 import com.onesignal.core.internal.backend.IParamsBackendService
@@ -23,7 +25,7 @@ internal class ParamsBackendService(
         Logging.log(LogLevel.DEBUG, "ParamsBackendService.fetchParams(appId: $appId, subscriptionId: $subscriptionId)")
 
         var paramsUrl = "apps/$appId/android_params.js"
-        if (subscriptionId != null) {
+        if (subscriptionId != null && !IDManager.isLocalId(subscriptionId)) {
             paramsUrl += "?player_id=$subscriptionId"
         }
 
@@ -64,6 +66,7 @@ internal class ParamsBackendService(
             unsubscribeWhenNotificationsDisabled = responseJson.safeBool("unsubscribe_on_notifications_disabled"),
             locationShared = responseJson.safeBool("location_shared"),
             requiresUserPrivacyConsent = responseJson.safeBool("requires_user_privacy_consent"),
+            opRepoExecutionInterval = responseJson.safeLong("oprepo_execution_interval"), // TODO: New
             influenceParams = influenceParams ?: InfluenceParamsObject(),
             fcmParams = fcmParams ?: FCMParamsObject()
         )

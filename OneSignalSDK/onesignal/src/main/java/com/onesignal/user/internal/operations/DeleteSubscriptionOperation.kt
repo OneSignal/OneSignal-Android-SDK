@@ -18,7 +18,7 @@ class DeleteSubscriptionOperation() : Operation(SubscriptionOperationExecutor.DE
 
     /**
      * The user ID this subscription will be associated with. This ID *may* be locally generated
-     * and should go through [IDManager] to ensure correct processing.
+     * and can be checked via [IDManager.isLocalId] to ensure correct processing.
      */
     var onesignalId: String
         get() = getProperty(::onesignalId.name)
@@ -26,7 +26,7 @@ class DeleteSubscriptionOperation() : Operation(SubscriptionOperationExecutor.DE
 
     /**
      * The subscription ID that is to be deleted. This ID *may* be locally generated
-     * and should go through [IDManager] to ensure correct processing.
+     * and can be checked via [IDManager.isLocalId] to ensure correct processing.
      */
     var subscriptionId: String
         get() = getProperty(::subscriptionId.name)
@@ -35,11 +35,20 @@ class DeleteSubscriptionOperation() : Operation(SubscriptionOperationExecutor.DE
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Subscription.$subscriptionId"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.NONE
-    override val canStartExecute: Boolean get() = !IDManager.isIdLocalOnly(onesignalId) && !IDManager.isIdLocalOnly(onesignalId)
+    override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId) && !IDManager.isLocalId(onesignalId)
 
     constructor(appId: String, onesignalId: String, subscriptionId: String) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
         this.subscriptionId = subscriptionId
+    }
+
+    override fun translateIds(map: Map<String, String>) {
+        if (map.containsKey(onesignalId)) {
+            onesignalId = map[onesignalId]!!
+        }
+        if (map.containsKey(subscriptionId)) {
+            subscriptionId = map[subscriptionId]!!
+        }
     }
 }

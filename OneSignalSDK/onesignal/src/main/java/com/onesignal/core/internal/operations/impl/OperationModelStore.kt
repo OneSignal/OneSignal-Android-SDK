@@ -4,10 +4,11 @@ import com.onesignal.common.modeling.ModelStore
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
-import com.onesignal.user.internal.operations.CreateUserOperation
 import com.onesignal.user.internal.operations.DeleteAliasOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteTagOperation
+import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.operations.RefreshUserOperation
 import com.onesignal.user.internal.operations.SetAliasOperation
 import com.onesignal.user.internal.operations.SetPropertyOperation
 import com.onesignal.user.internal.operations.SetTagOperation
@@ -15,8 +16,10 @@ import com.onesignal.user.internal.operations.TrackPurchaseOperation
 import com.onesignal.user.internal.operations.TrackSessionOperation
 import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
 import com.onesignal.user.internal.operations.impl.executors.IdentityOperationExecutor
+import com.onesignal.user.internal.operations.impl.executors.LoginUserOperationExecutor
+import com.onesignal.user.internal.operations.impl.executors.RefreshUserOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
-import com.onesignal.user.internal.operations.impl.executors.UserOperationExecutor
+import com.onesignal.user.internal.operations.impl.executors.UpdateUserOperationExecutor
 import org.json.JSONObject
 
 internal class OperationModelStore(prefs: IPreferencesService) : ModelStore<Operation>("operations", prefs) {
@@ -41,12 +44,13 @@ internal class OperationModelStore(prefs: IPreferencesService) : ModelStore<Oper
             SubscriptionOperationExecutor.CREATE_SUBSCRIPTION -> CreateSubscriptionOperation()
             SubscriptionOperationExecutor.UPDATE_SUBSCRIPTION -> UpdateSubscriptionOperation()
             SubscriptionOperationExecutor.DELETE_SUBSCRIPTION -> DeleteSubscriptionOperation()
-            UserOperationExecutor.CREATE_USER -> CreateUserOperation()
-            UserOperationExecutor.SET_TAG -> SetTagOperation()
-            UserOperationExecutor.DELETE_TAG -> DeleteTagOperation()
-            UserOperationExecutor.SET_PROPERTY -> SetPropertyOperation()
-            UserOperationExecutor.TRACK_SESSION -> TrackSessionOperation()
-            UserOperationExecutor.TRACK_PURCHASE -> TrackPurchaseOperation()
+            LoginUserOperationExecutor.LOGIN_USER -> LoginUserOperation()
+            RefreshUserOperationExecutor.REFRESH_USER -> RefreshUserOperation()
+            UpdateUserOperationExecutor.SET_TAG -> SetTagOperation()
+            UpdateUserOperationExecutor.DELETE_TAG -> DeleteTagOperation()
+            UpdateUserOperationExecutor.SET_PROPERTY -> SetPropertyOperation()
+            UpdateUserOperationExecutor.TRACK_SESSION -> TrackSessionOperation()
+            UpdateUserOperationExecutor.TRACK_PURCHASE -> TrackPurchaseOperation()
             else -> throw Exception("Unrecognized operation: $operationName")
         }
 

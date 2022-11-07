@@ -18,6 +18,21 @@ fun JSONObject.safeInt(name: String): Int? {
 }
 
 /**
+ * Retrieve an [Long] from the [JSONObject] safely.
+ *
+ * @param name The name of the attribute that contains an [Int] value.
+ *
+ * @return The [Long] value if it exists, null otherwise.
+ */
+fun JSONObject.safeLong(name: String): Long? {
+    if (this.has(name)) {
+        return this.getLong(name)
+    }
+
+    return null
+}
+
+/**
  * Retrieve a [Boolean] from the [JSONObject] safely.
  *
  * @param name The name of the attribute that contains a [Boolean] value.

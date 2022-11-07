@@ -30,6 +30,7 @@ class ParamsObject(
     var unsubscribeWhenNotificationsDisabled: Boolean? = null,
     var locationShared: Boolean? = null,
     var requiresUserPrivacyConsent: Boolean? = null,
+    var opRepoExecutionInterval: Long? = null,
     var influenceParams: InfluenceParamsObject,
     var fcmParams: FCMParamsObject
 )
