@@ -155,16 +155,16 @@ internal class LoginUserOperationExecutor(
 
             // TODO: assumption that the response.subscriptionIDs will associate to the input subscriptionList...to confirm
             for (index in subscriptionList.indices) {
-                if (index >= response.subscriptionIDs.size) {
+                if (index >= response.subscriptions.size) {
                     break
                 }
 
-                val backendSubscriptionId = response.subscriptionIDs[index]
+                val backendSubscription = response.subscriptions[index]
 
-                idTranslations[subscriptionList[index].id] = backendSubscriptionId
+                idTranslations[subscriptionList[index].id] = backendSubscription.id
 
                 val subscriptionModel = _subscriptionsModelStore.get(subscriptionList[index].id)
-                subscriptionModel?.setProperty(SubscriptionModel::id.name, backendSubscriptionId, ModelChangeTags.HYDRATE)
+                subscriptionModel?.setProperty(SubscriptionModel::id.name, backendSubscription.id, ModelChangeTags.HYDRATE)
             }
 
             return ExecutionResponse(ExecutionResult.SUCCESS, idTranslations)
@@ -207,7 +207,7 @@ internal class LoginUserOperationExecutor(
             subscriptionType,
             operation.address,
             operation.enabled,
-            null, // TODO: What is this for?
+            operation.status,
             OneSignalUtils.sdkVersion,
             Build.MODEL,
             Build.VERSION.RELEASE,
@@ -240,7 +240,7 @@ internal class LoginUserOperationExecutor(
                 subscriptions[operation.subscriptionId]!!.type,
                 operation.address,
                 operation.enabled,
-                subscriptions[operation.subscriptionId]!!.notificationTypes,
+                operation.status,
                 subscriptions[operation.subscriptionId]!!.sdk,
                 subscriptions[operation.subscriptionId]!!.deviceModel,
                 subscriptions[operation.subscriptionId]!!.deviceOS,

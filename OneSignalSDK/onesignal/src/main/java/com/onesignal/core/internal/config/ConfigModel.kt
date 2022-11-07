@@ -55,6 +55,20 @@ class ConfigModel : Model() {
         set(value) { setProperty(::unsubscribeWhenNotificationsDisabled.name, value) }
 
     /**
+     * The timeout in milliseconds for an HTTP connection.
+     */
+    var httpTimeout: Int
+        get() = getProperty(::httpTimeout.name) { 120000 }
+        set(value) { setProperty(::httpTimeout.name, value) }
+
+    /**
+     * The timeout in milliseconds for an HTTP connection GET request.
+     */
+    var httpGetTimeout: Int
+        get() = getProperty(::httpGetTimeout.name) { 60000 }
+        set(value) { setProperty(::httpGetTimeout.name, value) }
+
+    /**
      * Maximum time in milliseconds a user can spend out of focus before a new session is created.
      */
     var sessionFocusTimeout: Long

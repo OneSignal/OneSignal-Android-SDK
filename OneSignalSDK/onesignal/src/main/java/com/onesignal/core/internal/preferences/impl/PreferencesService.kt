@@ -75,7 +75,14 @@ internal class PreferencesService(
             }
         }
 
-        return defValue
+        return when (type) {
+            String::class.java -> defValue as String?
+            Boolean::class.java -> (defValue as Boolean?) ?: false
+            Int::class.java -> (defValue as Int?) ?: 0
+            Long::class.java -> (defValue as Long?) ?: 0
+            Set::class.java -> defValue as Set<String>?
+            else -> null
+        }
     }
 
     private fun save(store: String, key: String, value: Any?) {

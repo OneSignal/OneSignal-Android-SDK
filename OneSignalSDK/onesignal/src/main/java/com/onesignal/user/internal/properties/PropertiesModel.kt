@@ -13,23 +13,30 @@ class PropertiesModel : Model() {
         set(value) { setProperty(::onesignalId.name, value) }
 
     /**
-     * The language for this user. When `null` the device default will be used.
+     * The language for this user (ISO 639-1 format). When `null` the device default will be used.
+     *
+     * @see [https://en.wikipedia.org/wiki/ISO_639-1]
      */
     var language: String?
         get() = getProperty(::language.name)
         set(value) { setProperty(::language.name, value) }
 
     /**
-     * The country code for this user.
+     * The country code for this user (ISO 3166-1 Alpha 2 format).  When `null` the default will
+     * be `US`.
+     *
+     * @see [https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2]
      */
     var country: String
         get() = getProperty(::country.name) { "US" }
         set(value) { setProperty(::country.name, value) }
 
     /**
-     * The timezone for this user.
+     * The timezone for this user (TZ database name).
+     *
+     * @see [https://en.wikipedia.org/wiki/List_of_tz_database_time_zones]
      */
-    var timezone: UInt?
+    var timezone: String?
         get() = getProperty(::timezone.name)
         set(value) { setProperty(::timezone.name, value) }
 
