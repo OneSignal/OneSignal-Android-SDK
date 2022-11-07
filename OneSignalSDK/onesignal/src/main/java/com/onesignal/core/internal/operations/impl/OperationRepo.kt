@@ -1,6 +1,7 @@
 package com.onesignal.core.internal.operations.impl
 
 import com.onesignal.common.threading.WaiterWithValue
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.GroupComparisonType
@@ -11,10 +12,6 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 
@@ -32,7 +29,6 @@ internal class OperationRepo(
 
     private val _executorsMap: Map<String, IOperationExecutor>
     private val _queue = mutableListOf<OperationQueueItem>()
-    private var _queueJob: Deferred<Unit>? = null
     private val _waiter = WaiterWithValue<Boolean>()
 
     init {
@@ -51,8 +47,9 @@ internal class OperationRepo(
     }
 
     override fun start() {
-        // fire up an async job that will run "forever" so we don't hold up the other startable services.
-        _queueJob = doWorkAsync()
+        suspendifyOnThread {
+            processQueueForever()
+        }
     }
 
     override fun enqueue(operation: Operation, flush: Boolean) {
@@ -82,8 +79,11 @@ internal class OperationRepo(
         _waiter.wake(flush)
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
-    private fun doWorkAsync() = GlobalScope.async {
+    /**
+     * The background processing that will never return.  This should be called on it's own
+     * dedicated thread.
+     */
+    private suspend fun processQueueForever() {
         var lastSyncTime = _time.currentTimeMillis
         var force = false
 
@@ -108,11 +108,9 @@ internal class OperationRepo(
                     force = false
                 }
 
-                if (ops == null) {
-                    continue
+                if (ops != null) {
+                    executeOperations(ops!!)
                 }
-
-                executeOperations(ops!!)
 
                 if (!force) {
                     // potentially delay to prevent this from constant IO if a bunch of
