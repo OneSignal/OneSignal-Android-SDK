@@ -3,13 +3,13 @@ package com.onesignal.user.internal.operations
 import com.onesignal.common.IDManager
 import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.Operation
-import com.onesignal.user.internal.operations.impl.executors.IdentityOperationExecutor
+import com.onesignal.user.internal.operations.impl.executors.RefreshUserOperationExecutor
 
 /**
- * An [Operation] to create a new alias in the OneSignal backend. The alias wll
- * be associated to the user with the [appId] and [onesignalId] provided.
+ * An [Operation] to retrieve a user from the OneSignal backend. The resulting user
+ * will replace the current user.
  */
-class SetAliasOperation() : Operation(IdentityOperationExecutor.SET_ALIAS) {
+class RefreshUserOperation() : Operation(RefreshUserOperationExecutor.REFRESH_USER) {
     /**
      * The application ID this subscription will be created under.
      */
@@ -25,30 +25,14 @@ class SetAliasOperation() : Operation(IdentityOperationExecutor.SET_ALIAS) {
         get() = getProperty(::onesignalId.name)
         private set(value) { setProperty(::onesignalId.name, value) }
 
-    /**
-     * The alias label.
-     */
-    var label: String
-        get() = getProperty(::label.name)
-        private set(value) { setProperty(::label.name, value) }
-
-    /**
-     * The alias value.
-     */
-    var value: String
-        get() = getProperty(::value.name)
-        private set(value) { setProperty(::value.name, value) }
-
-    override val createComparisonKey: String get() = "$appId.User.$onesignalId"
-    override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Identity.$label"
-    override val groupComparisonType: GroupComparisonType = GroupComparisonType.ALTER
+    override val createComparisonKey: String get() = ""
+    override val modifyComparisonKey: String get() = ""
+    override val groupComparisonType: GroupComparisonType = GroupComparisonType.NONE
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
 
-    constructor(appId: String, onesignalId: String, label: String, value: String) : this() {
+    constructor(appId: String, onesignalId: String) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
-        this.label = label
-        this.value = value
     }
 
     override fun translateIds(map: Map<String, String>) {

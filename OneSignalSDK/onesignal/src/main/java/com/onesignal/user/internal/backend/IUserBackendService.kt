@@ -1,5 +1,7 @@
 package com.onesignal.user.internal.backend
 
+import com.onesignal.common.exceptions.BackendException
+
 interface IUserBackendService {
     /**
      * Create a user on the backend. If an identity provided already exists, this will result in *updating* that
@@ -33,6 +35,19 @@ interface IUserBackendService {
      * @return The updated properties for this user.
      */
     suspend fun updateUser(appId: String, aliasLabel: String, aliasValue: String, properties: PropertiesObject, refreshDeviceMetadata: Boolean, propertyiesDelta: PropertiesDeltasObject)
+
+    /**
+     * Retrieve a user from the backend.
+     *
+     * If there is a non-successful response from the backend, a [BackendException] will be thrown with response data.
+     *
+     * @param appId The ID of the OneSignal application this user will be created under.
+     * @param aliasLabel The alias label to retrieve the user under.
+     * @param aliasValue The identifier within the [aliasLabel] that identifies the user to retrieve.
+     *
+     * @return The backend response
+     */
+    suspend fun getUser(appId: String, aliasLabel: String, aliasValue: String): CreateUserResponse
 }
 
 class CreateUserResponse(
