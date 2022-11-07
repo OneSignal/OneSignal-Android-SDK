@@ -3,7 +3,7 @@ package com.onesignal.user.internal.backend
 class PropertiesObject(
     val tags: Map<String, String>? = null,
     val language: String? = null,
-    val timezoneId: String? = null,
+    val timezoneId: UInt? = null,
     val country: String? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,

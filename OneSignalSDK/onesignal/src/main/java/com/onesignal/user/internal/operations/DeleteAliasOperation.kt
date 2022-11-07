@@ -18,7 +18,7 @@ class DeleteAliasOperation() : Operation(IdentityOperationExecutor.DELETE_ALIAS)
 
     /**
      * The user ID this subscription will be associated with. This ID *may* be locally generated
-     * and should go through [IDManager] to ensure correct processing.
+     * and can be checked via [IDManager.isLocalId] to ensure correct processing.
      */
     var onesignalId: String
         get() = getProperty(::onesignalId.name)
@@ -34,11 +34,17 @@ class DeleteAliasOperation() : Operation(IdentityOperationExecutor.DELETE_ALIAS)
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Alias.$label"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.NONE
-    override val canStartExecute: Boolean get() = !IDManager.isIdLocalOnly(onesignalId)
+    override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
 
     constructor(appId: String, onesignalId: String, label: String) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
         this.label = label
+    }
+
+    override fun translateIds(map: Map<String, String>) {
+        if (map.containsKey(onesignalId)) {
+            onesignalId = map[onesignalId]!!
+        }
     }
 }

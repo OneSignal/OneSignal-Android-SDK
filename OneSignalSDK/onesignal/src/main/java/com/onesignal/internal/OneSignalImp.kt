@@ -32,12 +32,16 @@ import com.onesignal.user.UserModule
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
-import com.onesignal.user.internal.operations.CreateUserOperation
+import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.operations.RefreshUserOperation
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionType
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.yield
 
 internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val sdkVersion: String = OneSignalUtils.sdkVersion
@@ -66,34 +70,14 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
     // we hardcode the DebugManager implementation so it can be used prior to calling `initWithContext`
     override val debug: IDebugManager = DebugManager()
-
     override val session: ISessionManager get() = if (isInitialized) _session!! else throw Exception("Must call 'initWithContext' before use")
     override val notifications: INotificationsManager get() = if (isInitialized) _notifications!! else throw Exception("Must call 'initWithContext' before use")
     override val location: ILocationManager get() = if (isInitialized) _location!! else throw Exception("Must call 'initWithContext' before use")
     override val iam: IIAMManager get() = if (isInitialized) _iam!! else throw Exception("Must call 'initWithContext' before use")
-    override val user: IUserManager
-        get() {
-            if (!isInitialized) {
-                throw Exception("Must call 'initWithContext' before use")
-            }
-
-            if (!_hasCreatedBackendUser) {
-                synchronized(_hasCreatedBackendUser) {
-                    // check again now that we are synchronized.
-                    if (!_hasCreatedBackendUser) {
-                        // Create the new user in the backend as an operation
-                        _operationRepo!!.enqueue(CreateUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId, _identityModelStore!!.model.externalId))
-                        _hasCreatedBackendUser = true
-                    }
-                }
-            }
-
-            return _user!!
-        }
+    override val user: IUserManager get() = if (isInitialized) _user!! else throw Exception("Must call 'initWithContext' before use")
 
     // Services required by this class
     private var _user: IUserManager? = null
-    private var _hasCreatedBackendUser: Boolean = false
     private var _session: ISessionManager? = null
     private var _iam: IIAMManager? = null
     private var _location: ILocationManager? = null
@@ -111,6 +95,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     private var _requiresPrivacyConsent: Boolean? = null
     private var _givenPrivacyConsent: Boolean? = null
     private var _disableGMSMissingPrompt: Boolean? = null
+    private val _loginMutex: Mutex = Mutex()
 
     private val _listOfModules = listOf(
         "com.onesignal.notification.NotificationModule",
@@ -164,8 +149,12 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         _configModel = _services.getService<ConfigModelStore>().model
         _sessionModel = _services.getService<SessionModelStore>().model
 
+        var forceCreateUser = false
         // if the app id was specified as input, update the config model with it
         if (appId != null) {
+            if (_configModel!!.appId != appId) {
+                forceCreateUser = true
+            }
             _configModel!!.appId = appId
         }
 
@@ -198,11 +187,12 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         _startupService = _services.getService()
         _startupService!!.bootstrap()
 
-        if (_identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)) {
-            Logging.debug("initWithContext: using cached user ${_identityModelStore!!.model.onesignalId}")
-            _hasCreatedBackendUser = true
-        } else {
+        if (forceCreateUser || !_identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)) {
             createAndSwitchToNewUser()
+            _operationRepo!!.enqueue(LoginUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId, _identityModelStore!!.model.externalId))
+        } else {
+            Logging.debug("initWithContext: using cached user ${_identityModelStore!!.model.onesignalId}")
+            // _operationRepo!!.enqueue(GetUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId))
         }
 
         _startupService!!.start()
@@ -210,7 +200,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         isInitialized = true
     }
 
-    // This accepts UserIdentity.Anonymous?, so therefore UserAnonymous? might be null
     override suspend fun login(externalId: String, jwtBearerToken: String?) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
@@ -218,37 +207,68 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             throw Exception("Must call 'initWithContext' before use")
         }
 
-        synchronized(_hasCreatedBackendUser) {
+        // only allow one login/logout at a time
+        _loginMutex.withLock {
+            val currentIdentityExternalId = _identityModelStore!!.model.externalId
+            val currentIdentityOneSignalId = _identityModelStore!!.model.onesignalId
+
+            if (currentIdentityExternalId == externalId) {
+                // login is for same user that is already logged in, fetch (refresh)
+                // the current user.
+                _operationRepo!!.enqueueAndWait(RefreshUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId), true)
+                return
+            }
+
+            // TODO: Set JWT Token for all future requests.
+
             createAndSwitchToNewUser { identityModel, _ ->
                 identityModel.externalId = externalId
             }
 
-            _hasCreatedBackendUser = true
+            // We specify an "existingOneSignalId" here when the current user is anonymous to
+            // allow this login to attempt a "conversion" of the anonymous user.  We also
+            // wait for the LoginUserOperation operation to execute, which can take a *very* long
+            // time if network conditions prevent the operation to succeed.  This allows us to
+            // provide a callback to the caller when we can absolutely say the user is logged
+            // in, so they may take action on their own backend.
+            val result = _operationRepo!!.enqueueAndWait(
+                LoginUserOperation(
+                    _configModel!!.appId,
+                    _identityModelStore!!.model.onesignalId,
+                    externalId,
+                    if (currentIdentityExternalId == null) currentIdentityOneSignalId else null
+                ),
+                true
+            )
+
+            if (!result) {
+                throw Exception("Could not login user")
+            }
+
+            // enqueue a GetUserOperation to pull the user from the backend and refresh the models.
+            // This is a separate enqueue operation to ensure any outstanding operations that happened
+            // after the createAndSwitchToNewUser have been executed, and the retrieval will be the
+            // most up to date reflection of the user.
+            _operationRepo!!.enqueueAndWait(RefreshUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId), true)
         }
-
-        // TODO: Set JWT Token for all future requests.
-
-        // Create the new user in the backend as an operation
-        _operationRepo!!.execute(CreateUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId, _identityModelStore!!.model.externalId))
     }
 
-    override fun logout() {
+    override suspend fun logout() {
         Logging.log(LogLevel.DEBUG, "logout()")
 
         if (!isInitialized) {
             throw Exception("Must call 'initWithContext' before use")
         }
 
-        synchronized(_hasCreatedBackendUser) {
-            if (!_hasCreatedBackendUser) {
-                return
-            }
+        // if the mutex is free there is no suspend, so we yield to force a suspend.
+        yield()
 
+        // only allow one login/logout at a time
+        _loginMutex.withLock {
             createAndSwitchToNewUser()
-            _hasCreatedBackendUser = false
+            _operationRepo!!.enqueue(LoginUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId, _identityModelStore!!.model.externalId))
+            // TODO: remove JWT Token for all future requests.
         }
-
-        // TODO: remove JWT Token for all future requests.
     }
 
     private fun createAndSwitchToNewUser(modify: ((identityModel: IdentityModel, propertiesModel: PropertiesModel) -> Unit)? = null) {
@@ -257,10 +277,10 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         // create a new identity and properties model locally
         val sdkId = IDManager.createLocalId()
 
-        var identityModel = IdentityModel()
+        val identityModel = IdentityModel()
         identityModel.onesignalId = sdkId
 
-        var propertiesModel = PropertiesModel()
+        val propertiesModel = PropertiesModel()
         propertiesModel.onesignalId = sdkId
 
         if (modify != null) {
