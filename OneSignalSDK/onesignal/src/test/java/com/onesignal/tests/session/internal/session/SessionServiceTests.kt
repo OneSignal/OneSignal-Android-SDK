@@ -31,9 +31,9 @@ class SessionServiceTests : FunSpec({
         sessionService.onFocus()
 
         /* Then */
-        sessionModelStoreMock.get().isValid shouldBe true
-        sessionModelStoreMock.get().startTime shouldBe currentTime
-        sessionModelStoreMock.get().focusTime shouldBe currentTime
+        sessionModelStoreMock.model.isValid shouldBe true
+        sessionModelStoreMock.model.startTime shouldBe currentTime
+        sessionModelStoreMock.model.focusTime shouldBe currentTime
         verify(exactly = 1) { spyCallback.onSessionStarted() }
     }
 
@@ -57,9 +57,9 @@ class SessionServiceTests : FunSpec({
         sessionService.onFocus()
 
         /* Then */
-        sessionModelStoreMock.get().isValid shouldBe true
-        sessionModelStoreMock.get().startTime shouldBe startTime
-        sessionModelStoreMock.get().focusTime shouldBe currentTime
+        sessionModelStoreMock.model.isValid shouldBe true
+        sessionModelStoreMock.model.startTime shouldBe startTime
+        sessionModelStoreMock.model.focusTime shouldBe currentTime
         verify(exactly = 1) { spyCallback.onSessionActive() }
     }
 
@@ -85,9 +85,9 @@ class SessionServiceTests : FunSpec({
         sessionService.onUnfocused()
 
         /* Then */
-        sessionModelStoreMock.get().isValid shouldBe true
-        sessionModelStoreMock.get().startTime shouldBe startTime
-        sessionModelStoreMock.get().activeDuration shouldBe startingDuration + (currentTime - focusTime)
+        sessionModelStoreMock.model.isValid shouldBe true
+        sessionModelStoreMock.model.startTime shouldBe startTime
+        sessionModelStoreMock.model.activeDuration shouldBe startingDuration + (currentTime - focusTime)
     }
 
     test("session ended when background run") {
@@ -110,7 +110,7 @@ class SessionServiceTests : FunSpec({
         sessionService.backgroundRun()
 
         /* Then */
-        sessionModelStoreMock.get().isValid shouldBe false
+        sessionModelStoreMock.model.isValid shouldBe false
         verify(exactly = 1) { spyCallback.onSessionEnded(activeDuration) }
     }
 })

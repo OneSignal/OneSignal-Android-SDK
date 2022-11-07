@@ -10,7 +10,10 @@ import com.onesignal.session.internal.influence.InfluenceType
 import com.onesignal.session.internal.outcomes.impl.IOutcomeEventsBackendService
 import com.onesignal.session.internal.outcomes.impl.IOutcomeEventsPreferences
 import com.onesignal.session.internal.outcomes.impl.IOutcomeEventsRepository
+import com.onesignal.session.internal.outcomes.impl.OutcomeEventParams
 import com.onesignal.session.internal.outcomes.impl.OutcomeEventsController
+import com.onesignal.session.internal.outcomes.impl.OutcomeSource
+import com.onesignal.session.internal.outcomes.impl.OutcomeSourceBody
 import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.tests.core.mocks.MockHelper
 import io.kotest.core.spec.style.FunSpec
@@ -24,7 +27,9 @@ import io.mockk.coVerifySequence
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
 import io.mockk.spyk
+import kotlinx.coroutines.delay
 import org.json.JSONArray
 import org.junit.runner.RunWith
 
@@ -409,5 +414,149 @@ class OutcomeEventsControllerTests : FunSpec({
                 }
             )
         }
+    }
+
+    test("send unsent outcomes on startup") {
+        /* Given */
+        val now = 111111L
+        val mockSessionService = mockk<ISessionService>()
+        every { mockSessionService.subscribe(any()) } just Runs
+
+        val mockInfluenceManager = mockk<IInfluenceManager>()
+        val mockOutcomeEventsRepository = mockk<IOutcomeEventsRepository>()
+        coEvery { mockOutcomeEventsRepository.cleanCachedUniqueOutcomeEventNotifications() } just runs
+        coEvery { mockOutcomeEventsRepository.deleteOldOutcomeEvent(any()) } just runs
+        coEvery { mockOutcomeEventsRepository.getAllEventsToSend() } returns listOf(
+            OutcomeEventParams("outcomeId1", OutcomeSource(OutcomeSourceBody(JSONArray().put("notificationId1")), null), .4f, 1111),
+            OutcomeEventParams("outcomeId2", OutcomeSource(null, OutcomeSourceBody(JSONArray().put("notificationId2").put("notificationId3"))), .2f, 2222)
+        )
+        val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
+        val mockOutcomeEventsBackend = mockk<IOutcomeEventsBackendService>()
+        coEvery { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any()) } just runs
+
+        val outcomeEventsController = OutcomeEventsController(
+            mockSessionService,
+            mockInfluenceManager,
+            mockOutcomeEventsRepository,
+            mockOutcomeEventsPreferences,
+            mockOutcomeEventsBackend,
+            MockHelper.configModelStore(),
+            MockHelper.time(now),
+            MockHelper.deviceService()
+        )
+
+        /* When */
+        outcomeEventsController.start()
+
+        delay(1000)
+
+        /* Then */
+        coVerify(exactly = 1) {
+            mockOutcomeEventsBackend.sendOutcomeEvent(
+                "appId",
+                1,
+                true,
+                withArg {
+                    it.name shouldBe "outcomeId1"
+                    it.weight shouldBe .4f
+                    it.timestamp shouldBe 1111
+                    it.notificationIds!!.getString(0) shouldBe "notificationId1"
+                }
+            )
+        }
+        coVerify(exactly = 1) {
+            mockOutcomeEventsBackend.sendOutcomeEvent(
+                "appId",
+                1,
+                false,
+                withArg {
+                    it.name shouldBe "outcomeId2"
+                    it.weight shouldBe .2f
+                    it.timestamp shouldBe 2222
+                    it.notificationIds!!.getString(0) shouldBe "notificationId2"
+                    it.notificationIds!!.getString(1) shouldBe "notificationId3"
+                }
+            )
+        }
+        coVerify(exactly = 1) {
+            mockOutcomeEventsRepository.deleteOldOutcomeEvent(
+                withArg {
+                    it.outcomeId shouldBe "outcomeId1"
+                    it.timestamp shouldBe 1111
+                }
+            )
+        }
+        coVerify(exactly = 1) {
+            mockOutcomeEventsRepository.deleteOldOutcomeEvent(
+                withArg {
+                    it.outcomeId shouldBe "outcomeId2"
+                    it.timestamp shouldBe 2222
+                }
+            )
+        }
+    }
+
+    test("send unsent outcomes on startup fails gracefully") {
+        /* Given */
+        val now = 111111L
+        val mockSessionService = mockk<ISessionService>()
+        every { mockSessionService.subscribe(any()) } just Runs
+
+        val mockInfluenceManager = mockk<IInfluenceManager>()
+        val mockOutcomeEventsRepository = mockk<IOutcomeEventsRepository>()
+        coEvery { mockOutcomeEventsRepository.cleanCachedUniqueOutcomeEventNotifications() } just runs
+        coEvery { mockOutcomeEventsRepository.getAllEventsToSend() } returns listOf(
+            OutcomeEventParams("outcomeId1", OutcomeSource(OutcomeSourceBody(JSONArray().put("notificationId1")), null), .4f, 1111),
+            OutcomeEventParams("outcomeId2", OutcomeSource(null, OutcomeSourceBody(JSONArray().put("notificationId2").put("notificationId3"))), .2f, 2222)
+        )
+        val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
+        val mockOutcomeEventsBackend = mockk<IOutcomeEventsBackendService>()
+        coEvery { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any()) } throws BackendException(408, null)
+
+        val outcomeEventsController = OutcomeEventsController(
+            mockSessionService,
+            mockInfluenceManager,
+            mockOutcomeEventsRepository,
+            mockOutcomeEventsPreferences,
+            mockOutcomeEventsBackend,
+            MockHelper.configModelStore(),
+            MockHelper.time(now),
+            MockHelper.deviceService()
+        )
+
+        /* When */
+        outcomeEventsController.start()
+
+        delay(1000)
+
+        /* Then */
+        coVerify(exactly = 1) {
+            mockOutcomeEventsBackend.sendOutcomeEvent(
+                "appId",
+                1,
+                true,
+                withArg {
+                    it.name shouldBe "outcomeId1"
+                    it.weight shouldBe .4f
+                    it.timestamp shouldBe 1111
+                    it.notificationIds!!.getString(0) shouldBe "notificationId1"
+                }
+            )
+        }
+        coVerify(exactly = 1) {
+            mockOutcomeEventsBackend.sendOutcomeEvent(
+                "appId",
+                1,
+                false,
+                withArg {
+                    it.name shouldBe "outcomeId2"
+                    it.weight shouldBe .2f
+                    it.timestamp shouldBe 2222
+                    it.notificationIds!!.getString(0) shouldBe "notificationId2"
+                    it.notificationIds!!.getString(1) shouldBe "notificationId3"
+                }
+            )
+        }
+        coVerify(exactly = 0) { mockOutcomeEventsRepository.deleteOldOutcomeEvent(any()) }
     }
 })

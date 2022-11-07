@@ -26,7 +26,7 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.internal.logging.Logging
 import java.lang.ref.WeakReference
 
-internal class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, OnGlobalLayoutListener {
+class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, OnGlobalLayoutListener {
     private val _activityLifecycleNotifier: IEventProducer<IActivityLifecycleHandler> = EventProducer()
     private val _applicationLifecycleNotifier: IEventProducer<IApplicationLifecycleHandler> = EventProducer()
     private val _systemConditionNotifier: IEventProducer<ISystemConditionHandler> = EventProducer()
@@ -102,6 +102,7 @@ internal class ApplicationService() : IApplicationService, ActivityLifecycleCall
             entryState = AppEntryAction.APP_OPEN
             if (isCurrentActivityNull && isContextActivity) {
                 current = context as Activity?
+                _activityReferences = 1
                 _nextResumeIsFirstActivity = true
             }
         } else {

@@ -26,10 +26,15 @@ class HttpClientTests : FunSpec({
     test("timeout request will give a bad response") {
         /* Given */
         val mockResponse = MockHttpConnectionFactory.MockResponse()
-        mockResponse.mockRequestTime = 240000
+        mockResponse.mockRequestTime = 10000 // HttpClient will add 5 seconds to the httpTimeout to "give up" so we need to fail the request more than 5 seconds beyond our timeout.
+
+        val mockConfigModel = MockHelper.configModelStore {
+            it.httpTimeout = 200
+            it.httpGetTimeout = 200
+        }
 
         val factory = MockHttpConnectionFactory(mockResponse)
-        val httpClient = HttpClient(factory, MockPreferencesService(), MockHelper.configModelStore())
+        val httpClient = HttpClient(factory, MockPreferencesService(), mockConfigModel)
 
         /* When */
         val response = httpClient.get("URL")
