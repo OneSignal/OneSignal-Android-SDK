@@ -49,6 +49,10 @@ internal class RefreshUserOperationExecutor(
                 op.onesignalId
             )
 
+            if (op.onesignalId != _identityModelStore.model.onesignalId) {
+                return ExecutionResponse(ExecutionResult.SUCCESS)
+            }
+
             val identityModel = IdentityModel()
             identityModel.onesignalId = op.onesignalId
             // TODO: Remove once we can pull this from the backend.
@@ -64,7 +68,11 @@ internal class RefreshUserOperationExecutor(
                 propertiesModel.country = response.properties.country!!
             }
 
-            propertiesModel.setProperty(PropertiesModel::language.name, response.properties.language, ModelChangeTags.HYDRATE)
+            propertiesModel.setProperty(
+                PropertiesModel::language.name,
+                response.properties.language,
+                ModelChangeTags.HYDRATE
+            )
 
             if (response.properties.tags != null) {
                 for (tagKVP in response.properties.tags!!) {
