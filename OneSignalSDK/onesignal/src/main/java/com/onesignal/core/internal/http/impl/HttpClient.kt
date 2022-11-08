@@ -11,6 +11,7 @@ import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.internal.logging.Logging
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.TimeoutCancellationException
@@ -29,23 +30,23 @@ internal class HttpClient(
     private val _configModelStore: ConfigModelStore
 ) : IHttpClient {
     override suspend fun post(url: String, body: JSONObject): HttpResponse {
-        return makeRequest(url, "POST", body, TIMEOUT, null)
+        return makeRequest(url, "POST", body, _configModelStore.model.httpTimeout, null)
     }
 
     override suspend fun get(url: String, cacheKey: String?): HttpResponse {
-        return makeRequest(url, null, null, GET_TIMEOUT, cacheKey)
+        return makeRequest(url, null, null, _configModelStore.model.httpGetTimeout, cacheKey)
     }
 
     override suspend fun put(url: String, body: JSONObject): HttpResponse {
-        return makeRequest(url, "PUT", body, TIMEOUT, null)
+        return makeRequest(url, "PUT", body, _configModelStore.model.httpTimeout, null)
     }
 
     override suspend fun patch(url: String, body: JSONObject): HttpResponse {
-        return makeRequest(url, "PATCH", body, TIMEOUT, null)
+        return makeRequest(url, "PATCH", body, _configModelStore.model.httpTimeout, null)
     }
 
     override suspend fun delete(url: String): HttpResponse {
-        return makeRequest(url, "DELETE", null, TIMEOUT, null)
+        return makeRequest(url, "DELETE", null, _configModelStore.model.httpTimeout, null)
     }
 
     private suspend fun makeRequest(
@@ -73,6 +74,7 @@ internal class HttpClient(
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private suspend fun makeRequestIODispatcher(
         url: String,
         method: String?,
@@ -218,8 +220,6 @@ internal class HttpClient(
     companion object {
         private const val OS_API_VERSION = "1"
         private const val OS_ACCEPT_HEADER = "application/vnd.onesignal.v$OS_API_VERSION+json"
-        private const val GET_TIMEOUT = 60000
-        private const val TIMEOUT = 120000
         private const val THREAD_ID = 10000
     }
 }
