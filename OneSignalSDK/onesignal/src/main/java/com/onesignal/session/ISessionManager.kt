@@ -5,27 +5,27 @@ package com.onesignal.session
  */
 interface ISessionManager {
     /**
-     * Send an outcome with the provided name, captured against the current session.
+     * Add an outcome with the provided name, captured against the current session.
      * See [Outcomes | OneSignal] (https://documentation.onesignal.com/docs/outcomes)
      *
      * @param name The name of the outcome that has occurred.
      *
      * @return this user manager to allow for chaining of calls.
      */
-    fun sendOutcome(name: String): ISessionManager
+    fun addOutcome(name: String): ISessionManager
 
     /**
-     * Send a unique outcome with the provided name, captured against the current session.
+     * Add a unique outcome with the provided name, captured against the current session.
      * See [Outcomes | OneSignal] (https://documentation.onesignal.com/docs/outcomes)
      *
      * @param name The name of the unique outcome that has occurred.
      *
      * @return this user manager to allow for chaining of calls.
      */
-    fun sendUniqueOutcome(name: String): ISessionManager
+    fun addUniqueOutcome(name: String): ISessionManager
 
     /**
-     * Send an outcome with the provided name and value, captured against the current session.
+     * Add an outcome with the provided name and value, captured against the current session.
      * See [Outcomes | OneSignal] (https://documentation.onesignal.com/docs/outcomes)
      *
      * @param name The name of the outcome that has occurred.
@@ -33,5 +33,5 @@ interface ISessionManager {
      *
      * @return this user manager to allow for chaining of calls.
      */
-    fun sendOutcomeWithValue(name: String, value: Float): ISessionManager
+    fun addOutcomeWithValue(name: String, value: Float): ISessionManager
 }

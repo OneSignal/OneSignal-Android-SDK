@@ -26,7 +26,7 @@ import android.widget.TextView;
 
 import com.onesignal.Continue;
 import com.onesignal.OneSignal;
-import com.onesignal.notification.IPermissionStateChanges;
+import com.onesignal.notifications.IPermissionStateChanges;
 import com.onesignal.user.subscriptions.IEmailSubscription;
 import com.onesignal.user.subscriptions.IPushSubscription;
 import com.onesignal.user.subscriptions.ISmsSubscription;
@@ -388,7 +388,7 @@ public class MainActivityViewModel implements ActivityViewModel {
     private void setupAppLayout() {
         revokeConsentButton.setOnClickListener(v -> togglePrivacyConsent(false));
 
-        if(OneSignal.getUser().getAliases().containsKey("external_id")) {
+        if(OneSignal.getUser().getExternalId() != null) {
             isLoggedIn = true;
             switchUserButton.setText(R.string.logout_user);
         }
@@ -546,7 +546,7 @@ public class MainActivityViewModel implements ActivityViewModel {
                     tagSet.remove(pair.first);
                     toaster.makeCustomViewToast("Deleted tag " + pair.first, ToastType.SUCCESS);
                 } else {
-                    OneSignal.getUser().setTag(pair.first, pair.second.toString());
+                    OneSignal.getUser().addTag(pair.first, pair.second.toString());
                     tagSet.put(pair.first, pair.second);
                     toaster.makeCustomViewToast("Added tag " + pair.first, ToastType.SUCCESS);
                 }
@@ -625,7 +625,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         smssRecyclerView.setLayoutManager(linearLayoutManager);
         smssRecyclerViewAdapter = new SingleRecyclerViewAdapter(context, smsArrayList, value -> {
-            OneSignal.getUser().removeTrigger(value);
+            OneSignal.getInAppMessages().removeTrigger(value);
             smsArrayList.remove(value);
             refreshSMSRecyclerView();
             toaster.makeCustomViewToast("Deleted SMS " + value, ToastType.SUCCESS);
@@ -651,10 +651,10 @@ public class MainActivityViewModel implements ActivityViewModel {
             public boolean onSuccess(OutcomeEvent outcomeEvent, String name, String value) {
                 switch (outcomeEvent) {
                     case OUTCOME:
-                        OneSignal.getSession().sendOutcome(name);
+                        OneSignal.getSession().addOutcome(name);
                         break;
                     case UNIQUE_OUTCOME:
-                        OneSignal.getSession().sendUniqueOutcome(name);
+                        OneSignal.getSession().addUniqueOutcome(name);
                         break;
                     case OUTCOME_WITH_VALUE:
                         if (value.isEmpty()) {
@@ -662,7 +662,7 @@ public class MainActivityViewModel implements ActivityViewModel {
                             return false;
                         }
 
-                        OneSignal.getSession().sendOutcomeWithValue(name, Float.parseFloat(value));
+                        OneSignal.getSession().addOutcomeWithValue(name, Float.parseFloat(value));
                         break;
                 }
 
@@ -684,11 +684,11 @@ public class MainActivityViewModel implements ActivityViewModel {
             @Override
             public void onSuccess(Pair<String, Object> pair) {
                 if (pair.second == null || pair.second.toString().isEmpty()) {
-                    OneSignal.getUser().removeTrigger(pair.first);
+                    OneSignal.getInAppMessages().removeTrigger(pair.first);
                     triggerSet.remove(pair.first);
                     toaster.makeCustomViewToast("Deleted trigger " + pair.first, ToastType.SUCCESS);
                 } else {
-                    OneSignal.getUser().setTrigger(pair.first, pair.second);
+                    OneSignal.getInAppMessages().addTrigger(pair.first, pair.second);
                     triggerSet.put(pair.first, pair.second);
                     toaster.makeCustomViewToast("Added trigger " + pair.first, ToastType.SUCCESS);
                 }
@@ -708,7 +708,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         triggersRecyclerView.setLayoutManager(linearLayoutManager);
         triggerPairRecyclerViewAdapter = new PairRecyclerViewAdapter(context, triggerArrayList, key -> {
-            OneSignal.getUser().removeTrigger(key);
+            OneSignal.getInAppMessages().removeTrigger(key);
             triggerSet.remove(key);
 
             refreshTriggerRecyclerView();
@@ -823,7 +823,7 @@ public class MainActivityViewModel implements ActivityViewModel {
 
         pauseInAppMessagesSwitch.setChecked(SharedPreferenceUtil.getCachedInAppMessagingPausedStatus(context));
         pauseInAppMessagesSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            OneSignal.getIam().setPaused(isChecked);
+            OneSignal.getInAppMessages().setPaused(isChecked);
             SharedPreferenceUtil.cacheInAppMessagingPausedStatus(context, isChecked);
         });
     }

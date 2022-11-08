@@ -1,0 +1,86 @@
+plugins {
+    id 'com.android.library'
+    id 'kotlin-android'
+    id 'org.jlleitschuh.gradle.ktlint'
+    id 'io.gitlab.arturbosch.detekt'
+}
+
+android {
+    compileSdkVersion rootProject.buildVersions.compileSdkVersion
+    defaultConfig {
+        minSdkVersion rootProject.buildVersions.minSdkVersion
+        consumerProguardFiles "consumer-rules.pro"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        original {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        release {
+            minifyEnabled false
+        }
+        unity {
+            minifyEnabled false
+        }
+    }
+    testOptions {
+        unitTests.all {
+            maxParallelForks 1
+            maxHeapSize '2048m'
+        }
+        unitTests {
+            includeAndroidResources = true
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+    namespace 'com.onesignal.inAppMessages'
+}
+
+tasks.withType(Test) {
+    testLogging {
+        exceptionFormat "full"
+        events "started", "skipped", "passed", "failed"
+        showStandardStreams false // Enable to have logging print
+    }
+}
+
+dependencies {
+    implementation project(':onesignal')
+    implementation project(':onesignal:notifications')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4"
+
+    api('androidx.cardview:cardview') {
+        version {
+            require '[1.0.0, 1.0.99]'
+            prefer '1.0.0'
+        }
+    }
+    api('androidx.browser:browser') {
+        version {
+            require '[1.0.0, 1.3.99]'
+            prefer '1.3.0'
+        }
+    }
+
+    testImplementation("junit:junit:$junitVersion")
+    testImplementation("io.kotest:kotest-runner-junit4:$kotestVersion")
+    testImplementation("io.kotest:kotest-runner-junit4-jvm:$kotestVersion")
+    testImplementation("io.kotest:kotest-assertions-core:$kotestVersion")
+    testImplementation("io.kotest:kotest-property:$kotestVersion")
+    testImplementation("org.robolectric:robolectric:4.8.1")
+    testImplementation("androidx.test:core-ktx:1.4.0")
+    testImplementation("androidx.test:core:1.4.0")
+    testImplementation("io.mockk:mockk:1.13.2")
+    testImplementation("org.json:json:20180813")
+    testImplementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+}

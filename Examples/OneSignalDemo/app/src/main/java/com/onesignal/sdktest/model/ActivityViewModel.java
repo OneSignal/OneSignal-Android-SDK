@@ -4,7 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.onesignal.notification.IPermissionChangedHandler;
+import com.onesignal.notifications.IPermissionChangedHandler;
 
 /**
  * This is the interface created with a few generic methods for setting a ViewModel
