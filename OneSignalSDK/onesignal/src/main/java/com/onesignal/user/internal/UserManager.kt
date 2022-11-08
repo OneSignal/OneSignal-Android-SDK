@@ -10,15 +10,12 @@ import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
-import com.onesignal.user.internal.triggers.TriggerModel
-import com.onesignal.user.internal.triggers.TriggerModelStore
 import com.onesignal.user.subscriptions.SubscriptionList
 
 internal open class UserManager(
     private val _subscriptionManager: ISubscriptionManager,
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
-    private val _triggerModelStore: TriggerModelStore,
     private val _languageContext: ILanguageContext
 ) : IUserManager {
 
@@ -104,13 +101,13 @@ internal open class UserManager(
         return this
     }
 
-    override fun setTag(key: String, value: String): IUserManager {
+    override fun addTag(key: String, value: String): IUserManager {
         Logging.log(LogLevel.DEBUG, "setTag(key: $key, value: $value)")
         _propertiesModel.tags[key] = value
         return this
     }
 
-    override fun setTags(tags: Map<String, String>): IUserManager {
+    override fun addTags(tags: Map<String, String>): IUserManager {
         Logging.log(LogLevel.DEBUG, "setTags(tags: $tags)")
 
         tags.forEach {
@@ -133,53 +130,6 @@ internal open class UserManager(
             _propertiesModel.tags.remove(it)
         }
 
-        return this
-    }
-
-    override fun setTriggers(triggers: Map<String, Any>): IUserManager {
-        Logging.log(LogLevel.DEBUG, "setTriggers(triggers: $triggers)")
-
-        triggers.forEach { setTrigger(it.key, it.value) }
-
-        return this
-    }
-
-    override fun setTrigger(key: String, value: Any): IUserManager {
-        Logging.log(LogLevel.DEBUG, "setTrigger(key: $key, value: $value)")
-
-        var triggerModel = _triggerModelStore.get(key)
-        if (triggerModel != null) {
-            triggerModel.value = value
-        } else {
-            triggerModel = TriggerModel()
-            triggerModel.id = key
-            triggerModel.key = key
-            triggerModel.value = value
-            _triggerModelStore.add(triggerModel)
-        }
-
-        return this
-    }
-
-    override fun removeTriggers(keys: Collection<String>): IUserManager {
-        Logging.log(LogLevel.DEBUG, "removeTriggers(keys: $keys)")
-
-        keys.forEach { removeTrigger(it) }
-
-        return this
-    }
-
-    override fun removeTrigger(key: String): IUserManager {
-        Logging.log(LogLevel.DEBUG, "removeTrigger(key: $key)")
-
-        _triggerModelStore.remove(key)
-
-        return this
-    }
-
-    override fun clearTriggers(): IUserManager {
-        Logging.log(LogLevel.DEBUG, "clearTriggers()")
-        _triggerModelStore.clear()
         return this
     }
 }

@@ -8,12 +8,12 @@ import androidx.annotation.Nullable;
 import androidx.multidex.MultiDexApplication;
 
 import com.onesignal.OneSignal;
-import com.onesignal.iam.IInAppMessage;
-import com.onesignal.iam.IInAppMessageAction;
-import com.onesignal.iam.IInAppMessageClickHandler;
-import com.onesignal.iam.IInAppMessageLifecycleHandler;
+import com.onesignal.inAppMessages.IInAppMessage;
+import com.onesignal.inAppMessages.IInAppMessageAction;
+import com.onesignal.inAppMessages.IInAppMessageClickHandler;
+import com.onesignal.inAppMessages.IInAppMessageLifecycleHandler;
 import com.onesignal.debug.LogLevel;
-import com.onesignal.notification.INotification;
+import com.onesignal.notifications.INotification;
 import com.onesignal.sdktest.BuildConfig;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.constant.Tag;
@@ -45,7 +45,7 @@ public class MainApplication extends MultiDexApplication {
 
         OneSignal.initWithContext(this, appId);
 
-        OneSignal.getIam().setInAppMessageLifecycleHandler(new IInAppMessageLifecycleHandler() {
+        OneSignal.getInAppMessages().setInAppMessageLifecycleHandler(new IInAppMessageLifecycleHandler() {
             @Override
             public void onWillDisplayInAppMessage(@NonNull IInAppMessage message) {
                 Log.v("MainApplication", "onWillDisplayInAppMessage");
@@ -67,7 +67,7 @@ public class MainApplication extends MultiDexApplication {
             }
         });
 
-        OneSignal.getIam().setInAppMessageClickHandler(new IInAppMessageClickHandler() {
+        OneSignal.getInAppMessages().setInAppMessageClickHandler(new IInAppMessageClickHandler() {
             @Override
             public void inAppMessageClicked(@Nullable IInAppMessageAction result) {
                 Log.v("MainApplication", "inAppMessageClicked");
@@ -91,7 +91,7 @@ public class MainApplication extends MultiDexApplication {
                 });
 
         OneSignal.getNotifications().setUnsubscribeWhenNotificationsAreDisabled(true);
-        OneSignal.getIam().setPaused(true);
+        OneSignal.getInAppMessages().setPaused(true);
         OneSignal.getLocation().setLocationShared(false);
 
         Log.d(Tag.DEBUG, Text.ONESIGNAL_SDK_INIT);

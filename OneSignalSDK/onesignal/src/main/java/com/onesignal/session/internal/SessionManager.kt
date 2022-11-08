@@ -10,7 +10,7 @@ internal open class SessionManager(
     private val _outcomeController: IOutcomeEventsController
 ) : ISessionManager {
 
-    override fun sendOutcome(name: String): ISessionManager {
+    override fun addOutcome(name: String): ISessionManager {
         Logging.log(LogLevel.DEBUG, "sendOutcome(name: $name)")
 
         suspendifyOnThread {
@@ -20,7 +20,7 @@ internal open class SessionManager(
         return this
     }
 
-    override fun sendUniqueOutcome(name: String): ISessionManager {
+    override fun addUniqueOutcome(name: String): ISessionManager {
         Logging.log(LogLevel.DEBUG, "sendUniqueOutcome(name: $name)")
 
         suspendifyOnThread {
@@ -30,7 +30,7 @@ internal open class SessionManager(
         return this
     }
 
-    override fun sendOutcomeWithValue(name: String, value: Float): ISessionManager {
+    override fun addOutcomeWithValue(name: String, value: Float): ISessionManager {
         Logging.log(LogLevel.DEBUG, "sendOutcomeWithValue(name: $name, value: $value)")
 
         suspendifyOnThread {
