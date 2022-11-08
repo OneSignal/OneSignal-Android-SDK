@@ -33,12 +33,12 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.startup.StartupService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.core.internal.time.impl.Time
-import com.onesignal.iam.IIAMManager
-import com.onesignal.iam.internal.MisconfiguredIAMManager
+import com.onesignal.inAppMessages.IIAMManager
+import com.onesignal.inAppMessages.internal.MisconfiguredIAMManager
 import com.onesignal.location.ILocationManager
 import com.onesignal.location.internal.MisconfiguredLocationManager
-import com.onesignal.notification.INotificationsManager
-import com.onesignal.notification.internal.MisconfiguredNotificationsManager
+import com.onesignal.notifications.INotificationsManager
+import com.onesignal.notifications.internal.MisconfiguredNotificationsManager
 
 internal class CoreModule : IModule {
     override fun register(builder: ServiceBuilder) {
