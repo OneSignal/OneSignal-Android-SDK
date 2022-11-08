@@ -1,9 +1,12 @@
 package com.onesignal.user.internal.backend.impl
 
+import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.user.internal.backend.IIdentityBackendService
 import kotlinx.coroutines.yield
 
-internal class IdentityBackendService : IIdentityBackendService {
+internal class IdentityBackendService(
+    private val _httpClient: IHttpClient
+) : IIdentityBackendService {
     override suspend fun createAlias(appId: String, aliasLabel: String, aliasValue: String, identities: Map<String, String>): Map<String, String> {
         // TODO: To Implement
         yield()

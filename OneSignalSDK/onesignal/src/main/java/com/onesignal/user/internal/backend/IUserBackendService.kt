@@ -62,7 +62,7 @@ class CreateUserResponse(
     val properties: PropertiesObject,
 
     /**
-     * The IDs of the subscriptions for the user.
+     * The subscriptions for the user.
      */
-    val subscriptionIDs: List<String>
+    val subscriptions: List<SubscriptionObject>
 )

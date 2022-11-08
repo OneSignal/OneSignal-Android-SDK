@@ -1,5 +1,6 @@
 package com.onesignal.user.internal.backend.impl
 
+import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.user.internal.backend.CreateUserResponse
 import com.onesignal.user.internal.backend.ISubscriptionBackendService
 import com.onesignal.user.internal.backend.IUserBackendService
@@ -7,12 +8,14 @@ import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.PropertiesDeltasObject
 import com.onesignal.user.internal.backend.PropertiesObject
 import com.onesignal.user.internal.backend.SubscriptionObject
+import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 
 internal class UserBackendService(
+    private val _httpClient: IHttpClient,
     private val _subscriptionBackend: ISubscriptionBackendService
 ) : IUserBackendService {
 
@@ -43,7 +46,7 @@ internal class UserBackendService(
         val mutIdentities = identities.toMutableMap()
         mutIdentities[IdentityConstants.ONESIGNAL_ID] = UUID.randomUUID().toString()
 
-        return CreateUserResponse(mutIdentities, properties, subscriptionIDs)
+        return CreateUserResponse(mutIdentities, properties, subscriptionIDs.map { SubscriptionObject(it, SubscriptionObjectType.ANDROID_PUSH) })
     }
 
     override suspend fun updateUser(appId: String, aliasLabel: String, aliasValue: String, properties: PropertiesObject, refreshDeviceMetadata: Boolean, propertyiesDelta: PropertiesDeltasObject) {

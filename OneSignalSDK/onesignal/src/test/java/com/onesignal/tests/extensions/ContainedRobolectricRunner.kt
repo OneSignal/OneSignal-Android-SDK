@@ -24,12 +24,14 @@ internal class ContainedRobolectricRunner(
         .getMethod(PlaceholderTest::bootStrapMethod.name)
 
     fun containedBefore() {
+        Thread.currentThread().contextClassLoader = sdkEnvironment.robolectricClassLoader
         super.beforeTest(sdkEnvironment, placeHolderMethod, bootStrapMethod)
     }
 
     fun containedAfter() {
         super.afterTest(placeHolderMethod, bootStrapMethod)
         super.finallyAfterTest(placeHolderMethod)
+        Thread.currentThread().contextClassLoader = ContainedRobolectricRunner::class.java.classLoader
     }
 
     override fun createClassLoaderConfig(method: FrameworkMethod?): InstrumentationConfiguration {
