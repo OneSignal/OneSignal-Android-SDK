@@ -342,7 +342,7 @@ class UserBackendServiceTests : FunSpec({
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{properties: { }}")
         val userBackendService = UserBackendService(spyHttpClient, spySubscriptionBackend)
         val properties = PropertiesObject()
-        val propertiesDelta = PropertiesDeltasObject(sessionTime = 1111, sessionCounts = 1)
+        val propertiesDelta = PropertiesDeltasObject(sessionTime = 1111, sessionCount = 1)
 
         /* When */
         userBackendService.updateUser("appId", aliasLabel, aliasValue, properties, refreshDeviceMetadata = true, propertiesDelta)
