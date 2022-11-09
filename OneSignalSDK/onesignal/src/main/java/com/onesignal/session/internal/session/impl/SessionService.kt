@@ -54,7 +54,7 @@ internal class SessionService(
     }
 
     override suspend fun backgroundRun() {
-        Logging.log(LogLevel.DEBUG, "SessionService.run()")
+        Logging.log(LogLevel.DEBUG, "SessionService.backgroundRun()")
 
         if (!_session!!.isValid) {
             return
