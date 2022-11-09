@@ -5,9 +5,9 @@ gradle.rootProject {
         configurations.all {
             resolutionStrategy.dependencySubstitution {
                 substitute(module('com.onesignal:OneSignal')).using(project(':onesignal'))
-                substitute(module('com.onesignal:Notification')).using(project(':onesignal:notification'))
+                substitute(module('com.onesignal:Notifications')).using(project(':onesignal:notifications'))
                 substitute(module('com.onesignal:Location')).using(project(':onesignal:location'))
-                substitute(module('com.onesignal:IAM')).using(project(':onesignal:iam'))
+                substitute(module('com.onesignal:InAppMessages')).using(project(':onesignal:inAppMessages'))
             }
         }
     }
@@ -17,9 +17,9 @@ include ':app'
 project(':app').projectDir = new File(settingsDir, '../examples/OneSignalDemo/app')
 
 include ':onesignal'
-include ':onesignal:iam'
+include ':onesignal:inAppMessages'
 include ':onesignal:location'
-include ':onesignal:notification'
+include ':onesignal:notifications'
 
 //this will go away soon
 include ':unittest'

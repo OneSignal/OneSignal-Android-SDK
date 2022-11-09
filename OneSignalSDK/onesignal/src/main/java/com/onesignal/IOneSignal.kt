@@ -2,9 +2,9 @@ package com.onesignal
 
 import android.content.Context
 import com.onesignal.debug.IDebugManager
-import com.onesignal.iam.IIAMManager
+import com.onesignal.inAppMessages.IIAMManager
 import com.onesignal.location.ILocationManager
-import com.onesignal.notification.INotificationsManager
+import com.onesignal.notifications.INotificationsManager
 import com.onesignal.session.ISessionManager
 import com.onesignal.user.IUserManager
 
@@ -46,7 +46,7 @@ interface IOneSignal {
      * The In App Messaging manager for accessing device-scoped
      * IAP management.
      */
-    val iam: IIAMManager
+    val inAppMessages: IIAMManager
 
     /**
      * Access to debug the SDK in the event additional information is required to diagnose any
