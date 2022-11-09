@@ -118,8 +118,8 @@ internal class UserBackendService(
             deltasObject.put("session_time", propertiesDeltas.sessionTime)
         }
 
-        if (propertiesDeltas.sessionCounts != null) {
-            deltasObject.put("session_counts", propertiesDeltas.sessionCounts)
+        if (propertiesDeltas.sessionCount != null) {
+            deltasObject.put("session_counts", propertiesDeltas.sessionCount)
         }
 
         if (propertiesDeltas.amountSpent != null) {

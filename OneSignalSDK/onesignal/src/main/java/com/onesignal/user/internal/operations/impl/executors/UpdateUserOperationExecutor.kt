@@ -19,7 +19,8 @@ import com.onesignal.user.internal.operations.DeleteTagOperation
 import com.onesignal.user.internal.operations.SetPropertyOperation
 import com.onesignal.user.internal.operations.SetTagOperation
 import com.onesignal.user.internal.operations.TrackPurchaseOperation
-import com.onesignal.user.internal.operations.TrackSessionOperation
+import com.onesignal.user.internal.operations.TrackSessionEndOperation
+import com.onesignal.user.internal.operations.TrackSessionStartOperation
 import com.onesignal.user.internal.properties.PropertiesModelStore
 
 internal class UpdateUserOperationExecutor(
@@ -29,7 +30,7 @@ internal class UpdateUserOperationExecutor(
 ) : IOperationExecutor {
 
     override val operations: List<String>
-        get() = listOf(SET_TAG, DELETE_TAG, SET_PROPERTY, TRACK_SESSION, TRACK_PURCHASE)
+        get() = listOf(SET_TAG, DELETE_TAG, SET_PROPERTY, TRACK_SESSION_START, TRACK_SESSION_END, TRACK_PURCHASE)
 
     override suspend fun execute(ops: List<Operation>): ExecutionResponse {
         Logging.log(LogLevel.DEBUG, "UserOperationExecutor(operation: $operations)")
@@ -39,6 +40,7 @@ internal class UpdateUserOperationExecutor(
 
         var propertiesObject = PropertiesObject()
         var deltasObject = PropertiesDeltasObject()
+        var refreshDeviceMetadata = false
 
         for (operation in ops) {
             when (operation) {
@@ -66,20 +68,32 @@ internal class UpdateUserOperationExecutor(
 
                     propertiesObject = PropertyOperationHelper.createPropertiesFromOperation(operation, propertiesObject)
                 }
-                is TrackSessionOperation -> {
+                is TrackSessionStartOperation -> {
                     if (appId == null) {
                         appId = operation.appId
                         onesignalId = operation.onesignalId
                     }
 
-                    // The session count we pass up is essentially the number of `TrackSessionOperation`
+                    // The session count we pass up is essentially the number of `TrackSessionStartOperation`
                     // operations we come across in this group, while the session time we pass up is
                     // the total session time across all `TrackSessionOperation` operations
                     // that exist in this group.
-                    val sessionTime = if (deltasObject.sessionTime != null) deltasObject.sessionTime!! + operation.sessionTime else operation.sessionTime
-                    val sessionCount = if (deltasObject.sessionCounts != null) deltasObject.sessionCounts!! + 1 else 1
+                    val sessionCount = if (deltasObject.sessionCount != null) deltasObject.sessionCount!! + 1 else 1
 
-                    deltasObject = PropertiesDeltasObject(sessionTime, sessionCount, deltasObject.amountSpent, deltasObject.purchases)
+                    deltasObject = PropertiesDeltasObject(deltasObject.sessionTime, sessionCount, deltasObject.amountSpent, deltasObject.purchases)
+                    refreshDeviceMetadata = true
+                }
+                is TrackSessionEndOperation -> {
+                    if (appId == null) {
+                        appId = operation.appId
+                        onesignalId = operation.onesignalId
+                    }
+
+                    // The session time we pass up is the total session time across all `TrackSessionEndOperation`
+                    // operations that exist in this group.
+                    val sessionTime = if (deltasObject.sessionTime != null) deltasObject.sessionTime!! + operation.sessionTime else operation.sessionTime
+
+                    deltasObject = PropertiesDeltasObject(sessionTime, deltasObject.sessionCount, deltasObject.amountSpent, deltasObject.purchases)
                 }
                 is TrackPurchaseOperation -> {
                     if (appId == null) {
@@ -97,14 +111,14 @@ internal class UpdateUserOperationExecutor(
                         purchasesArray.add(PurchaseObject(purchase.sku, purchase.iso, purchase.amount))
                     }
 
-                    deltasObject = PropertiesDeltasObject(deltasObject.sessionTime, deltasObject.sessionCounts, amountSpent, purchasesArray)
+                    deltasObject = PropertiesDeltasObject(deltasObject.sessionTime, deltasObject.sessionCount, amountSpent, purchasesArray)
                 }
             }
         }
 
         if (appId != null && onesignalId != null) {
             try {
-                _userBackend.updateUser(appId, IdentityConstants.ONESIGNAL_ID, onesignalId, propertiesObject, true, deltasObject)
+                _userBackend.updateUser(appId, IdentityConstants.ONESIGNAL_ID, onesignalId, propertiesObject, refreshDeviceMetadata, deltasObject)
 
                 if (_identityModelStore.model.onesignalId == onesignalId) {
                     // go through and make sure any properties are in the correct model state
@@ -132,7 +146,8 @@ internal class UpdateUserOperationExecutor(
         const val SET_TAG = "set-tag"
         const val DELETE_TAG = "delete-tag"
         const val SET_PROPERTY = "set-property"
-        const val TRACK_SESSION = "track-session"
+        const val TRACK_SESSION_START = "track-session-start"
+        const val TRACK_SESSION_END = "track-session-end"
         const val TRACK_PURCHASE = "track-purchase"
     }
 }
