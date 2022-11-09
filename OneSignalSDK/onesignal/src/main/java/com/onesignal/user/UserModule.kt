@@ -24,13 +24,9 @@ import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.impl.SubscriptionManager
-import com.onesignal.user.internal.triggers.TriggerModelStore
 
 internal class UserModule : IModule {
     override fun register(builder: ServiceBuilder) {
-        // Triggers
-        builder.register<TriggerModelStore>().provides<TriggerModelStore>()
-
         // Properties
         builder.register<PropertiesModelStore>().provides<PropertiesModelStore>()
         builder.register<PropertiesModelStoreListener>().provides<IBootstrapService>()

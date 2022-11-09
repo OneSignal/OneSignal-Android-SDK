@@ -3,12 +3,12 @@ package com.onesignal
 import android.content.Context
 import com.onesignal.common.services.IServiceProvider
 import com.onesignal.debug.IDebugManager
-import com.onesignal.iam.IIAMManager
-import com.onesignal.internal.OneSignalImp
+import com.onesignal.inAppMessages.IIAMManager
 import com.onesignal.location.ILocationManager
-import com.onesignal.notification.INotificationsManager
+import com.onesignal.notifications.INotificationsManager
 import com.onesignal.session.ISessionManager
 import com.onesignal.user.IUserManager
+import com.onesignal.user.internal.OneSignalImp
 
 /**
  * This singleton class is the entry point to the OneSignal SDK. It
@@ -74,8 +74,8 @@ object OneSignal {
      * only after [initWithContext] has been called.
      */
     @JvmStatic
-    val iam: IIAMManager
-        get() = oneSignal.iam
+    val inAppMessages: IIAMManager
+        get() = oneSignal.inAppMessages
 
     /**
      * Access to debug the SDK in the additional information is required to diagnose any

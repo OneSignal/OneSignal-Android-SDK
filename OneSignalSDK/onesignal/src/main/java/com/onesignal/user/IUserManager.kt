@@ -115,7 +115,7 @@ interface IUserManager {
     fun removeSmsSubscription(sms: String): IUserManager
 
     /**
-     * Set a tag for the current user.  Tags are key:value pairs used as building blocks
+     * Add a tag for the current user.  Tags are key:value pairs used as building blocks
      * for targeting specific users and/or personalizing messages. See [Data Tags | OneSignal](https://documentation.onesignal.com/docs/add-user-data-tags).
      *
      * If the tag key already exists, it will be replaced with the value provided here.
@@ -125,10 +125,10 @@ interface IUserManager {
      *
      * @return this user manager to allow for chaining of calls.
      */
-    fun setTag(key: String, value: String): IUserManager
+    fun addTag(key: String, value: String): IUserManager
 
     /**
-     * Set multiple tags for the current user.  Tags are key:value pairs used as building blocks
+     * Add multiple tags for the current user.  Tags are key:value pairs used as building blocks
      * for targeting specific users and/or personalizing messages. See [Data Tags | OneSignal](https://documentation.onesignal.com/docs/add-user-data-tags).
      *
      * If the tag key already exists, it will be replaced with the value provided here.
@@ -137,7 +137,7 @@ interface IUserManager {
      *
      * @return this user manager to allow for chaining of calls.
      */
-    fun setTags(tags: Map<String, String>): IUserManager
+    fun addTags(tags: Map<String, String>): IUserManager
 
     /**
      * Remove the data tag with the provided key from the current user.
@@ -156,61 +156,4 @@ interface IUserManager {
      * @return this user manager to allow for chaining of calls.
      */
     fun removeTags(keys: Collection<String>): IUserManager
-
-    /**
-     * Set a trigger for the current user.  Triggers are currently explicitly used to determine
-     * whether a specific IAM should be displayed to the user. See [Triggers | OneSignal](https://documentation.onesignal.com/docs/iam-triggers).
-     *
-     * If the trigger key already exists, it will be replaced with the value provided here. Note that
-     * triggers are not persisted to the backend. They only exist on the local device and are applicable
-     * to the current user.
-     *
-     * @param key The key of the trigger that is to be set.
-     * @param value The value of the trigger. Although this is defined as [Any] its [Any.toString]
-     * will be used for evaluation purposes.
-     *
-     * @return this user manager to allow for chaining of calls.
-     */
-    fun setTrigger(key: String, value: Any): IUserManager
-
-    /**
-     * Set multiple triggers for the current user.  Triggers are currently explicitly used to determine
-     * whether a specific IAM should be displayed to the user. See [Triggers | OneSignal](https://documentation.onesignal.com/docs/iam-triggers).
-     *
-     * If the trigger key already exists, it will be replaced with the value provided here.  Note that
-     * triggers are not persisted to the backend. They only exist on the local device and are applicable
-     * to the current user.
-     *
-     * @param triggers The map of triggers that are to be added to the current user.  Although the
-     * value of the [Map] is defined as [Any] its [Any.toString] will be used for evaluation
-     * purposes.
-     *
-     * @return this user manager to allow for chaining of calls.
-     */
-    fun setTriggers(triggers: Map<String, Any>): IUserManager
-
-    /**
-     * Remove the trigger with the provided key from the current user.
-     *
-     * @param key The key of the trigger.
-     *
-     * @return this user manager to allow for chaining of calls.
-     */
-    fun removeTrigger(key: String): IUserManager
-
-    /**
-     * Remove multiple triggers from the current user.
-     *
-     * @param keys The collection of keys, all of which will be removed from the current user.
-     *
-     * @return this user manager to allow for chaining of calls.
-     */
-    fun removeTriggers(keys: Collection<String>): IUserManager
-
-    /**
-     * Clear all triggers from the current user.
-     *
-     * @return this user manager to allow for chaining of calls.
-     */
-    fun clearTriggers(): IUserManager
 }

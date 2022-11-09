@@ -9,7 +9,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.onesignal.OneSignal;
-import com.onesignal.notification.IPermissionStateChanges;
+import com.onesignal.notifications.IPermissionStateChanges;
 import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.constant.Text;
 import com.onesignal.sdktest.util.IntentTo;
@@ -70,7 +70,7 @@ public class SplashActivityViewModel implements ActivityViewModel {
         OneSignal.getLocation().setLocationShared(isLocationShared);
 
         boolean isInAppMessagingPaused = SharedPreferenceUtil.getCachedInAppMessagingPausedStatus(context);
-        OneSignal.getIam().setPaused(isInAppMessagingPaused);
+        OneSignal.getInAppMessages().setPaused(isInAppMessagingPaused);
 
         Log.d(Tag.DEBUG, Text.PRIVACY_CONSENT_REQUIRED_SET + ": " + privacyConsent);
 
