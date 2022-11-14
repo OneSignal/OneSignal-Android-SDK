@@ -131,7 +131,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
             mockPropertiesModelStore
         )
         val operations = listOf<Operation>(
-            TrackSessionOperation(appId, remoteOneSignalId, 1111)
+            TrackSessionEndOperation(appId, remoteOneSignalId, 1111)
         )
 
         /* When */
@@ -150,7 +150,6 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 any(),
                 withArg {
                     it.sessionTime shouldBe 1111
-                    it.sessionCounts shouldBe 1
                 }
             )
         }
@@ -171,7 +170,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
             mockPropertiesModelStore
         )
         val operations = listOf<Operation>(
-            TrackSessionOperation(appId, remoteOneSignalId, 1111),
+            TrackSessionEndOperation(appId, remoteOneSignalId, 1111),
             TrackPurchaseOperation(
                 appId,
                 remoteOneSignalId,
@@ -182,7 +181,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                     PurchaseInfo("sku2", "iso2", BigDecimal(1222))
                 )
             ),
-            TrackSessionOperation(appId, remoteOneSignalId, 3333)
+            TrackSessionEndOperation(appId, remoteOneSignalId, 3333)
         )
 
         /* When */
@@ -201,7 +200,6 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 any(),
                 withArg {
                     it.sessionTime shouldBe (1111 + 3333)
-                    it.sessionCounts shouldBe 2
                     it.amountSpent shouldBe BigDecimal(2222)
                     it.purchases shouldNotBe null
                     it.purchases!!.count() shouldBe 2
@@ -231,9 +229,9 @@ class UpdateUserOperationExecutorTests : FunSpec({
             mockPropertiesModelStore
         )
         val operations = listOf<Operation>(
-            TrackSessionOperation(appId, remoteOneSignalId, 1111),
+            TrackSessionEndOperation(appId, remoteOneSignalId, 1111),
             SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1"),
-            TrackSessionOperation(appId, remoteOneSignalId, 3333)
+            TrackSessionEndOperation(appId, remoteOneSignalId, 3333)
         )
 
         /* When */
@@ -252,7 +250,6 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 any(),
                 withArg {
                     it.sessionTime shouldBe (1111 + 3333)
-                    it.sessionCounts shouldBe 2
                 }
             )
         }

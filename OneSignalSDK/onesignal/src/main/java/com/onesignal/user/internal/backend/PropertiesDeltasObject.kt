@@ -4,7 +4,7 @@ import java.math.BigDecimal
 
 class PropertiesDeltasObject(
     val sessionTime: Long? = null,
-    val sessionCounts: Int? = null,
+    val sessionCount: Int? = null,
     val amountSpent: BigDecimal? = null,
     val purchases: List<PurchaseObject>? = null
 )
