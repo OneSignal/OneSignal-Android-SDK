@@ -8,7 +8,7 @@ import com.onesignal.user.internal.operations.impl.executors.UpdateUserOperation
 /**
  * An [Operation] to track the ending of a session, related to a specific user.
  */
-class TrackSessionOperation() : Operation(UpdateUserOperationExecutor.TRACK_SESSION) {
+class TrackSessionEndOperation() : Operation(UpdateUserOperationExecutor.TRACK_SESSION_END) {
     /**
      * The OneSignal appId the session was captured under.
      */
