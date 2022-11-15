@@ -4,15 +4,19 @@ import com.onesignal.common.IDManager
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.modeling.IModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
+import com.onesignal.common.threading.suspendifyOnMain
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.EmailSubscription
 import com.onesignal.user.internal.PushSubscription
 import com.onesignal.user.internal.SmsSubscription
+import com.onesignal.user.internal.Subscription
+import com.onesignal.user.internal.UninitializedPushSubscription
 import com.onesignal.user.internal.subscriptions.ISubscriptionChangedHandler
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 import com.onesignal.user.subscriptions.ISubscription
 import com.onesignal.user.subscriptions.SubscriptionList
@@ -32,7 +36,7 @@ internal class SubscriptionManager(
 ) : ISubscriptionManager, IModelStoreChangeHandler<SubscriptionModel> {
 
     private val _events = EventProducer<ISubscriptionChangedHandler>()
-    override var subscriptions: SubscriptionList = SubscriptionList(listOf())
+    override var subscriptions: SubscriptionList = SubscriptionList(listOf(), UninitializedPushSubscription())
 
     init {
         for (subscriptionModel in _subscriptionModelStore.list()) {
@@ -50,15 +54,17 @@ internal class SubscriptionManager(
         addSubscriptionToModels(SubscriptionType.SMS, sms)
     }
 
-    override fun addOrUpdatePushSubscription(pushToken: String?, pushTokenStatus: Int?) {
-        var pushSub = subscriptions.push
+    override fun addOrUpdatePushSubscription(pushToken: String?, pushTokenStatus: SubscriptionStatus) {
+        val pushSub = subscriptions.push
 
-        if (pushSub == null) {
+        if (pushSub is UninitializedPushSubscription) {
             addSubscriptionToModels(SubscriptionType.PUSH, pushToken ?: "", pushTokenStatus)
         } else {
             updateSubscriptionModel(pushSub) {
-                it.address = pushToken ?: ""
-                it.status = pushTokenStatus ?: SubscriptionModel.STATUS_SUBSCRIBED
+                if (pushToken != null) {
+                    it.address = pushToken
+                }
+                it.status = pushTokenStatus
             }
         }
     }
@@ -79,7 +85,7 @@ internal class SubscriptionManager(
         }
     }
 
-    private fun addSubscriptionToModels(type: SubscriptionType, address: String, status: Int? = null) {
+    private fun addSubscriptionToModels(type: SubscriptionType, address: String, status: SubscriptionStatus? = null) {
         Logging.log(LogLevel.DEBUG, "SubscriptionManager.addSubscription(type: $type, address: $address)")
 
         val subscriptionModel = SubscriptionModel()
@@ -87,7 +93,7 @@ internal class SubscriptionManager(
         subscriptionModel.enabled = true
         subscriptionModel.type = type
         subscriptionModel.address = address
-        subscriptionModel.status = status ?: SubscriptionModel.STATUS_SUBSCRIBED
+        subscriptionModel.status = status ?: SubscriptionStatus.SUBSCRIBED
 
         _subscriptionModelStore.add(subscriptionModel)
     }
@@ -99,8 +105,6 @@ internal class SubscriptionManager(
     }
 
     private fun updateSubscriptionModel(subscription: ISubscription, update: (SubscriptionModel) -> Unit) {
-        Logging.log(LogLevel.DEBUG, "SubscriptionManager.updateSubscriptionModel(subscription: $subscription)")
-
         val subscriptionModel = _subscriptionModelStore.get(subscription.id) ?: return
         update(subscriptionModel)
     }
@@ -129,6 +133,14 @@ internal class SubscriptionManager(
             // don't yet have a representation for it in the subscription list.
             createSubscriptionAndAddToSubscriptionList(args.model as SubscriptionModel)
         } else {
+            suspendifyOnMain {
+                (subscription as Subscription).changeHandlersNotifier.fire {
+                    it.onSubscriptionChanged(
+                        subscription
+                    )
+                }
+            }
+
             // the model has already been updated, so fire the update event
             _events.fire { it.onSubscriptionsChanged() }
         }
@@ -150,8 +162,16 @@ internal class SubscriptionManager(
         val subscription = createSubscriptionFromModel(subscriptionModel)
 
         val subscriptions = this.subscriptions.collection.toMutableList()
+
+        // There can only be 1 push subscription, always transfer any subscribers from the old one to the new
+        if (subscriptionModel.type == SubscriptionType.PUSH) {
+            val existingPushSubscription = this.subscriptions.push as Subscription
+            ((subscription as PushSubscription).changeHandlersNotifier).subscribeAll(existingPushSubscription.changeHandlersNotifier)
+            subscriptions.remove(existingPushSubscription)
+        }
+
         subscriptions.add(subscription)
-        this.subscriptions = SubscriptionList(subscriptions)
+        this.subscriptions = SubscriptionList(subscriptions, UninitializedPushSubscription())
 
         _events.fire { it.onSubscriptionsChanged() }
     }
@@ -159,7 +179,7 @@ internal class SubscriptionManager(
     private fun removeSubscriptionFromSubscriptionList(subscription: ISubscription) {
         val subscriptions = subscriptions.collection.toMutableList()
         subscriptions.remove(subscription)
-        this.subscriptions = SubscriptionList(subscriptions)
+        this.subscriptions = SubscriptionList(subscriptions, UninitializedPushSubscription())
 
         _events.fire { it.onSubscriptionsChanged() }
     }

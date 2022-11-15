@@ -1,18 +1,31 @@
 package com.onesignal.user.internal
 
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
+import com.onesignal.user.internal.subscriptions.SubscriptionType
 import com.onesignal.user.subscriptions.IPushSubscription
 
-internal class PushSubscription(
+internal open class PushSubscription(
     model: SubscriptionModel
 ) : Subscription(model), IPushSubscription {
 
-    override val pushToken: String?
+    override val pushToken: String
         get() = model.address
 
     override var enabled: Boolean
-        get() = model.enabled
+        get() = model.enabled && model.status == SubscriptionStatus.SUBSCRIBED
         set(value) { model.enabled = value }
+}
 
-    private var _enabled: Boolean = enabled
+internal class UninitializedPushSubscription() : PushSubscription(createFakePushSub()) {
+
+    companion object {
+        fun createFakePushSub(): SubscriptionModel {
+            val pushSubModel = SubscriptionModel()
+            pushSubModel.id = ""
+            pushSubModel.type = SubscriptionType.PUSH
+            pushSubModel.enabled = false
+            return pushSubModel
+        }
+    }
 }

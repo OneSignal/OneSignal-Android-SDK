@@ -84,6 +84,15 @@ class ConfigModel : Model() {
         set(value) { setProperty(::opRepoExecutionInterval.name, value) }
 
     /**
+     * The number of milliseconds to delay after the operation repo processing has been woken. This
+     * subsequent delay allow a sequence of changes to be grouped, rather than the first enqueue
+     * to be executed in isolation (because that is the one doing the waking).
+     */
+    var opRepoPostWakeDelay: Long
+        get() = getProperty(::opRepoPostWakeDelay.name) { 200 }
+        set(value) { setProperty(::opRepoPostWakeDelay.name, value) }
+
+    /**
      * The minimum number of milliseconds required to pass to allow the fetching of IAM to occur.
      */
     var fetchIAMMinInterval: Long

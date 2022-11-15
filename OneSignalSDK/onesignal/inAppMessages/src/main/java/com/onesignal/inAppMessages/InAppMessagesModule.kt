@@ -30,7 +30,7 @@ internal class InAppMessagesModule : IModule {
     override fun register(builder: ServiceBuilder) {
         // Make sure only Android 4.4 devices and higher can use IAMs
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            builder.register<DummyInAppMessagesManager>().provides<IIAMManager>()
+            builder.register<DummyInAppMessagesManager>().provides<IInAppMessagesManager>()
         } else {
             // Low level services
             builder.register<InAppStateService>().provides<InAppStateService>()
@@ -56,7 +56,7 @@ internal class InAppMessagesModule : IModule {
             builder.register<InAppMessagePromptFactory>().provides<IInAppMessagePromptFactory>()
 
             builder.register<InAppMessagesManager>()
-                .provides<IIAMManager>()
+                .provides<IInAppMessagesManager>()
                 .provides<IStartableService>()
         }
     }

@@ -7,9 +7,10 @@ package com.onesignal.user.subscriptions
 interface IPushSubscription : ISubscription {
 
     /**
-     * The token which identifies the device/app that notifications are to be sent.
+     * The token which identifies the device/app that notifications are to be sent. May
+     * be an empty string, indicating the push token has not yet been retrieved.
      */
-    val pushToken: String?
+    val pushToken: String
 
     /**
      *  Whether this subscription is current enabled. When enabled, the user is able to
