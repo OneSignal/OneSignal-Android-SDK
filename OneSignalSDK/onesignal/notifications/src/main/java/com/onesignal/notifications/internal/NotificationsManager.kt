@@ -5,6 +5,7 @@ import com.onesignal.common.events.EventProducer
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.threading.suspendifyOnMain
 import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.debug.internal.logging.Logging
@@ -12,7 +13,6 @@ import com.onesignal.notifications.INotificationOpenedHandler
 import com.onesignal.notifications.INotificationWillShowInForegroundHandler
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.notifications.IPermissionChangedHandler
-import com.onesignal.notifications.IPermissionState
 import com.onesignal.notifications.PostNotificationException
 import com.onesignal.notifications.internal.backend.INotificationBackendService
 import com.onesignal.notifications.internal.common.GenerateNotificationOpenIntentFromPushPayload
@@ -26,10 +26,6 @@ import com.onesignal.notifications.internal.summary.INotificationSummaryManager
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
-
-interface INotificationStateRefresher {
-    fun refreshNotificationState()
-}
 
 interface INotificationActivityOpener {
     suspend fun openDestinationActivity(activity: Activity, pushPayloads: JSONArray)
@@ -50,19 +46,29 @@ internal class NotificationsManager(
     private val _summaryManager: INotificationSummaryManager
 ) : INotificationsManager,
     INotificationActivityOpener,
-    INotificationStateRefresher,
-    INotificationPermissionChangedHandler {
+    INotificationPermissionChangedHandler,
+    IApplicationLifecycleHandler {
 
-    override var permissionStatus: IPermissionState = PermissionState(false)
+    override var permission: Boolean = NotificationHelper.areNotificationsEnabled(_applicationService.appContext)
+    override val canRequestPermission: Boolean = true // TODO: Implement
     override var unsubscribeWhenNotificationsAreDisabled: Boolean = false
 
     private val _permissionChangedNotifier = EventProducer<IPermissionChangedHandler>()
 
     init {
+        _applicationService.addApplicationLifecycleHandler(this)
         _notificationPermissionController.subscribe(this)
+
         suspendifyOnThread {
             _notificationDataController.deleteExpiredNotifications()
         }
+    }
+
+    override fun onFocus() {
+        refreshNotificationState()
+    }
+
+    override fun onUnfocused() {
     }
 
     /**
@@ -75,7 +81,7 @@ internal class NotificationsManager(
     /**
      * Called when app has gained focus and the notification state should be refreshed.
      */
-    override fun refreshNotificationState() {
+    private fun refreshNotificationState() {
         // ensure all notifications for this app have been restored to the notification panel
         _notificationRestoreWorkManager.beginEnqueueingWork(_applicationService.appContext, false)
 
@@ -83,20 +89,19 @@ internal class NotificationsManager(
         setPermissionStatusAndFire(isEnabled)
     }
 
-    override suspend fun requestPermission(): Boolean {
+    override suspend fun requestPermission(fallbackToSettings: Boolean): Boolean {
         Logging.debug("NotificationsManager.requestPermission()")
-        return _notificationPermissionController.prompt(true)
+        return _notificationPermissionController.prompt(fallbackToSettings)
     }
 
     private fun setPermissionStatusAndFire(isEnabled: Boolean) {
-        val oldPermissionStatus = permissionStatus
-        permissionStatus = PermissionState(isEnabled)
+        val oldPermissionStatus = permission
+        permission = isEnabled
 
-        if (oldPermissionStatus.notificationsEnabled != isEnabled) {
+        if (oldPermissionStatus != isEnabled) {
             // switch over to the main thread for the firing of the event
             suspendifyOnMain {
-                val changes = PermissionStateChanges(oldPermissionStatus, permissionStatus)
-                _permissionChangedNotifier.fire { it.onPermissionChanged(changes) }
+                _permissionChangedNotifier.fire { it.onPermissionChanged(isEnabled) }
             }
         }
     }
@@ -169,7 +174,7 @@ internal class NotificationsManager(
      * [android.app.NotificationManager.cancelAll], OneSignal notifications will be restored when
      * your app is restarted.
      */
-    override suspend fun clearAll() {
+    override suspend fun clearAllNotifications() {
         Logging.debug("NotificationsManager.clearAll()")
         _notificationDataController.markAsDismissedForOutstanding()
     }
@@ -190,7 +195,7 @@ internal class NotificationsManager(
      * @param handler the instance of [com.onesignal.OSPermissionObserver] that you want to process
      *                 the permission changes within
      */
-    override fun addPushPermissionHandler(handler: IPermissionChangedHandler) {
+    override fun addPermissionChangedHandler(handler: IPermissionChangedHandler) {
         Logging.debug("NotificationsManager.addPushPermissionHandler(handler: $handler)")
         _permissionChangedNotifier.subscribe(handler)
     }
@@ -200,7 +205,7 @@ internal class NotificationsManager(
      *
      * @param handler The previously added handler that should be removed.
      */
-    override fun removePushPermissionHandler(handler: IPermissionChangedHandler) {
+    override fun removePermissionChangedHandler(handler: IPermissionChangedHandler) {
         Logging.debug("NotificationsManager.removePushPermissionHandler(handler: $handler)")
         _permissionChangedNotifier.unsubscribe(handler)
     }

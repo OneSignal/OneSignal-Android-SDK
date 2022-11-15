@@ -12,6 +12,7 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.registration.IPushRegistrator
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -37,11 +38,11 @@ internal class PushRegistratorHMS(
                 getHMSTokenTask(_applicationService.appContext)
             } catch (e: ApiException) {
                 Logging.error("HMS ApiException getting Huawei push token!", e)
-                val pushStatus: IPushRegistrator.RegisterStatus =
+                val pushStatus: SubscriptionStatus =
                     if (e.statusCode == CommonCode.ErrorCode.ARGUMENTS_INVALID) {
-                        IPushRegistrator.RegisterStatus.PUSH_STATUS_HMS_ARGUMENTS_INVALID
+                        SubscriptionStatus.HMS_ARGUMENTS_INVALID
                     } else {
-                        IPushRegistrator.RegisterStatus.PUSH_STATUS_HMS_API_EXCEPTION_OTHER
+                        SubscriptionStatus.HMS_API_EXCEPTION_OTHER
                     }
 
                 IPushRegistrator.RegisterResult(null, pushStatus)
@@ -59,7 +60,7 @@ internal class PushRegistratorHMS(
         if (!_deviceService.hasAllHMSLibrariesForPushKit) {
             return IPushRegistrator.RegisterResult(
                 null,
-                IPushRegistrator.RegisterStatus.PUSH_STATUS_MISSING_HMS_PUSHKIT_LIBRARY
+                SubscriptionStatus.MISSING_HMS_PUSHKIT_LIBRARY
             )
         }
 
@@ -71,7 +72,7 @@ internal class PushRegistratorHMS(
             Logging.info("Device registered for HMS, push token = $pushToken")
             return IPushRegistrator.RegisterResult(
                 pushToken,
-                IPushRegistrator.RegisterStatus.PUSH_STATUS_SUBSCRIBED
+                SubscriptionStatus.SUBSCRIBED
             )
         } else {
             // If EMUI 9.x or older getToken will always return null.
@@ -86,13 +87,13 @@ internal class PushRegistratorHMS(
                 Logging.error("ADM registered with ID:$pushToken")
                 IPushRegistrator.RegisterResult(
                     pushToken,
-                    IPushRegistrator.RegisterStatus.PUSH_STATUS_SUBSCRIBED
+                    SubscriptionStatus.SUBSCRIBED
                 )
             } else {
                 Logging.error("HmsMessageServiceOneSignal.onNewToken timed out.")
                 IPushRegistrator.RegisterResult(
                     null,
-                    IPushRegistrator.RegisterStatus.PUSH_STATUS_HMS_TOKEN_TIMEOUT
+                    SubscriptionStatus.HMS_TOKEN_TIMEOUT
                 )
             }
         }

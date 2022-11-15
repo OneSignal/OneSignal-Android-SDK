@@ -12,6 +12,7 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 
@@ -125,6 +126,10 @@ internal class OperationRepo(
                             // wait to be woken up for the next pass
                             force = _waiter.waitForWake()
                         }
+
+                        // This secondary delay allows for any subsequent operations (beyond the first one
+                        // that woke us) to be enqueued before we pull from the queue.
+                        delay(_configModelStore.model.opRepoPostWakeDelay)
                     }
                 }
             } catch (e: Throwable) {

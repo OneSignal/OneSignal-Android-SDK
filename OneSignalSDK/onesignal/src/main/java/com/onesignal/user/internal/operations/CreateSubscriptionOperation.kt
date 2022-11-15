@@ -4,6 +4,7 @@ import com.onesignal.common.IDManager
 import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 
 /**
@@ -63,16 +64,19 @@ class CreateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.CR
     /**
      * The status of this subscription.
      */
-    var status: Int
-        get() = getProperty(::status.name)
-        private set(value) { setProperty(::status.name, value) }
+    var status: SubscriptionStatus
+        get() {
+            val value = getProperty<Int>(::status.name)
+            return SubscriptionStatus.values().first { it.value == value }
+        }
+        private set(value) { setProperty(::status.name, value.value) }
 
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Subscription.$subscriptionId"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.ALTER
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
 
-    constructor(appId: String, onesignalId: String, subscriptionId: String, type: SubscriptionType, enabled: Boolean, address: String, status: Int) : this() {
+    constructor(appId: String, onesignalId: String, subscriptionId: String, type: SubscriptionType, enabled: Boolean, address: String, status: SubscriptionStatus) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
         this.subscriptionId = subscriptionId

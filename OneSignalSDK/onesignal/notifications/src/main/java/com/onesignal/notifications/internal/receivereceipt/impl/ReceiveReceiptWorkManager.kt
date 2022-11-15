@@ -35,9 +35,9 @@ internal class ReceiveReceiptWorkManager(
         }
 
         val appId: String = _configModelStore.model.appId
-        val subscriptionId: String? = _subscriptionManager.subscriptions.push?.id
+        val subscriptionId = _subscriptionManager.subscriptions.push.id
 
-        if (subscriptionId == null || appId.isEmpty()) {
+        if (subscriptionId.isEmpty() || appId.isEmpty()) {
             Logging.debug("ReceiveReceiptWorkManager: No push subscription or appId!")
         }
 

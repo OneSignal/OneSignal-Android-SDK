@@ -6,5 +6,5 @@ interface IInAppMessageClickHandler {
      *
      * @param result The [IInAppMessageAction] that should be taken based on the click.
      */
-    fun inAppMessageClicked(result: IInAppMessageAction?)
+    fun inAppMessageClicked(result: IInAppMessageAction)
 }
