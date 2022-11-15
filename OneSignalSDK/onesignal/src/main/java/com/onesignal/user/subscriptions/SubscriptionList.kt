@@ -4,14 +4,14 @@ package com.onesignal.user.subscriptions
  * A readonly list of subscriptions.  Wraps a standard [List] to help navigate the list of
  * subscriptions.  The full list can be accessed via [SubscriptionList.collection].
  */
-class SubscriptionList(val collection: List<ISubscription>) {
+class SubscriptionList(val collection: List<ISubscription>, private val _fallbackPushSub: IPushSubscription) {
 
     /**
      * Retrieve the push subscription for this user.  This subscription is for this
      * device, or it does not exist and is null.
      */
-    val push: IPushSubscription?
-        get() = collection.filterIsInstance<IPushSubscription>().firstOrNull()
+    val push: IPushSubscription
+        get() = collection.filterIsInstance<IPushSubscription>().firstOrNull() ?: _fallbackPushSub
 
     /**
      * Retrieve the subset of subscriptions that are [IEmailSubscription].

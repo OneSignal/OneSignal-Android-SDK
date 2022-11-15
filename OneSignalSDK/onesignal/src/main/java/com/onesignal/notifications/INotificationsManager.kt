@@ -7,9 +7,14 @@ import org.json.JSONObject
  */
 interface INotificationsManager {
     /**
-     * The current permission state of push notifications on this device.
+     * Whether this app has push notification permission.
      */
-    val permissionStatus: IPermissionState
+    val permission: Boolean
+
+    /**
+     * Whether push notification permission can be requested.
+     */
+    val canRequestPermission: Boolean
 
     /**
      * Whether the current device push subscription should be automatically unsubscribed (deleted)
@@ -22,10 +27,16 @@ interface INotificationsManager {
      * OS prompt to request push notification permission.  If the user enables, a push
      * subscription to this device will be automatically added to the user.
      *
+     * Be aware of best practices regarding asking permissions on Android:
+     * [Requesting Permissions | Android Developers] (https://developer.android.com/guide/topics/permissions/requesting.html)
+     *
+     * @param fallbackToSettings Whether to direct the user to this app's settings to drive
+     * enabling of notifications, when the in-app prompting is not possible.
+     *
      * @return true if the user is opted in to push notifications (Android 13 and higher, user affirmed or already enabled. < Android 13, already enabled)
      *         false if the user is opted out of push notifications (user rejected)
      */
-    suspend fun requestPermission(): Boolean
+    suspend fun requestPermission(fallbackToSettings: Boolean): Boolean
 
     /**
      * Allows you to send notifications from user to user or schedule ones in the future to be delivered
@@ -65,7 +76,7 @@ interface INotificationsManager {
      * [android.app.NotificationManager.cancelAll], OneSignal notifications will be restored when
      * your app is restarted.
      */
-    suspend fun clearAll()
+    suspend fun clearAllNotifications()
 
     /**
      * The [IPermissionChangedHandler.onPermissionChanged] method will be fired on the passed-in
@@ -82,14 +93,14 @@ interface INotificationsManager {
      * @param handler the instance of [IPermissionChangedHandler] that you want to process
      *                the permission changes within
      */
-    fun addPushPermissionHandler(handler: IPermissionChangedHandler)
+    fun addPermissionChangedHandler(handler: IPermissionChangedHandler)
 
     /**
      * Remove a push permission handler that has been previously added.
      *
      * @param handler The previously added handler that should be removed.
      */
-    fun removePushPermissionHandler(handler: IPermissionChangedHandler)
+    fun removePermissionChangedHandler(handler: IPermissionChangedHandler)
 
     /**
      * Sets the handler to run before displaying a notification while the app is in focus. Use this

@@ -62,7 +62,10 @@ internal class ConfigModelStoreListener(
             var success = false
             do {
                 try {
-                    val params = _paramsBackendService.fetchParams(appId, _subscriptionManager.subscriptions.push?.id)
+                    val params = _paramsBackendService.fetchParams(
+                        appId,
+                        _subscriptionManager.subscriptions.push.id.ifEmpty { null }
+                    )
 
                     val config = ConfigModel()
                     config.appId = appId

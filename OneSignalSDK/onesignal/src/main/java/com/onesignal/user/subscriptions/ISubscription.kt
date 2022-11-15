@@ -5,7 +5,20 @@ package com.onesignal.user.subscriptions
  */
 interface ISubscription {
     /**
-     * The unique identifier for this subscription.
+     * The unique identifier for this subscription. This will be an empty string
+     * until the subscription has been successfully created on the backend and
+     * assigned an ID.
      */
     val id: String
+
+    /**
+     * Add a change handler to this subscription, allowing the provider to be
+     * notified whenever the subscription has changed.
+     */
+    fun addChangeHandler(handler: ISubscriptionChangedHandler)
+
+    /**
+     * Remove a change handler from this subscription.
+     */
+    fun removeChangeHandler(handler: ISubscriptionChangedHandler)
 }

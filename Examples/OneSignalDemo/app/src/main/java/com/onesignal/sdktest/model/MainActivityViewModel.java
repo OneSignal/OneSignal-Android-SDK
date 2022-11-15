@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import com.google.android.material.appbar.AppBarLayout;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.core.widget.NestedScrollView;
@@ -26,7 +27,7 @@ import android.widget.TextView;
 
 import com.onesignal.Continue;
 import com.onesignal.OneSignal;
-import com.onesignal.notifications.IPermissionStateChanges;
+import com.onesignal.sdktest.adapter.SubscriptionRecyclerViewAdapter;
 import com.onesignal.user.subscriptions.IEmailSubscription;
 import com.onesignal.user.subscriptions.IPushSubscription;
 import com.onesignal.user.subscriptions.ISmsSubscription;
@@ -35,7 +36,6 @@ import com.onesignal.sdktest.activity.SecondaryActivity;
 import com.onesignal.sdktest.adapter.InAppMessageRecyclerViewAdapter;
 import com.onesignal.sdktest.adapter.NotificationRecyclerViewAdapter;
 import com.onesignal.sdktest.adapter.PairRecyclerViewAdapter;
-import com.onesignal.sdktest.adapter.SingleRecyclerViewAdapter;
 import com.onesignal.sdktest.callback.AddPairAlertDialogCallback;
 import com.onesignal.sdktest.callback.PairItemActionCallback;
 import com.onesignal.sdktest.callback.SendOutcomeAlertDialogCallback;
@@ -53,6 +53,8 @@ import com.onesignal.sdktest.util.IntentTo;
 import com.onesignal.sdktest.util.SharedPreferenceUtil;
 import com.onesignal.sdktest.util.ProfileUtil;
 import com.onesignal.sdktest.util.Toaster;
+import com.onesignal.user.subscriptions.ISubscription;
+import com.onesignal.user.subscriptions.ISubscriptionChangedHandler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -60,7 +62,7 @@ import java.util.List;
 import java.util.Map;
 
 @RequiresApi(api = Build.VERSION_CODES.N)
-public class MainActivityViewModel implements ActivityViewModel {
+public class MainActivityViewModel implements ActivityViewModel, ISubscriptionChangedHandler {
 
     private Animate animate;
     private Dialog dialog;
@@ -110,14 +112,15 @@ public class MainActivityViewModel implements ActivityViewModel {
     private PairRecyclerViewAdapter tagPairRecyclerViewAdapter;
 
     private RecyclerView emailsRecyclerView;
-    private SingleRecyclerViewAdapter emailsRecyclerViewAdapter;
+    private SubscriptionRecyclerViewAdapter emailsRecyclerViewAdapter;
     private RecyclerView smssRecyclerView;
-    private SingleRecyclerViewAdapter smssRecyclerViewAdapter;
+    private SubscriptionRecyclerViewAdapter smssRecyclerViewAdapter;
 
     private Button addTagButton;
 
     // Notification Demo
     private TextView pushNotificationTitleTextView;
+    private TextView sendPushNotificationTitleTextView;
     private RecyclerView pushNotificationRecyclerView;
     private NotificationRecyclerViewAdapter pushNotificationRecyclerViewAdapter;
 
@@ -134,6 +137,7 @@ public class MainActivityViewModel implements ActivityViewModel {
 
     // In App Messaging Demo
     private TextView inAppMessagingTitleTextView;
+    private TextView sendInAppMessagingTitleTextView;
     private RecyclerView inAppMessagingRecyclerView;
     private InAppMessageRecyclerViewAdapter inAppMessagingRecyclerViewAdapter;
 
@@ -146,10 +150,12 @@ public class MainActivityViewModel implements ActivityViewModel {
     private Button promptLocationButton;
 
     // Push
-    private RelativeLayout subscriptionRelativeLayout;
-    private TextView subscriptionTextView;
-    private TextView subscriptionDescriptionTextView;
-    private Switch subscriptionSwitch;
+    private TextView pushSubscriptionIdTitleTextView;
+    private TextView pushSubscriptionIdTextView;
+    private RelativeLayout pushSubscriptionEnabledRelativeLayout;
+    private TextView pushSubscriptionEnabledTitleTextView;
+    private Switch pushSubscriptionEnabledSwitch;
+    private LinearLayout promptPushBottonLayout;
     private Button promptPushButton;
     private RelativeLayout pauseInAppMessagesRelativeLayout;
     private TextView pauseInAppMessagesTextView;
@@ -164,8 +170,8 @@ public class MainActivityViewModel implements ActivityViewModel {
     private Boolean isLoggedIn = false;
     private HashMap<String, Object> aliasSet;
     private ArrayList<Map.Entry> aliasArrayList;
-    private ArrayList<Object> emailArrayList;
-    private ArrayList<Object> smsArrayList;
+    private ArrayList<ISubscription> emailArrayList;
+    private ArrayList<ISubscription> smsArrayList;
 
     private HashMap<String, Object> tagSet;
     private ArrayList<Map.Entry> tagArrayList;
@@ -231,6 +237,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         addTagButton = getActivity().findViewById(R.id.main_activity_add_tags_button);
 
         pushNotificationTitleTextView = getActivity().findViewById(R.id.main_activity_push_notification_title_text_view);
+        sendPushNotificationTitleTextView= getActivity().findViewById(R.id.main_activity_send_push_notification_title_text_view);
         pushNotificationRecyclerView = getActivity().findViewById(R.id.main_activity_push_notification_recycler_view);
 
         outcomeTitleTextView = getActivity().findViewById(R.id.main_activity_outcomes_title_text_view);
@@ -242,6 +249,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         addTriggerButton = getActivity().findViewById(R.id.main_activity_add_triggers_button);
 
         inAppMessagingTitleTextView = getActivity().findViewById(R.id.main_activity_in_app_messaging_title_text_view);
+        sendInAppMessagingTitleTextView = getActivity().findViewById(R.id.main_activity_send_in_app_messaging_title_text_view);
         inAppMessagingRecyclerView = getActivity().findViewById(R.id.main_activity_in_app_messaging_recycler_view);
 
         locationTitleTextView = getActivity().findViewById(R.id.main_activity_location_title_text_view);
@@ -251,10 +259,13 @@ public class MainActivityViewModel implements ActivityViewModel {
         locationSharedSwitch = getActivity().findViewById(R.id.main_activity_location_shared_switch);
         promptLocationButton = getActivity().findViewById(R.id.main_activity_location_prompt_location_button);
 
-        subscriptionRelativeLayout = getActivity().findViewById(R.id.main_activity_push_subscription_relative_layout);
-        subscriptionTextView = getActivity().findViewById(R.id.main_activity_push_subscription_text_view);
-        subscriptionDescriptionTextView = getActivity().findViewById(R.id.main_activity_push_subscription_info_text_view);
-        subscriptionSwitch = getActivity().findViewById(R.id.main_activity_push_subscription_switch);
+        pushSubscriptionEnabledRelativeLayout = getActivity().findViewById(R.id.main_activity_push_subscription_relative_layout);
+        pushSubscriptionEnabledTitleTextView = getActivity().findViewById(R.id.main_activity_push_subscription_info_text_view);
+        pushSubscriptionIdTitleTextView = getActivity().findViewById(R.id.main_activity_push_subscription_id_title_text_view);
+        pushSubscriptionIdTextView = getActivity().findViewById(R.id.main_activity_push_subscription_id_text_view);
+        pushSubscriptionEnabledSwitch = getActivity().findViewById(R.id.main_activity_push_subscription_switch);
+
+        promptPushBottonLayout = getActivity().findViewById(R.id.main_activity_push_prompt_layout);
         promptPushButton = getActivity().findViewById(R.id.main_activity_push_prompt_push_button);
 
         pauseInAppMessagesRelativeLayout = getActivity().findViewById(R.id.main_activity_iam_pause_in_app_messages_relative_layout);
@@ -279,6 +290,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         triggerSet = new HashMap<>();
         triggerArrayList = new ArrayList<>();
 
+        OneSignal.getUser().getSubscriptions().getPush().addChangeHandler(this);
         return this;
     }
 
@@ -301,19 +313,21 @@ public class MainActivityViewModel implements ActivityViewModel {
         font.applyFont(noTagsTextView, font.saralaBold);
         font.applyFont(addTagButton, font.saralaBold);
         font.applyFont(pushNotificationTitleTextView, font.saralaBold);
+        font.applyFont(sendPushNotificationTitleTextView, font.saralaBold);
         font.applyFont(outcomeTitleTextView, font.saralaBold);
         font.applyFont(sendOutcomeButton, font.saralaBold);
         font.applyFont(triggersTitleTextView, font.saralaBold);
         font.applyFont(noTriggersTextView, font.saralaBold);
         font.applyFont(addTriggerButton, font.saralaBold);
         font.applyFont(inAppMessagingTitleTextView, font.saralaBold);
+        font.applyFont(sendInAppMessagingTitleTextView, font.saralaBold);
         font.applyFont(locationTitleTextView, font.saralaBold);
         font.applyFont(locationSharedTextView, font.saralaBold);
         font.applyFont(locationSharedDescriptionTextView, font.saralaRegular);
         font.applyFont(promptLocationButton, font.saralaBold);
         font.applyFont(promptPushButton, font.saralaBold);
-        font.applyFont(subscriptionTextView, font.saralaBold);
-        font.applyFont(subscriptionDescriptionTextView, font.saralaRegular);
+        font.applyFont(pushSubscriptionEnabledTitleTextView, font.saralaBold);
+        font.applyFont(pushSubscriptionIdTitleTextView, font.saralaBold);
         font.applyFont(pauseInAppMessagesTextView, font.saralaBold);
         font.applyFont(pauseInAppMessagesDescriptionTextView, font.saralaRegular);
         font.applyFont(revokeConsentButton, font.saralaBold);
@@ -344,7 +358,7 @@ public class MainActivityViewModel implements ActivityViewModel {
     }
 
     @Override
-    public void onPermissionChanged(@Nullable IPermissionStateChanges stateChanges) {
+    public void onPermissionChanged(@Nullable boolean permission) {
         refreshSubscriptionState();
     }
 
@@ -494,12 +508,15 @@ public class MainActivityViewModel implements ActivityViewModel {
     private void setupEmailLayout() {
         setupEmailRecyclerView();
 
+        MainActivityViewModel self = this;
         addEmailButton.setOnClickListener(v -> dialog.createUpdateAlertDialog("", Dialog.DialogAction.ADD, ProfileUtil.FieldType.EMAIL, new UpdateAlertDialogCallback() {
             @Override
             public void onSuccess(String value) {
                 if (value != null && !value.isEmpty()) {
-                    OneSignal.getUser().addEmailSubscription(value.toString());
-                    emailArrayList.add(value);
+                    OneSignal.getUser().addEmailSubscription(value);
+                    IEmailSubscription newSubscription = OneSignal.getUser().getSubscriptions().getByEmail(value);
+                    newSubscription.addChangeHandler(self);
+                    emailArrayList.add(OneSignal.getUser().getSubscriptions().getByEmail(value));
                     toaster.makeCustomViewToast("Added email " + value, ToastType.SUCCESS);
                 }
 
@@ -516,12 +533,15 @@ public class MainActivityViewModel implements ActivityViewModel {
     private void setupSMSLayout() {
         setupSMSRecyclerView();
 
+        MainActivityViewModel self = this;
         addSMSButton.setOnClickListener(v -> dialog.createUpdateAlertDialog("", Dialog.DialogAction.ADD, ProfileUtil.FieldType.SMS, new UpdateAlertDialogCallback() {
             @Override
             public void onSuccess(String value) {
                 if (value != null && !value.isEmpty()) {
                     OneSignal.getUser().addSmsSubscription(value);
-                    smsArrayList.add(value);
+                    ISmsSubscription newSubscription = OneSignal.getUser().getSubscriptions().getBySMS(value);
+                    newSubscription.addChangeHandler(self);
+                    smsArrayList.add(newSubscription);
                     toaster.makeCustomViewToast("Added SMS " + value, ToastType.SUCCESS);
                 }
 
@@ -599,11 +619,12 @@ public class MainActivityViewModel implements ActivityViewModel {
         recyclerViewBuilder.setupRecyclerView(emailsRecyclerView, 20, false, true);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         emailsRecyclerView.setLayoutManager(linearLayoutManager);
-        emailsRecyclerViewAdapter = new SingleRecyclerViewAdapter(context, emailArrayList, value -> {
-            OneSignal.getUser().removeEmailSubscription(value);
+        emailsRecyclerViewAdapter = new SubscriptionRecyclerViewAdapter(context, emailArrayList, value -> {
+            String email = ((IEmailSubscription)value).getEmail();
+            OneSignal.getUser().removeEmailSubscription(email);
             emailArrayList.remove(value);
             refreshEmailRecyclerView();
-            toaster.makeCustomViewToast("Deleted email " + value, ToastType.SUCCESS);
+            toaster.makeCustomViewToast("Deleted email " + email, ToastType.SUCCESS);
         });
         emailsRecyclerView.setAdapter(emailsRecyclerViewAdapter);
     }
@@ -624,11 +645,12 @@ public class MainActivityViewModel implements ActivityViewModel {
         recyclerViewBuilder.setupRecyclerView(smssRecyclerView, 20, false, true);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         smssRecyclerView.setLayoutManager(linearLayoutManager);
-        smssRecyclerViewAdapter = new SingleRecyclerViewAdapter(context, smsArrayList, value -> {
-            OneSignal.getInAppMessages().removeTrigger(value);
+        smssRecyclerViewAdapter = new SubscriptionRecyclerViewAdapter(context, smsArrayList, value -> {
+            String number = ((ISmsSubscription)value).getNumber();
+            OneSignal.getUser().removeSmsSubscription(number);
             smsArrayList.remove(value);
             refreshSMSRecyclerView();
-            toaster.makeCustomViewToast("Deleted SMS " + value, ToastType.SUCCESS);
+            toaster.makeCustomViewToast("Deleted SMS " + number, ToastType.SUCCESS);
         });
         smssRecyclerView.setAdapter(smssRecyclerViewAdapter);
     }
@@ -758,7 +780,7 @@ public class MainActivityViewModel implements ActivityViewModel {
 
     private void setupPromptLocationButton() {
         promptLocationButton.setOnClickListener(v -> {
-            OneSignal.getLocation().requestPermission(Continue.none());
+            OneSignal.getLocation().requestPermission(true, Continue.none());
         });
     }
 
@@ -771,34 +793,46 @@ public class MainActivityViewModel implements ActivityViewModel {
     private void setupSubscriptionSwitch() {
         refreshSubscriptionState();
 
-        subscriptionRelativeLayout.setOnClickListener(v -> {
-            boolean isSubscriptionEnabled = !subscriptionSwitch.isChecked();
-            subscriptionSwitch.setChecked(isSubscriptionEnabled);
+        pushSubscriptionEnabledRelativeLayout.setOnClickListener(v -> {
+            boolean isSubscriptionEnabled = !pushSubscriptionEnabledSwitch.isChecked();
+            pushSubscriptionEnabledSwitch.setChecked(isSubscriptionEnabled);
         });
 
         // Add a listener to toggle the push notification enablement for the push subscription.
-        subscriptionSwitch.setOnClickListener(v -> {
+        pushSubscriptionEnabledSwitch.setOnClickListener(v -> {
             IPushSubscription subscription = OneSignal.getUser().getSubscriptions().getPush();
-            if (subscription != null) {
-                subscription.setEnabled(subscriptionSwitch.isChecked());
-            }
+            subscription.setEnabled(pushSubscriptionEnabledSwitch.isChecked());
         });
     }
 
     private void setupPromptPushButton() {
         promptPushButton.setOnClickListener(v -> {
-            OneSignal.getNotifications().requestPermission(Continue.with(r -> refreshSubscriptionState()));
+            OneSignal.getNotifications().requestPermission(true, Continue.none());
         });
     }
 
-    private void refreshSubscriptionState() {
-        boolean isPermissionEnabled = OneSignal.getNotifications().getPermissionStatus().getNotificationsEnabled();
-        IPushSubscription pushSubscription = OneSignal.getUser().getSubscriptions().getPush();
-        boolean isSubscribed = pushSubscription != null && pushSubscription.getEnabled();
+    @Override
+    public void onSubscriptionChanged(@NonNull ISubscription subscription) {
+        if(subscription instanceof IPushSubscription) {
+            refreshSubscriptionState();
+        }
+        else if(subscription instanceof  IEmailSubscription) {
+            refreshEmailRecyclerView();
+        }
+        else if(subscription instanceof ISmsSubscription) {
+            refreshSMSRecyclerView();
+        }
+    }
 
-        subscriptionRelativeLayout.setEnabled(isPermissionEnabled);
-        subscriptionSwitch.setEnabled(isPermissionEnabled);
-        subscriptionSwitch.setChecked(isSubscribed);
+    private void refreshSubscriptionState() {
+        boolean isPermissionEnabled = OneSignal.getNotifications().getPermission();
+        IPushSubscription pushSubscription = OneSignal.getUser().getSubscriptions().getPush();
+
+        pushSubscriptionIdTextView.setText(pushSubscription.getId());
+        promptPushBottonLayout.setVisibility(isPermissionEnabled ? View.GONE : View.VISIBLE);
+        pushSubscriptionEnabledRelativeLayout.setEnabled(isPermissionEnabled);
+        pushSubscriptionEnabledSwitch.setEnabled(isPermissionEnabled);
+        pushSubscriptionEnabledSwitch.setChecked(pushSubscription.getEnabled());
     }
 
     private void setupSendNotificationsLayout() {
@@ -882,7 +916,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         emailArrayList.clear();
         List<IEmailSubscription> emailSubs = OneSignal.getUser().getSubscriptions().getEmails();
         for (IEmailSubscription emailSub: emailSubs) {
-            emailArrayList.add(emailSub.getEmail());
+            emailArrayList.add(emailSub);
         }
         refreshEmailRecyclerView();
 
@@ -890,7 +924,7 @@ public class MainActivityViewModel implements ActivityViewModel {
         smsArrayList.clear();
         List<ISmsSubscription> smsSubs = OneSignal.getUser().getSubscriptions().getSmss();
         for (ISmsSubscription smsSub: smsSubs) {
-            smsArrayList.add(smsSub.getNumber());
+            smsArrayList.add(smsSub);
         }
         refreshSMSRecyclerView();
 

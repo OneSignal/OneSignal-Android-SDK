@@ -2,7 +2,7 @@ package com.onesignal.inAppMessages
 
 /**
  * The lifecycle handler interface that should be implemented and provided as input
- * to [IIAMManager.setInAppMessageLifecycleHandler].  This allows for the app developer
+ * to [IInAppMessagesManager.setInAppMessageLifecycleHandler].  This allows for the app developer
  * to gain insight during the IAM lifecycle process.
  */
 interface IInAppMessageLifecycleHandler {
