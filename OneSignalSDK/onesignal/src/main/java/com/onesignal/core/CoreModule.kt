@@ -33,7 +33,7 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.startup.StartupService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.core.internal.time.impl.Time
-import com.onesignal.inAppMessages.IIAMManager
+import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.inAppMessages.internal.MisconfiguredIAMManager
 import com.onesignal.location.ILocationManager
 import com.onesignal.location.internal.MisconfiguredLocationManager
@@ -85,7 +85,7 @@ internal class CoreModule : IModule {
         // Register dummy services in the event they are not configured. These dummy services
         // will throw an error message if the associated functionality is attempted to be used.
         builder.register<MisconfiguredNotificationsManager>().provides<INotificationsManager>()
-        builder.register<MisconfiguredIAMManager>().provides<IIAMManager>()
+        builder.register<MisconfiguredIAMManager>().provides<IInAppMessagesManager>()
         builder.register<MisconfiguredLocationManager>().provides<ILocationManager>()
     }
 }

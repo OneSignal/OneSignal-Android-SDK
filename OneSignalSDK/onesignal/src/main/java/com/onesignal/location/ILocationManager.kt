@@ -22,10 +22,13 @@ interface ILocationManager {
      * Be aware of best practices regarding asking permissions on Android:
      * [Requesting Permissions | Android Developers] (https://developer.android.com/guide/topics/permissions/requesting.html)
      *
+     * @param fallbackToSettings Whether to direct the user to this app's settings to drive
+     * enabling of notifications, when the in-app prompting is not possible.
+     *
      * @return true if the user is opted in to location permission (user affirmed or already enabled)
      *         false if the user is opted out of location permission (user rejected)
      *
      * @see [Permission Requests | OneSignal Docs](https://documentation.onesignal.com/docs/permission-requests)
      */
-    suspend fun requestPermission(): Boolean
+    suspend fun requestPermission(fallbackToSettings: Boolean): Boolean
 }

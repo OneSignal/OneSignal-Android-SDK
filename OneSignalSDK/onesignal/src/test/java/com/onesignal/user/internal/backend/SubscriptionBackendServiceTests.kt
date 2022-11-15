@@ -9,6 +9,7 @@ import com.onesignal.extensions.RobolectricTest
 import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.backend.impl.SubscriptionBackendService
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -34,7 +35,7 @@ class SubscriptionBackendServiceTests : FunSpec({
         val subscriptionBackendService = SubscriptionBackendService(AndroidMockHelper.applicationService(), MockHelper.deviceService(), spyHttpClient)
 
         /* When */
-        val response = subscriptionBackendService.createSubscription("appId", aliasLabel, aliasValue, SubscriptionObjectType.ANDROID_PUSH, true, "pushToken", 1)
+        val response = subscriptionBackendService.createSubscription("appId", aliasLabel, aliasValue, SubscriptionObjectType.ANDROID_PUSH, true, "pushToken", SubscriptionStatus.SUBSCRIBED)
 
         /* Then */
         response shouldBe "subscriptionId"
@@ -69,7 +70,7 @@ class SubscriptionBackendServiceTests : FunSpec({
                 SubscriptionObjectType.ANDROID_PUSH,
                 true,
                 "pushToken",
-                1
+                SubscriptionStatus.SUBSCRIBED
             )
         }
 

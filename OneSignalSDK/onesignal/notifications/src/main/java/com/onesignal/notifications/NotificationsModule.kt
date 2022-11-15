@@ -8,7 +8,6 @@ import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.notifications.internal.INotificationActivityOpener
-import com.onesignal.notifications.internal.INotificationStateRefresher
 import com.onesignal.notifications.internal.NotificationsManager
 import com.onesignal.notifications.internal.analytics.IAnalyticsTracker
 import com.onesignal.notifications.internal.analytics.impl.FirebaseAnalyticsTracker
@@ -39,10 +38,8 @@ import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleServ
 import com.onesignal.notifications.internal.lifecycle.impl.NotificationLifecycleService
 import com.onesignal.notifications.internal.limiting.INotificationLimitManager
 import com.onesignal.notifications.internal.limiting.impl.NotificationLimitManager
-import com.onesignal.notifications.internal.listeners.ApplicationListener
-import com.onesignal.notifications.internal.listeners.ConfigModelStoreListener
+import com.onesignal.notifications.internal.listeners.DeviceRegistrationListener
 import com.onesignal.notifications.internal.listeners.NotificationListener
-import com.onesignal.notifications.internal.listeners.PushTokenListener
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessorHMS
 import com.onesignal.notifications.internal.open.impl.NotificationOpenedProcessor
@@ -142,14 +139,11 @@ internal class NotificationsModule : IModule {
         builder.register<ReceiveReceiptProcessor>().provides<IReceiveReceiptProcessor>()
 
         // Startable services
-        builder.register<ApplicationListener>().provides<IStartableService>()
-        builder.register<ConfigModelStoreListener>().provides<IStartableService>()
+        builder.register<DeviceRegistrationListener>().provides<IStartableService>()
         builder.register<NotificationListener>().provides<IStartableService>()
-        builder.register<PushTokenListener>().provides<IStartableService>()
 
         builder.register<NotificationsManager>()
             .provides<INotificationsManager>()
             .provides<INotificationActivityOpener>()
-            .provides<INotificationStateRefresher>()
     }
 }

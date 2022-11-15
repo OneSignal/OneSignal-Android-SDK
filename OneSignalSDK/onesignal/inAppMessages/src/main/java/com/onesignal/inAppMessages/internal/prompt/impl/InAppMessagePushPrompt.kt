@@ -7,13 +7,9 @@ internal class InAppMessagePushPrompt(
     private val _notificationsManager: INotificationsManager
 ) : InAppMessagePrompt() {
     override suspend fun handlePrompt(): PromptActionResult? {
-        val result = _notificationsManager.requestPermission()
+        val result = _notificationsManager.requestPermission(true)
 
-        return when (result) {
-            true -> PromptActionResult.PERMISSION_GRANTED
-            false -> PromptActionResult.PERMISSION_DENIED
-            null -> null
-        }
+        return if (result) PromptActionResult.PERMISSION_GRANTED else PromptActionResult.PERMISSION_DENIED
     }
 
     override val promptKey: String

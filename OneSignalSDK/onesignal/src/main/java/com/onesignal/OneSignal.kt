@@ -3,12 +3,12 @@ package com.onesignal
 import android.content.Context
 import com.onesignal.common.services.IServiceProvider
 import com.onesignal.debug.IDebugManager
-import com.onesignal.inAppMessages.IIAMManager
+import com.onesignal.inAppMessages.IInAppMessagesManager
+import com.onesignal.internal.OneSignalImp
 import com.onesignal.location.ILocationManager
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.session.ISessionManager
 import com.onesignal.user.IUserManager
-import com.onesignal.user.internal.OneSignalImp
 
 /**
  * This singleton class is the entry point to the OneSignal SDK. It
@@ -74,7 +74,7 @@ object OneSignal {
      * only after [initWithContext] has been called.
      */
     @JvmStatic
-    val inAppMessages: IIAMManager
+    val inAppMessages: IInAppMessagesManager
         get() = oneSignal.inAppMessages
 
     /**
@@ -188,6 +188,8 @@ object OneSignal {
      * Used to initialize the SDK when driven through user action. It is assumed [initWithContext]
      * has been called by the app developer, providing the appId, which has been cached for
      * this purpose.
+     *
+     * THIS IS AN INTERNAL INTERFACE AND SHOULD NOT BE USED DIRECTLY.
      */
     @JvmStatic
     fun initWithContext(context: Context) {
@@ -197,17 +199,26 @@ object OneSignal {
     /**
      * Used to retrieve services from the SDK when constructor dependency injection is not an
      * option.
+     *
+     * THIS IS AN INTERNAL INTERFACE AND SHOULD NOT BE USED DIRECTLY.
      */
     val services: IServiceProvider
         get() = oneSignal as IServiceProvider
 
     /**
-     * Inline function to retrieve a specific service
+     * Inline function to retrieve a specific service.
+     *
+     * THIS IS AN INTERNAL INTERFACE AND SHOULD NOT BE USED DIRECTLY.
      */
     inline fun <reified T : Any> getService(): T {
         return services.getService(T::class.java)
     }
 
+    /**
+     * Inline function to retrieve a specific service, or null if that service does not exist.
+     *
+     * THIS IS AN INTERNAL INTERFACE AND SHOULD NOT BE USED DIRECTLY.
+     */
     inline fun <reified T : Any> getServiceOrNull(): T? {
         return services.getServiceOrNull(T::class.java)
     }

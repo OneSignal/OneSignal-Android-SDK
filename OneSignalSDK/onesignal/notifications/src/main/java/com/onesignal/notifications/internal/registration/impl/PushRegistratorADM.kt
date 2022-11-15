@@ -5,6 +5,7 @@ import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.registration.IPushRegistrator
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -27,7 +28,7 @@ internal class PushRegistratorADM(
                 Logging.debug("ADM Already registered with ID:$registrationId")
                 result = IPushRegistrator.RegisterResult(
                     registrationId,
-                    IPushRegistrator.RegisterStatus.PUSH_STATUS_SUBSCRIBED
+                    SubscriptionStatus.SUBSCRIBED
                 )
             } else {
                 adm.startRegister()
@@ -42,13 +43,13 @@ internal class PushRegistratorADM(
                     Logging.error("ADM registered with ID:$registrationId")
                     IPushRegistrator.RegisterResult(
                         registrationId,
-                        IPushRegistrator.RegisterStatus.PUSH_STATUS_SUBSCRIBED
+                        SubscriptionStatus.SUBSCRIBED
                     )
                 } else {
                     Logging.error("com.onesignal.ADMMessageHandler timed out, please check that your have the receiver, service, and your package name matches(NOTE: Case Sensitive) per the OneSignal instructions.")
                     IPushRegistrator.RegisterResult(
                         null,
-                        IPushRegistrator.RegisterStatus.PUSH_STATUS_ERROR
+                        SubscriptionStatus.ERROR
                     )
                 }
             }

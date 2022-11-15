@@ -23,6 +23,15 @@ open class EventProducer<THandler> : IEventProducer<THandler> {
     }
 
     /**
+     * Subscribe all from an existing producer to this subscriber.
+     */
+    fun subscribeAll(from: EventProducer<THandler>) {
+        for (s in from._subscribers) {
+            subscribe(s)
+        }
+    }
+
+    /**
      * Conditional fire all subscribers *until one indicates to stop firing*
      *
      * @param callback The callback, returns true when no more subscribers should be called.

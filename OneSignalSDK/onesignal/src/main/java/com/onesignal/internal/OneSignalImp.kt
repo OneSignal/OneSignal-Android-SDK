@@ -1,4 +1,4 @@
-package com.onesignal.user.internal
+package com.onesignal.internal
 
 import android.content.Context
 import com.onesignal.IOneSignal
@@ -20,7 +20,7 @@ import com.onesignal.debug.IDebugManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.DebugManager
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.inAppMessages.IIAMManager
+import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.location.ILocationManager
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.session.ISessionManager
@@ -38,6 +38,7 @@ import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -73,13 +74,13 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val session: ISessionManager get() = if (isInitialized) _session!! else throw Exception("Must call 'initWithContext' before use")
     override val notifications: INotificationsManager get() = if (isInitialized) _notifications!! else throw Exception("Must call 'initWithContext' before use")
     override val location: ILocationManager get() = if (isInitialized) _location!! else throw Exception("Must call 'initWithContext' before use")
-    override val inAppMessages: IIAMManager get() = if (isInitialized) _iam!! else throw Exception("Must call 'initWithContext' before use")
+    override val inAppMessages: IInAppMessagesManager get() = if (isInitialized) _iam!! else throw Exception("Must call 'initWithContext' before use")
     override val user: IUserManager get() = if (isInitialized) _user!! else throw Exception("Must call 'initWithContext' before use")
 
     // Services required by this class
     private var _user: IUserManager? = null
     private var _session: ISessionManager? = null
-    private var _iam: IIAMManager? = null
+    private var _iam: IInAppMessagesManager? = null
     private var _location: ILocationManager? = null
     private var _notifications: INotificationsManager? = null
     private var _operationRepo: IOperationRepo? = null
@@ -298,6 +299,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         newPushSubscription.type = SubscriptionType.PUSH
         newPushSubscription.enabled = currentPushSubscription?.enabled ?: true
         newPushSubscription.address = currentPushSubscription?.address ?: ""
+        newPushSubscription.status = currentPushSubscription?.status ?: SubscriptionStatus.NO_PERMISSION
 
         subscriptions.add(newPushSubscription)
 
