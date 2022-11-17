@@ -16,7 +16,6 @@ import androidx.fragment.app.FragmentManager
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.events.EventProducer
-import com.onesignal.common.events.IEventProducer
 import com.onesignal.common.threading.Waiter
 import com.onesignal.core.internal.application.ActivityLifecycleHandlerBase
 import com.onesignal.core.internal.application.AppEntryAction
@@ -27,9 +26,9 @@ import com.onesignal.debug.internal.logging.Logging
 import java.lang.ref.WeakReference
 
 class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, OnGlobalLayoutListener {
-    private val _activityLifecycleNotifier: IEventProducer<IActivityLifecycleHandler> = EventProducer()
-    private val _applicationLifecycleNotifier: IEventProducer<IApplicationLifecycleHandler> = EventProducer()
-    private val _systemConditionNotifier: IEventProducer<ISystemConditionHandler> = EventProducer()
+    private val _activityLifecycleNotifier = EventProducer<IActivityLifecycleHandler>()
+    private val _applicationLifecycleNotifier = EventProducer<IApplicationLifecycleHandler>()
+    private val _systemConditionNotifier = EventProducer<ISystemConditionHandler>()
 
     override val isInForeground: Boolean
         get() = entryState.isAppOpen || entryState.isNotificationClick

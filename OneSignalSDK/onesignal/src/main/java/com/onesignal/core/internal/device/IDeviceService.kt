@@ -1,12 +1,11 @@
 package com.onesignal.core.internal.device
 
 interface IDeviceService {
-    val isGooglePlayStoreInstalled: Boolean
     val isAndroidDeviceType: Boolean
     val isFireOSDeviceType: Boolean
     val isHuaweiDeviceType: Boolean
 
-    val deviceType: Int
+    val deviceType: DeviceType
 
     val isGMSInstalledAndEnabled: Boolean
     val hasAllHMSLibrariesForPushKit: Boolean
@@ -17,5 +16,11 @@ interface IDeviceService {
         MISSING,
         OUTDATED,
         OK
+    }
+
+    enum class DeviceType(val value: Int) {
+        Fire(2),
+        Android(1),
+        Huawei(13)
     }
 }

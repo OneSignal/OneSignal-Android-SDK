@@ -94,7 +94,7 @@ internal class InAppBackendService(
         val json: JSONObject = object : JSONObject() {
             init {
                 put("app_id", appId)
-                put("device_type", _deviceService.deviceType)
+                put("device_type", _deviceService.deviceType.value)
                 put("player_id", subscriptionId)
                 put("click_id", clickId)
                 put("variant_id", variantId)
@@ -129,7 +129,7 @@ internal class InAppBackendService(
                 put("app_id", appId)
                 put("player_id", subscriptionId)
                 put("variant_id", variantId)
-                put("device_type", _deviceService.deviceType)
+                put("device_type", _deviceService.deviceType.value)
                 put("page_id", pageId)
             }
         }
@@ -155,7 +155,7 @@ internal class InAppBackendService(
                 put("app_id", appId)
                 put("player_id", subscriptionId)
                 put("variant_id", variantId)
-                put("device_type", _deviceService.deviceType)
+                put("device_type", _deviceService.deviceType.value)
                 put("first_impression", true)
             }
         }

@@ -110,11 +110,9 @@ object MockHelper {
         return mockLanguageContext
     }
 
-    const val DEFAULT_DEVICE_TYPE = 1
-
     fun deviceService(): IDeviceService {
         val deviceService = mockk<IDeviceService>()
-        every { deviceService.deviceType } returns DEFAULT_DEVICE_TYPE
+        every { deviceService.deviceType } returns IDeviceService.DeviceType.Android
         return deviceService
     }
 }

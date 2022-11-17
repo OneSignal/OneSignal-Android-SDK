@@ -1,10 +1,14 @@
 package com.onesignal.common.events
 
+import com.onesignal.common.threading.suspendifyOnMain
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 /**
- * A standard implementation that implements [IEventProducer] to make event firing less burdensome
- * to the user.
+ * A standard implementation that implements [IEventNotifier] and additional functionality to make
+ * event firing less burdensome to the user.
  */
-open class EventProducer<THandler> : IEventProducer<THandler> {
+open class EventProducer<THandler> : IEventNotifier<THandler> {
 
     private val _subscribers: MutableList<THandler> = mutableListOf()
 
@@ -14,12 +18,6 @@ open class EventProducer<THandler> : IEventProducer<THandler> {
 
     override fun unsubscribe(handler: THandler) {
         _subscribers.remove(handler)
-    }
-
-    override fun fire(callback: (THandler) -> Unit) {
-        for (s in _subscribers) {
-            callback(s)
-        }
     }
 
     /**
@@ -32,25 +30,55 @@ open class EventProducer<THandler> : IEventProducer<THandler> {
     }
 
     /**
-     * Conditional fire all subscribers *until one indicates to stop firing*
+     * Call this to fire the callback which will allow the caller to drive the calling of the
+     * callback handlers if there are any.
      *
-     * @param callback The callback, returns true when no more subscribers should be called.
-     *
-     * @return Whether a subscriber callback indicated to stop firing.
+     * @param callback The callback will be invoked for each subscribed handler, allowing you to call the handler.
      */
-    fun conditionalFire(callback: (THandler) -> Boolean): Boolean {
+    fun fire(callback: (THandler) -> Unit) {
         for (s in _subscribers) {
-            if (!callback(s)) {
-                return true
-            }
+            callback(s)
         }
-
-        return true
     }
 
+    /**
+     * Call this to fire the callback which will allow the caller to drive the calling of the
+     * callback handlers if there are any.  The callback will be invoked asynchronously on the main
+     * thread.  Control will be returned immediately, most likely prior to the callbacks being invoked.
+     *
+     * @param callback The callback will be invoked for each subscribed handler, allowing you to call the handler.
+     */
+    fun fireOnMain(callback: (THandler) -> Unit) {
+        suspendifyOnMain {
+            for (s in _subscribers) {
+                callback(s)
+            }
+        }
+    }
+
+    /**
+     * Call this to fire the callback which will allow the caller to drive the calling of the
+     * callback handlers if there are any.
+     *
+     * @param callback The callback will be invoked for each subscribed handler, allowing you to call the handler.
+     */
     suspend fun suspendingFire(callback: suspend (THandler) -> Unit) {
         for (s in _subscribers) {
             callback(s)
+        }
+    }
+
+    /**
+     * Call this to fire the callback which will allow the caller to drive the calling of the
+     * callback handlers if there are any. The callback will be invoked on the main thread.
+     *
+     * @param callback The callback will be invoked for each subscribed handler, allowing you to call the handler.
+     */
+    suspend fun suspendingFireOnMain(callback: suspend (THandler) -> Unit) {
+        withContext(Dispatchers.Main) {
+            for (s in _subscribers) {
+                callback(s)
+            }
         }
     }
 }

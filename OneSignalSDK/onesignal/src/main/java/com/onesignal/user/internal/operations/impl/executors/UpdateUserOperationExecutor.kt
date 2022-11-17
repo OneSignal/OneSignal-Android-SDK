@@ -33,7 +33,7 @@ internal class UpdateUserOperationExecutor(
         get() = listOf(SET_TAG, DELETE_TAG, SET_PROPERTY, TRACK_SESSION_START, TRACK_SESSION_END, TRACK_PURCHASE)
 
     override suspend fun execute(ops: List<Operation>): ExecutionResponse {
-        Logging.log(LogLevel.DEBUG, "UserOperationExecutor(operation: $operations)")
+        Logging.log(LogLevel.DEBUG, "UpdateUserOperationExecutor(operation: $ops)")
 
         var appId: String? = null
         var onesignalId: String? = null

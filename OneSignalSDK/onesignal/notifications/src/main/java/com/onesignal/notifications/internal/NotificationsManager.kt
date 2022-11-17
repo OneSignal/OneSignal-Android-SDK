@@ -3,7 +3,6 @@ package com.onesignal.notifications.internal
 import android.app.Activity
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.exceptions.BackendException
-import com.onesignal.common.threading.suspendifyOnMain
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
@@ -100,9 +99,7 @@ internal class NotificationsManager(
 
         if (oldPermissionStatus != isEnabled) {
             // switch over to the main thread for the firing of the event
-            suspendifyOnMain {
-                _permissionChangedNotifier.fire { it.onPermissionChanged(isEnabled) }
-            }
+            _permissionChangedNotifier.fireOnMain { it.onPermissionChanged(isEnabled) }
         }
     }
 
