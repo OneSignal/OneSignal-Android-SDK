@@ -18,9 +18,9 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.inAppMessages.IIAMManager
 import com.onesignal.inAppMessages.IInAppMessageClickHandler
 import com.onesignal.inAppMessages.IInAppMessageLifecycleHandler
+import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.inAppMessages.InAppMessageActionUrlType
 import com.onesignal.inAppMessages.R
 import com.onesignal.inAppMessages.internal.backend.IInAppBackendService
@@ -66,7 +66,7 @@ internal class InAppMessagesManager(
     private val _lifecycle: IInAppLifecycleService,
     private val _languageContext: ILanguageContext,
     private val _time: ITime
-) : IIAMManager,
+) : IInAppMessagesManager,
     IStartableService,
     ISubscriptionChangedHandler,
     ISingletonModelStoreChangeHandler<ConfigModel>,
@@ -141,12 +141,12 @@ internal class InAppMessagesManager(
         }
     }
 
-    override fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler?) {
+    override fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler) {
         Logging.log(LogLevel.DEBUG, "IAMManager.setInAppMessageLifecycleHandler(handler: $handler)")
         _lifecycleCallback.set(handler)
     }
 
-    override fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler?) {
+    override fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler) {
         Logging.log(LogLevel.DEBUG, "IAMManager.setInAppMessageClickHandler(handler: $handler)")
         _messageClickCallback.set(handler)
     }
@@ -168,10 +168,6 @@ internal class InAppMessagesManager(
     }
 
     override fun onSubscriptionsChanged() {
-        if (_subscriptionManager.subscriptions.push == null) {
-            return
-        }
-
         suspendifyOnThread {
             fetchMessages()
         }
@@ -193,9 +189,9 @@ internal class InAppMessagesManager(
     // called when a new push subscription is added, or the app id is updated, or a new session starts
     private suspend fun fetchMessages() {
         val appId = _configModelStore.model.appId
-        val subscriptionId = _subscriptionManager.subscriptions.push?.id
+        val subscriptionId = _subscriptionManager.subscriptions.push.id
 
-        if (subscriptionId == null || IDManager.isLocalId(subscriptionId) || appId.isEmpty()) {
+        if (subscriptionId.isEmpty() || IDManager.isLocalId(subscriptionId) || appId.isEmpty()) {
             return
         }
 
@@ -505,7 +501,7 @@ internal class InAppMessagesManager(
             try {
                 _backend.sendIAMImpression(
                     _configModelStore.model.appId,
-                    _subscriptionManager.subscriptions.push?.id.toString(),
+                    _subscriptionManager.subscriptions.push.id,
                     variantId,
                     message.messageId
                 )
@@ -732,7 +728,7 @@ internal class InAppMessagesManager(
         try {
             _backend.sendIAMPageImpression(
                 _configModelStore.model.appId,
-                _subscriptionManager.subscriptions.push?.id.toString(),
+                _subscriptionManager.subscriptions.push.id,
                 variantId,
                 message.messageId,
                 pageId
@@ -766,7 +762,7 @@ internal class InAppMessagesManager(
         try {
             _backend.sendIAMClick(
                 _configModelStore.model.appId,
-                _subscriptionManager.subscriptions.push?.id.toString(),
+                _subscriptionManager.subscriptions.push.id,
                 variantId,
                 message.messageId,
                 clickId,

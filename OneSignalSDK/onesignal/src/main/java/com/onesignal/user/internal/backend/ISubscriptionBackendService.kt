@@ -1,5 +1,7 @@
 package com.onesignal.user.internal.backend
 
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
+
 interface ISubscriptionBackendService {
     /**
      * Create a new subscription for the user identified by the [aliasLabel]/[aliasValue] provided. If the subscription
@@ -17,18 +19,19 @@ interface ISubscriptionBackendService {
      *
      * @return The ID of the subscription created.
      */
-    suspend fun createSubscription(appId: String, aliasLabel: String, aliasValue: String, type: SubscriptionObjectType, enabled: Boolean, address: String, status: Int): String
+    suspend fun createSubscription(appId: String, aliasLabel: String, aliasValue: String, type: SubscriptionObjectType, enabled: Boolean, address: String, status: SubscriptionStatus): String
 
     /**
      * Update an existing subscription with the properties provided.
      *
      * @param appId The ID of the OneSignal application this subscription exists under.
      * @param subscriptionId The ID of the subscription to update.
+     * @param type The new type of the subscription.
      * @param enabled Whether this subscription is enabled.
      * @param address The subscription address.
      * @param status The subscription status.
      */
-    suspend fun updateSubscription(appId: String, subscriptionId: String, enabled: Boolean, address: String, status: Int)
+    suspend fun updateSubscription(appId: String, subscriptionId: String, type: SubscriptionObjectType, enabled: Boolean, address: String, status: SubscriptionStatus)
 
     /**
      * Delete an existing subscription.
