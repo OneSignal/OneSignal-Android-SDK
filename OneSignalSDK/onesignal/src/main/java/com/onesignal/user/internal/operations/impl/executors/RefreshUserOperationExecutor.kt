@@ -31,7 +31,7 @@ internal class RefreshUserOperationExecutor(
         get() = listOf(REFRESH_USER)
 
     override suspend fun execute(operations: List<Operation>): ExecutionResponse {
-        Logging.log(LogLevel.DEBUG, "GetUserOperationExecutor(operation: $operations)")
+        Logging.log(LogLevel.DEBUG, "RefreshUserOperationExecutor(operation: $operations)")
 
         val startingOp = operations.first()
         if (startingOp is RefreshUserOperation) {

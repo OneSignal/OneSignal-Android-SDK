@@ -1,6 +1,7 @@
 package com.onesignal.session.internal.outcomes.impl
 
 import com.onesignal.common.exceptions.BackendException
+import com.onesignal.core.internal.device.IDeviceService
 
 /**
  * The backend service for outcomes.
@@ -17,5 +18,5 @@ internal interface IOutcomeEventsBackendService {
      * @param direct Whether this outcome event is direct. `true` if it is, `false` if it isn't, `null` if should not be specified.
      * @param event The outcome event to send up.
      */
-    suspend fun sendOutcomeEvent(appId: String, deviceType: Int, direct: Boolean?, event: OutcomeEvent)
+    suspend fun sendOutcomeEvent(appId: String, deviceType: IDeviceService.DeviceType, direct: Boolean?, event: OutcomeEvent)
 }

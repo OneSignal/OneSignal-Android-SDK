@@ -24,13 +24,3 @@ interface ICallbackNotifier<THandler> {
      */
     fun set(handler: THandler?)
 }
-
-/**
- * An extension of [ICallbackNotifier] should be used internally to indicate the implementing
- * class is the producer of the callback.  The interface exists for abstraction/testing purposes.
- *
- * @param THandler The type that the implementor is expecting to callback to.
- */
-interface ICallbackProducer<THandler> : ICallbackNotifier<THandler> {
-    fun fire(callback: (THandler) -> Unit)
-}
