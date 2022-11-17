@@ -64,11 +64,8 @@ internal class OutcomeEventsController(
     }
 
     private suspend fun sendSavedOutcomeEvent(event: OutcomeEventParams) {
-        val deviceType: Int = _deviceService.deviceType
-        val appId: String = _configModelStore.model.appId
-
         try {
-            requestMeasureOutcomeEvent(appId, deviceType, event)
+            requestMeasureOutcomeEvent(event)
 
             _outcomeEventsCache.deleteOldOutcomeEvent(event)
         } catch (ex: BackendException) {
@@ -158,8 +155,6 @@ Outcome event was cached and will be reattempted on app cold start"""
         influences: List<Influence>
     ): OutcomeEvent? {
         val timestampSeconds: Long = _time.currentTimeMillis / 1000
-        val deviceType: Int = _deviceService.deviceType
-        val appId: String = _configModelStore.model.appId
         var directSourceBody: OutcomeSourceBody? = null
         var indirectSourceBody: OutcomeSourceBody? = null
         var unattributed = false
@@ -190,7 +185,7 @@ Outcome event was cached and will be reattempted on app cold start"""
         val eventParams = OutcomeEventParams(name, source, weight, 0)
 
         try {
-            requestMeasureOutcomeEvent(appId, deviceType, eventParams)
+            requestMeasureOutcomeEvent(eventParams)
 
             saveUniqueOutcome(eventParams)
 
@@ -268,7 +263,9 @@ Outcome event was cached and will be reattempted on app cold start"""
         return uniqueInfluences.ifEmpty { null }
     }
 
-    private suspend fun requestMeasureOutcomeEvent(appId: String, deviceType: Int, eventParams: OutcomeEventParams) {
+    private suspend fun requestMeasureOutcomeEvent(eventParams: OutcomeEventParams) {
+        val deviceType = _deviceService.deviceType
+        val appId: String = _configModelStore.model.appId
         val event = OutcomeEvent.fromOutcomeEventParamstoOutcomeEvent(eventParams)
         val direct = when (event.session) {
             InfluenceType.DIRECT -> true

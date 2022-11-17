@@ -2,7 +2,6 @@ package com.onesignal.common.modeling
 
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.events.IEventNotifier
-import com.onesignal.common.events.IEventProducer
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -62,7 +61,7 @@ open class Model(
         set(value) { setProperty(::id.name, value) }
 
     protected val data: MutableMap<String, Any?> = mutableMapOf()
-    private val _changeNotifier: IEventProducer<IModelChangedHandler> = EventProducer()
+    private val _changeNotifier = EventProducer<IModelChangedHandler>()
 
     init {
         if (_parentModel != null && _parentProperty == null) {
