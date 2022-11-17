@@ -27,21 +27,3 @@ interface IEventNotifier<THandler> {
      */
     fun unsubscribe(handler: THandler)
 }
-
-/**
- * An extension of [IEventNotifier] should be used internally to indicate the implementing
- * class is the producer of the event.  The interface exists for abstraction/testing purposes.
- *
- * @param THandler The type that the implementor is expecting to raise events to.
- */
-interface IEventProducer<THandler> : IEventNotifier<THandler> {
-    /**
-     * Call this to fire an event which will iterate through all subscribers
-     * and allow the caller to drive the calling of the handler. It is done
-     * this way to avoid this abstract class from knowing the specific
-     * signature of the handler.
-     *
-     * @param callback The callback will be invoked for each subscriber, allowing you to call the handler.
-     */
-    fun fire(callback: (THandler) -> Unit)
-}

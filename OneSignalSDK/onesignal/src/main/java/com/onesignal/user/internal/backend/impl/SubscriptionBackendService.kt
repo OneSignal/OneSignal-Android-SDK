@@ -34,7 +34,7 @@ internal class SubscriptionBackendService(
         val json = JSONObject()
         try {
             json.put("app_id", appId)
-            json.put("device_type", _device.deviceType)
+            json.put("device_type", _device.deviceType.value)
             json.put("device_model", Build.MODEL)
             json.put("device_os", Build.VERSION.RELEASE)
             json.put("timezone", TimeUtils.getTimeZoneOffset())
@@ -81,7 +81,7 @@ internal class SubscriptionBackendService(
         val json = JSONObject()
         try {
             json.put("app_id", appId)
-            json.put("device_type", _device.deviceType)
+            json.put("device_type", _device.deviceType.value)
             json.put("device_model", Build.MODEL)
             json.put("device_os", Build.VERSION.RELEASE)
             json.put("timezone", TimeUtils.getTimeZoneOffset())

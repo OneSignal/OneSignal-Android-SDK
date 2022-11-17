@@ -1,6 +1,7 @@
 package com.onesignal.notifications.internal.backend
 
 import com.onesignal.common.exceptions.BackendException
+import com.onesignal.core.internal.device.IDeviceService
 import org.json.JSONObject
 
 /**
@@ -18,7 +19,7 @@ internal interface INotificationBackendService {
      * @param subscriptionId The specific subscription within the [appId] the notification has been received for.
      * @param deviceType The type of device the notification was received at.
      */
-    suspend fun updateNotificationAsReceived(appId: String, notificationId: String, subscriptionId: String, deviceType: Int)
+    suspend fun updateNotificationAsReceived(appId: String, notificationId: String, subscriptionId: String, deviceType: IDeviceService.DeviceType)
 
     /**
      * Update the provided notification as opened by a specific subscription.
@@ -30,7 +31,7 @@ internal interface INotificationBackendService {
      * @param subscriptionId The specific subscription within the [appId] the notification has been received for.
      * @param deviceType The type of device the notification was received at.
      */
-    suspend fun updateNotificationAsOpened(appId: String, notificationId: String, subscriptionId: String, deviceType: Int)
+    suspend fun updateNotificationAsOpened(appId: String, notificationId: String, subscriptionId: String, deviceType: IDeviceService.DeviceType)
 
     /**
      * Send a notification using the provided payload.
