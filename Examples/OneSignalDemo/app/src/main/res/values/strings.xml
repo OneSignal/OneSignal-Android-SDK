@@ -28,7 +28,9 @@
     <string name="no_tags_added">No Tags Added</string>
     <string name="add_tag">Add Tag</string>
 
-    <string name="push_notification">Push Notifications</string>
+    <string name="push_notification">Push</string>
+    <string name="send_push_notification">Send Push Notification</string>
+    <string name="push_notification_no_id">Not Available</string>
 
     <string name="outcomes">Outcome Events</string>
     <string name="current_session">App Session:</string>
@@ -41,6 +43,7 @@
     <string name="add_trigger">Add Trigger</string>
 
     <string name="in_app_messaging">In-App Messaging</string>
+    <string name="send_in_app_messaging">Send In-App Message</string>
 
     <string name="location">Location</string>
     <string name="location_shared_colon">Location Shared:</string>
@@ -48,7 +51,7 @@
     <string name="prompt_location">Prompt Location</string>
 
     <string name="subscribe_colon">Notifications:</string>
-    <string name="app_push_notifications_description">Toggle Push Notifications</string>
+    <string name="app_push_notifications_description">Enabled</string>
     <string name="prompt_push">Prompt Push</string>
 
     <string name="pause_in_app_messages_colon">Pause In-App Messages:</string>

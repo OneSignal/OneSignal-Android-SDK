@@ -58,25 +58,12 @@ internal class SubscriptionOperationExecutor(
         val address = lastUpdateOperation?.address ?: createOperation.address
         val status = lastUpdateOperation?.status ?: createOperation.status
 
-        // translate the subscription type to the subscription object type.
-        val subscriptionType: SubscriptionObjectType = when (createOperation.type) {
-            SubscriptionType.SMS -> {
-                SubscriptionObjectType.SMS
-            }
-            SubscriptionType.EMAIL -> {
-                SubscriptionObjectType.SMS
-            }
-            else -> {
-                SubscriptionObjectType.fromDeviceType(_deviceService.deviceType)
-            }
-        }
-
         try {
             val backendSubscriptionId = _subscriptionBackend.createSubscription(
                 createOperation.appId,
                 IdentityConstants.ONESIGNAL_ID,
                 createOperation.onesignalId,
-                subscriptionType,
+                convert(createOperation.type),
                 enabled,
                 address,
                 status
@@ -118,6 +105,7 @@ internal class SubscriptionOperationExecutor(
             _subscriptionBackend.updateSubscription(
                 lastOperation.appId,
                 lastOperation.subscriptionId,
+                convert(lastOperation.type),
                 lastOperation.enabled,
                 lastOperation.address,
                 lastOperation.status
@@ -129,7 +117,7 @@ internal class SubscriptionOperationExecutor(
                 subscriptionModel.setProperty(SubscriptionModel::type.name, lastOperation.type.toString(), ModelChangeTags.HYDRATE)
                 subscriptionModel.setProperty(SubscriptionModel::address.name, lastOperation.address, ModelChangeTags.HYDRATE)
                 subscriptionModel.setProperty(SubscriptionModel::enabled.name, lastOperation.enabled, ModelChangeTags.HYDRATE)
-                subscriptionModel.setProperty(SubscriptionModel::status.name, lastOperation.status, ModelChangeTags.HYDRATE)
+                subscriptionModel.setProperty(SubscriptionModel::status.name, lastOperation.status.value, ModelChangeTags.HYDRATE)
             } else {
                 val newSubModel = SubscriptionModel()
                 newSubModel.id = lastOperation.subscriptionId
@@ -149,6 +137,20 @@ internal class SubscriptionOperationExecutor(
         }
 
         return ExecutionResponse(ExecutionResult.SUCCESS)
+    }
+
+    private fun convert(subscriptionType: SubscriptionType): SubscriptionObjectType {
+        return when (subscriptionType) {
+            SubscriptionType.SMS -> {
+                SubscriptionObjectType.SMS
+            }
+            SubscriptionType.EMAIL -> {
+                SubscriptionObjectType.SMS
+            }
+            else -> {
+                SubscriptionObjectType.fromDeviceType(_deviceService.deviceType)
+            }
+        }
     }
 
     private suspend fun deleteSubscription(op: DeleteSubscriptionOperation): ExecutionResponse {

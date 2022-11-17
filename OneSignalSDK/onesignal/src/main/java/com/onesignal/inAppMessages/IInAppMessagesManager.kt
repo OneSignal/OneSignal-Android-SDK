@@ -6,7 +6,7 @@ package com.onesignal.inAppMessages
  * if the current user qualifies for any IAMs sent down by the OneSignal backend. To
  * blanket disable IAMs, set [paused] to `true` on startup.
  */
-interface IIAMManager {
+interface IInAppMessagesManager {
 
     /**
      * Whether the In-app messaging is currently paused.  When set to `true` no IAM
@@ -71,7 +71,7 @@ interface IIAMManager {
      * @param handler: The handler that will be called at various times throughout
      *                 the IAM lifecycle.
      */
-    fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler?)
+    fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler)
 
     /**
      * Set the IAM click handler.
@@ -79,5 +79,5 @@ interface IIAMManager {
      * @param handler: The handler that will be called when the IAM has been
      *                 clicked.
      */
-    fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler?)
+    fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler)
 }
