@@ -58,7 +58,7 @@ internal class LocationManager(
      *
      * For all cases we are calling prompt listeners.
      */
-    override suspend fun requestPermission(): Boolean {
+    override suspend fun requestPermission(fallbackToSettings: Boolean): Boolean {
         Logging.log(LogLevel.DEBUG, "LocationManager.requestPermission()")
 
         if (!isLocationShared) {
@@ -125,12 +125,12 @@ internal class LocationManager(
                 //
                 // For each case, we call the prompt handlers
                 result = if (requestPermission != null) {
-                    _locationPermissionController.prompt(true, requestPermission)
+                    _locationPermissionController.prompt(fallbackToSettings, requestPermission)
                 } else {
                     hasCoarsePermissionGranted
                 }
             } else if (Build.VERSION.SDK_INT >= 29 && !hasBackgroundPermissionGranted) {
-                result = backgroundLocationPermissionLogic()
+                result = backgroundLocationPermissionLogic(fallbackToSettings)
             } else {
                 result = true
                 startGetLocation()
@@ -145,11 +145,11 @@ internal class LocationManager(
      * On Android 11 and greater, background location should be asked after fine and coarse permission
      * If background permission is asked at the same time as fine and coarse then both permission request are ignored
      */
-    private suspend fun backgroundLocationPermissionLogic(): Boolean {
+    private suspend fun backgroundLocationPermissionLogic(fallbackToSettings: Boolean): Boolean {
         val hasManifestPermission = AndroidUtils.hasPermission(LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING, false, _applicationService)
 
         return if (hasManifestPermission) {
-            _locationPermissionController.prompt(true, LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING)
+            _locationPermissionController.prompt(fallbackToSettings, LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING)
         } else {
             // Fine permission already granted
             true

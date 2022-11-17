@@ -9,7 +9,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.onesignal.OneSignal;
-import com.onesignal.notifications.IPermissionStateChanges;
 import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.constant.Text;
 import com.onesignal.sdktest.util.IntentTo;
@@ -142,7 +141,7 @@ public class SplashActivityViewModel implements ActivityViewModel {
     }
 
     @Override
-    public void onPermissionChanged(@Nullable IPermissionStateChanges stateChanges) {
+    public void onPermissionChanged(@Nullable boolean permission) {
 
     }
 }

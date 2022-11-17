@@ -31,6 +31,7 @@ import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.registration.IPushRegistrator
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import kotlinx.coroutines.delay
 import java.io.IOException
 
@@ -52,14 +53,14 @@ internal abstract class PushRegistratorAbstractGoogle(
     override suspend fun registerForPush(): IPushRegistrator.RegisterResult {
         if (!_deviceService.hasFCMLibrary) {
             Logging.fatal("The Firebase FCM library is missing! Please make sure to include it in your project.")
-            return IPushRegistrator.RegisterResult(null, IPushRegistrator.RegisterStatus.PUSH_STATUS_MISSING_FIREBASE_FCM_LIBRARY)
+            return IPushRegistrator.RegisterResult(null, SubscriptionStatus.MISSING_FIREBASE_FCM_LIBRARY)
         }
 
         return if (!isValidProjectNumber(_configModelStore.model.googleProjectNumber)) {
             Logging.error("Missing Google Project number!\nPlease enter a Google Project number / Sender ID on under App Settings > Android > Configuration on the OneSignal dashboard.")
             IPushRegistrator.RegisterResult(
                 null,
-                IPushRegistrator.RegisterStatus.PUSH_STATUS_INVALID_FCM_SENDER_ID
+                SubscriptionStatus.INVALID_FCM_SENDER_ID
             )
         } else {
             internalRegisterForPush(_configModelStore.model.googleProjectNumber!!)
@@ -79,7 +80,7 @@ internal abstract class PushRegistratorAbstractGoogle(
                 Logging.error("'Google Play services' app not installed or disabled on the device.")
                 IPushRegistrator.RegisterResult(
                     null,
-                    IPushRegistrator.RegisterStatus.PUSH_STATUS_OUTDATED_GOOGLE_PLAY_SERVICES_APP
+                    SubscriptionStatus.OUTDATED_GOOGLE_PLAY_SERVICES_APP
                 )
             }
         } catch (t: Throwable) {
@@ -91,7 +92,7 @@ internal abstract class PushRegistratorAbstractGoogle(
 
         return IPushRegistrator.RegisterResult(
             null,
-            IPushRegistrator.RegisterStatus.PUSH_STATUS_FIREBASE_FCM_INIT_ERROR
+            SubscriptionStatus.FIREBASE_FCM_INIT_ERROR
         )
     }
 
@@ -108,7 +109,7 @@ internal abstract class PushRegistratorAbstractGoogle(
         // TODO: New error?
         return IPushRegistrator.RegisterResult(
             null,
-            IPushRegistrator.RegisterStatus.PUSH_STATUS_FIREBASE_FCM_INIT_ERROR
+            SubscriptionStatus.FIREBASE_FCM_INIT_ERROR
         )
     }
 
@@ -118,10 +119,10 @@ internal abstract class PushRegistratorAbstractGoogle(
             Logging.info("Device registered, push token = $registrationId")
             return IPushRegistrator.RegisterResult(
                 registrationId,
-                IPushRegistrator.RegisterStatus.PUSH_STATUS_SUBSCRIBED
+                SubscriptionStatus.SUBSCRIBED
             )
         } catch (e: IOException) {
-            val pushStatus: IPushRegistrator.RegisterStatus = pushStatusFromThrowable(e)
+            val pushStatus: SubscriptionStatus = pushStatusFromThrowable(e)
             val exceptionMessage: String? = AndroidUtils.getRootCauseMessage(e)
             val retryingKnownToWorkSometimes = "SERVICE_NOT_AVAILABLE" == exceptionMessage || "AUTHENTICATION_FAILED" == exceptionMessage
 
@@ -149,23 +150,23 @@ internal abstract class PushRegistratorAbstractGoogle(
             Logging.error("Unknown error getting $providerName Token", t)
             return IPushRegistrator.RegisterResult(
                 null,
-                IPushRegistrator.RegisterStatus.PUSH_STATUS_FIREBASE_FCM_ERROR_MISC_EXCEPTION
+                SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION
             )
         }
 
         return null
     }
 
-    private fun pushStatusFromThrowable(throwable: Throwable): IPushRegistrator.RegisterStatus {
+    private fun pushStatusFromThrowable(throwable: Throwable): SubscriptionStatus {
         val exceptionMessage: String? = AndroidUtils.getRootCauseMessage(throwable)
         return if (throwable is IOException) {
             when (exceptionMessage) {
-                "SERVICE_NOT_AVAILABLE" -> IPushRegistrator.RegisterStatus.PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE
-                "AUTHENTICATION_FAILED" -> IPushRegistrator.RegisterStatus.PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED
-                else -> IPushRegistrator.RegisterStatus.PUSH_STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER
+                "SERVICE_NOT_AVAILABLE" -> SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_SERVICE_NOT_AVAILABLE
+                "AUTHENTICATION_FAILED" -> SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED
+                else -> SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER
             }
         } else {
-            IPushRegistrator.RegisterStatus.PUSH_STATUS_FIREBASE_FCM_ERROR_MISC_EXCEPTION
+            SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION
         }
     }
 

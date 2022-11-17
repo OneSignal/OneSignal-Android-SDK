@@ -24,21 +24,21 @@ class SubscriptionManagerTests : FunSpec({
         val pushSubscription = SubscriptionModel()
         pushSubscription.id = "subscription1"
         pushSubscription.type = SubscriptionType.PUSH
-        pushSubscription.status = SubscriptionModel.STATUS_SUBSCRIBED
+        pushSubscription.status = SubscriptionStatus.SUBSCRIBED
         pushSubscription.enabled = true
         pushSubscription.address = "pushToken"
 
         val emailSubscription = SubscriptionModel()
         emailSubscription.id = "subscription2"
         emailSubscription.type = SubscriptionType.EMAIL
-        emailSubscription.status = SubscriptionModel.STATUS_SUBSCRIBED
+        emailSubscription.status = SubscriptionStatus.SUBSCRIBED
         emailSubscription.enabled = false
         emailSubscription.address = "email@email.co"
 
         val smsSubscription = SubscriptionModel()
         smsSubscription.id = "subscription3"
         smsSubscription.type = SubscriptionType.SMS
-        smsSubscription.status = SubscriptionModel.STATUS_SUBSCRIBED
+        smsSubscription.status = SubscriptionStatus.SUBSCRIBED
         smsSubscription.enabled = false
         smsSubscription.address = "+15558675309"
 
@@ -86,7 +86,7 @@ class SubscriptionManagerTests : FunSpec({
                     it.type shouldBe SubscriptionType.EMAIL
                     it.address shouldBe "name@company.com"
                     it.enabled shouldBe true
-                    it.status shouldBe SubscriptionModel.STATUS_SUBSCRIBED
+                    it.status shouldBe SubscriptionStatus.SUBSCRIBED
                 }
             )
         }
@@ -113,7 +113,7 @@ class SubscriptionManagerTests : FunSpec({
                     it.type shouldBe SubscriptionType.SMS
                     it.address shouldBe "+15558675309"
                     it.enabled shouldBe true
-                    it.status shouldBe SubscriptionModel.STATUS_SUBSCRIBED
+                    it.status shouldBe SubscriptionStatus.SUBSCRIBED
                 }
             )
         }
@@ -131,7 +131,7 @@ class SubscriptionManagerTests : FunSpec({
         val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
 
         /* When */
-        subscriptionManager.addOrUpdatePushSubscription("pushToken", null)
+        subscriptionManager.addOrUpdatePushSubscription("pushToken", SubscriptionStatus.SUBSCRIBED)
 
         /* Then */
         verify {
@@ -140,7 +140,7 @@ class SubscriptionManagerTests : FunSpec({
                     it.type shouldBe SubscriptionType.PUSH
                     it.address shouldBe "pushToken"
                     it.enabled shouldBe true
-                    it.status shouldBe SubscriptionModel.STATUS_SUBSCRIBED
+                    it.status shouldBe SubscriptionStatus.SUBSCRIBED
                 }
             )
         }
@@ -153,7 +153,7 @@ class SubscriptionManagerTests : FunSpec({
         val pushSubscription = SubscriptionModel()
         pushSubscription.id = "subscription1"
         pushSubscription.type = SubscriptionType.PUSH
-        pushSubscription.status = SubscriptionModel.STATUS_SUBSCRIBED
+        pushSubscription.status = SubscriptionStatus.SUBSCRIBED
         pushSubscription.enabled = true
         pushSubscription.address = "pushToken1"
 
@@ -167,11 +167,11 @@ class SubscriptionManagerTests : FunSpec({
         val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
 
         /* When */
-        subscriptionManager.addOrUpdatePushSubscription("pushToken2", SubscriptionModel.STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER)
+        subscriptionManager.addOrUpdatePushSubscription("pushToken2", SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER)
 
         /* Then */
         pushSubscription.address shouldBe "pushToken2"
-        pushSubscription.status shouldBe SubscriptionModel.STATUS_FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER
+        pushSubscription.status shouldBe SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER
     }
 
     test("remove email subscription removes from model store") {
@@ -181,7 +181,7 @@ class SubscriptionManagerTests : FunSpec({
         val emailSubscription = SubscriptionModel()
         emailSubscription.id = "subscription1"
         emailSubscription.type = SubscriptionType.EMAIL
-        emailSubscription.status = SubscriptionModel.STATUS_SUBSCRIBED
+        emailSubscription.status = SubscriptionStatus.SUBSCRIBED
         emailSubscription.enabled = true
         emailSubscription.address = "name@company.com"
 
@@ -208,7 +208,7 @@ class SubscriptionManagerTests : FunSpec({
         val emailSubscription = SubscriptionModel()
         emailSubscription.id = "subscription1"
         emailSubscription.type = SubscriptionType.SMS
-        emailSubscription.status = SubscriptionModel.STATUS_SUBSCRIBED
+        emailSubscription.status = SubscriptionStatus.SUBSCRIBED
         emailSubscription.enabled = true
         emailSubscription.address = "+18458675309"
 
@@ -233,7 +233,7 @@ class SubscriptionManagerTests : FunSpec({
         val emailSubscription = SubscriptionModel()
         emailSubscription.id = "subscription1"
         emailSubscription.type = SubscriptionType.SMS
-        emailSubscription.status = SubscriptionModel.STATUS_SUBSCRIBED
+        emailSubscription.status = SubscriptionStatus.SUBSCRIBED
         emailSubscription.enabled = true
         emailSubscription.address = "+18458675309"
 
@@ -264,7 +264,7 @@ class SubscriptionManagerTests : FunSpec({
         val emailSubscription = SubscriptionModel()
         emailSubscription.id = "subscription1"
         emailSubscription.type = SubscriptionType.SMS
-        emailSubscription.status = SubscriptionModel.STATUS_SUBSCRIBED
+        emailSubscription.status = SubscriptionStatus.SUBSCRIBED
         emailSubscription.enabled = true
         emailSubscription.address = "+18458675309"
 
@@ -296,7 +296,7 @@ class SubscriptionManagerTests : FunSpec({
         val emailSubscription = SubscriptionModel()
         emailSubscription.id = "subscription1"
         emailSubscription.type = SubscriptionType.SMS
-        emailSubscription.status = SubscriptionModel.STATUS_SUBSCRIBED
+        emailSubscription.status = SubscriptionStatus.SUBSCRIBED
         emailSubscription.enabled = true
         emailSubscription.address = "+18458675309"
 

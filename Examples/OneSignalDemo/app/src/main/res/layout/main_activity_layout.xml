@@ -357,6 +357,154 @@
 
             </LinearLayout>
 
+            <!-- Push -->
+            <LinearLayout
+                android:id="@+id/main_activity_push_notification_linear_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/main_activity_push_notification_title_text_view"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:gravity="start|center_vertical"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginLeft="12dp"
+                    android:text="@string/push_notification"
+                    android:textColor="@color/colorDarkText"/>
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="12dp"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- Subscription Id -->
+
+                        <RelativeLayout
+                            android:id="@+id/main_activity_push_subscription_id_relative_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/ripple_selector_red_white"
+                            android:paddingStart="12dp"
+                            android:paddingTop="12dp"
+                            android:paddingEnd="12dp"
+                            android:paddingBottom="12dp">
+
+                            <TextView
+                                android:id="@+id/main_activity_push_subscription_id_title_text_view"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentStart="true"
+                                android:layout_alignParentLeft="true"
+                                android:layout_centerVertical="true"
+                                android:layout_toStartOf="@id/main_activity_account_details_app_id_text_view"
+                                android:layout_toLeftOf="@id/main_activity_account_details_app_id_text_view"
+                                android:text="@string/id_colon"
+                                android:textColor="@color/colorDarkText"
+                                android:textSize="16sp" />
+
+                            <TextView
+                                android:id="@+id/main_activity_push_subscription_id_text_view"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentEnd="true"
+                                android:layout_alignParentRight="true"
+                                android:layout_centerVertical="true"
+                                android:textColor="@color/colorDarkText"
+                                android:textSize="16sp" />
+
+                        </RelativeLayout>
+
+                        <!-- Subscription Enablement -->
+                        <RelativeLayout
+                            android:id="@+id/main_activity_push_subscription_relative_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="12dp"
+                            android:clipChildren="false"
+                            android:clipToPadding="false"
+                            android:background="@drawable/ripple_selector_red_white">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentStart="true"
+                                android:layout_alignParentLeft="true"
+                                android:layout_centerVertical="true"
+                                android:layout_toStartOf="@id/main_activity_push_subscription_switch"
+                                android:layout_toLeftOf="@id/main_activity_push_subscription_switch"
+                                android:paddingEnd="6dp"
+                                android:paddingRight="6dp"
+                                android:clipChildren="false"
+                                android:clipToPadding="false"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/main_activity_push_subscription_info_text_view"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/app_push_notifications_description"
+                                    android:textSize="13sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                            </LinearLayout>
+
+                            <Switch
+                                android:id="@+id/main_activity_push_subscription_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentEnd="true"
+                                android:layout_alignParentRight="true"
+                                android:layout_centerVertical="true"
+                                android:theme="@style/SwitchTheme" />
+
+                        </RelativeLayout>
+
+                        <!-- Permission Status -->
+                        <LinearLayout
+                            android:id="@+id/main_activity_push_prompt_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:background="@color/colorPrimary">
+
+                            <Button
+                                android:id="@+id/main_activity_push_prompt_push_button"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:text="@string/prompt_push"
+                                android:textSize="19sp"
+                                android:textColor="@android:color/white"
+                                android:background="@drawable/ripple_selector_white_red"
+                                android:visibility="visible"/>
+
+                        </LinearLayout>
+                    </LinearLayout>
+
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
             <!-- Email -->
 
             <LinearLayout
@@ -615,6 +763,178 @@
 
             </LinearLayout>
 
+            <!-- Outcomes -->
+
+            <LinearLayout
+                android:id="@+id/main_activity_outcomes_linear_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/main_activity_outcomes_title_text_view"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:gravity="start|center_vertical"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginLeft="12dp"
+                    android:text="@string/outcomes"
+                    android:textColor="@color/colorDarkText" />
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="12dp"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:background="@color/colorPrimary">
+
+                            <Button
+                                android:id="@+id/main_activity_outcomes_send_outcome_button"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:text="@string/send_outcome"
+                                android:textSize="19sp"
+                                android:textColor="@android:color/white"
+                                android:background="@drawable/ripple_selector_white_red"
+                                android:visibility="visible"/>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
+            <!-- In-App Messaging -->
+
+            <LinearLayout
+                android:id="@+id/main_activity_in_app_messaging_linear_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/main_activity_in_app_messaging_title_text_view"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:gravity="start|center_vertical"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginLeft="12dp"
+                    android:text="@string/in_app_messaging"
+                    android:textColor="@color/colorDarkText" />
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="12dp"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:background="@color/colorDivider"/>
+
+
+                        <!-- Pause In-App Messages -->
+
+                        <RelativeLayout
+                            android:id="@+id/main_activity_iam_pause_in_app_messages_relative_layout"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp"
+                            android:paddingTop="12dp"
+                            android:paddingBottom="12dp"
+                            android:clipChildren="false"
+                            android:clipToPadding="false"
+                            android:background="@drawable/ripple_selector_red_white">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentStart="true"
+                                android:layout_alignParentLeft="true"
+                                android:layout_centerVertical="true"
+                                android:layout_toStartOf="@id/main_activity_iam_pause_in_app_messages_switch"
+                                android:layout_toLeftOf="@id/main_activity_iam_pause_in_app_messages_switch"
+                                android:paddingEnd="6dp"
+                                android:paddingRight="6dp"
+                                android:clipChildren="false"
+                                android:clipToPadding="false"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/main_activity_iam_pause_in_app_messages_text_view"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/pause_in_app_messages_colon"
+                                    android:textSize="16sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                                <TextView
+                                    android:id="@+id/main_activity_iam_pause_in_app_messages_info_text_view"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/app_iam_pause_in_app_messages_description"
+                                    android:textSize="13sp"
+                                    android:textColor="@color/colorDarkText"/>
+
+                            </LinearLayout>
+
+                            <Switch
+                                android:id="@+id/main_activity_iam_pause_in_app_messages_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_alignParentRight="true"
+                                android:layout_alignParentEnd="true"
+                                android:layout_centerVertical="true"
+                                android:theme="@style/SwitchTheme" />
+
+                        </RelativeLayout>
+
+                    </LinearLayout>
+
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
             <!-- Triggers -->
 
             <LinearLayout
@@ -690,70 +1010,6 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
                                 android:text="@string/add_trigger"
-                                android:textSize="19sp"
-                                android:textColor="@android:color/white"
-                                android:background="@drawable/ripple_selector_white_red"
-                                android:visibility="visible"/>
-
-                        </LinearLayout>
-
-                    </LinearLayout>
-
-                </androidx.cardview.widget.CardView>
-
-            </LinearLayout>
-
-            <!-- Outcomes -->
-
-            <LinearLayout
-                android:id="@+id/main_activity_outcomes_linear_layout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:clipChildren="false"
-                android:clipToPadding="false"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/main_activity_outcomes_title_text_view"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="start|center_vertical"
-                    android:gravity="start|center_vertical"
-                    android:layout_marginBottom="4dp"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginLeft="12dp"
-                    android:text="@string/outcomes"
-                    android:textColor="@color/colorDarkText" />
-
-                <androidx.cardview.widget.CardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="12dp"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:layout_gravity="center"
-                            android:gravity="center"
-                            android:orientation="vertical"
-                            android:background="@color/colorPrimary">
-
-                            <Button
-                                android:id="@+id/main_activity_outcomes_send_outcome_button"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:text="@string/send_outcome"
                                 android:textSize="19sp"
                                 android:textColor="@android:color/white"
                                 android:background="@drawable/ripple_selector_white_red"
@@ -887,10 +1143,10 @@
 
             </LinearLayout>
 
-            <!-- Push Notifications -->
+            <!-- Send Push Notifications -->
 
             <LinearLayout
-                android:id="@+id/main_activity_push_notification_linear_layout"
+                android:id="@+id/main_activity_send_push_notification_linear_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
@@ -899,108 +1155,15 @@
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/main_activity_push_notification_title_text_view"
+                    android:id="@+id/main_activity_send_push_notification_title_text_view"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="start|center_vertical"
                     android:gravity="start|center_vertical"
                     android:layout_marginStart="12dp"
                     android:layout_marginLeft="12dp"
-                    android:text="@string/push_notification"
+                    android:text="@string/send_push_notification"
                     android:textColor="@color/colorDarkText"/>
-
-                <androidx.cardview.widget.CardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="12dp"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
-                        <!-- Subscription -->
-                        <RelativeLayout
-                        android:id="@+id/main_activity_push_subscription_relative_layout"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:paddingStart="12dp"
-                        android:paddingEnd="12dp"
-                        android:paddingTop="12dp"
-                        android:paddingBottom="12dp"
-                        android:clipChildren="false"
-                        android:clipToPadding="false"
-                        android:background="@drawable/ripple_selector_red_white">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_alignParentStart="true"
-                            android:layout_alignParentLeft="true"
-                            android:layout_centerVertical="true"
-                            android:layout_toStartOf="@id/main_activity_push_subscription_switch"
-                            android:layout_toLeftOf="@id/main_activity_push_subscription_switch"
-                            android:paddingEnd="6dp"
-                            android:paddingRight="6dp"
-                            android:clipChildren="false"
-                            android:clipToPadding="false"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/main_activity_push_subscription_text_view"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:text="@string/subscribe_colon"
-                                android:textSize="16sp"
-                                android:textColor="@color/colorDarkText"/>
-
-                            <TextView
-                                android:id="@+id/main_activity_push_subscription_info_text_view"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/app_push_notifications_description"
-                                android:textSize="13sp"
-                                android:textColor="@color/colorDarkText"/>
-
-                        </LinearLayout>
-
-                        <Switch
-                            android:id="@+id/main_activity_push_subscription_switch"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_alignParentEnd="true"
-                            android:layout_alignParentRight="true"
-                            android:layout_centerVertical="true"
-                            android:theme="@style/SwitchTheme" />
-
-                    </RelativeLayout>
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:layout_gravity="center"
-                            android:gravity="center"
-                            android:orientation="vertical"
-                            android:background="@color/colorPrimary">
-
-                            <Button
-                                android:id="@+id/main_activity_push_prompt_push_button"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:text="@string/prompt_push"
-                                android:textSize="19sp"
-                                android:textColor="@android:color/white"
-                                android:background="@drawable/ripple_selector_white_red"
-                                android:visibility="visible"/>
-
-                        </LinearLayout>
-                    </LinearLayout>
-
-                </androidx.cardview.widget.CardView>
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/main_activity_push_notification_recycler_view"
@@ -1018,7 +1181,7 @@
 
             </LinearLayout>
 
-            <!-- In-App Messaging -->
+            <!-- Send In-App Messaging -->
 
             <LinearLayout
                 android:id="@+id/main_activity_in_app_messaging_linear_layout"
@@ -1030,99 +1193,15 @@
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/main_activity_in_app_messaging_title_text_view"
+                    android:id="@+id/main_activity_send_in_app_messaging_title_text_view"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="start|center_vertical"
                     android:gravity="start|center_vertical"
                     android:layout_marginStart="12dp"
                     android:layout_marginLeft="12dp"
-                    android:text="@string/in_app_messaging"
+                    android:text="@string/send_in_app_messaging"
                     android:textColor="@color/colorDarkText" />
-
-                <androidx.cardview.widget.CardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="12dp"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
-
-
-                        <View
-                            android:layout_width="match_parent"
-                            android:layout_height="1dp"
-                            android:background="@color/colorDivider"/>
-
-
-                        <!-- Pause In-App Messages -->
-
-                        <RelativeLayout
-                            android:id="@+id/main_activity_iam_pause_in_app_messages_relative_layout"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:paddingStart="12dp"
-                            android:paddingEnd="12dp"
-                            android:paddingTop="12dp"
-                            android:paddingBottom="12dp"
-                            android:clipChildren="false"
-                            android:clipToPadding="false"
-                            android:background="@drawable/ripple_selector_red_white">
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_alignParentStart="true"
-                                android:layout_alignParentLeft="true"
-                                android:layout_centerVertical="true"
-                                android:layout_toStartOf="@id/main_activity_iam_pause_in_app_messages_switch"
-                                android:layout_toLeftOf="@id/main_activity_iam_pause_in_app_messages_switch"
-                                android:paddingEnd="6dp"
-                                android:paddingRight="6dp"
-                                android:clipChildren="false"
-                                android:clipToPadding="false"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    android:id="@+id/main_activity_iam_pause_in_app_messages_text_view"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/pause_in_app_messages_colon"
-                                    android:textSize="16sp"
-                                    android:textColor="@color/colorDarkText"/>
-
-                                <TextView
-                                    android:id="@+id/main_activity_iam_pause_in_app_messages_info_text_view"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/app_iam_pause_in_app_messages_description"
-                                    android:textSize="13sp"
-                                    android:textColor="@color/colorDarkText"/>
-
-                            </LinearLayout>
-
-                            <Switch
-                                android:id="@+id/main_activity_iam_pause_in_app_messages_switch"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_alignParentRight="true"
-                                android:layout_alignParentEnd="true"
-                                android:layout_centerVertical="true"
-                                android:theme="@style/SwitchTheme" />
-
-                        </RelativeLayout>
-
-                    </LinearLayout>
-
-                </androidx.cardview.widget.CardView>
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/main_activity_in_app_messaging_recycler_view"
