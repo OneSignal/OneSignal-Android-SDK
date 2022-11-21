@@ -7,8 +7,7 @@ package com.onesignal.user.subscriptions
 class SubscriptionList(val collection: List<ISubscription>, private val _fallbackPushSub: IPushSubscription) {
 
     /**
-     * Retrieve the push subscription for this user.  This subscription is for this
-     * device, or it does not exist and is null.
+     * Retrieve the push subscription for this user on the current device.
      */
     val push: IPushSubscription
         get() = collection.filterIsInstance<IPushSubscription>().firstOrNull() ?: _fallbackPushSub

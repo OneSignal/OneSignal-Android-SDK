@@ -4,7 +4,6 @@ import com.onesignal.common.IDManager
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.modeling.IModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
-import com.onesignal.common.threading.suspendifyOnMain
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.EmailSubscription
@@ -133,12 +132,10 @@ internal class SubscriptionManager(
             // don't yet have a representation for it in the subscription list.
             createSubscriptionAndAddToSubscriptionList(args.model as SubscriptionModel)
         } else {
-            suspendifyOnMain {
-                (subscription as Subscription).changeHandlersNotifier.fire {
-                    it.onSubscriptionChanged(
-                        subscription
-                    )
-                }
+            (subscription as Subscription).changeHandlersNotifier.fireOnMain {
+                it.onSubscriptionChanged(
+                    subscription
+                )
             }
 
             // the model has already been updated, so fire the update event

@@ -44,7 +44,7 @@ internal class NotificationLifecycleService(
         if (_extOpenedCallback.hasCallback && _unprocessedOpenedNotifs.any()) {
             for (data in _unprocessedOpenedNotifs) {
                 val openedResult = NotificationHelper.generateNotificationOpenedResult(data, _time)
-                _extOpenedCallback.fire { it.notificationOpened(openedResult) }
+                _extOpenedCallback.fireOnMain { it.notificationOpened(openedResult) }
             }
         }
     }
@@ -76,7 +76,7 @@ internal class NotificationLifecycleService(
         // we will immediately fire the handler.
         if (_extOpenedCallback.hasCallback) {
             val openResult = NotificationHelper.generateNotificationOpenedResult(data, _time)
-            _extOpenedCallback.fire { it.notificationOpened(openResult) }
+            _extOpenedCallback.fireOnMain { it.notificationOpened(openResult) }
         } else {
             _unprocessedOpenedNotifs.add(data)
         }

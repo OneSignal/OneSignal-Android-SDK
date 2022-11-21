@@ -23,7 +23,7 @@ internal class IdentityOperationExecutor(
         get() = listOf(SET_ALIAS, DELETE_ALIAS)
 
     override suspend fun execute(operations: List<Operation>): ExecutionResponse {
-        Logging.debug("AliasOperationExecutor(operations: $operations)")
+        Logging.debug("IdentityOperationExecutor(operations: $operations)")
 
         // An alias group is an appId/onesignalId/aliasLabel combo, so we only care
         // about the last operation in the group, as that will be the effective end

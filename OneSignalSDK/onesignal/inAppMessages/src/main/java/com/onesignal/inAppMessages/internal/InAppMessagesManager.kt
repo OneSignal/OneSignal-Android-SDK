@@ -5,7 +5,6 @@ import com.onesignal.common.AndroidUtils
 import com.onesignal.common.IDManager
 import com.onesignal.common.JSONUtils
 import com.onesignal.common.events.CallbackProducer
-import com.onesignal.common.events.ICallbackProducer
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
@@ -43,10 +42,8 @@ import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.IUserManager
 import com.onesignal.user.internal.subscriptions.ISubscriptionChangedHandler
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 
 internal class InAppMessagesManager(
     private val _applicationService: IApplicationService,
@@ -74,8 +71,8 @@ internal class InAppMessagesManager(
     ITriggerHandler,
     ISessionLifecycleHandler {
 
-    private val _lifecycleCallback: ICallbackProducer<IInAppMessageLifecycleHandler> = CallbackProducer()
-    private val _messageClickCallback: ICallbackProducer<IInAppMessageClickHandler> = CallbackProducer()
+    private val _lifecycleCallback = CallbackProducer<IInAppMessageLifecycleHandler>()
+    private val _messageClickCallback = CallbackProducer<IInAppMessageClickHandler>()
 
     // IAMs loaded remotely from on_session
     //   If on_session won't be called this will be loaded from cache
@@ -376,7 +373,7 @@ internal class InAppMessagesManager(
             Logging.verbose("IAMManager.messageWasDismissed: inAppMessageLifecycleHandler is null")
             return
         }
-        _lifecycleCallback.fire { it.onDidDismissInAppMessage(message) }
+        _lifecycleCallback.fireOnMain { it.onDidDismissInAppMessage(message) }
 
         _state.inAppMessageIdShowing = null
 
@@ -475,7 +472,7 @@ internal class InAppMessagesManager(
             Logging.verbose("IAMManager.onMessageWillDisplay: inAppMessageLifecycleHandler is null")
             return
         }
-        _lifecycleCallback.fire { it.onWillDisplayInAppMessage(message) }
+        _lifecycleCallback.fireOnMain { it.onWillDisplayInAppMessage(message) }
     }
 
     override fun onMessageWasDisplayed(message: InAppMessage) {
@@ -483,7 +480,7 @@ internal class InAppMessagesManager(
             Logging.verbose("IAMManager.onMessageWasDisplayed: inAppMessageLifecycleHandler is null")
             return
         }
-        _lifecycleCallback.fire { it.onDidDisplayInAppMessage(message) }
+        _lifecycleCallback.fireOnMain { it.onDidDisplayInAppMessage(message) }
 
         if (message.isPreview) {
             return
@@ -552,7 +549,7 @@ internal class InAppMessagesManager(
             Logging.verbose("IAMManager.onMessageWillDismiss: inAppMessageLifecycleHandler is null")
             return
         }
-        _lifecycleCallback.fire { it.onWillDismissInAppMessage(message) }
+        _lifecycleCallback.fireOnMain { it.onWillDismissInAppMessage(message) }
     }
 
     override fun onMessageWasDismissed(message: InAppMessage) {
@@ -707,10 +704,7 @@ internal class InAppMessagesManager(
         // Check that only on the handler
         // Any outcome sent on this callback should count as DIRECT from this IAM
         _influenceManager.onDirectInfluenceFromIAM(messageId)
-
-        withContext(Dispatchers.Main) {
-            _messageClickCallback.fire { it.inAppMessageClicked(action) }
-        }
+        _messageClickCallback.suspendingFireOnMain { it.inAppMessageClicked(action) }
     }
 
     private suspend fun fireRESTCallForPageChange(message: InAppMessage, page: InAppMessagePage) {
