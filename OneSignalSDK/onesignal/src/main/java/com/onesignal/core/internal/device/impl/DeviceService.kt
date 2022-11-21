@@ -12,19 +12,16 @@ internal class DeviceService(private val _applicationService: IApplicationServic
         private const val HMS_CORE_SERVICES_PACKAGE = "com.huawei.hwid" // = HuaweiApiAvailability.SERVICES_PACKAGE
         private const val GOOGLE_PLAY_SERVICES_PACKAGE = "com.google.android.gms" // = GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE
         private const val HMS_AVAILABLE_SUCCESSFUL = 0
-        private const val DEVICE_TYPE_ANDROID = 1
-        private const val DEVICE_TYPE_FIREOS = 2
-        private const val DEVICE_TYPE_HUAWEI = 13
     }
 
     override val isAndroidDeviceType: Boolean
-        get() = deviceType == DEVICE_TYPE_ANDROID
+        get() = deviceType == IDeviceService.DeviceType.Android
 
     override val isFireOSDeviceType: Boolean
-        get() = deviceType == DEVICE_TYPE_FIREOS
+        get() = deviceType == IDeviceService.DeviceType.Fire
 
     override val isHuaweiDeviceType: Boolean
-        get() = deviceType == DEVICE_TYPE_HUAWEI
+        get() = deviceType == IDeviceService.DeviceType.Huawei
 
     /**
      * Device type is determined by the push channel(s) the device supports.
@@ -38,38 +35,22 @@ internal class DeviceService(private val _applicationService: IApplicationServic
      * i. "Notification Message" pushes are very bare bones. (title + body)
      * ii. "Data Message" works as expected.
      */
-    override val deviceType: Int
+    override val deviceType: IDeviceService.DeviceType
         get() {
-            if (supportsADM()) return DEVICE_TYPE_FIREOS
-            if (supportsGooglePush()) return DEVICE_TYPE_ANDROID
+            if (supportsADM()) return IDeviceService.DeviceType.Fire
+            if (supportsGooglePush()) return IDeviceService.DeviceType.Android
 
             // Some Huawei devices have both FCM & HMS support, but prefer FCM (Google push) over HMS
-            if (supportsHMS) return DEVICE_TYPE_HUAWEI
+            if (supportsHMS) return IDeviceService.DeviceType.Huawei
 
             // Start - Fallback logic
             //    Libraries in the app (Google:FCM, HMS:PushKit) + Device may not have a valid combo
             // Example: App with only the FCM library in it and a Huawei device with only HMS Core
-            if (isGMSInstalledAndEnabled) return DEVICE_TYPE_ANDROID
-            return if (isHMSCoreInstalledAndEnabledFallback()) DEVICE_TYPE_HUAWEI else DEVICE_TYPE_ANDROID
+            if (isGMSInstalledAndEnabled) return IDeviceService.DeviceType.Android
+            return if (isHMSCoreInstalledAndEnabledFallback()) IDeviceService.DeviceType.Huawei else IDeviceService.DeviceType.Android
 
             // Last fallback
             // Fallback to device_type 1 (Android) if there are no supported push channels on the device
-        }
-
-    override val isGooglePlayStoreInstalled: Boolean
-        get() {
-            try {
-                val pm: PackageManager = _applicationService.appContext.getPackageManager()
-                val info = pm.getPackageInfo(
-                    GOOGLE_PLAY_SERVICES_PACKAGE,
-                    PackageManager.GET_META_DATA
-                )
-                val label = info.applicationInfo.loadLabel(pm) as String
-                return label != "Market"
-            } catch (e: PackageManager.NameNotFoundException) {
-                // Google Play Store might not be installed, ignore exception if so
-            }
-            return false
         }
 
     override val androidSupportLibraryStatus: IDeviceService.AndroidSupportLibraryStatus
