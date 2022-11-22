@@ -1,6 +1,7 @@
 package com.onesignal.session.internal.outcomes
 
 import com.onesignal.common.exceptions.BackendException
+import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.debug.LogLevel
@@ -31,7 +32,7 @@ class OutcomeEventsBackendServiceTests : FunSpec({
         val outcomeEventsController = OutcomeEventsBackendService(spyHttpClient)
 
         /* When */
-        outcomeEventsController.sendOutcomeEvent("appId", 1, null, evnt)
+        outcomeEventsController.sendOutcomeEvent("appId", IDeviceService.DeviceType.Android, null, evnt)
 
         /* Then */
         coVerify {
@@ -58,7 +59,7 @@ class OutcomeEventsBackendServiceTests : FunSpec({
         val outcomeEventsController = OutcomeEventsBackendService(spyHttpClient)
 
         /* When */
-        outcomeEventsController.sendOutcomeEvent("appId", 1, null, evnt)
+        outcomeEventsController.sendOutcomeEvent("appId", IDeviceService.DeviceType.Android, null, evnt)
 
         /* Then */
         coVerify {
@@ -85,7 +86,7 @@ class OutcomeEventsBackendServiceTests : FunSpec({
         val outcomeEventsController = OutcomeEventsBackendService(spyHttpClient)
 
         /* When */
-        outcomeEventsController.sendOutcomeEvent("appId", 1, false, evnt)
+        outcomeEventsController.sendOutcomeEvent("appId", IDeviceService.DeviceType.Android, false, evnt)
 
         /* Then */
         coVerify {
@@ -112,7 +113,7 @@ class OutcomeEventsBackendServiceTests : FunSpec({
         val outcomeEventsController = OutcomeEventsBackendService(spyHttpClient)
 
         /* When */
-        outcomeEventsController.sendOutcomeEvent("appId", 1, true, evnt)
+        outcomeEventsController.sendOutcomeEvent("appId", IDeviceService.DeviceType.Android, true, evnt)
 
         /* Then */
         coVerify {
@@ -139,7 +140,7 @@ class OutcomeEventsBackendServiceTests : FunSpec({
         val outcomeEventsController = OutcomeEventsBackendService(spyHttpClient)
 
         /* When */
-        outcomeEventsController.sendOutcomeEvent("appId", 1, null, evnt)
+        outcomeEventsController.sendOutcomeEvent("appId", IDeviceService.DeviceType.Android, null, evnt)
 
         /* Then */
         coVerify {
@@ -167,7 +168,7 @@ class OutcomeEventsBackendServiceTests : FunSpec({
 
         /* When */
         val exception = shouldThrowUnit<BackendException> {
-            outcomeEventsController.sendOutcomeEvent("appId", 1, null, evnt)
+            outcomeEventsController.sendOutcomeEvent("appId", IDeviceService.DeviceType.Android, null, evnt)
         }
 
         /* Then */
