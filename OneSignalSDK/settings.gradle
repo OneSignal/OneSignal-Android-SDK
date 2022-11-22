@@ -20,6 +20,3 @@ include ':onesignal'
 include ':onesignal:inAppMessages'
 include ':onesignal:location'
 include ':onesignal:notifications'
-
-//this will go away soon
-include ':unittest'
