@@ -119,7 +119,6 @@ import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 
 import org.awaitility.Awaitility;
-import org.awaitility.Duration;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -140,6 +139,7 @@ import org.robolectric.shadows.ShadowLog;
 
 import java.lang.reflect.Field;
 import java.math.BigInteger;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -1522,8 +1522,8 @@ public class GenerateNotificationRunner {
 
       FCMBroadcastReceiver_processBundle(blankActivity, getBaseNotifBundle(), processBundleReceiverCallback);
       Awaitility.await()
-              .atMost(new Duration(3, TimeUnit.SECONDS))
-              .pollInterval(new Duration(100, TimeUnit.MILLISECONDS))
+              .atMost(Duration.ofSeconds(3))
+              .pollInterval(Duration.ofMillis(100))
               .untilAsserted(() -> {
                  assertTrue(callbackEnded[0]);
               });
@@ -1897,8 +1897,8 @@ public class GenerateNotificationRunner {
 
       // Notification save is done on the OSTimeoutHandler, we wait until the notification is saved
       Awaitility.await()
-              .atMost(new Duration(3, TimeUnit.SECONDS))
-              .pollInterval(new Duration(100, TimeUnit.MILLISECONDS))
+              .atMost(Duration.ofSeconds(3))
+              .pollInterval(Duration.ofMillis(100))
               .untilAsserted(() -> {
                  // 5. Make sure 1 notification exists in DB
                  assertNotificationDbRecords(1);
@@ -1941,8 +1941,8 @@ public class GenerateNotificationRunner {
 
       // Notification save is done on the OSTimeoutHandler, we wait until the notification is saved
       Awaitility.await()
-              .atMost(new Duration(3, TimeUnit.SECONDS))
-              .pollInterval(new Duration(100, TimeUnit.MILLISECONDS))
+              .atMost(Duration.ofSeconds(3))
+              .pollInterval(Duration.ofMillis(100))
               .untilAsserted(() -> {
                  // 6. Make sure 1 notification exists in DB
                  assertNotificationDbRecords(1);
@@ -2218,8 +2218,8 @@ public class GenerateNotificationRunner {
 
       // Complete being call from Notification Receiver Handler thread
       Awaitility.await()
-              .atMost(new Duration(5, TimeUnit.SECONDS))
-              .pollInterval(new Duration(500, TimeUnit.MILLISECONDS))
+              .atMost(Duration.ofSeconds(5))
+              .pollInterval(Duration.ofMillis(500))
               .untilAsserted(() -> {
                  // 5. Make sure 1 notification exists in DB
                  assertNotificationDbRecords(1);
@@ -2300,8 +2300,8 @@ public class GenerateNotificationRunner {
 
       // Complete being call from User thread
       Awaitility.await()
-              .atMost(new Duration(10, TimeUnit.SECONDS))
-              .pollInterval(new Duration(500, TimeUnit.MILLISECONDS))
+              .atMost(Duration.ofSeconds(10))
+              .pollInterval(Duration.ofMillis(500))
               .untilAsserted(() -> {
                  // Make sure 1 notification exists in DB
                  assertNotificationDbRecords(1, true);
@@ -2337,8 +2337,8 @@ public class GenerateNotificationRunner {
       Bundle bundle = getBaseNotifBundle();
       FCMBroadcastReceiver_processBundle(blankActivity, bundle, processBundleReceiverCallback);
       Awaitility.await()
-              .atMost(new Duration(3, TimeUnit.SECONDS))
-              .pollInterval(new Duration(100, TimeUnit.MILLISECONDS))
+              .atMost(Duration.ofSeconds(3))
+              .pollInterval(Duration.ofMillis(100))
               .untilAsserted(() -> {
                  assertTrue(callbackEnded[0]);
               });

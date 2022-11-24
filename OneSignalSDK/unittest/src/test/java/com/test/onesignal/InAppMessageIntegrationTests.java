@@ -33,7 +33,6 @@ import com.onesignal.example.BlankActivity;
 import com.onesignal.influence.data.OSTrackerFactory;
 
 import org.awaitility.Awaitility;
-import org.awaitility.Duration;
 import org.awaitility.core.ThrowingRunnable;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -51,6 +50,7 @@ import org.robolectric.annotation.LooperMode;
 import org.robolectric.shadows.ShadowLog;
 
 import java.lang.reflect.Field;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -363,14 +363,14 @@ public class InAppMessageIntegrationTests {
         // for the correct amount of time, so all we are doing here is checking to
         // make sure the message actually gets displayed once the timer fires
         Awaitility.await()
-                .atMost(new Duration(1_000, TimeUnit.MILLISECONDS))
-                .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+                .atMost(Duration.ofSeconds(1))
+                .pollInterval(Duration.ofMillis(1s0))
                 .until(() -> OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size() == 1);
 
         // After IAM is added to display queue we now need to wait until it is shown
         Awaitility.await()
-                .atMost(new Duration(1_000, TimeUnit.MILLISECONDS))
-                .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+               .atMost(Duration.ofSeconds(1))
+               .pollInterval(Duration.ofMillis(10))
                 .untilAsserted(new ThrowingRunnable() {
                     @Override
                     public void run() {
@@ -382,8 +382,8 @@ public class InAppMessageIntegrationTests {
 
         // Check that the IAM is not displayed again
         Awaitility.await()
-                .atMost(new Duration(1_000, TimeUnit.MILLISECONDS))
-                .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+                .atMost(Duration.ofSeconds(1))
+                .pollInterval(Duration.ofMillis(10))
                 .until(() -> OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size() == 0);
     }
 
@@ -420,8 +420,8 @@ public class InAppMessageIntegrationTests {
         // for the correct amount of time, so all we are doing here is checking to
         // make sure the message actually gets displayed once the timer fires
         Awaitility.await()
-                .atMost(new Duration(150, TimeUnit.MILLISECONDS))
-                .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+                .atMost(Duration.ofMillis(150))
+                .pollInterval(Duration.ofMillis(10))
                 .untilAsserted(() -> {
                     assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
                     try {
@@ -436,8 +436,8 @@ public class InAppMessageIntegrationTests {
 
         // Second in app should now display
         Awaitility.await()
-                .atMost(new Duration(1, TimeUnit.SECONDS))
-                .pollInterval(new Duration(100, TimeUnit.MILLISECONDS))
+                .atMost(Duration.ofSeconds(1))
+                .pollInterval(Duration.ofMillis(100))
                 .untilAsserted(() -> {
                     assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
                     try {
@@ -1355,8 +1355,8 @@ public class InAppMessageIntegrationTests {
 
         // No schedule should happen, IAM should evaluate to true
         Awaitility.await()
-            .atMost(new Duration(1_000, TimeUnit.MILLISECONDS))
-            .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+            .atMost(Duration.ofSeconds(1))
+            .pollInterval(Duration.ofMillis(10))
             .untilAsserted(new ThrowingRunnable() {
                 @Override
                 public void run() throws Exception {
@@ -1366,8 +1366,8 @@ public class InAppMessageIntegrationTests {
 
         // After IAM is added to display queue we now need to wait until it is shown
         Awaitility.await()
-            .atMost(new Duration(1_000, TimeUnit.MILLISECONDS))
-            .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+           .atMost(Duration.ofSeconds(1))
+           .pollInterval(Duration.ofMillis(10))
             .untilAsserted(new ThrowingRunnable() {
                 @Override
                 public void run() throws Exception {
@@ -1400,8 +1400,8 @@ public class InAppMessageIntegrationTests {
         // No schedule should happen since session time period is very small, should evaluate to true on first run
         // Wait for redisplay logic
         Awaitility.await()
-                .atMost(new Duration(1_000, TimeUnit.MILLISECONDS))
-                .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+                .atMost(Duration.ofSeconds(1))
+                .pollInterval(Duration.ofMillis(10))
                 .untilAsserted(new ThrowingRunnable() {
                     @Override
                     public void run() {
@@ -1888,8 +1888,8 @@ public class InAppMessageIntegrationTests {
         assertEquals(1, OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size());
         // Wait for both getTags and get IAM HTML to be called
         Awaitility.await()
-                .atMost(new Duration(150, TimeUnit.MILLISECONDS))
-                .pollInterval(new Duration(10, TimeUnit.MILLISECONDS))
+                .atMost(Duration.ofMillis(150))
+                .pollInterval(Duration.ofMillis(10))
                 .until(() -> ShadowOneSignalRestClient.requests.size() == 4);
         int requestSize = ShadowOneSignalRestClient.requests.size();
         ShadowOneSignalRestClient.Request getTagsRequest = ShadowOneSignalRestClient.requests.get(requestSize - 1);

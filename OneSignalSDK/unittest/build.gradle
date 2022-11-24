@@ -1,17 +1,17 @@
 ext {
     buildVersions = [
-            minSdkVersion: 17,
+            minSdkVersion: 19,
             versionCode: 1,
             versionName: '1.0'
     ]
-    androidTestCoreVersion = '1.3.0'
+    androidTestCoreVersion = '1.5.0'
     androidWorkTestVersion = '2.7.1'
-    awaitilityVersion = '3.1.5'
-    firebaseAnalytics = '19.0.1'
-    googlePlayServicesVersion = '18.0.0'
+    awaitilityVersion = '4.2.0'
+    firebaseAnalytics = '21.2.0'
+    googlePlayServicesVersion = '21.0.1'
     jUnitVersion = '4.13.2'
-    reflectionsVersion = '0.9.12'
-    roboelectricVersion = '4.8.1'
+    reflectionsVersion = '0.10.2'
+    roboelectricVersion = '4.9'
 }
 
 apply plugin: 'com.android.application'
