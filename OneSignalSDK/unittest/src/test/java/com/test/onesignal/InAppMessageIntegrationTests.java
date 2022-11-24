@@ -364,7 +364,7 @@ public class InAppMessageIntegrationTests {
         // make sure the message actually gets displayed once the timer fires
         Awaitility.await()
                 .atMost(Duration.ofSeconds(1))
-                .pollInterval(Duration.ofMillis(1s0))
+                .pollInterval(Duration.ofMillis(10))
                 .until(() -> OneSignalPackagePrivateHelper.getInAppMessageDisplayQueue().size() == 1);
 
         // After IAM is added to display queue we now need to wait until it is shown
