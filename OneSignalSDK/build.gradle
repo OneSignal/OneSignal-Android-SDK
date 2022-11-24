@@ -4,17 +4,17 @@ buildscript {
 
     ext {
         buildVersions = [
-                compileSdkVersion: 31,
-                targetSdkVersion: 31
+                compileSdkVersion: 33,
+                targetSdkVersion: 33
         ]
-        androidGradlePluginVersion = '7.0.4'
-        googleServicesGradlePluginVersion = '4.3.10'
-        huaweiAgconnectVersion = '1.6.2.300'
-        huaweiHMSPushVersion = '6.3.0.304'
-        huaweiHMSLocationVersion = '4.0.0.300'
-        kotlinVersion = '1.4.32'
+        androidGradlePluginVersion = '7.3.1'
+        googleServicesGradlePluginVersion = '4.3.14'
+        huaweiAgconnectVersion = '1.7.3.300'
+        huaweiHMSPushVersion = '6.7.0.300'
+        huaweiHMSLocationVersion = '6.8.0.300'
+        kotlinVersion = '1.7.21'
         ktlintVersion = '11.0.0'
-        detektVersion = '1.21.0'
+        detektVersion = '1.22.0'
     }
 
     repositories {
