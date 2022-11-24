@@ -26,6 +26,7 @@ android {
         versionCode buildVersions.versionCode
         versionName buildVersions.versionName
         testOptions.unitTests.includeAndroidResources = true
+        multiDexEnabled = true
     }
     buildTypes {
         debug {
