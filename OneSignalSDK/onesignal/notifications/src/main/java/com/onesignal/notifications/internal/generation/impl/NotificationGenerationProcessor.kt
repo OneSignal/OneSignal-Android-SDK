@@ -2,6 +2,7 @@ package com.onesignal.notifications.internal.generation.impl
 
 import android.content.Context
 import com.onesignal.common.AndroidUtils
+import com.onesignal.common.safeString
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.time.ITime
@@ -15,7 +16,6 @@ import com.onesignal.notifications.internal.display.INotificationDisplayer
 import com.onesignal.notifications.internal.generation.INotificationGenerationProcessor
 import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleService
 import com.onesignal.notifications.internal.summary.INotificationSummaryManager
-import com.onesignal.session.internal.session.ISessionService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 import org.json.JSONException
@@ -32,7 +32,6 @@ internal class NotificationGenerationProcessor(
     private val _dataController: INotificationRepository,
     private val _notificationSummaryManager: INotificationSummaryManager,
     private val _lifecycleService: INotificationLifecycleService,
-    private val _sessionService: ISessionService,
     private val _time: ITime
 ) : INotificationGenerationProcessor {
 
@@ -229,7 +228,7 @@ internal class NotificationGenerationProcessor(
 
             _dataController.createNotification(
                 customJSON.optString("i"),
-                jsonPayload.optString("grp"),
+                jsonPayload.safeString("grp"),
                 collapseKey,
                 notificationJob.isNotificationToDisplay, // When notification was displayed, count any notifications with duplicated android notification ids as dismissed.
                 opened,

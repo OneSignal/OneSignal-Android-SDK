@@ -37,7 +37,7 @@ internal class PushTokenManager(
                     // runtime error
                     if (pushToken == null &&
                         (
-                            pushTokenStatus == SubscriptionStatus.SUBSCRIBED ||
+                            pushTokenStatus == SubscriptionStatus.NO_PERMISSION ||
                                 pushStatusRuntimeError(pushTokenStatus)
                             )
                     ) {

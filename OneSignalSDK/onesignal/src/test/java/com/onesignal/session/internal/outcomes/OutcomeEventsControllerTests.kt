@@ -1,6 +1,7 @@
 package com.onesignal.session.internal.outcomes
 
 import com.onesignal.common.exceptions.BackendException
+import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
@@ -106,7 +107,7 @@ class OutcomeEventsControllerTests : FunSpec({
         evnt.session shouldBe InfluenceType.UNATTRIBUTED
         evnt.timestamp shouldBe 0 // timestamp only set when it had to be saved.
 
-        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, MockHelper.DEFAULT_DEVICE_TYPE, null, evnt) }
+        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, IDeviceService.DeviceType.Android, null, evnt) }
     }
 
     test("send outcome with indirect influences") {
@@ -146,7 +147,7 @@ class OutcomeEventsControllerTests : FunSpec({
         evnt.session shouldBe InfluenceType.INDIRECT
         evnt.timestamp shouldBe 0 // timestamp only set when it had to be saved.
 
-        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, MockHelper.DEFAULT_DEVICE_TYPE, false, evnt) }
+        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, IDeviceService.DeviceType.Android, false, evnt) }
     }
 
     test("send outcome with direct influence") {
@@ -186,7 +187,7 @@ class OutcomeEventsControllerTests : FunSpec({
         evnt.session shouldBe InfluenceType.DIRECT
         evnt.timestamp shouldBe 0 // timestamp only set when it had to be saved.
 
-        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, MockHelper.DEFAULT_DEVICE_TYPE, true, evnt) }
+        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, IDeviceService.DeviceType.Android, true, evnt) }
     }
 
     test("send outcome with weight") {
@@ -225,7 +226,7 @@ class OutcomeEventsControllerTests : FunSpec({
         evnt.session shouldBe InfluenceType.UNATTRIBUTED
         evnt.timestamp shouldBe 0 // timestamp only set when it had to be saved.
 
-        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, MockHelper.DEFAULT_DEVICE_TYPE, null, evnt) }
+        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, IDeviceService.DeviceType.Android, null, evnt) }
     }
 
     test("send unique outcome with unattributed influences") {
@@ -266,7 +267,7 @@ class OutcomeEventsControllerTests : FunSpec({
 
         evnt2 shouldBe null
 
-        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, MockHelper.DEFAULT_DEVICE_TYPE, any(), any()) }
+        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, IDeviceService.DeviceType.Android, any(), any()) }
     }
 
     test("send unique outcome with same indirect influences") {
@@ -313,7 +314,7 @@ class OutcomeEventsControllerTests : FunSpec({
 
         evnt2 shouldBe null
 
-        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, MockHelper.DEFAULT_DEVICE_TYPE, any(), any()) }
+        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, IDeviceService.DeviceType.Android, any(), any()) }
     }
 
     test("send unique outcome with different indirect influences") {
@@ -369,8 +370,8 @@ class OutcomeEventsControllerTests : FunSpec({
         evnt2.timestamp shouldBe 0 // timestamp only set when it had to be saved.
 
         coVerifySequence {
-            mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, MockHelper.DEFAULT_DEVICE_TYPE, false, evnt1)
-            mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, MockHelper.DEFAULT_DEVICE_TYPE, true, evnt2)
+            mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, IDeviceService.DeviceType.Android, false, evnt1)
+            mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, IDeviceService.DeviceType.Android, true, evnt2)
         }
     }
 
@@ -454,7 +455,7 @@ class OutcomeEventsControllerTests : FunSpec({
         coVerify(exactly = 1) {
             mockOutcomeEventsBackend.sendOutcomeEvent(
                 "appId",
-                1,
+                IDeviceService.DeviceType.Android,
                 true,
                 withArg {
                     it.name shouldBe "outcomeId1"
@@ -467,7 +468,7 @@ class OutcomeEventsControllerTests : FunSpec({
         coVerify(exactly = 1) {
             mockOutcomeEventsBackend.sendOutcomeEvent(
                 "appId",
-                1,
+                IDeviceService.DeviceType.Android,
                 false,
                 withArg {
                     it.name shouldBe "outcomeId2"
@@ -533,7 +534,7 @@ class OutcomeEventsControllerTests : FunSpec({
         coVerify(exactly = 1) {
             mockOutcomeEventsBackend.sendOutcomeEvent(
                 "appId",
-                1,
+                IDeviceService.DeviceType.Android,
                 true,
                 withArg {
                     it.name shouldBe "outcomeId1"
@@ -546,7 +547,7 @@ class OutcomeEventsControllerTests : FunSpec({
         coVerify(exactly = 1) {
             mockOutcomeEventsBackend.sendOutcomeEvent(
                 "appId",
-                1,
+                IDeviceService.DeviceType.Android,
                 false,
                 withArg {
                     it.name shouldBe "outcomeId2"

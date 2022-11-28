@@ -19,6 +19,7 @@ import com.onesignal.user.internal.operations.impl.executors.LoginUserOperationE
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeOneOf
@@ -319,9 +320,9 @@ class LoginUserOperationExecutorTests : FunSpec({
             SetAliasOperation(appId, localOneSignalId, "aliasLabel1", "aliasValue1-2"),
             SetAliasOperation(appId, localOneSignalId, "aliasLabel2", "aliasValue2"),
             DeleteAliasOperation(appId, localOneSignalId, "aliasLabel2"),
-            CreateSubscriptionOperation(appId, localOneSignalId, "subscriptionId1", SubscriptionType.PUSH, true, "pushToken1", SubscriptionModel.STATUS_SUBSCRIBED),
-            UpdateSubscriptionOperation(appId, localOneSignalId, "subscriptionId1", SubscriptionType.PUSH, true, "pushToken2", SubscriptionModel.STATUS_SUBSCRIBED),
-            CreateSubscriptionOperation(appId, localOneSignalId, "subscriptionId2", SubscriptionType.EMAIL, true, "name@company.com", SubscriptionModel.STATUS_SUBSCRIBED),
+            CreateSubscriptionOperation(appId, localOneSignalId, "subscriptionId1", SubscriptionType.PUSH, true, "pushToken1", SubscriptionStatus.SUBSCRIBED),
+            UpdateSubscriptionOperation(appId, localOneSignalId, "subscriptionId1", SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED),
+            CreateSubscriptionOperation(appId, localOneSignalId, "subscriptionId2", SubscriptionType.EMAIL, true, "name@company.com", SubscriptionStatus.SUBSCRIBED),
             DeleteSubscriptionOperation(appId, localOneSignalId, "subscriptionId2"),
             SetTagOperation(appId, localOneSignalId, "tagKey1", "tagValue1-1"),
             SetTagOperation(appId, localOneSignalId, "tagKey1", "tagValue1-2"),
@@ -361,7 +362,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                     it[0].type shouldBe SubscriptionObjectType.ANDROID_PUSH
                     it[0].enabled shouldBe true
                     it[0].token shouldBe "pushToken2"
-                    it[0].notificationTypes shouldBe SubscriptionModel.STATUS_SUBSCRIBED
+                    it[0].notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED
                 }
             )
         }
@@ -408,8 +409,8 @@ class LoginUserOperationExecutorTests : FunSpec({
         )
         val operations = listOf<Operation>(
             LoginUserOperation(appId, localOneSignalId, null, null),
-            CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken1", SubscriptionModel.STATUS_SUBSCRIBED),
-            CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId2, SubscriptionType.EMAIL, true, "name@company.com", SubscriptionModel.STATUS_SUBSCRIBED)
+            CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken1", SubscriptionStatus.SUBSCRIBED),
+            CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId2, SubscriptionType.EMAIL, true, "name@company.com", SubscriptionStatus.SUBSCRIBED)
         )
 
         /* When */
@@ -474,8 +475,8 @@ class LoginUserOperationExecutorTests : FunSpec({
         )
         val operations = listOf<Operation>(
             LoginUserOperation(appId, localOneSignalId, null, null),
-            CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken1", SubscriptionModel.STATUS_SUBSCRIBED),
-            CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId2, SubscriptionType.EMAIL, true, "name@company.com", SubscriptionModel.STATUS_SUBSCRIBED)
+            CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken1", SubscriptionStatus.SUBSCRIBED),
+            CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId2, SubscriptionType.EMAIL, true, "name@company.com", SubscriptionStatus.SUBSCRIBED)
         )
 
         /* When */
@@ -526,8 +527,8 @@ class LoginUserOperationExecutorTests : FunSpec({
         )
         val operations = listOf<Operation>(
             LoginUserOperation(appId, localOneSignalId, null, null),
-            CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken1", SubscriptionModel.STATUS_SUBSCRIBED),
-            CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId2, SubscriptionType.EMAIL, true, "name@company.com", SubscriptionModel.STATUS_SUBSCRIBED)
+            CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken1", SubscriptionStatus.SUBSCRIBED),
+            CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId2, SubscriptionType.EMAIL, true, "name@company.com", SubscriptionStatus.SUBSCRIBED)
         )
 
         /* When */
