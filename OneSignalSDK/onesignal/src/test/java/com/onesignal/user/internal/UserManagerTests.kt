@@ -132,7 +132,7 @@ class UserManagerTests : FunSpec({
 
     test("subscriptions are backed by the subscriptions manager") {
         /* Given */
-        val subscriptionList = SubscriptionList(listOf())
+        val subscriptionList = SubscriptionList(listOf(), UninitializedPushSubscription())
         val mockSubscriptionManager = mockk<ISubscriptionManager>()
         every { mockSubscriptionManager.subscriptions } returns subscriptionList
         every { mockSubscriptionManager.addEmailSubscription(any()) } just runs

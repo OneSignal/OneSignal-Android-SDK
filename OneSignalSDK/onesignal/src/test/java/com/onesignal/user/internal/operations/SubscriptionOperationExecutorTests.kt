@@ -10,6 +10,7 @@ import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -45,7 +46,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
             mockSubscriptionsModelStore
         )
 
-        val operations = listOf<Operation>(CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionModel.STATUS_SUBSCRIBED))
+        val operations = listOf<Operation>(CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionStatus.SUBSCRIBED))
 
         /* When */
         val response = subscriptionOperationExecutor.execute(operations)
@@ -61,7 +62,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 SubscriptionObjectType.ANDROID_PUSH,
                 true,
                 "pushToken",
-                SubscriptionModel.STATUS_SUBSCRIBED
+                SubscriptionStatus.SUBSCRIBED
             )
         }
     }
@@ -78,7 +79,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
             mockSubscriptionsModelStore
         )
 
-        val operations = listOf<Operation>(CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionModel.STATUS_SUBSCRIBED))
+        val operations = listOf<Operation>(CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionStatus.SUBSCRIBED))
 
         /* When */
         val response = subscriptionOperationExecutor.execute(operations)
@@ -93,7 +94,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 SubscriptionObjectType.ANDROID_PUSH,
                 true,
                 "pushToken",
-                SubscriptionModel.STATUS_SUBSCRIBED
+                SubscriptionStatus.SUBSCRIBED
             )
         }
     }
@@ -110,7 +111,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
             mockSubscriptionsModelStore
         )
 
-        val operations = listOf<Operation>(CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionModel.STATUS_SUBSCRIBED))
+        val operations = listOf<Operation>(CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionStatus.SUBSCRIBED))
 
         /* When */
         val response = subscriptionOperationExecutor.execute(operations)
@@ -125,7 +126,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 SubscriptionObjectType.ANDROID_PUSH,
                 true,
                 "pushToken",
-                SubscriptionModel.STATUS_SUBSCRIBED
+                SubscriptionStatus.SUBSCRIBED
             )
         }
     }
@@ -145,7 +146,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
         )
 
         val operations = listOf<Operation>(
-            CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionModel.STATUS_SUBSCRIBED),
+            CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionStatus.SUBSCRIBED),
             DeleteSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId)
         )
 
@@ -172,8 +173,8 @@ class SubscriptionOperationExecutorTests : FunSpec({
         )
 
         val operations = listOf<Operation>(
-            CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken1", SubscriptionModel.STATUS_SUBSCRIBED),
-            UpdateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionModel.STATUS_SUBSCRIBED)
+            CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken1", SubscriptionStatus.SUBSCRIBED),
+            UpdateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED)
         )
 
         /* When */
@@ -190,7 +191,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 SubscriptionObjectType.ANDROID_PUSH,
                 true,
                 "pushToken2",
-                SubscriptionModel.STATUS_SUBSCRIBED
+                SubscriptionStatus.SUBSCRIBED
             )
         }
     }
@@ -198,7 +199,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
     test("update subscription successfully updates subscription") {
         /* Given */
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-        coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any(), any(), any()) } just runs
+        coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any(), any(), any(), any()) } just runs
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val subscriptionModel1 = SubscriptionModel()
@@ -213,8 +214,8 @@ class SubscriptionOperationExecutorTests : FunSpec({
         )
 
         val operations = listOf<Operation>(
-            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionModel.STATUS_SUBSCRIBED),
-            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken3", SubscriptionModel.STATUS_SUBSCRIBED)
+            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED),
+            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken3", SubscriptionStatus.SUBSCRIBED)
         )
 
         /* When */
@@ -227,9 +228,10 @@ class SubscriptionOperationExecutorTests : FunSpec({
             mockSubscriptionBackendService.updateSubscription(
                 appId,
                 remoteSubscriptionId,
+                SubscriptionObjectType.ANDROID_PUSH,
                 true,
                 "pushToken3",
-                SubscriptionModel.STATUS_SUBSCRIBED
+                SubscriptionStatus.SUBSCRIBED
             )
         }
     }
@@ -237,7 +239,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
     test("update subscription fails with retry when there is a network condition") {
         /* Given */
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-        coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any(), any(), any()) } throws BackendException(408)
+        coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any(), any(), any(), any()) } throws BackendException(408)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
@@ -247,7 +249,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
         )
 
         val operations = listOf<Operation>(
-            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionModel.STATUS_SUBSCRIBED)
+            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED)
         )
 
         /* When */
@@ -259,9 +261,10 @@ class SubscriptionOperationExecutorTests : FunSpec({
             mockSubscriptionBackendService.updateSubscription(
                 appId,
                 remoteSubscriptionId,
+                SubscriptionObjectType.ANDROID_PUSH,
                 true,
                 "pushToken2",
-                SubscriptionModel.STATUS_SUBSCRIBED
+                SubscriptionStatus.SUBSCRIBED
             )
         }
     }
@@ -269,7 +272,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
     test("update subscription fails without retry when there is a backend error") {
         /* Given */
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-        coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any(), any(), any()) } throws BackendException(404)
+        coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any(), any(), any(), any()) } throws BackendException(404)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
@@ -279,7 +282,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
         )
 
         val operations = listOf<Operation>(
-            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionModel.STATUS_SUBSCRIBED)
+            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED)
         )
 
         /* When */
@@ -291,9 +294,10 @@ class SubscriptionOperationExecutorTests : FunSpec({
             mockSubscriptionBackendService.updateSubscription(
                 appId,
                 remoteSubscriptionId,
+                SubscriptionObjectType.ANDROID_PUSH,
                 true,
                 "pushToken2",
-                SubscriptionModel.STATUS_SUBSCRIBED
+                SubscriptionStatus.SUBSCRIBED
             )
         }
     }
@@ -313,7 +317,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
         )
 
         val operations = listOf<Operation>(
-            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionModel.STATUS_SUBSCRIBED),
+            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED),
             DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId)
         )
 
