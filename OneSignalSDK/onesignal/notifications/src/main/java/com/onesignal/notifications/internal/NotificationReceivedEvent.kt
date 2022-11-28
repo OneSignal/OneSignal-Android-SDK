@@ -10,6 +10,6 @@ internal class NotificationReceivedEvent(
     var effectiveNotification: Notification? = notification
 
     override fun complete(notification: INotification?) {
-        effectiveNotification = notification as Notification
+        effectiveNotification = notification as Notification?
     }
 }
