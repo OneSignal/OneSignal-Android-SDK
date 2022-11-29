@@ -36,12 +36,4 @@ internal class NotificationBackendService(
             throw BackendException(response.statusCode, response.payload)
         }
     }
-
-    override suspend fun postNotification(appId: String, json: JSONObject): HttpResponse {
-        if (!json.has("app_id")) {
-            json.put("app_id", appId)
-        }
-
-        return _httpClient.post("notifications/", json)
-    }
 }

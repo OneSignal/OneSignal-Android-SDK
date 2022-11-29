@@ -138,12 +138,12 @@ internal class InAppMessagesManager(
         }
     }
 
-    override fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler) {
+    override fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler?) {
         Logging.log(LogLevel.DEBUG, "IAMManager.setInAppMessageLifecycleHandler(handler: $handler)")
         _lifecycleCallback.set(handler)
     }
 
-    override fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler) {
+    override fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler?) {
         Logging.log(LogLevel.DEBUG, "IAMManager.setInAppMessageClickHandler(handler: $handler)")
         _messageClickCallback.set(handler)
     }
@@ -515,7 +515,7 @@ internal class InAppMessagesManager(
         suspendifyOnThread {
             action.isFirstClick = message.takeActionAsUnique()
 
-            firePublicClickHandler(message.messageId, action)
+            firePublicClickHandler(message, action)
             beginProcessingPrompts(message, action.prompts)
             fireClickAction(action)
             logInAppMessagePreviewActions(action)
@@ -525,7 +525,7 @@ internal class InAppMessagesManager(
     override fun onMessageActionOccurredOnMessage(message: InAppMessage, action: InAppMessageAction) {
         suspendifyOnThread {
             action.isFirstClick = message.takeActionAsUnique()
-            firePublicClickHandler(message.messageId, action)
+            firePublicClickHandler(message, action)
             beginProcessingPrompts(message, action.prompts)
             fireClickAction(action)
             fireRESTCallForClick(message, action)
@@ -695,7 +695,7 @@ internal class InAppMessagesManager(
         // TODO: Add more action payload preview logs here in future
     }
 
-    private suspend fun firePublicClickHandler(messageId: String, action: InAppMessageAction) {
+    private suspend fun firePublicClickHandler(message: InAppMessage, action: InAppMessageAction) {
         if (!_messageClickCallback.hasCallback) {
             return
         }
@@ -703,8 +703,9 @@ internal class InAppMessagesManager(
         // Send public outcome not from handler
         // Check that only on the handler
         // Any outcome sent on this callback should count as DIRECT from this IAM
-        _influenceManager.onDirectInfluenceFromIAM(messageId)
-        _messageClickCallback.suspendingFireOnMain { it.inAppMessageClicked(action) }
+        _influenceManager.onDirectInfluenceFromIAM(message.messageId)
+        val result = InAppMessageClickResult(message, action)
+        _messageClickCallback.suspendingFireOnMain { it.inAppMessageClicked(result) }
     }
 
     private suspend fun fireRESTCallForPageChange(message: InAppMessage, page: InAppMessagePage) {

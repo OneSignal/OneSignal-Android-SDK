@@ -2,9 +2,10 @@ package com.onesignal.notifications.internal.lifecycle
 
 import android.app.Activity
 import android.content.Context
-import com.onesignal.notifications.INotificationOpenedHandler
+import com.onesignal.notifications.INotificationClickHandler
 import com.onesignal.notifications.INotificationReceivedEvent
 import com.onesignal.notifications.INotificationWillShowInForegroundHandler
+import com.onesignal.notifications.IRemoteNotificationReceivedHandler
 import com.onesignal.notifications.internal.common.NotificationGenerationJob
 import org.json.JSONArray
 import org.json.JSONObject
@@ -23,7 +24,7 @@ import org.json.JSONObject
  * --------
  * [IRemoteNotificationReceivedHandler]: Callback to indicate a notification has been received. Specified in the AndroidManifest.xml.
  * [INotificationWillShowInForegroundHandler]: Callback to indicate a notification has been received while the app is in the foreground.
- * [INotificationOpenedHandler]: Callback to indicate a notification has been opened.
+ * [INotificationClickHandler]: Callback to indicate a notification has been opened.
  *
  * The order of events is as follows
  *  1. Notification is received by the notification module
@@ -35,14 +36,14 @@ import org.json.JSONObject
  *  7. User "opens" or "dismisses" the notification
  *  8. [INotificationLifecycleCallback.canOpenNotification] To determine if the notification can be opened by the notification module, or should be ignored.
  *  9. [INotificationLifecycleEventHandler.onNotificationOpened] To indicate the notification has been opened.
- * 10. [INotificationOpenedHandler.notificationOpened] To indicate the notification has been opened.
+ * 10. [INotificationClickHandler.notificationClicked] To indicate the notification has been opened.
  */
 interface INotificationLifecycleService {
     fun addInternalNotificationLifecycleEventHandler(handler: INotificationLifecycleEventHandler)
     fun removeInternalNotificationLifecycleEventHandler(handler: INotificationLifecycleEventHandler)
     fun setInternalNotificationLifecycleCallback(callback: INotificationLifecycleCallback?)
     fun setExternalWillShowInForegroundHandler(handler: INotificationWillShowInForegroundHandler?)
-    fun setExternalNotificationOpenedHandler(handler: INotificationOpenedHandler?)
+    fun setExternalNotificationOpenedHandler(handler: INotificationClickHandler?)
 
     suspend fun canReceiveNotification(jsonPayload: JSONObject): Boolean
     fun externalRemoteNotificationReceived(context: Context, notificationReceivedEvent: INotificationReceivedEvent)
