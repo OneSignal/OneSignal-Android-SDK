@@ -41,7 +41,7 @@ internal open class UserManager(
     private val _propertiesModel: PropertiesModel
         get() = _propertiesModelStore.model
 
-    override fun addAlias(label: String, id: String): com.onesignal.user.IUserManager {
+    override fun addAlias(label: String, id: String) {
         Logging.log(LogLevel.DEBUG, "setAlias(label: $label, id: $id)")
 
         if (label == IdentityConstants.ONESIGNAL_ID) {
@@ -49,10 +49,9 @@ internal open class UserManager(
         }
 
         _identityModel[label] = id
-        return this
     }
 
-    override fun addAliases(aliases: Map<String, String>): IUserManager {
+    override fun addAliases(aliases: Map<String, String>) {
         Logging.log(LogLevel.DEBUG, "addAliases(aliases: $aliases")
 
         if (aliases.keys.any { it == IdentityConstants.ONESIGNAL_ID }) {
@@ -62,11 +61,9 @@ internal open class UserManager(
         aliases.forEach {
             _identityModel[it.key] = it.value
         }
-
-        return this
     }
 
-    override fun removeAlias(label: String): IUserManager {
+    override fun removeAlias(label: String) {
         Logging.log(LogLevel.DEBUG, "removeAlias(label: $label)")
 
         if (label == IdentityConstants.ONESIGNAL_ID) {
@@ -74,62 +71,51 @@ internal open class UserManager(
         }
 
         _identityModel.remove(label)
-        return this
     }
 
-    override fun addEmailSubscription(email: String): IUserManager {
+    override fun addEmailSubscription(email: String) {
         Logging.log(LogLevel.DEBUG, "addEmailSubscription(email: $email)")
         _subscriptionManager.addEmailSubscription(email)
-        return this
     }
 
-    override fun removeEmailSubscription(email: String): IUserManager {
+    override fun removeEmailSubscription(email: String) {
         Logging.log(LogLevel.DEBUG, "removeEmailSubscription(email: $email)")
         _subscriptionManager.removeEmailSubscription(email)
-        return this
     }
 
-    override fun addSmsSubscription(sms: String): IUserManager {
+    override fun addSmsSubscription(sms: String) {
         Logging.log(LogLevel.DEBUG, "addSmsSubscription(sms: $sms)")
         _subscriptionManager.addSmsSubscription(sms)
-        return this
     }
 
-    override fun removeSmsSubscription(sms: String): IUserManager {
+    override fun removeSmsSubscription(sms: String) {
         Logging.log(LogLevel.DEBUG, "removeSmsSubscription(sms: $sms)")
         _subscriptionManager.removeSmsSubscription(sms)
-        return this
     }
 
-    override fun addTag(key: String, value: String): IUserManager {
+    override fun addTag(key: String, value: String) {
         Logging.log(LogLevel.DEBUG, "setTag(key: $key, value: $value)")
         _propertiesModel.tags[key] = value
-        return this
     }
 
-    override fun addTags(tags: Map<String, String>): IUserManager {
+    override fun addTags(tags: Map<String, String>) {
         Logging.log(LogLevel.DEBUG, "setTags(tags: $tags)")
 
         tags.forEach {
             _propertiesModel.tags[it.key] = it.value
         }
-
-        return this
     }
 
-    override fun removeTag(key: String): IUserManager {
+    override fun removeTag(key: String) {
         Logging.log(LogLevel.DEBUG, "removeTag(key: $key)")
         _propertiesModel.tags.remove(key)
-        return this
     }
 
-    override fun removeTags(keys: Collection<String>): IUserManager {
+    override fun removeTags(keys: Collection<String>) {
         Logging.log(LogLevel.DEBUG, "removeTags(keys: $keys)")
 
         keys.forEach {
             _propertiesModel.tags.remove(it)
         }
-
-        return this
     }
 }

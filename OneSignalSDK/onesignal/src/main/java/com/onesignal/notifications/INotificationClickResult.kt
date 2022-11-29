@@ -1,10 +1,10 @@
 package com.onesignal.notifications
 
 /**
- * The data provided to [INotificationOpenedHandler.notificationOpened] when a notification
+ * The data provided to [INotificationClickHandler.notificationClicked] when a notification
  * has been opened by the user.
  */
-interface INotificationOpenedResult {
+interface INotificationClickResult {
     /**
      * The notification that was opened by the user.
      */

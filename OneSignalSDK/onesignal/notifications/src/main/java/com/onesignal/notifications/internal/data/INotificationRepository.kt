@@ -113,7 +113,7 @@ internal interface INotificationRepository {
         val id: String,
         val fullData: String,
         val createdAt: Long,
-        val title: String,
-        val message: String
+        val title: String?,
+        val message: String?
     )
 }
