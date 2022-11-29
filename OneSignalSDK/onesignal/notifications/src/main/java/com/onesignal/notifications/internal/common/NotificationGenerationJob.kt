@@ -53,14 +53,14 @@ class NotificationGenerationJob {
     /**
      * Get the notification title from the payload
      */
-    val title: CharSequence
-        get() = overriddenTitleFromExtender ?: notification!!.title as CharSequence
+    val title: CharSequence?
+        get() = overriddenTitleFromExtender ?: notification!!.title as CharSequence?
 
     /**
      * Get the notification body from the payload
      */
-    val body: CharSequence
-        get() = overriddenBodyFromExtender ?: notification!!.body as CharSequence
+    val body: CharSequence?
+        get() = overriddenBodyFromExtender ?: notification!!.body as CharSequence?
 
     /**
      * Get the notification additional data json from the payload

@@ -11,6 +11,7 @@ import android.text.style.StyleSpan
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import com.onesignal.common.safeString
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.notifications.internal.common.NotificationConstants
 import com.onesignal.notifications.internal.common.NotificationGenerationJob
@@ -127,7 +128,7 @@ internal class SummaryNotificationDisplayer(
                 spannableString.setSpan(StyleSpan(Typeface.BOLD), 0, title.length, 0)
             }
 
-            summaryList!!.add(spannableString)
+            summaryList.add(spannableString)
             if (firstFullData == null) {
                 firstFullData = notification.fullData
             }
@@ -139,14 +140,11 @@ internal class SummaryNotificationDisplayer(
         )
 
         // 2 or more notifications with a group received, group them together as a single notification.
-        if (summaryList != null &&
-            (
-                updateSummary && summaryList!!.size > 1 ||
-                    !updateSummary && summaryList!!.size > 0
-                )
+        if (updateSummary && summaryList.size > 1 ||
+            !updateSummary && summaryList.size > 0
         ) {
-            val notificationCount = summaryList!!.size + if (updateSummary) 0 else 1
-            var summaryMessage = fcmJson.optString("grp_msg", null)
+            val notificationCount = summaryList.size + if (updateSummary) 0 else 1
+            var summaryMessage = fcmJson.safeString("grp_msg")
             summaryMessage = summaryMessage?.replace("$[notif_count]", "" + notificationCount)
                 ?: "$notificationCount new messages"
             val summaryBuilder = _notificationDisplayBuilder.getBaseOneSignalNotificationBuilder(notificationJob).compatBuilder
@@ -198,7 +196,8 @@ internal class SummaryNotificationDisplayer(
                         notificationJob.title.toString()
                 }
                 if (line1Title == null) line1Title = "" else line1Title += " "
-                val message: String = notificationJob.body.toString()
+
+                val message: String = notificationJob.body?.toString() ?: ""
                 val spannableString = SpannableString(line1Title + message)
                 if (line1Title.length > 0) {
                     spannableString.setSpan(
@@ -210,7 +209,7 @@ internal class SummaryNotificationDisplayer(
                 }
                 inboxStyle.addLine(spannableString)
             }
-            for (line in summaryList!!) inboxStyle.addLine(line)
+            for (line in summaryList) inboxStyle.addLine(line)
             inboxStyle.setBigContentTitle(summaryMessage)
             summaryBuilder.setStyle(inboxStyle)
             summaryNotification = summaryBuilder.build()
