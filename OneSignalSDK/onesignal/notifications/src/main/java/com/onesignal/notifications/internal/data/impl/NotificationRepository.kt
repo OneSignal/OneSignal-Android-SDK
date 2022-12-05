@@ -428,12 +428,11 @@ internal class NotificationRepository(
                 whereArgs = whereArgs,
                 orderBy = BaseColumns._ID + " DESC" // sort order, new to old);
             ) {
-                if (it.count > 1) {
-                    it.moveToFirst()
+                if (it.moveToFirst()) {
                     do {
                         try {
-                            val title = it.getString(OneSignalDbContract.NotificationTable.COLUMN_NAME_TITLE)
-                            val message = it.getString(OneSignalDbContract.NotificationTable.COLUMN_NAME_MESSAGE)
+                            val title = it.getOptString(OneSignalDbContract.NotificationTable.COLUMN_NAME_TITLE)
+                            val message = it.getOptString(OneSignalDbContract.NotificationTable.COLUMN_NAME_MESSAGE)
                             val osNotificationId = it.getString(OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID)
                             val existingId = it.getInt(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID)
                             val fullData = it.getString(OneSignalDbContract.NotificationTable.COLUMN_NAME_FULL_DATA)
@@ -529,9 +528,9 @@ internal class NotificationRepository(
             ) {
                 while (it.moveToNext()) {
                     val title =
-                        it.getString(OneSignalDbContract.NotificationTable.COLUMN_NAME_TITLE)
+                        it.getOptString(OneSignalDbContract.NotificationTable.COLUMN_NAME_TITLE)
                     val message =
-                        it.getString(OneSignalDbContract.NotificationTable.COLUMN_NAME_MESSAGE)
+                        it.getOptString(OneSignalDbContract.NotificationTable.COLUMN_NAME_MESSAGE)
                     val osNotificationId =
                         it.getString(OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID)
                     val existingId =

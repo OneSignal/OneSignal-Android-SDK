@@ -1,6 +1,8 @@
 package com.onesignal.notifications.internal
 
 import androidx.core.app.NotificationCompat
+import com.onesignal.common.safeJSONObject
+import com.onesignal.common.safeString
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.BackgroundImageLayout
@@ -129,27 +131,27 @@ open class Notification : INotification {
             sentTime = currentTime / 1000
             ttl = NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD
         }
-        notificationId = customJson.optString("i")
-        templateId = customJson.optString("ti")
-        templateName = customJson.optString("tn")
+        notificationId = customJson.safeString("i")
+        templateId = customJson.safeString("ti")
+        templateName = customJson.safeString("tn")
         rawPayload = currentJsonPayload.toString()
-        additionalData = customJson.optJSONObject(NotificationConstants.PUSH_ADDITIONAL_DATA_KEY)
-        launchURL = customJson.optString("u", null)
-        body = currentJsonPayload.optString("alert", null)
-        title = currentJsonPayload.optString("title", null)
-        smallIcon = currentJsonPayload.optString("sicon", null)
-        bigPicture = currentJsonPayload.optString("bicon", null)
-        largeIcon = currentJsonPayload.optString("licon", null)
-        sound = currentJsonPayload.optString("sound", null)
-        groupKey = currentJsonPayload.optString("grp", null)
-        groupMessage = currentJsonPayload.optString("grp_msg", null)
-        smallIconAccentColor = currentJsonPayload.optString("bgac", null)
-        ledColor = currentJsonPayload.optString("ledc", null)
-        val visibility = currentJsonPayload.optString("vis", null)
+        additionalData = customJson.safeJSONObject(NotificationConstants.PUSH_ADDITIONAL_DATA_KEY)
+        launchURL = customJson.safeString("u")
+        body = currentJsonPayload.safeString("alert")
+        title = currentJsonPayload.safeString("title")
+        smallIcon = currentJsonPayload.safeString("sicon")
+        bigPicture = currentJsonPayload.safeString("bicon")
+        largeIcon = currentJsonPayload.safeString("licon")
+        sound = currentJsonPayload.safeString("sound")
+        groupKey = currentJsonPayload.safeString("grp")
+        groupMessage = currentJsonPayload.safeString("grp_msg")
+        smallIconAccentColor = currentJsonPayload.safeString("bgac")
+        ledColor = currentJsonPayload.safeString("ledc")
+        val visibility = currentJsonPayload.safeString("vis")
         if (visibility != null) lockScreenVisibility = visibility.toInt()
-        fromProjectNumber = currentJsonPayload.optString("from", null)
+        fromProjectNumber = currentJsonPayload.safeString("from")
         priority = currentJsonPayload.optInt("pri", 0)
-        val collapseKey = currentJsonPayload.optString("collapse_key", null)
+        val collapseKey = currentJsonPayload.safeString("collapse_key")
         if ("do_not_collapse" != collapseKey) collapseId = collapseKey
         try {
             setActionButtonsFromData()
@@ -171,9 +173,9 @@ open class Notification : INotification {
             for (i in 0 until jsonActionButtons.length()) {
                 val jsonActionButton = jsonActionButtons.getJSONObject(i)
                 val actionButton = ActionButton()
-                actionButton.id = jsonActionButton.optString("id", null)
-                actionButton.text = jsonActionButton.optString("text", null)
-                actionButton.icon = jsonActionButton.optString("icon", null)
+                actionButton.id = jsonActionButton.safeString("id")
+                actionButton.text = jsonActionButton.safeString("text")
+                actionButton.icon = jsonActionButton.safeString("icon")
                 actionBtns.add(actionButton)
             }
             actionButtons = actionBtns
@@ -184,13 +186,13 @@ open class Notification : INotification {
 
     @Throws(Throwable::class)
     private fun setBackgroundImageLayoutFromData(currentJsonPayload: JSONObject) {
-        val jsonStrBgImage = currentJsonPayload.optString("bg_img", null)
+        val jsonStrBgImage = currentJsonPayload.safeString("bg_img")
         if (jsonStrBgImage != null) {
             val jsonBgImage = JSONObject(jsonStrBgImage)
             backgroundImageLayout = BackgroundImageLayout(
-                jsonBgImage.optString("img"),
-                jsonBgImage.optString("tc"),
-                jsonBgImage.optString("bc")
+                jsonBgImage.safeString("img"),
+                jsonBgImage.safeString("tc"),
+                jsonBgImage.safeString("bc")
             )
         }
     }
@@ -317,9 +319,9 @@ open class Notification : INotification {
 
         constructor() {}
         constructor(jsonObject: JSONObject) {
-            id = jsonObject.optString("id")
-            text = jsonObject.optString("text")
-            icon = jsonObject.optString("icon")
+            id = jsonObject.safeString("id")
+            text = jsonObject.safeString("text")
+            icon = jsonObject.safeString("icon")
         }
 
         constructor(id: String?, text: String?, icon: String?) {

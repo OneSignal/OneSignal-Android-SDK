@@ -21,9 +21,9 @@ internal class DummyInAppMessagesManager : IInAppMessagesManager {
     override fun clearTriggers() {
     }
 
-    override fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler) {
+    override fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler?) {
     }
 
-    override fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler) {
+    override fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler?) {
     }
 }

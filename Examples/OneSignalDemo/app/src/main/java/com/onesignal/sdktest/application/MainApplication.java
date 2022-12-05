@@ -9,8 +9,8 @@ import androidx.multidex.MultiDexApplication;
 
 import com.onesignal.OneSignal;
 import com.onesignal.inAppMessages.IInAppMessage;
-import com.onesignal.inAppMessages.IInAppMessageAction;
 import com.onesignal.inAppMessages.IInAppMessageClickHandler;
+import com.onesignal.inAppMessages.IInAppMessageClickResult;
 import com.onesignal.inAppMessages.IInAppMessageLifecycleHandler;
 import com.onesignal.debug.LogLevel;
 import com.onesignal.notifications.INotification;
@@ -18,6 +18,7 @@ import com.onesignal.sdktest.BuildConfig;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.constant.Text;
+import com.onesignal.sdktest.notification.OneSignalNotificationSender;
 import com.onesignal.sdktest.util.SharedPreferenceUtil;
 
 import org.json.JSONObject;
@@ -43,6 +44,7 @@ public class MainApplication extends MultiDexApplication {
             SharedPreferenceUtil.cacheOneSignalAppId(this, appId);
         }
 
+        OneSignalNotificationSender.setAppId(appId);
         OneSignal.initWithContext(this, appId);
 
         OneSignal.getInAppMessages().setInAppMessageLifecycleHandler(new IInAppMessageLifecycleHandler() {
@@ -69,12 +71,12 @@ public class MainApplication extends MultiDexApplication {
 
         OneSignal.getInAppMessages().setInAppMessageClickHandler(new IInAppMessageClickHandler() {
             @Override
-            public void inAppMessageClicked(@Nullable IInAppMessageAction result) {
+            public void inAppMessageClicked(@Nullable IInAppMessageClickResult result) {
                 Log.v("MainApplication", "inAppMessageClicked");
             }
         });
 
-        OneSignal.getNotifications().setNotificationOpenedHandler(result ->
+        OneSignal.getNotifications().setNotificationClickHandler(result ->
                 {
                     Log.v("MainApplication", "INotificationOpenedResult: " + result);
                 });

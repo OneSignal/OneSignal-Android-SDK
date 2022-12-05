@@ -18,8 +18,8 @@ internal class MisconfiguredIAMManager : IInAppMessagesManager {
     override fun removeTrigger(key: String) = throw EXCEPTION
     override fun removeTriggers(keys: Collection<String>) = throw EXCEPTION
     override fun clearTriggers() = throw EXCEPTION
-    override fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler) = throw EXCEPTION
-    override fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler) = throw EXCEPTION
+    override fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler?) = throw EXCEPTION
+    override fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler?) = throw EXCEPTION
 
     companion object {
         private val EXCEPTION: Throwable get() = Exception("Must include gradle module com.onesignal:InAppMessages in order to use this functionality!")

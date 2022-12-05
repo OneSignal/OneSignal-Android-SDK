@@ -16,7 +16,7 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.INotification
 import com.onesignal.notifications.INotificationAction
 import com.onesignal.notifications.internal.NotificationAction
-import com.onesignal.notifications.internal.NotificationOpenedResult
+import com.onesignal.notifications.internal.NotificationClickResult
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -203,7 +203,7 @@ object NotificationHelper {
         return ""
     }
 
-    fun generateNotificationOpenedResult(jsonArray: JSONArray, time: ITime): NotificationOpenedResult {
+    fun generateNotificationOpenedResult(jsonArray: JSONArray, time: ITime): NotificationClickResult {
         val jsonArraySize = jsonArray.length()
         var firstMessage = true
         val androidNotificationId = jsonArray.optJSONObject(0)
@@ -244,6 +244,6 @@ object NotificationHelper {
             androidNotificationId,
             time
         )
-        return NotificationOpenedResult(notification, notificationAction)
+        return NotificationClickResult(notification, notificationAction)
     }
 }
