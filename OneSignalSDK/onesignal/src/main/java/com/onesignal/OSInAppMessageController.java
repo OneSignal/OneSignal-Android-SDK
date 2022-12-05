@@ -80,7 +80,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     private boolean inAppMessageShowing = false;
 
     @Nullable
-    private String userTagsString = null;
+    private String userTagsString = "";
 
     @Nullable
     private OSInAppMessageContent pendingMessageContent = null;
