@@ -16,6 +16,7 @@ import androidx.core.app.NotificationManagerCompat
 import com.onesignal.common.AndroidSupportV4Compat
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.exceptions.MainThreadException
+import com.onesignal.common.safeString
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.R
@@ -71,14 +72,14 @@ internal class NotificationDisplayer(
     private suspend fun showNotification(notificationJob: NotificationGenerationJob): Boolean {
         val notificationId: Int = notificationJob.androidId
         val fcmJson: JSONObject = notificationJob.jsonPayload!!
-        var group: String? = fcmJson.optString("grp", null)
-        val intentGenerator = IntentGeneratorForAttachingToNotifications(currentContext!!)
+        var group: String? = fcmJson.safeString("grp")
+        val intentGenerator = IntentGeneratorForAttachingToNotifications(currentContext)
         var grouplessNotifs = ArrayList<StatusBarNotification>()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             /* Android 7.0 auto groups 4 or more notifications so we find these groupless active
           * notifications and add a generic group to them */
-            grouplessNotifs = NotificationHelper.getActiveGrouplessNotifications(currentContext!!)
+            grouplessNotifs = NotificationHelper.getActiveGrouplessNotifications(currentContext)
 
             // If the null this makes the 4th notification and we want to check that 3 or more active groupless exist
             if (group == null && grouplessNotifs.size >= 3) {
@@ -204,11 +205,11 @@ internal class NotificationDisplayer(
             val mContentTextField =
                 NotificationCompat.Builder::class.java.getDeclaredField("mContentText")
             mContentTextField.isAccessible = true
-            val mContentText = mContentTextField[notificationBuilder] as CharSequence
+            val mContentText = mContentTextField[notificationBuilder] as CharSequence?
             val mContentTitleField =
                 NotificationCompat.Builder::class.java.getDeclaredField("mContentTitle")
             mContentTitleField.isAccessible = true
-            val mContentTitle = mContentTitleField[notificationBuilder] as CharSequence
+            val mContentTitle = mContentTitleField[notificationBuilder] as CharSequence?
             notificationJob.overriddenBodyFromExtender = mContentText
             notificationJob.overriddenTitleFromExtender = mContentTitle
             if (!notificationJob.isRestoring) {

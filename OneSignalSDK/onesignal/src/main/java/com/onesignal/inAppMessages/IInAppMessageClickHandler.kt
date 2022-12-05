@@ -2,9 +2,9 @@ package com.onesignal.inAppMessages
 
 interface IInAppMessageClickHandler {
     /**
-     * Fires when a user taps on a clickable element in the notification such as a button or image
+     * Fires when a user clicks on a clickable element in the IAM.
      *
-     * @param result The [IInAppMessageAction] that should be taken based on the click.
+     * @param result The [IInAppMessageClickResult] with the user's response and properties of this message.
      */
-    fun inAppMessageClicked(result: IInAppMessageAction)
+    fun inAppMessageClicked(result: IInAppMessageClickResult)
 }

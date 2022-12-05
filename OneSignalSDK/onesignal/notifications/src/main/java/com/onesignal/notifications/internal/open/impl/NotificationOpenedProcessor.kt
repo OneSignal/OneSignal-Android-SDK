@@ -163,7 +163,7 @@ internal class NotificationOpenedProcessor(
     private suspend fun addChildNotifications(dataArray: JSONArray, summaryGroup: String) {
         val childNotifications = _dataController.listNotificationsForGroup(summaryGroup)
         for (childNotification in childNotifications)
-            dataArray!!.put(JSONObject(childNotification.fullData))
+            dataArray.put(JSONObject(childNotification.fullData))
     }
 
     private suspend fun markNotificationsConsumed(
