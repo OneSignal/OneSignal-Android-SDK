@@ -14,7 +14,6 @@ import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import org.json.JSONObject
 import org.junit.runner.RunWith
 
 @RunWith(KotestTestRunner::class)
@@ -106,74 +105,6 @@ class NotificationBackendServiceTests : FunSpec({
                 "subscriptionId",
                 IDeviceService.DeviceType.Android
             )
-        }
-
-        /* Then */
-        exception.statusCode shouldBe 404
-    }
-
-    test("postNotification succeeds when response is successful and appId not provided in payload") {
-        /* Given */
-        val spyHttpClient = mockk<IHttpClient>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{prop1: \"val1\"}")
-
-        val notificationBackendService = NotificationBackendService(spyHttpClient)
-
-        val jsonObject = JSONObject().put("prop1", "val1")
-
-        /* When */
-        val response = notificationBackendService.postNotification("appId", jsonObject)
-
-        /* Then */
-        response.getString("prop1") shouldBe "val1"
-        coVerify {
-            spyHttpClient.post(
-                "notifications/",
-                withArg {
-                    it.getString("app_id") shouldBe "appId"
-                    it.getString("prop1") shouldBe "val1"
-                }
-            )
-        }
-    }
-
-    test("postNotification succeeds when response is successful and appId provided in payload") {
-        /* Given */
-        val spyHttpClient = mockk<IHttpClient>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{prop1: \"val1\"}")
-
-        val notificationBackendService = NotificationBackendService(spyHttpClient)
-
-        val jsonObject = JSONObject().put("app_id", "appId1").put("prop1", "val1")
-
-        /* When */
-        val response = notificationBackendService.postNotification("appId2", jsonObject)
-
-        /* Then */
-        response.getString("prop1") shouldBe "val1"
-        coVerify {
-            spyHttpClient.post(
-                "notifications/",
-                withArg {
-                    it.getString("app_id") shouldBe "appId1"
-                    it.getString("prop1") shouldBe "val1"
-                }
-            )
-        }
-    }
-
-    test("postNotification throws exception when response is unsuccessful") {
-        /* Given */
-        val spyHttpClient = mockk<IHttpClient>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(404, null)
-
-        val notificationBackendService = NotificationBackendService(spyHttpClient)
-
-        val jsonObject = JSONObject().put("prop1", "val1")
-
-        /* When */
-        val exception = shouldThrowUnit<BackendException> {
-            notificationBackendService.postNotification("appId", jsonObject)
         }
 
         /* Then */

@@ -1,7 +1,5 @@
 package com.onesignal.notifications
 
-import org.json.JSONObject
-
 /**
  * The entry point to the notification SDK for OneSignal.
  */
@@ -37,22 +35,6 @@ interface INotificationsManager {
      *         false if the user is opted out of push notifications (user rejected)
      */
     suspend fun requestPermission(fallbackToSettings: Boolean): Boolean
-
-    /**
-     * Allows you to send notifications from user to user or schedule ones in the future to be delivered
-     * to the current device.
-     *
-     * *Note:* You can only use `include_player_ids` as a targeting parameter from your app.
-     * Other target options such as `tags` and `included_segments` require your OneSignal
-     * App REST API key which can only be used from your server.
-     *
-     * @param json Contains notification options, see [OneSignal | Create Notification](https://documentation.onesignal.com/reference#create-notification)
-     *             POST call for all options.
-     *
-     * @return The JSON response to sending the notification.
-     */
-    suspend fun postNotification(json: JSONObject): JSONObject
-    suspend fun postNotification(json: String): JSONObject
 
     /**
      * Cancels a single OneSignal notification based on its Android notification integer ID. Use
@@ -118,12 +100,12 @@ interface INotificationsManager {
      *
      * @param handler: The handler that is to be called when the even occurs.
      */
-    fun setNotificationWillShowInForegroundHandler(handler: INotificationWillShowInForegroundHandler)
+    fun setNotificationWillShowInForegroundHandler(handler: INotificationWillShowInForegroundHandler?)
 
     /**
-     * Sets a handler that will run whenever a notification is tapped on by the user.
+     * Sets a handler that will run whenever a notification is clicked on by the user.
      *
      * @param handler The handler that is to be called when the event occurs.
      */
-    fun setNotificationOpenedHandler(handler: INotificationOpenedHandler)
+    fun setNotificationClickHandler(handler: INotificationClickHandler?)
 }

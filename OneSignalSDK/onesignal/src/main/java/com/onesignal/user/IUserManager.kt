@@ -53,10 +53,8 @@ interface IUserManager {
      * @param label The alias label that you want to set against the current user.
      * @param id The alias id that should be set against the current user. This must be a unique value
      * within the alias label across your entire user base so it can uniquely identify this user.
-     *
-     * @return this user manager to allow for chaining of calls.
      */
-    fun addAlias(label: String, id: String): IUserManager
+    fun addAlias(label: String, id: String)
 
     /**
      * Add/set aliases for the current user. If any alias already exists it will be overwritten.
@@ -64,55 +62,43 @@ interface IUserManager {
      * @param aliases A map of the alias label -> alias id that should be set against the user. Each
      * alias id must be a unique value within the alias label across your entire user base so it can
      * uniquely identify this user.
-     *
-     * @return this user manager to allow for chaining of calls.
      */
-    fun addAliases(aliases: Map<String, String>): IUserManager
+    fun addAliases(aliases: Map<String, String>)
 
     /**
      * Remove an alias from the current user.
      *
      * @param label The alias label that should no longer be set for the current user.
-     *
-     * @return this user manager to allow for chaining of calls.
      */
-    fun removeAlias(label: String): IUserManager
+    fun removeAlias(label: String)
 
     /**
      * Add a new email subscription to the current user.
      *
      * @param email The email address that the current user has subscribed for.
-     *
-     * @return this user manager to allow for chaining of calls.
      */
-    fun addEmailSubscription(email: String): IUserManager
+    fun addEmailSubscription(email: String)
 
     /**
      * Remove an email subscription from the current user.
      *
      * @param email The email address that the current user was subscribed for, and should no longer be.
-     *
-     * @return this user manager to allow for chaining of calls.
      */
-    fun removeEmailSubscription(email: String): IUserManager
+    fun removeEmailSubscription(email: String)
 
     /**
      * Add a new SMS subscription to the current user.
      *
      * @param sms The phone number that the current user has subscribed for, in [E.164](https://documentation.onesignal.com/docs/sms-faq#what-is-the-e164-format) format.
-     *
-     * @return this user manager to allow for chaining of calls.
      */
-    fun addSmsSubscription(sms: String): IUserManager
+    fun addSmsSubscription(sms: String)
 
     /**
      * Remove an SMS subscription from the current user.
      *
      * @param sms The sms address that the current user was subscribed for, and should no longer be.
-     *
-     * @return this user manager to allow for chaining of calls.
      */
-    fun removeSmsSubscription(sms: String): IUserManager
+    fun removeSmsSubscription(sms: String)
 
     /**
      * Add a tag for the current user.  Tags are key:value pairs used as building blocks
@@ -122,10 +108,8 @@ interface IUserManager {
      *
      * @param key The key of the data tag.
      * @param value THe new value of the data tag.
-     *
-     * @return this user manager to allow for chaining of calls.
      */
-    fun addTag(key: String, value: String): IUserManager
+    fun addTag(key: String, value: String)
 
     /**
      * Add multiple tags for the current user.  Tags are key:value pairs used as building blocks
@@ -134,26 +118,20 @@ interface IUserManager {
      * If the tag key already exists, it will be replaced with the value provided here.
      *
      * @param tags A map of tags, all of which will be added/updated for the current user.
-     *
-     * @return this user manager to allow for chaining of calls.
      */
-    fun addTags(tags: Map<String, String>): IUserManager
+    fun addTags(tags: Map<String, String>)
 
     /**
      * Remove the data tag with the provided key from the current user.
      *
      * @param key The key of the data tag.
-     *
-     * @return this user manager to allow for chaining of calls.
      */
-    fun removeTag(key: String): IUserManager
+    fun removeTag(key: String)
 
     /**
      * Remove multiple tags from the current user.
      *
      * @param keys The collection of keys, all of which will be removed from the current user.
-     *
-     * @return this user manager to allow for chaining of calls.
      */
-    fun removeTags(keys: Collection<String>): IUserManager
+    fun removeTags(keys: Collection<String>)
 }

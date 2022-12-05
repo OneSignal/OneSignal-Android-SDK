@@ -2,17 +2,15 @@ package com.onesignal.notifications.internal
 
 import android.app.Activity
 import com.onesignal.common.events.EventProducer
-import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.notifications.INotificationOpenedHandler
+import com.onesignal.notifications.INotificationClickHandler
 import com.onesignal.notifications.INotificationWillShowInForegroundHandler
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.notifications.IPermissionChangedHandler
-import com.onesignal.notifications.PostNotificationException
 import com.onesignal.notifications.internal.backend.INotificationBackendService
 import com.onesignal.notifications.internal.common.GenerateNotificationOpenIntentFromPushPayload
 import com.onesignal.notifications.internal.common.NotificationHelper
@@ -24,7 +22,6 @@ import com.onesignal.notifications.internal.restoration.INotificationRestoreWork
 import com.onesignal.notifications.internal.summary.INotificationSummaryManager
 import org.json.JSONArray
 import org.json.JSONException
-import org.json.JSONObject
 
 interface INotificationActivityOpener {
     suspend fun openDestinationActivity(activity: Activity, pushPayloads: JSONArray)
@@ -104,50 +101,6 @@ internal class NotificationsManager(
     }
 
     /**
-     * Allows you to send notifications from user to user or schedule ones in the future to be delivered
-     * to the current device.
-     *
-     *
-     * *Note:* You can only use `include_player_ids` as a targeting parameter from your app.
-     * Other target options such as `tags` and `included_segments` require your OneSignal
-     * App REST API key which can only be used from your server.
-     *
-     * @param json Contains notification options, see <a href="https://documentation.onesignal.com/reference#create-notification">OneSignal | Create Notification</a>
-     *              POST call for all options.
-     * @param callback a {@link PostNotificationResponseHandler} object to receive the request result
-     */
-    override suspend fun postNotification(json: JSONObject): JSONObject {
-        Logging.debug("NotificationsManager.postNotification(json: $json)")
-
-        // app_id will not be set if init was never called.
-        val appId = if (json.has("app_id")) {
-            json.getString("app_id")
-        } else {
-            _configModelStore.model.appId
-        }
-
-        try {
-            var jsonObject = _backend.postNotification(appId, json)
-
-            if (!jsonObject.has("errors")) {
-                return jsonObject
-            } else {
-                throw PostNotificationException(jsonObject)
-            }
-        } catch (ex: BackendException) {
-            val jsonObject = if (ex.response != null) {
-                JSONObject(ex.response)
-            } else {
-                JSONObject("{\"error\": \"HTTP no response error\"}")
-            }
-
-            throw PostNotificationException(jsonObject)
-        }
-    }
-
-    override suspend fun postNotification(json: String): JSONObject = postNotification(JSONObject(json))
-
-    /**
      * Cancels a single OneSignal notification based on its Android notification integer ID. Use
      * instead of Android's [android.app.NotificationManager.cancel}, otherwise the notification will be restored
      * when your app is restarted.
@@ -216,7 +169,7 @@ internal class NotificationsManager(
      *
      * @param handler: The handler that is to be called when the even occurs.
      */
-    override fun setNotificationWillShowInForegroundHandler(handler: INotificationWillShowInForegroundHandler) {
+    override fun setNotificationWillShowInForegroundHandler(handler: INotificationWillShowInForegroundHandler?) {
         Logging.debug("NotificationsManager.setNotificationWillShowInForegroundHandler(handler: $handler)")
         _notificationLifecycleService.setExternalWillShowInForegroundHandler(handler)
     }
@@ -226,7 +179,7 @@ internal class NotificationsManager(
      *
      * @param handler The handler that is to be called when the event occurs.
      */
-    override fun setNotificationOpenedHandler(handler: INotificationOpenedHandler) {
+    override fun setNotificationClickHandler(handler: INotificationClickHandler?) {
         Logging.debug("NotificationsManager.setNotificationOpenedHandler(handler: $handler)")
         _notificationLifecycleService.setExternalNotificationOpenedHandler(handler)
     }
