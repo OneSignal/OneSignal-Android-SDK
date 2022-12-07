@@ -1,8 +1,13 @@
 package com.onesignal.user.internal.operations.impl.executors
 
+import android.os.Build
+import com.onesignal.common.DeviceUtils
 import com.onesignal.common.NetworkUtils
+import com.onesignal.common.OneSignalUtils
+import com.onesignal.common.RootToolsInternalMethods
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
+import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -12,6 +17,7 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.ISubscriptionBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
+import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
@@ -23,6 +29,7 @@ import com.onesignal.user.internal.subscriptions.SubscriptionType
 internal class SubscriptionOperationExecutor(
     private val _subscriptionBackend: ISubscriptionBackendService,
     private val _deviceService: IDeviceService,
+    private val _applicationService: IApplicationService,
     private val _subscriptionModelStore: SubscriptionModelStore
 ) : IOperationExecutor {
 
@@ -59,14 +66,25 @@ internal class SubscriptionOperationExecutor(
         val status = lastUpdateOperation?.status ?: createOperation.status
 
         try {
+            val subscription = SubscriptionObject(
+                createOperation.subscriptionId,
+                convert(createOperation.type),
+                address,
+                enabled,
+                status.value,
+                OneSignalUtils.sdkVersion,
+                Build.MODEL,
+                Build.VERSION.RELEASE,
+                RootToolsInternalMethods.isRooted,
+                DeviceUtils.getNetType(_applicationService.appContext),
+                DeviceUtils.getCarrierName(_applicationService.appContext)
+            )
+
             val backendSubscriptionId = _subscriptionBackend.createSubscription(
                 createOperation.appId,
                 IdentityConstants.ONESIGNAL_ID,
                 createOperation.onesignalId,
-                convert(createOperation.type),
-                enabled,
-                address,
-                status
+                subscription
             )
 
             val subscriptionModel = _subscriptionModelStore.get(createOperation.subscriptionId)
@@ -102,14 +120,21 @@ internal class SubscriptionOperationExecutor(
         // the effective enabled/address is the last update performed
         val lastOperation = operations.last() as UpdateSubscriptionOperation
         try {
-            _subscriptionBackend.updateSubscription(
-                lastOperation.appId,
+            val subscription = SubscriptionObject(
                 lastOperation.subscriptionId,
                 convert(lastOperation.type),
-                lastOperation.enabled,
                 lastOperation.address,
-                lastOperation.status
+                lastOperation.enabled,
+                lastOperation.status.value,
+                OneSignalUtils.sdkVersion,
+                Build.MODEL,
+                Build.VERSION.RELEASE,
+                RootToolsInternalMethods.isRooted,
+                DeviceUtils.getNetType(_applicationService.appContext),
+                DeviceUtils.getCarrierName(_applicationService.appContext)
             )
+
+            _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription)
 
             // update/create the subscription model, in case it lost it's sync.
             val subscriptionModel = _subscriptionModelStore.get(lastOperation.subscriptionId)

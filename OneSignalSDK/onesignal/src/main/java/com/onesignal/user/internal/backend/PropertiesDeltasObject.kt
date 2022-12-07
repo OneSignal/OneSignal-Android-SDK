@@ -7,7 +7,10 @@ class PropertiesDeltasObject(
     val sessionCount: Int? = null,
     val amountSpent: BigDecimal? = null,
     val purchases: List<PurchaseObject>? = null
-)
+) {
+    val hasAtLeastOnePropertySet : Boolean
+        get() = sessionTime != null || sessionCount != null || amountSpent != null || purchases != null
+}
 
 class PurchaseObject(
     val sku: String,

@@ -25,9 +25,8 @@ class UserBackendServiceTests : FunSpec({
     test("create user with nothing throws an exception") {
         /* Given */
         val spyHttpClient = mockk<IHttpClient>()
-        val spySubscriptionBackend = mockk<ISubscriptionBackendService>()
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(403, "FORBIDDEN")
-        val userBackendService = UserBackendService(spyHttpClient, spySubscriptionBackend)
+        val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf<String, String>()
         val properties = PropertiesObject()
         val subscriptions = listOf<SubscriptionObject>()
@@ -46,9 +45,8 @@ class UserBackendServiceTests : FunSpec({
         /* Given */
         val osId = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        val spySubscriptionBackend = mockk<ISubscriptionBackendService>()
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\", aliasLabel1: \"aliasValue1\"}}")
-        val userBackendService = UserBackendService(spyHttpClient, spySubscriptionBackend)
+        val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf("aliasLabel1" to "aliasValue1")
         val properties = PropertiesObject()
         val subscriptions = listOf<SubscriptionObject>()
@@ -62,7 +60,7 @@ class UserBackendServiceTests : FunSpec({
         response.subscriptions.count() shouldBe 0
         coVerify {
             spyHttpClient.post(
-                "apps/appId/user",
+                "apps/appId/users",
                 withArg {
                     it.has("identity") shouldBe true
                     it.getJSONObject("identity").has("aliasLabel1") shouldBe true
@@ -78,9 +76,8 @@ class UserBackendServiceTests : FunSpec({
         /* Given */
         val osId = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        val spySubscriptionBackend = mockk<ISubscriptionBackendService>()
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\"}, subscriptions:[{id:\"subscriptionId1\", type:\"AndroidPush\"}]}")
-        val userBackendService = UserBackendService(spyHttpClient, spySubscriptionBackend)
+        val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf<String, String>()
         val properties = PropertiesObject()
         val subscriptions = mutableListOf<SubscriptionObject>()
@@ -97,7 +94,7 @@ class UserBackendServiceTests : FunSpec({
 
         coVerify {
             spyHttpClient.post(
-                "apps/appId/user",
+                "apps/appId/users",
                 withArg {
                     it.has("identity") shouldBe false
                     it.has("properties") shouldBe false
@@ -114,9 +111,8 @@ class UserBackendServiceTests : FunSpec({
         /* Given */
         val osId = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        val spySubscriptionBackend = mockk<ISubscriptionBackendService>()
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\", aliasLabel1: \"aliasValue1\"}, properties: { tags: {tagKey1: tagValue1}}}")
-        val userBackendService = UserBackendService(spyHttpClient, spySubscriptionBackend)
+        val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf("aliasLabel1" to "aliasValue1")
         val properties = PropertiesObject(tags = mapOf("tagkey1" to "tagValue1"))
         val subscriptions = listOf<SubscriptionObject>()
@@ -130,7 +126,7 @@ class UserBackendServiceTests : FunSpec({
         response.subscriptions.count() shouldBe 0
         coVerify {
             spyHttpClient.post(
-                "apps/appId/user",
+                "apps/appId/users",
                 withArg {
                     it.has("identity") shouldBe true
                     it.getJSONObject("identity").has("aliasLabel1") shouldBe true
@@ -150,9 +146,8 @@ class UserBackendServiceTests : FunSpec({
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        val spySubscriptionBackend = mockk<ISubscriptionBackendService>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{properties: { tags: {tagKey1: tagValue1}}}")
-        val userBackendService = UserBackendService(spyHttpClient, spySubscriptionBackend)
+        coEvery { spyHttpClient.patch(any(), any()) } returns HttpResponse(202, "{properties: { tags: {tagKey1: tagValue1}}}")
+        val userBackendService = UserBackendService(spyHttpClient)
         val properties = PropertiesObject(tags = mapOf("tagkey1" to "tagValue1"))
         val propertiesDelta = PropertiesDeltasObject()
 
@@ -162,7 +157,7 @@ class UserBackendServiceTests : FunSpec({
         /* Then */
         coVerify {
             spyHttpClient.patch(
-                "apps/appId/user/by/$aliasLabel/$aliasValue",
+                "apps/appId/users/by/$aliasLabel/$aliasValue",
                 withArg {
                     it.has("properties") shouldBe true
                     it.getJSONObject("properties").has("tags") shouldBe true
@@ -178,9 +173,8 @@ class UserBackendServiceTests : FunSpec({
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        val spySubscriptionBackend = mockk<ISubscriptionBackendService>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{properties: { tags: {tagKey1: tagValue1}}}")
-        val userBackendService = UserBackendService(spyHttpClient, spySubscriptionBackend)
+        coEvery { spyHttpClient.patch(any(), any()) } returns HttpResponse(202, "{properties: { tags: {tagKey1: tagValue1}}}")
+        val userBackendService = UserBackendService(spyHttpClient)
         val properties = PropertiesObject(language = "newLanguage")
         val propertiesDelta = PropertiesDeltasObject()
 
@@ -190,7 +184,7 @@ class UserBackendServiceTests : FunSpec({
         /* Then */
         coVerify {
             spyHttpClient.patch(
-                "apps/appId/user/by/$aliasLabel/$aliasValue",
+                "apps/appId/users/by/$aliasLabel/$aliasValue",
                 withArg {
                     it.has("properties") shouldBe true
                     it.getJSONObject("properties").has("language") shouldBe true
@@ -205,9 +199,8 @@ class UserBackendServiceTests : FunSpec({
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        val spySubscriptionBackend = mockk<ISubscriptionBackendService>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{properties: { timezone_id: \"America/New_York\"}}")
-        val userBackendService = UserBackendService(spyHttpClient, spySubscriptionBackend)
+        coEvery { spyHttpClient.patch(any(), any()) } returns HttpResponse(202, "{properties: { timezone_id: \"America/New_York\"}}")
+        val userBackendService = UserBackendService(spyHttpClient)
         val properties = PropertiesObject(timezoneId = "America/New_York")
         val propertiesDelta = PropertiesDeltasObject()
 
@@ -217,7 +210,7 @@ class UserBackendServiceTests : FunSpec({
         /* Then */
         coVerify {
             spyHttpClient.patch(
-                "apps/appId/user/by/$aliasLabel/$aliasValue",
+                "apps/appId/users/by/$aliasLabel/$aliasValue",
                 withArg {
                     it.has("properties") shouldBe true
                     it.getJSONObject("properties").has("timezone_id") shouldBe true
@@ -232,9 +225,8 @@ class UserBackendServiceTests : FunSpec({
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        val spySubscriptionBackend = mockk<ISubscriptionBackendService>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{properties: { country: \"TV\"}}")
-        val userBackendService = UserBackendService(spyHttpClient, spySubscriptionBackend)
+        coEvery { spyHttpClient.patch(any(), any()) } returns HttpResponse(202, "{properties: { country: \"TV\"}}")
+        val userBackendService = UserBackendService(spyHttpClient)
         val properties = PropertiesObject(country = "TV")
         val propertiesDelta = PropertiesDeltasObject()
 
@@ -244,7 +236,7 @@ class UserBackendServiceTests : FunSpec({
         /* Then */
         coVerify {
             spyHttpClient.patch(
-                "apps/appId/user/by/$aliasLabel/$aliasValue",
+                "apps/appId/users/by/$aliasLabel/$aliasValue",
                 withArg {
                     it.has("properties") shouldBe true
                     it.getJSONObject("properties").has("country") shouldBe true
@@ -259,10 +251,9 @@ class UserBackendServiceTests : FunSpec({
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        val spySubscriptionBackend = mockk<ISubscriptionBackendService>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{properties: { lat: \"12.34\", long: \"45.67\"}}")
-        val userBackendService = UserBackendService(spyHttpClient, spySubscriptionBackend)
-        val properties = PropertiesObject(latitude = 12.34, longitude = 45.67, locationAccuracy = 8.9f, locationType = 1, locationBackground = false, locationTimestamp = 1111)
+        coEvery { spyHttpClient.patch(any(), any()) } returns HttpResponse(202, "{properties: { lat: 12.34, long: 45.67}}")
+        val userBackendService = UserBackendService(spyHttpClient)
+        val properties = PropertiesObject(latitude = 12.34, longitude = 45.67)
         val propertiesDelta = PropertiesDeltasObject()
 
         /* When */
@@ -271,13 +262,13 @@ class UserBackendServiceTests : FunSpec({
         /* Then */
         coVerify {
             spyHttpClient.patch(
-                "apps/appId/user/by/$aliasLabel/$aliasValue",
+                "apps/appId/users/by/$aliasLabel/$aliasValue",
                 withArg {
                     it.has("properties") shouldBe true
                     it.getJSONObject("properties").has("lat") shouldBe true
-                    it.getJSONObject("properties").getString("lat") shouldBe 12.34
+                    it.getJSONObject("properties").getDouble("lat") shouldBe 12.34
                     it.getJSONObject("properties").has("long") shouldBe true
-                    it.getJSONObject("properties").getString("long") shouldBe 45.67
+                    it.getJSONObject("properties").getDouble("long") shouldBe 45.67
                 }
             )
         }
@@ -288,9 +279,8 @@ class UserBackendServiceTests : FunSpec({
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        val spySubscriptionBackend = mockk<ISubscriptionBackendService>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{properties: {} }")
-        val userBackendService = UserBackendService(spyHttpClient, spySubscriptionBackend)
+        coEvery { spyHttpClient.patch(any(), any()) } returns HttpResponse(202, "{properties: {} }")
+        val userBackendService = UserBackendService(spyHttpClient)
         val properties = PropertiesObject(tags = mapOf("tagkey1" to "tagValue1"))
         val propertiesDelta = PropertiesDeltasObject()
 
@@ -300,9 +290,9 @@ class UserBackendServiceTests : FunSpec({
         /* Then */
         coVerify {
             spyHttpClient.patch(
-                "apps/appId/user/by/$aliasLabel/$aliasValue",
+                "apps/appId/users/by/$aliasLabel/$aliasValue",
                 withArg {
-                    it.has("refresh_device_metadata") shouldBe true
+                    it.getBoolean("refresh_device_metadata") shouldBe true
                 }
             )
         }
@@ -313,9 +303,8 @@ class UserBackendServiceTests : FunSpec({
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        val spySubscriptionBackend = mockk<ISubscriptionBackendService>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{properties: {} }")
-        val userBackendService = UserBackendService(spyHttpClient, spySubscriptionBackend)
+        coEvery { spyHttpClient.patch(any(), any()) } returns HttpResponse(202, "{properties: {} }")
+        val userBackendService = UserBackendService(spyHttpClient)
         val properties = PropertiesObject(tags = mapOf("tagkey1" to "tagValue1"))
         val propertiesDelta = PropertiesDeltasObject()
 
@@ -325,9 +314,9 @@ class UserBackendServiceTests : FunSpec({
         /* Then */
         coVerify {
             spyHttpClient.patch(
-                "apps/appId/user/by/$aliasLabel/$aliasValue",
+                "apps/appId/users/by/$aliasLabel/$aliasValue",
                 withArg {
-                    it.has("refresh_device_metadata") shouldBe false
+                    it.getBoolean("refresh_device_metadata") shouldBe false
                 }
             )
         }
@@ -338,9 +327,8 @@ class UserBackendServiceTests : FunSpec({
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        val spySubscriptionBackend = mockk<ISubscriptionBackendService>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{properties: { }}")
-        val userBackendService = UserBackendService(spyHttpClient, spySubscriptionBackend)
+        coEvery { spyHttpClient.patch(any(), any()) } returns HttpResponse(202, "{properties: { }}")
+        val userBackendService = UserBackendService(spyHttpClient)
         val properties = PropertiesObject()
         val propertiesDelta = PropertiesDeltasObject(sessionTime = 1111, sessionCount = 1)
 
@@ -350,13 +338,13 @@ class UserBackendServiceTests : FunSpec({
         /* Then */
         coVerify {
             spyHttpClient.patch(
-                "apps/appId/user/by/$aliasLabel/$aliasValue",
+                "apps/appId/users/by/$aliasLabel/$aliasValue",
                 withArg {
                     it.has("deltas") shouldBe true
                     it.getJSONObject("deltas").has("session_time") shouldBe true
-                    it.getJSONObject("deltas").getString("session_time") shouldBe 1111
+                    it.getJSONObject("deltas").getLong("session_time") shouldBe 1111
                     it.getJSONObject("deltas").has("session_count") shouldBe true
-                    it.getJSONObject("deltas").getString("session_count") shouldBe 1
+                    it.getJSONObject("deltas").getInt("session_count") shouldBe 1
                 }
             )
         }
@@ -367,9 +355,8 @@ class UserBackendServiceTests : FunSpec({
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        val spySubscriptionBackend = mockk<ISubscriptionBackendService>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{properties: { }}")
-        val userBackendService = UserBackendService(spyHttpClient, spySubscriptionBackend)
+        coEvery { spyHttpClient.patch(any(), any()) } returns HttpResponse(202, "{properties: { }}")
+        val userBackendService = UserBackendService(spyHttpClient)
         val properties = PropertiesObject()
         val propertiesDelta = PropertiesDeltasObject(
             amountSpent = BigDecimal(1111),
@@ -385,11 +372,11 @@ class UserBackendServiceTests : FunSpec({
         /* Then */
         coVerify {
             spyHttpClient.patch(
-                "apps/appId/user/by/$aliasLabel/$aliasValue",
+                "apps/appId/users/by/$aliasLabel/$aliasValue",
                 withArg {
                     it.has("deltas") shouldBe true
                     it.getJSONObject("deltas").has("amount_spent") shouldBe true
-                    it.getJSONObject("deltas").getString("amount_spent") shouldBe 1111
+                    it.getJSONObject("deltas").getDouble("amount_spent") shouldBe 1111
                     it.getJSONObject("deltas").has("purchases") shouldBe true
                     it.getJSONObject("deltas").getJSONArray("purchases").length() shouldBe 2
                     it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(0).has("sku") shouldBe true
@@ -397,13 +384,13 @@ class UserBackendServiceTests : FunSpec({
                     it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(0).has("iso") shouldBe true
                     it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(0).getString("iso") shouldBe "iso1"
                     it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(0).has("amount") shouldBe true
-                    it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(0).getString("amount") shouldBe 2222
+                    it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(0).getDouble("amount") shouldBe 2222
                     it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(1).has("sku") shouldBe true
                     it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(1).getString("sku") shouldBe "sku2"
                     it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(1).has("iso") shouldBe true
                     it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(1).getString("iso") shouldBe "iso2"
                     it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(1).has("amount") shouldBe true
-                    it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(1).getString("amount") shouldBe 4444
+                    it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(1).getDouble("amount") shouldBe 4444
                 }
             )
         }
@@ -414,9 +401,8 @@ class UserBackendServiceTests : FunSpec({
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        val spySubscriptionBackend = mockk<ISubscriptionBackendService>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(404, "NOT FOUND")
-        val userBackendService = UserBackendService(spyHttpClient, spySubscriptionBackend)
+        coEvery { spyHttpClient.patch(any(), any()) } returns HttpResponse(404, "NOT FOUND")
+        val userBackendService = UserBackendService(spyHttpClient)
         val properties = PropertiesObject(tags = mapOf("tagkey1" to "tagValue1"))
         val propertiesDelta = PropertiesDeltasObject()
 
@@ -435,9 +421,8 @@ class UserBackendServiceTests : FunSpec({
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        val spySubscriptionBackend = mockk<ISubscriptionBackendService>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(403, "FORBIDDEN")
-        val userBackendService = UserBackendService(spyHttpClient, spySubscriptionBackend)
+        coEvery { spyHttpClient.patch(any(), any()) } returns HttpResponse(403, "FORBIDDEN")
+        val userBackendService = UserBackendService(spyHttpClient)
         val properties = PropertiesObject(tags = mapOf("tagkey1" to "tagValue1"))
         val propertiesDelta = PropertiesDeltasObject()
 

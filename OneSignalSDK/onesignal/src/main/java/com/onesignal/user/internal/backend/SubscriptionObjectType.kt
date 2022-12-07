@@ -25,5 +25,7 @@ enum class SubscriptionObjectType(val value: String) {
                 IDeviceService.DeviceType.Huawei -> HUAWEI_PUSH
             }
         }
+
+        fun fromString(type: String): SubscriptionObjectType? = values().firstOrNull() { it.value.equals(type, true) }
     }
 }

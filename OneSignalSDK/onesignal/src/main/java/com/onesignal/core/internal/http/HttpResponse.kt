@@ -26,5 +26,5 @@ class HttpResponse(
      * Whether the response is a successful one.
      */
     val isSuccess: Boolean
-        get() = statusCode == HttpURLConnection.HTTP_OK || statusCode == HttpURLConnection.HTTP_ACCEPTED || statusCode == HttpURLConnection.HTTP_NOT_MODIFIED
+        get() = statusCode == HttpURLConnection.HTTP_OK || statusCode == HttpURLConnection.HTTP_ACCEPTED || statusCode == HttpURLConnection.HTTP_NOT_MODIFIED || statusCode == HttpURLConnection.HTTP_CREATED
 }

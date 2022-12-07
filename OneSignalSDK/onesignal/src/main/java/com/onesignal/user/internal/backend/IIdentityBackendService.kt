@@ -15,19 +15,6 @@ interface IIdentityBackendService {
     suspend fun createAlias(appId: String, aliasLabel: String, aliasValue: String, identities: Map<String, String>): Map<String, String>
 
     /**
-     * Update the [aliasLabelToUpdate] from the user identified by the [aliasLabel]/[aliasValue] provided.
-     *
-     * If there is a non-successful response from the backend, a [BackendException] will be thrown with response data.
-     *
-     * @param appId The ID of the OneSignal application this user exists under.
-     * @param aliasLabel The alias label to retrieve the user under.
-     * @param aliasValue The identifier within the [aliasLabel] that identifies the user to retrieve.
-     * @param aliasLabelToUpdate The alias label to delete from the user identified.
-     * @param newAliasId The new ID for the [aliasLabelToUpdate].
-     */
-    suspend fun updateAlias(appId: String, aliasLabel: String, aliasValue: String, aliasLabelToUpdate: String, newAliasId: String)
-
-    /**
      * Delete the [aliasLabelToDelete] from the user identified by the [aliasLabel]/[aliasValue] provided.
      *
      * If there is a non-successful response from the backend, a [BackendException] will be thrown with response data.
