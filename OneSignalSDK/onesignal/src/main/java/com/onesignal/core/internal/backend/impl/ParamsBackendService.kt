@@ -2,7 +2,7 @@ package com.onesignal.core.internal.backend.impl
 
 import com.onesignal.common.IDManager
 import com.onesignal.common.exceptions.BackendException
-import com.onesignal.common.expand
+import com.onesignal.common.expandJSONObject
 import com.onesignal.common.safeBool
 import com.onesignal.common.safeInt
 import com.onesignal.common.safeLong
@@ -39,13 +39,13 @@ internal class ParamsBackendService(
 
         // Process outcomes params
         var influenceParams: InfluenceParamsObject? = null
-        responseJson.expand("outcomes") {
+        responseJson.expandJSONObject("outcomes") {
             influenceParams = processOutcomeJson(it)
         }
 
         // Process FCM params
         var fcmParams: FCMParamsObject? = null
-        responseJson.expand("fcm") {
+        responseJson.expandJSONObject("fcm") {
             fcmParams = FCMParamsObject(
                 apiKey = it.safeString("api_key"),
                 appId = it.safeString("app_id"),
@@ -82,27 +82,27 @@ internal class ParamsBackendService(
         var isUnattributedEnabled: Boolean? = null
 
         // direct
-        outcomeJson.expand("direct") {
+        outcomeJson.expandJSONObject("direct") {
             isDirectEnabled = it.safeBool("enabled")
         }
 
         // indirect
-        outcomeJson.expand("indirect") { indirectJSON ->
+        outcomeJson.expandJSONObject("indirect") { indirectJSON ->
             isIndirectEnabled = indirectJSON.safeBool("enabled")
 
-            indirectJSON.expand("notification_attribution") {
+            indirectJSON.expandJSONObject("notification_attribution") {
                 indirectNotificationAttributionWindow = it.safeInt("minutes_since_displayed")
                 notificationLimit = it.safeInt("limit")
             }
 
-            indirectJSON.expand("in_app_message_attribution") {
+            indirectJSON.expandJSONObject("in_app_message_attribution") {
                 indirectIAMAttributionWindow = it.safeInt("minutes_since_displayed")
                 iamLimit = it.safeInt("limit")
             }
         }
 
         // unattributed
-        outcomeJson.expand("unattributed") {
+        outcomeJson.expandJSONObject("unattributed") {
             isUnattributedEnabled = it.safeBool("enabled")
         }
 

@@ -32,10 +32,18 @@ class SubscriptionBackendServiceTests : FunSpec({
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{id: \"subscriptionId\"}")
-        val subscriptionBackendService = SubscriptionBackendService(AndroidMockHelper.applicationService(), MockHelper.deviceService(), spyHttpClient)
+        val subscriptionBackendService = SubscriptionBackendService(spyHttpClient)
 
         /* When */
-        val response = subscriptionBackendService.createSubscription("appId", aliasLabel, aliasValue, SubscriptionObjectType.ANDROID_PUSH, true, "pushToken", SubscriptionStatus.SUBSCRIBED)
+        val subscription = SubscriptionObject(
+            "no-id",
+            SubscriptionObjectType.ANDROID_PUSH,
+            "pushToken",
+            true,
+            SubscriptionStatus.SUBSCRIBED.value
+        )
+
+        val response = subscriptionBackendService.createSubscription("appId", aliasLabel, aliasValue, subscription)
 
         /* Then */
         response shouldBe "subscriptionId"
@@ -59,18 +67,22 @@ class SubscriptionBackendServiceTests : FunSpec({
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(404, "NOT FOUND")
-        val subscriptionBackendService = SubscriptionBackendService(AndroidMockHelper.applicationService(), MockHelper.deviceService(), spyHttpClient)
+        val subscriptionBackendService = SubscriptionBackendService(spyHttpClient)
 
         /* When */
+        val subscription = SubscriptionObject(
+            "no-id",
+            SubscriptionObjectType.ANDROID_PUSH,
+            "pushToken",
+            true,
+            SubscriptionStatus.SUBSCRIBED.value
+        )
         val exception = shouldThrowUnit<BackendException> {
             subscriptionBackendService.createSubscription(
                 "appId",
                 aliasLabel,
                 aliasValue,
-                SubscriptionObjectType.ANDROID_PUSH,
-                true,
-                "pushToken",
-                SubscriptionStatus.SUBSCRIBED
+                subscription
             )
         }
 

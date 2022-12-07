@@ -144,7 +144,10 @@ internal class OperationRepo(
             val executor = _executorsMap[startingOp.operation.name]
                 ?: throw Exception("Could not find executor for operation ${startingOp.operation.name}")
 
-            val response = executor.execute(ops.map { it.operation })
+            val operations = ops.map { it.operation }
+            val response = executor.execute(operations)
+
+            Logging.debug("OperationRepo: execute response = ${response.result}")
 
             // if the execution resulted in ID translations, run through the queue so they pick it up.
             // We also run through the ops just executed in case they are re-added to the queue.
@@ -162,6 +165,7 @@ internal class OperationRepo(
                     ops.forEach { it.waiter?.wake(true) }
                 }
                 ExecutionResult.FAIL_NORETRY -> {
+                    Logging.error("Operation execution failed without retry: $operations")
                     // on failure we remove the operation from the store and wake any waiters
                     ops.forEach { _operationModelStore.remove(it.operation.id) }
                     ops.forEach { it.waiter?.wake(false) }

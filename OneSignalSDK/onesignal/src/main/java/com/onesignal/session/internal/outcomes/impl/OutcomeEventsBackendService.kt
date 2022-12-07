@@ -8,10 +8,13 @@ import org.json.JSONObject
 internal class OutcomeEventsBackendService(private val _http: IHttpClient) :
     IOutcomeEventsBackendService {
 
-    override suspend fun sendOutcomeEvent(appId: String, deviceType: IDeviceService.DeviceType, direct: Boolean?, event: OutcomeEvent) {
+    override suspend fun sendOutcomeEvent(appId: String, userId: String, subscriptionId: String, direct: Boolean?, event: OutcomeEvent) {
         val jsonObject = JSONObject()
             .put("app_id", appId)
-            .put("device_type", deviceType.value)
+            .put("onesignal_id", userId)
+            .put("subscription", JSONObject()
+                .put("id", subscriptionId)
+            )
 
         if (direct != null) {
             jsonObject.put("direct", direct)
