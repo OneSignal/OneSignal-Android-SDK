@@ -17,6 +17,9 @@ import com.onesignal.session.internal.outcomes.impl.OutcomeEventsController
 import com.onesignal.session.internal.outcomes.impl.OutcomeSource
 import com.onesignal.session.internal.outcomes.impl.OutcomeSourceBody
 import com.onesignal.session.internal.session.ISessionService
+import com.onesignal.user.internal.PushSubscription
+import com.onesignal.user.internal.subscriptions.ISubscriptionManager
+import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -48,6 +51,7 @@ class OutcomeEventsControllerTests : FunSpec({
 
         val mockInfluenceManager = mockk<IInfluenceManager>()
         every { mockInfluenceManager.influences } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DISABLED, null))
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
 
         val mockOutcomeEventsRepository = spyk<IOutcomeEventsRepository>()
         val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
@@ -60,8 +64,9 @@ class OutcomeEventsControllerTests : FunSpec({
             mockOutcomeEventsPreferences,
             mockOutcomeEventsBackend,
             MockHelper.configModelStore(),
-            MockHelper.time(now),
-            MockHelper.deviceService()
+            MockHelper.identityModelStore(),
+            mockSubscriptionManager,
+            MockHelper.time(now)
         )
 
         /* When */
@@ -69,7 +74,7 @@ class OutcomeEventsControllerTests : FunSpec({
 
         /* Then */
         evnt shouldBe null
-        coVerify(exactly = 0) { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any(), any()) }
     }
 
     test("send outcome with unattributed influences") {
@@ -81,6 +86,12 @@ class OutcomeEventsControllerTests : FunSpec({
         val mockInfluenceManager = mockk<IInfluenceManager>()
         every { mockInfluenceManager.influences } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.UNATTRIBUTED, null))
 
+        val subscriptionModel = SubscriptionModel()
+        subscriptionModel.id = "subscriptionId"
+
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
+
         val mockOutcomeEventsRepository = spyk<IOutcomeEventsRepository>()
         val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
         val mockOutcomeEventsBackend = spyk<IOutcomeEventsBackendService>()
@@ -92,8 +103,9 @@ class OutcomeEventsControllerTests : FunSpec({
             mockOutcomeEventsPreferences,
             mockOutcomeEventsBackend,
             MockHelper.configModelStore(),
-            MockHelper.time(now),
-            MockHelper.deviceService()
+            MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
+            mockSubscriptionManager,
+            MockHelper.time(now)
         )
 
         /* When */
@@ -107,7 +119,7 @@ class OutcomeEventsControllerTests : FunSpec({
         evnt.session shouldBe InfluenceType.UNATTRIBUTED
         evnt.timestamp shouldBe 0 // timestamp only set when it had to be saved.
 
-        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, IDeviceService.DeviceType.Android, null, evnt) }
+        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", null, evnt) }
     }
 
     test("send outcome with indirect influences") {
@@ -120,6 +132,11 @@ class OutcomeEventsControllerTests : FunSpec({
         val mockInfluenceManager = mockk<IInfluenceManager>()
         every { mockInfluenceManager.influences } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.INDIRECT, JSONArray(notificationIds)))
 
+        val subscriptionModel = SubscriptionModel()
+        subscriptionModel.id = "subscriptionId"
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
+
         val mockOutcomeEventsRepository = spyk<IOutcomeEventsRepository>()
         val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
         val mockOutcomeEventsBackend = spyk<IOutcomeEventsBackendService>()
@@ -131,8 +148,9 @@ class OutcomeEventsControllerTests : FunSpec({
             mockOutcomeEventsPreferences,
             mockOutcomeEventsBackend,
             MockHelper.configModelStore(),
-            MockHelper.time(now),
-            MockHelper.deviceService()
+            MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
+            mockSubscriptionManager,
+            MockHelper.time(now)
         )
 
         /* When */
@@ -147,7 +165,7 @@ class OutcomeEventsControllerTests : FunSpec({
         evnt.session shouldBe InfluenceType.INDIRECT
         evnt.timestamp shouldBe 0 // timestamp only set when it had to be saved.
 
-        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, IDeviceService.DeviceType.Android, false, evnt) }
+        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", false, evnt) }
     }
 
     test("send outcome with direct influence") {
@@ -160,6 +178,11 @@ class OutcomeEventsControllerTests : FunSpec({
         val mockInfluenceManager = mockk<IInfluenceManager>()
         every { mockInfluenceManager.influences } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray(notificationIds)))
 
+        val subscriptionModel = SubscriptionModel()
+        subscriptionModel.id = "subscriptionId"
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
+
         val mockOutcomeEventsRepository = spyk<IOutcomeEventsRepository>()
         val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
         val mockOutcomeEventsBackend = spyk<IOutcomeEventsBackendService>()
@@ -171,8 +194,9 @@ class OutcomeEventsControllerTests : FunSpec({
             mockOutcomeEventsPreferences,
             mockOutcomeEventsBackend,
             MockHelper.configModelStore(),
-            MockHelper.time(now),
-            MockHelper.deviceService()
+            MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
+            mockSubscriptionManager,
+            MockHelper.time(now)
         )
 
         /* When */
@@ -187,7 +211,7 @@ class OutcomeEventsControllerTests : FunSpec({
         evnt.session shouldBe InfluenceType.DIRECT
         evnt.timestamp shouldBe 0 // timestamp only set when it had to be saved.
 
-        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, IDeviceService.DeviceType.Android, true, evnt) }
+        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", true, evnt) }
     }
 
     test("send outcome with weight") {
@@ -200,6 +224,11 @@ class OutcomeEventsControllerTests : FunSpec({
         val mockInfluenceManager = mockk<IInfluenceManager>()
         every { mockInfluenceManager.influences } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.UNATTRIBUTED, null))
 
+        val subscriptionModel = SubscriptionModel()
+        subscriptionModel.id = "subscriptionId"
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
+
         val mockOutcomeEventsRepository = spyk<IOutcomeEventsRepository>()
         val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
         val mockOutcomeEventsBackend = spyk<IOutcomeEventsBackendService>()
@@ -211,8 +240,9 @@ class OutcomeEventsControllerTests : FunSpec({
             mockOutcomeEventsPreferences,
             mockOutcomeEventsBackend,
             MockHelper.configModelStore(),
-            MockHelper.time(now),
-            MockHelper.deviceService()
+            MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
+            mockSubscriptionManager,
+            MockHelper.time(now)
         )
 
         /* When */
@@ -226,7 +256,7 @@ class OutcomeEventsControllerTests : FunSpec({
         evnt.session shouldBe InfluenceType.UNATTRIBUTED
         evnt.timestamp shouldBe 0 // timestamp only set when it had to be saved.
 
-        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, IDeviceService.DeviceType.Android, null, evnt) }
+        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", null, evnt) }
     }
 
     test("send unique outcome with unattributed influences") {
@@ -237,6 +267,11 @@ class OutcomeEventsControllerTests : FunSpec({
 
         val mockInfluenceManager = mockk<IInfluenceManager>()
         every { mockInfluenceManager.influences } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.UNATTRIBUTED, null))
+
+        val subscriptionModel = SubscriptionModel()
+        subscriptionModel.id = "subscriptionId"
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
 
         val mockOutcomeEventsRepository = spyk<IOutcomeEventsRepository>()
         val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
@@ -249,8 +284,9 @@ class OutcomeEventsControllerTests : FunSpec({
             mockOutcomeEventsPreferences,
             mockOutcomeEventsBackend,
             MockHelper.configModelStore(),
-            MockHelper.time(now),
-            MockHelper.deviceService()
+            MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
+            mockSubscriptionManager,
+            MockHelper.time(now)
         )
 
         /* When */
@@ -267,7 +303,7 @@ class OutcomeEventsControllerTests : FunSpec({
 
         evnt2 shouldBe null
 
-        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, IDeviceService.DeviceType.Android, any(), any()) }
+        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", any(), any()) }
     }
 
     test("send unique outcome with same indirect influences") {
@@ -285,6 +321,11 @@ class OutcomeEventsControllerTests : FunSpec({
         coEvery { mockOutcomeEventsRepository.getNotCachedUniqueInfluencesForOutcome("OUTCOME_1", any()) } returns listOf(notificationInfluence) andThen listOf()
         coEvery { mockOutcomeEventsRepository.saveUniqueOutcomeEventParams(any()) }
 
+        val subscriptionModel = SubscriptionModel()
+        subscriptionModel.id = "subscriptionId"
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
+
         val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
         val mockOutcomeEventsBackend = spyk<IOutcomeEventsBackendService>()
 
@@ -295,8 +336,9 @@ class OutcomeEventsControllerTests : FunSpec({
             mockOutcomeEventsPreferences,
             mockOutcomeEventsBackend,
             MockHelper.configModelStore(),
-            MockHelper.time(now),
-            MockHelper.deviceService()
+            MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
+            mockSubscriptionManager,
+            MockHelper.time(now)
         )
 
         /* When */
@@ -314,7 +356,7 @@ class OutcomeEventsControllerTests : FunSpec({
 
         evnt2 shouldBe null
 
-        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, IDeviceService.DeviceType.Android, any(), any()) }
+        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", any(), any()) }
     }
 
     test("send unique outcome with different indirect influences") {
@@ -330,6 +372,11 @@ class OutcomeEventsControllerTests : FunSpec({
         val notificationInfluence2 = Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray(notificationIds2))
         every { mockInfluenceManager.influences } returns listOf(notificationInfluence1) andThen listOf(notificationInfluence2)
 
+        val subscriptionModel = SubscriptionModel()
+        subscriptionModel.id = "subscriptionId"
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
+
         val mockOutcomeEventsRepository = mockk<IOutcomeEventsRepository>()
         coEvery { mockOutcomeEventsRepository.getNotCachedUniqueInfluencesForOutcome("OUTCOME_1", any()) } returns listOf(notificationInfluence1) andThen listOf(notificationInfluence2)
         coEvery { mockOutcomeEventsRepository.saveUniqueOutcomeEventParams(any()) }
@@ -344,8 +391,9 @@ class OutcomeEventsControllerTests : FunSpec({
             mockOutcomeEventsPreferences,
             mockOutcomeEventsBackend,
             MockHelper.configModelStore(),
-            MockHelper.time(now),
-            MockHelper.deviceService()
+            MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
+            mockSubscriptionManager,
+            MockHelper.time(now)
         )
 
         /* When */
@@ -370,8 +418,8 @@ class OutcomeEventsControllerTests : FunSpec({
         evnt2.timestamp shouldBe 0 // timestamp only set when it had to be saved.
 
         coVerifySequence {
-            mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, IDeviceService.DeviceType.Android, false, evnt1)
-            mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, IDeviceService.DeviceType.Android, true, evnt2)
+            mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", false, evnt1)
+            mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", true, evnt2)
         }
     }
 
@@ -384,10 +432,15 @@ class OutcomeEventsControllerTests : FunSpec({
         val mockInfluenceManager = mockk<IInfluenceManager>()
         every { mockInfluenceManager.influences } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.UNATTRIBUTED, null))
 
+        val subscriptionModel = SubscriptionModel()
+        subscriptionModel.id = "subscriptionId"
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
+
         val mockOutcomeEventsRepository = spyk<IOutcomeEventsRepository>()
         val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
         val mockOutcomeEventsBackend = mockk<IOutcomeEventsBackendService>()
-        coEvery { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any()) } throws BackendException(408, null)
+        coEvery { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any(), any()) } throws BackendException(408, null)
 
         val outcomeEventsController = OutcomeEventsController(
             mockSessionService,
@@ -396,8 +449,9 @@ class OutcomeEventsControllerTests : FunSpec({
             mockOutcomeEventsPreferences,
             mockOutcomeEventsBackend,
             MockHelper.configModelStore(),
-            MockHelper.time(now),
-            MockHelper.deviceService()
+            MockHelper.identityModelStore(),
+            mockSubscriptionManager,
+            MockHelper.time(now)
         )
 
         /* When */
@@ -423,6 +477,11 @@ class OutcomeEventsControllerTests : FunSpec({
         val mockSessionService = mockk<ISessionService>()
         every { mockSessionService.subscribe(any()) } just Runs
 
+        val subscriptionModel = SubscriptionModel()
+        subscriptionModel.id = "subscriptionId"
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
+
         val mockInfluenceManager = mockk<IInfluenceManager>()
         val mockOutcomeEventsRepository = mockk<IOutcomeEventsRepository>()
         coEvery { mockOutcomeEventsRepository.cleanCachedUniqueOutcomeEventNotifications() } just runs
@@ -433,7 +492,7 @@ class OutcomeEventsControllerTests : FunSpec({
         )
         val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
         val mockOutcomeEventsBackend = mockk<IOutcomeEventsBackendService>()
-        coEvery { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any()) } just runs
+        coEvery { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any(), any()) } just runs
 
         val outcomeEventsController = OutcomeEventsController(
             mockSessionService,
@@ -442,8 +501,9 @@ class OutcomeEventsControllerTests : FunSpec({
             mockOutcomeEventsPreferences,
             mockOutcomeEventsBackend,
             MockHelper.configModelStore(),
-            MockHelper.time(now),
-            MockHelper.deviceService()
+            MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
+            mockSubscriptionManager,
+            MockHelper.time(now)
         )
 
         /* When */
@@ -455,7 +515,8 @@ class OutcomeEventsControllerTests : FunSpec({
         coVerify(exactly = 1) {
             mockOutcomeEventsBackend.sendOutcomeEvent(
                 "appId",
-                IDeviceService.DeviceType.Android,
+                "onesignalId",
+                "subscriptionId",
                 true,
                 withArg {
                     it.name shouldBe "outcomeId1"
@@ -468,7 +529,8 @@ class OutcomeEventsControllerTests : FunSpec({
         coVerify(exactly = 1) {
             mockOutcomeEventsBackend.sendOutcomeEvent(
                 "appId",
-                IDeviceService.DeviceType.Android,
+                "onesignalId",
+                "subscriptionId",
                 false,
                 withArg {
                     it.name shouldBe "outcomeId2"
@@ -503,6 +565,11 @@ class OutcomeEventsControllerTests : FunSpec({
         val mockSessionService = mockk<ISessionService>()
         every { mockSessionService.subscribe(any()) } just Runs
 
+        val subscriptionModel = SubscriptionModel()
+        subscriptionModel.id = "subscriptionId"
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
+
         val mockInfluenceManager = mockk<IInfluenceManager>()
         val mockOutcomeEventsRepository = mockk<IOutcomeEventsRepository>()
         coEvery { mockOutcomeEventsRepository.cleanCachedUniqueOutcomeEventNotifications() } just runs
@@ -512,7 +579,7 @@ class OutcomeEventsControllerTests : FunSpec({
         )
         val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
         val mockOutcomeEventsBackend = mockk<IOutcomeEventsBackendService>()
-        coEvery { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any()) } throws BackendException(408, null)
+        coEvery { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any(), any()) } throws BackendException(408, null)
 
         val outcomeEventsController = OutcomeEventsController(
             mockSessionService,
@@ -521,8 +588,9 @@ class OutcomeEventsControllerTests : FunSpec({
             mockOutcomeEventsPreferences,
             mockOutcomeEventsBackend,
             MockHelper.configModelStore(),
-            MockHelper.time(now),
-            MockHelper.deviceService()
+            MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
+            mockSubscriptionManager,
+            MockHelper.time(now)
         )
 
         /* When */
@@ -534,7 +602,8 @@ class OutcomeEventsControllerTests : FunSpec({
         coVerify(exactly = 1) {
             mockOutcomeEventsBackend.sendOutcomeEvent(
                 "appId",
-                IDeviceService.DeviceType.Android,
+                "onesignalId",
+                "subscriptionId",
                 true,
                 withArg {
                     it.name shouldBe "outcomeId1"
@@ -547,7 +616,8 @@ class OutcomeEventsControllerTests : FunSpec({
         coVerify(exactly = 1) {
             mockOutcomeEventsBackend.sendOutcomeEvent(
                 "appId",
-                IDeviceService.DeviceType.Android,
+                "onesignalId",
+                "subscriptionId",
                 false,
                 withArg {
                     it.name shouldBe "outcomeId2"

@@ -1,25 +1,33 @@
 package com.onesignal.user.internal.backend.impl
 
+import com.onesignal.common.exceptions.BackendException
+import com.onesignal.common.putMap
+import com.onesignal.common.toMap
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.user.internal.backend.IIdentityBackendService
-import kotlinx.coroutines.yield
+import org.json.JSONObject
 
 internal class IdentityBackendService(
     private val _httpClient: IHttpClient
 ) : IIdentityBackendService {
     override suspend fun createAlias(appId: String, aliasLabel: String, aliasValue: String, identities: Map<String, String>): Map<String, String> {
-        // TODO: To Implement
-        yield()
-        return identities
-    }
+        val requestJSONObject = JSONObject()
+            .put("identity", JSONObject().putMap(identities))
 
-    override suspend fun updateAlias(appId: String, aliasLabel: String, aliasValue: String, aliasLabelToUpdate: String, newAliasId: String) {
-        // TODO: To Implement
-        yield()
+        val response = _httpClient.patch("apps/$appId/users/by/$aliasLabel/$aliasValue/identity", requestJSONObject)
+
+        if(!response.isSuccess)
+            throw BackendException(response.statusCode, response.payload)
+
+        val responseJSON = JSONObject(response.payload!!)
+
+        return responseJSON.getJSONObject("identity").toMap().mapValues { it.value.toString() }
     }
 
     override suspend fun deleteAlias(appId: String, aliasLabel: String, aliasValue: String, aliasLabelToDelete: String) {
-        // TODO: To Implement
-        yield()
+        val response = _httpClient.delete("apps/$appId/users/by/$aliasLabel/$aliasValue/identity/$aliasLabelToDelete")
+
+        if(!response.isSuccess)
+            throw BackendException(response.statusCode, response.payload)
     }
 }

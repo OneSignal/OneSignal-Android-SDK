@@ -139,21 +139,12 @@ internal class LoginUserOperationExecutor(
 
             if (identityModel.onesignalId == createUserOperation.onesignalId) {
                 identityModel.setProperty(IdentityConstants.ONESIGNAL_ID, backendOneSignalId, ModelChangeTags.HYDRATE)
-
-                // TODO: hydrate any additional aliases from the backend...
             }
 
             if (propertiesModel.onesignalId == createUserOperation.onesignalId) {
                 propertiesModel.setProperty(PropertiesModel::onesignalId.name, backendOneSignalId, ModelChangeTags.HYDRATE)
-
-                // TODO: hydrate the models from the backend create response.  Temporarily inject dummy stuff to
-                //       show that it's working.
-//                propertiesModel.setProperty(PropertiesModel::language.name, "en", notify = false)
-                propertiesModel.setProperty(PropertiesModel::country.name, "US", ModelChangeTags.HYDRATE)
-                propertiesModel.tags.setProperty("foo", UUID.randomUUID().toString(), ModelChangeTags.HYDRATE)
             }
 
-            // TODO: assumption that the response.subscriptionIDs will associate to the input subscriptionList...to confirm
             for (index in subscriptionList.indices) {
                 if (index >= response.subscriptions.size) {
                     break
