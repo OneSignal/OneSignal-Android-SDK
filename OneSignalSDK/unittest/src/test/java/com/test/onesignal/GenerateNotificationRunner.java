@@ -1310,7 +1310,7 @@ public class GenerateNotificationRunner {
       new FCMBroadcastReceiver().onReceive(blankActivity, intent);
       threadAndTaskWait();
       threadAndTaskWait();
-      assertEquals("PGh0bWw+PC9odG1sPgoKPHNjcmlwdD4KICAgIHNldFBsYXllclRhZ3MobnVsbCk7Cjwvc2NyaXB0Pg==", ShadowOSWebView.lastData);
+      assertEquals("PGh0bWw+PC9odG1sPgoKPHNjcmlwdD4KICAgIHNldFBsYXllclRhZ3MoKTsKPC9zY3JpcHQ+", ShadowOSWebView.lastData);
    }
 
    @Test
@@ -1336,7 +1336,7 @@ public class GenerateNotificationRunner {
       NotificationOpenedProcessor_processFromContext(blankActivity, notificationOpenIntent);
       threadAndTaskWait();
       threadAndTaskWait();
-      assertEquals("PGh0bWw+PC9odG1sPgoKPHNjcmlwdD4KICAgIHNldFBsYXllclRhZ3MobnVsbCk7Cjwvc2NyaXB0Pg==", ShadowOSWebView.lastData);
+      assertEquals("PGh0bWw+PC9odG1sPgoKPHNjcmlwdD4KICAgIHNldFBsYXllclRhZ3MoKTsKPC9zY3JpcHQ+", ShadowOSWebView.lastData);
 
       // Ensure the app is foregrounded.
       assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
