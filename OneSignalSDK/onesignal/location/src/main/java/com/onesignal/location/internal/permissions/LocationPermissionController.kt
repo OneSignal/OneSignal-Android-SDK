@@ -43,7 +43,6 @@ internal interface ILocationPermissionChangedHandler {
 }
 
 internal class LocationPermissionController(
-    private val _application: IApplicationService,
     private val _requestPermission: IRequestPermissionService,
     private val _applicationService: IApplicationService
 ) : IRequestPermissionService.PermissionCallback,
@@ -95,7 +94,7 @@ internal class LocationPermissionController(
     }
 
     private fun showFallbackAlertDialog(): Boolean {
-        val activity = _application.current ?: return false
+        val activity = _applicationService.current ?: return false
         AlertDialogPrepromptForAndroidSettings.show(
             activity,
             activity.getString(R.string.location_permission_name_for_title),
