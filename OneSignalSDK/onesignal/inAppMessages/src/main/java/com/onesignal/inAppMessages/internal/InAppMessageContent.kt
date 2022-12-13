@@ -1,5 +1,9 @@
 package com.onesignal.inAppMessages.internal
 
+import com.onesignal.common.safeBool
+import com.onesignal.common.safeDouble
+import com.onesignal.common.safeJSONObject
+import com.onesignal.common.safeString
 import com.onesignal.inAppMessages.internal.display.impl.WebViewManager
 import org.json.JSONObject
 
@@ -15,11 +19,11 @@ internal open class InAppMessageContent constructor(jsonObject: JSONObject) {
     var pageHeight: Int = 0
 
     init {
-        contentHtml = jsonObject.optString(HTML)
-        displayDuration = jsonObject.optDouble(DISPLAY_DURATION)
-        var styles: JSONObject? = jsonObject.optJSONObject(STYLES)
-        useHeightMargin = !(styles?.optBoolean(REMOVE_HEIGHT_MARGIN, false) ?: false)
-        useWidthMargin = !(styles?.optBoolean(REMOVE_WIDTH_MARGIN, false) ?: false)
+        contentHtml = jsonObject.safeString(HTML)
+        displayDuration = jsonObject.safeDouble(DISPLAY_DURATION)
+        var styles: JSONObject? = jsonObject.safeJSONObject(STYLES)
+        useHeightMargin = !(styles?.safeBool(REMOVE_HEIGHT_MARGIN) ?: false)
+        useWidthMargin = !(styles?.safeBool(REMOVE_WIDTH_MARGIN) ?: false)
         isFullBleed = !useHeightMargin
     }
 
