@@ -1,4 +1,4 @@
-package com.onesignal.mocks
+package com.onesignal.inAppMessages.mocks
 
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModel
@@ -16,6 +16,7 @@ import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
 import java.util.UUID
 
 /**
@@ -33,6 +34,7 @@ object MockHelper {
         val mockAppService = mockk<IApplicationService>()
 
         every { mockAppService.addApplicationLifecycleHandler(any()) } just Runs
+        every { mockAppService.removeApplicationLifecycleHandler(any()) } just Runs
 
         return mockAppService
     }
@@ -50,6 +52,7 @@ object MockHelper {
         val mockConfigStore = mockk<ConfigModelStore>()
 
         every { mockConfigStore.model } returns configModel
+        every { mockConfigStore.subscribe(any()) } just runs
 
         return mockConfigStore
     }
