@@ -4,7 +4,7 @@
  *
  * LICENSE: https://github.com/kotest/kotest-extensions-robolectric/blob/master/LICENSE
  */
-package com.onesignal.extensions
+package com.onesignal.inAppMessages.extensions
 
 import android.app.Application
 import io.kotest.core.extensions.ConstructorExtension
@@ -30,13 +30,23 @@ internal class RobolectricExtension : ConstructorExtension, TestCaseExtension {
     }
 
     private fun KClass<*>.getConfig(): Config {
-        val annotations = listOf(this.java).plus(this.java.getParentClass())
+        val configAnnotations = listOf(this.java).plus(this.java.getParentClass())
+            .mapNotNull { it.kotlin.findAnnotation<Config>() }
+            .asSequence()
+
+        val configAnnotation = configAnnotations.firstOrNull()
+
+        if (configAnnotation != null) {
+            return Config.Builder(configAnnotation).build()
+        }
+
+        val robolectricTestAnnotations = listOf(this.java).plus(this.java.getParentClass())
             .mapNotNull { it.kotlin.findAnnotation<RobolectricTest>() }
             .asSequence()
 
-        val application: KClass<out Application>? = annotations
+        val application: KClass<out Application>? = robolectricTestAnnotations
             .firstOrNull { it.application != KotestDefaultApplication::class }?.application
-        val sdk: Int? = annotations.firstOrNull { it.sdk != -1 }?.takeUnless { it.sdk == -1 }?.sdk
+        val sdk: Int? = robolectricTestAnnotations.firstOrNull { it.sdk != -1 }?.takeUnless { it.sdk == -1 }?.sdk
 
         return Config.Builder()
             .also { builder ->
