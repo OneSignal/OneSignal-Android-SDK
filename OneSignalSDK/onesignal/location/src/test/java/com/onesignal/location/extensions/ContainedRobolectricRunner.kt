@@ -3,7 +3,7 @@
  *
  * LICENSE: https://github.com/kotest/kotest-extensions-robolectric/blob/master/LICENSE
  */
-package com.onesignal.inAppMessages.extensions
+package com.onesignal.notifications.extensions
 
 import org.junit.runners.model.FrameworkMethod
 import org.robolectric.RobolectricTestRunner

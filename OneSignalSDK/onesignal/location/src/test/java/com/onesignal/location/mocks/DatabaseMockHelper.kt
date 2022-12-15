@@ -1,4 +1,4 @@
-package com.onesignal.inAppMessages.mocks
+package com.onesignal.mocks
 
 import com.onesignal.core.internal.database.ICursor
 import com.onesignal.core.internal.database.IDatabase

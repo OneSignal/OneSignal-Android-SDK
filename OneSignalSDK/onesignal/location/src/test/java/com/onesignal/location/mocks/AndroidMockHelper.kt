@@ -1,4 +1,4 @@
-package com.onesignal.inAppMessages.mocks
+package com.onesignal.mocks
 
 import androidx.test.core.app.ApplicationProvider
 import com.onesignal.core.internal.application.IApplicationService
