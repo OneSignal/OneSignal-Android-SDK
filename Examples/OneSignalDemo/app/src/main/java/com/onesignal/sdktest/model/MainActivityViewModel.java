@@ -780,8 +780,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
 
     private void setupPromptLocationButton() {
         promptLocationButton.setOnClickListener(v -> {
-            OneSignal.getUser().setLanguage("es");
-//            OneSignal.getLocation().requestPermission(true, Continue.none());
+            OneSignal.getLocation().requestPermission(true, Continue.none());
         });
     }
 
