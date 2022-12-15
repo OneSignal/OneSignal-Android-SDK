@@ -12,12 +12,15 @@ internal class SubscriptionBackendService(
 ) : ISubscriptionBackendService {
 
     override suspend fun createSubscription(appId: String, aliasLabel: String, aliasValue: String, subscription: SubscriptionObject): String {
-        val requestJSON = JSONConverter.convertToJSON(subscription)
+        val requestJSON = JSONObject()
+            .put("subscription", JSONConverter.convertToJSON(subscription))
+            .put("retain_previous_owner", true)
 
         val response = _httpClient.post("apps/$appId/users/by/$aliasLabel/$aliasValue/subscriptions", requestJSON)
 
-        if(!response.isSuccess)
+        if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload)
+        }
 
         val responseJSON = JSONObject(response.payload!!)
         val subscriptionJSON = responseJSON.safeJSONObject("subscription")
@@ -29,18 +32,21 @@ internal class SubscriptionBackendService(
     }
 
     override suspend fun updateSubscription(appId: String, subscriptionId: String, subscription: SubscriptionObject) {
-        val requestJSON = JSONConverter.convertToJSON(subscription)
+        val requestJSON = JSONObject()
+            .put("subscription", JSONConverter.convertToJSON(subscription))
 
-        val response = _httpClient.post("apps/$appId//subscriptions/$subscriptionId", requestJSON)
+        val response = _httpClient.patch("apps/$appId/subscriptions/$subscriptionId", requestJSON)
 
-        if(!response.isSuccess)
+        if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload)
+        }
     }
 
     override suspend fun deleteSubscription(appId: String, subscriptionId: String) {
         val response = _httpClient.delete("apps/$appId/subscriptions/$subscriptionId")
 
-        if(!response.isSuccess)
+        if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload)
+        }
     }
 }

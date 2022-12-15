@@ -1,7 +1,6 @@
 package com.onesignal.session.internal.outcomes.impl
 
 import com.onesignal.common.exceptions.BackendException
-import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.http.IHttpClient
 import org.json.JSONObject
 
@@ -12,8 +11,10 @@ internal class OutcomeEventsBackendService(private val _http: IHttpClient) :
         val jsonObject = JSONObject()
             .put("app_id", appId)
             .put("onesignal_id", userId)
-            .put("subscription", JSONObject()
-                .put("id", subscriptionId)
+            .put(
+                "subscription",
+                JSONObject()
+                    .put("id", subscriptionId)
             )
 
         if (direct != null) {

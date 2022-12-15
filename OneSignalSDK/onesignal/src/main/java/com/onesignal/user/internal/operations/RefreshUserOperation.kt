@@ -14,20 +14,20 @@ class RefreshUserOperation() : Operation(RefreshUserOperationExecutor.REFRESH_US
      * The application ID this subscription will be created under.
      */
     var appId: String
-        get() = getProperty(::appId.name)
-        private set(value) { setProperty(::appId.name, value) }
+        get() = getStringProperty(::appId.name)
+        private set(value) { setStringProperty(::appId.name, value) }
 
     /**
      * The user ID this subscription will be associated with. This ID *may* be locally generated
      * and can be checked via [IDManager.isLocalId] to ensure correct processing.
      */
     var onesignalId: String
-        get() = getProperty(::onesignalId.name)
-        private set(value) { setProperty(::onesignalId.name, value) }
+        get() = getStringProperty(::onesignalId.name)
+        private set(value) { setStringProperty(::onesignalId.name, value) }
 
-    override val createComparisonKey: String get() = ""
-    override val modifyComparisonKey: String get() = ""
-    override val groupComparisonType: GroupComparisonType = GroupComparisonType.NONE
+    override val createComparisonKey: String get() = "$appId.User.$onesignalId.Refresh"
+    override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Refresh"
+    override val groupComparisonType: GroupComparisonType = GroupComparisonType.CREATE
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
 
     constructor(appId: String, onesignalId: String) : this() {

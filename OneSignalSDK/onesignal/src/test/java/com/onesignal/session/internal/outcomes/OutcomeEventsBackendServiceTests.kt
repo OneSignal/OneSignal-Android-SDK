@@ -1,7 +1,6 @@
 package com.onesignal.session.internal.outcomes
 
 import com.onesignal.common.exceptions.BackendException
-import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.debug.LogLevel
@@ -60,7 +59,7 @@ class OutcomeEventsBackendServiceTests : FunSpec({
         val outcomeEventsController = OutcomeEventsBackendService(spyHttpClient)
 
         /* When */
-        outcomeEventsController.sendOutcomeEvent("appId","onesignalId", "subscriptionId", null, evnt)
+        outcomeEventsController.sendOutcomeEvent("appId", "onesignalId", "subscriptionId", null, evnt)
 
         /* Then */
         coVerify {
