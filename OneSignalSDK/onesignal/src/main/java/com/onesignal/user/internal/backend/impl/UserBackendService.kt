@@ -36,35 +36,36 @@ internal class UserBackendService(
 
         val response = _httpClient.post("apps/$appId/users", requestJSON)
 
-        if(!response.isSuccess)
+        if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload)
+        }
 
         return JSONConverter.convertToCreateUserResponse(JSONObject(response.payload!!))
     }
 
     override suspend fun updateUser(appId: String, aliasLabel: String, aliasValue: String, properties: PropertiesObject, refreshDeviceMetadata: Boolean, propertyiesDelta: PropertiesDeltasObject) {
-
         val jsonObject = JSONObject()
             .put("refresh_device_metadata", refreshDeviceMetadata)
 
-        if(properties.hasAtLeastOnePropertySet) {
+        if (properties.hasAtLeastOnePropertySet) {
             jsonObject.put("properties", JSONConverter.convertToJSON(properties))
         }
 
-        if(propertyiesDelta.hasAtLeastOnePropertySet) {
+        if (propertyiesDelta.hasAtLeastOnePropertySet) {
             jsonObject.put("deltas", JSONConverter.convertToJSON(propertyiesDelta))
         }
 
         val response = _httpClient.patch("apps/$appId/users/by/$aliasLabel/$aliasValue", jsonObject)
 
-        if(!response.isSuccess)
+        if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload)
+        }
     }
 
     override suspend fun getUser(appId: String, aliasLabel: String, aliasValue: String): CreateUserResponse {
-        val response = _httpClient.get("apps/$appId/user/by/$aliasLabel/$aliasValue")
+        val response = _httpClient.get("apps/$appId/users/by/$aliasLabel/$aliasValue")
 
-        if(!response.isSuccess) {
+        if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload)
         }
 

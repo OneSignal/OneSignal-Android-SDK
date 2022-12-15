@@ -1,9 +1,6 @@
 package com.onesignal.session.internal.outcomes.impl
 
 import com.onesignal.common.exceptions.BackendException
-import com.onesignal.core.internal.device.IDeviceService
-import com.onesignal.user.internal.subscriptions.SubscriptionModel
-import com.onesignal.user.subscriptions.ISubscription
 
 /**
  * The backend service for outcomes.

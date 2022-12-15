@@ -1,11 +1,14 @@
 package com.onesignal.user.internal.subscriptions
 
 import com.onesignal.common.events.IEventNotifier
+import com.onesignal.common.modeling.ModelChangedArgs
+import com.onesignal.user.subscriptions.ISubscription
 import com.onesignal.user.subscriptions.SubscriptionList
 
 interface ISubscriptionManager : IEventNotifier<ISubscriptionChangedHandler> {
     var subscriptions: SubscriptionList
 
+    val pushSubscriptionModel: SubscriptionModel
     fun addEmailSubscription(email: String)
     fun addOrUpdatePushSubscription(pushToken: String?, pushTokenStatus: SubscriptionStatus)
     fun addSmsSubscription(sms: String)
@@ -14,5 +17,7 @@ interface ISubscriptionManager : IEventNotifier<ISubscriptionChangedHandler> {
 }
 
 interface ISubscriptionChangedHandler {
-    fun onSubscriptionsChanged()
+    fun onSubscriptionsAdded(subscription: ISubscription)
+    fun onSubscriptionsChanged(subscription: ISubscription, args: ModelChangedArgs)
+    fun onSubscriptionRemoved(subscription: ISubscription)
 }

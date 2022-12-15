@@ -26,7 +26,7 @@ internal class OutcomeEventsController(
     private val _configModelStore: ConfigModelStore,
     private val _identityModelStore: IdentityModelStore,
     private val _subscriptionManager: ISubscriptionManager,
-    private val _time: ITime,
+    private val _time: ITime
 ) : IOutcomeEventsController, IStartableService, ISessionLifecycleHandler {
     // Keeps track of unique outcome events sent for UNATTRIBUTED sessions on a per session level
     private var unattributedUniqueOutcomeEventsSentOnSession: MutableSet<String> = mutableSetOf()
@@ -271,7 +271,7 @@ Outcome event was cached and will be reattempted on app cold start"""
 
         // if we don't have a subscription ID yet, throw an exception. The outcome will be saved and processed
         // later, when we do have a subscription ID.
-        if(subscriptionId.isEmpty()) {
+        if (subscriptionId.isEmpty()) {
             throw BackendException(0)
         }
 
@@ -283,6 +283,6 @@ Outcome event was cached and will be reattempted on app cold start"""
             else -> null
         }
 
-        _outcomeEventsBackend.sendOutcomeEvent(appId, _identityModelStore.model.onesignalId, subscriptionId,  direct, event)
+        _outcomeEventsBackend.sendOutcomeEvent(appId, _identityModelStore.model.onesignalId, subscriptionId, direct, event)
     }
 }

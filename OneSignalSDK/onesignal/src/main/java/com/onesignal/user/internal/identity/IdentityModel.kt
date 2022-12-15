@@ -16,13 +16,13 @@ class IdentityModel : MapModel<String>() {
      * created on the backend or not.
      */
     var onesignalId: String
-        get() = getProperty(IdentityConstants.ONESIGNAL_ID)
-        set(value) { setProperty(IdentityConstants.ONESIGNAL_ID, value) }
+        get() = getStringProperty(IdentityConstants.ONESIGNAL_ID)
+        set(value) { setStringProperty(IdentityConstants.ONESIGNAL_ID, value) }
 
     /**
      * The (developer managed) identifier that uniquely identifies this user.
      */
     var externalId: String?
-        get() = getProperty(IdentityConstants.EXTERNAL_ID)
-        set(value) { setProperty(IdentityConstants.EXTERNAL_ID, value) }
+        get() = getOptStringProperty(IdentityConstants.EXTERNAL_ID)
+        set(value) { setOptStringProperty(IdentityConstants.EXTERNAL_ID, value) }
 }

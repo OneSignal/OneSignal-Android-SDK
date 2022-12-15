@@ -35,7 +35,7 @@ public class OneSignalNotificationSender {
         new Thread(() -> {
             IPushSubscription subscription = OneSignal.getUser().getSubscriptions().getPush();
 
-            if (!subscription.getEnabled())
+            if (!subscription.getOptedIn())
                 return;
 
             int pos = notification.getTemplatePos();

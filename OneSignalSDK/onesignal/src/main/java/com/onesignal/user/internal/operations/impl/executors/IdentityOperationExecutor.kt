@@ -41,10 +41,12 @@ internal class IdentityOperationExecutor(
 
                 // ensure the now created alias is in the model as long as the user is still current.
                 if (_identityModelStore.model.onesignalId == lastOperation.onesignalId) {
-                    _identityModelStore.model.setProperty(lastOperation.label, lastOperation.value, ModelChangeTags.HYDRATE)
+                    _identityModelStore.model.setStringProperty(lastOperation.label, lastOperation.value, ModelChangeTags.HYDRATE)
                 }
             } catch (ex: BackendException) {
-                return if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
+                return if (ex.statusCode == 409) {
+                    ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+                } else if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
                     ExecutionResponse(ExecutionResult.FAIL_RETRY)
                 } else {
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)
@@ -56,7 +58,7 @@ internal class IdentityOperationExecutor(
 
                 // ensure the now deleted alias is not in the model as long as the user is still current.
                 if (_identityModelStore.model.onesignalId == lastOperation.onesignalId) {
-                    _identityModelStore.model.setProperty(lastOperation.label, null, ModelChangeTags.HYDRATE)
+                    _identityModelStore.model.setOptStringProperty(lastOperation.label, null, ModelChangeTags.HYDRATE)
                 }
             } catch (ex: BackendException) {
                 return if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
