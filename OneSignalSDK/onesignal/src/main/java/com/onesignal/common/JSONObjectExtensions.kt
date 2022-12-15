@@ -33,6 +33,21 @@ fun JSONObject.safeLong(name: String): Long? {
 }
 
 /**
+ * Retrieve an [Double] from the [JSONObject] safely.
+ *
+ * @param name The name of the attribute that contains an [Int] value.
+ *
+ * @return The [Double] value if it exists, null otherwise.
+ */
+fun JSONObject.safeDouble(name: String): Double? {
+    if (this.has(name)) {
+        return this.getDouble(name)
+    }
+
+    return null
+}
+
+/**
  * Retrieve a [Boolean] from the [JSONObject] safely.
  *
  * @param name The name of the attribute that contains a [Boolean] value.

@@ -201,7 +201,7 @@ internal class InAppMessagesManager(
             _lastTimeFetchedIAMs = now
         }
 
-        val newMessages = _backend.listInAppMessages(appId, subscriptionId.toString())
+        val newMessages = _backend.listInAppMessages(appId, subscriptionId)
 
         if (newMessages != null) {
             this._messages = newMessages
