@@ -16,8 +16,9 @@ internal class IdentityBackendService(
 
         val response = _httpClient.patch("apps/$appId/users/by/$aliasLabel/$aliasValue/identity", requestJSONObject)
 
-        if(!response.isSuccess)
+        if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload)
+        }
 
         val responseJSON = JSONObject(response.payload!!)
 
@@ -27,7 +28,8 @@ internal class IdentityBackendService(
     override suspend fun deleteAlias(appId: String, aliasLabel: String, aliasValue: String, aliasLabelToDelete: String) {
         val response = _httpClient.delete("apps/$appId/users/by/$aliasLabel/$aliasValue/identity/$aliasLabelToDelete")
 
-        if(!response.isSuccess)
+        if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload)
+        }
     }
 }

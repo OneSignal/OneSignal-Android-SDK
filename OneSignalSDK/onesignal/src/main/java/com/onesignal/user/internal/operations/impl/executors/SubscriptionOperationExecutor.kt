@@ -87,24 +87,9 @@ internal class SubscriptionOperationExecutor(
                 subscription
             )
 
+            // update the subscription model with the new ID, if it's still active.
             val subscriptionModel = _subscriptionModelStore.get(createOperation.subscriptionId)
-            if (subscriptionModel != null) {
-                subscriptionModel.setProperty(
-                    SubscriptionModel::id.name,
-                    backendSubscriptionId,
-                    ModelChangeTags.HYDRATE
-                )
-            } else {
-                // the subscription model no longer exists, add it back to the model as a HYDRATE
-                val newSubModel = SubscriptionModel()
-                newSubModel.id = backendSubscriptionId
-                newSubModel.type = createOperation.type
-                newSubModel.address = address
-                newSubModel.enabled = enabled
-                newSubModel.status = status
-
-                _subscriptionModelStore.add(newSubModel, ModelChangeTags.HYDRATE)
-            }
+            subscriptionModel?.setStringProperty(SubscriptionModel::id.name, backendSubscriptionId, ModelChangeTags.HYDRATE)
 
             return ExecutionResponse(ExecutionResult.SUCCESS, mapOf(createOperation.subscriptionId to backendSubscriptionId))
         } catch (ex: BackendException) {
@@ -135,24 +120,6 @@ internal class SubscriptionOperationExecutor(
             )
 
             _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription)
-
-            // update/create the subscription model, in case it lost it's sync.
-            val subscriptionModel = _subscriptionModelStore.get(lastOperation.subscriptionId)
-            if (subscriptionModel != null) {
-                subscriptionModel.setProperty(SubscriptionModel::type.name, lastOperation.type.toString(), ModelChangeTags.HYDRATE)
-                subscriptionModel.setProperty(SubscriptionModel::address.name, lastOperation.address, ModelChangeTags.HYDRATE)
-                subscriptionModel.setProperty(SubscriptionModel::enabled.name, lastOperation.enabled, ModelChangeTags.HYDRATE)
-                subscriptionModel.setProperty(SubscriptionModel::status.name, lastOperation.status.value, ModelChangeTags.HYDRATE)
-            } else {
-                val newSubModel = SubscriptionModel()
-                newSubModel.id = lastOperation.subscriptionId
-                newSubModel.type = lastOperation.type
-                newSubModel.address = lastOperation.address
-                newSubModel.enabled = lastOperation.enabled
-                newSubModel.status = lastOperation.status
-
-                _subscriptionModelStore.add(newSubModel, ModelChangeTags.HYDRATE)
-            }
         } catch (ex: BackendException) {
             return if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
                 ExecutionResponse(ExecutionResult.FAIL_RETRY)
@@ -170,7 +137,7 @@ internal class SubscriptionOperationExecutor(
                 SubscriptionObjectType.SMS
             }
             SubscriptionType.EMAIL -> {
-                SubscriptionObjectType.SMS
+                SubscriptionObjectType.EMAIL
             }
             else -> {
                 SubscriptionObjectType.fromDeviceType(_deviceService.deviceType)

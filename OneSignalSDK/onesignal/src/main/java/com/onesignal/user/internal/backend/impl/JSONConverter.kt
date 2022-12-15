@@ -1,9 +1,9 @@
 package com.onesignal.user.internal.backend.impl
 
 import com.onesignal.common.expandJSONArray
+import com.onesignal.common.putJSONArray
 import com.onesignal.common.putMap
 import com.onesignal.common.putSafe
-import com.onesignal.common.putJSONArray
 import com.onesignal.common.safeBool
 import com.onesignal.common.safeDouble
 import com.onesignal.common.safeInt
@@ -24,7 +24,7 @@ object JSONConverter {
 
         val propertiesJSON = jsonObject.safeJSONObject("properties")
         val respProperties = PropertiesObject(
-            propertiesJSON?.getJSONObject("tags")?.toMap()?.mapValues { it.value.toString() },
+            propertiesJSON?.safeJSONObject("tags")?.toMap()?.mapValues { it.value.toString() },
             propertiesJSON?.safeString("language"),
             propertiesJSON?.safeString("timezone_id"),
             propertiesJSON?.safeString("country"),
@@ -34,7 +34,7 @@ object JSONConverter {
 
         val respSubscriptions = jsonObject.expandJSONArray("subscriptions") {
             val subscriptionType = SubscriptionObjectType.fromString(it.getString("type"))
-            if(subscriptionType != null) {
+            if (subscriptionType != null) {
                 return@expandJSONArray SubscriptionObject(
                     it.getString("id"),
                     subscriptionType,
@@ -90,7 +90,6 @@ object JSONConverter {
 
     fun convertToJSON(subscription: SubscriptionObject): JSONObject {
         return JSONObject()
-            .put("id", subscription.id)
             .put("type", subscription.type.value)
             .putSafe("token", subscription.token)
             .putSafe("enabled", subscription.enabled)

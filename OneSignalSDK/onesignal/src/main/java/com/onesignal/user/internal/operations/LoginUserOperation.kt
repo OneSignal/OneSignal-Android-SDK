@@ -17,23 +17,23 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
      * The application ID the user will exist/be logged in under.
      */
     var appId: String
-        get() = getProperty(::appId.name)
-        private set(value) { setProperty(::appId.name, value) }
+        get() = getStringProperty(::appId.name)
+        private set(value) { setStringProperty(::appId.name, value) }
 
     /**
      * The local OneSignal ID this user was initially logged in under. The user models with this ID
      * will have its ID updated with the backend-generated ID post-create.
      */
     var onesignalId: String
-        get() = getProperty(::onesignalId.name)
-        private set(value) { setProperty(::onesignalId.name, value) }
+        get() = getStringProperty(::onesignalId.name)
+        private set(value) { setStringProperty(::onesignalId.name, value) }
 
     /**
      * The optional external ID of this newly logged-in user. Must be unique for the [appId].
      */
     var externalId: String?
-        get() = getProperty(::externalId.name)
-        private set(value) { setProperty(::externalId.name, value) }
+        get() = getOptStringProperty(::externalId.name)
+        private set(value) { setOptStringProperty(::externalId.name, value) }
 
     /**
      * The user ID of an existing user the [externalId] will be attempted to be associated to first.
@@ -41,8 +41,8 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
      * and can be checked via [IDManager.isLocalId] to ensure correct processing.
      */
     var existingOnesignalId: String?
-        get() = getProperty(::existingOnesignalId.name)
-        private set(value) { setProperty(::existingOnesignalId.name, value) }
+        get() = getOptStringProperty(::existingOnesignalId.name)
+        private set(value) { setOptStringProperty(::existingOnesignalId.name, value) }
 
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String = ""

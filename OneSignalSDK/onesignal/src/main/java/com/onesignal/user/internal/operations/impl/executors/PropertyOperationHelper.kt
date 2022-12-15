@@ -18,10 +18,11 @@ internal object PropertyOperationHelper {
     }
 
     fun createPropertiesFromOperation(operation: DeleteTagOperation, propertiesObject: PropertiesObject): PropertiesObject {
-        val tags = propertiesObject.tags?.toMutableMap()
-        if(tags != null) {
-            tags[operation.key] = ""
+        var tags = propertiesObject.tags?.toMutableMap()
+        if (tags == null) {
+            tags = mutableMapOf()
         }
+        tags[operation.key] = null
         return PropertiesObject(tags, propertiesObject.language, propertiesObject.timezoneId, propertiesObject.country, propertiesObject.latitude, propertiesObject.longitude)
     }
 

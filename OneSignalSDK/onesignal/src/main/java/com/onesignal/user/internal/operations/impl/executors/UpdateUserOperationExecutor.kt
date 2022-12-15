@@ -124,9 +124,9 @@ internal class UpdateUserOperationExecutor(
                     // go through and make sure any properties are in the correct model state
                     for (operation in ops) {
                         when (operation) {
-                            is SetTagOperation -> _propertiesModelStore.model.tags.setProperty(operation.key, operation.value, ModelChangeTags.HYDRATE)
-                            is DeleteTagOperation -> _propertiesModelStore.model.tags.setProperty(operation.key, null, ModelChangeTags.HYDRATE)
-                            is SetPropertyOperation -> _propertiesModelStore.model.setProperty(operation.property, operation.value, ModelChangeTags.HYDRATE)
+                            is SetTagOperation -> _propertiesModelStore.model.tags.setStringProperty(operation.key, operation.value, ModelChangeTags.HYDRATE)
+                            is DeleteTagOperation -> _propertiesModelStore.model.tags.setOptStringProperty(operation.key, null, ModelChangeTags.HYDRATE)
+                            is SetPropertyOperation -> _propertiesModelStore.model.setOptAnyProperty(operation.property, operation.value, ModelChangeTags.HYDRATE)
                         }
                     }
                 }

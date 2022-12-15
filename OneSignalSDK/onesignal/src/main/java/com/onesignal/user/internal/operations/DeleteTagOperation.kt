@@ -14,23 +14,23 @@ class DeleteTagOperation() : Operation(UpdateUserOperationExecutor.DELETE_TAG) {
      * The application ID this subscription will be created under.
      */
     var appId: String
-        get() = getProperty(::appId.name)
-        private set(value) { setProperty(::appId.name, value) }
+        get() = getStringProperty(::appId.name)
+        private set(value) { setStringProperty(::appId.name, value) }
 
     /**
      * The user ID this subscription will be associated with. This ID *may* be locally generated
      * and can be checked via [IDManager.isLocalId] to ensure correct processing.
      */
     var onesignalId: String
-        get() = getProperty(::onesignalId.name)
-        private set(value) { setProperty(::onesignalId.name, value) }
+        get() = getStringProperty(::onesignalId.name)
+        private set(value) { setStringProperty(::onesignalId.name, value) }
 
     /**
      * The tag key to delete.
      */
     var key: String
-        get() = getProperty(::key.name)
-        private set(value) { setProperty(::key.name, value) }
+        get() = getStringProperty(::key.name)
+        private set(value) { setStringProperty(::key.name, value) }
 
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String get() = createComparisonKey

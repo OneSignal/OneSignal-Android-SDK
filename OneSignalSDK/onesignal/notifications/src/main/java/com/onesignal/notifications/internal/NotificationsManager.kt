@@ -5,13 +5,11 @@ import com.onesignal.common.events.EventProducer
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
-import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.INotificationClickHandler
 import com.onesignal.notifications.INotificationWillShowInForegroundHandler
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.notifications.IPermissionChangedHandler
-import com.onesignal.notifications.internal.backend.INotificationBackendService
 import com.onesignal.notifications.internal.common.GenerateNotificationOpenIntentFromPushPayload
 import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.data.INotificationRepository
@@ -33,8 +31,6 @@ interface INotificationActivityOpener {
  */
 internal class NotificationsManager(
     private val _applicationService: IApplicationService,
-    private val _configModelStore: ConfigModelStore,
-    private val _backend: INotificationBackendService,
     private val _notificationPermissionController: INotificationPermissionController,
     private val _notificationRestoreWorkManager: INotificationRestoreWorkManager,
     private val _notificationLifecycleService: INotificationLifecycleService,

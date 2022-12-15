@@ -21,11 +21,7 @@ internal class InAppBackendService(
 
     override suspend fun listInAppMessages(appId: String, subscriptionId: String): List<InAppMessage>? {
         // Retrieve any in app messages that might exist
-        val jsonBody = JSONObject()
-        jsonBody.put("app_id", appId)
-
-        // TODO: This will be replaced by dedicated iam endpoint once it's available
-        var response = _httpClient.post("players/$subscriptionId/on_session", jsonBody)
+        val response = _httpClient.get("apps/$appId/subscriptions/$subscriptionId/iams")
 
         if (response.isSuccess) {
             val jsonResponse = JSONObject(response.payload)
