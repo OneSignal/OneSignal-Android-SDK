@@ -82,4 +82,5 @@ dependencies {
     testImplementation("io.mockk:mockk:1.13.2")
     testImplementation("org.json:json:20180813")
     testImplementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+    testImplementation("com.google.android.gms:play-services-location:18.0.0")
 }
