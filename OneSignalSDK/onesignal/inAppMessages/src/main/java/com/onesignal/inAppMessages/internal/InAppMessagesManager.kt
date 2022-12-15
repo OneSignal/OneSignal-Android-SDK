@@ -42,6 +42,9 @@ import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.IUserManager
 import com.onesignal.user.internal.subscriptions.ISubscriptionChangedHandler
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
+import com.onesignal.user.internal.subscriptions.SubscriptionModel
+import com.onesignal.user.subscriptions.IPushSubscription
+import com.onesignal.user.subscriptions.ISubscription
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -164,7 +167,13 @@ internal class InAppMessagesManager(
         }
     }
 
-    override fun onSubscriptionsChanged() {
+    override fun onSubscriptionsAdded(subscription: ISubscription) { }
+    override fun onSubscriptionRemoved(subscription: ISubscription) { }
+    override fun onSubscriptionsChanged(subscription: ISubscription, args: ModelChangedArgs) {
+        if (subscription !is IPushSubscription || args.path != SubscriptionModel::id.name) {
+            return
+        }
+
         suspendifyOnThread {
             fetchMessages()
         }

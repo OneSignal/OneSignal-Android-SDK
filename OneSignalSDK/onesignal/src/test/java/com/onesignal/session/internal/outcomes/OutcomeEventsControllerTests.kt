@@ -1,7 +1,6 @@
 package com.onesignal.session.internal.outcomes
 
 import com.onesignal.common.exceptions.BackendException
-import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper

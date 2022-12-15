@@ -11,6 +11,7 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.IUserBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
+import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.RefreshUserOperation
@@ -18,6 +19,7 @@ import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 
 internal class RefreshUserOperationExecutor(
@@ -54,9 +56,6 @@ internal class RefreshUserOperationExecutor(
             }
 
             val identityModel = IdentityModel()
-            identityModel.onesignalId = op.onesignalId
-            // TODO: Remove once we can pull this from the backend.
-            identityModel.externalId = _identityModelStore.model.externalId
             for (aliasKVP in response.identities) {
                 identityModel[aliasKVP.key] = aliasKVP.value
             }
@@ -65,30 +64,44 @@ internal class RefreshUserOperationExecutor(
             propertiesModel.onesignalId = op.onesignalId
 
             if (response.properties.country != null) {
-                propertiesModel.country = response.properties.country!!
+                propertiesModel.country = response.properties.country
             }
 
-            propertiesModel.setProperty(
-                PropertiesModel::language.name,
-                response.properties.language,
-                ModelChangeTags.HYDRATE
-            )
+            if (response.properties.language != null) {
+                propertiesModel.language = response.properties.language
+            }
 
             if (response.properties.tags != null) {
-                for (tagKVP in response.properties.tags!!) {
-                    propertiesModel.tags[tagKVP.key] = tagKVP.value
+                for (tagKVP in response.properties.tags) {
+                    if (tagKVP.value != null) {
+                        propertiesModel.tags[tagKVP.key] = tagKVP.value!!
+                    }
                 }
             }
 
             if (response.properties.timezoneId != null) {
-                propertiesModel.timezone = response.properties.timezoneId!!
+                propertiesModel.timezone = response.properties.timezoneId
             }
 
             val subscriptionModels = mutableListOf<SubscriptionModel>()
-            // TODO fill this in for real. Below just copies over the push subscription.
-            val existingPush = _subscriptionsModelStore.list().firstOrNull { it.type == SubscriptionType.PUSH }
-            if (existingPush != null) {
-                subscriptionModels.add(existingPush)
+            for (subscription in response.subscriptions) {
+                val subscriptionModel = SubscriptionModel()
+                subscriptionModel.id = subscription.id
+                subscriptionModel.address = subscription.token ?: ""
+                subscriptionModel.status = SubscriptionStatus.fromInt(subscription.notificationTypes ?: SubscriptionStatus.SUBSCRIBED.value) ?: SubscriptionStatus.SUBSCRIBED
+                subscriptionModel.type = when (subscription.type) {
+                    SubscriptionObjectType.EMAIL -> {
+                        SubscriptionType.EMAIL
+                    }
+                    SubscriptionObjectType.SMS -> {
+                        SubscriptionType.SMS
+                    }
+                    else -> {
+                        SubscriptionType.PUSH
+                    }
+                }
+                subscriptionModel.optedIn = subscriptionModel.status != SubscriptionStatus.UNSUBSCRIBE
+                subscriptionModels.add(subscriptionModel)
             }
 
             _identityModelStore.replace(identityModel, ModelChangeTags.HYDRATE)

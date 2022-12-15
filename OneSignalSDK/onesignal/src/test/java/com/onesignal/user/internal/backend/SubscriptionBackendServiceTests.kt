@@ -6,8 +6,6 @@ import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.extensions.RobolectricTest
-import com.onesignal.mocks.AndroidMockHelper
-import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.backend.impl.SubscriptionBackendService
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import io.kotest.assertions.throwables.shouldThrowUnit

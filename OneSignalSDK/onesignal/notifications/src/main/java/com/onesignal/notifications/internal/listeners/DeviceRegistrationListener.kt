@@ -11,8 +11,11 @@ import com.onesignal.notifications.INotificationsManager
 import com.onesignal.notifications.IPermissionChangedHandler
 import com.onesignal.notifications.internal.channels.INotificationChannelManager
 import com.onesignal.notifications.internal.pushtoken.IPushTokenManager
+import com.onesignal.user.internal.subscriptions.ISubscriptionChangedHandler
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
+import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
+import com.onesignal.user.subscriptions.ISubscription
 
 /**
  * The device registration listener will subscribe to events and at the appropriate time will
@@ -28,11 +31,15 @@ internal class DeviceRegistrationListener(
     private val _subscriptionManager: ISubscriptionManager
 ) : IStartableService,
     ISingletonModelStoreChangeHandler<ConfigModel>,
-    IPermissionChangedHandler {
+    IPermissionChangedHandler,
+    ISubscriptionChangedHandler {
 
     override fun start() {
         _configModelStore.subscribe(this)
         _notificationsManager.addPermissionChangedHandler(this)
+        _subscriptionManager.subscribe(this)
+
+        retrievePushTokenAndUpdateSubscription()
     }
 
     override fun onModelReplaced(model: ConfigModel, tag: String) {
@@ -44,28 +51,42 @@ internal class DeviceRegistrationListener(
 
         _channelManager.processChannelList(model.notificationChannels)
 
-        retrievePushTokenAndUpdateSubscription(_notificationsManager.permission)
+        retrievePushTokenAndUpdateSubscription()
     }
 
     override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
     }
 
     override fun onPermissionChanged(permission: Boolean) {
-        retrievePushTokenAndUpdateSubscription(permission)
+        retrievePushTokenAndUpdateSubscription()
     }
 
-    private fun retrievePushTokenAndUpdateSubscription(permission: Boolean) {
+    private fun retrievePushTokenAndUpdateSubscription() {
         val pushSubscription = _subscriptionManager.subscriptions.push
 
         if (pushSubscription.pushToken.isNotEmpty()) {
+            val permission = _notificationsManager.permission
             _subscriptionManager.addOrUpdatePushSubscription(null, if (permission) SubscriptionStatus.SUBSCRIBED else SubscriptionStatus.NO_PERMISSION)
         } else {
             suspendifyOnThread {
                 val pushTokenAndStatus = _pushTokenManager.retrievePushToken()
+                val permission = _notificationsManager.permission
                 _subscriptionManager.addOrUpdatePushSubscription(
                     pushTokenAndStatus.token,
                     if (permission) pushTokenAndStatus.status else SubscriptionStatus.NO_PERMISSION
                 )
+            }
+        }
+    }
+
+    override fun onSubscriptionRemoved(subscription: ISubscription) { }
+    override fun onSubscriptionsAdded(subscription: ISubscription) { }
+    override fun onSubscriptionsChanged(subscription: ISubscription, args: ModelChangedArgs) {
+        // when going from optedIn=false to optedIn=true and there aren't permissions, automatically drive
+        // permission request.
+        if (args.path == SubscriptionModel::optedIn.name && args.oldValue == false && args.newValue == true && !_notificationsManager.permission) {
+            suspendifyOnThread {
+                _notificationsManager.requestPermission(true)
             }
         }
     }
