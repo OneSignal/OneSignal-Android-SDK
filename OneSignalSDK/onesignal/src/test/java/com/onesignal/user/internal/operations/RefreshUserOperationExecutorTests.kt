@@ -1,6 +1,7 @@
 package com.onesignal.user.internal.operations
 
 import com.onesignal.common.exceptions.BackendException
+import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.mocks.MockHelper
@@ -48,7 +49,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
         val mockIdentityModel = IdentityModel()
         mockIdentityModel.onesignalId = remoteOneSignalId
         every { mockIdentityModelStore.model } returns mockIdentityModel
-        every { mockIdentityModelStore.replace(any()) } just runs
+        every { mockIdentityModelStore.replace(any(), any()) } just runs
 
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
         val mockPropertiesModel = PropertiesModel()
@@ -56,10 +57,10 @@ class RefreshUserOperationExecutorTests : FunSpec({
         mockPropertiesModel.country = "VT"
         mockPropertiesModel.language = "language"
         every { mockPropertiesModelStore.model } returns mockPropertiesModel
-        every { mockPropertiesModelStore.replace(any()) } just runs
+        every { mockPropertiesModelStore.replace(any(), any()) } just runs
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
-        every { mockSubscriptionsModelStore.replaceAll(any()) } just runs
+        every { mockSubscriptionsModelStore.replaceAll(any(), any()) } just runs
 
         val loginUserOperationExecutor = RefreshUserOperationExecutor(
             mockUserBackendService,
@@ -80,26 +81,29 @@ class RefreshUserOperationExecutorTests : FunSpec({
             mockIdentityModelStore.replace(
                 withArg {
                     it["aliasLabel1"] shouldBe "aliasValue1"
-                }
+                },
+                ModelChangeTags.HYDRATE
             )
             mockPropertiesModelStore.replace(
                 withArg {
                     it.country shouldBe "US"
                     it.language shouldBe null
-                }
+                },
+                ModelChangeTags.HYDRATE
             )
             mockSubscriptionsModelStore.replaceAll(
                 withArg {
                     it.count() shouldBe 2
                     it[0].id shouldBe remoteSubscriptionId1
                     it[0].type shouldBe SubscriptionType.PUSH
-                    it[0].enabled shouldBe true
+                    it[0].optedIn shouldBe true
                     it[0].address shouldBe "pushToken"
                     it[1].id shouldBe remoteSubscriptionId2
                     it[1].type shouldBe SubscriptionType.EMAIL
-                    it[1].enabled shouldBe true
+                    it[1].optedIn shouldBe true
                     it[1].address shouldBe "name@company.com"
-                }
+                },
+                ModelChangeTags.HYDRATE
             )
         }
     }

@@ -80,8 +80,8 @@ internal class DeviceRegistrationListener(
     }
 
     override fun onSubscriptionRemoved(subscription: ISubscription) { }
-    override fun onSubscriptionsAdded(subscription: ISubscription) { }
-    override fun onSubscriptionsChanged(subscription: ISubscription, args: ModelChangedArgs) {
+    override fun onSubscriptionAdded(subscription: ISubscription) { }
+    override fun onSubscriptionChanged(subscription: ISubscription, args: ModelChangedArgs) {
         // when going from optedIn=false to optedIn=true and there aren't permissions, automatically drive
         // permission request.
         if (args.path == SubscriptionModel::optedIn.name && args.oldValue == false && args.newValue == true && !_notificationsManager.permission) {

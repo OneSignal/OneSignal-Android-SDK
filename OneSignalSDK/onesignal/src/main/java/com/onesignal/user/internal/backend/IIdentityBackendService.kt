@@ -1,9 +1,10 @@
 package com.onesignal.user.internal.backend
 
+import com.onesignal.common.exceptions.BackendException
+
 interface IIdentityBackendService {
     /**
-     * Create one or more aliases for the user identified by the [aliasLabel]/[aliasValue] provided. For
-     * each being created, the [aliasLabel]/[aliasValue] pair must not already exist within the [appId].
+     * Set one or more aliases for the user identified by the [aliasLabel]/[aliasValue] provided.
      *
      * If there is a non-successful response from the backend, a [BackendException] will be thrown with response data.
      *
@@ -12,7 +13,7 @@ interface IIdentityBackendService {
      * @param aliasValue The identifier within the [aliasLabel] that identifies the user to retrieve.
      * @param identities The identities that are to be created.
      */
-    suspend fun createAlias(appId: String, aliasLabel: String, aliasValue: String, identities: Map<String, String>): Map<String, String>
+    suspend fun setAlias(appId: String, aliasLabel: String, aliasValue: String, identities: Map<String, String>): Map<String, String>
 
     /**
      * Delete the [aliasLabelToDelete] from the user identified by the [aliasLabel]/[aliasValue] provided.

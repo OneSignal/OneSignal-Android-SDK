@@ -167,9 +167,9 @@ internal class InAppMessagesManager(
         }
     }
 
-    override fun onSubscriptionsAdded(subscription: ISubscription) { }
+    override fun onSubscriptionAdded(subscription: ISubscription) { }
     override fun onSubscriptionRemoved(subscription: ISubscription) { }
-    override fun onSubscriptionsChanged(subscription: ISubscription, args: ModelChangedArgs) {
+    override fun onSubscriptionChanged(subscription: ISubscription, args: ModelChangedArgs) {
         if (subscription !is IPushSubscription || args.path != SubscriptionModel::id.name) {
             return
         }
