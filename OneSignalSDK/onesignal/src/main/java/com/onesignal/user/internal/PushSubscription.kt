@@ -12,19 +12,26 @@ internal open class PushSubscription(
     override val pushToken: String
         get() = model.address
 
-    override var enabled: Boolean
-        get() = model.enabled && model.status == SubscriptionStatus.SUBSCRIBED
-        set(value) { model.enabled = value }
+    override val optedIn: Boolean
+        get() = model.optedIn && model.status != SubscriptionStatus.NO_PERMISSION
+
+    override fun optIn() {
+        model.optedIn = true
+    }
+
+    override fun optOut() {
+        model.optedIn = false
+    }
 }
 
 internal class UninitializedPushSubscription() : PushSubscription(createFakePushSub()) {
-
     companion object {
         fun createFakePushSub(): SubscriptionModel {
             val pushSubModel = SubscriptionModel()
             pushSubModel.id = ""
             pushSubModel.type = SubscriptionType.PUSH
-            pushSubModel.enabled = false
+            pushSubModel.optedIn = false
+            pushSubModel.address = ""
             return pushSubModel
         }
     }

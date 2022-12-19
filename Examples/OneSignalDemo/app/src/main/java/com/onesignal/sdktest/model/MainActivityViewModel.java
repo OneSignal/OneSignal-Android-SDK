@@ -801,7 +801,12 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
         // Add a listener to toggle the push notification enablement for the push subscription.
         pushSubscriptionEnabledSwitch.setOnClickListener(v -> {
             IPushSubscription subscription = OneSignal.getUser().getSubscriptions().getPush();
-            subscription.setEnabled(pushSubscriptionEnabledSwitch.isChecked());
+            if(pushSubscriptionEnabledSwitch.isChecked()) {
+                subscription.optIn();
+            }
+            else {
+                subscription.optOut();
+            }
         });
     }
 
@@ -832,7 +837,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
         promptPushBottonLayout.setVisibility(isPermissionEnabled ? View.GONE : View.VISIBLE);
         pushSubscriptionEnabledRelativeLayout.setEnabled(isPermissionEnabled);
         pushSubscriptionEnabledSwitch.setEnabled(isPermissionEnabled);
-        pushSubscriptionEnabledSwitch.setChecked(pushSubscription.getEnabled());
+        pushSubscriptionEnabledSwitch.setChecked(pushSubscription.getOptedIn());
     }
 
     private void setupSendNotificationsLayout() {

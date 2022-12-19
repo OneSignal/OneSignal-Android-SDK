@@ -4,7 +4,6 @@ import android.os.Process
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.config.ConfigModelStore
-import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
@@ -15,6 +14,8 @@ import com.onesignal.session.internal.influence.InfluenceType
 import com.onesignal.session.internal.outcomes.IOutcomeEventsController
 import com.onesignal.session.internal.session.ISessionLifecycleHandler
 import com.onesignal.session.internal.session.ISessionService
+import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 
 internal class OutcomeEventsController(
     private val _session: ISessionService,
@@ -23,8 +24,9 @@ internal class OutcomeEventsController(
     private val _outcomeEventsPreferences: IOutcomeEventsPreferences,
     private val _outcomeEventsBackend: IOutcomeEventsBackendService,
     private val _configModelStore: ConfigModelStore,
-    private val _time: ITime,
-    private val _deviceService: IDeviceService
+    private val _identityModelStore: IdentityModelStore,
+    private val _subscriptionManager: ISubscriptionManager,
+    private val _time: ITime
 ) : IOutcomeEventsController, IStartableService, ISessionLifecycleHandler {
     // Keeps track of unique outcome events sent for UNATTRIBUTED sessions on a per session level
     private var unattributedUniqueOutcomeEventsSentOnSession: MutableSet<String> = mutableSetOf()
@@ -264,8 +266,15 @@ Outcome event was cached and will be reattempted on app cold start"""
     }
 
     private suspend fun requestMeasureOutcomeEvent(eventParams: OutcomeEventParams) {
-        val deviceType = _deviceService.deviceType
         val appId: String = _configModelStore.model.appId
+        val subscriptionId = _subscriptionManager.subscriptions.push.id
+
+        // if we don't have a subscription ID yet, throw an exception. The outcome will be saved and processed
+        // later, when we do have a subscription ID.
+        if (subscriptionId.isEmpty()) {
+            throw BackendException(0)
+        }
+
         val event = OutcomeEvent.fromOutcomeEventParamstoOutcomeEvent(eventParams)
         val direct = when (event.session) {
             InfluenceType.DIRECT -> true
@@ -274,6 +283,6 @@ Outcome event was cached and will be reattempted on app cold start"""
             else -> null
         }
 
-        _outcomeEventsBackend.sendOutcomeEvent(appId, deviceType, direct, event)
+        _outcomeEventsBackend.sendOutcomeEvent(appId, _identityModelStore.model.onesignalId, subscriptionId, direct, event)
     }
 }

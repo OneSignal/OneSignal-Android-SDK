@@ -16,38 +16,38 @@ class CreateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.CR
      * The application ID this subscription will be created under.
      */
     var appId: String
-        get() = getProperty(::appId.name)
-        private set(value) { setProperty(::appId.name, value) }
+        get() = getStringProperty(::appId.name)
+        private set(value) { setStringProperty(::appId.name, value) }
 
     /**
      * The user ID this subscription will be associated with. This ID *may* be locally generated
      * and can be checked via [IDManager.isLocalId] to ensure correct processing.
      */
     var onesignalId: String
-        get() = getProperty(::onesignalId.name)
-        private set(value) { setProperty(::onesignalId.name, value) }
+        get() = getStringProperty(::onesignalId.name)
+        private set(value) { setStringProperty(::onesignalId.name, value) }
 
     /**
      * The local ID of the subscription being created.  The subscription model with this ID will have its
      * ID updated with the backend-generated ID post-create.
      */
     var subscriptionId: String
-        get() = getProperty(::subscriptionId.name)
-        private set(value) { setProperty(::subscriptionId.name, value) }
+        get() = getStringProperty(::subscriptionId.name)
+        private set(value) { setStringProperty(::subscriptionId.name, value) }
 
     /**
      * The type of subscription.
      */
     var type: SubscriptionType
-        get() = SubscriptionType.valueOf(getProperty(::type.name))
-        private set(value) { setProperty(::type.name, value.toString()) }
+        get() = getEnumProperty(::type.name)
+        private set(value) { setEnumProperty(::type.name, value) }
 
     /**
      * Whether this subscription is currently enabled.
      */
     var enabled: Boolean
-        get() = getProperty(::enabled.name)
-        private set(value) { setProperty(::enabled.name, value) }
+        get() = getBooleanProperty(::enabled.name)
+        private set(value) { setBooleanProperty(::enabled.name, value) }
 
     /**
      * The address-specific information for this subscription. Its contents depends on the type
@@ -58,18 +58,15 @@ class CreateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.CR
      * * [SubscriptionType.PUSH]: The push token.
      */
     var address: String
-        get() = getProperty(::address.name)
-        private set(value) { setProperty(::address.name, value) }
+        get() = getStringProperty(::address.name)
+        private set(value) { setStringProperty(::address.name, value) }
 
     /**
      * The status of this subscription.
      */
     var status: SubscriptionStatus
-        get() {
-            val value = getProperty<Int>(::status.name)
-            return SubscriptionStatus.values().first { it.value == value }
-        }
-        private set(value) { setProperty(::status.name, value.value) }
+        get() = getEnumProperty(::status.name)
+        private set(value) { setEnumProperty(::status.name, value) }
 
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Subscription.$subscriptionId"

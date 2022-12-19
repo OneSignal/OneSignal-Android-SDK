@@ -17,37 +17,37 @@ class TrackPurchaseOperation() : Operation(UpdateUserOperationExecutor.TRACK_PUR
      * The OneSignal appId the purchase was captured under.
      */
     var appId: String
-        get() = getProperty(::appId.name)
-        private set(value) { setProperty(::appId.name, value) }
+        get() = getStringProperty(::appId.name)
+        private set(value) { setStringProperty(::appId.name, value) }
 
     /**
      * The OneSignal ID the purchase was captured under. This ID *may* be locally generated
      * and can be checked via [IDManager.isLocalId] to ensure correct processing.
      */
     var onesignalId: String
-        get() = getProperty(::onesignalId.name)
-        private set(value) { setProperty(::onesignalId.name, value) }
+        get() = getStringProperty(::onesignalId.name)
+        private set(value) { setStringProperty(::onesignalId.name, value) }
 
     /**
      * Whether to treat new purchases as an existing purchase.
      */
     var treatNewAsExisting: Boolean
-        get() = getProperty(::treatNewAsExisting.name)
-        private set(value) { setProperty(::treatNewAsExisting.name, value) }
+        get() = getBooleanProperty(::treatNewAsExisting.name)
+        private set(value) { setBooleanProperty(::treatNewAsExisting.name, value) }
 
     /**
      * The amount spent by the user.
      */
     var amountSpent: BigDecimal
-        get() = getProperty(::amountSpent.name)
-        private set(value) { setProperty(::amountSpent.name, value) }
+        get() = getBigDecimalProperty(::amountSpent.name)
+        private set(value) { setBigDecimalProperty(::amountSpent.name, value) }
 
     /**
      * The list of purchases that have been made.
      */
     var purchases: List<PurchaseInfo>
-        get() = getProperty(::purchases.name)
-        private set(value) { setProperty(::purchases.name, value) }
+        get() = getListProperty(::purchases.name)
+        private set(value) { setListProperty(::purchases.name, value) }
 
     override val createComparisonKey: String get() = ""
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId"
@@ -88,16 +88,16 @@ class TrackPurchaseOperation() : Operation(UpdateUserOperationExecutor.TRACK_PUR
  */
 class PurchaseInfo() : Model() {
     var sku: String
-        get() = getProperty(::sku.name)
-        private set(value) { setProperty(::sku.name, value) }
+        get() = getStringProperty(::sku.name)
+        private set(value) { setStringProperty(::sku.name, value) }
 
     var iso: String
-        get() = getProperty(::iso.name)
-        private set(value) { setProperty(::iso.name, value) }
+        get() = getStringProperty(::iso.name)
+        private set(value) { setStringProperty(::iso.name, value) }
 
     var amount: BigDecimal
-        get() = getProperty(::amount.name)
-        private set(value) { setProperty(::amount.name, value) }
+        get() = getBigDecimalProperty(::amount.name)
+        private set(value) { setBigDecimalProperty(::amount.name, value) }
 
     constructor(sku: String, iso: String, amount: BigDecimal) : this() {
         this.sku = sku

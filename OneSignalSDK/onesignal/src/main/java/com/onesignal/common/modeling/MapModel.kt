@@ -35,28 +35,28 @@ open class MapModel<V>(
     }
 
     override fun get(key: String): V {
-        return getProperty(key)
+        return getOptAnyProperty(key) as V
     }
 
     override fun clear() {
         for (property in data.keys)
-            setProperty(property, null)
+            setOptAnyProperty(property, null)
     }
 
     override fun put(key: String, value: V): V {
-        setProperty(key, value)
+        setOptAnyProperty(key, value)
         return value
     }
 
     override fun putAll(from: Map<out String, V>) {
         for (item in from) {
-            setProperty(item.key, item.value)
+            setOptAnyProperty(item.key, item.value)
         }
     }
 
     override fun remove(key: String): V {
-        val value = getProperty<V>(key)
-        setProperty(key, null)
+        val value = getOptAnyProperty(key) as V
+        setOptAnyProperty(key, null)
         return value
     }
 }

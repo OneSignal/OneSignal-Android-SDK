@@ -33,6 +33,7 @@ open class SingletonModelStore<TModel>(
     override fun replace(model: TModel, tag: String) {
         val existingModel = this.model
         existingModel.initializeFromModel(_singletonId, model)
+        store.persist()
         _changeSubscription.fire { it.onModelReplaced(existingModel, tag) }
     }
 

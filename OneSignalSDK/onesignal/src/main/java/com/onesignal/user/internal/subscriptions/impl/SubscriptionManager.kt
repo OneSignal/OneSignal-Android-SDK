@@ -36,6 +36,8 @@ internal class SubscriptionManager(
 
     private val _events = EventProducer<ISubscriptionChangedHandler>()
     override var subscriptions: SubscriptionList = SubscriptionList(listOf(), UninitializedPushSubscription())
+    override val pushSubscriptionModel: SubscriptionModel
+        get() = (subscriptions.push as PushSubscription).model
 
     init {
         for (subscriptionModel in _subscriptionModelStore.list()) {
@@ -89,7 +91,7 @@ internal class SubscriptionManager(
 
         val subscriptionModel = SubscriptionModel()
         subscriptionModel.id = IDManager.createLocalId()
-        subscriptionModel.enabled = true
+        subscriptionModel.optedIn = true
         subscriptionModel.type = type
         subscriptionModel.address = address
         subscriptionModel.status = status ?: SubscriptionStatus.SUBSCRIBED
@@ -139,7 +141,7 @@ internal class SubscriptionManager(
             }
 
             // the model has already been updated, so fire the update event
-            _events.fire { it.onSubscriptionsChanged() }
+            _events.fire { it.onSubscriptionChanged(subscription, args) }
         }
     }
 
@@ -170,7 +172,7 @@ internal class SubscriptionManager(
         subscriptions.add(subscription)
         this.subscriptions = SubscriptionList(subscriptions, UninitializedPushSubscription())
 
-        _events.fire { it.onSubscriptionsChanged() }
+        _events.fire { it.onSubscriptionAdded(subscription) }
     }
 
     private fun removeSubscriptionFromSubscriptionList(subscription: ISubscription) {
@@ -178,7 +180,7 @@ internal class SubscriptionManager(
         subscriptions.remove(subscription)
         this.subscriptions = SubscriptionList(subscriptions, UninitializedPushSubscription())
 
-        _events.fire { it.onSubscriptionsChanged() }
+        _events.fire { it.onSubscriptionRemoved(subscription) }
     }
 
     private fun createSubscriptionFromModel(subscriptionModel: SubscriptionModel): ISubscription {
