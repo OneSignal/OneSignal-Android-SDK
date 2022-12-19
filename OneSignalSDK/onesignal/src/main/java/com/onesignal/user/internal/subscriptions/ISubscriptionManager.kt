@@ -17,7 +17,7 @@ interface ISubscriptionManager : IEventNotifier<ISubscriptionChangedHandler> {
 }
 
 interface ISubscriptionChangedHandler {
-    fun onSubscriptionsAdded(subscription: ISubscription)
-    fun onSubscriptionsChanged(subscription: ISubscription, args: ModelChangedArgs)
+    fun onSubscriptionAdded(subscription: ISubscription)
+    fun onSubscriptionChanged(subscription: ISubscription, args: ModelChangedArgs)
     fun onSubscriptionRemoved(subscription: ISubscription)
 }

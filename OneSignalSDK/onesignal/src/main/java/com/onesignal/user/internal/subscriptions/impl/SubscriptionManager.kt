@@ -141,7 +141,7 @@ internal class SubscriptionManager(
             }
 
             // the model has already been updated, so fire the update event
-            _events.fire { it.onSubscriptionsChanged(subscription, args) }
+            _events.fire { it.onSubscriptionChanged(subscription, args) }
         }
     }
 
@@ -172,7 +172,7 @@ internal class SubscriptionManager(
         subscriptions.add(subscription)
         this.subscriptions = SubscriptionList(subscriptions, UninitializedPushSubscription())
 
-        _events.fire { it.onSubscriptionsAdded(subscription) }
+        _events.fire { it.onSubscriptionAdded(subscription) }
     }
 
     private fun removeSubscriptionFromSubscriptionList(subscription: ISubscription) {

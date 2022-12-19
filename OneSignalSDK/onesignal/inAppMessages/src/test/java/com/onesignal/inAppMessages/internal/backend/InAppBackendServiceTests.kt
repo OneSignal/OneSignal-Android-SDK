@@ -51,7 +51,7 @@ class InAppBackendServiceTests : FunSpec({
         /* Given */
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
-        coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(200, "{ in_app_messages: [{id: \"messageId1\", variants:{all: {en: \"content1\"}}, triggers:[[{id: \"triggerId1\", kind: \"custom\", property: \"property1\", operator: \"equal\", value: \"value1\"}]], end_time: \"2020-12-13T23:23:23\", redisplay: { limit: 11111, delay: 22222}] }")
+        coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(200, "{ in_app_messages: [{id: \"messageId1\", variants:{all: {en: \"content1\"}}, triggers:[[{id: \"triggerId1\", kind: \"custom\", property: \"property1\", operator: \"equal\", value: \"value1\"}]], end_time: \"2008-09-03T20:56:35.450686Z\", redisplay: { limit: 11111, delay: 22222}}] }")
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
@@ -62,9 +62,9 @@ class InAppBackendServiceTests : FunSpec({
         response shouldNotBe null
         response!!.count() shouldBe 1
         response[0].messageId shouldBe "messageId1"
-        response[0].variants.keys shouldBe 1
+        response[0].variants.keys.count() shouldBe 1
         response[0].variants["all"] shouldNotBe null
-        response[0].variants["all"]!!.keys shouldBe 1
+        response[0].variants["all"]!!.keys.count() shouldBe 1
         response[0].variants["all"]!!["en"] shouldBe "content1"
         response[0].triggers.count() shouldBe 1
         response[0].triggers[0].count() shouldBe 1
