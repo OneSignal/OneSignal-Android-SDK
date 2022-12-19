@@ -7,7 +7,7 @@ import com.onesignal.location.ILocationManager
  * have not included the appropriate location module.
  */
 internal class MisconfiguredLocationManager : ILocationManager {
-    override var isLocationShared: Boolean
+    override var isShared: Boolean
         get() = throw EXCEPTION
         set(value) = throw EXCEPTION
 
