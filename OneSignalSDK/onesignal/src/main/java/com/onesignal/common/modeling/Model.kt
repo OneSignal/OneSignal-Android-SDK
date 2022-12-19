@@ -44,7 +44,7 @@ open class Model(
      * to this model will *also* be propagated up to it's parent for notification. When
      * this is specified, must also specify [_parentProperty]
      */
-    private val _parentModel: Model? = null,
+    private var _parentModel: Model? = null,
 
     /**
      * The optional parent model property that references this model. When this is
@@ -118,10 +118,21 @@ open class Model(
      * @param id The id of the model to initialze to.
      * @param model The model to initialize this model from.
      */
-    fun initializeFromModel(id: String, model: Model) {
+    fun initializeFromModel(id: String?, model: Model) {
         data.clear()
-        data.putAll(model.data)
-        data[::id.name] = id
+        for (item in model.data) {
+            if (item.value is Model) {
+                val childModel = item.value as Model
+                childModel._parentModel = this
+                data[item.key] = childModel
+            } else {
+                data[item.key] = item.value
+            }
+        }
+
+        if (id != null) {
+            data[::id.name] = id
+        }
     }
 
     /**
@@ -286,7 +297,7 @@ open class Model(
         // if there is a parent model, propagate the change up to the parent for it's own processing.
         if (_parentModel != null) {
             val parentPath = "$_parentProperty.$path"
-            _parentModel.notifyChanged(parentPath, property, tag, oldValue, newValue)
+            _parentModel!!.notifyChanged(parentPath, property, tag, oldValue, newValue)
         }
     }
 
