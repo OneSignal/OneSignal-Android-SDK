@@ -12,7 +12,7 @@ interface ISessionManager {
      *
      * @return this user manager to allow for chaining of calls.
      */
-    fun addOutcome(name: String): ISessionManager
+    fun addOutcome(name: String)
 
     /**
      * Add a unique outcome with the provided name, captured against the current session.
@@ -22,7 +22,7 @@ interface ISessionManager {
      *
      * @return this user manager to allow for chaining of calls.
      */
-    fun addUniqueOutcome(name: String): ISessionManager
+    fun addUniqueOutcome(name: String)
 
     /**
      * Add an outcome with the provided name and value, captured against the current session.
@@ -33,5 +33,5 @@ interface ISessionManager {
      *
      * @return this user manager to allow for chaining of calls.
      */
-    fun addOutcomeWithValue(name: String, value: Float): ISessionManager
+    fun addOutcomeWithValue(name: String, value: Float)
 }

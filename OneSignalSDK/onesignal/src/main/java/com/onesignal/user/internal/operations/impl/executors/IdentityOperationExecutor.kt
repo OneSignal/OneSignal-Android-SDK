@@ -61,7 +61,10 @@ internal class IdentityOperationExecutor(
                     _identityModelStore.model.setOptStringProperty(lastOperation.label, null, ModelChangeTags.HYDRATE)
                 }
             } catch (ex: BackendException) {
-                return if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
+                return if (ex.statusCode == 409) {
+                    // The 409 indicates the alias doesn't exist on the user it's being deleted from. This is good!
+                    ExecutionResponse(ExecutionResult.SUCCESS)
+                } else if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
                     ExecutionResponse(ExecutionResult.FAIL_RETRY)
                 } else {
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)

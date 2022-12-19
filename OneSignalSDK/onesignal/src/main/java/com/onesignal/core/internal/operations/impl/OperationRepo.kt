@@ -118,9 +118,8 @@ internal class OperationRepo(
                     // operations are set sequentially.
                     val newTime = _time.currentTimeMillis
 
-                    val delay = lastSyncTime - newTime + _configModelStore.model.opRepoExecutionInterval
+                    val delay = (lastSyncTime - newTime) + _configModelStore.model.opRepoExecutionInterval
                     lastSyncTime = newTime
-
                     if (delay > 0) {
                         withTimeoutOrNull(delay) {
                             // wait to be woken up for the next pass
@@ -130,6 +129,8 @@ internal class OperationRepo(
                         // This secondary delay allows for any subsequent operations (beyond the first one
                         // that woke us) to be enqueued before we pull from the queue.
                         delay(_configModelStore.model.opRepoPostWakeDelay)
+
+                        lastSyncTime = _time.currentTimeMillis
                     }
                 }
             } catch (e: Throwable) {
