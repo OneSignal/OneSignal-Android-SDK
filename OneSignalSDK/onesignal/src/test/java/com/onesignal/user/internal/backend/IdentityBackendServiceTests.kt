@@ -29,7 +29,7 @@ class IdentityBackendServiceTests : FunSpec({
         val identities = mapOf("aliasKey1" to "aliasValue1")
 
         /* When */
-        val response = identityBackendService.createAlias("appId", aliasLabel, aliasValue, identities)
+        val response = identityBackendService.setAlias("appId", aliasLabel, aliasValue, identities)
 
         /* Then */
         response["aliasKey1"] shouldBe "aliasValue1"

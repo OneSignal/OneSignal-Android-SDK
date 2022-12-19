@@ -10,7 +10,7 @@ import org.json.JSONObject
 internal class IdentityBackendService(
     private val _httpClient: IHttpClient
 ) : IIdentityBackendService {
-    override suspend fun createAlias(appId: String, aliasLabel: String, aliasValue: String, identities: Map<String, String>): Map<String, String> {
+    override suspend fun setAlias(appId: String, aliasLabel: String, aliasValue: String, identities: Map<String, String>): Map<String, String> {
         val requestJSONObject = JSONObject()
             .put("identity", JSONObject().putMap(identities))
 
