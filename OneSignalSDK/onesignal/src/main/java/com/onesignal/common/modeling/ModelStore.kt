@@ -121,7 +121,7 @@ abstract class ModelStore<TModel>(
         }
     }
 
-    private fun persist() {
+    fun persist() {
         if (name != null && _prefs != null) {
             val jsonArray = JSONArray()
             for (model in _models) {

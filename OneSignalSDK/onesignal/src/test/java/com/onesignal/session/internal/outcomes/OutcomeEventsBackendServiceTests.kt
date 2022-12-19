@@ -1,7 +1,6 @@
 package com.onesignal.session.internal.outcomes
 
 import com.onesignal.common.exceptions.BackendException
-import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.debug.LogLevel
@@ -32,7 +31,7 @@ class OutcomeEventsBackendServiceTests : FunSpec({
         val outcomeEventsController = OutcomeEventsBackendService(spyHttpClient)
 
         /* When */
-        outcomeEventsController.sendOutcomeEvent("appId", IDeviceService.DeviceType.Android, null, evnt)
+        outcomeEventsController.sendOutcomeEvent("appId", "onesignalId", "subscriptionId", null, evnt)
 
         /* Then */
         coVerify {
@@ -40,7 +39,8 @@ class OutcomeEventsBackendServiceTests : FunSpec({
                 "outcomes/measure",
                 withArg {
                     it.getString("app_id") shouldBe "appId"
-                    it.getInt("device_type") shouldBe 1
+                    it.getString("onesignal_id") shouldBe "onesignalId"
+                    it.getJSONObject("subscription").getString("id") shouldBe "subscriptionId"
                     it.getString("id") shouldBe "EVENT_NAME"
                     it.has("direct") shouldBe false
                     it.has("notification_ids") shouldBe false
@@ -59,7 +59,7 @@ class OutcomeEventsBackendServiceTests : FunSpec({
         val outcomeEventsController = OutcomeEventsBackendService(spyHttpClient)
 
         /* When */
-        outcomeEventsController.sendOutcomeEvent("appId", IDeviceService.DeviceType.Android, null, evnt)
+        outcomeEventsController.sendOutcomeEvent("appId", "onesignalId", "subscriptionId", null, evnt)
 
         /* Then */
         coVerify {
@@ -67,7 +67,8 @@ class OutcomeEventsBackendServiceTests : FunSpec({
                 "outcomes/measure",
                 withArg {
                     it.getString("app_id") shouldBe "appId"
-                    it.getInt("device_type") shouldBe 1
+                    it.getString("onesignal_id") shouldBe "onesignalId"
+                    it.getJSONObject("subscription").getString("id") shouldBe "subscriptionId"
                     it.getString("id") shouldBe "EVENT_NAME"
                     it.getInt("weight") shouldBe 1
                     it.has("direct") shouldBe false
@@ -86,7 +87,7 @@ class OutcomeEventsBackendServiceTests : FunSpec({
         val outcomeEventsController = OutcomeEventsBackendService(spyHttpClient)
 
         /* When */
-        outcomeEventsController.sendOutcomeEvent("appId", IDeviceService.DeviceType.Android, false, evnt)
+        outcomeEventsController.sendOutcomeEvent("appId", "onesignalId", "subscriptionId", false, evnt)
 
         /* Then */
         coVerify {
@@ -94,7 +95,8 @@ class OutcomeEventsBackendServiceTests : FunSpec({
                 "outcomes/measure",
                 withArg {
                     it.getString("app_id") shouldBe "appId"
-                    it.getInt("device_type") shouldBe 1
+                    it.getString("onesignal_id") shouldBe "onesignalId"
+                    it.getJSONObject("subscription").getString("id") shouldBe "subscriptionId"
                     it.getString("id") shouldBe "EVENT_NAME"
                     it.getBoolean("direct") shouldBe false
                     it.has("notification_ids") shouldBe false
@@ -113,7 +115,7 @@ class OutcomeEventsBackendServiceTests : FunSpec({
         val outcomeEventsController = OutcomeEventsBackendService(spyHttpClient)
 
         /* When */
-        outcomeEventsController.sendOutcomeEvent("appId", IDeviceService.DeviceType.Android, true, evnt)
+        outcomeEventsController.sendOutcomeEvent("appId", "onesignalId", "subscriptionId", true, evnt)
 
         /* Then */
         coVerify {
@@ -121,7 +123,8 @@ class OutcomeEventsBackendServiceTests : FunSpec({
                 "outcomes/measure",
                 withArg {
                     it.getString("app_id") shouldBe "appId"
-                    it.getInt("device_type") shouldBe 1
+                    it.getString("onesignal_id") shouldBe "onesignalId"
+                    it.getJSONObject("subscription").getString("id") shouldBe "subscriptionId"
                     it.getString("id") shouldBe "EVENT_NAME"
                     it.getBoolean("direct") shouldBe true
                     it.has("notification_ids") shouldBe false
@@ -140,7 +143,7 @@ class OutcomeEventsBackendServiceTests : FunSpec({
         val outcomeEventsController = OutcomeEventsBackendService(spyHttpClient)
 
         /* When */
-        outcomeEventsController.sendOutcomeEvent("appId", IDeviceService.DeviceType.Android, null, evnt)
+        outcomeEventsController.sendOutcomeEvent("appId", "onesignalId", "subscriptionId", null, evnt)
 
         /* Then */
         coVerify {
@@ -148,7 +151,8 @@ class OutcomeEventsBackendServiceTests : FunSpec({
                 "outcomes/measure",
                 withArg {
                     it.getString("app_id") shouldBe "appId"
-                    it.getInt("device_type") shouldBe 1
+                    it.getString("onesignal_id") shouldBe "onesignalId"
+                    it.getJSONObject("subscription").getString("id") shouldBe "subscriptionId"
                     it.getString("id") shouldBe "EVENT_NAME"
                     it.getInt("timestamp") shouldBe 1111
                     it.has("notification_ids") shouldBe false
@@ -168,7 +172,7 @@ class OutcomeEventsBackendServiceTests : FunSpec({
 
         /* When */
         val exception = shouldThrowUnit<BackendException> {
-            outcomeEventsController.sendOutcomeEvent("appId", IDeviceService.DeviceType.Android, null, evnt)
+            outcomeEventsController.sendOutcomeEvent("appId", "onesignalId", "subscriptionId", null, evnt)
         }
 
         /* Then */

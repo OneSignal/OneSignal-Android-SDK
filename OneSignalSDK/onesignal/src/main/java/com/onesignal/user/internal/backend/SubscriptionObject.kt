@@ -10,10 +10,6 @@ class SubscriptionObject(
     val deviceModel: String? = null,
     val deviceOS: String? = null,
     val rooted: Boolean? = null,
-    val testType: Int? = null,
-    val appVersion: String? = null,
     val netType: Int? = null,
-    val carrier: String? = null,
-    val webAuth: String? = null,
-    val webP256: String? = null
+    val carrier: String? = null
 )
