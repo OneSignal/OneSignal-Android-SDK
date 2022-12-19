@@ -3,9 +3,12 @@ package com.onesignal.user.internal.subscriptions
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.user.internal.subscriptions.impl.SubscriptionManager
+import com.onesignal.user.subscriptions.ISmsSubscription
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.types.beInstanceOf
 import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.every
 import io.mockk.just
@@ -25,21 +28,21 @@ class SubscriptionManagerTests : FunSpec({
         pushSubscription.id = "subscription1"
         pushSubscription.type = SubscriptionType.PUSH
         pushSubscription.status = SubscriptionStatus.SUBSCRIBED
-        pushSubscription.enabled = true
+        pushSubscription.optedIn = true
         pushSubscription.address = "pushToken"
 
         val emailSubscription = SubscriptionModel()
         emailSubscription.id = "subscription2"
         emailSubscription.type = SubscriptionType.EMAIL
         emailSubscription.status = SubscriptionStatus.SUBSCRIBED
-        emailSubscription.enabled = false
+        emailSubscription.optedIn = false
         emailSubscription.address = "email@email.co"
 
         val smsSubscription = SubscriptionModel()
         smsSubscription.id = "subscription3"
         smsSubscription.type = SubscriptionType.SMS
         smsSubscription.status = SubscriptionStatus.SUBSCRIBED
-        smsSubscription.enabled = false
+        smsSubscription.optedIn = false
         smsSubscription.address = "+15558675309"
 
         val listOfSubscriptions = listOf(pushSubscription, emailSubscription, smsSubscription)
@@ -56,7 +59,7 @@ class SubscriptionManagerTests : FunSpec({
         subscriptions.push shouldNotBe null
         subscriptions.push!!.id shouldBe pushSubscription.id
         subscriptions.push!!.pushToken shouldBe pushSubscription.address
-        subscriptions.push!!.enabled shouldBe pushSubscription.enabled
+        subscriptions.push!!.optedIn shouldBe pushSubscription.optedIn
         subscriptions.emails.count() shouldBe 1
         subscriptions.emails[0].id shouldBe emailSubscription.id
         subscriptions.emails[0].email shouldBe emailSubscription.address
@@ -85,7 +88,7 @@ class SubscriptionManagerTests : FunSpec({
                 withArg {
                     it.type shouldBe SubscriptionType.EMAIL
                     it.address shouldBe "name@company.com"
-                    it.enabled shouldBe true
+                    it.optedIn shouldBe true
                     it.status shouldBe SubscriptionStatus.SUBSCRIBED
                 }
             )
@@ -112,7 +115,7 @@ class SubscriptionManagerTests : FunSpec({
                 withArg {
                     it.type shouldBe SubscriptionType.SMS
                     it.address shouldBe "+15558675309"
-                    it.enabled shouldBe true
+                    it.optedIn shouldBe true
                     it.status shouldBe SubscriptionStatus.SUBSCRIBED
                 }
             )
@@ -139,7 +142,7 @@ class SubscriptionManagerTests : FunSpec({
                 withArg {
                     it.type shouldBe SubscriptionType.PUSH
                     it.address shouldBe "pushToken"
-                    it.enabled shouldBe true
+                    it.optedIn shouldBe true
                     it.status shouldBe SubscriptionStatus.SUBSCRIBED
                 }
             )
@@ -154,7 +157,7 @@ class SubscriptionManagerTests : FunSpec({
         pushSubscription.id = "subscription1"
         pushSubscription.type = SubscriptionType.PUSH
         pushSubscription.status = SubscriptionStatus.SUBSCRIBED
-        pushSubscription.enabled = true
+        pushSubscription.optedIn = true
         pushSubscription.address = "pushToken1"
 
         val listOfSubscriptions = listOf(pushSubscription)
@@ -182,7 +185,7 @@ class SubscriptionManagerTests : FunSpec({
         emailSubscription.id = "subscription1"
         emailSubscription.type = SubscriptionType.EMAIL
         emailSubscription.status = SubscriptionStatus.SUBSCRIBED
-        emailSubscription.enabled = true
+        emailSubscription.optedIn = true
         emailSubscription.address = "name@company.com"
 
         val listOfSubscriptions = listOf(emailSubscription)
@@ -209,7 +212,7 @@ class SubscriptionManagerTests : FunSpec({
         emailSubscription.id = "subscription1"
         emailSubscription.type = SubscriptionType.SMS
         emailSubscription.status = SubscriptionStatus.SUBSCRIBED
-        emailSubscription.enabled = true
+        emailSubscription.optedIn = true
         emailSubscription.address = "+18458675309"
 
         val listOfSubscriptions = listOf(emailSubscription)
@@ -230,12 +233,12 @@ class SubscriptionManagerTests : FunSpec({
 
     test("subscription added when model added") {
         /* Given */
-        val emailSubscription = SubscriptionModel()
-        emailSubscription.id = "subscription1"
-        emailSubscription.type = SubscriptionType.SMS
-        emailSubscription.status = SubscriptionStatus.SUBSCRIBED
-        emailSubscription.enabled = true
-        emailSubscription.address = "+18458675309"
+        val smsSubscription = SubscriptionModel()
+        smsSubscription.id = "subscription1"
+        smsSubscription.type = SubscriptionType.SMS
+        smsSubscription.status = SubscriptionStatus.SUBSCRIBED
+        smsSubscription.optedIn = true
+        smsSubscription.address = "+18458675309"
 
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
         val listOfSubscriptions = listOf<SubscriptionModel>()
@@ -249,14 +252,22 @@ class SubscriptionManagerTests : FunSpec({
         subscriptionManager.subscribe(spySubscriptionChangedHandler)
 
         /* When */
-        subscriptionManager.onModelAdded(emailSubscription, ModelChangeTags.NORMAL)
+        subscriptionManager.onModelAdded(smsSubscription, ModelChangeTags.NORMAL)
         val subscriptions = subscriptionManager.subscriptions
 
         /* Then */
         subscriptions.smss.count() shouldBe 1
-        subscriptions.smss[0].id shouldBe emailSubscription.id
-        subscriptions.smss[0].number shouldBe emailSubscription.address
-        verify(exactly = 1) { spySubscriptionChangedHandler.onSubscriptionsChanged() }
+        subscriptions.smss[0].id shouldBe smsSubscription.id
+        subscriptions.smss[0].number shouldBe smsSubscription.address
+        verify(exactly = 1) {
+            spySubscriptionChangedHandler.onSubscriptionAdded(
+                withArg {
+                    it.id shouldBe smsSubscription.id
+                    it should beInstanceOf<ISmsSubscription>()
+                    (it as ISmsSubscription).number shouldBe smsSubscription.address
+                }
+            )
+        }
     }
 
     test("subscription modified when model updated") {
@@ -265,7 +276,7 @@ class SubscriptionManagerTests : FunSpec({
         emailSubscription.id = "subscription1"
         emailSubscription.type = SubscriptionType.SMS
         emailSubscription.status = SubscriptionStatus.SUBSCRIBED
-        emailSubscription.enabled = true
+        emailSubscription.optedIn = true
         emailSubscription.address = "+18458675309"
 
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
@@ -288,20 +299,20 @@ class SubscriptionManagerTests : FunSpec({
         subscriptions.smss.count() shouldBe 1
         subscriptions.smss[0].id shouldBe emailSubscription.id
         subscriptions.smss[0].number shouldBe "+15551234567"
-        verify(exactly = 1) { spySubscriptionChangedHandler.onSubscriptionsChanged() }
+        verify(exactly = 1) { spySubscriptionChangedHandler.onSubscriptionChanged(any(), any()) }
     }
 
     test("subscription removed when model removed") {
         /* Given */
-        val emailSubscription = SubscriptionModel()
-        emailSubscription.id = "subscription1"
-        emailSubscription.type = SubscriptionType.SMS
-        emailSubscription.status = SubscriptionStatus.SUBSCRIBED
-        emailSubscription.enabled = true
-        emailSubscription.address = "+18458675309"
+        val smsSubscription = SubscriptionModel()
+        smsSubscription.id = "subscription1"
+        smsSubscription.type = SubscriptionType.SMS
+        smsSubscription.status = SubscriptionStatus.SUBSCRIBED
+        smsSubscription.optedIn = true
+        smsSubscription.address = "+18458675309"
 
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
-        val listOfSubscriptions = listOf(emailSubscription)
+        val listOfSubscriptions = listOf(smsSubscription)
 
         every { mockSubscriptionModelStore.subscribe(any()) } just runs
         every { mockSubscriptionModelStore.list() } returns listOfSubscriptions
@@ -312,11 +323,19 @@ class SubscriptionManagerTests : FunSpec({
         subscriptionManager.subscribe(spySubscriptionChangedHandler)
 
         /* When */
-        subscriptionManager.onModelRemoved(emailSubscription, ModelChangeTags.NORMAL)
+        subscriptionManager.onModelRemoved(smsSubscription, ModelChangeTags.NORMAL)
         val subscriptions = subscriptionManager.subscriptions
 
         /* Then */
         subscriptions.smss.count() shouldBe 0
-        verify(exactly = 1) { spySubscriptionChangedHandler.onSubscriptionsChanged() }
+        verify(exactly = 1) {
+            spySubscriptionChangedHandler.onSubscriptionRemoved(
+                withArg {
+                    it.id shouldBe smsSubscription.id
+                    it should beInstanceOf<ISmsSubscription>()
+                    (it as ISmsSubscription).number shouldBe smsSubscription.address
+                }
+            )
+        }
     }
 })

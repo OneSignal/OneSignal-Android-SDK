@@ -1,8 +1,13 @@
 package com.onesignal.user.internal.operations.impl.executors
 
+import android.os.Build
+import com.onesignal.common.DeviceUtils
 import com.onesignal.common.NetworkUtils
+import com.onesignal.common.OneSignalUtils
+import com.onesignal.common.RootToolsInternalMethods
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
+import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -12,6 +17,7 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.ISubscriptionBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
+import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
@@ -23,6 +29,7 @@ import com.onesignal.user.internal.subscriptions.SubscriptionType
 internal class SubscriptionOperationExecutor(
     private val _subscriptionBackend: ISubscriptionBackendService,
     private val _deviceService: IDeviceService,
+    private val _applicationService: IApplicationService,
     private val _subscriptionModelStore: SubscriptionModelStore
 ) : IOperationExecutor {
 
@@ -59,34 +66,30 @@ internal class SubscriptionOperationExecutor(
         val status = lastUpdateOperation?.status ?: createOperation.status
 
         try {
+            val subscription = SubscriptionObject(
+                createOperation.subscriptionId,
+                convert(createOperation.type),
+                address,
+                enabled,
+                status.value,
+                OneSignalUtils.sdkVersion,
+                Build.MODEL,
+                Build.VERSION.RELEASE,
+                RootToolsInternalMethods.isRooted,
+                DeviceUtils.getNetType(_applicationService.appContext),
+                DeviceUtils.getCarrierName(_applicationService.appContext)
+            )
+
             val backendSubscriptionId = _subscriptionBackend.createSubscription(
                 createOperation.appId,
                 IdentityConstants.ONESIGNAL_ID,
                 createOperation.onesignalId,
-                convert(createOperation.type),
-                enabled,
-                address,
-                status
+                subscription
             )
 
+            // update the subscription model with the new ID, if it's still active.
             val subscriptionModel = _subscriptionModelStore.get(createOperation.subscriptionId)
-            if (subscriptionModel != null) {
-                subscriptionModel.setProperty(
-                    SubscriptionModel::id.name,
-                    backendSubscriptionId,
-                    ModelChangeTags.HYDRATE
-                )
-            } else {
-                // the subscription model no longer exists, add it back to the model as a HYDRATE
-                val newSubModel = SubscriptionModel()
-                newSubModel.id = backendSubscriptionId
-                newSubModel.type = createOperation.type
-                newSubModel.address = address
-                newSubModel.enabled = enabled
-                newSubModel.status = status
-
-                _subscriptionModelStore.add(newSubModel, ModelChangeTags.HYDRATE)
-            }
+            subscriptionModel?.setStringProperty(SubscriptionModel::id.name, backendSubscriptionId, ModelChangeTags.HYDRATE)
 
             return ExecutionResponse(ExecutionResult.SUCCESS, mapOf(createOperation.subscriptionId to backendSubscriptionId))
         } catch (ex: BackendException) {
@@ -102,32 +105,21 @@ internal class SubscriptionOperationExecutor(
         // the effective enabled/address is the last update performed
         val lastOperation = operations.last() as UpdateSubscriptionOperation
         try {
-            _subscriptionBackend.updateSubscription(
-                lastOperation.appId,
+            val subscription = SubscriptionObject(
                 lastOperation.subscriptionId,
                 convert(lastOperation.type),
-                lastOperation.enabled,
                 lastOperation.address,
-                lastOperation.status
+                lastOperation.enabled,
+                lastOperation.status.value,
+                OneSignalUtils.sdkVersion,
+                Build.MODEL,
+                Build.VERSION.RELEASE,
+                RootToolsInternalMethods.isRooted,
+                DeviceUtils.getNetType(_applicationService.appContext),
+                DeviceUtils.getCarrierName(_applicationService.appContext)
             )
 
-            // update/create the subscription model, in case it lost it's sync.
-            val subscriptionModel = _subscriptionModelStore.get(lastOperation.subscriptionId)
-            if (subscriptionModel != null) {
-                subscriptionModel.setProperty(SubscriptionModel::type.name, lastOperation.type.toString(), ModelChangeTags.HYDRATE)
-                subscriptionModel.setProperty(SubscriptionModel::address.name, lastOperation.address, ModelChangeTags.HYDRATE)
-                subscriptionModel.setProperty(SubscriptionModel::enabled.name, lastOperation.enabled, ModelChangeTags.HYDRATE)
-                subscriptionModel.setProperty(SubscriptionModel::status.name, lastOperation.status.value, ModelChangeTags.HYDRATE)
-            } else {
-                val newSubModel = SubscriptionModel()
-                newSubModel.id = lastOperation.subscriptionId
-                newSubModel.type = lastOperation.type
-                newSubModel.address = lastOperation.address
-                newSubModel.enabled = lastOperation.enabled
-                newSubModel.status = lastOperation.status
-
-                _subscriptionModelStore.add(newSubModel, ModelChangeTags.HYDRATE)
-            }
+            _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription)
         } catch (ex: BackendException) {
             return if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
                 ExecutionResponse(ExecutionResult.FAIL_RETRY)
@@ -145,7 +137,7 @@ internal class SubscriptionOperationExecutor(
                 SubscriptionObjectType.SMS
             }
             SubscriptionType.EMAIL -> {
-                SubscriptionObjectType.SMS
+                SubscriptionObjectType.EMAIL
             }
             else -> {
                 SubscriptionObjectType.fromDeviceType(_deviceService.deviceType)

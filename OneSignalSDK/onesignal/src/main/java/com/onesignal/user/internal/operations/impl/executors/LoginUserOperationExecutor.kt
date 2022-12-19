@@ -34,7 +34,6 @@ import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionType
-import java.util.UUID
 
 internal class LoginUserOperationExecutor(
     private val _identityOperationExecutor: IdentityOperationExecutor,
@@ -79,11 +78,11 @@ internal class LoginUserOperationExecutor(
                     // because the set alias was successful any grouped operations could not be executed, let the
                     // caller know those still need to be executed.
                     if (_identityModelStore.model.onesignalId == loginUserOp.onesignalId) {
-                        _identityModelStore.model.setProperty(IdentityConstants.ONESIGNAL_ID, backendOneSignalId, ModelChangeTags.HYDRATE)
+                        _identityModelStore.model.setStringProperty(IdentityConstants.ONESIGNAL_ID, backendOneSignalId, ModelChangeTags.HYDRATE)
                     }
 
                     if (_propertiesModelStore.model.onesignalId == loginUserOp.onesignalId) {
-                        _propertiesModelStore.model.setProperty(PropertiesModel::onesignalId.name, backendOneSignalId, ModelChangeTags.HYDRATE)
+                        _propertiesModelStore.model.setStringProperty(PropertiesModel::onesignalId.name, backendOneSignalId, ModelChangeTags.HYDRATE)
                     }
 
                     ExecutionResponse(ExecutionResult.SUCCESS_STARTING_ONLY, mapOf(loginUserOp.onesignalId to backendOneSignalId))
@@ -138,22 +137,13 @@ internal class LoginUserOperationExecutor(
             val propertiesModel = _propertiesModelStore.model
 
             if (identityModel.onesignalId == createUserOperation.onesignalId) {
-                identityModel.setProperty(IdentityConstants.ONESIGNAL_ID, backendOneSignalId, ModelChangeTags.HYDRATE)
-
-                // TODO: hydrate any additional aliases from the backend...
+                identityModel.setStringProperty(IdentityConstants.ONESIGNAL_ID, backendOneSignalId, ModelChangeTags.HYDRATE)
             }
 
             if (propertiesModel.onesignalId == createUserOperation.onesignalId) {
-                propertiesModel.setProperty(PropertiesModel::onesignalId.name, backendOneSignalId, ModelChangeTags.HYDRATE)
-
-                // TODO: hydrate the models from the backend create response.  Temporarily inject dummy stuff to
-                //       show that it's working.
-//                propertiesModel.setProperty(PropertiesModel::language.name, "en", notify = false)
-                propertiesModel.setProperty(PropertiesModel::country.name, "US", ModelChangeTags.HYDRATE)
-                propertiesModel.tags.setProperty("foo", UUID.randomUUID().toString(), ModelChangeTags.HYDRATE)
+                propertiesModel.setStringProperty(PropertiesModel::onesignalId.name, backendOneSignalId, ModelChangeTags.HYDRATE)
             }
 
-            // TODO: assumption that the response.subscriptionIDs will associate to the input subscriptionList...to confirm
             for (index in subscriptionList.indices) {
                 if (index >= response.subscriptions.size) {
                     break
@@ -164,7 +154,7 @@ internal class LoginUserOperationExecutor(
                 idTranslations[subscriptionList[index].id] = backendSubscription.id
 
                 val subscriptionModel = _subscriptionsModelStore.get(subscriptionList[index].id)
-                subscriptionModel?.setProperty(SubscriptionModel::id.name, backendSubscription.id, ModelChangeTags.HYDRATE)
+                subscriptionModel?.setStringProperty(SubscriptionModel::id.name, backendSubscription.id, ModelChangeTags.HYDRATE)
             }
 
             return ExecutionResponse(ExecutionResult.SUCCESS, idTranslations)
@@ -212,13 +202,9 @@ internal class LoginUserOperationExecutor(
             Build.MODEL,
             Build.VERSION.RELEASE,
             RootToolsInternalMethods.isRooted,
-            null, // TODO: What is test_type?
-            null,
             DeviceUtils.getNetType(_application.appContext),
-            DeviceUtils.getCarrierName(_application.appContext),
-            null, // TODO: Fill in
-            null
-        ) // TODO: Fill in
+            DeviceUtils.getCarrierName(_application.appContext)
+        )
 
         // TODO: These are no longer captured?
         // subscriptionObject.put("sdk_type", OneSignalUtils.sdkType)
@@ -245,12 +231,8 @@ internal class LoginUserOperationExecutor(
                 subscriptions[operation.subscriptionId]!!.deviceModel,
                 subscriptions[operation.subscriptionId]!!.deviceOS,
                 subscriptions[operation.subscriptionId]!!.rooted,
-                subscriptions[operation.subscriptionId]!!.testType,
-                subscriptions[operation.subscriptionId]!!.appVersion,
                 subscriptions[operation.subscriptionId]!!.netType,
-                subscriptions[operation.subscriptionId]!!.carrier,
-                subscriptions[operation.subscriptionId]!!.webAuth,
-                subscriptions[operation.subscriptionId]!!.webP256
+                subscriptions[operation.subscriptionId]!!.carrier
             )
         }
         // TODO: Is it possible for the Create to be after the Update?

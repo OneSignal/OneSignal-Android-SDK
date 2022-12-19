@@ -103,7 +103,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 IdentityConstants.ONESIGNAL_ID,
                 remoteOneSignalId,
                 withArg {
-                    it.tags shouldBe mapOf("tagKey1" to "tagValue1-2", "tagKey2" to "tagValue2")
+                    it.tags shouldBe mapOf("tagKey1" to "tagValue1-2", "tagKey2" to "tagValue2", "tagKey3" to null)
                     it.country shouldBe "country"
                     it.language shouldBe "lang2"
                     it.timezoneId shouldBe "timezone"

@@ -1,6 +1,6 @@
 package com.onesignal.user.internal.backend
 
-import com.onesignal.user.internal.subscriptions.SubscriptionStatus
+import com.onesignal.common.exceptions.BackendException
 
 interface ISubscriptionBackendService {
     /**
@@ -12,26 +12,20 @@ interface ISubscriptionBackendService {
      * @param appId The ID of the OneSignal application this user exists under.
      * @param aliasLabel The alias label to retrieve the user under.
      * @param aliasValue The identifier within the [aliasLabel] that identifies the user to retrieve.
-     * @param type The type of subscription to create.
-     * @param enabled Whether this subscription is enabled.
-     * @param address The subscription address.
-     * @param status The subscription status.
+     * @param subscription The subscription to create.
      *
      * @return The ID of the subscription created.
      */
-    suspend fun createSubscription(appId: String, aliasLabel: String, aliasValue: String, type: SubscriptionObjectType, enabled: Boolean, address: String, status: SubscriptionStatus): String
+    suspend fun createSubscription(appId: String, aliasLabel: String, aliasValue: String, subscription: SubscriptionObject): String
 
     /**
      * Update an existing subscription with the properties provided.
      *
      * @param appId The ID of the OneSignal application this subscription exists under.
      * @param subscriptionId The ID of the subscription to update.
-     * @param type The new type of the subscription.
-     * @param enabled Whether this subscription is enabled.
-     * @param address The subscription address.
-     * @param status The subscription status.
+     * @param subscription The subscription updates. Any non-null value will be updated.
      */
-    suspend fun updateSubscription(appId: String, subscriptionId: String, type: SubscriptionObjectType, enabled: Boolean, address: String, status: SubscriptionStatus)
+    suspend fun updateSubscription(appId: String, subscriptionId: String, subscription: SubscriptionObject)
 
     /**
      * Delete an existing subscription.

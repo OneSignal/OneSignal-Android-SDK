@@ -153,7 +153,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         var forceCreateUser = false
         // if the app id was specified as input, update the config model with it
         if (appId != null) {
-            if (_configModel!!.appId != appId) {
+            if (!_configModel!!.hasProperty(ConfigModel::appId.name) || _configModel!!.appId != appId) {
                 forceCreateUser = true
             }
             _configModel!!.appId = appId
@@ -193,7 +193,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             _operationRepo!!.enqueue(LoginUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId, _identityModelStore!!.model.externalId))
         } else {
             Logging.debug("initWithContext: using cached user ${_identityModelStore!!.model.onesignalId}")
-            // _operationRepo!!.enqueue(GetUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId))
+            _operationRepo!!.enqueue(RefreshUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId))
         }
 
         _startupService!!.start()
@@ -297,7 +297,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
         newPushSubscription.id = IDManager.createLocalId()
         newPushSubscription.type = SubscriptionType.PUSH
-        newPushSubscription.enabled = currentPushSubscription?.enabled ?: true
+        newPushSubscription.optedIn = currentPushSubscription?.optedIn ?: true
         newPushSubscription.address = currentPushSubscription?.address ?: ""
         newPushSubscription.status = currentPushSubscription?.status ?: SubscriptionStatus.NO_PERMISSION
 

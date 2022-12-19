@@ -66,34 +66,43 @@ enum class SubscriptionStatus(val value: Int) {
     FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED(-29),
 
     /** The subscription is not enabled due to some other (unknown locally) error */
-    ERROR(9999)
+    ERROR(9999);
+
+    companion object {
+        fun fromInt(value: Int): SubscriptionStatus? {
+            return SubscriptionStatus.values().firstOrNull { it.value == value }
+        }
+    }
 }
 
 class SubscriptionModel : Model() {
-    var enabled: Boolean
-        get() = getProperty(::enabled.name)
+    var optedIn: Boolean
+        get() = getBooleanProperty(::optedIn.name)
         set(value) {
-            setProperty(::enabled.name, value)
+            setBooleanProperty(::optedIn.name, value)
         }
 
     var type: SubscriptionType
-        get() = SubscriptionType.valueOf(getProperty(::type.name))
+        get() = getEnumProperty(::type.name)
         set(value) {
-            setProperty(::type.name, value.toString())
+            setEnumProperty(::type.name, value)
         }
 
     var address: String
-        get() = getProperty(::address.name)
+        get() = getStringProperty(::address.name)
         set(value) {
-            setProperty(::address.name, value)
+            setStringProperty(::address.name, value)
         }
 
     var status: SubscriptionStatus
         get() {
-            val value = getProperty(::status.name) { SubscriptionStatus.SUBSCRIBED.value }
-            return SubscriptionStatus.values().first { it.value == value }
+            if (!hasProperty(::status.name)) {
+                setEnumProperty(::status.name, SubscriptionStatus.SUBSCRIBED)
+            }
+
+            return getEnumProperty(::status.name)
         }
         set(value) {
-            setProperty(::status.name, value.value)
+            setEnumProperty(::status.name, value)
         }
 }

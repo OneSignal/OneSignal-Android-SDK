@@ -3,6 +3,8 @@ package com.onesignal.user.internal.operations
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.Operation
+import com.onesignal.extensions.RobolectricTest
+import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.backend.ISubscriptionBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
@@ -24,6 +26,7 @@ import io.mockk.runs
 import io.mockk.verify
 import org.junit.runner.RunWith
 
+@RobolectricTest
 @RunWith(KotestTestRunner::class)
 class SubscriptionOperationExecutorTests : FunSpec({
     val appId = "appId"
@@ -34,7 +37,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
     test("create subscription successfully creates subscription") {
         /* Given */
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-        coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any(), any(), any(), any()) } returns remoteSubscriptionId
+        coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } returns remoteSubscriptionId
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val subscriptionModel1 = SubscriptionModel()
@@ -43,6 +46,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
+            AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore
         )
 
@@ -59,10 +63,12 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 appId,
                 IdentityConstants.ONESIGNAL_ID,
                 remoteOneSignalId,
-                SubscriptionObjectType.ANDROID_PUSH,
-                true,
-                "pushToken",
-                SubscriptionStatus.SUBSCRIBED
+                withArg {
+                    it.type shouldBe SubscriptionObjectType.ANDROID_PUSH
+                    it.enabled shouldBe true
+                    it.token shouldBe "pushToken"
+                    it.notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED.value
+                }
             )
         }
     }
@@ -70,12 +76,13 @@ class SubscriptionOperationExecutorTests : FunSpec({
     test("create subscription fails with retry when there is a network condition") {
         /* Given */
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-        coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any(), any(), any(), any()) } throws BackendException(408)
+        coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } throws BackendException(408)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
+            AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore
         )
 
@@ -91,10 +98,12 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 appId,
                 IdentityConstants.ONESIGNAL_ID,
                 remoteOneSignalId,
-                SubscriptionObjectType.ANDROID_PUSH,
-                true,
-                "pushToken",
-                SubscriptionStatus.SUBSCRIBED
+                withArg {
+                    it.type shouldBe SubscriptionObjectType.ANDROID_PUSH
+                    it.enabled shouldBe true
+                    it.token shouldBe "pushToken"
+                    it.notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED.value
+                }
             )
         }
     }
@@ -102,12 +111,13 @@ class SubscriptionOperationExecutorTests : FunSpec({
     test("create subscription fails without retry when there is a backend error") {
         /* Given */
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-        coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any(), any(), any(), any()) } throws BackendException(404)
+        coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } throws BackendException(404)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
+            AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore
         )
 
@@ -123,10 +133,12 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 appId,
                 IdentityConstants.ONESIGNAL_ID,
                 remoteOneSignalId,
-                SubscriptionObjectType.ANDROID_PUSH,
-                true,
-                "pushToken",
-                SubscriptionStatus.SUBSCRIBED
+                withArg {
+                    it.type shouldBe SubscriptionObjectType.ANDROID_PUSH
+                    it.enabled shouldBe true
+                    it.token shouldBe "pushToken"
+                    it.notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED.value
+                }
             )
         }
     }
@@ -142,6 +154,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
+            AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore
         )
 
@@ -160,7 +173,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
     test("create subscription then update subscription successfully creates subscription") {
         /* Given */
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-        coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any(), any(), any(), any()) } returns remoteSubscriptionId
+        coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } returns remoteSubscriptionId
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val subscriptionModel1 = SubscriptionModel()
@@ -169,6 +182,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
+            AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore
         )
 
@@ -188,10 +202,12 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 appId,
                 IdentityConstants.ONESIGNAL_ID,
                 remoteOneSignalId,
-                SubscriptionObjectType.ANDROID_PUSH,
-                true,
-                "pushToken2",
-                SubscriptionStatus.SUBSCRIBED
+                withArg {
+                    it.type shouldBe SubscriptionObjectType.ANDROID_PUSH
+                    it.enabled shouldBe true
+                    it.token shouldBe "pushToken2"
+                    it.notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED.value
+                }
             )
         }
     }
@@ -199,7 +215,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
     test("update subscription successfully updates subscription") {
         /* Given */
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-        coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any(), any(), any(), any()) } just runs
+        coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } just runs
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val subscriptionModel1 = SubscriptionModel()
@@ -210,6 +226,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
+            AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore
         )
 
@@ -228,10 +245,12 @@ class SubscriptionOperationExecutorTests : FunSpec({
             mockSubscriptionBackendService.updateSubscription(
                 appId,
                 remoteSubscriptionId,
-                SubscriptionObjectType.ANDROID_PUSH,
-                true,
-                "pushToken3",
-                SubscriptionStatus.SUBSCRIBED
+                withArg {
+                    it.type shouldBe SubscriptionObjectType.ANDROID_PUSH
+                    it.enabled shouldBe true
+                    it.token shouldBe "pushToken3"
+                    it.notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED.value
+                }
             )
         }
     }
@@ -239,12 +258,13 @@ class SubscriptionOperationExecutorTests : FunSpec({
     test("update subscription fails with retry when there is a network condition") {
         /* Given */
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-        coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any(), any(), any(), any()) } throws BackendException(408)
+        coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(408)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
+            AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore
         )
 
@@ -261,10 +281,12 @@ class SubscriptionOperationExecutorTests : FunSpec({
             mockSubscriptionBackendService.updateSubscription(
                 appId,
                 remoteSubscriptionId,
-                SubscriptionObjectType.ANDROID_PUSH,
-                true,
-                "pushToken2",
-                SubscriptionStatus.SUBSCRIBED
+                withArg {
+                    it.type shouldBe SubscriptionObjectType.ANDROID_PUSH
+                    it.enabled shouldBe true
+                    it.token shouldBe "pushToken2"
+                    it.notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED.value
+                }
             )
         }
     }
@@ -272,12 +294,13 @@ class SubscriptionOperationExecutorTests : FunSpec({
     test("update subscription fails without retry when there is a backend error") {
         /* Given */
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-        coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any(), any(), any(), any()) } throws BackendException(404)
+        coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(404)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
+            AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore
         )
 
@@ -294,10 +317,12 @@ class SubscriptionOperationExecutorTests : FunSpec({
             mockSubscriptionBackendService.updateSubscription(
                 appId,
                 remoteSubscriptionId,
-                SubscriptionObjectType.ANDROID_PUSH,
-                true,
-                "pushToken2",
-                SubscriptionStatus.SUBSCRIBED
+                withArg {
+                    it.type shouldBe SubscriptionObjectType.ANDROID_PUSH
+                    it.enabled shouldBe true
+                    it.token shouldBe "pushToken2"
+                    it.notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED.value
+                }
             )
         }
     }
@@ -313,6 +338,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
+            AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore
         )
 
@@ -339,6 +365,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
+            AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore
         )
 
@@ -363,6 +390,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
+            AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore
         )
 
