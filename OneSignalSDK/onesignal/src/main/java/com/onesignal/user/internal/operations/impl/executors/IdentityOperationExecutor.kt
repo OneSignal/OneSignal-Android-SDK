@@ -32,7 +32,7 @@ internal class IdentityOperationExecutor(
 
         if (lastOperation is SetAliasOperation) {
             try {
-                _identityBackend.createAlias(
+                _identityBackend.setAlias(
                     lastOperation.appId,
                     IdentityConstants.ONESIGNAL_ID,
                     lastOperation.onesignalId,
