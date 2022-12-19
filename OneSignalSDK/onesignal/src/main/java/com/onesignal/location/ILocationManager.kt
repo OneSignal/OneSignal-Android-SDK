@@ -8,7 +8,7 @@ interface ILocationManager {
     /**
      * Whether location is currently shared with OneSignal.
      */
-    var isLocationShared: Boolean
+    var isShared: Boolean
 
     /**
      * Use this method to manually prompt the user for location permissions.

@@ -10,7 +10,7 @@ import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
-import com.onesignal.user.subscriptions.SubscriptionList
+import com.onesignal.user.subscriptions.IPushSubscription
 
 internal open class UserManager(
     private val _subscriptionManager: ISubscriptionManager,
@@ -18,22 +18,12 @@ internal open class UserManager(
     private val _propertiesModelStore: PropertiesModelStore,
     private val _languageContext: ILanguageContext
 ) : IUserManager {
-
-    override val externalId: String?
-        get() = _identityModel.externalId
-
     override var language: String
         get() = _languageContext.language
         set(value) { _languageContext.language = value }
 
-    override val tags: Map<String, String>
-        get() = _propertiesModel.tags
-
-    override val aliases: Map<String, String>
-        get() = _identityModel.filter { it.key != IdentityModel::id.name }.toMap()
-
-    override val subscriptions: SubscriptionList
-        get() = _subscriptionManager.subscriptions
+    override val pushSubscription: IPushSubscription
+        get() = _subscriptionManager.subscriptions.push
 
     private val _identityModel: IdentityModel
         get() = _identityModelStore.model

@@ -10,17 +10,6 @@ interface INotificationsManager {
     val permission: Boolean
 
     /**
-     * Whether push notification permission can be requested.
-     */
-    val canRequestPermission: Boolean
-
-    /**
-     * Whether the current device push subscription should be automatically unsubscribed (deleted)
-     * if the user disables notifications on the device/app this subscription is for.
-     */
-    var unsubscribeWhenNotificationsAreDisabled: Boolean
-
-    /**
      * Prompt the user for permission to push notifications.  This will display the native
      * OS prompt to request push notification permission.  If the user enables, a push
      * subscription to this device will be automatically added to the user.

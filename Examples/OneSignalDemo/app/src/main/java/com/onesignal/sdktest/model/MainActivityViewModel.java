@@ -167,7 +167,6 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
 
     private Context context;
 
-    private Boolean isLoggedIn = false;
     private HashMap<String, Object> aliasSet;
     private ArrayList<Map.Entry> aliasArrayList;
     private ArrayList<ISubscription> emailArrayList;
@@ -290,7 +289,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
         triggerSet = new HashMap<>();
         triggerArrayList = new ArrayList<>();
 
-        OneSignal.getUser().getSubscriptions().getPush().addChangeHandler(this);
+        OneSignal.getUser().getPushSubscription().addChangeHandler(this);
         return this;
     }
 
@@ -402,26 +401,25 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
     private void setupAppLayout() {
         revokeConsentButton.setOnClickListener(v -> togglePrivacyConsent(false));
 
-        if(OneSignal.getUser().getExternalId() != null) {
-            isLoggedIn = true;
+        if(SharedPreferenceUtil.getCachedIsLoggedIn(context)) {
             switchUserButton.setText(R.string.logout_user);
         }
 
         switchUserButton.setOnClickListener(v -> {
-            if(isLoggedIn) {
+            if(SharedPreferenceUtil.getCachedIsLoggedIn(context)) {
                 OneSignal.logout(Continue.with(r -> {
-                    isLoggedIn = false;
+                    SharedPreferenceUtil.cacheIsLoggedIn(context, false);
                     switchUserButton.setText(R.string.login_user);
                     refreshState();
                 }));
             }
             else {
-                dialog.createUpdateAlertDialog(OneSignal.getUser().getExternalId(), Dialog.DialogAction.LOGIN, ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
+                dialog.createUpdateAlertDialog("", Dialog.DialogAction.LOGIN, ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
                     @Override
                     public void onSuccess(String update) {
                         if (update != null && !update.isEmpty()) {
                             OneSignal.login(update, Continue.with(r -> {
-                                isLoggedIn = true;
+                                SharedPreferenceUtil.cacheIsLoggedIn(context, true);
                                 switchUserButton.setText(R.string.logout_user);
                                 refreshState();
                             }));
@@ -505,6 +503,30 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
         });
     }
 
+    private class DummySubscription implements ISubscription {
+
+        private String _id;
+        public DummySubscription(String id) {
+            _id = id;
+        }
+
+        @NonNull
+        @Override
+        public String getId() {
+            return _id;
+        }
+
+        @Override
+        public void addChangeHandler(@NonNull ISubscriptionChangedHandler handler) {
+
+        }
+
+        @Override
+        public void removeChangeHandler(@NonNull ISubscriptionChangedHandler handler) {
+
+        }
+    }
+
     private void setupEmailLayout() {
         setupEmailRecyclerView();
 
@@ -514,9 +536,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
             public void onSuccess(String value) {
                 if (value != null && !value.isEmpty()) {
                     OneSignal.getUser().addEmailSubscription(value);
-                    IEmailSubscription newSubscription = OneSignal.getUser().getSubscriptions().getByEmail(value);
-                    newSubscription.addChangeHandler(self);
-                    emailArrayList.add(OneSignal.getUser().getSubscriptions().getByEmail(value));
+                    emailArrayList.add(new DummySubscription(value));
                     toaster.makeCustomViewToast("Added email " + value, ToastType.SUCCESS);
                 }
 
@@ -539,9 +559,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
             public void onSuccess(String value) {
                 if (value != null && !value.isEmpty()) {
                     OneSignal.getUser().addSmsSubscription(value);
-                    ISmsSubscription newSubscription = OneSignal.getUser().getSubscriptions().getBySMS(value);
-                    newSubscription.addChangeHandler(self);
-                    smsArrayList.add(newSubscription);
+                    smsArrayList.add(new DummySubscription(value));
                     toaster.makeCustomViewToast("Added SMS " + value, ToastType.SUCCESS);
                 }
 
@@ -774,7 +792,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
         locationSharedSwitch.setChecked(isLocationShared);
         locationSharedSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             SharedPreferenceUtil.cacheLocationSharedStatus(context, isChecked);
-            OneSignal.getLocation().setLocationShared(isChecked);
+            OneSignal.getLocation().setShared(isChecked);
         });
     }
 
@@ -800,7 +818,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
 
         // Add a listener to toggle the push notification enablement for the push subscription.
         pushSubscriptionEnabledSwitch.setOnClickListener(v -> {
-            IPushSubscription subscription = OneSignal.getUser().getSubscriptions().getPush();
+            IPushSubscription subscription = OneSignal.getUser().getPushSubscription();
             if(pushSubscriptionEnabledSwitch.isChecked()) {
                 subscription.optIn();
             }
@@ -831,7 +849,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
 
     private void refreshSubscriptionState() {
         boolean isPermissionEnabled = OneSignal.getNotifications().getPermission();
-        IPushSubscription pushSubscription = OneSignal.getUser().getSubscriptions().getPush();
+        IPushSubscription pushSubscription = OneSignal.getUser().getPushSubscription();
 
         pushSubscriptionIdTextView.setText(pushSubscription.getId());
         promptPushBottonLayout.setVisibility(isPermissionEnabled ? View.GONE : View.VISIBLE);
@@ -911,34 +929,34 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
         appIdTextView.setText(getOneSignalAppId());
 
         // aliases
-        aliasSet.clear();
-        for (Map.Entry<String, String> aliasEntry :OneSignal.getUser().getAliases().entrySet()) {
-            aliasSet.put(aliasEntry.getKey(), aliasEntry.getValue());
-        }
-        refreshAliasRecyclerView();
+//        aliasSet.clear();
+//        for (Map.Entry<String, String> aliasEntry :OneSignal.getUser().getAliases().entrySet()) {
+//            aliasSet.put(aliasEntry.getKey(), aliasEntry.getValue());
+//        }
+//        refreshAliasRecyclerView();
 
         // email subscriptions
-        emailArrayList.clear();
-        List<IEmailSubscription> emailSubs = OneSignal.getUser().getSubscriptions().getEmails();
-        for (IEmailSubscription emailSub: emailSubs) {
-            emailArrayList.add(emailSub);
-        }
-        refreshEmailRecyclerView();
+//        emailArrayList.clear();
+//        List<IEmailSubscription> emailSubs = OneSignal.getUser().getSubscriptions().getEmails();
+//        for (IEmailSubscription emailSub: emailSubs) {
+//            emailArrayList.add(emailSub);
+//        }
+//        refreshEmailRecyclerView();
 
         // sms subscriptions
-        smsArrayList.clear();
-        List<ISmsSubscription> smsSubs = OneSignal.getUser().getSubscriptions().getSmss();
-        for (ISmsSubscription smsSub: smsSubs) {
-            smsArrayList.add(smsSub);
-        }
-        refreshSMSRecyclerView();
+//        smsArrayList.clear();
+//        List<ISmsSubscription> smsSubs = OneSignal.getUser().getSubscriptions().getSmss();
+//        for (ISmsSubscription smsSub: smsSubs) {
+//            smsArrayList.add(smsSub);
+//        }
+//        refreshSMSRecyclerView();
 
         // tags
-        tagSet.clear();
-        for (Map.Entry<String, String> tagEntry :OneSignal.getUser().getTags().entrySet()) {
-            tagSet.put(tagEntry.getKey(), tagEntry.getValue());
-        }
-        refreshTagRecyclerView();
+//        tagSet.clear();
+//        for (Map.Entry<String, String> tagEntry :OneSignal.getUser().getTags().entrySet()) {
+//            tagSet.put(tagEntry.getKey(), tagEntry.getValue());
+//        }
+//        refreshTagRecyclerView();
 
         // triggers
         triggerSet.clear();

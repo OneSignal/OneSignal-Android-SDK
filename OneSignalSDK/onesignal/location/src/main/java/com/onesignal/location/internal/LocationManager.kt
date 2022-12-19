@@ -22,7 +22,7 @@ internal class LocationManager(
     private val _locationPermissionController: LocationPermissionController
 ) : ILocationManager, IStartableService, ILocationPermissionChangedHandler {
 
-    override var isLocationShared: Boolean = false
+    override var isShared: Boolean = false
 
     override fun start() {
         _locationPermissionController.subscribe(this)
@@ -61,7 +61,7 @@ internal class LocationManager(
     override suspend fun requestPermission(fallbackToSettings: Boolean): Boolean {
         Logging.log(LogLevel.DEBUG, "LocationManager.requestPermission()")
 
-        if (!isLocationShared) {
+        if (!isShared) {
             return false
         }
 

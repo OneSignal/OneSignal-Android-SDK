@@ -42,8 +42,6 @@ internal class NotificationsManager(
     IApplicationLifecycleHandler {
 
     override var permission: Boolean = NotificationHelper.areNotificationsEnabled(_applicationService.appContext)
-    override val canRequestPermission: Boolean = true // TODO: Implement
-    override var unsubscribeWhenNotificationsAreDisabled: Boolean = false
 
     private val _permissionChangedNotifier = EventProducer<IPermissionChangedHandler>()
 

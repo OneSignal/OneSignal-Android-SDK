@@ -93,7 +93,9 @@ internal class SubscriptionOperationExecutor(
 
             return ExecutionResponse(ExecutionResult.SUCCESS, mapOf(createOperation.subscriptionId to backendSubscriptionId))
         } catch (ex: BackendException) {
-            return if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
+            return if (ex.statusCode == 409) {
+                ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+            } else if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
                 ExecutionResponse(ExecutionResult.FAIL_RETRY)
             } else {
                 ExecutionResponse(ExecutionResult.FAIL_NORETRY)

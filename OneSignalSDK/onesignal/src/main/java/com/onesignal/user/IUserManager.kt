@@ -1,7 +1,7 @@
 package com.onesignal.user
 
 import com.onesignal.OneSignal
-import com.onesignal.user.subscriptions.SubscriptionList
+import com.onesignal.user.subscriptions.IPushSubscription
 
 /**
  * The OneSignal user manager is responsible for managing the current user state.  When
@@ -21,31 +21,15 @@ import com.onesignal.user.subscriptions.SubscriptionList
  */
 interface IUserManager {
     /**
-     * The external id of the current user.  When null, the current user is a device-scoped user
-     * and cannot be retrieved outside of this device/app.
-     */
-    val externalId: String?
-
-    /**
      * The 2-character language either as a detected language or explicitly set for this user. See
      * See [Supported Languages | OneSignal](https://documentation.onesignal.com/docs/language-localization#what-languages-are-supported)
      */
     var language: String
 
     /**
-     * The aliases associated to the current user.
+     * The push subscription associated to the current user.
      */
-    val aliases: Map<String, String>
-
-    /**
-     * The subscriptions associated to the current user.
-     */
-    val subscriptions: SubscriptionList
-
-    /**
-     * The tags associated to the current user.
-     */
-    val tags: Map<String, String>
+    val pushSubscription: IPushSubscription
 
     /**
      * Set an alias for the current user.  If this alias already exists it will be overwritten.

@@ -87,7 +87,7 @@ class ConfigModel : Model() {
      * the queue.
      */
     var opRepoExecutionInterval: Long
-        get() = getLongProperty(::opRepoExecutionInterval.name) { 5000 }
+        get() = getLongProperty(::opRepoExecutionInterval.name) { 10000 }
         set(value) { setLongProperty(::opRepoExecutionInterval.name, value) }
 
     /**
