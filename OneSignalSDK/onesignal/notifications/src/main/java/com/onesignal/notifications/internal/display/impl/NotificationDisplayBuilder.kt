@@ -11,8 +11,8 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import com.onesignal.R
 import com.onesignal.common.AndroidUtils
+import com.onesignal.core.R
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.bundle.impl.NotificationBundleProcessor
