@@ -272,7 +272,7 @@
 
             <!-- Aliases -->
             <LinearLayout
-                android:id="@+id/main_activity_account_linear_layout"
+                android:id="@+id/main_activity_aliases_linear_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:clipChildren="false"
@@ -302,7 +302,7 @@
                     app:cardElevation="4dp">
 
                     <LinearLayout
-                        android:id="@+id/main_activity_account_details_linear_layout"
+                        android:id="@+id/main_activity_aliases_details_linear_layout"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
@@ -412,8 +412,8 @@
                                 android:layout_alignParentStart="true"
                                 android:layout_alignParentLeft="true"
                                 android:layout_centerVertical="true"
-                                android:layout_toStartOf="@id/main_activity_account_details_app_id_text_view"
-                                android:layout_toLeftOf="@id/main_activity_account_details_app_id_text_view"
+                                android:layout_toStartOf="@id/main_activity_push_subscription_id_text_view"
+                                android:layout_toLeftOf="@id/main_activity_push_subscription_id_text_view"
                                 android:text="@string/id_colon"
                                 android:textColor="@color/colorDarkText"
                                 android:textSize="16sp" />
@@ -1184,7 +1184,7 @@
             <!-- Send In-App Messaging -->
 
             <LinearLayout
-                android:id="@+id/main_activity_in_app_messaging_linear_layout"
+                android:id="@+id/main_activity_in_app_messaging_details_linear_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
