@@ -29,7 +29,7 @@ package com.onesignal.core.internal.permissions
 
 import android.app.Activity
 import android.app.AlertDialog
-import com.onesignal.R
+import com.onesignal.core.R
 
 /**
  * A singleton helper which will display the fallback-to-settings alert dialog.
