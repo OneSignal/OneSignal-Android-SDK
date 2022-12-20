@@ -14,6 +14,7 @@ public class SharedPreferenceUtil {
     public static final String USER_EXTERNAL_USER_ID_SHARED_PREF = "USER_EXTERNAL_USER_ID_SHARED_PREF";
     private static final String LOCATION_SHARED_PREF = "LOCATION_SHARED_PREF";
     private static final String IN_APP_MESSAGING_PAUSED_PREF = "IN_APP_MESSAGING_PAUSED_PREF";
+    private static final String IS_LOGGED_IN = "IS_LOGGED_IN";
 
     private static SharedPreferences getSharedPreference(Context context) {
         return context.getSharedPreferences(APP_SHARED_PREFS, Context.MODE_PRIVATE);
@@ -43,6 +44,10 @@ public class SharedPreferenceUtil {
         return getSharedPreference(context).getBoolean(IN_APP_MESSAGING_PAUSED_PREF, true);
     }
 
+    public static boolean getCachedIsLoggedIn(Context context) {
+        return getSharedPreference(context).getBoolean(IS_LOGGED_IN, false);
+    }
+
     public static void cacheOneSignalAppId(Context context, String appId) {
         getSharedPreference(context).edit().putString(OS_APP_ID_SHARED_PREF, appId).apply();
     }
@@ -61,5 +66,9 @@ public class SharedPreferenceUtil {
 
     public static void cacheInAppMessagingPausedStatus(Context context, boolean paused) {
         getSharedPreference(context).edit().putBoolean(IN_APP_MESSAGING_PAUSED_PREF, paused).apply();
+    }
+
+    public static void cacheIsLoggedIn(Context context, boolean isLoggedIn) {
+        getSharedPreference(context).edit().putBoolean(IS_LOGGED_IN, isLoggedIn).apply();
     }
 }

@@ -13,13 +13,6 @@ internal class MisconfiguredNotificationsManager : INotificationsManager {
     override val permission: Boolean
         get() = throw EXCEPTION
 
-    override val canRequestPermission: Boolean
-        get() = throw EXCEPTION
-
-    override var unsubscribeWhenNotificationsAreDisabled: Boolean
-        get() = throw EXCEPTION
-        set(value) = throw EXCEPTION
-
     override suspend fun requestPermission(fallbackToSettings: Boolean): Boolean = throw EXCEPTION
     override suspend fun removeNotification(id: Int) = throw EXCEPTION
     override suspend fun removeGroupedNotifications(group: String) = throw EXCEPTION
