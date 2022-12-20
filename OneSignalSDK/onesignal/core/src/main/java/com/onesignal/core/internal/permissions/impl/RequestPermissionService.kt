@@ -2,7 +2,7 @@ package com.onesignal.core.internal.permissions.impl
 
 import android.app.Activity
 import android.content.Intent
-import com.onesignal.R
+import com.onesignal.core.R
 import com.onesignal.core.activities.PermissionsActivity
 import com.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService

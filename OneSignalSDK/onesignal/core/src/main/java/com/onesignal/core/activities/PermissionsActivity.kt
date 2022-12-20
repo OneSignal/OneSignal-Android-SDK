@@ -7,8 +7,8 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import com.onesignal.OneSignal
-import com.onesignal.R
 import com.onesignal.common.AndroidSupportV4Compat
+import com.onesignal.core.R
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 
 class PermissionsActivity : Activity() {

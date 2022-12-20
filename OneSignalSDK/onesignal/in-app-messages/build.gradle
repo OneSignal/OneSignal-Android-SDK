@@ -52,9 +52,13 @@ tasks.withType(Test) {
     }
 }
 
+ext {
+    projectDescription = "OneSignal Android SDK - In App Messages Module"
+}
+
 dependencies {
-    implementation project(':onesignal')
-    implementation project(':onesignal:notifications')
+    implementation project(':OneSignal:core')
+    implementation project(':OneSignal:notifications')
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4"
@@ -84,3 +88,5 @@ dependencies {
     testImplementation("org.json:json:20180813")
     testImplementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
 }
+
+apply from: '../maven-push.gradle'
