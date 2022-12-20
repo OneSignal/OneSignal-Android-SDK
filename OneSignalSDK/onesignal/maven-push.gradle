@@ -31,7 +31,6 @@ apply plugin: 'signing'
 class Global {
     static def POM_PACKAGING = 'aar'
 
-    static def POM_DESCRIPTION = 'OneSignal Android SDK'
     static def POM_URL = 'https://github.com/onesignal/onesignal-android-sdk'
     static def POM_SCM_URL = 'https://github.com/onesignal/onesignal-android-sdk'
     static def POM_SCM_CONNECTION = 'scm:git:https://github.com/onesignal/onesignal-android-sdk'
