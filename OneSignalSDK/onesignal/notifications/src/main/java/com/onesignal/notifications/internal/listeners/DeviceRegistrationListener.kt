@@ -64,7 +64,7 @@ internal class DeviceRegistrationListener(
     private fun retrievePushTokenAndUpdateSubscription() {
         val pushSubscription = _subscriptionManager.subscriptions.push
 
-        if (pushSubscription.pushToken.isNotEmpty()) {
+        if (pushSubscription.token.isNotEmpty()) {
             val permission = _notificationsManager.permission
             _subscriptionManager.addOrUpdatePushSubscription(null, if (permission) SubscriptionStatus.SUBSCRIBED else SubscriptionStatus.NO_PERMISSION)
         } else {

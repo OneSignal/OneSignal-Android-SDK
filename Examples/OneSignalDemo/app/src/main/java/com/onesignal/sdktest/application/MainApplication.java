@@ -92,9 +92,9 @@ public class MainApplication extends MultiDexApplication {
                     notificationReceivedEvent.complete(notification);
                 });
 
-        OneSignal.getNotifications().setUnsubscribeWhenNotificationsAreDisabled(true);
+//        OneSignal.getNotifications().setUnsubscribeWhenNotificationsAreDisabled(true);
         OneSignal.getInAppMessages().setPaused(true);
-        OneSignal.getLocation().setLocationShared(false);
+        OneSignal.getLocation().setShared(false);
 
         Log.d(Tag.DEBUG, Text.ONESIGNAL_SDK_INIT);
     }

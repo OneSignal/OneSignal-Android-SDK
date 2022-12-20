@@ -33,7 +33,7 @@ public class OneSignalNotificationSender {
      */
     public static void sendDeviceNotification(final Notification notification) {
         new Thread(() -> {
-            IPushSubscription subscription = OneSignal.getUser().getSubscriptions().getPush();
+            IPushSubscription subscription = OneSignal.getUser().getPushSubscription();
 
             if (!subscription.getOptedIn())
                 return;
