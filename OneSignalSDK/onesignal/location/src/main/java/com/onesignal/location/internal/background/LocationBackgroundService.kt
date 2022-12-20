@@ -19,7 +19,7 @@ internal class LocationBackgroundService(
 ) : IBackgroundService {
     override val scheduleBackgroundRunIn: Long?
         get() {
-            if (!_locationManager.isLocationShared) {
+            if (!_locationManager.isShared) {
                 Logging.debug("LocationController scheduleUpdate not possible, location shared not enabled")
                 return null
             }

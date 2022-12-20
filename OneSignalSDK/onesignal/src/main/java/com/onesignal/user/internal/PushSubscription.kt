@@ -9,7 +9,7 @@ internal open class PushSubscription(
     model: SubscriptionModel
 ) : Subscription(model), IPushSubscription {
 
-    override val pushToken: String
+    override val token: String
         get() = model.address
 
     override val optedIn: Boolean

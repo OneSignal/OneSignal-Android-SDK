@@ -99,10 +99,10 @@ internal class PreferencesService(
     }
 
     private fun doWorkAsync() = GlobalScope.async(Dispatchers.IO) {
-        try {
-            var lastSyncTime = _time.currentTimeMillis
+        var lastSyncTime = _time.currentTimeMillis
 
-            while (true) {
+        while (true) {
+            try {
                 // go through all outstanding items to process
                 for (storeKey in _prefsToApply.keys) {
                     val storeMap = _prefsToApply[storeKey]!!
@@ -146,10 +146,9 @@ internal class PreferencesService(
 
                 // wait to be woken up for the next pass
                 _waiter.waitForWake()
+            } catch (e: Throwable) {
+                Logging.log(LogLevel.ERROR, "Error with Preference work loop", e)
             }
-        } catch (e: Throwable) {
-            Logging.log(LogLevel.ERROR, "Error with Preference work loop", e)
-            // TODO: Restart/crash logic
         }
     }
 
