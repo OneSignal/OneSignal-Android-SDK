@@ -1,6 +1,7 @@
 package com.onesignal.session.internal.outcomes
 
 import com.onesignal.common.exceptions.BackendException
+import com.onesignal.common.threading.Waiter
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
@@ -360,6 +361,7 @@ class OutcomeEventsControllerTests : FunSpec({
 
     test("send unique outcome with different indirect influences") {
         /* Given */
+        val waiter = Waiter()
         val now = 111L
         val notificationIds1 = "[\"id1\",\"id2\"]"
         val notificationIds2 = "[\"id3\",\"id4\"]"
@@ -378,7 +380,7 @@ class OutcomeEventsControllerTests : FunSpec({
 
         val mockOutcomeEventsRepository = mockk<IOutcomeEventsRepository>()
         coEvery { mockOutcomeEventsRepository.getNotCachedUniqueInfluencesForOutcome("OUTCOME_1", any()) } returns listOf(notificationInfluence1) andThen listOf(notificationInfluence2)
-        coEvery { mockOutcomeEventsRepository.saveUniqueOutcomeEventParams(any()) }
+        coEvery { mockOutcomeEventsRepository.saveUniqueOutcomeEventParams(any()) } answers { waiter.wake() }
 
         val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
         val mockOutcomeEventsBackend = spyk<IOutcomeEventsBackendService>()
@@ -398,6 +400,8 @@ class OutcomeEventsControllerTests : FunSpec({
         /* When */
         val evnt1 = outcomeEventsController.sendUniqueOutcomeEvent("OUTCOME_1")
         val evnt2 = outcomeEventsController.sendUniqueOutcomeEvent("OUTCOME_1")
+
+        waiter.waitForWake()
 
         /* Then */
         evnt1 shouldNotBe null

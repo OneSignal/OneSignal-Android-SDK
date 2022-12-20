@@ -1,11 +1,11 @@
 package com.onesignal.sdktest.notification;
 
 import android.os.Bundle;
+import android.util.Log;
 
 import com.huawei.hms.push.HmsMessageService;
 import com.huawei.hms.push.RemoteMessage;
-import com.onesignal.OneSignal;
-import com.onesignal.OneSignalHmsEventBridge;
+import com.onesignal.notifications.bridges.OneSignalHmsEventBridge;
 
 public class HmsMessageServiceAppLevel extends HmsMessageService {
 
@@ -19,19 +19,19 @@ public class HmsMessageServiceAppLevel extends HmsMessageService {
      */
     @Override
     public void onNewToken(String token, Bundle bundle) {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HmsMessageServiceAppLevel onNewToken refresh token:" + token + " bundle: " + bundle);
+        Log.d("MainApplication", "HmsMessageServiceAppLevel onNewToken refresh token:" + token + " bundle: " + bundle);
 
         // Forward event on to OneSignal SDK
-        OneSignalHmsEventBridge.onNewToken(this, token, bundle);
+        OneSignalHmsEventBridge.INSTANCE.onNewToken(this, token, bundle);
     }
 
     @Deprecated
     @Override
     public void onNewToken(String token) {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HmsMessageServiceAppLevel onNewToken refresh token:" + token);
+        Log.d("MainApplication", "HmsMessageServiceAppLevel onNewToken refresh token:" + token);
 
         // Forward event on to OneSignal SDK
-        OneSignalHmsEventBridge.onNewToken(this, token);
+        OneSignalHmsEventBridge.INSTANCE.onNewToken(this, token);
     }
 
     /**
@@ -44,18 +44,18 @@ public class HmsMessageServiceAppLevel extends HmsMessageService {
      */
     @Override
     public void onMessageReceived(RemoteMessage message) {
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HMS onMessageReceived: " + message);
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HMS onMessageReceived.ttl:" + message.getTtl());
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HMS onMessageReceived.data:" + message.getData());
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HMS onMessageReceived.title: " + message.getNotification().getTitle());
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HMS onMessageReceived.body: " + message.getNotification().getBody());
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HMS onMessageReceived.icon: " + message.getNotification().getIcon());
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HMS onMessageReceived.color: " + message.getNotification().getColor());
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HMS onMessageReceived.channelId: " + message.getNotification().getChannelId());
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HMS onMessageReceived.imageURL: " + message.getNotification().getImageUrl());
-        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "HMS onMessageReceived.tag: " + message.getNotification().getTag());
+        Log.d("MainApplication", "HMS onMessageReceived: " + message);
+        Log.d("MainApplication", "HMS onMessageReceived.ttl:" + message.getTtl());
+        Log.d("MainApplication", "HMS onMessageReceived.data:" + message.getData());
+        Log.d("MainApplication", "HMS onMessageReceived.title: " + message.getNotification().getTitle());
+        Log.d("MainApplication", "HMS onMessageReceived.body: " + message.getNotification().getBody());
+        Log.d("MainApplication", "HMS onMessageReceived.icon: " + message.getNotification().getIcon());
+        Log.d("MainApplication", "HMS onMessageReceived.color: " + message.getNotification().getColor());
+        Log.d("MainApplication", "HMS onMessageReceived.channelId: " + message.getNotification().getChannelId());
+        Log.d("MainApplication", "HMS onMessageReceived.imageURL: " + message.getNotification().getImageUrl());
+        Log.d("MainApplication", "HMS onMessageReceived.tag: " + message.getNotification().getTag());
 
         // Forward event on to OneSignal SDK
-        OneSignalHmsEventBridge.onMessageReceived(this, message);
+        OneSignalHmsEventBridge.INSTANCE.onMessageReceived(this, message);
     }
 }

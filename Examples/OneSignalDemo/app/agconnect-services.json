@@ -23,7 +23,7 @@
 		"project_id":"9105385871709201822",
 		"app_id":"102009847",
 		"api_key":"CV68fkx9E2fU8Fv/v3zbuO8+rCjJ8w6QiMha7ZJUpIGTxs08n0/ddVXbOueUKBtxf3sD+ni8WPx27htLHhtse5eP5VrT",
-		"package_name":"com.onesignal.example"
+		"package_name":"com.onesignal.sdktest"
 	},
 	"oauth_client":{
 		"client_id":"102009847",
@@ -31,7 +31,7 @@
 	},
 	"app_info":{
 		"app_id":"102009847",
-		"package_name":"com.onesignal.example"
+		"package_name":"com.onesignal.sdktest"
 	},
 	"service":{
 		"analytics":{
@@ -53,12 +53,12 @@
 	"configuration_version":"3.0",
 	"appInfos":[
 		{
-			"package_name":"com.onesignal.example",
+			"package_name":"com.onesignal.sdktest",
 			"client":{
 				"app_id":"102009847"
 			},
 			"app_info":{
-				"package_name":"com.onesignal.example",
+				"package_name":"com.onesignal.sdktest",
 				"app_id":"102009847"
 			},
 			"oauth_client":{
