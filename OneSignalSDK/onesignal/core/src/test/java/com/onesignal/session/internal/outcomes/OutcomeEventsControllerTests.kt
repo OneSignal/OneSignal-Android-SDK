@@ -308,6 +308,7 @@ class OutcomeEventsControllerTests : FunSpec({
 
     test("send unique outcome with same indirect influences") {
         /* Given */
+        val waiter = Waiter()
         val now = 111L
         val notificationIds = "[\"id1\",\"id2\"]"
         val mockSessionService = mockk<ISessionService>()
@@ -319,7 +320,7 @@ class OutcomeEventsControllerTests : FunSpec({
 
         val mockOutcomeEventsRepository = mockk<IOutcomeEventsRepository>()
         coEvery { mockOutcomeEventsRepository.getNotCachedUniqueInfluencesForOutcome("OUTCOME_1", any()) } returns listOf(notificationInfluence) andThen listOf()
-        coEvery { mockOutcomeEventsRepository.saveUniqueOutcomeEventParams(any()) }
+        coEvery { mockOutcomeEventsRepository.saveUniqueOutcomeEventParams(any()) } answers { waiter.wake() }
 
         val subscriptionModel = SubscriptionModel()
         subscriptionModel.id = "subscriptionId"
@@ -344,6 +345,8 @@ class OutcomeEventsControllerTests : FunSpec({
         /* When */
         val evnt1 = outcomeEventsController.sendUniqueOutcomeEvent("OUTCOME_1")
         val evnt2 = outcomeEventsController.sendUniqueOutcomeEvent("OUTCOME_1")
+
+        waiter.waitForWake()
 
         /* Then */
         evnt1 shouldNotBe null
