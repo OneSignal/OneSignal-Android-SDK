@@ -55,7 +55,7 @@ class LocationBackgroundServiceTests : FunSpec({
     test("scheduleBackgroundRunIn will return null when location services are disabled in SDK") {
         /* Given */
         val mockLocationManager = mockk<ILocationManager>()
-        every { mockLocationManager.isLocationShared } returns false
+        every { mockLocationManager.isShared } returns false
 
         val mockLocationPreferencesService = mockk<ILocationPreferencesService>()
         val mockLocationCapturer = mockk<ILocationCapturer>()
@@ -73,13 +73,13 @@ class LocationBackgroundServiceTests : FunSpec({
 
         /* Then */
         result shouldBe null
-        verify(exactly = 1) { mockLocationManager.isLocationShared }
+        verify(exactly = 1) { mockLocationManager.isShared }
     }
 
     test("scheduleBackgroundRunIn will return null when no android permissions") {
         /* Given */
         val mockLocationManager = mockk<ILocationManager>()
-        every { mockLocationManager.isLocationShared } returns true
+        every { mockLocationManager.isShared } returns true
 
         val mockLocationPreferencesService = mockk<ILocationPreferencesService>()
         every { mockLocationPreferencesService.lastLocationTime } returns 1111

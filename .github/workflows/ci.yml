@@ -37,7 +37,7 @@ jobs:
       - name: "[Test] SDK Unit Tests"
         working-directory: OneSignalSDK
         run: |
-          ./gradlew unittest:testReleaseUnitTest --console=plain
+          ./gradlew test --console=plain
       - name: Unit tests results
         if: failure()
         uses: actions/upload-artifact@v3
