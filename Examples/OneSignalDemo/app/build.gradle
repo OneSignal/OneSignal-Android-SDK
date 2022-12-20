@@ -30,7 +30,7 @@ android {
         huawei {
             dimension "default"
             minSdkVersion 17
-            applicationId "com.onesignal.example"
+            applicationId "com.onesignal.sdktest"
         }
     }
 
@@ -67,17 +67,13 @@ dependencies {
 
     implementation 'com.github.bumptech.glide:glide:4.12.0'
 
-    implementation('com.onesignal:OneSignal:4.8.2')
-    implementation('com.onesignal:Location:4.8.2')
-    implementation('com.onesignal:InAppMessages:4.8.2')
-
     /** START - Google Play Builds **/
-    gmsImplementation('com.onesignal:Notifications:4.8.2')
+    gmsImplementation('com.onesignal:OneSignal:5.0.0')
     /** END - Google Play Builds **/
 
     /** START - Huawei Builds **/
     // Omit Google / Firebase libraries for Huawei builds.
-    huaweiImplementation('com.onesignal:Notifications:4.8.2') {
+    huaweiImplementation('com.onesignal:OneSignal:5.0.0') {
         exclude group: 'com.google.android.gms', module: 'play-services-gcm'
         exclude group: 'com.google.android.gms', module: 'play-services-analytics'
         exclude group: 'com.google.android.gms', module: 'play-services-location'

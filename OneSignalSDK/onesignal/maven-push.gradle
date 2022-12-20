@@ -29,19 +29,14 @@ apply plugin: 'maven-publish'
 apply plugin: 'signing'
 
 class Global {
-    static def POM_NAME = 'OneSignal'
-    static def POM_ARTIFACT_ID = 'OneSignal'
     static def POM_PACKAGING = 'aar'
-    static def VERSION_NAME = '4.8.2'
 
-    static def GROUP_ID = 'com.onesignal'
-    static def POM_DESCRIPTION = 'OneSignal Android SDK'
-    static def POM_URL = 'https://github.com/one-signal/OneSignal-Android-SDK'
-    static def POM_SCM_URL = 'https://github.com/one-signal/OneSignal-Android-SDK'
-    static def POM_SCM_CONNECTION = 'scm:git:https://github.com/one-signal/OneSignal-Android-SDK'
-    static def POM_SCM_DEV_CONNECTION = 'scm:git:https://github.com/one-signal/OneSignal-Android-SDK'
+    static def POM_URL = 'https://github.com/onesignal/onesignal-android-sdk'
+    static def POM_SCM_URL = 'https://github.com/onesignal/onesignal-android-sdk'
+    static def POM_SCM_CONNECTION = 'scm:git:https://github.com/onesignal/onesignal-android-sdk'
+    static def POM_SCM_DEV_CONNECTION = 'scm:git:https://github.com/onesignal/onesignal-android-sdk'
     static def POM_LICENCE_NAME = 'MIT License'
-    static def POM_LICENCE_URL = 'https://raw.githubusercontent.com/one-signal/OneSignal-Android-SDK/master/LICENSE'
+    static def POM_LICENCE_URL = 'https://raw.githubusercontent.com/onesignal/onesignal-android-sdk/master/LICENSE'
     static def POM_LICENCE_DIST = 'repo'
     static def POM_DEVELOPER_ID = 'OneSignal'
     static def POM_DEVELOPER_NAME = 'Josh Kasten'
@@ -72,14 +67,10 @@ afterEvaluate {
         publications {
             release(MavenPublication) {
                 from components.release
-                groupId = Global.GROUP_ID
-                artifactId = Global.POM_ARTIFACT_ID
-                version = Global.VERSION_NAME
 
                 pom {
-                    name = Global.POM_NAME
                     packaging = Global.POM_PACKAGING
-                    description = Global.POM_DESCRIPTION
+                    description = projectDescription
                     url = Global.POM_URL
 
                     scm {
