@@ -58,7 +58,7 @@ class SubscriptionManagerTests : FunSpec({
         subscriptions.collection.count() shouldBe 3
         subscriptions.push shouldNotBe null
         subscriptions.push!!.id shouldBe pushSubscription.id
-        subscriptions.push!!.pushToken shouldBe pushSubscription.address
+        subscriptions.push!!.token shouldBe pushSubscription.address
         subscriptions.push!!.optedIn shouldBe pushSubscription.optedIn
         subscriptions.emails.count() shouldBe 1
         subscriptions.emails[0].id shouldBe emailSubscription.id

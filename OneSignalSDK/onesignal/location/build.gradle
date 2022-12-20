@@ -52,8 +52,12 @@ tasks.withType(Test) {
     }
 }
 
+ext {
+    projectDescription = "OneSignal Android SDK - Location Module"
+}
+
 dependencies {
-    implementation project(':onesignal')
+    implementation project(':OneSignal:core')
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4"
@@ -84,3 +88,5 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
     testImplementation("com.google.android.gms:play-services-location:18.0.0")
 }
+
+apply from: '../maven-push.gradle'
