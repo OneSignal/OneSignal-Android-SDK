@@ -28,6 +28,7 @@ android {
 }
 
 ext {
+    projectName = "OneSignal SDK"
     projectDescription = "OneSignal Android SDK - All Modules"
 }
 
