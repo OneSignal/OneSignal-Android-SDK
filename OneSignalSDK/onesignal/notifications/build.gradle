@@ -53,6 +53,7 @@ tasks.withType(Test) {
 }
 
 ext {
+    projectName = "OneSignal SDK Notifications"
     projectDescription = "OneSignal Android SDK - Notifications Module"
 }
 
