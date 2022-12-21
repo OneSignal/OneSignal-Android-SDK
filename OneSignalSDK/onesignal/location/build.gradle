@@ -53,6 +53,7 @@ tasks.withType(Test) {
 }
 
 ext {
+    projectName = "OneSignal SDK Location"
     projectDescription = "OneSignal Android SDK - Location Module"
 }
 
