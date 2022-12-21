@@ -53,6 +53,7 @@ tasks.withType(Test) {
 }
 
 ext {
+    projectName = "OneSignal SDK InAppMessages"
     projectDescription = "OneSignal Android SDK - In App Messages Module"
 }
 
