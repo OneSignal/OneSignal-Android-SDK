@@ -65,7 +65,7 @@ class NotificationSummaryManager {
       // If all individual notifications consumed
       //   - Remove summary notification from the shade.
       //   - Mark summary notification as consumed.
-      if (notificationsInGroup == 0) {
+      if (notificationsInGroup == 0 && !group.equals(OneSignalNotificationManager.getGrouplessSummaryKey())) {
          cursor.close();
    
          Integer androidNotifId = getSummaryNotificationId(db, group);
