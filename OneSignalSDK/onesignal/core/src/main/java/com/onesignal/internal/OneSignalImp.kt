@@ -266,6 +266,10 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
         // only allow one login/logout at a time
         _loginMutex.withLock {
+            if (_identityModelStore!!.model.externalId == null) {
+                return
+            }
+
             createAndSwitchToNewUser()
             _operationRepo!!.enqueue(LoginUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId, _identityModelStore!!.model.externalId))
             // TODO: remove JWT Token for all future requests.
@@ -291,22 +295,29 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         val subscriptions = mutableListOf<SubscriptionModel>()
 
         // Create the push subscription for this device under the new user, copying the current
-        // user's push subscription if one exists.
-        val currentPushSubscription = _subscriptionModelStore!!.list().firstOrNull { it.type == SubscriptionType.PUSH }
+        // user's push subscription if one exists.  We also copy the ID. If the ID is local there
+        // will already be a CreateSubscriptionOperation on the queue.  If the ID is remote the subscription
+        // will be automatically transferred over to this new user being created.  If there is no
+        // current push subscription we do a "normal" replace which will drive adding a CreateSubscriptionOperation
+        // to the queue.
+        val currentPushSubscription = _subscriptionModelStore!!.list().firstOrNull { it.id == _configModel!!.pushSubscriptionId }
         val newPushSubscription = SubscriptionModel()
 
-        newPushSubscription.id = IDManager.createLocalId()
+        newPushSubscription.id = currentPushSubscription?.id ?: IDManager.createLocalId()
         newPushSubscription.type = SubscriptionType.PUSH
         newPushSubscription.optedIn = currentPushSubscription?.optedIn ?: true
         newPushSubscription.address = currentPushSubscription?.address ?: ""
         newPushSubscription.status = currentPushSubscription?.status ?: SubscriptionStatus.NO_PERMISSION
 
+        // ensure we always know this devices push subscription ID
+        _configModel!!.pushSubscriptionId = newPushSubscription.id
+
         subscriptions.add(newPushSubscription)
 
         // The next 4 lines makes this user the effective user locally.  We clear the subscriptions
-        // first as an internal change because we don't want to drive deleting the cleared subscriptions
+        // first as a `NO_PROPOGATE` change because we don't want to drive deleting the cleared subscriptions
         // on the backend.  Once cleared we can then setup the new identity/properties model, and add
-        // the new user's subscriptions as a "normal" change, which will drive changes to the backend.
+        // the new user's subscriptions as a `NORMAL` change, which will drive changes to the backend.
         _subscriptionModelStore!!.clear(ModelChangeTags.NO_PROPOGATE)
         _identityModelStore!!.replace(identityModel)
         _propertiesModelStore!!.replace(propertiesModel)

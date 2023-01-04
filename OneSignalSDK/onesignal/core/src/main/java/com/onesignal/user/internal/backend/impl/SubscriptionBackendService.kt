@@ -69,4 +69,15 @@ internal class SubscriptionBackendService(
             throw BackendException(response.statusCode, response.payload)
         }
     }
+
+    override suspend fun transferSubscription(appId: String, subscriptionId: String, aliasLabel: String, aliasValue: String) {
+        val requestJSON = JSONObject()
+            .put("identity", JSONObject().put(aliasLabel, aliasValue))
+
+        val response = _httpClient.patch("apps/$appId/subscriptions/$subscriptionId/owner", requestJSON)
+
+        if (!response.isSuccess) {
+            throw BackendException(response.statusCode, response.payload)
+        }
+    }
 }
