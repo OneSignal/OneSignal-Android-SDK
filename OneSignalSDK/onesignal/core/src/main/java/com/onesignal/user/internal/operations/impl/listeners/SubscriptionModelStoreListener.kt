@@ -20,22 +20,8 @@ internal class SubscriptionModelStoreListener(
 ) : ModelStoreListener<SubscriptionModel>(store, opRepo) {
 
     override fun getAddOperation(model: SubscriptionModel): Operation {
-        val status: SubscriptionStatus
-        val enabled: Boolean
-
-        if (model.optedIn && model.status == SubscriptionStatus.SUBSCRIBED && model.address.isNotEmpty()) {
-            enabled = true
-            status = SubscriptionStatus.SUBSCRIBED
-        } else {
-            enabled = false
-            status = if (!model.optedIn) {
-                SubscriptionStatus.UNSUBSCRIBE
-            } else {
-                model.status
-            }
-        }
-
-        return CreateSubscriptionOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, model.id, model.type, enabled, model.address, status)
+        val enabledAndStatus = getSubscriptionEnabledAndStatus(model)
+        return CreateSubscriptionOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, model.id, model.type, enabledAndStatus.first, model.address, enabledAndStatus.second)
     }
 
     override fun getRemoveOperation(model: SubscriptionModel): Operation {
@@ -43,21 +29,28 @@ internal class SubscriptionModelStoreListener(
     }
 
     override fun getUpdateOperation(model: SubscriptionModel, path: String, property: String, oldValue: Any?, newValue: Any?): Operation {
-        val status: SubscriptionStatus
-        val enabled: Boolean
+        val enabledAndStatus = getSubscriptionEnabledAndStatus(model)
+        return UpdateSubscriptionOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, model.id, model.type, enabledAndStatus.first, model.address, enabledAndStatus.second)
+    }
 
-        if (model.optedIn && model.status == SubscriptionStatus.SUBSCRIBED && model.address.isNotEmpty()) {
-            enabled = true
-            status = SubscriptionStatus.SUBSCRIBED
-        } else {
-            enabled = false
-            status = if (!model.optedIn) {
-                SubscriptionStatus.UNSUBSCRIBE
+    companion object {
+        fun getSubscriptionEnabledAndStatus(model: SubscriptionModel): Pair<Boolean, SubscriptionStatus> {
+            val status: SubscriptionStatus
+            val enabled: Boolean
+
+            if (model.optedIn && model.status == SubscriptionStatus.SUBSCRIBED && model.address.isNotEmpty()) {
+                enabled = true
+                status = SubscriptionStatus.SUBSCRIBED
             } else {
-                model.status
+                enabled = false
+                status = if (!model.optedIn) {
+                    SubscriptionStatus.UNSUBSCRIBE
+                } else {
+                    model.status
+                }
             }
-        }
 
-        return UpdateSubscriptionOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, model.id, model.type, enabled, model.address, status)
+            return Pair(enabled, status)
+        }
     }
 }
