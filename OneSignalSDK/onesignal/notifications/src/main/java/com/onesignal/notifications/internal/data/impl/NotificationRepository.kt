@@ -352,7 +352,7 @@ internal class NotificationRepository(
             ) {
                 if (it.moveToFirst()) {
                     groupId =
-                        it.getString(OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID)
+                        it.getOptString(OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID)
                 }
             }
         }

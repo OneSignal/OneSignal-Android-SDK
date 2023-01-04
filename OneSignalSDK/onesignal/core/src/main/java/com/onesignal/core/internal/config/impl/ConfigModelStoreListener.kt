@@ -62,39 +62,39 @@ internal class ConfigModelStoreListener(
             var success = false
             do {
                 try {
-                    val params = _paramsBackendService.fetchParams(
-                        appId,
-                        _subscriptionManager.subscriptions.push.id.ifEmpty { null }
-                    )
+                    val params = _paramsBackendService.fetchParams(appId, _subscriptionManager.subscriptions.push.id.ifEmpty { null })
 
+                    // copy current model into new model, then override with what comes down.
                     val config = ConfigModel()
+                    config.initializeFromModel(null, _configModelStore.model)
+
+                    // these are always copied from the backend params
                     config.appId = appId
-                    config.enterprise = params.enterprise ?: _configModelStore.model.enterprise
-                    config.useIdentityVerification = params.useIdentityVerification ?: _configModelStore.model.useIdentityVerification
                     config.notificationChannels = params.notificationChannels
-                    config.firebaseAnalytics = params.firebaseAnalytics ?: _configModelStore.model.firebaseAnalytics
-                    config.restoreTTLFilter = params.restoreTTLFilter ?: _configModelStore.model.restoreTTLFilter
                     config.googleProjectNumber = params.googleProjectNumber
-                    config.clearGroupOnSummaryClick = params.clearGroupOnSummaryClick ?: _configModelStore.model.clearGroupOnSummaryClick
-                    config.receiveReceiptEnabled = params.receiveReceiptEnabled ?: _configModelStore.model.receiveReceiptEnabled
-                    config.disableGMSMissingPrompt = params.disableGMSMissingPrompt ?: _configModelStore.model.disableGMSMissingPrompt
-                    config.unsubscribeWhenNotificationsDisabled = params.unsubscribeWhenNotificationsDisabled ?: _configModelStore.model.unsubscribeWhenNotificationsDisabled
-                    config.locationShared = params.locationShared ?: _configModelStore.model.locationShared
-                    config.requiresPrivacyConsent = params.requiresUserPrivacyConsent ?: _configModelStore.model.requiresPrivacyConsent
-                    config.opRepoExecutionInterval = params.opRepoExecutionInterval ?: _configModelStore.model.opRepoExecutionInterval
-                    config.givenPrivacyConsent = _configModelStore.model.givenPrivacyConsent
-
-                    config.influenceParams.notificationLimit = params.influenceParams.notificationLimit ?: _configModelStore.model.influenceParams.notificationLimit
-                    config.influenceParams.indirectNotificationAttributionWindow = params.influenceParams.indirectNotificationAttributionWindow ?: _configModelStore.model.influenceParams.indirectNotificationAttributionWindow
-                    config.influenceParams.iamLimit = params.influenceParams.iamLimit ?: _configModelStore.model.influenceParams.iamLimit
-                    config.influenceParams.indirectIAMAttributionWindow = params.influenceParams.indirectIAMAttributionWindow ?: _configModelStore.model.influenceParams.indirectIAMAttributionWindow
-                    config.influenceParams.isDirectEnabled = params.influenceParams.isDirectEnabled ?: _configModelStore.model.influenceParams.isDirectEnabled
-                    config.influenceParams.isIndirectEnabled = params.influenceParams.isIndirectEnabled ?: _configModelStore.model.influenceParams.isIndirectEnabled
-                    config.influenceParams.isUnattributedEnabled = params.influenceParams.isUnattributedEnabled ?: _configModelStore.model.influenceParams.isUnattributedEnabled
-
                     config.fcmParams.projectId = params.fcmParams.projectId
                     config.fcmParams.appId = params.fcmParams.appId
                     config.fcmParams.apiKey = params.fcmParams.apiKey
+
+                    // these are only copied from the backend params when the backend has set them.
+                    params.enterprise?.let { config.enterprise = it }
+                    params.useIdentityVerification?.let { config.useIdentityVerification = it }
+                    params.firebaseAnalytics?.let { config.firebaseAnalytics = it }
+                    params.restoreTTLFilter?.let { config.restoreTTLFilter = it }
+                    params.clearGroupOnSummaryClick?.let { config.clearGroupOnSummaryClick = it }
+                    params.receiveReceiptEnabled?.let { config.receiveReceiptEnabled = it }
+                    params.disableGMSMissingPrompt?.let { config.disableGMSMissingPrompt = it }
+                    params.unsubscribeWhenNotificationsDisabled?.let { config.unsubscribeWhenNotificationsDisabled = it }
+                    params.locationShared?.let { config.locationShared = it }
+                    params.requiresUserPrivacyConsent?.let { config.requiresPrivacyConsent = it }
+                    params.opRepoExecutionInterval?.let { config.opRepoExecutionInterval = it }
+                    params.influenceParams.notificationLimit?.let { config.influenceParams.notificationLimit = it }
+                    params.influenceParams.indirectNotificationAttributionWindow?.let { config.influenceParams.indirectNotificationAttributionWindow = it }
+                    params.influenceParams.iamLimit?.let { config.influenceParams.iamLimit = it }
+                    params.influenceParams.indirectIAMAttributionWindow?.let { config.influenceParams.indirectIAMAttributionWindow = it }
+                    params.influenceParams.isDirectEnabled?.let { config.influenceParams.isDirectEnabled = it }
+                    params.influenceParams.isIndirectEnabled?.let { config.influenceParams.isIndirectEnabled = it }
+                    params.influenceParams.isUnattributedEnabled?.let { config.influenceParams.isUnattributedEnabled }
 
                     _configModelStore.replace(config, ModelChangeTags.HYDRATE)
                     success = true

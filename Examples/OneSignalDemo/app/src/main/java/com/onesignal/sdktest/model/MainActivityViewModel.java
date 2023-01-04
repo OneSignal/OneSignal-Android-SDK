@@ -86,7 +86,8 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
     private RelativeLayout appIdRelativeLayout;
     private TextView appIdTitleTextView;
     private TextView appIdTextView;
-    private Button switchUserButton;
+    private Button loginUserButton;
+    private Button logoutUserButton;
 
     // Alias
     private TextView aliasTitleTextView;
@@ -213,7 +214,8 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
         appIdTitleTextView = getActivity().findViewById(R.id.main_activity_account_details_app_id_title_text_view);
         appIdTextView = getActivity().findViewById(R.id.main_activity_account_details_app_id_text_view);
         revokeConsentButton = getActivity().findViewById(R.id.main_activity_app_revoke_consent_button);
-        switchUserButton = getActivity().findViewById(R.id.main_activity_switch_user_button);
+        loginUserButton = getActivity().findViewById(R.id.main_activity_login_user_button);
+        logoutUserButton = getActivity().findViewById(R.id.main_activity_logout_user_button);
 
         aliasTitleTextView = getActivity().findViewById(R.id.main_activity_aliases_title_text_view);
         noAliasesTextView = getActivity().findViewById(R.id.main_activity_aliases_no_aliases_text_view);
@@ -301,7 +303,8 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
         font.applyFont(privacyConsentAllowButton, font.saralaBold);
         font.applyFont(appIdTitleTextView, font.saralaBold);
         font.applyFont(appIdTextView, font.saralaRegular);
-        font.applyFont(switchUserButton, font.saralaBold);
+        font.applyFont(loginUserButton, font.saralaBold);
+        font.applyFont(logoutUserButton, font.saralaBold);
         font.applyFont(aliasTitleTextView, font.saralaBold);
         font.applyFont(noAliasesTextView, font.saralaBold);
         font.applyFont(emailHeaderTextView, font.saralaBold);
@@ -401,37 +404,28 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
     private void setupAppLayout() {
         revokeConsentButton.setOnClickListener(v -> togglePrivacyConsent(false));
 
-        if(SharedPreferenceUtil.getCachedIsLoggedIn(context)) {
-            switchUserButton.setText(R.string.logout_user);
-        }
-
-        switchUserButton.setOnClickListener(v -> {
-            if(SharedPreferenceUtil.getCachedIsLoggedIn(context)) {
-                OneSignal.logout(Continue.with(r -> {
-                    SharedPreferenceUtil.cacheIsLoggedIn(context, false);
-                    switchUserButton.setText(R.string.login_user);
-                    refreshState();
-                }));
-            }
-            else {
-                dialog.createUpdateAlertDialog("", Dialog.DialogAction.LOGIN, ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
-                    @Override
-                    public void onSuccess(String update) {
-                        if (update != null && !update.isEmpty()) {
-                            OneSignal.login(update, Continue.with(r -> {
-                                SharedPreferenceUtil.cacheIsLoggedIn(context, true);
-                                switchUserButton.setText(R.string.logout_user);
-                                refreshState();
-                            }));
-                        }
+        loginUserButton.setOnClickListener(v -> {
+            dialog.createUpdateAlertDialog("", Dialog.DialogAction.LOGIN, ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
+                @Override
+                public void onSuccess(String update) {
+                    if (update != null && !update.isEmpty()) {
+                        OneSignal.login(update, Continue.with(r -> {
+                            refreshState();
+                        }));
                     }
+                }
 
-                    @Override
-                    public void onFailure() {
+                @Override
+                public void onFailure() {
 
-                    }
-                });
-            }
+                }
+            });
+        });
+
+        logoutUserButton.setOnClickListener(v -> {
+            OneSignal.logout(Continue.with(r -> {
+                refreshState();
+            }));
         });
     }
 
