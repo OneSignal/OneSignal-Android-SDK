@@ -8,6 +8,7 @@ import com.onesignal.common.RootToolsInternalMethods
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -42,7 +43,8 @@ internal class LoginUserOperationExecutor(
     private val _userBackend: IUserBackendService,
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
-    private val _subscriptionsModelStore: SubscriptionModelStore
+    private val _subscriptionsModelStore: SubscriptionModelStore,
+    private val _configModelStore: ConfigModelStore
 ) : IOperationExecutor {
 
     override val operations: List<String>
@@ -153,6 +155,10 @@ internal class LoginUserOperationExecutor(
 
                 idTranslations[subscriptionList[index].id] = backendSubscription.id
 
+                if (_configModelStore.model.pushSubscriptionId == subscriptionList[index].id) {
+                    _configModelStore.model.pushSubscriptionId = backendSubscription.id
+                }
+
                 val subscriptionModel = _subscriptionsModelStore.get(subscriptionList[index].id)
                 subscriptionModel?.setStringProperty(SubscriptionModel::id.name, backendSubscription.id, ModelChangeTags.HYDRATE)
             }
@@ -205,15 +211,6 @@ internal class LoginUserOperationExecutor(
             DeviceUtils.getNetType(_application.appContext),
             DeviceUtils.getCarrierName(_application.appContext)
         )
-
-        // TODO: These are no longer captured?
-        // subscriptionObject.put("sdk_type", OneSignalUtils.sdkType)
-        // subscriptionObject.put("type", SubscriptionObjectType.fromDeviceType(_deviceService.deviceType))
-        // subscriptionObject.put("android_package", _application.appContext.packageName)
-//                        try {
-//                            subscriptionObject.put("game_version", _application.appContext.packageManager.getPackageInfo(_application.appContext.packageName, 0).versionCode)
-//                        } catch (e: PackageManager.NameNotFoundException) {
-//                        }
 
         return mutableSubscriptions
     }

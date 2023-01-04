@@ -8,6 +8,7 @@ import com.onesignal.common.RootToolsInternalMethods
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -21,6 +22,7 @@ import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
+import com.onesignal.user.internal.operations.TransferSubscriptionOperation
 import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
@@ -30,11 +32,12 @@ internal class SubscriptionOperationExecutor(
     private val _subscriptionBackend: ISubscriptionBackendService,
     private val _deviceService: IDeviceService,
     private val _applicationService: IApplicationService,
-    private val _subscriptionModelStore: SubscriptionModelStore
+    private val _subscriptionModelStore: SubscriptionModelStore,
+    private val _configModelStore: ConfigModelStore
 ) : IOperationExecutor {
 
     override val operations: List<String>
-        get() = listOf(CREATE_SUBSCRIPTION, UPDATE_SUBSCRIPTION, DELETE_SUBSCRIPTION)
+        get() = listOf(CREATE_SUBSCRIPTION, UPDATE_SUBSCRIPTION, DELETE_SUBSCRIPTION, TRANSFER_SUBSCRIPTION)
 
     override suspend fun execute(operations: List<Operation>): ExecutionResponse {
         Logging.log(LogLevel.DEBUG, "SubscriptionOperationExecutor(operations: $operations)")
@@ -47,6 +50,8 @@ internal class SubscriptionOperationExecutor(
             deleteSubscription(operations.first { it is DeleteSubscriptionOperation } as DeleteSubscriptionOperation)
         } else if (startingOp is UpdateSubscriptionOperation) {
             updateSubscription(startingOp, operations)
+        } else if (startingOp is TransferSubscriptionOperation) {
+            transferSubscription(startingOp)
         } else {
             throw Exception("Unrecognized operation: $startingOp")
         }
@@ -91,6 +96,10 @@ internal class SubscriptionOperationExecutor(
             val subscriptionModel = _subscriptionModelStore.get(createOperation.subscriptionId)
             subscriptionModel?.setStringProperty(SubscriptionModel::id.name, backendSubscriptionId, ModelChangeTags.HYDRATE)
 
+            if (_configModelStore.model.pushSubscriptionId == createOperation.subscriptionId) {
+                _configModelStore.model.pushSubscriptionId = backendSubscriptionId
+            }
+
             return ExecutionResponse(ExecutionResult.SUCCESS, mapOf(createOperation.subscriptionId to backendSubscriptionId))
         } catch (ex: BackendException) {
             return if (ex.statusCode == 409) {
@@ -122,6 +131,20 @@ internal class SubscriptionOperationExecutor(
             )
 
             _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription)
+        } catch (ex: BackendException) {
+            return if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
+                ExecutionResponse(ExecutionResult.FAIL_RETRY)
+            } else {
+                ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+            }
+        }
+
+        return ExecutionResponse(ExecutionResult.SUCCESS)
+    }
+
+    private suspend fun transferSubscription(startingOperation: TransferSubscriptionOperation): ExecutionResponse {
+        try {
+            _subscriptionBackend.transferSubscription(startingOperation.appId, startingOperation.subscriptionId, IdentityConstants.ONESIGNAL_ID, startingOperation.onesignalId)
         } catch (ex: BackendException) {
             return if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
                 ExecutionResponse(ExecutionResult.FAIL_RETRY)
@@ -168,5 +191,6 @@ internal class SubscriptionOperationExecutor(
         const val CREATE_SUBSCRIPTION = "create-subscription"
         const val UPDATE_SUBSCRIPTION = "update-subscription"
         const val DELETE_SUBSCRIPTION = "delete-subscription"
+        const val TRANSFER_SUBSCRIPTION = "transfer-subscription"
     }
 }
