@@ -3,6 +3,7 @@ package com.onesignal.user.internal.operations.impl.executors
 import com.onesignal.common.NetworkUtils
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
+import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.IOperationExecutor
@@ -26,7 +27,8 @@ internal class RefreshUserOperationExecutor(
     private val _userBackend: IUserBackendService,
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
-    private val _subscriptionsModelStore: SubscriptionModelStore
+    private val _subscriptionsModelStore: SubscriptionModelStore,
+    private val _configModelStore: ConfigModelStore
 ) : IOperationExecutor {
 
     override val operations: List<String>
@@ -101,7 +103,11 @@ internal class RefreshUserOperationExecutor(
                     }
                 }
                 subscriptionModel.optedIn = subscriptionModel.status != SubscriptionStatus.UNSUBSCRIBE
-                subscriptionModels.add(subscriptionModel)
+
+                // We only add a push subscription if it is this device's push subscription.
+                if (subscriptionModel.type != SubscriptionType.PUSH || subscriptionModel.id == _configModelStore.model.pushSubscriptionId) {
+                    subscriptionModels.add(subscriptionModel)
+                }
             }
 
             _identityModelStore.replace(identityModel, ModelChangeTags.HYDRATE)

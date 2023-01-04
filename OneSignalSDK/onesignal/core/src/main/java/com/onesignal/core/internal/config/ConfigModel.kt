@@ -13,6 +13,13 @@ class ConfigModel : Model() {
         set(value) { setStringProperty(::appId.name, value) }
 
     /**
+     * This device's push subscription ID.
+     */
+    var pushSubscriptionId: String?
+        get() = getOptStringProperty(::pushSubscriptionId.name)
+        set(value) { setOptStringProperty(::pushSubscriptionId.name, value) }
+
+    /**
      * The API URL String.
      */
     var apiUrl: String
