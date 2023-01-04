@@ -61,12 +61,13 @@ internal class SubscriptionManager(
         if (pushSub is UninitializedPushSubscription) {
             addSubscriptionToModels(SubscriptionType.PUSH, pushToken ?: "", pushTokenStatus)
         } else {
-            updateSubscriptionModel(pushSub) {
-                if (pushToken != null) {
-                    it.address = pushToken
-                }
-                it.status = pushTokenStatus
+            val pushSubModel = (pushSub as Subscription).model
+
+            if (pushToken != null) {
+                pushSubModel.address = pushToken
             }
+
+            pushSubModel.status = pushTokenStatus
         }
     }
 
@@ -103,11 +104,6 @@ internal class SubscriptionManager(
         Logging.log(LogLevel.DEBUG, "SubscriptionManager.removeSubscription(subscription: $subscription)")
 
         _subscriptionModelStore.remove(subscription.id)
-    }
-
-    private fun updateSubscriptionModel(subscription: ISubscription, update: (SubscriptionModel) -> Unit) {
-        val subscriptionModel = _subscriptionModelStore.get(subscription.id) ?: return
-        update(subscriptionModel)
     }
 
     override fun subscribe(handler: ISubscriptionChangedHandler) = _events.subscribe(handler)

@@ -31,7 +31,17 @@ interface ISubscriptionBackendService {
      * Delete an existing subscription.
      *
      * @param appId The ID of the OneSignal application this subscription exists under.
-     * @param subscriptionId The ID of the subscription to update.
+     * @param subscriptionId The ID of the subscription to delete.
      */
     suspend fun deleteSubscription(appId: String, subscriptionId: String)
+
+    /**
+     * Transfer an existing subscription to the user specified.
+     *
+     * @param appId The ID of the OneSignal application this subscription exists under.
+     * @param subscriptionId The ID of the subscription to transfer.
+     * @param aliasLabel The alias label of the user to transfer the subscription under.
+     * @param aliasValue The identifier within the [aliasLabel] that identifies the user to transfer under.
+     */
+    suspend fun transferSubscription(appId: String, subscriptionId: String, aliasLabel: String, aliasValue: String)
 }
