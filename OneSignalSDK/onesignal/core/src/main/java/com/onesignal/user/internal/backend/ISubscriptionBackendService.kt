@@ -14,9 +14,9 @@ interface ISubscriptionBackendService {
      * @param aliasValue The identifier within the [aliasLabel] that identifies the user to retrieve.
      * @param subscription The subscription to create.
      *
-     * @return The ID of the subscription created.
+     * @return The ID of the subscription created.  Or null if the subscription is already part of the current user.
      */
-    suspend fun createSubscription(appId: String, aliasLabel: String, aliasValue: String, subscription: SubscriptionObject): String
+    suspend fun createSubscription(appId: String, aliasLabel: String, aliasValue: String, subscription: SubscriptionObject): String?
 
     /**
      * Update an existing subscription with the properties provided.
