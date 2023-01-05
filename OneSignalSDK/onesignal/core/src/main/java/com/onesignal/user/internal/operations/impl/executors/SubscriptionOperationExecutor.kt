@@ -90,17 +90,24 @@ internal class SubscriptionOperationExecutor(
                 IdentityConstants.ONESIGNAL_ID,
                 createOperation.onesignalId,
                 subscription
-            )
+            ) ?: return ExecutionResponse(ExecutionResult.SUCCESS)
 
             // update the subscription model with the new ID, if it's still active.
             val subscriptionModel = _subscriptionModelStore.get(createOperation.subscriptionId)
-            subscriptionModel?.setStringProperty(SubscriptionModel::id.name, backendSubscriptionId, ModelChangeTags.HYDRATE)
+            subscriptionModel?.setStringProperty(
+                SubscriptionModel::id.name,
+                backendSubscriptionId,
+                ModelChangeTags.HYDRATE
+            )
 
             if (_configModelStore.model.pushSubscriptionId == createOperation.subscriptionId) {
                 _configModelStore.model.pushSubscriptionId = backendSubscriptionId
             }
 
-            return ExecutionResponse(ExecutionResult.SUCCESS, mapOf(createOperation.subscriptionId to backendSubscriptionId))
+            return ExecutionResponse(
+                ExecutionResult.SUCCESS,
+                mapOf(createOperation.subscriptionId to backendSubscriptionId)
+            )
         } catch (ex: BackendException) {
             return if (ex.statusCode == 409) {
                 ExecutionResponse(ExecutionResult.FAIL_NORETRY)
