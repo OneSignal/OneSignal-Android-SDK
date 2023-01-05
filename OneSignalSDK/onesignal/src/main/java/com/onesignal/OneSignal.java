@@ -431,7 +431,7 @@ public class OneSignal {
    private static TrackAmazonPurchase trackAmazonPurchase;
    private static TrackFirebaseAnalytics trackFirebaseAnalytics;
 
-   private static final String VERSION = "040803";
+   private static final String VERSION = "040804";
    public static String getSdkVersionRaw() {
       return VERSION;
    }
