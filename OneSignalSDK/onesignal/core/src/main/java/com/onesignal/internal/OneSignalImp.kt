@@ -75,7 +75,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val notifications: INotificationsManager get() = if (isInitialized) _notifications!! else throw Exception("Must call 'initWithContext' before use")
     override val location: ILocationManager get() = if (isInitialized) _location!! else throw Exception("Must call 'initWithContext' before use")
     override val inAppMessages: IInAppMessagesManager get() = if (isInitialized) _iam!! else throw Exception("Must call 'initWithContext' before use")
-    override val user: IUserManager get() = if (isInitialized) _user!! else throw Exception("Must call 'initWithContext' before use")
+    override val User: IUserManager get() = if (isInitialized) _user!! else throw Exception("Must call 'initWithContext' before use")
 
     // Services required by this class
     private var _user: IUserManager? = null
