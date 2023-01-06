@@ -1,6 +1,7 @@
 package com.onesignal.user.internal.operations.impl.executors
 
 import android.os.Build
+import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.NetworkUtils
 import com.onesignal.common.OneSignalUtils
@@ -209,7 +210,8 @@ internal class LoginUserOperationExecutor(
             Build.VERSION.RELEASE,
             RootToolsInternalMethods.isRooted,
             DeviceUtils.getNetType(_application.appContext),
-            DeviceUtils.getCarrierName(_application.appContext)
+            DeviceUtils.getCarrierName(_application.appContext),
+            AndroidUtils.getAppVersion(_application.appContext)
         )
 
         return mutableSubscriptions
@@ -229,7 +231,8 @@ internal class LoginUserOperationExecutor(
                 subscriptions[operation.subscriptionId]!!.deviceOS,
                 subscriptions[operation.subscriptionId]!!.rooted,
                 subscriptions[operation.subscriptionId]!!.netType,
-                subscriptions[operation.subscriptionId]!!.carrier
+                subscriptions[operation.subscriptionId]!!.carrier,
+                subscriptions[operation.subscriptionId]!!.appVersion
             )
         }
         // TODO: Is it possible for the Create to be after the Update?
