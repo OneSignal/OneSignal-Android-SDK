@@ -60,6 +60,17 @@ object AndroidUtils {
         return hasFlag
     }
 
+    fun getAppVersion(context: Context): String? {
+        val appVersion: Int? =
+            try {
+                context.packageManager.getPackageInfo(context.packageName, 0).versionCode
+            } catch (e: PackageManager.NameNotFoundException) {
+                null
+            }
+
+        return appVersion?.toString()
+    }
+
     fun getManifestMeta(context: Context, metaName: String?): String? {
         val bundle = getManifestMetaBundle(context)
         return bundle?.getString(metaName)
