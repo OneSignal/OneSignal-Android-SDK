@@ -45,7 +45,8 @@ object JSONConverter {
                     it.safeString("device_model"),
                     it.safeString("device_os"),
                     it.safeBool("rooted"),
-                    it.safeInt("test_type"),
+                    it.safeInt("net_type"),
+                    it.safeString("carrier"),
                     it.safeString("app_version")
                 )
             }
@@ -100,5 +101,6 @@ object JSONConverter {
             .putSafe("rooted", subscription.rooted)
             .putSafe("net_type", subscription.netType)
             .putSafe("carrier", subscription.carrier)
+            .putSafe("app_version", subscription.appVersion)
     }
 }

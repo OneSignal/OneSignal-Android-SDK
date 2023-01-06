@@ -58,7 +58,6 @@ import com.onesignal.user.subscriptions.ISubscriptionChangedHandler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @RequiresApi(api = Build.VERSION_CODES.N)
@@ -632,7 +631,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         emailsRecyclerView.setLayoutManager(linearLayoutManager);
         emailsRecyclerViewAdapter = new SubscriptionRecyclerViewAdapter(context, emailArrayList, value -> {
-            String email = ((IEmailSubscription)value).getEmail();
+            String email = ((DummySubscription)value).getId();
             OneSignal.getUser().removeEmailSubscription(email);
             emailArrayList.remove(value);
             refreshEmailRecyclerView();
@@ -658,7 +657,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         smssRecyclerView.setLayoutManager(linearLayoutManager);
         smssRecyclerViewAdapter = new SubscriptionRecyclerViewAdapter(context, smsArrayList, value -> {
-            String number = ((ISmsSubscription)value).getNumber();
+            String number = ((DummySubscription)value).getId();
             OneSignal.getUser().removeSmsSubscription(number);
             smsArrayList.remove(value);
             refreshSMSRecyclerView();
