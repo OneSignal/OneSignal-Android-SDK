@@ -1,6 +1,7 @@
 package com.onesignal.user.internal.operations.impl.executors
 
 import android.os.Build
+import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.NetworkUtils
 import com.onesignal.common.OneSignalUtils
@@ -82,7 +83,8 @@ internal class SubscriptionOperationExecutor(
                 Build.VERSION.RELEASE,
                 RootToolsInternalMethods.isRooted,
                 DeviceUtils.getNetType(_applicationService.appContext),
-                DeviceUtils.getCarrierName(_applicationService.appContext)
+                DeviceUtils.getCarrierName(_applicationService.appContext),
+                AndroidUtils.getAppVersion(_applicationService.appContext)
             )
 
             val backendSubscriptionId = _subscriptionBackend.createSubscription(
@@ -134,7 +136,8 @@ internal class SubscriptionOperationExecutor(
                 Build.VERSION.RELEASE,
                 RootToolsInternalMethods.isRooted,
                 DeviceUtils.getNetType(_applicationService.appContext),
-                DeviceUtils.getCarrierName(_applicationService.appContext)
+                DeviceUtils.getCarrierName(_applicationService.appContext),
+                AndroidUtils.getAppVersion(_applicationService.appContext)
             )
 
             _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription)
