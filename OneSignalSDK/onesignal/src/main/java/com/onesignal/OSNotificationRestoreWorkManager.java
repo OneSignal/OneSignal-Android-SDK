@@ -9,7 +9,6 @@ import android.text.TextUtils;
 import androidx.annotation.NonNull;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
-import androidx.work.WorkManager;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
@@ -45,7 +44,7 @@ class OSNotificationRestoreWorkManager {
                 .setInitialDelay(restoreDelayInSeconds, TimeUnit.SECONDS)
                 .build();
 
-        WorkManager.getInstance(context)
+        OSWorkManagerHelper.getInstance(context)
                 .enqueueUniqueWork(NOTIFICATION_RESTORE_WORKER_IDENTIFIER, ExistingWorkPolicy.KEEP, workRequest);
     }
 
