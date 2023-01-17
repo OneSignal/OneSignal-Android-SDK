@@ -27,6 +27,7 @@
 
 package com.onesignal;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -51,6 +52,7 @@ import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 
 import androidx.legacy.content.WakefulBroadcastReceiver;
+import androidx.work.impl.WorkManagerImpl;
 
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.huawei.hms.api.HuaweiApiAvailability;
@@ -666,5 +668,20 @@ class OSUtils {
 
    static String getRootCauseMessage(@NonNull Throwable throwable) {
       return getRootCauseThrowable(throwable).getMessage();
+   }
+
+   /**
+    * Provides a way to check if WorkManager is initialized in this process.
+    *
+    * This is effectively the WorkManager.isInitialized() public method introduced in androidx.work:work-*:2.8.0-alpha02.
+    * Please see https://android-review.googlesource.com/c/platform/frameworks/support/+/1941186.
+    *
+    * @return {@code true} if WorkManager has been initialized in this process.
+    */
+   @SuppressWarnings("deprecation")
+   @SuppressLint("RestrictedApi")
+   static boolean isWorkManagerInitialized() {
+      WorkManagerImpl instance = WorkManagerImpl.getInstance();
+      return instance != null;
    }
 }
