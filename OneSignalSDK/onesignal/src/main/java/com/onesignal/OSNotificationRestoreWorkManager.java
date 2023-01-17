@@ -7,6 +7,7 @@ import android.service.notification.StatusBarNotification;
 import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
+import androidx.work.Configuration;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
@@ -45,8 +46,13 @@ class OSNotificationRestoreWorkManager {
                 .setInitialDelay(restoreDelayInSeconds, TimeUnit.SECONDS)
                 .build();
 
-        WorkManager.getInstance(context)
-                .enqueueUniqueWork(NOTIFICATION_RESTORE_WORKER_IDENTIFIER, ExistingWorkPolicy.KEEP, workRequest);
+        // Before using WorkManager, check for its existence. Else, initialize it ourselves.
+        if (OSUtils.isWorkManagerInitialized()) {
+            WorkManager.getInstance(context)
+                    .enqueueUniqueWork(NOTIFICATION_RESTORE_WORKER_IDENTIFIER, ExistingWorkPolicy.KEEP, workRequest);
+        } else {
+            WorkManager.initialize(context, new Configuration.Builder().build());
+        }
     }
 
     public static class NotificationRestoreWorker extends Worker {

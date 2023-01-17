@@ -3,6 +3,7 @@ package com.onesignal;
 import android.content.Context;
 
 import androidx.annotation.NonNull;
+import androidx.work.Configuration;
 import androidx.work.Data;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.OneTimeWorkRequest;
@@ -63,8 +64,14 @@ class OSNotificationWorkManager {
                 .build();
 
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OSNotificationWorkManager enqueueing notification work with notificationId: " + osNotificationId + " and jsonPayload: " + jsonPayload);
-        WorkManager.getInstance(context)
-                .enqueueUniqueWork(osNotificationId, ExistingWorkPolicy.KEEP, workRequest);
+
+        // Before using WorkManager, check for its existence. Else, initialize it ourselves.
+        if (OSUtils.isWorkManagerInitialized()) {
+            WorkManager.getInstance(context)
+                    .enqueueUniqueWork(osNotificationId, ExistingWorkPolicy.KEEP, workRequest);
+        } else {
+            WorkManager.initialize(context, new Configuration.Builder().build());
+        }
     }
 
     public static class NotificationWorker extends Worker {
