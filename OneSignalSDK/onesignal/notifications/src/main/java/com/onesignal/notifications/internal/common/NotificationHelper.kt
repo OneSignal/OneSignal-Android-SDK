@@ -203,7 +203,7 @@ object NotificationHelper {
         return ""
     }
 
-    fun generateNotificationOpenedResult(jsonArray: JSONArray, time: ITime): NotificationClickResult {
+    internal fun generateNotificationOpenedResult(jsonArray: JSONArray, time: ITime): NotificationClickResult {
         val jsonArraySize = jsonArray.length()
         var firstMessage = true
         val androidNotificationId = jsonArray.optJSONObject(0)
