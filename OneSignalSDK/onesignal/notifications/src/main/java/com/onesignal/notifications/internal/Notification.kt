@@ -25,12 +25,7 @@ import org.json.JSONObject
 open class Notification : INotification {
     var notificationExtender: NotificationCompat.Extender? = null
 
-    /**
-     * Summary notifications grouped
-     * Notification payload will have the most recent notification received.
-     */
-    var groupedNotifications: List<Notification>? = null
-
+    override var groupedNotifications: List<Notification>? = null
     override var androidNotificationId = 0
     override var notificationId: String? = null
     override var templateName: String? = null
