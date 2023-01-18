@@ -40,7 +40,6 @@ import com.onesignal.notifications.R
 import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.permissions.INotificationPermissionChangedHandler
 import com.onesignal.notifications.internal.permissions.INotificationPermissionController
-import kotlinx.coroutines.yield
 
 internal class NotificationPermissionController(
     private val _application: IApplicationService,
@@ -74,10 +73,6 @@ internal class NotificationPermissionController(
      * to notify of the status.
      */
     override suspend fun prompt(fallbackToSettings: Boolean): Boolean {
-        // yield to force a suspension.  When there is no suspension the continuation will
-        // never be called
-        yield()
-
         if (notificationsEnabled()) {
             return true
         }
