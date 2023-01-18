@@ -127,6 +127,12 @@ interface INotification {
     val ttl: Int
 
     /**
+     * When this notification is a summary notification, this will contain the list of
+     * notifications it summarizes.
+     */
+    val groupedNotifications: List<INotification>?
+
+    /**
      * Create a mutable copy of this notification. Typically used in [IRemoteNotificationReceivedHandler]
      * or [INotificationWillShowInForegroundHandler] to modify an incoming notification prior to it
      * being displayed to the user.
