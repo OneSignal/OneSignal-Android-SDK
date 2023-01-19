@@ -132,21 +132,23 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     }
 
     override fun onActivityCreated(activity: Activity, bundle: Bundle?) {
-        Logging.debug("ApplicationService.onActivityCreated: $activity")
+        Logging.debug("ApplicationService.onActivityCreated($_activityReferences,$entryState): $activity")
     }
 
     override fun onActivityStarted(activity: Activity) {
-        Logging.debug("ApplicationService.onActivityStarted: $activity")
+        Logging.debug("ApplicationService.onActivityStarted($_activityReferences,$entryState): $activity")
 
         current = activity
+        _activityReferences++
 
-        if (++_activityReferences == 1 && !_isActivityChangingConfigurations) {
+        if ((!isInForeground || _nextResumeIsFirstActivity) && !_isActivityChangingConfigurations) {
+            _activityReferences = 1
             handleFocus()
         }
     }
 
     override fun onActivityResumed(activity: Activity) {
-        Logging.debug("ApplicationService.onActivityResumed: $activity")
+        Logging.debug("ApplicationService.onActivityResumed($_activityReferences,$entryState): $activity")
 
         // When an activity has something shown above it, it will be paused allowing
         // the new activity to be started (where current is set).  However when that
@@ -156,18 +158,24 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         if (current != activity) {
             current = activity
         }
+
+        if ((!isInForeground || _nextResumeIsFirstActivity) && !_isActivityChangingConfigurations) {
+            _activityReferences = 1
+            handleFocus()
+        }
     }
 
     override fun onActivityPaused(activity: Activity) {
-        Logging.debug("ApplicationService.onActivityPaused: $activity")
+        Logging.debug("ApplicationService.onActivityPaused($_activityReferences,$entryState): $activity")
     }
 
     override fun onActivityStopped(activity: Activity) {
-        Logging.debug("ApplicationService.onActivityStopped: $activity")
+        Logging.debug("ApplicationService.onActivityStopped($_activityReferences,$entryState): $activity")
 
         _isActivityChangingConfigurations = activity.isChangingConfigurations
-        if (--_activityReferences == 0 && !_isActivityChangingConfigurations) {
+        if (!_isActivityChangingConfigurations && --_activityReferences <= 0) {
             current = null
+            _activityReferences = 0
             handleLostFocus()
         }
 
@@ -179,7 +187,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     }
 
     override fun onActivityDestroyed(activity: Activity) {
-        Logging.debug("ApplicationService.onActivityDestroyed: $activity")
+        Logging.debug("ApplicationService.onActivityDestroyed($_activityReferences,$entryState): $activity")
     }
 
     override fun onGlobalLayout() {
@@ -199,7 +207,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
             if (currentActivity is AppCompatActivity) {
                 val manager = currentActivity.supportFragmentManager
 
-                var lastFragment = manager.fragments.lastOrNull()
+                val lastFragment = manager.fragments.lastOrNull()
                 if (lastFragment != null && lastFragment.isVisible && lastFragment is DialogFragment) {
                     val waiter = Waiter()
 
