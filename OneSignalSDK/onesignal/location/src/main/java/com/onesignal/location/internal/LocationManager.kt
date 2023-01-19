@@ -14,6 +14,8 @@ import com.onesignal.location.internal.common.LocationUtils
 import com.onesignal.location.internal.controller.ILocationController
 import com.onesignal.location.internal.permissions.ILocationPermissionChangedHandler
 import com.onesignal.location.internal.permissions.LocationPermissionController
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 internal class LocationManager(
     private val _applicationService: IApplicationService,
@@ -61,79 +63,81 @@ internal class LocationManager(
     override suspend fun requestPermission(fallbackToSettings: Boolean): Boolean {
         Logging.log(LogLevel.DEBUG, "LocationManager.requestPermission()")
 
-        if (!isShared) {
-            return false
-        }
-
-        var result: Boolean
-        val hasFinePermissionGranted = AndroidUtils.hasPermission(LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING, true, _applicationService)
-        var hasCoarsePermissionGranted: Boolean = false
-        var hasBackgroundPermissionGranted: Boolean = false
-
-        if (!hasFinePermissionGranted) {
-            hasCoarsePermissionGranted = AndroidUtils.hasPermission(LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING, true, _applicationService)
-            _capturer.locationCoarse = true
-        }
-
-        if (Build.VERSION.SDK_INT >= 29) {
-            hasBackgroundPermissionGranted = AndroidUtils.hasPermission(LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING, true, _applicationService)
-        }
-
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            if (!hasFinePermissionGranted && !hasCoarsePermissionGranted) {
-                // Permission missing on manifest
-                Logging.error("Location permissions not added on AndroidManifest file < M")
-                return false
+        var result = false
+        withContext(Dispatchers.Main) {
+            if (!isShared) {
+                return@withContext false
             }
 
-            startGetLocation()
-            result = true
-        } else { // Android 6.0+
+            val hasFinePermissionGranted = AndroidUtils.hasPermission(LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING, true, _applicationService)
+            var hasCoarsePermissionGranted: Boolean = false
+            var hasBackgroundPermissionGranted: Boolean = false
+
             if (!hasFinePermissionGranted) {
-                var requestPermission: String? = null
-                var permissionList = AndroidUtils.filterManifestPermissions(
-                    listOf(
-                        LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING,
-                        LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING,
-                        LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING
-                    ),
-                    _applicationService
-                )
+                hasCoarsePermissionGranted = AndroidUtils.hasPermission(LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING, true, _applicationService)
+                _capturer.locationCoarse = true
+            }
 
-                if (permissionList.contains(LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING)) {
-                    // ACCESS_FINE_LOCATION permission defined on Manifest, prompt for permission
-                    // If permission already given prompt will return positive, otherwise will prompt again or show settings
-                    requestPermission = LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING
-                } else if (permissionList.contains(LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING)) {
-                    if (!hasCoarsePermissionGranted) {
-                        // ACCESS_COARSE_LOCATION permission defined on Manifest, prompt for permission
-                        // If permission already given prompt will return positive, otherwise will prompt again or show settings
-                        requestPermission = LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING
-                    } else if (Build.VERSION.SDK_INT >= 29 && permissionList.contains(LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING)) {
-                        // ACCESS_BACKGROUND_LOCATION permission defined on Manifest, prompt for permission
-                        requestPermission = LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING
-                    }
-                } else {
-                    Logging.info("Location permissions not added on AndroidManifest file >= M")
+            if (Build.VERSION.SDK_INT >= 29) {
+                hasBackgroundPermissionGranted = AndroidUtils.hasPermission(LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING, true, _applicationService)
+            }
+
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                if (!hasFinePermissionGranted && !hasCoarsePermissionGranted) {
+                    // Permission missing on manifest
+                    Logging.error("Location permissions not added on AndroidManifest file < M")
+                    return@withContext false
                 }
 
-                // We handle the following cases:
-                //  1 - If needed and available then prompt for permissions
-                //       - Request permission can be ACCESS_COARSE_LOCATION or ACCESS_FINE_LOCATION
-                //  2 - If the permission were already granted then start getting location
-                //  3 - If permission wasn't granted then trigger fail flow
-                //
-                // For each case, we call the prompt handlers
-                result = if (requestPermission != null) {
-                    _locationPermissionController.prompt(fallbackToSettings, requestPermission)
-                } else {
-                    hasCoarsePermissionGranted
-                }
-            } else if (Build.VERSION.SDK_INT >= 29 && !hasBackgroundPermissionGranted) {
-                result = backgroundLocationPermissionLogic(fallbackToSettings)
-            } else {
-                result = true
                 startGetLocation()
+                result = true
+            } else { // Android 6.0+
+                if (!hasFinePermissionGranted) {
+                    var requestPermission: String? = null
+                    var permissionList = AndroidUtils.filterManifestPermissions(
+                        listOf(
+                            LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING,
+                            LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING,
+                            LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING
+                        ),
+                        _applicationService
+                    )
+
+                    if (permissionList.contains(LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING)) {
+                        // ACCESS_FINE_LOCATION permission defined on Manifest, prompt for permission
+                        // If permission already given prompt will return positive, otherwise will prompt again or show settings
+                        requestPermission = LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING
+                    } else if (permissionList.contains(LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING)) {
+                        if (!hasCoarsePermissionGranted) {
+                            // ACCESS_COARSE_LOCATION permission defined on Manifest, prompt for permission
+                            // If permission already given prompt will return positive, otherwise will prompt again or show settings
+                            requestPermission = LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING
+                        } else if (Build.VERSION.SDK_INT >= 29 && permissionList.contains(LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING)) {
+                            // ACCESS_BACKGROUND_LOCATION permission defined on Manifest, prompt for permission
+                            requestPermission = LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING
+                        }
+                    } else {
+                        Logging.info("Location permissions not added on AndroidManifest file >= M")
+                    }
+
+                    // We handle the following cases:
+                    //  1 - If needed and available then prompt for permissions
+                    //       - Request permission can be ACCESS_COARSE_LOCATION or ACCESS_FINE_LOCATION
+                    //  2 - If the permission were already granted then start getting location
+                    //  3 - If permission wasn't granted then trigger fail flow
+                    //
+                    // For each case, we call the prompt handlers
+                    result = if (requestPermission != null) {
+                        _locationPermissionController.prompt(fallbackToSettings, requestPermission)
+                    } else {
+                        hasCoarsePermissionGranted
+                    }
+                } else if (Build.VERSION.SDK_INT >= 29 && !hasBackgroundPermissionGranted) {
+                    result = backgroundLocationPermissionLogic(fallbackToSettings)
+                } else {
+                    result = true
+                    startGetLocation()
+                }
             }
         }
 

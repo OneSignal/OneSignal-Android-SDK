@@ -18,6 +18,8 @@ import com.onesignal.notifications.internal.permissions.INotificationPermissionC
 import com.onesignal.notifications.internal.permissions.INotificationPermissionController
 import com.onesignal.notifications.internal.restoration.INotificationRestoreWorkManager
 import com.onesignal.notifications.internal.summary.INotificationSummaryManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONException
 
@@ -81,7 +83,10 @@ internal class NotificationsManager(
 
     override suspend fun requestPermission(fallbackToSettings: Boolean): Boolean {
         Logging.debug("NotificationsManager.requestPermission()")
-        return _notificationPermissionController.prompt(fallbackToSettings)
+
+        return withContext(Dispatchers.Main) {
+            return@withContext _notificationPermissionController.prompt(fallbackToSettings)
+        }
     }
 
     private fun setPermissionStatusAndFire(isEnabled: Boolean) {
