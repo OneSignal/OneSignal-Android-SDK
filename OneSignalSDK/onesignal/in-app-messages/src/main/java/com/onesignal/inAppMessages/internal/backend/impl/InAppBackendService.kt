@@ -53,7 +53,9 @@ internal class InAppBackendService(
         } else {
             printHttpErrorForInAppMessageRequest("html", response.statusCode, response.payload)
 
-            return if (!NetworkUtils.shouldRetryNetworkRequest(response.statusCode) || htmlNetworkRequestAttemptCount >= NetworkUtils.MAX_NETWORK_REQUEST_ATTEMPT_COUNT) {
+            return if (NetworkUtils.getResponseStatusType(response.statusCode) != NetworkUtils.ResponseStatusType.RETRYABLE ||
+                htmlNetworkRequestAttemptCount >= NetworkUtils.MAX_NETWORK_REQUEST_ATTEMPT_COUNT
+            ) {
                 // Failure limit reached, reset
                 htmlNetworkRequestAttemptCount = 0
                 GetIAMDataResponse(null, false)

@@ -48,7 +48,7 @@ internal class OperationRepo(
     }
 
     override fun start() {
-        suspendifyOnThread {
+        suspendifyOnThread(name = "OpRepo") {
             processQueueForever()
         }
     }
@@ -165,6 +165,7 @@ internal class OperationRepo(
                     ops.forEach { _operationModelStore.remove(it.operation.id) }
                     ops.forEach { it.waiter?.wake(true) }
                 }
+                ExecutionResult.FAIL_UNAUTHORIZED, // TODO: Need to provide callback for app to reset JWT. For now, fail with no retry.
                 ExecutionResult.FAIL_NORETRY -> {
                     Logging.error("Operation execution failed without retry: $operations")
                     // on failure we remove the operation from the store and wake any waiters
@@ -184,6 +185,19 @@ internal class OperationRepo(
                     // add back all operations to the front of the queue to be re-executed.
                     synchronized(_queue) {
                         ops.reversed().forEach { _queue.add(0, it) }
+                    }
+                }
+            }
+
+            // if there are operations provided on the result, we need to enqueue them at the
+            // beginning of the queue.
+            if (response.operations != null) {
+                synchronized(_queue) {
+                    for (op in response.operations.reversed()) {
+                        op.id = UUID.randomUUID().toString()
+                        val queueItem = OperationQueueItem(op)
+                        _queue.add(0, queueItem)
+                        _operationModelStore.add(0, queueItem.operation)
                     }
                 }
             }
