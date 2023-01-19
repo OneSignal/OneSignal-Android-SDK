@@ -93,7 +93,6 @@ internal class HttpClient(
             }
 
             try {
-                Logging.debug("HttpClient: Making request to: $url")
                 con = _connectionFactory.newHttpURLConnection(url)
 
                 // https://github.com/OneSignal/OneSignal-Android-SDK/issues/1465
@@ -124,12 +123,14 @@ internal class HttpClient(
 
                 if (jsonBody != null) {
                     val strJsonBody = JSONUtils.toUnescapedEUIDString(jsonBody)
-                    Logging.debug("HttpClient: $method SEND JSON: $strJsonBody")
+                    Logging.debug("HttpClient: ${method ?: "GET"} $url - $strJsonBody")
 
                     val sendBytes = strJsonBody.toByteArray(charset("UTF-8"))
                     con.setFixedLengthStreamingMode(sendBytes.size)
                     val outputStream = con.outputStream
                     outputStream.write(sendBytes)
+                } else {
+                    Logging.debug("HttpClient: ${method ?: "GET"} $url")
                 }
 
                 if (cacheKey != null) {
@@ -143,24 +144,21 @@ internal class HttpClient(
 
                 // Network request is made from getResponseCode()
                 httpResponse = con.responseCode
-                Logging.verbose("HttpClient: After con.getResponseCode to: $url")
 
                 when (httpResponse) {
                     HttpURLConnection.HTTP_NOT_MODIFIED -> {
                         val cachedResponse = _prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + cacheKey)
-                        Logging.debug("HttpClient: " + (method ?: "GET") + " - Using Cached response due to 304: " + cachedResponse)
+                        Logging.debug("HttpClient: ${method ?: "GET"} $url - Using Cached response due to 304: " + cachedResponse)
 
                         // TODO: SHOULD RETURN OK INSTEAD OF NOT_MODIFIED TO MAKE TRANSPARENT?
                         retVal = HttpResponse(httpResponse, cachedResponse)
                     }
-                    HttpURLConnection.HTTP_ACCEPTED, HttpURLConnection.HTTP_OK -> {
-                        Logging.debug("HttpClient: Successfully finished request to: $url")
-
+                    HttpURLConnection.HTTP_ACCEPTED, HttpURLConnection.HTTP_CREATED, HttpURLConnection.HTTP_OK -> {
                         val inputStream = con.inputStream
                         val scanner = Scanner(inputStream, "UTF-8")
                         val json = if (scanner.useDelimiter("\\A").hasNext()) scanner.next() else ""
                         scanner.close()
-                        Logging.debug("HttpClient: " + (method ?: "GET") + " RECEIVED JSON: " + json)
+                        Logging.debug("HttpClient: ${method ?: "GET"} $url - STATUS: $httpResponse JSON: " + json)
 
                         if (cacheKey != null) {
                             val eTag = con.getHeaderField("etag")
@@ -175,7 +173,7 @@ internal class HttpClient(
                         retVal = HttpResponse(httpResponse, json)
                     }
                     else -> {
-                        Logging.debug("HttpClient: Failed request to: $url")
+                        Logging.debug("HttpClient: ${method ?: "GET"} $url - FAILED STATUS: $httpResponse")
 
                         var inputStream = con.errorStream
                         if (inputStream == null) {
