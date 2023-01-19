@@ -34,7 +34,12 @@ class ExecutionResponse(
      * The map of id translations that should be applied to any outstanding operations.
      * Within the map the key is the local Id, the value is the remote Id.
      */
-    val idTranslations: Map<String, String>? = null
+    val idTranslations: Map<String, String>? = null,
+
+    /**
+     * When specified, any operations that should be prepended to the operation repo.
+     */
+    val operations: List<Operation>? = null
 )
 
 enum class ExecutionResult {
@@ -56,5 +61,11 @@ enum class ExecutionResult {
     /**
      * The operation failed and should not be tried again.
      */
-    FAIL_NORETRY
+    FAIL_NORETRY,
+
+    /**
+     * The operation failed because the request was not authorized.  The operation can be
+     * retried if authorization can be achieved.
+     */
+    FAIL_UNAUTHORIZED
 }
