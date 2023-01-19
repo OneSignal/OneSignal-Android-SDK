@@ -10,13 +10,15 @@ import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.IIdentityBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
+import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.DeleteAliasOperation
 import com.onesignal.user.internal.operations.SetAliasOperation
 
 internal class IdentityOperationExecutor(
     private val _identityBackend: IIdentityBackendService,
-    private val _identityModelStore: IdentityModelStore
+    private val _identityModelStore: IdentityModelStore,
+    private val _buildUserService: IRebuildUserService
 ) : IOperationExecutor {
 
     override val operations: List<String>
@@ -44,12 +46,24 @@ internal class IdentityOperationExecutor(
                     _identityModelStore.model.setStringProperty(lastOperation.label, lastOperation.value, ModelChangeTags.HYDRATE)
                 }
             } catch (ex: BackendException) {
-                return if (ex.statusCode == 409) {
-                    ExecutionResponse(ExecutionResult.FAIL_NORETRY)
-                } else if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
-                    ExecutionResponse(ExecutionResult.FAIL_RETRY)
-                } else {
-                    ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+                val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
+
+                return when (responseType) {
+                    NetworkUtils.ResponseStatusType.RETRYABLE ->
+                        ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                    NetworkUtils.ResponseStatusType.INVALID,
+                    NetworkUtils.ResponseStatusType.CONFLICT ->
+                        ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+                    NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                        ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                    NetworkUtils.ResponseStatusType.MISSING -> {
+                        val operations = _buildUserService.getRebuildOperationsIfCurrentUser(lastOperation.appId, lastOperation.onesignalId)
+                        if (operations == null) {
+                            return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+                        } else {
+                            return ExecutionResponse(ExecutionResult.FAIL_RETRY, operations = operations)
+                        }
+                    }
                 }
             }
         } else if (lastOperation is DeleteAliasOperation) {
@@ -61,13 +75,26 @@ internal class IdentityOperationExecutor(
                     _identityModelStore.model.setOptStringProperty(lastOperation.label, null, ModelChangeTags.HYDRATE)
                 }
             } catch (ex: BackendException) {
-                return if (ex.statusCode == 409) {
-                    // The 409 indicates the alias doesn't exist on the user it's being deleted from. This is good!
-                    ExecutionResponse(ExecutionResult.SUCCESS)
-                } else if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
-                    ExecutionResponse(ExecutionResult.FAIL_RETRY)
-                } else {
-                    ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+                val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
+
+                return when (responseType) {
+                    NetworkUtils.ResponseStatusType.RETRYABLE ->
+                        ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                    NetworkUtils.ResponseStatusType.CONFLICT ->
+                        // A conflict indicates the alias doesn't exist on the user it's being deleted from. This is good!
+                        ExecutionResponse(ExecutionResult.SUCCESS)
+                    NetworkUtils.ResponseStatusType.INVALID ->
+                        ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+                    NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                        ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                    NetworkUtils.ResponseStatusType.MISSING -> {
+                        val operations = _buildUserService.getRebuildOperationsIfCurrentUser(lastOperation.appId, lastOperation.onesignalId)
+                        if (operations == null) {
+                            return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+                        } else {
+                            return ExecutionResponse(ExecutionResult.FAIL_RETRY, operations = operations)
+                        }
+                    }
                 }
             }
         }

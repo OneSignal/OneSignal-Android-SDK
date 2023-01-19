@@ -21,6 +21,7 @@ import com.onesignal.user.internal.backend.ISubscriptionBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
+import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
 import com.onesignal.user.internal.operations.TransferSubscriptionOperation
@@ -34,7 +35,8 @@ internal class SubscriptionOperationExecutor(
     private val _deviceService: IDeviceService,
     private val _applicationService: IApplicationService,
     private val _subscriptionModelStore: SubscriptionModelStore,
-    private val _configModelStore: ConfigModelStore
+    private val _configModelStore: ConfigModelStore,
+    private val _buildUserService: IRebuildUserService
 ) : IOperationExecutor {
 
     override val operations: List<String>
@@ -111,12 +113,24 @@ internal class SubscriptionOperationExecutor(
                 mapOf(createOperation.subscriptionId to backendSubscriptionId)
             )
         } catch (ex: BackendException) {
-            return if (ex.statusCode == 409) {
-                ExecutionResponse(ExecutionResult.FAIL_NORETRY)
-            } else if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
-                ExecutionResponse(ExecutionResult.FAIL_RETRY)
-            } else {
-                ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+            val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
+
+            return when (responseType) {
+                NetworkUtils.ResponseStatusType.RETRYABLE ->
+                    ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                NetworkUtils.ResponseStatusType.CONFLICT,
+                NetworkUtils.ResponseStatusType.INVALID ->
+                    ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+                NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                    ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                NetworkUtils.ResponseStatusType.MISSING -> {
+                    val operations = _buildUserService.getRebuildOperationsIfCurrentUser(createOperation.appId, createOperation.onesignalId)
+                    if (operations == null) {
+                        return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+                    } else {
+                        return ExecutionResponse(ExecutionResult.FAIL_RETRY, operations = operations)
+                    }
+                }
             }
         }
     }
@@ -142,10 +156,16 @@ internal class SubscriptionOperationExecutor(
 
             _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription)
         } catch (ex: BackendException) {
-            return if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
-                ExecutionResponse(ExecutionResult.FAIL_RETRY)
-            } else {
-                ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+            val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
+
+            return when (responseType) {
+                NetworkUtils.ResponseStatusType.RETRYABLE ->
+                    ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                NetworkUtils.ResponseStatusType.MISSING ->
+                    // toss this, but create an identical CreateSubscriptionOperation to re-create the subscription being updated.
+                    ExecutionResponse(ExecutionResult.FAIL_NORETRY, operations = listOf(CreateSubscriptionOperation(lastOperation.appId, lastOperation.onesignalId, lastOperation.subscriptionId, lastOperation.type, lastOperation.enabled, lastOperation.address, lastOperation.status)))
+                else ->
+                    ExecutionResponse(ExecutionResult.FAIL_NORETRY)
             }
         }
 
@@ -156,10 +176,13 @@ internal class SubscriptionOperationExecutor(
         try {
             _subscriptionBackend.transferSubscription(startingOperation.appId, startingOperation.subscriptionId, IdentityConstants.ONESIGNAL_ID, startingOperation.onesignalId)
         } catch (ex: BackendException) {
-            return if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
-                ExecutionResponse(ExecutionResult.FAIL_RETRY)
-            } else {
-                ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+            val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
+
+            return when (responseType) {
+                NetworkUtils.ResponseStatusType.RETRYABLE ->
+                    ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                else ->
+                    ExecutionResponse(ExecutionResult.FAIL_NORETRY)
             }
         }
 
@@ -187,10 +210,16 @@ internal class SubscriptionOperationExecutor(
             // remove the subscription model as a HYDRATE in case for some reason it still exists.
             _subscriptionModelStore.remove(op.subscriptionId, ModelChangeTags.HYDRATE)
         } catch (ex: BackendException) {
-            return if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
-                ExecutionResponse(ExecutionResult.FAIL_RETRY)
-            } else {
-                ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+            val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
+
+            return when (responseType) {
+                NetworkUtils.ResponseStatusType.MISSING ->
+                    // if the subscription is missing, we are good!
+                    ExecutionResponse(ExecutionResult.SUCCESS)
+                NetworkUtils.ResponseStatusType.RETRYABLE ->
+                    ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                else ->
+                    ExecutionResponse(ExecutionResult.FAIL_NORETRY)
             }
         }
 
