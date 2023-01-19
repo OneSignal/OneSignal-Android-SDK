@@ -26,9 +26,17 @@
  */
 package com.onesignal.notifications.internal
 
+import com.onesignal.common.putSafe
 import com.onesignal.notifications.INotificationAction
+import org.json.JSONObject
 
 internal class NotificationAction(
     override val type: INotificationAction.ActionType,
     override val actionId: String?
-) : INotificationAction
+) : INotificationAction {
+    fun toJSONObject(): JSONObject {
+        return JSONObject()
+            .put("type", type)
+            .putSafe("actionId", actionId)
+    }
+}
