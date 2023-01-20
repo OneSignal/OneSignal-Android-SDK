@@ -1,12 +1,23 @@
 package com.onesignal.common
 
 object NetworkUtils {
-    var MAX_NETWORK_REQUEST_ATTEMPT_COUNT = 3
-    val NO_RETRY_NETWROK_REQUEST_STATUS_CODES = intArrayOf(401, 402, 403, 404, 410)
+    enum class ResponseStatusType {
+        INVALID,
+        RETRYABLE,
+        UNAUTHORIZED,
+        MISSING,
+        CONFLICT
+    }
 
-    fun shouldRetryNetworkRequest(statusCode: Int): Boolean {
-        for (code in NO_RETRY_NETWROK_REQUEST_STATUS_CODES)
-            if (statusCode == code) return false
-        return true
+    var MAX_NETWORK_REQUEST_ATTEMPT_COUNT = 3
+
+    fun getResponseStatusType(statusCode: Int): ResponseStatusType {
+        return when (statusCode) {
+            400, 402 -> ResponseStatusType.INVALID
+            401, 403 -> ResponseStatusType.UNAUTHORIZED
+            404, 410 -> ResponseStatusType.MISSING
+            409 -> ResponseStatusType.CONFLICT
+            else -> ResponseStatusType.RETRYABLE
+        }
     }
 }

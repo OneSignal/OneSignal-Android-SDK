@@ -13,6 +13,7 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.IUserBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObjectType
+import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.RefreshUserOperation
@@ -28,7 +29,8 @@ internal class RefreshUserOperationExecutor(
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
     private val _subscriptionsModelStore: SubscriptionModelStore,
-    private val _configModelStore: ConfigModelStore
+    private val _configModelStore: ConfigModelStore,
+    private val _buildUserService: IRebuildUserService
 ) : IOperationExecutor {
 
     override val operations: List<String>
@@ -116,10 +118,23 @@ internal class RefreshUserOperationExecutor(
 
             return ExecutionResponse(ExecutionResult.SUCCESS)
         } catch (ex: BackendException) {
-            return if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
-                ExecutionResponse(ExecutionResult.FAIL_RETRY)
-            } else {
-                ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+            val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
+
+            return when (responseType) {
+                NetworkUtils.ResponseStatusType.RETRYABLE ->
+                    ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                    ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                NetworkUtils.ResponseStatusType.MISSING -> {
+                    val operations = _buildUserService.getRebuildOperationsIfCurrentUser(op.appId, op.onesignalId)
+                    if (operations == null) {
+                        return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+                    } else {
+                        return ExecutionResponse(ExecutionResult.FAIL_RETRY, operations = operations)
+                    }
+                }
+                else ->
+                    ExecutionResponse(ExecutionResult.FAIL_NORETRY)
             }
         }
     }
