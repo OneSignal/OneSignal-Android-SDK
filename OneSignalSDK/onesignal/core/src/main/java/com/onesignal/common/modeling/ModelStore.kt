@@ -46,6 +46,15 @@ abstract class ModelStore<TModel>(
         addItem(model, tag)
     }
 
+    override fun add(index: Int, model: TModel, tag: String) {
+        val oldModel = _models.firstOrNull { it.id == model.id }
+        if (oldModel != null) {
+            removeItem(oldModel, tag)
+        }
+
+        addItem(model, tag, index)
+    }
+
     override fun list(): Collection<TModel> {
         return _models
     }
@@ -86,8 +95,12 @@ abstract class ModelStore<TModel>(
         }
     }
 
-    private fun addItem(model: TModel, tag: String) {
-        _models.add(model)
+    private fun addItem(model: TModel, tag: String, index: Int? = null) {
+        if (index != null) {
+            _models.add(index, model)
+        } else {
+            _models.add(model)
+        }
 
         // listen for changes to this model
         model.subscribe(this)

@@ -166,10 +166,15 @@ internal class LoginUserOperationExecutor(
 
             return ExecutionResponse(ExecutionResult.SUCCESS, idTranslations)
         } catch (ex: BackendException) {
-            return if (NetworkUtils.shouldRetryNetworkRequest(ex.statusCode)) {
-                ExecutionResponse(ExecutionResult.FAIL_RETRY)
-            } else {
-                ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+            val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
+
+            return when (responseType) {
+                NetworkUtils.ResponseStatusType.RETRYABLE ->
+                    ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                    ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                else ->
+                    ExecutionResponse(ExecutionResult.FAIL_NORETRY)
             }
         }
     }
