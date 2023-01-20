@@ -112,6 +112,11 @@ internal class HttpClient(
                 con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignalUtils.sdkVersion)
                 con.setRequestProperty("Accept", OS_ACCEPT_HEADER)
 
+                val subscriptionId = _configModelStore.model.pushSubscriptionId
+                if(subscriptionId != null && subscriptionId.isNotEmpty()) {
+                    con.setRequestProperty("OneSignal-Subscription-Id", subscriptionId)
+                }
+
                 if (jsonBody != null) {
                     con.doInput = true
                 }
