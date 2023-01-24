@@ -60,7 +60,7 @@ internal class LocationManager(
      *
      * For all cases we are calling prompt listeners.
      */
-    override suspend fun requestPermission(fallbackToSettings: Boolean): Boolean {
+    override suspend fun requestPermission(): Boolean {
         Logging.log(LogLevel.DEBUG, "LocationManager.requestPermission()")
 
         var result = false
@@ -128,12 +128,12 @@ internal class LocationManager(
                     //
                     // For each case, we call the prompt handlers
                     result = if (requestPermission != null) {
-                        _locationPermissionController.prompt(fallbackToSettings, requestPermission)
+                        _locationPermissionController.prompt(true, requestPermission)
                     } else {
                         hasCoarsePermissionGranted
                     }
                 } else if (Build.VERSION.SDK_INT >= 29 && !hasBackgroundPermissionGranted) {
-                    result = backgroundLocationPermissionLogic(fallbackToSettings)
+                    result = backgroundLocationPermissionLogic(true)
                 } else {
                     result = true
                     startGetLocation()
