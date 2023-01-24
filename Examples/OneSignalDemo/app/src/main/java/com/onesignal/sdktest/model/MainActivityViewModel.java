@@ -408,9 +408,8 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
                 @Override
                 public void onSuccess(String update) {
                     if (update != null && !update.isEmpty()) {
-                        OneSignal.login(update, Continue.with(r -> {
-                            refreshState();
-                        }));
+                        OneSignal.login(update);
+                        refreshState();
                     }
                 }
 
@@ -422,9 +421,8 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
         });
 
         logoutUserButton.setOnClickListener(v -> {
-            OneSignal.logout(Continue.with(r -> {
-                refreshState();
-            }));
+            OneSignal.logout();
+            refreshState();
         });
     }
 
@@ -791,7 +789,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
 
     private void setupPromptLocationButton() {
         promptLocationButton.setOnClickListener(v -> {
-            OneSignal.getLocation().requestPermission(true, Continue.none());
+            OneSignal.getLocation().requestPermission(Continue.none());
         });
     }
 
@@ -823,7 +821,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
 
     private void setupPromptPushButton() {
         promptPushButton.setOnClickListener(v -> {
-            OneSignal.getNotifications().requestPermission(true, Continue.none());
+            OneSignal.getUser().getPushSubscription().optIn();
         });
     }
 

@@ -91,7 +91,8 @@ object JSONConverter {
 
     fun convertToJSON(subscription: SubscriptionObject): JSONObject {
         return JSONObject()
-            .put("type", subscription.type.value)
+            .putSafe("id", subscription.id)
+            .putSafe("type", subscription.type?.value)
             .putSafe("token", subscription.token)
             .putSafe("enabled", subscription.enabled)
             .putSafe("notification_types", subscription.notificationTypes)
