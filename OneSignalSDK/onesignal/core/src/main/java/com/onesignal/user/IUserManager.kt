@@ -21,15 +21,17 @@ import com.onesignal.user.subscriptions.IPushSubscription
  */
 interface IUserManager {
     /**
-     * The 2-character language either as a detected language or explicitly set for this user. See
-     * See [Supported Languages | OneSignal](https://documentation.onesignal.com/docs/language-localization#what-languages-are-supported)
-     */
-    var language: String
-
-    /**
      * The push subscription associated to the current user.
      */
     val pushSubscription: IPushSubscription
+
+    /**
+     * Set the 2-character language either as a detected language or explicitly set for this user. See
+     * See [Supported Languages | OneSignal](https://documentation.onesignal.com/docs/language-localization#what-languages-are-supported)
+     *
+     * @param value The 2-character language string, or an empty string to use the device default.
+     */
+    fun setLanguage(value: String)
 
     /**
      * Set an alias for the current user.  If this alias already exists it will be overwritten.
@@ -55,6 +57,13 @@ interface IUserManager {
      * @param label The alias label that should no longer be set for the current user.
      */
     fun removeAlias(label: String)
+
+    /**
+     * Remove multiple aliases from the current user.
+     *
+     * @param labels The collection of alias labels, all of which will be removed from the current user.
+     */
+    fun removeAliases(labels: Collection<String>)
 
     /**
      * Add a new email subscription to the current user.

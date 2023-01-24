@@ -11,7 +11,7 @@ internal class MisconfiguredLocationManager : ILocationManager {
         get() = throw EXCEPTION
         set(value) = throw EXCEPTION
 
-    override suspend fun requestPermission(fallbackToSettings: Boolean): Boolean = throw EXCEPTION
+    override suspend fun requestPermission(): Boolean = throw EXCEPTION
 
     companion object {
         private val EXCEPTION = Exception("Must include gradle module com.onesignal:Location in order to use this functionality!")
