@@ -32,7 +32,7 @@ class TransferSubscriptionOperation() : Operation(SubscriptionOperationExecutor.
         get() = getStringProperty(::onesignalId.name)
         private set(value) { setStringProperty(::onesignalId.name, value) }
 
-    override val createComparisonKey: String get() = "$appId.Subscription.$subscriptionId.Transfer"
+    override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String get() = "$appId.Subscription.$subscriptionId.Transfer"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.NONE
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId) && !IDManager.isLocalId(subscriptionId)

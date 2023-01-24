@@ -75,7 +75,7 @@ internal class SubscriptionOperationExecutor(
 
         try {
             val subscription = SubscriptionObject(
-                createOperation.subscriptionId,
+                id = null,
                 convert(createOperation.type),
                 address,
                 enabled,
@@ -140,7 +140,7 @@ internal class SubscriptionOperationExecutor(
         val lastOperation = operations.last() as UpdateSubscriptionOperation
         try {
             val subscription = SubscriptionObject(
-                lastOperation.subscriptionId,
+                id = null,
                 convert(lastOperation.type),
                 lastOperation.address,
                 lastOperation.enabled,
