@@ -47,7 +47,7 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String = ""
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.CREATE
-    override val canStartExecute: Boolean = existingOnesignalId == null || !IDManager.isLocalId(existingOnesignalId!!)
+    override val canStartExecute: Boolean get() = existingOnesignalId == null || !IDManager.isLocalId(existingOnesignalId!!)
 
     constructor(appId: String, onesignalId: String, externalId: String?, existingOneSignalId: String? = null) : this() {
         this.appId = appId
