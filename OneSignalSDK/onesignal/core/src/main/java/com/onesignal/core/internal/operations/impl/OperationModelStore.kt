@@ -15,6 +15,7 @@ import com.onesignal.user.internal.operations.SetTagOperation
 import com.onesignal.user.internal.operations.TrackPurchaseOperation
 import com.onesignal.user.internal.operations.TrackSessionEndOperation
 import com.onesignal.user.internal.operations.TrackSessionStartOperation
+import com.onesignal.user.internal.operations.TransferSubscriptionOperation
 import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
 import com.onesignal.user.internal.operations.impl.executors.IdentityOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.LoginUserOperationExecutor
@@ -45,6 +46,7 @@ internal class OperationModelStore(prefs: IPreferencesService) : ModelStore<Oper
             SubscriptionOperationExecutor.CREATE_SUBSCRIPTION -> CreateSubscriptionOperation()
             SubscriptionOperationExecutor.UPDATE_SUBSCRIPTION -> UpdateSubscriptionOperation()
             SubscriptionOperationExecutor.DELETE_SUBSCRIPTION -> DeleteSubscriptionOperation()
+            SubscriptionOperationExecutor.TRANSFER_SUBSCRIPTION -> TransferSubscriptionOperation()
             LoginUserOperationExecutor.LOGIN_USER -> LoginUserOperation()
             RefreshUserOperationExecutor.REFRESH_USER -> RefreshUserOperation()
             UpdateUserOperationExecutor.SET_TAG -> SetTagOperation()

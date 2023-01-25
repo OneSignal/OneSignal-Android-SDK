@@ -1,8 +1,8 @@
 package com.onesignal.user.internal.backend
 
 class SubscriptionObject(
-    val id: String,
-    val type: SubscriptionObjectType,
+    val id: String? = null,
+    val type: SubscriptionObjectType? = null,
     val token: String? = null,
     val enabled: Boolean? = null,
     val notificationTypes: Int? = null,

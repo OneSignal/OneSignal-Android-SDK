@@ -145,7 +145,7 @@ object OneSignal {
      * @param externalId The external ID of the user that is to be logged in.
      */
     @JvmStatic
-    suspend fun login(externalId: String) = oneSignal.login(externalId)
+    fun login(externalId: String) = oneSignal.login(externalId)
 
     /**
      * Login to OneSignal under the user identified by the [externalId] provided. The act of
@@ -169,7 +169,7 @@ object OneSignal {
      * [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
      */
     @JvmStatic
-    suspend fun login(externalId: String, jwtBearerToken: String? = null) = oneSignal.login(externalId, jwtBearerToken)
+    fun login(externalId: String, jwtBearerToken: String? = null) = oneSignal.login(externalId, jwtBearerToken)
 
     /**
      * Logout the user previously logged in via [login]. The [User] property now references
@@ -178,7 +178,7 @@ object OneSignal {
      * data is not cleared.
      */
     @JvmStatic
-    suspend fun logout() = oneSignal.logout()
+    fun logout() = oneSignal.logout()
 
     private val oneSignal: IOneSignal by lazy {
         OneSignalImp()

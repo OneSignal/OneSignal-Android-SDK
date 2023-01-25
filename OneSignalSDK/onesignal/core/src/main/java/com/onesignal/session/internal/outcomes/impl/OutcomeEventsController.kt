@@ -173,7 +173,6 @@ Outcome event was cached and will be reattempted on app cold start"""
                 InfluenceType.UNATTRIBUTED -> unattributed = true
                 InfluenceType.DISABLED -> {
                     Logging.verbose("OutcomeEventsController.sendAndCreateOutcomeEvent: Outcomes disabled for channel: " + influence.influenceChannel)
-                    return null // finish method
                 }
             }
         }
