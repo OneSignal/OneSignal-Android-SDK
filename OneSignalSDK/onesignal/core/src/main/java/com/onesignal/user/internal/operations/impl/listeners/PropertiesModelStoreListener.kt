@@ -22,6 +22,15 @@ internal class PropertiesModelStoreListener(
     }
 
     override fun getUpdateOperation(model: PropertiesModel, path: String, property: String, oldValue: Any?, newValue: Any?): Operation? {
+        // for any of the property changes, we do not need to fire an operation.
+        if (path.startsWith(PropertiesModel::locationTimestamp.name) ||
+            path.startsWith(PropertiesModel::locationBackground.name) ||
+            path.startsWith(PropertiesModel::locationType.name) ||
+            path.startsWith(PropertiesModel::locationAccuracy.name)
+        ) {
+            return null
+        }
+
         if (path.startsWith(PropertiesModel::tags.name)) {
             return if (newValue != null && newValue is String) {
                 SetTagOperation(_configModelStore.model.appId, model.onesignalId, property, newValue)

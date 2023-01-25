@@ -16,7 +16,9 @@ internal open class PushSubscription(
         get() = model.optedIn && model.status != SubscriptionStatus.NO_PERMISSION
 
     override fun optIn() {
-        model.optedIn = true
+        // we set `optedIn` using the lower level method so we can set `forceChange=true`, which
+        // will result in *always* driving change notification.
+        model.setBooleanProperty(SubscriptionModel::optedIn.name, true, forceChange = true)
     }
 
     override fun optOut() {

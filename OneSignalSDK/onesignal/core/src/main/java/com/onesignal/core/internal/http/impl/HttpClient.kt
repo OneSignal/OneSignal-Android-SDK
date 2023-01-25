@@ -112,7 +112,7 @@ internal class HttpClient(
                 con.setRequestProperty("Accept", OS_ACCEPT_HEADER)
 
                 val subscriptionId = _configModelStore.model.pushSubscriptionId
-                if(subscriptionId != null && subscriptionId.isNotEmpty()) {
+                if (subscriptionId != null && subscriptionId.isNotEmpty()) {
                     con.setRequestProperty("OneSignal-Subscription-Id", subscriptionId)
                 }
 

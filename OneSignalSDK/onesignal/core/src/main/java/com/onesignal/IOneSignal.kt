@@ -104,8 +104,8 @@ interface IOneSignal {
      * trust for the login operation.  Required when identity verification has been enabled. See
      * [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
      */
-    suspend fun login(externalId: String, jwtBearerToken: String? = null)
-    suspend fun login(externalId: String) = login(externalId, null)
+    fun login(externalId: String, jwtBearerToken: String? = null)
+    fun login(externalId: String) = login(externalId, null)
 
     /**
      * Logout the user previously logged in via [login]. The [User] property now references
@@ -113,5 +113,5 @@ interface IOneSignal {
      * be retrieved, except through this device as long as the app remains installed and the app
      * data is not cleared.
      */
-    suspend fun logout()
+    fun logout()
 }
