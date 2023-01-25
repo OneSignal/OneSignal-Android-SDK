@@ -161,33 +161,33 @@ open class Model(
      */
     protected open fun createListForProperty(property: String, jsonArray: JSONArray): List<*>? = null
 
-    inline fun <reified T : Enum<T>> setEnumProperty(name: String, value: T, tag: String = ModelChangeTags.NORMAL) = setOptEnumProperty(name, value, tag)
-    fun <T> setMapModelProperty(name: String, value: MapModel<T>, tag: String = ModelChangeTags.NORMAL) = setOptMapModelProperty(name, value, tag)
-    fun <T> setListProperty(name: String, value: List<T>, tag: String = ModelChangeTags.NORMAL) = setOptListProperty(name, value, tag)
-    fun setStringProperty(name: String, value: String, tag: String = ModelChangeTags.NORMAL) = setOptStringProperty(name, value, tag)
-    fun setBooleanProperty(name: String, value: Boolean, tag: String = ModelChangeTags.NORMAL) = setOptBooleanProperty(name, value, tag)
-    fun setLongProperty(name: String, value: Long, tag: String = ModelChangeTags.NORMAL) = setOptLongProperty(name, value, tag)
-    fun setDoubleProperty(name: String, value: Double, tag: String = ModelChangeTags.NORMAL) = setOptDoubleProperty(name, value, tag)
-    fun setFloatProperty(name: String, value: Float, tag: String = ModelChangeTags.NORMAL) = setOptFloatProperty(name, value, tag)
-    fun setIntProperty(name: String, value: Int, tag: String = ModelChangeTags.NORMAL) = setOptIntProperty(name, value, tag)
-    fun setBigDecimalProperty(name: String, value: BigDecimal, tag: String = ModelChangeTags.NORMAL) = setOptBigDecimalProperty(name, value, tag)
-    fun setAnyProperty(name: String, value: Any, tag: String = ModelChangeTags.NORMAL) = setOptAnyProperty(name, value, tag)
+    inline fun <reified T : Enum<T>> setEnumProperty(name: String, value: T, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptEnumProperty(name, value, tag, forceChange)
+    fun <T> setMapModelProperty(name: String, value: MapModel<T>, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptMapModelProperty(name, value, tag, forceChange)
+    fun <T> setListProperty(name: String, value: List<T>, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptListProperty(name, value, tag, forceChange)
+    fun setStringProperty(name: String, value: String, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptStringProperty(name, value, tag, forceChange)
+    fun setBooleanProperty(name: String, value: Boolean, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptBooleanProperty(name, value, tag, forceChange)
+    fun setLongProperty(name: String, value: Long, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptLongProperty(name, value, tag, forceChange)
+    fun setDoubleProperty(name: String, value: Double, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptDoubleProperty(name, value, tag, forceChange)
+    fun setFloatProperty(name: String, value: Float, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptFloatProperty(name, value, tag, forceChange)
+    fun setIntProperty(name: String, value: Int, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptIntProperty(name, value, tag, forceChange)
+    fun setBigDecimalProperty(name: String, value: BigDecimal, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptBigDecimalProperty(name, value, tag, forceChange)
+    fun setAnyProperty(name: String, value: Any, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value, tag, forceChange)
 
-    inline fun <reified T : Enum<T>> setOptEnumProperty(name: String, value: T?, tag: String = ModelChangeTags.NORMAL) = setOptAnyProperty(name, value?.toString(), tag)
-    fun <T> setOptMapModelProperty(name: String, value: MapModel<T>?, tag: String = ModelChangeTags.NORMAL) = setOptAnyProperty(name, value, tag)
-    fun <T> setOptListProperty(name: String, value: List<T>?, tag: String = ModelChangeTags.NORMAL) = setOptAnyProperty(name, value, tag)
-    fun setOptStringProperty(name: String, value: String?, tag: String = ModelChangeTags.NORMAL) = setOptAnyProperty(name, value, tag)
-    fun setOptBooleanProperty(name: String, value: Boolean?, tag: String = ModelChangeTags.NORMAL) = setOptAnyProperty(name, value, tag)
-    fun setOptLongProperty(name: String, value: Long?, tag: String = ModelChangeTags.NORMAL) = setOptAnyProperty(name, value, tag)
-    fun setOptDoubleProperty(name: String, value: Double?, tag: String = ModelChangeTags.NORMAL) = setOptAnyProperty(name, value, tag)
-    fun setOptFloatProperty(name: String, value: Float?, tag: String = ModelChangeTags.NORMAL) = setOptAnyProperty(name, value, tag)
-    fun setOptIntProperty(name: String, value: Int?, tag: String = ModelChangeTags.NORMAL) = setOptAnyProperty(name, value, tag)
-    fun setOptBigDecimalProperty(name: String, value: BigDecimal?, tag: String = ModelChangeTags.NORMAL) = setOptAnyProperty(name, value?.toString(), tag)
+    inline fun <reified T : Enum<T>> setOptEnumProperty(name: String, value: T?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value?.toString(), tag, forceChange)
+    fun <T> setOptMapModelProperty(name: String, value: MapModel<T>?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value, tag, forceChange)
+    fun <T> setOptListProperty(name: String, value: List<T>?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value, tag, forceChange)
+    fun setOptStringProperty(name: String, value: String?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value, tag, forceChange)
+    fun setOptBooleanProperty(name: String, value: Boolean?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value, tag, forceChange)
+    fun setOptLongProperty(name: String, value: Long?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value, tag, forceChange)
+    fun setOptDoubleProperty(name: String, value: Double?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value, tag, forceChange)
+    fun setOptFloatProperty(name: String, value: Float?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value, tag, forceChange)
+    fun setOptIntProperty(name: String, value: Int?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value, tag, forceChange)
+    fun setOptBigDecimalProperty(name: String, value: BigDecimal?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value?.toString(), tag, forceChange)
 
-    fun setOptAnyProperty(name: String, value: Any?, tag: String = ModelChangeTags.NORMAL) {
+    fun setOptAnyProperty(name: String, value: Any?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) {
         val oldValue = data[name]
 
-        if (oldValue == value) {
+        if (oldValue == value && !forceChange) {
             return
         }
 

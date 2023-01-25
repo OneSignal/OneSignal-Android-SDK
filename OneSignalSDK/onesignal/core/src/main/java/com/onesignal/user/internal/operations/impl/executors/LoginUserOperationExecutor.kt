@@ -30,6 +30,7 @@ import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.operations.SetAliasOperation
 import com.onesignal.user.internal.operations.SetPropertyOperation
 import com.onesignal.user.internal.operations.SetTagOperation
+import com.onesignal.user.internal.operations.TransferSubscriptionOperation
 import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
@@ -117,6 +118,7 @@ internal class LoginUserOperationExecutor(
                 is SetAliasOperation -> identities = createIdentityFromOperation(operation, identities)
                 is DeleteAliasOperation -> identities = createIdentityFromOperation(operation, identities)
                 is CreateSubscriptionOperation -> subscriptions = createSubscriptionsFromOperation(operation, subscriptions)
+                is TransferSubscriptionOperation -> subscriptions = createSubscriptionsFromOperation(operation, subscriptions)
                 is UpdateSubscriptionOperation -> subscriptions = createSubscriptionsFromOperation(operation, subscriptions)
                 is DeleteSubscriptionOperation -> subscriptions = createSubscriptionsFromOperation(operation, subscriptions)
                 is SetTagOperation -> propertiesObject = PropertyOperationHelper.createPropertiesFromOperation(operation, propertiesObject)
@@ -126,8 +128,8 @@ internal class LoginUserOperationExecutor(
         }
 
         try {
-            val subscriptionList = subscriptions.values.toList()
-            val response = _userBackend.createUser(createUserOperation.appId, identities, propertiesObject, subscriptionList)
+            val subscriptionList = subscriptions.toList()
+            val response = _userBackend.createUser(createUserOperation.appId, identities, propertiesObject, subscriptionList.map { it.second })
             val idTranslations = mutableMapOf<String, String>()
             // Add the "local-to-backend" ID translation to the IdentifierTranslator for any operations that were
             // *not* executed but still reference the locally-generated IDs.
@@ -154,13 +156,13 @@ internal class LoginUserOperationExecutor(
 
                 val backendSubscription = response.subscriptions[index]
 
-                idTranslations[subscriptionList[index].id] = backendSubscription.id
+                idTranslations[subscriptionList[index].first] = backendSubscription.id!!
 
-                if (_configModelStore.model.pushSubscriptionId == subscriptionList[index].id) {
+                if (_configModelStore.model.pushSubscriptionId == subscriptionList[index].first) {
                     _configModelStore.model.pushSubscriptionId = backendSubscription.id
                 }
 
-                val subscriptionModel = _subscriptionsModelStore.get(subscriptionList[index].id)
+                val subscriptionModel = _subscriptionsModelStore.get(subscriptionList[index].first)
                 subscriptionModel?.setStringProperty(SubscriptionModel::id.name, backendSubscription.id, ModelChangeTags.HYDRATE)
             }
 
@@ -191,6 +193,30 @@ internal class LoginUserOperationExecutor(
         return mutableIdentity
     }
 
+    private fun createSubscriptionsFromOperation(operation: TransferSubscriptionOperation, subscriptions: Map<String, SubscriptionObject>): Map<String, SubscriptionObject> {
+        val mutableSubscriptions = subscriptions.toMutableMap()
+        if (mutableSubscriptions.containsKey(operation.subscriptionId)) {
+            mutableSubscriptions[operation.subscriptionId] = SubscriptionObject(
+                operation.subscriptionId,
+                subscriptions[operation.subscriptionId]!!.type,
+                subscriptions[operation.subscriptionId]!!.token,
+                subscriptions[operation.subscriptionId]!!.enabled,
+                subscriptions[operation.subscriptionId]!!.notificationTypes,
+                subscriptions[operation.subscriptionId]!!.sdk,
+                subscriptions[operation.subscriptionId]!!.deviceModel,
+                subscriptions[operation.subscriptionId]!!.deviceOS,
+                subscriptions[operation.subscriptionId]!!.rooted,
+                subscriptions[operation.subscriptionId]!!.netType,
+                subscriptions[operation.subscriptionId]!!.carrier,
+                subscriptions[operation.subscriptionId]!!.appVersion
+            )
+        } else {
+            mutableSubscriptions[operation.subscriptionId] = SubscriptionObject(operation.subscriptionId)
+        }
+
+        return mutableSubscriptions
+    }
+
     private fun createSubscriptionsFromOperation(operation: CreateSubscriptionOperation, subscriptions: Map<String, SubscriptionObject>): Map<String, SubscriptionObject> {
         val mutableSubscriptions = subscriptions.toMutableMap()
         val subscriptionType: SubscriptionObjectType = when (operation.type) {
@@ -198,14 +224,14 @@ internal class LoginUserOperationExecutor(
                 SubscriptionObjectType.SMS
             }
             SubscriptionType.EMAIL -> {
-                SubscriptionObjectType.SMS
+                SubscriptionObjectType.EMAIL
             }
             else -> {
                 SubscriptionObjectType.fromDeviceType(_deviceService.deviceType)
             }
         }
         mutableSubscriptions[operation.subscriptionId] = SubscriptionObject(
-            operation.subscriptionId,
+            id = null,
             subscriptionType,
             operation.address,
             operation.enabled,
@@ -226,7 +252,7 @@ internal class LoginUserOperationExecutor(
         val mutableSubscriptions = subscriptions.toMutableMap()
         if (mutableSubscriptions.containsKey(operation.subscriptionId)) {
             mutableSubscriptions[operation.subscriptionId] = SubscriptionObject(
-                operation.subscriptionId,
+                subscriptions[operation.subscriptionId]!!.id,
                 subscriptions[operation.subscriptionId]!!.type,
                 operation.address,
                 operation.enabled,
@@ -240,7 +266,7 @@ internal class LoginUserOperationExecutor(
                 subscriptions[operation.subscriptionId]!!.appVersion
             )
         }
-        // TODO: Is it possible for the Create to be after the Update?
+
         return mutableSubscriptions
     }
 

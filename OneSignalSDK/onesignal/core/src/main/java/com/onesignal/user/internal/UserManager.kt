@@ -23,10 +23,6 @@ internal open class UserManager(
     val externalId: String?
         get() = _identityModel.externalId
 
-    override var language: String
-        get() = _languageContext.language
-        set(value) { _languageContext.language = value }
-
     val tags: Map<String, String>
         get() = _propertiesModel.tags
 
@@ -44,6 +40,10 @@ internal open class UserManager(
 
     private val _propertiesModel: PropertiesModel
         get() = _propertiesModelStore.model
+
+    override fun setLanguage(value: String) {
+        _languageContext.language = value
+    }
 
     override fun addAlias(label: String, id: String) {
         Logging.log(LogLevel.DEBUG, "setAlias(label: $label, id: $id)")
@@ -75,6 +75,14 @@ internal open class UserManager(
         }
 
         _identityModel.remove(label)
+    }
+
+    override fun removeAliases(labels: Collection<String>) {
+        Logging.log(LogLevel.DEBUG, "removeAliases(labels: $labels)")
+
+        labels.forEach {
+            _identityModel.remove(it)
+        }
     }
 
     override fun addEmailSubscription(email: String) {

@@ -141,7 +141,7 @@ internal class BackgroundManager(
             if (_nextScheduledSyncTimeMs != 0L &&
                 _time.currentTimeMillis + delayMs > _nextScheduledSyncTimeMs
             ) {
-                Logging.verbose("OSSyncService scheduleSyncTask already update scheduled nextScheduledSyncTimeMs: $_nextScheduledSyncTimeMs")
+                Logging.debug("OSSyncService scheduleSyncTask already update scheduled nextScheduledSyncTimeMs: $_nextScheduledSyncTimeMs")
                 return
             }
             if (delayMs < 5000) delayMs = 5000
@@ -180,7 +180,7 @@ internal class BackgroundManager(
 
     @RequiresApi(21)
     private fun scheduleSyncServiceAsJob(delayMs: Long) {
-        Logging.verbose("OSBackgroundSync scheduleSyncServiceAsJob:atTime: $delayMs")
+        Logging.debug("OSBackgroundSync scheduleSyncServiceAsJob:atTime: $delayMs")
         if (isJobIdRunning()) {
             Logging.verbose("OSBackgroundSync scheduleSyncServiceAsJob Scheduler already running!")
             // If a JobScheduler is schedule again while running it will stop current job. We will schedule again when finished.
