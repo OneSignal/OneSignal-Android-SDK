@@ -2,6 +2,7 @@ package com.onesignal.user.internal.backend.impl
 
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.safeJSONObject
+import com.onesignal.common.toMap
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.user.internal.backend.ISubscriptionBackendService
 import com.onesignal.user.internal.backend.SubscriptionObject
@@ -59,5 +60,17 @@ internal class SubscriptionBackendService(
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload)
         }
+    }
+
+    override suspend fun getIdentityFromSubscription(appId: String, subscriptionId: String): Map<String, String> {
+        val response = _httpClient.get("apps/$appId/subscriptions/$subscriptionId/user/identity")
+
+        if (!response.isSuccess) {
+            throw BackendException(response.statusCode, response.payload)
+        }
+
+        val responseJSON = JSONObject(response.payload!!)
+        val identityJSON = responseJSON.safeJSONObject("identity")
+        return identityJSON?.toMap()?.mapValues { it.value.toString() } ?: mapOf()
     }
 }

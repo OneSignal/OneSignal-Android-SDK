@@ -134,6 +134,17 @@ object PreferencePlayerPurchasesKeys {
 }
 
 object PreferenceOneSignalKeys {
+    // Legacy
+    /**
+     * (String) The legacy player ID from SDKs prior to 5.
+     */
+    const val PREFS_LEGACY_PLAYER_ID = "GT_PLAYER_ID"
+
+    /**
+     * (String) The legacy player sync values from SDKS prior to 5.
+     */
+    const val PREFS_LEGACY_USER_SYNCVALUES = "ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE"
+
     // Location
     /**
      * (Long) The last time the device location was captured, in Unix time milliseconds.

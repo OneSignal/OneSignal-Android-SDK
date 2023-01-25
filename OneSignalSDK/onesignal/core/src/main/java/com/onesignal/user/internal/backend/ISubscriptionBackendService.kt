@@ -44,4 +44,14 @@ interface ISubscriptionBackendService {
      * @param aliasValue The identifier within the [aliasLabel] that identifies the user to transfer under.
      */
     suspend fun transferSubscription(appId: String, subscriptionId: String, aliasLabel: String, aliasValue: String)
+
+    /**
+     * Given an existing subscription, retrieve all identities associated to it.
+     *
+     * @param appId The ID of the OneSignal application this subscription exists under.
+     * @param subscriptionId The ID of the subscription to retrieve identities for.
+     *
+     * @return The identities associated to the subscription.
+     */
+    suspend fun getIdentityFromSubscription(appId: String, subscriptionId: String) : Map<String, String>
 }
