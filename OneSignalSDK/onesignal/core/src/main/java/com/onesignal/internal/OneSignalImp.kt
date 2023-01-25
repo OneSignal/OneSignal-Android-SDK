@@ -9,6 +9,7 @@ import com.onesignal.common.modules.IModule
 import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.CoreModule
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
@@ -34,15 +35,13 @@ import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.operations.RefreshUserOperation
+import com.onesignal.user.internal.operations.TransferSubscriptionOperation
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.yield
 
 internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val sdkVersion: String = OneSignalUtils.sdkVersion
@@ -96,7 +95,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     private var _requiresPrivacyConsent: Boolean? = null
     private var _givenPrivacyConsent: Boolean? = null
     private var _disableGMSMissingPrompt: Boolean? = null
-    private val _loginMutex: Mutex = Mutex()
+    private val _loginLock: Any = Any()
 
     private val _listOfModules = listOf(
         "com.onesignal.notifications.NotificationsModule",
@@ -201,31 +200,45 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         isInitialized = true
     }
 
-    override suspend fun login(externalId: String, jwtBearerToken: String?) {
+    override fun login(externalId: String, jwtBearerToken: String?) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
         if (!isInitialized) {
             throw Exception("Must call 'initWithContext' before use")
         }
 
+        var currentIdentityExternalId: String? = null
+        var currentIdentityOneSignalId: String? = null
+        var newIdentityOneSignalId: String = ""
+
         // only allow one login/logout at a time
-        _loginMutex.withLock {
-            val currentIdentityExternalId = _identityModelStore!!.model.externalId
-            val currentIdentityOneSignalId = _identityModelStore!!.model.onesignalId
+        synchronized(_loginLock) {
+            currentIdentityExternalId = _identityModelStore!!.model.externalId
+            currentIdentityOneSignalId = _identityModelStore!!.model.onesignalId
 
             if (currentIdentityExternalId == externalId) {
                 // login is for same user that is already logged in, fetch (refresh)
                 // the current user.
-                _operationRepo!!.enqueueAndWait(RefreshUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId), true)
+                _operationRepo!!.enqueue(
+                    RefreshUserOperation(
+                        _configModel!!.appId,
+                        _identityModelStore!!.model.onesignalId
+                    ),
+                    true
+                )
                 return
             }
 
             // TODO: Set JWT Token for all future requests.
-
             createAndSwitchToNewUser { identityModel, _ ->
                 identityModel.externalId = externalId
             }
 
+            newIdentityOneSignalId = _identityModelStore!!.model.onesignalId
+        }
+
+        // on a background thread enqueue the login/fetch of the new user
+        suspendifyOnThread {
             // We specify an "existingOneSignalId" here when the current user is anonymous to
             // allow this login to attempt a "conversion" of the anonymous user.  We also
             // wait for the LoginUserOperation operation to execute, which can take a *very* long
@@ -235,7 +248,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             val result = _operationRepo!!.enqueueAndWait(
                 LoginUserOperation(
                     _configModel!!.appId,
-                    _identityModelStore!!.model.onesignalId,
+                    newIdentityOneSignalId,
                     externalId,
                     if (currentIdentityExternalId == null) currentIdentityOneSignalId else null
                 ),
@@ -246,32 +259,42 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 throw Exception("Could not login user")
             }
 
-            // enqueue a GetUserOperation to pull the user from the backend and refresh the models.
+            // enqueue a RefreshUserOperation to pull the user from the backend and refresh the models.
             // This is a separate enqueue operation to ensure any outstanding operations that happened
             // after the createAndSwitchToNewUser have been executed, and the retrieval will be the
             // most up to date reflection of the user.
-            _operationRepo!!.enqueueAndWait(RefreshUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId), true)
+            _operationRepo!!.enqueueAndWait(
+                RefreshUserOperation(
+                    _configModel!!.appId,
+                    _identityModelStore!!.model.onesignalId
+                ),
+                true
+            )
         }
     }
 
-    override suspend fun logout() {
+    override fun logout() {
         Logging.log(LogLevel.DEBUG, "logout()")
 
         if (!isInitialized) {
             throw Exception("Must call 'initWithContext' before use")
         }
 
-        // if the mutex is free there is no suspend, so we yield to force a suspend.
-        yield()
-
         // only allow one login/logout at a time
-        _loginMutex.withLock {
+        synchronized(_loginLock) {
             if (_identityModelStore!!.model.externalId == null) {
                 return
             }
 
             createAndSwitchToNewUser()
-            _operationRepo!!.enqueue(LoginUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId, _identityModelStore!!.model.externalId))
+            _operationRepo!!.enqueue(
+                LoginUserOperation(
+                    _configModel!!.appId,
+                    _identityModelStore!!.model.onesignalId,
+                    _identityModelStore!!.model.externalId
+                )
+            )
+
             // TODO: remove JWT Token for all future requests.
         }
     }
@@ -321,7 +344,13 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         _subscriptionModelStore!!.clear(ModelChangeTags.NO_PROPOGATE)
         _identityModelStore!!.replace(identityModel)
         _propertiesModelStore!!.replace(propertiesModel)
-        _subscriptionModelStore!!.replaceAll(subscriptions)
+
+        if (currentPushSubscription != null) {
+            _operationRepo!!.enqueue(TransferSubscriptionOperation(_configModel!!.appId, currentPushSubscription.id, sdkId))
+            _subscriptionModelStore!!.replaceAll(subscriptions, ModelChangeTags.NO_PROPOGATE)
+        } else {
+            _subscriptionModelStore!!.replaceAll(subscriptions)
+        }
     }
 
     override fun <T> hasService(c: Class<T>): Boolean = _services.hasService(c)
