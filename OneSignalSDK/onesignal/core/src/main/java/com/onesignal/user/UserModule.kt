@@ -15,6 +15,7 @@ import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.builduser.impl.RebuildUserService
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.impl.executors.IdentityOperationExecutor
+import com.onesignal.user.internal.operations.impl.executors.LoginUserFromSubscriptionOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.LoginUserOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.RefreshUserOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
@@ -57,6 +58,7 @@ internal class UserModule : IModule {
             .provides<UpdateUserOperationExecutor>()
             .provides<IOperationExecutor>()
         builder.register<LoginUserOperationExecutor>().provides<IOperationExecutor>()
+        builder.register<LoginUserFromSubscriptionOperationExecutor>().provides<IOperationExecutor>()
         builder.register<RefreshUserOperationExecutor>().provides<IOperationExecutor>()
         builder.register<UserManager>().provides<IUserManager>()
     }

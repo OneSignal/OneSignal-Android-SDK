@@ -6,6 +6,7 @@ import com.onesignal.common.IDManager
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modules.IModule
+import com.onesignal.common.safeString
 import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
@@ -16,6 +17,9 @@ import com.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
+import com.onesignal.core.internal.preferences.IPreferencesService
+import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
+import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.core.internal.startup.StartupService
 import com.onesignal.debug.IDebugManager
 import com.onesignal.debug.LogLevel
@@ -33,6 +37,7 @@ import com.onesignal.user.UserModule
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.operations.LoginUserFromSubscriptionOperation
 import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.operations.RefreshUserOperation
 import com.onesignal.user.internal.operations.TransferSubscriptionOperation
@@ -42,6 +47,7 @@ import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
+import org.json.JSONObject
 
 internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val sdkVersion: String = OneSignalUtils.sdkVersion
@@ -87,6 +93,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     private var _propertiesModelStore: PropertiesModelStore? = null
     private var _subscriptionModelStore: SubscriptionModelStore? = null
     private var _startupService: StartupService? = null
+    private var _preferencesService: IPreferencesService? = null
 
     // Other State
     private val _services: ServiceProvider
@@ -182,14 +189,48 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         _propertiesModelStore = _services.getService()
         _identityModelStore = _services.getService()
         _subscriptionModelStore = _services.getService()
+        _preferencesService = _services.getService()
 
         // Instantiate and call the IStartableServices
         _startupService = _services.getService()
         _startupService!!.bootstrap()
 
         if (forceCreateUser || !_identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)) {
-            createAndSwitchToNewUser()
-            _operationRepo!!.enqueue(LoginUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId, _identityModelStore!!.model.externalId))
+            val legacyPlayerId = _preferencesService!!.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID)
+            if(legacyPlayerId == null) {
+                Logging.debug("initWithContext: creating new device-scoped user")
+                createAndSwitchToNewUser()
+                _operationRepo!!.enqueue(LoginUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId, _identityModelStore!!.model.externalId))
+            }
+            else {
+                Logging.debug("initWithContext: creating user linked to subscription $legacyPlayerId")
+
+                // Converting a 4.x SDK to the 5.x SDK.  We pull the legacy user sync values to create the subscription model, then enqueue
+                // a specialized `LoginUserFromSubscriptionOperation`, which will drive fetching/refreshing of the local user
+                // based on the subscription ID we do have.
+                val legacyUserSyncString = _preferencesService!!.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_USER_SYNCVALUES)
+                var suppressBackendOperation = false
+
+                if(legacyUserSyncString != null) {
+                    val legacyUserSyncJSON = JSONObject(legacyUserSyncString)
+                    val notificationTypes = legacyUserSyncJSON.getInt("notification_types")
+
+                    val pushSubscriptionModel = SubscriptionModel()
+                    pushSubscriptionModel.id = legacyPlayerId
+                    pushSubscriptionModel.type = SubscriptionType.PUSH
+                    pushSubscriptionModel.optedIn = notificationTypes != SubscriptionStatus.NO_PERMISSION.value && notificationTypes != SubscriptionStatus.UNSUBSCRIBE.value
+                    pushSubscriptionModel.address = legacyUserSyncJSON.safeString("identifier") ?: ""
+                    pushSubscriptionModel.status = SubscriptionStatus.fromInt(notificationTypes) ?: SubscriptionStatus.NO_PERMISSION
+                    _configModel!!.pushSubscriptionId = legacyPlayerId
+                    _subscriptionModelStore!!.add(pushSubscriptionModel, ModelChangeTags.NO_PROPOGATE)
+                    suppressBackendOperation = true
+                }
+
+                createAndSwitchToNewUser(suppressBackendOperation = suppressBackendOperation)
+
+                _operationRepo!!.enqueue(LoginUserFromSubscriptionOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId, legacyPlayerId))
+                _preferencesService!!.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID, null)
+            }
         } else {
             Logging.debug("initWithContext: using cached user ${_identityModelStore!!.model.onesignalId}")
             _operationRepo!!.enqueue(RefreshUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId))
@@ -299,7 +340,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         }
     }
 
-    private fun createAndSwitchToNewUser(modify: ((identityModel: IdentityModel, propertiesModel: PropertiesModel) -> Unit)? = null) {
+    private fun createAndSwitchToNewUser(suppressBackendOperation: Boolean = false, modify: ((identityModel: IdentityModel, propertiesModel: PropertiesModel) -> Unit)? = null) {
         Logging.debug("createAndSwitchToNewUser()")
 
         // create a new identity and properties model locally
@@ -345,7 +386,10 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         _identityModelStore!!.replace(identityModel)
         _propertiesModelStore!!.replace(propertiesModel)
 
-        if (currentPushSubscription != null) {
+        if (suppressBackendOperation) {
+            _subscriptionModelStore!!.replaceAll(subscriptions, ModelChangeTags.NO_PROPOGATE)
+        }
+        else if (currentPushSubscription != null) {
             _operationRepo!!.enqueue(TransferSubscriptionOperation(_configModel!!.appId, currentPushSubscription.id, sdkId))
             _subscriptionModelStore!!.replaceAll(subscriptions, ModelChangeTags.NO_PROPOGATE)
         } else {
