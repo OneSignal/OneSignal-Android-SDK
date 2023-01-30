@@ -70,28 +70,28 @@ interface IUserManager {
      *
      * @param email The email address that the current user has subscribed for.
      */
-    fun addEmailSubscription(email: String)
+    fun addEmail(email: String)
 
     /**
      * Remove an email subscription from the current user.
      *
      * @param email The email address that the current user was subscribed for, and should no longer be.
      */
-    fun removeEmailSubscription(email: String)
+    fun removeEmail(email: String)
 
     /**
      * Add a new SMS subscription to the current user.
      *
      * @param sms The phone number that the current user has subscribed for, in [E.164](https://documentation.onesignal.com/docs/sms-faq#what-is-the-e164-format) format.
      */
-    fun addSmsSubscription(sms: String)
+    fun addSms(sms: String)
 
     /**
      * Remove an SMS subscription from the current user.
      *
      * @param sms The sms address that the current user was subscribed for, and should no longer be.
      */
-    fun removeSmsSubscription(sms: String)
+    fun removeSms(sms: String)
 
     /**
      * Add a tag for the current user.  Tags are key:value pairs used as building blocks

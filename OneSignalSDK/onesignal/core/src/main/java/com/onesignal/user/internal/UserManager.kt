@@ -1,5 +1,6 @@
 package com.onesignal.user.internal
 
+import com.onesignal.common.OneSignalUtils
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -48,8 +49,12 @@ internal open class UserManager(
     override fun addAlias(label: String, id: String) {
         Logging.log(LogLevel.DEBUG, "setAlias(label: $label, id: $id)")
 
+        if(label.isEmpty()) {
+            throw Exception("Cannot add empty alias")
+        }
+
         if (label == IdentityConstants.ONESIGNAL_ID) {
-            throw Exception("Cannot remove '${IdentityConstants.ONESIGNAL_ID}' alias")
+            throw Exception("Cannot add '${IdentityConstants.ONESIGNAL_ID}' alias")
         }
 
         _identityModel[label] = id
@@ -58,8 +63,14 @@ internal open class UserManager(
     override fun addAliases(aliases: Map<String, String>) {
         Logging.log(LogLevel.DEBUG, "addAliases(aliases: $aliases")
 
-        if (aliases.keys.any { it == IdentityConstants.ONESIGNAL_ID }) {
-            throw Exception("Cannot remove '${IdentityConstants.ONESIGNAL_ID}' alias")
+        aliases.forEach {
+            if(it.key.isEmpty()) {
+                throw Exception("Cannot add empty alias")
+            }
+
+            if (it.key == IdentityConstants.ONESIGNAL_ID) {
+                throw Exception("Cannot add '${IdentityConstants.ONESIGNAL_ID}' alias")
+            }
         }
 
         aliases.forEach {
@@ -69,6 +80,10 @@ internal open class UserManager(
 
     override fun removeAlias(label: String) {
         Logging.log(LogLevel.DEBUG, "removeAlias(label: $label)")
+
+        if(label.isEmpty()) {
+            throw Exception("Cannot remove empty alias")
+        }
 
         if (label == IdentityConstants.ONESIGNAL_ID) {
             throw Exception("Cannot remove '${IdentityConstants.ONESIGNAL_ID}' alias")
@@ -81,37 +96,78 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "removeAliases(labels: $labels)")
 
         labels.forEach {
+            if(it.isEmpty()) {
+                throw Exception("Cannot remove empty alias")
+            }
+
+            if (it == IdentityConstants.ONESIGNAL_ID) {
+                throw Exception("Cannot remove '${IdentityConstants.ONESIGNAL_ID}' alias")
+            }
+        }
+
+        labels.forEach {
             _identityModel.remove(it)
         }
     }
 
-    override fun addEmailSubscription(email: String) {
-        Logging.log(LogLevel.DEBUG, "addEmailSubscription(email: $email)")
+    override fun addEmail(email: String) {
+        Logging.log(LogLevel.DEBUG, "addEmail(email: $email)")
+
+        if(!OneSignalUtils.isValidEmail(email)) {
+            throw Exception("Cannot add invalid email address as subscription: $email")
+        }
+
         _subscriptionManager.addEmailSubscription(email)
     }
 
-    override fun removeEmailSubscription(email: String) {
-        Logging.log(LogLevel.DEBUG, "removeEmailSubscription(email: $email)")
+    override fun removeEmail(email: String) {
+        Logging.log(LogLevel.DEBUG, "removeEmail(email: $email)")
+
+        if(!OneSignalUtils.isValidEmail(email)) {
+            throw Exception("Cannot remove invalid email address as subscription: $email")
+        }
+
         _subscriptionManager.removeEmailSubscription(email)
     }
 
-    override fun addSmsSubscription(sms: String) {
-        Logging.log(LogLevel.DEBUG, "addSmsSubscription(sms: $sms)")
+    override fun addSms(sms: String) {
+        Logging.log(LogLevel.DEBUG, "addSms(sms: $sms)")
+
+        if(!OneSignalUtils.isValidPhoneNumber(sms)) {
+            throw Exception("Cannot add invalid sms number as subscription: $sms")
+        }
+
         _subscriptionManager.addSmsSubscription(sms)
     }
 
-    override fun removeSmsSubscription(sms: String) {
-        Logging.log(LogLevel.DEBUG, "removeSmsSubscription(sms: $sms)")
+    override fun removeSms(sms: String) {
+        Logging.log(LogLevel.DEBUG, "removeSms(sms: $sms)")
+
+        if(!OneSignalUtils.isValidPhoneNumber(sms)) {
+            throw Exception("Cannot remove invalid sms number as subscription: $sms")
+        }
+
         _subscriptionManager.removeSmsSubscription(sms)
     }
 
     override fun addTag(key: String, value: String) {
         Logging.log(LogLevel.DEBUG, "setTag(key: $key, value: $value)")
+
+        if(key.isEmpty()) {
+            throw Exception("Cannot add tag with empty key")
+        }
+
         _propertiesModel.tags[key] = value
     }
 
     override fun addTags(tags: Map<String, String>) {
         Logging.log(LogLevel.DEBUG, "setTags(tags: $tags)")
+
+        tags.forEach {
+            if(it.key.isEmpty()) {
+                throw Exception("Cannot add tag with empty key")
+            }
+        }
 
         tags.forEach {
             _propertiesModel.tags[it.key] = it.value
@@ -120,11 +176,22 @@ internal open class UserManager(
 
     override fun removeTag(key: String) {
         Logging.log(LogLevel.DEBUG, "removeTag(key: $key)")
+
+        if(key.isEmpty()) {
+            throw Exception("Cannot remove tag with empty key")
+        }
+
         _propertiesModel.tags.remove(key)
     }
 
     override fun removeTags(keys: Collection<String>) {
         Logging.log(LogLevel.DEBUG, "removeTags(keys: $keys)")
+
+        keys.forEach {
+            if(it.isEmpty()) {
+                throw Exception("Cannot remove tag with empty key")
+            }
+        }
 
         keys.forEach {
             _propertiesModel.tags.remove(it)
