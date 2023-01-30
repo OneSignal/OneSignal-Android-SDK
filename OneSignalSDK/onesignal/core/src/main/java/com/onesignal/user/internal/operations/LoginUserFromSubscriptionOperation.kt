@@ -35,9 +35,9 @@ class LoginUserFromSubscriptionOperation() : Operation(LoginUserFromSubscription
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.NONE
     override val canStartExecute: Boolean = true
 
-    constructor(appId: String, onesignalId: String, playerId: String) : this() {
+    constructor(appId: String, onesignalId: String, subscriptionId: String) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
-        this.subscriptionId = playerId
+        this.subscriptionId = subscriptionId
     }
 }
