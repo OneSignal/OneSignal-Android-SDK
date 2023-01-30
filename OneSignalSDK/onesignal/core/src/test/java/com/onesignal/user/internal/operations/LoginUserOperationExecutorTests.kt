@@ -65,7 +65,8 @@ class LoginUserOperationExecutorTests : FunSpec({
             mockUserBackendService,
             mockIdentityModelStore,
             mockPropertiesModelStore,
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore()
         )
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, null, null))
 
@@ -95,7 +96,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
-        val loginUserOperationExecutor = LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore)
+        val loginUserOperationExecutor = LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore())
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, null, null))
 
         /* When */
@@ -117,7 +118,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
-        val loginUserOperationExecutor = LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore)
+        val loginUserOperationExecutor = LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore())
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, null, null))
 
         /* When */
@@ -140,7 +141,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
-        val loginUserOperationExecutor = LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore)
+        val loginUserOperationExecutor = LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore())
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", null))
 
         /* When */
@@ -162,7 +163,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
-        val loginUserOperationExecutor = LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore)
+        val loginUserOperationExecutor = LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore())
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         /* When */
@@ -197,7 +198,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
-        val loginUserOperationExecutor = LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore)
+        val loginUserOperationExecutor = LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore())
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         /* When */
@@ -232,7 +233,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
-        val loginUserOperationExecutor = LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore)
+        val loginUserOperationExecutor = LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore())
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         /* When */
@@ -267,7 +268,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
-        val loginUserOperationExecutor = LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore)
+        val loginUserOperationExecutor = LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore())
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         /* When */
@@ -312,7 +313,8 @@ class LoginUserOperationExecutorTests : FunSpec({
             mockUserBackendService,
             mockIdentityModelStore,
             mockPropertiesModelStore,
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore()
         )
         val operations = listOf<Operation>(
             LoginUserOperation(appId, localOneSignalId, null, null),
@@ -405,7 +407,8 @@ class LoginUserOperationExecutorTests : FunSpec({
             mockUserBackendService,
             mockIdentityModelStore,
             mockPropertiesModelStore,
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore()
         )
         val operations = listOf<Operation>(
             LoginUserOperation(appId, localOneSignalId, null, null),
@@ -471,7 +474,8 @@ class LoginUserOperationExecutorTests : FunSpec({
             mockUserBackendService,
             mockIdentityModelStore,
             mockPropertiesModelStore,
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore()
         )
         val operations = listOf<Operation>(
             LoginUserOperation(appId, localOneSignalId, null, null),
@@ -523,7 +527,8 @@ class LoginUserOperationExecutorTests : FunSpec({
             mockUserBackendService,
             mockIdentityModelStore,
             mockPropertiesModelStore,
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore()
         )
         val operations = listOf<Operation>(
             LoginUserOperation(appId, localOneSignalId, null, null),
