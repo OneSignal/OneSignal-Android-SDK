@@ -526,7 +526,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
             @Override
             public void onSuccess(String value) {
                 if (value != null && !value.isEmpty()) {
-                    OneSignal.getUser().addEmailSubscription(value);
+                    OneSignal.getUser().addEmail(value);
                     emailArrayList.add(new DummySubscription(value));
                     toaster.makeCustomViewToast("Added email " + value, ToastType.SUCCESS);
                 }
@@ -549,7 +549,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
             @Override
             public void onSuccess(String value) {
                 if (value != null && !value.isEmpty()) {
-                    OneSignal.getUser().addSmsSubscription(value);
+                    OneSignal.getUser().addSms(value);
                     smsArrayList.add(new DummySubscription(value));
                     toaster.makeCustomViewToast("Added SMS " + value, ToastType.SUCCESS);
                 }
@@ -630,7 +630,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
         emailsRecyclerView.setLayoutManager(linearLayoutManager);
         emailsRecyclerViewAdapter = new SubscriptionRecyclerViewAdapter(context, emailArrayList, value -> {
             String email = ((DummySubscription)value).getId();
-            OneSignal.getUser().removeEmailSubscription(email);
+            OneSignal.getUser().removeEmail(email);
             emailArrayList.remove(value);
             refreshEmailRecyclerView();
             toaster.makeCustomViewToast("Deleted email " + email, ToastType.SUCCESS);
@@ -656,7 +656,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
         smssRecyclerView.setLayoutManager(linearLayoutManager);
         smssRecyclerViewAdapter = new SubscriptionRecyclerViewAdapter(context, smsArrayList, value -> {
             String number = ((DummySubscription)value).getId();
-            OneSignal.getUser().removeSmsSubscription(number);
+            OneSignal.getUser().removeSms(number);
             smsArrayList.remove(value);
             refreshSMSRecyclerView();
             toaster.makeCustomViewToast("Deleted SMS " + number, ToastType.SUCCESS);
