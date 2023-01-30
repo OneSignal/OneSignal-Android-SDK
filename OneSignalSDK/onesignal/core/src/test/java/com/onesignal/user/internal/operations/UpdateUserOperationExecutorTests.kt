@@ -5,6 +5,7 @@ import com.onesignal.core.internal.operations.Operation
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.backend.IUserBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
+import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.operations.impl.executors.UpdateUserOperationExecutor
 import com.onesignal.user.internal.properties.PropertiesModel
 import io.kotest.core.spec.style.FunSpec
@@ -33,11 +34,13 @@ class UpdateUserOperationExecutorTests : FunSpec({
         /* Given */
         val mockIdentityModelStore = MockHelper.identityModelStore()
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockBuildUserService = mockk<IRebuildUserService>()
 
         val loginUserOperationExecutor = UpdateUserOperationExecutor(
             mockUserBackendService,
             mockIdentityModelStore,
-            mockPropertiesModelStore
+            mockPropertiesModelStore,
+            mockBuildUserService
         )
         val operations = listOf<Operation>(SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1"))
 
@@ -68,11 +71,13 @@ class UpdateUserOperationExecutorTests : FunSpec({
         /* Given */
         val mockIdentityModelStore = MockHelper.identityModelStore()
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockBuildUserService = mockk<IRebuildUserService>()
 
         val loginUserOperationExecutor = UpdateUserOperationExecutor(
             mockUserBackendService,
             mockIdentityModelStore,
-            mockPropertiesModelStore
+            mockPropertiesModelStore,
+            mockBuildUserService
         )
         val operations = listOf<Operation>(
             SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1-1"),
@@ -124,11 +129,13 @@ class UpdateUserOperationExecutorTests : FunSpec({
         /* Given */
         val mockIdentityModelStore = MockHelper.identityModelStore()
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockBuildUserService = mockk<IRebuildUserService>()
 
         val loginUserOperationExecutor = UpdateUserOperationExecutor(
             mockUserBackendService,
             mockIdentityModelStore,
-            mockPropertiesModelStore
+            mockPropertiesModelStore,
+            mockBuildUserService
         )
         val operations = listOf<Operation>(
             TrackSessionEndOperation(appId, remoteOneSignalId, 1111)
@@ -163,11 +170,13 @@ class UpdateUserOperationExecutorTests : FunSpec({
         /* Given */
         val mockIdentityModelStore = MockHelper.identityModelStore()
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockBuildUserService = mockk<IRebuildUserService>()
 
         val loginUserOperationExecutor = UpdateUserOperationExecutor(
             mockUserBackendService,
             mockIdentityModelStore,
-            mockPropertiesModelStore
+            mockPropertiesModelStore,
+            mockBuildUserService
         )
         val operations = listOf<Operation>(
             TrackSessionEndOperation(appId, remoteOneSignalId, 1111),
@@ -222,11 +231,13 @@ class UpdateUserOperationExecutorTests : FunSpec({
         /* Given */
         val mockIdentityModelStore = MockHelper.identityModelStore()
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockBuildUserService = mockk<IRebuildUserService>()
 
         val loginUserOperationExecutor = UpdateUserOperationExecutor(
             mockUserBackendService,
             mockIdentityModelStore,
-            mockPropertiesModelStore
+            mockPropertiesModelStore,
+            mockBuildUserService
         )
         val operations = listOf<Operation>(
             TrackSessionEndOperation(appId, remoteOneSignalId, 1111),

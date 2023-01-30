@@ -167,7 +167,7 @@ class InAppBackendServiceTests : FunSpec({
         /* Given */
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
-        coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(409, null)
+        coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(500, null)
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
@@ -205,7 +205,7 @@ class InAppBackendServiceTests : FunSpec({
         /* Given */
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
-        coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(409, null)
+        coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(500, null)
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
