@@ -9,6 +9,7 @@ import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.backend.ISubscriptionBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObjectType
+import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
@@ -43,11 +44,16 @@ class SubscriptionOperationExecutorTests : FunSpec({
         val subscriptionModel1 = SubscriptionModel()
         subscriptionModel1.id = localSubscriptionId
         every { mockSubscriptionsModelStore.get(localSubscriptionId) } returns subscriptionModel1
+
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
             AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore(),
+            mockBuildUserService
         )
 
         val operations = listOf<Operation>(CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionStatus.SUBSCRIBED))
@@ -79,11 +85,15 @@ class SubscriptionOperationExecutorTests : FunSpec({
         coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } throws BackendException(408)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
             AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore(),
+            mockBuildUserService
         )
 
         val operations = listOf<Operation>(CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionStatus.SUBSCRIBED))
@@ -114,11 +124,15 @@ class SubscriptionOperationExecutorTests : FunSpec({
         coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } throws BackendException(404)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
             AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore(),
+            mockBuildUserService
         )
 
         val operations = listOf<Operation>(CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionStatus.SUBSCRIBED))
@@ -151,11 +165,16 @@ class SubscriptionOperationExecutorTests : FunSpec({
         val subscriptionModel1 = SubscriptionModel()
         subscriptionModel1.id = localSubscriptionId
         every { mockSubscriptionsModelStore.get(localSubscriptionId) } returns subscriptionModel1
+
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
             AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore(),
+            mockBuildUserService
         )
 
         val operations = listOf<Operation>(
@@ -179,11 +198,16 @@ class SubscriptionOperationExecutorTests : FunSpec({
         val subscriptionModel1 = SubscriptionModel()
         subscriptionModel1.id = localSubscriptionId
         every { mockSubscriptionsModelStore.get(localSubscriptionId) } returns subscriptionModel1
+
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
             AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore(),
+            mockBuildUserService
         )
 
         val operations = listOf<Operation>(
@@ -223,11 +247,15 @@ class SubscriptionOperationExecutorTests : FunSpec({
         subscriptionModel1.address = "pushToken1"
         every { mockSubscriptionsModelStore.get(remoteSubscriptionId) } returns subscriptionModel1
 
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
             AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore(),
+            mockBuildUserService
         )
 
         val operations = listOf<Operation>(
@@ -261,11 +289,15 @@ class SubscriptionOperationExecutorTests : FunSpec({
         coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(408)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
             AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore(),
+            mockBuildUserService
         )
 
         val operations = listOf<Operation>(
@@ -297,11 +329,15 @@ class SubscriptionOperationExecutorTests : FunSpec({
         coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(404)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
             AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore(),
+            mockBuildUserService
         )
 
         val operations = listOf<Operation>(
@@ -335,11 +371,15 @@ class SubscriptionOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         every { mockSubscriptionsModelStore.remove(any(), any()) } just runs
 
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
             AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore(),
+            mockBuildUserService
         )
 
         val operations = listOf<Operation>(
@@ -362,11 +402,15 @@ class SubscriptionOperationExecutorTests : FunSpec({
         coEvery { mockSubscriptionBackendService.deleteSubscription(any(), any()) } throws BackendException(408)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
             AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore(),
+            mockBuildUserService
         )
 
         val operations = listOf<Operation>(
@@ -387,11 +431,15 @@ class SubscriptionOperationExecutorTests : FunSpec({
         coEvery { mockSubscriptionBackendService.deleteSubscription(any(), any()) } throws BackendException(404)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
         val subscriptionOperationExecutor = SubscriptionOperationExecutor(
             mockSubscriptionBackendService,
             MockHelper.deviceService(),
             AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore(),
+            mockBuildUserService
         )
 
         val operations = listOf<Operation>(

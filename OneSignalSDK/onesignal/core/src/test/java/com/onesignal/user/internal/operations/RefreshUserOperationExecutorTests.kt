@@ -11,6 +11,7 @@ import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.PropertiesObject
 import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
+import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.operations.impl.executors.RefreshUserOperationExecutor
 import com.onesignal.user.internal.properties.PropertiesModel
@@ -62,11 +63,15 @@ class RefreshUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         every { mockSubscriptionsModelStore.replaceAll(any(), any()) } just runs
 
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
         val loginUserOperationExecutor = RefreshUserOperationExecutor(
             mockUserBackendService,
             mockIdentityModelStore,
             mockPropertiesModelStore,
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore(),
+            mockBuildUserService
         )
 
         val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
@@ -131,12 +136,15 @@ class RefreshUserOperationExecutorTests : FunSpec({
         every { mockPropertiesModelStore.model } returns mockPropertiesModel
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        val mockBuildUserService = mockk<IRebuildUserService>()
 
         val loginUserOperationExecutor = RefreshUserOperationExecutor(
             mockUserBackendService,
             mockIdentityModelStore,
             mockPropertiesModelStore,
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore(),
+            mockBuildUserService
         )
 
         val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
@@ -163,12 +171,15 @@ class RefreshUserOperationExecutorTests : FunSpec({
         val mockIdentityModelStore = MockHelper.identityModelStore()
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        val mockBuildUserService = mockk<IRebuildUserService>()
 
         val loginUserOperationExecutor = RefreshUserOperationExecutor(
             mockUserBackendService,
             mockIdentityModelStore,
             mockPropertiesModelStore,
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore(),
+            mockBuildUserService
         )
 
         val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
@@ -186,18 +197,21 @@ class RefreshUserOperationExecutorTests : FunSpec({
     test("refresh user fails without retry when there is a backend error condition") {
         /* Given */
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId) } throws BackendException(404)
+        coEvery { mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId) } throws BackendException(400)
 
         /* Given */
         val mockIdentityModelStore = MockHelper.identityModelStore()
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        val mockBuildUserService = mockk<IRebuildUserService>()
 
         val loginUserOperationExecutor = RefreshUserOperationExecutor(
             mockUserBackendService,
             mockIdentityModelStore,
             mockPropertiesModelStore,
-            mockSubscriptionsModelStore
+            mockSubscriptionsModelStore,
+            MockHelper.configModelStore(),
+            mockBuildUserService
         )
 
         val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
