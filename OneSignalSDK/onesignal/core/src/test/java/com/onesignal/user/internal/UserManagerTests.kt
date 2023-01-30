@@ -30,11 +30,9 @@ class UserManagerTests : FunSpec({
         val userManager = UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), languageContext)
 
         /* When */
-        val language = userManager.language
-        userManager.language = "new-language"
+        userManager.setLanguage("new-language")
 
         /* Then */
-        language shouldBe "custom-language"
         languageSlot.captured shouldBe "new-language"
     }
 
@@ -144,11 +142,11 @@ class UserManagerTests : FunSpec({
 
         /* When */
         val subscriptions = userManager.subscriptions
-        userManager.addEmailSubscription("email@co.com")
-        userManager.removeEmailSubscription("email@co.com")
+        userManager.addEmail("email@co.com")
+        userManager.removeEmail("email@co.com")
 
-        userManager.addSmsSubscription("+15558675309")
-        userManager.removeSmsSubscription("+15558675309")
+        userManager.addSms("+15558675309")
+        userManager.removeSms("+15558675309")
 
         /* Then */
         subscriptions shouldBe subscriptionList
