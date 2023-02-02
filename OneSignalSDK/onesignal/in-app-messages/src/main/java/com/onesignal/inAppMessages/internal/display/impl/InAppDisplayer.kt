@@ -111,7 +111,7 @@ internal class InAppDisplayer(
         Logging.debug("WebViewManager IAM dismissAndAwaitNextMessage lastInstance: $lastInstance")
 
         if (lastInstance != null) {
-            lastInstance!!.dismissAndAwaitNextMessage()
+            lastInstance!!.backgroundDismissAndAwaitNextMessage()
         }
     }
 

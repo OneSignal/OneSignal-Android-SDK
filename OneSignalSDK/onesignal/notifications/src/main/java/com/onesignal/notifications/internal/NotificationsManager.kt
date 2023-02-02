@@ -106,16 +106,22 @@ internal class NotificationsManager(
      *
      * @param id
      */
-    override suspend fun removeNotification(id: Int) {
+    override fun removeNotification(id: Int) {
         Logging.debug("NotificationsManager.removeNotification(id: $id)")
-        if (_notificationDataController.markAsDismissed(id)) {
-            _summaryManager.updatePossibleDependentSummaryOnDismiss(id)
+
+        suspendifyOnThread {
+            if (_notificationDataController.markAsDismissed(id)) {
+                _summaryManager.updatePossibleDependentSummaryOnDismiss(id)
+            }
         }
     }
 
-    override suspend fun removeGroupedNotifications(group: String) {
+    override fun removeGroupedNotifications(group: String) {
         Logging.debug("NotificationsManager.removeGroupedNotifications(group: $group)")
-        _notificationDataController.markAsDismissedForGroup(group)
+
+        suspendifyOnThread {
+            _notificationDataController.markAsDismissedForGroup(group)
+        }
     }
 
     /**
@@ -123,9 +129,12 @@ internal class NotificationsManager(
      * [android.app.NotificationManager.cancelAll], OneSignal notifications will be restored when
      * your app is restarted.
      */
-    override suspend fun clearAllNotifications() {
-        Logging.debug("NotificationsManager.clearAll()")
-        _notificationDataController.markAsDismissedForOutstanding()
+    override fun clearAllNotifications() {
+        Logging.debug("NotificationsManager.clearAllNotifications()")
+
+        suspendifyOnThread {
+            _notificationDataController.markAsDismissedForOutstanding()
+        }
     }
 
     /**
@@ -145,7 +154,7 @@ internal class NotificationsManager(
      *                 the permission changes within
      */
     override fun addPermissionChangedHandler(handler: IPermissionChangedHandler) {
-        Logging.debug("NotificationsManager.addPushPermissionHandler(handler: $handler)")
+        Logging.debug("NotificationsManager.addPermissionChangedHandler(handler: $handler)")
         _permissionChangedNotifier.subscribe(handler)
     }
 
@@ -155,7 +164,7 @@ internal class NotificationsManager(
      * @param handler The previously added handler that should be removed.
      */
     override fun removePermissionChangedHandler(handler: IPermissionChangedHandler) {
-        Logging.debug("NotificationsManager.removePushPermissionHandler(handler: $handler)")
+        Logging.debug("NotificationsManager.removePermissionChangedHandler(handler: $handler)")
         _permissionChangedNotifier.unsubscribe(handler)
     }
 
@@ -179,7 +188,7 @@ internal class NotificationsManager(
      * @param handler The handler that is to be called when the event occurs.
      */
     override fun setNotificationClickHandler(handler: INotificationClickHandler?) {
-        Logging.debug("NotificationsManager.setNotificationOpenedHandler(handler: $handler)")
+        Logging.debug("NotificationsManager.setNotificationClickHandler(handler: $handler)")
         _notificationLifecycleService.setExternalNotificationOpenedHandler(handler)
     }
 

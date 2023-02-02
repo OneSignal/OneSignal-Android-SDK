@@ -3,11 +3,10 @@ package com.onesignal.common
 import java.util.regex.Pattern
 
 object OneSignalUtils {
-    @JvmStatic
-    var sdkType = "native"
-
-    @JvmStatic
-    val sdkVersion: String = "050000"
+    /**
+     * The version of this SDK.
+     */
+    const val sdkVersion: String = "050000"
 
     fun isValidEmail(email: String): Boolean {
         if (email.isEmpty())
