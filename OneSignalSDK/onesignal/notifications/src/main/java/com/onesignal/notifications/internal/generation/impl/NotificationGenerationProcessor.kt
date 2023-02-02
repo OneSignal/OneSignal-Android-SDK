@@ -16,7 +16,10 @@ import com.onesignal.notifications.internal.display.INotificationDisplayer
 import com.onesignal.notifications.internal.generation.INotificationGenerationProcessor
 import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleService
 import com.onesignal.notifications.internal.summary.INotificationSummaryManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import org.json.JSONException
 import org.json.JSONObject
@@ -67,7 +70,9 @@ internal class NotificationGenerationProcessor(
 
         try {
             withTimeout(30000L) {
-                _lifecycleService.externalRemoteNotificationReceived(context, serviceExtensionReceivedEvent)
+                GlobalScope.launch(Dispatchers.IO) {
+                    _lifecycleService.externalRemoteNotificationReceived(context, serviceExtensionReceivedEvent)
+                }.join()
             }
         } catch (t: Throwable) {
             Logging.error("remoteNotificationReceived throw an exception. Displaying normal OneSignal notification.", t)
@@ -84,7 +89,11 @@ internal class NotificationGenerationProcessor(
 
                 try {
                     withTimeout(30000L) {
-                        _lifecycleService.externalNotificationWillShowInForeground(foregroundReceivedEvent)
+                        GlobalScope.launch(Dispatchers.IO) {
+                            _lifecycleService.externalNotificationWillShowInForeground(
+                                foregroundReceivedEvent
+                            )
+                        }.join()
                     }
                 } catch (t: Throwable) {
                     Logging.error("Exception thrown while notification was being processed for display by notificationWillShowInForegroundHandler, showing notification in foreground!", t)

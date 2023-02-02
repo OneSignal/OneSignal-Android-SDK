@@ -15,7 +15,6 @@ import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
-import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.inAppMessages.IInAppMessageClickHandler
 import com.onesignal.inAppMessages.IInAppMessageLifecycleHandler
@@ -109,8 +108,14 @@ internal class InAppMessagesManager(
     override var paused: Boolean
         get() = _state.paused
         set(value) {
-            Logging.log(LogLevel.DEBUG, "IAMManager.setPaused(value: $value)")
+            Logging.debug("InAppMessagesManager.setPaused(value: $value)")
             _state.paused = value
+
+            if(!value) {
+                suspendifyOnThread {
+                    evaluateInAppMessages()
+                }
+            }
         }
 
     override fun start() {
@@ -142,12 +147,12 @@ internal class InAppMessagesManager(
     }
 
     override fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler?) {
-        Logging.log(LogLevel.DEBUG, "IAMManager.setInAppMessageLifecycleHandler(handler: $handler)")
+        Logging.debug("InAppMessagesManager.setInAppMessageLifecycleHandler(handler: $handler)")
         _lifecycleCallback.set(handler)
     }
 
     override fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler?) {
-        Logging.log(LogLevel.DEBUG, "IAMManager.setInAppMessageClickHandler(handler: $handler)")
+        Logging.debug("InAppMessagesManager.setInAppMessageClickHandler(handler: $handler)")
         _messageClickCallback.set(handler)
     }
 
@@ -222,7 +227,7 @@ internal class InAppMessagesManager(
      * Iterate through the messages and determine if they should be shown to the user.
      */
     private suspend fun evaluateInAppMessages() {
-        Logging.debug("IAMManager.evaluateInAppMessages()")
+        Logging.debug("InAppMessagesManager.evaluateInAppMessages()")
 
         for (message in _messages) {
             // Make trigger evaluation first, dynamic trigger might change "trigger changed" flag value for redisplay messages
@@ -258,14 +263,14 @@ internal class InAppMessagesManager(
             message.isDisplayedInSession = savedIAM.isDisplayedInSession
 
             val triggerHasChanged: Boolean = hasMessageTriggerChanged(message)
-            Logging.debug("IAMManager.setDataForRedisplay: $message triggerHasChanged: $triggerHasChanged")
+            Logging.debug("InAppMessagesManager.setDataForRedisplay: $message triggerHasChanged: $triggerHasChanged")
 
             // Check if conditions are correct for redisplay
             if (triggerHasChanged &&
                 message.redisplayStats.isDelayTimeSatisfied &&
                 message.redisplayStats.shouldDisplayAgain()
             ) {
-                Logging.debug("IAMManager.setDataForRedisplay message available for redisplay: " + message.messageId)
+                Logging.debug("InAppMessagesManager.setDataForRedisplay message available for redisplay: " + message.messageId)
                 _dismissedMessages.remove(message.messageId)
                 _impressionedMessages.remove(message.messageId)
                 // Pages from different IAMs should not impact each other so we can clear the entire
@@ -297,7 +302,7 @@ internal class InAppMessagesManager(
             // Make sure no message is ever added to the queue more than once
             if (!_messageDisplayQueue.contains(message) && _state.inAppMessageIdShowing != message.messageId) {
                 _messageDisplayQueue.add(message)
-                Logging.debug("IAMManager.queueMessageForDisplay: In app message with id: " + message.messageId + ", added to the queue")
+                Logging.debug("InAppMessagesManager.queueMessageForDisplay: In app message with id: " + message.messageId + ", added to the queue")
             }
         }
 
@@ -307,23 +312,23 @@ internal class InAppMessagesManager(
     private suspend fun attemptToShowInAppMessage() {
         // We need to wait for system conditions to be the correct ones
         if (!_applicationService.waitUntilSystemConditionsAvailable()) {
-            Logging.warn("IAMManager.attemptToShowInAppMessage: In app message not showing due to system condition not correct")
+            Logging.warn("InAppMessagesManager.attemptToShowInAppMessage: In app message not showing due to system condition not correct")
             return
         }
 
         var messageToDisplay: InAppMessage? = null
 
         _messageDisplayQueueMutex.withLock {
-            Logging.debug("IAMManager.attemptToShowInAppMessage: $_messageDisplayQueue")
+            Logging.debug("InAppMessagesManager.attemptToShowInAppMessage: $_messageDisplayQueue")
             // If there are IAMs in the queue and nothing showing, show first in the queue
             if (paused) {
-                Logging.warn("IAMManager.attemptToShowInAppMessage: In app messaging is currently paused, in app messages will not be shown!")
+                Logging.warn("InAppMessagesManager.attemptToShowInAppMessage: In app messaging is currently paused, in app messages will not be shown!")
             } else if (_messageDisplayQueue.isEmpty()) {
-                Logging.debug("IAMManager.attemptToShowInAppMessage: There are no IAMs left in the queue!")
+                Logging.debug("InAppMessagesManager.attemptToShowInAppMessage: There are no IAMs left in the queue!")
             } else if (_state.inAppMessageIdShowing != null) {
-                Logging.debug("IAMManager.attemptToShowInAppMessage: There is an IAM currently showing!")
+                Logging.debug("InAppMessagesManager.attemptToShowInAppMessage: There is an IAM currently showing!")
             } else {
-                Logging.debug("IAMManager.attemptToShowInAppMessage: No IAM showing currently, showing first item in the queue!")
+                Logging.debug("InAppMessagesManager.attemptToShowInAppMessage: No IAM showing currently, showing first item in the queue!")
                 messageToDisplay = _messageDisplayQueue.removeAt(0)
 
                 // set the state while the mutex is held so the next one coming in will pick up
@@ -366,20 +371,20 @@ internal class InAppMessagesManager(
                 persistInAppMessage(message)
             }
 
-            Logging.debug("IAMManager.messageWasDismissed: dismissedMessages: $_dismissedMessages")
+            Logging.debug("InAppMessagesManager.messageWasDismissed: dismissedMessages: $_dismissedMessages")
         }
 
         // Remove DIRECT influence due to ClickHandler of ClickAction outcomes
         _influenceManager.onInAppMessageDismissed()
 
         if (_state.currentPrompt != null) {
-            Logging.debug("IAMManager.messageWasDismissed: Stop evaluateMessageDisplayQueue because prompt is currently displayed")
+            Logging.debug("InAppMessagesManager.messageWasDismissed: Stop evaluateMessageDisplayQueue because prompt is currently displayed")
             return
         }
 
         // fire the external callback
         if (!_lifecycleCallback.hasCallback) {
-            Logging.verbose("IAMManager.messageWasDismissed: inAppMessageLifecycleHandler is null")
+            Logging.verbose("InAppMessagesManager.messageWasDismissed: inAppMessageLifecycleHandler is null")
             return
         }
         _lifecycleCallback.fireOnMain { it.onDidDismissInAppMessage(message) }
@@ -388,10 +393,10 @@ internal class InAppMessagesManager(
 
         // Display the next message in the queue, or attempt to add more IAMs to the queue
         if (_messageDisplayQueue.isNotEmpty()) {
-            Logging.debug("IAMManager.messageWasDismissed: In app message on queue available, attempting to show")
+            Logging.debug("InAppMessagesManager.messageWasDismissed: In app message on queue available, attempting to show")
             attemptToShowInAppMessage()
         } else {
-            Logging.debug("IAMManager.messageWasDismissed: In app message dismissed evaluating messages")
+            Logging.debug("InAppMessagesManager.messageWasDismissed: In app message dismissed evaluating messages")
             evaluateInAppMessages()
         }
     }
@@ -409,7 +414,7 @@ internal class InAppMessagesManager(
             if (!message.isTriggerChanged && _redisplayedInAppMessages.contains(message) &&
                 _triggerController.isTriggerOnMessage(message, newTriggersKeys)
             ) {
-                Logging.debug("IAMManager.makeRedisplayMessagesAvailableWithTriggers: Trigger changed for message: $message")
+                Logging.debug("InAppMessagesManager.makeRedisplayMessagesAvailableWithTriggers: Trigger changed for message: $message")
                 message.isTriggerChanged = true
             }
         }
@@ -434,17 +439,17 @@ internal class InAppMessagesManager(
             _redisplayedInAppMessages.add(message)
         }
 
-        Logging.debug("IAMManager.persistInAppMessage: $message with msg array data: $_redisplayedInAppMessages")
+        Logging.debug("InAppMessagesManager.persistInAppMessage: $message with msg array data: $_redisplayedInAppMessages")
     }
 
     override fun addTriggers(triggers: Map<String, Any>) {
-        Logging.log(LogLevel.DEBUG, "setTriggers(triggers: $triggers)")
+        Logging.debug("InAppMessagesManager.addTriggers(triggers: $triggers)")
 
         triggers.forEach { addTrigger(it.key, it.value) }
     }
 
     override fun addTrigger(key: String, value: Any) {
-        Logging.log(LogLevel.DEBUG, "setTrigger(key: $key, value: $value)")
+        Logging.debug("InAppMessagesManager.addTrigger(key: $key, value: $value)")
 
         var triggerModel = _triggerModelStore.get(key)
         if (triggerModel != null) {
@@ -459,26 +464,26 @@ internal class InAppMessagesManager(
     }
 
     override fun removeTriggers(keys: Collection<String>) {
-        Logging.log(LogLevel.DEBUG, "removeTriggers(keys: $keys)")
+        Logging.debug("InAppMessagesManager.removeTriggers(keys: $keys)")
 
         keys.forEach { removeTrigger(it) }
     }
 
     override fun removeTrigger(key: String) {
-        Logging.log(LogLevel.DEBUG, "removeTrigger(key: $key)")
+        Logging.debug("InAppMessagesManager.removeTrigger(key: $key)")
 
         _triggerModelStore.remove(key)
     }
 
     override fun clearTriggers() {
-        Logging.log(LogLevel.DEBUG, "clearTriggers()")
+        Logging.debug("InAppMessagesManager.clearTriggers()")
         _triggerModelStore.clear()
     }
 
     // IAM LIFECYCLE CALLBACKS
     override fun onMessageWillDisplay(message: InAppMessage) {
         if (!_lifecycleCallback.hasCallback) {
-            Logging.verbose("IAMManager.onMessageWillDisplay: inAppMessageLifecycleHandler is null")
+            Logging.verbose("InAppMessagesManager.onMessageWillDisplay: inAppMessageLifecycleHandler is null")
             return
         }
         _lifecycleCallback.fireOnMain { it.onWillDisplayInAppMessage(message) }
@@ -486,7 +491,7 @@ internal class InAppMessagesManager(
 
     override fun onMessageWasDisplayed(message: InAppMessage) {
         if (!_lifecycleCallback.hasCallback) {
-            Logging.verbose("IAMManager.onMessageWasDisplayed: inAppMessageLifecycleHandler is null")
+            Logging.verbose("InAppMessagesManager.onMessageWasDisplayed: inAppMessageLifecycleHandler is null")
             return
         }
         _lifecycleCallback.fireOnMain { it.onDidDisplayInAppMessage(message) }
@@ -555,7 +560,7 @@ internal class InAppMessagesManager(
 
     override fun onMessageWillDismiss(message: InAppMessage) {
         if (!_lifecycleCallback.hasCallback) {
-            Logging.verbose("IAMManager.onMessageWillDismiss: inAppMessageLifecycleHandler is null")
+            Logging.verbose("InAppMessagesManager.onMessageWillDismiss: inAppMessageLifecycleHandler is null")
             return
         }
         _lifecycleCallback.fireOnMain { it.onWillDismissInAppMessage(message) }
@@ -578,7 +583,7 @@ internal class InAppMessagesManager(
      * @see OSInAppMessageController.messageTriggerConditionChanged
      */
     override fun onTriggerCompleted(triggerId: String) {
-        Logging.debug("IAMManager.onTriggerCompleted: called with triggerId: $triggerId")
+        Logging.debug("InAppMessagesManager.onTriggerCompleted: called with triggerId: $triggerId")
         val triggerIds: MutableSet<String> = HashSet()
         triggerIds.add(triggerId)
         makeRedisplayMessagesAvailableWithTriggers(triggerIds)
@@ -592,7 +597,7 @@ internal class InAppMessagesManager(
      * @see OSInAppMessageController.setDataForRedisplay
      */
     override fun onTriggerConditionChanged() {
-        Logging.debug("IAMManager.onTriggerConditionChanged()")
+        Logging.debug("InAppMessagesManager.onTriggerConditionChanged()")
 
         suspendifyOnThread {
             // This method is called when a time-based trigger timer fires, meaning the message can
@@ -602,7 +607,7 @@ internal class InAppMessagesManager(
     }
 
     override fun onTriggerChanged(newTriggerKey: String) {
-        Logging.debug("IAMManager.onTriggerChanged(newTriggerKey: $newTriggerKey)")
+        Logging.debug("InAppMessagesManager.onTriggerChanged(newTriggerKey: $newTriggerKey)")
 
         makeRedisplayMessagesAvailableWithTriggers(listOf(newTriggerKey))
 
@@ -617,7 +622,7 @@ internal class InAppMessagesManager(
 
     private suspend fun beginProcessingPrompts(message: InAppMessage, prompts: List<InAppMessagePrompt>) {
         if (prompts.isNotEmpty()) {
-            Logging.debug("IAMManager.beginProcessingPrompts: IAM showing prompts from IAM: $message")
+            Logging.debug("InAppMessagesManager.beginProcessingPrompts: IAM showing prompts from IAM: $message")
 
             // TODO until we don't fix the activity going forward or back dismissing the IAM, we need to auto dismiss
             _displayer.dismissCurrentInAppMessage()
@@ -661,11 +666,11 @@ internal class InAppMessagesManager(
             if (!prompt.hasPrompted()) {
                 _state.currentPrompt = prompt
 
-                Logging.debug("IAMManager.showMultiplePrompts: IAM prompt to handle: " + _state.currentPrompt.toString())
+                Logging.debug("InAppMessagesManager.showMultiplePrompts: IAM prompt to handle: " + _state.currentPrompt.toString())
                 _state.currentPrompt!!.setPrompted(true)
                 val result = _state.currentPrompt!!.handlePrompt()
                 _state.currentPrompt = null
-                Logging.debug("IAMManager.showMultiplePrompts: IAM prompt to handle finished with result: $result")
+                Logging.debug("InAppMessagesManager.showMultiplePrompts: IAM prompt to handle finished with result: $result")
 
                 // On preview mode we show informative alert dialogs
                 if (inAppMessage.isPreview && result == InAppMessagePrompt.PromptActionResult.LOCATION_PERMISSIONS_MISSING_MANIFEST) {
@@ -676,7 +681,7 @@ internal class InAppMessagesManager(
         }
 
         if (_state.currentPrompt == null) {
-            Logging.debug("IAMManager.showMultiplePrompts: No IAM prompt to handle, dismiss message: " + inAppMessage.messageId)
+            Logging.debug("InAppMessagesManager.showMultiplePrompts: No IAM prompt to handle, dismiss message: " + inAppMessage.messageId)
             messageWasDismissed(inAppMessage)
         }
     }
@@ -694,11 +699,11 @@ internal class InAppMessagesManager(
     /* End IAM Lifecycle methods */
     private fun logInAppMessagePreviewActions(action: InAppMessageAction) {
         if (action.tags != null) {
-            Logging.debug("IAMManager.logInAppMessagePreviewActions: Tags detected inside of the action click payload, ignoring because action came from IAM preview:: " + action.tags.toString())
+            Logging.debug("InAppMessagesManager.logInAppMessagePreviewActions: Tags detected inside of the action click payload, ignoring because action came from IAM preview:: " + action.tags.toString())
         }
 
         if (action.outcomes.size > 0) {
-            Logging.debug("IAMManager.logInAppMessagePreviewActions: Outcomes detected inside of the action click payload, ignoring because action came from IAM preview: " + action.outcomes.toString())
+            Logging.debug("InAppMessagesManager.logInAppMessagePreviewActions: Outcomes detected inside of the action click payload, ignoring because action came from IAM preview: " + action.outcomes.toString())
         }
 
         // TODO: Add more action payload preview logs here in future
@@ -724,7 +729,7 @@ internal class InAppMessagesManager(
 
         // Never send multiple page impressions for the same message UUID unless that page change is from an IAM with redisplay
         if (_viewedPageIds.contains(messagePrefixedPageId)) {
-            Logging.verbose("IAMManager: Already sent page impression for id: $pageId")
+            Logging.verbose("InAppMessagesManager: Already sent page impression for id: $pageId")
             return
         }
         _viewedPageIds.add(messagePrefixedPageId)
