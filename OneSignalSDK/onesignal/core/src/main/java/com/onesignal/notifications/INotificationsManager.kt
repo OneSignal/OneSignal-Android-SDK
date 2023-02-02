@@ -32,7 +32,7 @@ interface INotificationsManager {
      *
      * @param id The android ID of the notification to be removed. See [INotification.androidNotificationId].
      */
-    suspend fun removeNotification(id: Int)
+    fun removeNotification(id: Int)
 
     /**
      * Cancels a group of OneSignal notifications with the provided group key. Grouping notifications
@@ -40,14 +40,14 @@ interface INotificationsManager {
      *
      * @param group The group key which all notifications fall under will be removed. See [INotification.groupKey].
      */
-    suspend fun removeGroupedNotifications(group: String)
+    fun removeGroupedNotifications(group: String)
 
     /**
      * Removes all OneSignal notifications from the Notification Shade. If you just use
      * [android.app.NotificationManager.cancelAll], OneSignal notifications will be restored when
      * your app is restarted.
      */
-    suspend fun clearAllNotifications()
+    fun clearAllNotifications()
 
     /**
      * The [IPermissionChangedHandler.onPermissionChanged] method will be fired on the passed-in

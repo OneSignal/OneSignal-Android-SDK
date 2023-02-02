@@ -24,7 +24,7 @@ class SessionModel : Model() {
      * When this session started, in Unix time milliseconds.
      */
     var startTime: Long
-        get() = getLongProperty(::startTime.name)
+        get() = getLongProperty(::startTime.name) { System.currentTimeMillis() }
         set(value) { setLongProperty(::startTime.name, value) }
 
     /**

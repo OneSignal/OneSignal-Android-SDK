@@ -14,9 +14,9 @@ internal class MisconfiguredNotificationsManager : INotificationsManager {
         get() = throw EXCEPTION
 
     override suspend fun requestPermission(fallbackToSettings: Boolean): Boolean = throw EXCEPTION
-    override suspend fun removeNotification(id: Int) = throw EXCEPTION
-    override suspend fun removeGroupedNotifications(group: String) = throw EXCEPTION
-    override suspend fun clearAllNotifications() = throw EXCEPTION
+    override fun removeNotification(id: Int) = throw EXCEPTION
+    override fun removeGroupedNotifications(group: String) = throw EXCEPTION
+    override fun clearAllNotifications() = throw EXCEPTION
     override fun addPermissionChangedHandler(handler: IPermissionChangedHandler) = throw EXCEPTION
     override fun removePermissionChangedHandler(handler: IPermissionChangedHandler) = throw EXCEPTION
     override fun setNotificationWillShowInForegroundHandler(handler: INotificationWillShowInForegroundHandler?) = throw EXCEPTION

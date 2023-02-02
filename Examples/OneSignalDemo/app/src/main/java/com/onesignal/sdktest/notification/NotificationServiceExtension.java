@@ -1,9 +1,8 @@
 package com.onesignal.sdktest.notification;
 
 import android.content.Context;
+import android.util.Log;
 
-import com.onesignal.debug.LogLevel;
-import com.onesignal.debug.internal.logging.Logging;
 import com.onesignal.notifications.IActionButton;
 import com.onesignal.notifications.IMutableNotification;
 import com.onesignal.notifications.INotification;
@@ -15,14 +14,13 @@ public class NotificationServiceExtension implements IRemoteNotificationReceived
 
    @Override
    public void remoteNotificationReceived(Context context, INotificationReceivedEvent notificationReceivedEvent) {
-      Logging.log(LogLevel.VERBOSE, "OSRemoteNotificationReceivedHandler fired!" +
-              " with OSNotificationReceived: " + notificationReceivedEvent.toString());
+      Log.v("MainApplication", "IRemoteNotificationReceivedHandler fired!" + " with INotificationReceivedEvent: " + notificationReceivedEvent.toString());
 
       INotification notification = notificationReceivedEvent.getNotification();
 
       if (notification.getActionButtons() != null) {
          for (IActionButton button : notification.getActionButtons()) {
-            Logging.log(LogLevel.VERBOSE, "ActionButton: " + button.toString());
+            Log.v("MainApplication", "ActionButton: " + button.toString());
          }
       }
 
