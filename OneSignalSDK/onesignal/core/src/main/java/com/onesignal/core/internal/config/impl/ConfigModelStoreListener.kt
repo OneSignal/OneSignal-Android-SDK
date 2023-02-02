@@ -94,7 +94,7 @@ internal class ConfigModelStoreListener(
                     params.influenceParams.indirectIAMAttributionWindow?.let { config.influenceParams.indirectIAMAttributionWindow = it }
                     params.influenceParams.isDirectEnabled?.let { config.influenceParams.isDirectEnabled = it }
                     params.influenceParams.isIndirectEnabled?.let { config.influenceParams.isIndirectEnabled = it }
-                    params.influenceParams.isUnattributedEnabled?.let { config.influenceParams.isUnattributedEnabled }
+                    params.influenceParams.isUnattributedEnabled?.let { config.influenceParams.isUnattributedEnabled = it }
 
                     _configModelStore.replace(config, ModelChangeTags.HYDRATE)
                     success = true
