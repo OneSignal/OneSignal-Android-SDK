@@ -24,7 +24,13 @@ internal class LocationManager(
     private val _locationPermissionController: LocationPermissionController
 ) : ILocationManager, IStartableService, ILocationPermissionChangedHandler {
 
-    override var isShared: Boolean = false
+    private var _isShared: Boolean = false
+    override var isShared
+        get() = _isShared
+        set(value) {
+            Logging.debug("LocationManager.setIsShared(value: $value)")
+            _isShared = value
+        }
 
     override fun start() {
         _locationPermissionController.subscribe(this)

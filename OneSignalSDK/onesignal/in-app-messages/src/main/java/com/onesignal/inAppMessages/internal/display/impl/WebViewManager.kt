@@ -8,6 +8,7 @@ import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import com.onesignal.common.ViewUtils
+import com.onesignal.common.safeString
 import com.onesignal.common.threading.suspendifyOnMain
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.IActivityLifecycleHandler
@@ -143,7 +144,7 @@ internal class WebViewManager(
         @Throws(JSONException::class)
         private fun handleActionTaken(jsonObject: JSONObject) {
             val body = jsonObject.getJSONObject("body")
-            val id = body.optString("id", null)
+            val id = body.safeString("id")
             closing = body.getBoolean("close")
             if (message.isPreview) {
                 var action = InAppMessageAction(body, _promptFactory)
@@ -153,7 +154,7 @@ internal class WebViewManager(
                 _lifecycle.messageActionOccurredOnMessage(message, action)
             }
             if (closing) {
-                dismissAndAwaitNextMessage()
+                backgroundDismissAndAwaitNextMessage()
             }
         }
 
@@ -382,26 +383,27 @@ internal class WebViewManager(
         return ViewUtils.getWindowHeight(activity) - margin
     }
 
+    fun backgroundDismissAndAwaitNextMessage() {
+        suspendifyOnThread {
+            dismissAndAwaitNextMessage()
+        }
+    }
     /**
      * Trigger the [.messageView] dismiss animation flow
      */
-    fun dismissAndAwaitNextMessage() {
+    suspend fun dismissAndAwaitNextMessage() {
         val locMessageView = messageView
 
         if (locMessageView == null || dismissFired) {
             return
         }
-        if (message != null && locMessageView != null) {
-            _lifecycle.messageWillDismiss(message)
-        }
 
-        dismissFired = false
-        setMessageView(null)
         dismissFired = true
+        _lifecycle.messageWillDismiss(message)
+        locMessageView.dismissAndAwaitNextMessage()
+        dismissFired = false
 
-        suspendifyOnThread {
-            locMessageView.dismissAndAwaitNextMessage()
-        }
+        setMessageView(null)
     }
 
     fun setContentSafeAreaInsets(content: InAppMessageContent, activity: Activity) {

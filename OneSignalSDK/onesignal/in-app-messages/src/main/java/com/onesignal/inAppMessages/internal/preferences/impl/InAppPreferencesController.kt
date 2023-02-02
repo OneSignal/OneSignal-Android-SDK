@@ -70,6 +70,6 @@ internal class InAppPreferencesController(
 
     // This pattern matches the pattern used by the Date class's toString() method
     override var lastTimeInAppDismissed: Long?
-        get() = _prefs.getLong(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_LAST_TIME_IAM_DISMISSED, null)
-        set(value) = _prefs.saveLong(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_LAST_TIME_IAM_DISMISSED, value)
+        get() = _prefs.getLong(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_IAM_LAST_DISMISSED_TIME, null)
+        set(value) = _prefs.saveLong(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_IAM_LAST_DISMISSED_TIME, value)
 }
