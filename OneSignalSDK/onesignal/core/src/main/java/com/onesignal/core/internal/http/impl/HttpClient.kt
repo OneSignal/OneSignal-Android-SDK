@@ -4,6 +4,7 @@ import android.net.TrafficStats
 import android.os.Build
 import com.onesignal.common.JSONUtils
 import com.onesignal.common.OneSignalUtils
+import com.onesignal.common.OneSignalWrapper
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.http.IHttpClient
@@ -109,6 +110,11 @@ internal class HttpClient(
                 con.connectTimeout = timeout
                 con.readTimeout = timeout
                 con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignalUtils.sdkVersion)
+
+                if(OneSignalWrapper.sdkType != null && OneSignalWrapper.sdkVersion != null) {
+                    con.setRequestProperty("SDK-Wrapper", "onesignal/${OneSignalWrapper.sdkType}/${OneSignalWrapper.sdkVersion}")
+                }
+
                 con.setRequestProperty("Accept", OS_ACCEPT_HEADER)
 
                 val subscriptionId = _configModelStore.model.pushSubscriptionId

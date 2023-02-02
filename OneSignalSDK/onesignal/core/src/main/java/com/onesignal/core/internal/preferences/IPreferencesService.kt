@@ -199,7 +199,7 @@ object PreferenceOneSignalKeys {
     /**
      * (Long) The last time an IAM was dismissed, in unix time milliseconds.
      */
-    const val PREFS_OS_LAST_TIME_IAM_DISMISSED = "PREFS_OS_LAST_TIME_IAM_DISMISSED"
+    const val PREFS_OS_IAM_LAST_DISMISSED_TIME = "PREFS_OS_IAM_LAST_DISMISSED_TIME"
 
     // Models
     /**

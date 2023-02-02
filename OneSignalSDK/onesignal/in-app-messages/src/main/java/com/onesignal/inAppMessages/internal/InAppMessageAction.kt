@@ -14,7 +14,7 @@ internal class InAppMessageAction(json: JSONObject, promptFactory: IInAppMessage
      * UUID assigned by OneSignal for internal use.
      * Package-private to track which element was tapped to report to the OneSignal dashboard.
      */
-    override val clickId: String?
+    val clickId: String?
 
     /**
      * An optional click name entered defined by the app developer when creating the IAM
@@ -34,7 +34,7 @@ internal class InAppMessageAction(json: JSONObject, promptFactory: IInAppMessage
     /**
      * UUID for the page in an IAM Carousel
      */
-    override val pageId: String?
+    val pageId: String?
 
     /**
      * Outcome for action

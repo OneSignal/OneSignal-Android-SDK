@@ -59,10 +59,12 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
     }
 
     class NotificationGenerationWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
-
-        private val _notificationProcessor: INotificationGenerationProcessor = OneSignal.getService()
-
         override suspend fun doWork(): Result {
+            if(!OneSignal.isInitialized) {
+                return Result.failure()
+            }
+
+            val notificationProcessor: INotificationGenerationProcessor = OneSignal.getService()
             val inputData = inputData
             val id = inputData.getString(OS_ID_DATA_PARAM) ?: return Result.failure()
 
@@ -73,7 +75,7 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
                 val timestamp = inputData.getLong(TIMESTAMP_WORKER_DATA_PARAM, System.currentTimeMillis() / 1000L)
                 val isRestoring = inputData.getBoolean(IS_RESTORING_WORKER_DATA_PARAM, false)
 
-                _notificationProcessor.processNotificationData(applicationContext, androidNotificationId, jsonPayload, isRestoring, timestamp)
+                notificationProcessor.processNotificationData(applicationContext, androidNotificationId, jsonPayload, isRestoring, timestamp)
             } catch (e: JSONException) {
                 Logging.error("Error occurred doing work for job with id: $id", e)
                 return Result.failure()
