@@ -11,5 +11,5 @@ object OneSignalWrapper {
      * The version of the wrapper SDK.
      */
     @JvmStatic
-    val sdkVersion: String? = null
+    var sdkVersion: String? = null
 }
