@@ -45,8 +45,7 @@ object OSWorkManagerHelper {
     @SuppressWarnings("deprecation")
     @SuppressLint("RestrictedApi")
     private fun isInitialized(): Boolean {
-        val instance = WorkManagerImpl.getInstance()
-        return instance != null
+        return WorkManagerImpl.getInstance() != null
     }
 
     /**
@@ -57,12 +56,11 @@ object OSWorkManagerHelper {
      * @return an instance of WorkManager
      */
     @JvmStatic
+    @Synchronized
     fun getInstance(context: Context): WorkManager {
-        return if (isInitialized()) {
-            WorkManager.getInstance(context)
-        } else {
+        if (!isInitialized()) {
             WorkManager.initialize(context, Configuration.Builder().build())
-            WorkManager.getInstance(context)
         }
+        return WorkManager.getInstance(context)
     }
 }
