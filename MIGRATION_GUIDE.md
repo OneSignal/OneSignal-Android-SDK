@@ -1,4 +1,4 @@
-# Android v5.0.0-beta1 Migration Guide
+# Android v5.0.0-beta2 Migration Guide
 In this release, we are making a significant shift from a device-centered model to a user-centered model.  A user-centered model allows for more powerful omni-channel integrations within the OneSignal platform.
 
 This migration guide will walk you through the Android SDK v5.0.0 changes as a result of this shift.
@@ -32,7 +32,7 @@ Open your App’s `build.gradle (Module: app)` file, add (or update) the followi
 
 
     dependencies {
-      implementation 'com.onesignal:OneSignal:5.0.0-beta1'
+      implementation 'com.onesignal:OneSignal:5.0.0-beta2'
     }
 
 The above statement will bring in the entire OneSignalSDK and is the desired state for most integrations.  For greater flexibility you can alternatively specify individual modules that make up the full SDK.  The possible modules are:
@@ -44,10 +44,10 @@ The above statement will bring in the entire OneSignalSDK and is the desired sta
 
 
     dependencies {
-      implementation 'com.onesignal:core:5.0.0-beta1'
-      implementation 'com.onesignal:in-app-messages:5.0.0-beta1'
-      implementation 'com.onesignal:notifications:5.0.0-beta1'
-      implementation 'com.onesignal:location:5.0.0-beta1'
+      implementation 'com.onesignal:core:5.0.0-beta2'
+      implementation 'com.onesignal:in-app-messages:5.0.0-beta2'
+      implementation 'com.onesignal:notifications:5.0.0-beta2'
+      implementation 'com.onesignal:location:5.0.0-beta2'
     }
 
 
