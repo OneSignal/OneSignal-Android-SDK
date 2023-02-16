@@ -51,7 +51,7 @@ open class Notification : INotification {
     override var sentTime: Long = 0
     override var ttl = 0
 
-    var rawPayload: String? = null
+    override var rawPayload: String? = null
 
     constructor() {}
     constructor(payload: JSONObject, time: ITime) : this(null, payload, 0, time) {}
