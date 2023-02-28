@@ -12,6 +12,8 @@ import com.onesignal.notifications.IPermissionChangedHandler
 internal class MisconfiguredNotificationsManager : INotificationsManager {
     override val permission: Boolean
         get() = throw EXCEPTION
+    override val canRequestPermission: Boolean
+        get() = throw EXCEPTION
 
     override suspend fun requestPermission(fallbackToSettings: Boolean): Boolean = throw EXCEPTION
     override fun removeNotification(id: Int) = throw EXCEPTION
