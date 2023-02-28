@@ -36,6 +36,9 @@ import com.onesignal.core.internal.application.ApplicationLifecycleHandlerBase
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.permissions.AlertDialogPrepromptForAndroidSettings
 import com.onesignal.core.internal.permissions.IRequestPermissionService
+import com.onesignal.core.internal.preferences.IPreferencesService
+import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
+import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.notifications.R
 import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.permissions.INotificationPermissionChangedHandler
@@ -44,12 +47,20 @@ import com.onesignal.notifications.internal.permissions.INotificationPermissionC
 internal class NotificationPermissionController(
     private val _application: IApplicationService,
     private val _requestPermission: IRequestPermissionService,
-    private val _applicationService: IApplicationService
+    private val _applicationService: IApplicationService,
+    private val _preferenceService: IPreferencesService
 ) : IRequestPermissionService.PermissionCallback,
     INotificationPermissionController {
 
     private val _waiter = WaiterWithValue<Boolean>()
     private val _events = EventProducer<INotificationPermissionChangedHandler>()
+
+    override val canRequestPermission: Boolean
+        get() = !_preferenceService.getBool(
+            PreferenceStores.ONESIGNAL,
+            "${PreferenceOneSignalKeys.PREFS_OS_USER_REJECTED_PERMISSION_PREFIX}${ANDROID_PERMISSION_STRING}",
+            false
+        )!!
 
     init {
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)

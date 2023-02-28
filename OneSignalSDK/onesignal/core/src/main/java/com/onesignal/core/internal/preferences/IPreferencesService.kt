@@ -151,6 +151,13 @@ object PreferenceOneSignalKeys {
      */
     const val PREFS_OS_LAST_LOCATION_TIME = "OS_LAST_LOCATION_TIME"
 
+    // Permissions
+    /**
+     * (Boolean) A prefix key for the permission state. When true, the user has rejected this
+     * permission too many times and will not be prompted again.
+     */
+    const val PREFS_OS_USER_REJECTED_PERMISSION_PREFIX = "USER_REJECTED_PERMISSION_"
+
     // HTTP
     /**
      * (String) A prefix key for retrieving the ETAG for a given HTTP GET cache key. The cache

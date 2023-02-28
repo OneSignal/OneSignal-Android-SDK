@@ -10,9 +10,13 @@ import com.onesignal.OneSignal
 import com.onesignal.common.AndroidSupportV4Compat
 import com.onesignal.core.R
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
+import com.onesignal.core.internal.preferences.IPreferencesService
+import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
+import com.onesignal.core.internal.preferences.PreferenceStores
 
 class PermissionsActivity : Activity() {
     private var _requestPermissionService: RequestPermissionService? = null
+    private var _preferenceService: IPreferencesService? = null
     private var permissionRequestType: String? = null
     private var androidPermissionString: String? = null
 
@@ -21,6 +25,7 @@ class PermissionsActivity : Activity() {
         OneSignal.initWithContext(this)
 
         _requestPermissionService = OneSignal.getService()
+        _preferenceService = OneSignal.getService()
 
         handleBundleParams(intent.extras)
     }
@@ -62,8 +67,8 @@ class PermissionsActivity : Activity() {
     private fun requestPermission(androidPermissionString: String?) {
         if (!_requestPermissionService!!.waiting) {
             _requestPermissionService!!.waiting = true
-            _requestPermissionService!!.neverAskAgainClicked =
-                !AndroidSupportV4Compat.ActivityCompat.shouldShowRequestPermissionRationale(
+            _requestPermissionService!!.shouldShowRequestPermissionRationaleBeforeRequest =
+                AndroidSupportV4Compat.ActivityCompat.shouldShowRequestPermissionRationale(
                     this@PermissionsActivity,
                     androidPermissionString
                 )
@@ -107,14 +112,34 @@ class PermissionsActivity : Activity() {
     }
 
     private fun shouldShowSettings(): Boolean {
-        return (
-            _requestPermissionService!!.fallbackToSettings &&
-                _requestPermissionService!!.neverAskAgainClicked &&
-                !AndroidSupportV4Compat.ActivityCompat.shouldShowRequestPermissionRationale(
+        if (!_requestPermissionService!!.fallbackToSettings)
+            return false;
+
+        // We want to show settings after the user has clicked "Don't Allow" 2 times.
+        // After the first time shouldShowRequestPermissionRationale becomes true, after
+        // the second time shouldShowRequestPermissionRationale becomes false again. We
+        // look for the change from `true` -> `false`. When this happens we remember this
+        // rejection, as the user will never be prompted again.
+        if (_requestPermissionService!!.shouldShowRequestPermissionRationaleBeforeRequest) {
+            if (!AndroidSupportV4Compat.ActivityCompat.shouldShowRequestPermissionRationale(
                     this@PermissionsActivity,
                     androidPermissionString
                 )
-            )
+            ) {
+                _preferenceService!!.saveBool(
+                    PreferenceStores.ONESIGNAL,
+                    "${PreferenceOneSignalKeys.PREFS_OS_USER_REJECTED_PERMISSION_PREFIX}${androidPermissionString}",
+                    true
+                )
+                return false;
+            }
+        }
+
+        return _preferenceService!!.getBool(
+            PreferenceStores.ONESIGNAL,
+            "${PreferenceOneSignalKeys.PREFS_OS_USER_REJECTED_PERMISSION_PREFIX}$androidPermissionString",
+            false
+        )!!
     }
 
     companion object {
