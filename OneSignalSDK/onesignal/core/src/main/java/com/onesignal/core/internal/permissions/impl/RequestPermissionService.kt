@@ -9,12 +9,12 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.permissions.IRequestPermissionService
 
 internal class RequestPermissionService(
-    private val _application: IApplicationService
+    private val _application: IApplicationService,
 ) : Activity(), IRequestPermissionService {
 
     var waiting = false
     var fallbackToSettings = false
-    var neverAskAgainClicked = false
+    var shouldShowRequestPermissionRationaleBeforeRequest = false
     private val callbackMap = HashMap<String?, IRequestPermissionService.PermissionCallback>()
 
     override fun registerAsCallback(
