@@ -15,7 +15,6 @@ internal class SubscriptionBackendService(
     override suspend fun createSubscription(appId: String, aliasLabel: String, aliasValue: String, subscription: SubscriptionObject): String? {
         val requestJSON = JSONObject()
             .put("subscription", JSONConverter.convertToJSON(subscription))
-            .put("retain_previous_owner", true)
 
         val response = _httpClient.post("apps/$appId/users/by/$aliasLabel/$aliasValue/subscriptions", requestJSON)
 
