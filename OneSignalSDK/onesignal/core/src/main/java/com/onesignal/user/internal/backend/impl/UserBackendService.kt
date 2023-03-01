@@ -29,9 +29,6 @@ internal class UserBackendService(
         if (subscriptions.isNotEmpty()) {
             requestJSON
                 .put("subscriptions", JSONConverter.convertToJSON(subscriptions))
-                .putJSONObject("subscription_options") {
-                    it.put("retain_previous_owner", true)
-                }
         }
 
         val response = _httpClient.post("apps/$appId/users", requestJSON)
