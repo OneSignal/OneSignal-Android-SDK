@@ -15,12 +15,16 @@ android {
         flavorDimensions "default"
     }
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
+//    signingConfigs {
+//        huawei {
+//            storeFile file('SdkTest.jks')
+//            keyAlias 'SdkTest'
+//            keyPassword ''
+//            storePassword ''
+//            v1SigningEnabled true
+//            v2SigningEnabled true
+//        }
+//    }
 
     productFlavors {
         gms {
@@ -30,7 +34,19 @@ android {
         huawei {
             dimension "default"
             minSdkVersion 17
-            applicationId "com.onesignal.sdktest"
+            applicationId "com.onesignal.sdk.test"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+//            signingConfig null
+//            productFlavors.huawei.signingConfig signingConfigs.huawei
+            debuggable true
         }
     }
 
