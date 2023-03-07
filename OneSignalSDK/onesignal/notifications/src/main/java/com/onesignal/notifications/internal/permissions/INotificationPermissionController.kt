@@ -32,6 +32,11 @@ import com.onesignal.common.events.IEventNotifier
 internal interface INotificationPermissionController :
     IEventNotifier<INotificationPermissionChangedHandler> {
     /**
+     * Whether this app can request push notification permission.
+     */
+    val canRequestPermission: Boolean
+
+    /**
      * Prompt the user for notification permission.  Note it is possible the application
      * will be killed while the permission prompt is being displayed to the user. When the
      * app restarts it will begin with the permission prompt.  In this case this suspending

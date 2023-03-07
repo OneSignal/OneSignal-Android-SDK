@@ -10,6 +10,11 @@ interface INotificationsManager {
     val permission: Boolean
 
     /**
+     * Whether this app can request push notification permission.
+     */
+    val canRequestPermission: Boolean
+
+    /**
      * Prompt the user for permission to push notifications.  This will display the native
      * OS prompt to request push notification permission.  If the user enables, a push
      * subscription to this device will be automatically added to the user.
