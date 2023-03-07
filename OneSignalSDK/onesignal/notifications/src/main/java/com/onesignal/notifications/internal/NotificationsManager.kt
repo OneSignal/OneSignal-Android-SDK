@@ -45,6 +45,9 @@ internal class NotificationsManager(
 
     override var permission: Boolean = NotificationHelper.areNotificationsEnabled(_applicationService.appContext)
 
+    override val canRequestPermission: Boolean
+        get() = _notificationPermissionController.canRequestPermission
+
     private val _permissionChangedNotifier = EventProducer<IPermissionChangedHandler>()
 
     init {
