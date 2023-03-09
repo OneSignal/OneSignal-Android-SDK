@@ -38,7 +38,9 @@ import com.onesignal.debug.internal.logging.Logging
 @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
 class SyncJobService : JobService() {
     override fun onStartJob(jobParameters: JobParameters): Boolean {
-        OneSignal.initWithContext(this)
+        if(!OneSignal.initWithContext(this)) {
+            return false
+        }
 
         var backgroundService = OneSignal.getService<IBackgroundManager>()
 
