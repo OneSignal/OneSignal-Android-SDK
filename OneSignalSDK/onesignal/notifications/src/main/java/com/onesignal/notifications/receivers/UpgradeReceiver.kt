@@ -43,12 +43,11 @@ class UpgradeReceiver : BroadcastReceiver() {
             return
         }
 
-        if (!OneSignal.isInitialized) {
-            OneSignal.initWithContext(context)
+        if(!OneSignal.initWithContext(context)) {
+            return
         }
 
-        var restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
-
+        val restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
         restoreWorkManager.beginEnqueueingWork(context, true)
     }
 }
