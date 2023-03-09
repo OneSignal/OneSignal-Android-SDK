@@ -53,7 +53,9 @@ object OneSignalHmsEventBridge {
     }
 
     fun onMessageReceived(context: Context, message: RemoteMessage) {
-        OneSignal.initWithContext(context)
+        if(!OneSignal.initWithContext(context)) {
+            return
+        }
 
         var time = OneSignal.getService<ITime>()
         val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
