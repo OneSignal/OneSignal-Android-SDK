@@ -21,7 +21,9 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
             return
         }
 
-        OneSignal.initWithContext(context)
+        if(!OneSignal.initWithContext(context)) {
+            return
+        }
 
         val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
 
