@@ -45,8 +45,8 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
         override suspend fun doWork(): Result {
             val context = applicationContext
 
-            if (!OneSignal.isInitialized) {
-                OneSignal.initWithContext(context)
+            if (!OneSignal.initWithContext(context)) {
+                return Result.success();
             }
 
             if (!NotificationHelper.areNotificationsEnabled(context)) {

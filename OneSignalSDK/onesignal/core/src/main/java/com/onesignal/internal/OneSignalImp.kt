@@ -134,12 +134,12 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         _services = serviceBuilder.build()
     }
 
-    override fun initWithContext(context: Context, appId: String?) {
+    override fun initWithContext(context: Context, appId: String?) : Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
         // do not do this again if already initialized
         if (isInitialized) {
-            return
+            return true
         }
 
         // start the application service. This is called explicitly first because we want
@@ -154,6 +154,14 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         // get the current config model, if there is one
         _configModel = _services.getService<ConfigModelStore>().model
         _sessionModel = _services.getService<SessionModelStore>().model
+
+        // initWithContext is called by our internal services/receivers/activites but they do not provide
+        // an appId (they don't know it).  If the app has never called the external initWithContext
+        // prior to our services/receivers/activities we will blow up, as no appId has been established.
+        if (appId == null && !_configModel!!.hasProperty(ConfigModel::appId.name)) {
+            Logging.warn("initWithContext called without providing appId, and no appId has been established!")
+            return false
+        }
 
         var forceCreateUser = false
         // if the app id was specified as input, update the config model with it
@@ -238,6 +246,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         _startupService!!.start()
 
         isInitialized = true
+
+        return true
     }
 
     override fun login(externalId: String, jwtBearerToken: String?) {
