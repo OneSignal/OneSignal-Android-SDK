@@ -36,7 +36,9 @@ import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
 abstract class NotificationOpenedActivityBase : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        OneSignal.initWithContext(applicationContext)
+        if(!OneSignal.initWithContext(applicationContext)) {
+            return
+        }
 
         var self = this
 
@@ -50,7 +52,9 @@ abstract class NotificationOpenedActivityBase : Activity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        OneSignal.initWithContext(applicationContext)
+        if(!OneSignal.initWithContext(applicationContext)) {
+            return
+        }
 
         var self = this
         suspendifyOnThread {

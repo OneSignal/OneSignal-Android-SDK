@@ -22,7 +22,10 @@ class PermissionsActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        OneSignal.initWithContext(this)
+        
+        if(!OneSignal.initWithContext(this)) {
+            return
+        }
 
         _requestPermissionService = OneSignal.getService()
         _preferenceService = OneSignal.getService()
