@@ -13,9 +13,6 @@ import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.registration.IPushRegistrator
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
 internal class PushRegistratorHMS(
@@ -30,26 +27,24 @@ internal class PushRegistratorHMS(
 
     private var _waiter: WaiterWithValue<String?>? = null
 
-    override suspend fun registerForPush(): IPushRegistrator.RegisterResult = coroutineScope {
+    override suspend fun registerForPush(): IPushRegistrator.RegisterResult {
         var result: IPushRegistrator.RegisterResult? = null
 
-        launch(Dispatchers.Default) {
-            result = try {
-                getHMSTokenTask(_applicationService.appContext)
-            } catch (e: ApiException) {
-                Logging.error("HMS ApiException getting Huawei push token!", e)
-                val pushStatus: SubscriptionStatus =
-                    if (e.statusCode == CommonCode.ErrorCode.ARGUMENTS_INVALID) {
-                        SubscriptionStatus.HMS_ARGUMENTS_INVALID
-                    } else {
-                        SubscriptionStatus.HMS_API_EXCEPTION_OTHER
-                    }
+        result = try {
+            getHMSTokenTask(_applicationService.appContext)
+        } catch (e: ApiException) {
+            Logging.error("HMS ApiException getting Huawei push token!", e)
+            val pushStatus: SubscriptionStatus =
+                if (e.statusCode == CommonCode.ErrorCode.ARGUMENTS_INVALID) {
+                    SubscriptionStatus.HMS_ARGUMENTS_INVALID
+                } else {
+                    SubscriptionStatus.HMS_API_EXCEPTION_OTHER
+                }
 
-                IPushRegistrator.RegisterResult(null, pushStatus)
-            }
+            IPushRegistrator.RegisterResult(null, pushStatus)
         }
 
-        return@coroutineScope result!!
+        return result!!
     }
 
     @Synchronized
@@ -84,7 +79,7 @@ internal class PushRegistratorHMS(
             }
 
             return if (pushToken != null) {
-                Logging.error("ADM registered with ID:$pushToken")
+                Logging.error("HMS registered with ID:$pushToken")
                 IPushRegistrator.RegisterResult(
                     pushToken,
                     SubscriptionStatus.SUBSCRIBED
