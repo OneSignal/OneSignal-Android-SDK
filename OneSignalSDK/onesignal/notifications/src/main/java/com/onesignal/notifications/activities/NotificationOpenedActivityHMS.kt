@@ -72,7 +72,9 @@ class NotificationOpenedActivityHMS : Activity() {
     }
 
     private fun processOpen(intent: Intent?) {
-        OneSignal.initWithContext(applicationContext)
+        if (!OneSignal.initWithContext(applicationContext)) {
+            return
+        }
 
         var notificationPayloadProcessorHMS = OneSignal.getService<INotificationOpenedProcessorHMS>()
         val self = this
