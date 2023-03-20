@@ -6,6 +6,13 @@ import org.json.JSONObject
 
 class ConfigModel : Model() {
     /**
+     * Whether this config has been initialized with remote data.
+     */
+    var isInitializedWithRemote: Boolean
+        get() = getBooleanProperty(::isInitializedWithRemote.name) { false }
+        set(value) { setBooleanProperty(::isInitializedWithRemote.name, value) }
+
+    /**
      * The current OneSignal application ID provided to the SDK.
      */
     var appId: String
