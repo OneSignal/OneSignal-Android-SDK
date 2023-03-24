@@ -45,40 +45,40 @@ internal object OutcomesDbContract {
     const val CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_INFLUENCE_ID: String = CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID
     const val CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_TYPE: String = CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE
     const val SQL_CREATE_OUTCOME_ENTRIES_V1 = "CREATE TABLE " + OutcomeEventsTable.TABLE_NAME + " (" +
-            OutcomeEventsTable.ID + " INTEGER PRIMARY KEY," +
-            OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + TEXT_TYPE + "," +
-            OutcomeEventsTable.COLUMN_NAME_NAME + TEXT_TYPE + "," +
-            OutcomeEventsTable.COLUMN_NAME_SESSION + TEXT_TYPE + "," +
-            OutcomeEventsTable.COLUMN_NAME_PARAMS + TEXT_TYPE + "," +
-            OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + " TIMESTAMP" +
-            ");"
+        OutcomeEventsTable.ID + " INTEGER PRIMARY KEY," +
+        OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + TEXT_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_NAME + TEXT_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_SESSION + TEXT_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_PARAMS + TEXT_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + " TIMESTAMP" +
+        ");"
     const val SQL_CREATE_OUTCOME_ENTRIES_V2 = "CREATE TABLE " + OutcomeEventsTable.TABLE_NAME + " (" +
-            OutcomeEventsTable.ID + INTEGER_PRIMARY_KEY_TYPE + "," +
-            OutcomeEventsTable.COLUMN_NAME_SESSION + TEXT_TYPE + "," +
-            OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + TEXT_TYPE + "," +
-            OutcomeEventsTable.COLUMN_NAME_NAME + TEXT_TYPE + "," +
-            OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + TIMESTAMP_TYPE + "," +  // "params TEXT" Added in v4, removed in v5.
-            OutcomeEventsTable.COLUMN_NAME_WEIGHT + FLOAT_TYPE +  // New in v5, missing migration added in v6
-            ");"
+        OutcomeEventsTable.ID + INTEGER_PRIMARY_KEY_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_SESSION + TEXT_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + TEXT_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_NAME + TEXT_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + TIMESTAMP_TYPE + "," + // "params TEXT" Added in v4, removed in v5.
+        OutcomeEventsTable.COLUMN_NAME_WEIGHT + FLOAT_TYPE + // New in v5, missing migration added in v6
+        ");"
     const val SQL_CREATE_OUTCOME_ENTRIES_V3 = "CREATE TABLE " + OutcomeEventsTable.TABLE_NAME + " (" +
-            OutcomeEventsTable.ID + INTEGER_PRIMARY_KEY_TYPE + "," +
-            OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE + TEXT_TYPE + "," +
-            OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE + TEXT_TYPE + "," +
-            OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + TEXT_TYPE + "," +
-            OutcomeEventsTable.COLUMN_NAME_IAM_IDS + TEXT_TYPE + "," +
-            OutcomeEventsTable.COLUMN_NAME_NAME + TEXT_TYPE + "," +
-            OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + TIMESTAMP_TYPE + "," +  // "params TEXT" Added in v4, removed in v5.
-            OutcomeEventsTable.COLUMN_NAME_WEIGHT + FLOAT_TYPE +  // New in v5, missing migration added in v6
-            ");"
+        OutcomeEventsTable.ID + INTEGER_PRIMARY_KEY_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE + TEXT_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE + TEXT_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + TEXT_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_IAM_IDS + TEXT_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_NAME + TEXT_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + TIMESTAMP_TYPE + "," + // "params TEXT" Added in v4, removed in v5.
+        OutcomeEventsTable.COLUMN_NAME_WEIGHT + FLOAT_TYPE + // New in v5, missing migration added in v6
+        ");"
     const val SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V1 = "CREATE TABLE " + CachedUniqueOutcomeTable.TABLE_NAME_V1 + " (" +
-            CachedUniqueOutcomeTable.ID + INTEGER_PRIMARY_KEY_TYPE + "," +
-            CachedUniqueOutcomeTable.COLUMN_NAME_NOTIFICATION_ID + TEXT_TYPE + "," +
-            CachedUniqueOutcomeTable.COLUMN_NAME_NAME + TEXT_TYPE +
-            ");"
+        CachedUniqueOutcomeTable.ID + INTEGER_PRIMARY_KEY_TYPE + "," +
+        CachedUniqueOutcomeTable.COLUMN_NAME_NOTIFICATION_ID + TEXT_TYPE + "," +
+        CachedUniqueOutcomeTable.COLUMN_NAME_NAME + TEXT_TYPE +
+        ");"
     const val SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2 = "CREATE TABLE " + CachedUniqueOutcomeTable.TABLE_NAME_V2 + " (" +
-            CachedUniqueOutcomeTable.ID + INTEGER_PRIMARY_KEY_TYPE + "," +
-            CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID + TEXT_TYPE + "," +
-            CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE + TEXT_TYPE + "," +
-            CachedUniqueOutcomeTable.COLUMN_NAME_NAME + TEXT_TYPE +
-            ");"
+        CachedUniqueOutcomeTable.ID + INTEGER_PRIMARY_KEY_TYPE + "," +
+        CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID + TEXT_TYPE + "," +
+        CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE + TEXT_TYPE + "," +
+        CachedUniqueOutcomeTable.COLUMN_NAME_NAME + TEXT_TYPE +
+        ");"
 }

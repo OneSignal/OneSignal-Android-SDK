@@ -546,7 +546,6 @@ public class MainActivityViewModel implements ActivityViewModel {
         boolean isPermissionEnabled = deviceState != null && deviceState.areNotificationsEnabled();
         final boolean isSubscribed = deviceState != null && deviceState.isSubscribed();
 
-        subscriptionSwitch.setEnabled(isPermissionEnabled);
         subscriptionSwitch.setChecked(isSubscribed);
 
         if (isPermissionEnabled) {
@@ -561,6 +560,17 @@ public class MainActivityViewModel implements ActivityViewModel {
 
         subscriptionSwitch.setOnClickListener(v -> {
             OneSignal.disablePush(!subscriptionSwitch.isChecked());
+            if (subscriptionSwitch.isChecked()) {
+                OneSignal.promptForPushNotifications(
+                        true,
+                        new OneSignal.PromptForPushNotificationPermissionResponseHandler() {
+                            @Override
+                            public void response(boolean accepted) {
+                                System.out.println("APP promptForPushNotifications:" + this + ":accepted: " + accepted);
+                            }
+                        }
+                );
+            }
         });
     }
 

@@ -582,10 +582,7 @@ class OSUtils {
             break;
       }
       intent.addFlags(
-          Intent.FLAG_ACTIVITY_NO_HISTORY |
-          Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET |
-          Intent.FLAG_ACTIVITY_MULTIPLE_TASK |
-          Intent.FLAG_ACTIVITY_NEW_TASK
+         Intent.FLAG_ACTIVITY_NEW_TASK
       );
       return intent;
    }
@@ -659,5 +656,18 @@ class OSUtils {
 
    static int getRandomDelay(int minDelay, int maxDelay) {
       return new Random().nextInt(maxDelay + 1 - minDelay) + minDelay;
+   }
+
+   @NonNull
+   static Throwable getRootCauseThrowable(@NonNull Throwable subjectThrowable) {
+      Throwable throwable = subjectThrowable;
+      while (throwable.getCause() != null && throwable.getCause() != throwable) {
+         throwable = throwable.getCause();
+      }
+      return throwable;
+   }
+
+   static String getRootCauseMessage(@NonNull Throwable throwable) {
+      return getRootCauseThrowable(throwable).getMessage();
    }
 }

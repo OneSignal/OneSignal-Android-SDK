@@ -10,8 +10,6 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.onesignal.OSInAppMessageLocationPrompt.LOCATION_PROMPT_KEY;
-
 public class OSInAppMessageAction {
 
     private static final String ID = "id";
@@ -117,8 +115,14 @@ public class OSInAppMessageAction {
     private void parsePrompts(JSONObject json) throws JSONException {
         JSONArray promptsJsonArray = json.getJSONArray(PROMPTS);
         for (int i = 0; i < promptsJsonArray.length(); i++) {
-            if (promptsJsonArray.get(i).equals(LOCATION_PROMPT_KEY) ) {
-                prompts.add(new OSInAppMessageLocationPrompt());
+            String promptType = promptsJsonArray.getString(i);
+            switch (promptType) {
+                case OSInAppMessagePushPrompt.PUSH_PROMPT_KEY:
+                    prompts.add(new OSInAppMessagePushPrompt());
+                    break;
+                case OSInAppMessageLocationPrompt.LOCATION_PROMPT_KEY:
+                    prompts.add(new OSInAppMessageLocationPrompt());
+                    break;
             }
         }
     }

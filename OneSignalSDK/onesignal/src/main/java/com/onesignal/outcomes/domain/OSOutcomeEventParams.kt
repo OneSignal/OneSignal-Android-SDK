@@ -4,14 +4,16 @@ import com.onesignal.outcomes.OSOutcomeConstants
 import org.json.JSONException
 import org.json.JSONObject
 
-class OSOutcomeEventParams constructor(val outcomeId: String,
-                                       val outcomeSource: OSOutcomeSource?, // This field is optional
-                                       var weight: Float, // This field is optional.
-                                       var timestamp: Long = 0) {
+class OSOutcomeEventParams constructor(
+    val outcomeId: String,
+    val outcomeSource: OSOutcomeSource?, // This field is optional
+    var weight: Float, // This field is optional.
+    var timestamp: Long = 0
+) {
     @Throws(JSONException::class)
     fun toJSONObject(): JSONObject {
         val json = JSONObject()
-                .put(OSOutcomeConstants.OUTCOME_ID, outcomeId)
+            .put(OSOutcomeConstants.OUTCOME_ID, outcomeId)
         outcomeSource?.let {
             json.put(OSOutcomeConstants.OUTCOME_SOURCES, it.toJSONObject())
         }
@@ -24,10 +26,10 @@ class OSOutcomeEventParams constructor(val outcomeId: String,
 
     override fun toString(): String {
         return "OSOutcomeEventParams{" +
-                "outcomeId='" + outcomeId + '\'' +
-                ", outcomeSource=" + outcomeSource +
-                ", weight=" + weight +
-                ", timestamp=" + timestamp +
-                '}'
+            "outcomeId='" + outcomeId + '\'' +
+            ", outcomeSource=" + outcomeSource +
+            ", weight=" + weight +
+            ", timestamp=" + timestamp +
+            '}'
     }
 }

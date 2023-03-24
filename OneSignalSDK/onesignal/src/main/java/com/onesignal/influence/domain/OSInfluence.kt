@@ -25,9 +25,11 @@ class OSInfluence {
         this.ids = if (ids.isEmpty()) null else JSONArray(ids)
     }
 
-    constructor(influenceChannel: OSInfluenceChannel,
-                influenceType: OSInfluenceType,
-                ids: JSONArray?) {
+    constructor(
+        influenceChannel: OSInfluenceChannel,
+        influenceType: OSInfluenceType,
+        ids: JSONArray?
+    ) {
         this.influenceChannel = influenceChannel
         this.influenceType = influenceType
         this.ids = ids
@@ -38,24 +40,24 @@ class OSInfluence {
         get() = ids?.let { if (it.length() > 0) it.getString(0) else null }
 
     fun copy() = OSInfluence(
-            influenceChannel = this@OSInfluence.influenceChannel,
-            influenceType = this@OSInfluence.influenceType,
-            ids = this@OSInfluence.ids
+        influenceChannel = this@OSInfluence.influenceChannel,
+        influenceType = this@OSInfluence.influenceType,
+        ids = this@OSInfluence.ids
     )
 
     @Throws(JSONException::class)
     fun toJSONString() = JSONObject()
-            .put(OSInfluenceConstants.INFLUENCE_CHANNEL, influenceChannel.toString())
-            .put(OSInfluenceConstants.INFLUENCE_TYPE, influenceType.toString())
-            .put(OSInfluenceConstants.INFLUENCE_IDS, if (ids != null) ids.toString() else "")
-            .toString()
+        .put(OSInfluenceConstants.INFLUENCE_CHANNEL, influenceChannel.toString())
+        .put(OSInfluenceConstants.INFLUENCE_TYPE, influenceType.toString())
+        .put(OSInfluenceConstants.INFLUENCE_IDS, if (ids != null) ids.toString() else "")
+        .toString()
 
     override fun toString(): String {
         return "SessionInfluence{" +
-                "influenceChannel=" + influenceChannel +
-                ", influenceType=" + influenceType +
-                ", ids=" + ids +
-                '}'
+            "influenceChannel=" + influenceChannel +
+            ", influenceType=" + influenceType +
+            ", ids=" + ids +
+            '}'
     }
 
     override fun equals(o: Any?): Boolean {
@@ -63,7 +65,7 @@ class OSInfluence {
         if (o == null || javaClass != o.javaClass) return false
         val that = o as OSInfluence
         return influenceChannel == that.influenceChannel &&
-                influenceType == that.influenceType
+            influenceType == that.influenceType
     }
 
     override fun hashCode(): Int {

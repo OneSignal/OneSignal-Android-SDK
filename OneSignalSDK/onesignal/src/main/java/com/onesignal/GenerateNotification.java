@@ -82,10 +82,24 @@ class GenerateNotification {
    private static Resources contextResources = null;
    private static Context currentContext = null;
    private static String packageName = null;
+   private static Integer groupAlertBehavior = null;
 
    private static class OneSignalNotificationBuilder {
       NotificationCompat.Builder compatBuilder;
       boolean hasLargeIcon;
+   }
+
+   // NotificationCompat unfortunately doesn't correctly support some features
+   // such as sounds and heads-up notifications with GROUP_ALERT_CHILDREN on
+   // Android 6.0 and older.
+   // This includes:
+   //    Android 6.0 - No Sound or heads-up
+   //    Android 5.0 - Sound, but no heads-up
+   private static void initGroupAlertBehavior() {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N)
+         groupAlertBehavior = NotificationCompat.GROUP_ALERT_CHILDREN;
+     else
+         groupAlertBehavior = NotificationCompat.GROUP_ALERT_SUMMARY;
    }
 
    private static void setStatics(Context inContext) {
@@ -99,6 +113,8 @@ class GenerateNotification {
       setStatics(notificationJob.getContext());
 
       isRunningOnMainThreadCheck();
+
+      initGroupAlertBehavior();
 
       return showNotification(notificationJob);
    }
@@ -259,9 +275,8 @@ class GenerateNotification {
       JSONObject fcmJson = notificationJob.getJsonPayload();
       String group = fcmJson.optString("grp", null);
 
-      GenerateNotificationOpenIntent intentGenerator = GenerateNotificationOpenIntentFromPushPayload.INSTANCE.create(
-          currentContext,
-          fcmJson
+      IntentGeneratorForAttachingToNotifications intentGenerator = new IntentGeneratorForAttachingToNotifications(
+          currentContext
       );
 
       ArrayList<StatusBarNotification> grouplessNotifs = new ArrayList<>();
@@ -352,7 +367,7 @@ class GenerateNotification {
 
    private static Notification createGenericPendingIntentsForNotif(
        NotificationCompat.Builder notifBuilder,
-       GenerateNotificationOpenIntent intentGenerator,
+       IntentGeneratorForAttachingToNotifications intentGenerator,
        JSONObject gcmBundle,
        int notificationId
    ) {
@@ -369,7 +384,7 @@ class GenerateNotification {
 
    private static void createGenericPendingIntentsForGroup(
        NotificationCompat.Builder notifBuilder,
-       GenerateNotificationOpenIntent intentGenerator,
+       IntentGeneratorForAttachingToNotifications intentGenerator,
        JSONObject gcmBundle,
        String group,
        int notificationId
@@ -385,7 +400,7 @@ class GenerateNotification {
       notifBuilder.setGroup(group);
 
       try {
-         notifBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
+         notifBuilder.setGroupAlertBehavior(groupAlertBehavior);
       } catch (Throwable t) {
          //do nothing in this case...Android support lib 26 isn't in the project
       }
@@ -479,9 +494,8 @@ class GenerateNotification {
    private static void createSummaryNotification(OSNotificationGenerationJob notificationJob, OneSignalNotificationBuilder notifBuilder) {
       boolean updateSummary = notificationJob.isRestoring();
       JSONObject fcmJson = notificationJob.getJsonPayload();
-      GenerateNotificationOpenIntent intentGenerator = GenerateNotificationOpenIntentFromPushPayload.INSTANCE.create(
-           currentContext,
-           fcmJson
+      IntentGeneratorForAttachingToNotifications intentGenerator = new IntentGeneratorForAttachingToNotifications(
+           currentContext
       );
 
       String group = fcmJson.optString("grp", null);
@@ -511,7 +525,7 @@ class GenerateNotification {
          String[] whereArgs = { group };
          
          // Make sure to omit any old existing matching android ids in-case we are replacing it.
-         if (!updateSummary && notificationJob.getAndroidId() != -1)
+         if (!updateSummary)
             whereStr += " AND " + NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " <> " + notificationJob.getAndroidId();
          
          cursor = dbHelper.query(
@@ -612,7 +626,7 @@ class GenerateNotification {
               .setGroupSummary(true);
 
          try {
-            summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
+            summaryBuilder.setGroupAlertBehavior(groupAlertBehavior);
          }
          catch (Throwable t) {
             //do nothing in this case...Android support lib 26 isn't in the project
@@ -674,7 +688,7 @@ class GenerateNotification {
                        .setGroupSummary(true);
 
          try {
-            summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
+            summaryBuilder.setGroupAlertBehavior(groupAlertBehavior);
          }
          catch (Throwable t) {
             //do nothing in this case...Android support lib 26 isn't in the project
@@ -690,7 +704,7 @@ class GenerateNotification {
    @RequiresApi(api = Build.VERSION_CODES.M)
    private static void createGrouplessSummaryNotification(
        OSNotificationGenerationJob notificationJob,
-       GenerateNotificationOpenIntent intentGenerator,
+       IntentGeneratorForAttachingToNotifications intentGenerator,
        int grouplessNotifCount
    ) {
       JSONObject fcmJson = notificationJob.getJsonPayload();
@@ -701,6 +715,8 @@ class GenerateNotification {
       String group = OneSignalNotificationManager.getGrouplessSummaryKey();
       String summaryMessage = grouplessNotifCount + " new messages";
       int summaryNotificationId = OneSignalNotificationManager.getGrouplessSummaryId();
+      OneSignalDbHelper dbHelper = OneSignalDbHelper.getInstance(currentContext);
+      createSummaryIdDatabaseEntry(dbHelper, group, summaryNotificationId);
 
       PendingIntent summaryContentIntent = intentGenerator.getNewActionPendingIntent(
           random.nextInt(),
@@ -730,7 +746,7 @@ class GenerateNotification {
             .setGroupSummary(true);
 
       try {
-        summaryBuilder.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
+        summaryBuilder.setGroupAlertBehavior(groupAlertBehavior);
       }
       catch (Throwable t) {
         // Do nothing in this case... Android support lib 26 isn't in the project
@@ -747,7 +763,7 @@ class GenerateNotification {
    
    private static Intent createBaseSummaryIntent(
        int summaryNotificationId,
-       GenerateNotificationOpenIntent intentGenerator,
+       IntentGeneratorForAttachingToNotifications intentGenerator,
        JSONObject fcmJson,
        String group
    ) {
@@ -1018,7 +1034,7 @@ class GenerateNotification {
 
    private static void addNotificationActionButtons(
        JSONObject fcmJson,
-       GenerateNotificationOpenIntent intentGenerator,
+       IntentGeneratorForAttachingToNotifications intentGenerator,
        NotificationCompat.Builder mBuilder,
        int notificationId,
        String groupSummary

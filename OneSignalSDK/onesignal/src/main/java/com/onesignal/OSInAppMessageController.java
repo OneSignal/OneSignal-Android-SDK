@@ -80,7 +80,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     private boolean inAppMessageShowing = false;
 
     @Nullable
-    private String userTagsString = null;
+    private String userTagsString = "";
 
     @Nullable
     private OSInAppMessageContent pendingMessageContent = null;
@@ -446,8 +446,8 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
     }
 
     private void showAlertDialogMessage(final OSInAppMessageInternal inAppMessage, final List<OSInAppMessagePrompt> prompts) {
-        final String messageTitle = OneSignal.appContext.getString(R.string.location_not_available_title);
-        final String message = OneSignal.appContext.getString(R.string.location_not_available_message);
+        final String messageTitle = OneSignal.appContext.getString(R.string.location_permission_missing_title);
+        final String message = OneSignal.appContext.getString(R.string.location_permission_missing_message);
         new AlertDialog.Builder(OneSignal.getCurrentActivity())
                 .setTitle(messageTitle)
                 .setMessage(message)

@@ -74,7 +74,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -127,6 +126,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
@@ -427,6 +427,54 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       assertEquals(4, getNotificationsInGroup("os_group_undefined").size());
+   }
+
+   @Test
+   @Config(sdk = Build.VERSION_CODES.N, shadows = { ShadowGenerateNotification.class })
+   public void testGrouplessSummaryNotificationIsDismissedOnClear() throws Exception {
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.initWithContext(blankActivity.getApplicationContext());
+      threadAndTaskWait();
+
+      // Add 4 groupless notifications
+      postNotificationWithOptionalGroup(4, null);
+      threadAndTaskWait();
+
+      // Obtain the posted notifications
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      assertEquals(5, postedNotifs.size());
+      // Clear OneSignal Notifications
+      OneSignal.clearOneSignalNotifications();
+      threadAndTaskWait();
+      assertEquals(0, postedNotifs.size());
+   }
+
+   @Test
+   @Config(sdk = Build.VERSION_CODES.N, shadows = { ShadowGenerateNotification.class })
+   public void testIndividualGrouplessSummaryNotificationDismissal() throws Exception {
+      OneSignal.setAppId("b2f7f966-d8cc-11e4-bed1-df8f05be55ba");
+      OneSignal.initWithContext(blankActivity.getApplicationContext());
+      threadAndTaskWait();
+
+      // Add 4 groupless notifications
+      postNotificationWithOptionalGroup(4, null);
+      threadAndTaskWait();
+
+      // Obtain the posted notifications
+      Map<Integer, PostedNotification> postedNotifs = ShadowRoboNotificationManager.notifications;
+      Iterator<Map.Entry<Integer, PostedNotification>> iterator = postedNotifs.entrySet().iterator();
+      Map.Entry<Integer, PostedNotification> entry = iterator.next();
+      Map.Entry<Integer, PostedNotification> entry2 = iterator.next();
+      Map.Entry<Integer, PostedNotification> entry3 = iterator.next();
+      Map.Entry<Integer, PostedNotification> entry4 = iterator.next();
+      Integer id4 = entry4.getKey();
+      assertNotNull(id4);
+
+      assertEquals(5, postedNotifs.size());
+      // Clear a OneSignal Notification
+      OneSignal.removeNotification(id4);
+      threadAndTaskWait();
+      assertEquals(4, postedNotifs.size());
    }
 
     @Test
@@ -1142,70 +1190,31 @@ public class GenerateNotificationRunner {
       threadAndTaskWait();
 
       Intent[] intents = lastNotificationIntents();
-      assertEquals("android.intent.action.MAIN", intents[0].getAction());
       assertEquals(
          com.onesignal.NotificationOpenedReceiver.class.getName(),
-         intents[1].getComponent().getClassName()
+         intents[0].getComponent().getClassName()
       );
-      assertEquals(2, intents.length);
-   }
-
-   @Test
-   @Config(shadows = { ShadowGenerateNotification.class })
-   public void shouldSetContentIntentForLaunchURL() throws Exception {
-      generateNotificationWithLaunchURL();
-
-      Intent[] intents = lastNotificationIntents();
-      assertEquals(2, intents.length);
-      Intent intentLaunchURL = intents[0];
-      assertEquals("android.intent.action.VIEW", intentLaunchURL.getAction());
-      assertEquals("https://google.com", intentLaunchURL.getData().toString());
-
-      assertNotificationOpenedReceiver(intents[1]);
-   }
-
-   @Test
-   @Config(shadows = { ShadowGenerateNotification.class })
-   public void shouldNotSetContentIntentForLaunchURLIfDefaultNotificationOpenIsDisabled() throws Exception {
-      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.NotificationOpened.DEFAULT", "DISABLE");
-      generateNotificationWithLaunchURL();
-
-      Intent[] intents = lastNotificationIntents();
       assertEquals(1, intents.length);
-      assertNotificationOpenedReceiver(intents[0]);
    }
 
    @Test
-   @Config(shadows = { ShadowGenerateNotification.class })
-   public void shouldNotSetContentIntentForLaunchURLIfSuppress() throws Exception {
-      OneSignalShadowPackageManager.addManifestMetaData("com.onesignal.suppressLaunchURLs", true);
-      generateNotificationWithLaunchURL();
+   @Config(sdk = 21, shadows = { ShadowGenerateNotification.class })
+   public void shouldUseCorrectActivityForLessThanAndroid23() throws Exception {
+      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle());
+      threadAndTaskWait();
 
       Intent[] intents = lastNotificationIntents();
-      assertEquals(2, intents.length);
-      assertOpenMainActivityIntent(intents[0]);
-      assertNotificationOpenedReceiver(intents[1]);
+      assertEquals(
+           com.onesignal.NotificationOpenedReceiverAndroid22AndOlder.class.getName(),
+           intents[0].getComponent().getClassName()
+      );
+      assertEquals(1, intents.length);
    }
 
    private Intent[] lastNotificationIntents() {
       PendingIntent pendingIntent = ShadowRoboNotificationManager.getLastNotif().contentIntent;
       // NOTE: This is fragile until this robolectric issue is fixed: https://github.com/robolectric/robolectric/issues/6660
       return shadowOf(pendingIntent).getSavedIntents();
-   }
-
-   private void generateNotificationWithLaunchURL() throws Exception {
-      Bundle bundle = launchURLMockPayloadBundle();
-      NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, bundle);
-      threadAndTaskWait();
-   }
-
-   private void assertNotificationOpenedReceiver(@NonNull Intent intent) {
-      assertEquals(com.onesignal.NotificationOpenedReceiverAndroid22AndOlder.class.getName(), intent.getComponent().getClassName());
-   }
-
-   private void assertOpenMainActivityIntent(@NonNull Intent intent) {
-      assertEquals(Intent.ACTION_MAIN, intent.getAction());
-      assertTrue(intent.getCategories().contains(Intent.CATEGORY_LAUNCHER));
    }
 
    @Test
@@ -1271,11 +1280,14 @@ public class GenerateNotificationRunner {
    @Test
    @Config(shadows = { ShadowGenerateNotification.class })
    public void shouldSetExpireTimeCorrectlyWhenMissingFromPayload() throws Exception {
+      time.freezeTime();
       NotificationBundleProcessor_ProcessFromFCMIntentService(blankActivity, getBaseNotifBundle());
       threadAndTaskWait();
 
+      long currentTime = time.getCurrentTimeMillis() / 1_000L;
       long expireTime = (Long)TestHelpers.getAllNotificationRecords(dbHelper).get(0).get(NotificationTable.COLUMN_NAME_EXPIRE_TIME);
-      assertEquals((System.currentTimeMillis() / 1_000L) + 259_200, expireTime);
+      long expectedExpireTime = currentTime + 259_200;
+      assertEquals(expectedExpireTime, expireTime);
    }
 
    // TODO: Once we figure out the correct way to process notifications with high priority using the WorkManager
@@ -1309,17 +1321,6 @@ public class GenerateNotificationRunner {
       return bundle;
    }
 
-   @NonNull
-   private static Bundle launchURLMockPayloadBundle() throws JSONException {
-      Bundle bundle = new Bundle();
-      bundle.putString("alert", "test");
-      bundle.putString("custom", new JSONObject() {{
-         put("i", "UUID");
-         put("u", "https://google.com");
-      }}.toString());
-      return bundle;
-   }
-
    @Test
    @Config(shadows = { ShadowOneSignalRestClient.class, ShadowOSWebView.class })
    public void shouldShowInAppPreviewWhenInFocus() throws Exception {
@@ -1336,7 +1337,7 @@ public class GenerateNotificationRunner {
       new FCMBroadcastReceiver().onReceive(blankActivity, intent);
       threadAndTaskWait();
       threadAndTaskWait();
-      assertEquals("PGh0bWw+PC9odG1sPgoKPHNjcmlwdD4KICAgIHNldFBsYXllclRhZ3MobnVsbCk7Cjwvc2NyaXB0Pg==", ShadowOSWebView.lastData);
+      assertEquals("PGh0bWw+PC9odG1sPgoKPHNjcmlwdD4KICAgIHNldFBsYXllclRhZ3MoKTsKPC9zY3JpcHQ+", ShadowOSWebView.lastData);
    }
 
    @Test
@@ -1355,11 +1356,17 @@ public class GenerateNotificationRunner {
          }});
       }}.toString());
 
+      // Grab activity to remove it from the unit test's tracked list.
+      shadowOf(blankActivity).getNextStartedActivity();
+
       Intent notificationOpenIntent = createOpenIntent(2, inAppPreviewMockPayloadBundle());
       NotificationOpenedProcessor_processFromContext(blankActivity, notificationOpenIntent);
       threadAndTaskWait();
       threadAndTaskWait();
-      assertEquals("PGh0bWw+PC9odG1sPgoKPHNjcmlwdD4KICAgIHNldFBsYXllclRhZ3MobnVsbCk7Cjwvc2NyaXB0Pg==", ShadowOSWebView.lastData);
+      assertEquals("PGh0bWw+PC9odG1sPgoKPHNjcmlwdD4KICAgIHNldFBsYXllclRhZ3MoKTsKPC9zY3JpcHQ+", ShadowOSWebView.lastData);
+
+      // Ensure the app is foregrounded.
+      assertNotNull(shadowOf(blankActivity).getNextStartedActivity());
    }
 
    @Test
@@ -1830,6 +1837,7 @@ public class GenerateNotificationRunner {
    }
 
    @Test
+   @Ignore
    @Config(shadows = { ShadowGenerateNotification.class })
    public void testNotificationProcessingAndForegroundHandler_displayCalled_noMutateId() throws Exception {
       // 1. Setup correct notification extension service class

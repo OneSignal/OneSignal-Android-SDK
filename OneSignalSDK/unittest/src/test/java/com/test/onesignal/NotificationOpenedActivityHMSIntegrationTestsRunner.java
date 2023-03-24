@@ -155,6 +155,15 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
     }
 
     @Test
+    public void barebonesOSPayload_startsMainActivity() throws Exception {
+        helper_initSDKAndFireHMSNotificationBarebonesOSOpenIntent();
+
+        Intent startedActivity = shadowOf((Application) ApplicationProvider.getApplicationContext()).getNextStartedActivity();
+        assertNotNull(startedActivity);
+        assertEquals(startedActivity.getComponent().getClassName(), BlankActivity.class.getName());
+    }
+
+    @Test
     public void barebonesOSPayload_makesNotificationOpenRequest() throws Exception {
         helper_initSDKAndFireHMSNotificationBarebonesOSOpenIntent();
         assertNotificationOpenAtIndex(2, UserState.DEVICE_TYPE_HUAWEI);
@@ -200,6 +209,8 @@ public class NotificationOpenedActivityHMSIntegrationTestsRunner {
                 );
 
         helper_startHMSOpenActivity(intent);
-        assertEquals("PGh0bWw+PC9odG1sPgoKPHNjcmlwdD4KICAgIHNldFBsYXllclRhZ3MobnVsbCk7Cjwvc2NyaXB0Pg==", ShadowOSWebView.lastData);
+        threadAndTaskWait();
+        threadAndTaskWait();
+        assertEquals("PGh0bWw+PC9odG1sPgoKPHNjcmlwdD4KICAgIHNldFBsYXllclRhZ3MoKTsKPC9zY3JpcHQ+", ShadowOSWebView.lastData);
     }
 }
