@@ -35,6 +35,7 @@ import androidx.work.Data;
 import androidx.work.ExistingWorkPolicy;
 import androidx.work.NetworkType;
 import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
@@ -81,7 +82,7 @@ class OSReceiveReceiptController {
 
         OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "OSReceiveReceiptController enqueueing send receive receipt work with notificationId: " + osNotificationId + " and delay: " + delay + " seconds");
 
-        OSWorkManagerHelper.getInstance(context)
+        WorkManager.getInstance(context)
                 .enqueueUniqueWork(osNotificationId + "_receive_receipt", ExistingWorkPolicy.KEEP, workRequest);
     }
 

@@ -32,6 +32,7 @@ import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
+import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import java.util.concurrent.TimeUnit
@@ -86,8 +87,7 @@ class OSFocusHandler {
             .setInitialDelay(delay, TimeUnit.MILLISECONDS)
             .addTag(tag)
             .build()
-
-        OSWorkManagerHelper.getInstance(context)
+        WorkManager.getInstance(context)
             .enqueueUniqueWork(
                 tag,
                 ExistingWorkPolicy.KEEP,
@@ -96,7 +96,7 @@ class OSFocusHandler {
     }
 
     fun cancelOnLostFocusWorker(tag: String, context: Context) {
-        OSWorkManagerHelper.getInstance(context).cancelAllWorkByTag(tag)
+        WorkManager.getInstance(context).cancelAllWorkByTag(tag)
     }
 
     private fun resetStopState() {
