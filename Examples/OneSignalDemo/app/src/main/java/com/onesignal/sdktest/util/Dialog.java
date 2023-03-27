@@ -167,7 +167,9 @@ public class Dialog {
                 Object pairValue = pairStringValue;
                 if (Util.isBoolean(pairStringValue)) {
                     pairValue = Boolean.parseBoolean(pairStringValue.toLowerCase());
-                } else if (Util.isNumeric(pairStringValue)) {
+                } else if (Util.isInteger(pairStringValue)) {
+                    pairValue = Long.parseLong(pairStringValue);
+                } else if (Util.isFloat(pairStringValue)) {
                     pairValue = Double.parseDouble(pairStringValue);
                 }
 
