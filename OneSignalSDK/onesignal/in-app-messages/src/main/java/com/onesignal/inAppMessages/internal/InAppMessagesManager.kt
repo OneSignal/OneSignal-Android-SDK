@@ -442,13 +442,13 @@ internal class InAppMessagesManager(
         Logging.debug("InAppMessagesManager.persistInAppMessage: $message with msg array data: $_redisplayedInAppMessages")
     }
 
-    override fun addTriggers(triggers: Map<String, Any>) {
+    override fun addTriggers(triggers: Map<String, String>) {
         Logging.debug("InAppMessagesManager.addTriggers(triggers: $triggers)")
 
         triggers.forEach { addTrigger(it.key, it.value) }
     }
 
-    override fun addTrigger(key: String, value: Any) {
+    override fun addTrigger(key: String, value: String) {
         Logging.debug("InAppMessagesManager.addTrigger(key: $key, value: $value)")
 
         var triggerModel = _triggerModelStore.get(key)
