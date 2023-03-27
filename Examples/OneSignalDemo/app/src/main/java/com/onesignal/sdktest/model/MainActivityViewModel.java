@@ -719,7 +719,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
                     triggerSet.remove(pair.first);
                     toaster.makeCustomViewToast("Deleted trigger " + pair.first, ToastType.SUCCESS);
                 } else {
-                    OneSignal.getInAppMessages().addTrigger(pair.first, pair.second);
+                    OneSignal.getInAppMessages().addTrigger(pair.first, pair.second.toString());
                     triggerSet.put(pair.first, pair.second);
                     toaster.makeCustomViewToast("Added trigger " + pair.first, ToastType.SUCCESS);
                 }

@@ -7,7 +7,16 @@ public class Util {
         return (string.equals("true") || string.equals("false"));
     }
 
-    public static boolean isNumeric(String string) {
+    public static boolean isInteger(String string) {
+        try {
+            Long.parseLong(string);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
+    public static boolean isFloat(String string) {
         try {
             Double.parseDouble(string);
             return true;
