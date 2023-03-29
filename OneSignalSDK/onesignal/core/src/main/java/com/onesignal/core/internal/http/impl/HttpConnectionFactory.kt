@@ -6,7 +6,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 internal class HttpConnectionFactory(
-    private val _configModelStore: ConfigModelStore
+    private val _configModelStore: ConfigModelStore,
 ) : IHttpConnectionFactory {
     @Throws(IOException::class)
     override fun newHttpURLConnection(url: String): HttpURLConnection {

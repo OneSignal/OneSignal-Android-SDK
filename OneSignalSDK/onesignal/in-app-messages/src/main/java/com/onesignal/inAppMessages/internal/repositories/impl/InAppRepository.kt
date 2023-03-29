@@ -18,30 +18,30 @@ import org.json.JSONException
 internal class InAppRepository(
     private val _databaseProvider: IDatabaseProvider,
     private val _time: ITime,
-    private val _prefs: IInAppPreferencesController
+    private val _prefs: IInAppPreferencesController,
 ) : IInAppRepository {
 
     override suspend fun saveInAppMessage(inAppMessage: InAppMessage) {
         val values = ContentValues()
         values.put(
             OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID,
-            inAppMessage.messageId
+            inAppMessage.messageId,
         )
         values.put(
             OneSignalDbContract.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY,
-            inAppMessage.redisplayStats.displayQuantity
+            inAppMessage.redisplayStats.displayQuantity,
         )
         values.put(
             OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY,
-            inAppMessage.redisplayStats.lastDisplayTime
+            inAppMessage.redisplayStats.lastDisplayTime,
         )
         values.put(
             OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS,
-            inAppMessage.clickedClickIds.toString()
+            inAppMessage.clickedClickIds.toString(),
         )
         values.put(
             OneSignalDbContract.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION,
-            inAppMessage.isDisplayedInSession
+            inAppMessage.isDisplayedInSession,
         )
 
         withContext(Dispatchers.IO) {
@@ -49,14 +49,14 @@ internal class InAppRepository(
                 OneSignalDbContract.InAppMessageTable.TABLE_NAME,
                 values,
                 OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID.toString() + " = ?",
-                arrayOf<String>(inAppMessage.messageId)
+                arrayOf<String>(inAppMessage.messageId),
             )
 
             if (rowsUpdated == 0) {
                 _databaseProvider.os.insert(
                     OneSignalDbContract.InAppMessageTable.TABLE_NAME,
                     null,
-                    values
+                    values,
                 )
             }
         }
@@ -88,7 +88,7 @@ internal class InAppRepository(
                                 clickIdsSet,
                                 displayed,
                                 InAppMessageRedisplayStats(displayQuantity, lastDisplay, _time),
-                                _time
+                                _time,
                             )
                             inAppMessages.add(inAppMessage)
                         } while (it.moveToNext())
@@ -107,7 +107,7 @@ internal class InAppRepository(
             // 1. Query for all old message ids and old clicked click ids
             val retColumns = arrayOf<String>(
                 OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID,
-                OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS
+                OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS,
             )
             val whereStr: String =
                 OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY.toString() + " < ?"
@@ -122,7 +122,7 @@ internal class InAppRepository(
                     OneSignalDbContract.InAppMessageTable.TABLE_NAME,
                     columns = retColumns,
                     whereClause = whereStr,
-                    whereArgs = whereArgs
+                    whereArgs = whereArgs,
                 ) {
                     if (it.count == 0) {
                         Logging.debug("Attempted to clean 6 month old IAM data, but none exists!")
@@ -141,9 +141,9 @@ internal class InAppRepository(
                             oldClickedClickIds.addAll(
                                 JSONUtils.newStringSetFromJSONArray(
                                     JSONArray(
-                                        oldClickIds
-                                    )
-                                )
+                                        oldClickIds,
+                                    ),
+                                ),
                             )
                         } while (it.moveToNext())
                     }
@@ -156,7 +156,7 @@ internal class InAppRepository(
             _databaseProvider.os.delete(
                 OneSignalDbContract.InAppMessageTable.TABLE_NAME,
                 whereStr,
-                whereArgs
+                whereArgs,
             )
 
             // 3. Use queried data to clean SharedPreferences

@@ -32,7 +32,7 @@ import org.json.JSONObject
 
 internal class NotificationAction(
     override val type: INotificationAction.ActionType,
-    override val actionId: String?
+    override val actionId: String?,
 ) : INotificationAction {
     fun toJSONObject(): JSONObject {
         return JSONObject()

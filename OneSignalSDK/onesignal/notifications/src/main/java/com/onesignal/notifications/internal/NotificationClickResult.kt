@@ -12,7 +12,7 @@ import org.json.JSONObject
  */
 internal class NotificationClickResult(
     notif: Notification,
-    actn: NotificationAction
+    actn: NotificationAction,
 ) : INotificationClickResult {
     /** The notification that was opened by the user. **/
     override val notification: INotification

@@ -12,5 +12,5 @@ class SubscriptionObject(
     val rooted: Boolean? = null,
     val netType: Int? = null,
     val carrier: String? = null,
-    val appVersion: String? = null
+    val appVersion: String? = null,
 )

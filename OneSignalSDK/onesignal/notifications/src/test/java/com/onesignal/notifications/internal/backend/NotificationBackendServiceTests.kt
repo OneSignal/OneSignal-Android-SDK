@@ -40,7 +40,7 @@ class NotificationBackendServiceTests : FunSpec({
                     it.getString("app_id") shouldBe "appId"
                     it.getString("player_id") shouldBe "subscriptionId"
                     it.getInt("device_type") shouldBe IDeviceService.DeviceType.Android.value
-                }
+                },
             )
         }
     }
@@ -58,7 +58,7 @@ class NotificationBackendServiceTests : FunSpec({
                 "appId",
                 "notificationId",
                 "subscriptionId",
-                IDeviceService.DeviceType.Android
+                IDeviceService.DeviceType.Android,
             )
         }
 
@@ -85,7 +85,7 @@ class NotificationBackendServiceTests : FunSpec({
                     it.getString("player_id") shouldBe "subscriptionId"
                     it.getBoolean("opened") shouldBe true
                     it.getInt("device_type") shouldBe IDeviceService.DeviceType.Android.value
-                }
+                },
             )
         }
     }
@@ -103,7 +103,7 @@ class NotificationBackendServiceTests : FunSpec({
                 "appId",
                 "notificationId",
                 "subscriptionId",
-                IDeviceService.DeviceType.Android
+                IDeviceService.DeviceType.Android,
             )
         }
 

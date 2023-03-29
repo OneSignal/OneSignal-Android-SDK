@@ -29,7 +29,7 @@ import org.robolectric.annotation.Config
 
 @Config(
     packageName = "com.onesignal.example",
-    sdk = [26]
+    sdk = [26],
 )
 @RobolectricTest
 @RunWith(KotestTestRunner::class)
@@ -61,7 +61,7 @@ class NotificationGenerationProcessorTests : FunSpec({
             mockNotificationRepository,
             mockNotificationSummaryManager,
             mockNotificationLifecycleService,
-            mockTime
+            mockTime,
         )
 
         val payload = JSONObject()
@@ -70,7 +70,7 @@ class NotificationGenerationProcessorTests : FunSpec({
             .put(
                 "custom",
                 JSONObject()
-                    .put("i", "UUID1")
+                    .put("i", "UUID1"),
             )
 
         /* When */
@@ -86,7 +86,7 @@ class NotificationGenerationProcessorTests : FunSpec({
                     it.title shouldBe "test title"
                     it.isRestoring shouldBe false
                     it.shownTimeStamp shouldBe 1111
-                }
+                },
             )
         }
         coVerify(exactly = 1) {
@@ -116,7 +116,7 @@ class NotificationGenerationProcessorTests : FunSpec({
             mockNotificationRepository,
             mockNotificationSummaryManager,
             mockNotificationLifecycleService,
-            mockTime
+            mockTime,
         )
 
         val payload = JSONObject()
@@ -125,7 +125,7 @@ class NotificationGenerationProcessorTests : FunSpec({
             .put(
                 "custom",
                 JSONObject()
-                    .put("i", "UUID1")
+                    .put("i", "UUID1"),
             )
 
         /* When */
@@ -141,7 +141,7 @@ class NotificationGenerationProcessorTests : FunSpec({
                     it.title shouldBe "test title"
                     it.isRestoring shouldBe true
                     it.shownTimeStamp shouldBe 1111
-                }
+                },
             )
         }
     }
@@ -172,7 +172,7 @@ class NotificationGenerationProcessorTests : FunSpec({
             mockNotificationRepository,
             mockNotificationSummaryManager,
             mockNotificationLifecycleService,
-            mockTime
+            mockTime,
         )
 
         val payload = JSONObject()
@@ -181,7 +181,7 @@ class NotificationGenerationProcessorTests : FunSpec({
             .put(
                 "custom",
                 JSONObject()
-                    .put("i", "UUID1")
+                    .put("i", "UUID1"),
             )
 
         /* When */
@@ -216,7 +216,7 @@ class NotificationGenerationProcessorTests : FunSpec({
             mockNotificationRepository,
             mockNotificationSummaryManager,
             mockNotificationLifecycleService,
-            mockTime
+            mockTime,
         )
 
         val payload = JSONObject()
@@ -225,7 +225,7 @@ class NotificationGenerationProcessorTests : FunSpec({
             .put(
                 "custom",
                 JSONObject()
-                    .put("i", "UUID1")
+                    .put("i", "UUID1"),
             )
 
         /* When */
@@ -241,7 +241,7 @@ class NotificationGenerationProcessorTests : FunSpec({
                     it.title shouldBe "test title"
                     it.isRestoring shouldBe true
                     it.shownTimeStamp shouldBe 1111
-                }
+                },
             )
         }
     }
@@ -272,7 +272,7 @@ class NotificationGenerationProcessorTests : FunSpec({
             mockNotificationRepository,
             mockNotificationSummaryManager,
             mockNotificationLifecycleService,
-            mockTime
+            mockTime,
         )
 
         val payload = JSONObject()
@@ -281,7 +281,7 @@ class NotificationGenerationProcessorTests : FunSpec({
             .put(
                 "custom",
                 JSONObject()
-                    .put("i", "UUID1")
+                    .put("i", "UUID1"),
             )
 
         /* When */
@@ -316,7 +316,7 @@ class NotificationGenerationProcessorTests : FunSpec({
             mockNotificationRepository,
             mockNotificationSummaryManager,
             mockNotificationLifecycleService,
-            mockTime
+            mockTime,
         )
 
         val payload = JSONObject()
@@ -325,7 +325,7 @@ class NotificationGenerationProcessorTests : FunSpec({
             .put(
                 "custom",
                 JSONObject()
-                    .put("i", "UUID1")
+                    .put("i", "UUID1"),
             )
 
         /* When */
@@ -341,7 +341,7 @@ class NotificationGenerationProcessorTests : FunSpec({
                     it.title shouldBe "test title"
                     it.isRestoring shouldBe true
                     it.shownTimeStamp shouldBe 1111
-                }
+                },
             )
         }
     }

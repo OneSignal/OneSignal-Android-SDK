@@ -28,7 +28,7 @@ internal class DeviceRegistrationListener(
     private val _channelManager: INotificationChannelManager,
     private val _pushTokenManager: IPushTokenManager,
     private val _notificationsManager: INotificationsManager,
-    private val _subscriptionManager: ISubscriptionManager
+    private val _subscriptionManager: ISubscriptionManager,
 ) : IStartableService,
     ISingletonModelStoreChangeHandler<ConfigModel>,
     IPermissionChangedHandler,
@@ -73,7 +73,7 @@ internal class DeviceRegistrationListener(
                 val permission = _notificationsManager.permission
                 _subscriptionManager.addOrUpdatePushSubscription(
                     pushTokenAndStatus.token,
-                    if (permission) pushTokenAndStatus.status else SubscriptionStatus.NO_PERMISSION
+                    if (permission) pushTokenAndStatus.status else SubscriptionStatus.NO_PERMISSION,
                 )
             }
         }

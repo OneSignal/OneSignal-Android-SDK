@@ -20,7 +20,7 @@ internal class InfluenceManager(
     private val _applicationService: IApplicationService,
     private val _configModelStore: ConfigModelStore,
     preferences: IPreferencesService,
-    timeProvider: ITime
+    timeProvider: ITime,
 ) : IInfluenceManager, ISessionLifecycleHandler {
     private val trackers = ConcurrentHashMap<String, ChannelTracker>()
     private val dataRepository: InfluenceDataRepository = InfluenceDataRepository(preferences, _configModelStore)
@@ -137,7 +137,7 @@ internal class InfluenceManager(
                     channelTracker,
                     InfluenceType.INDIRECT,
                     null,
-                    lastIds
+                    lastIds,
                 )
             } else {
                 setSessionTracker(channelTracker, InfluenceType.UNATTRIBUTED, null, null)
@@ -157,7 +157,7 @@ internal class InfluenceManager(
             influenceType: ${channelTracker.influenceType}, directNotificationId: ${channelTracker.directId}, indirectNotificationIds: ${channelTracker.indirectIds}
             to:
             influenceType: $influenceType, directNotificationId: $directNotificationId, indirectNotificationIds: $indirectNotificationIds
-            """.trimIndent()
+            """.trimIndent(),
         )
 
         channelTracker.influenceType = influenceType

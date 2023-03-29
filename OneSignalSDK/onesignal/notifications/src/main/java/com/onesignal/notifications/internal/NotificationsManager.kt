@@ -37,7 +37,7 @@ internal class NotificationsManager(
     private val _notificationRestoreWorkManager: INotificationRestoreWorkManager,
     private val _notificationLifecycleService: INotificationLifecycleService,
     private val _notificationDataController: INotificationRepository,
-    private val _summaryManager: INotificationSummaryManager
+    private val _summaryManager: INotificationSummaryManager,
 ) : INotificationsManager,
     INotificationActivityOpener,
     INotificationPermissionChangedHandler,

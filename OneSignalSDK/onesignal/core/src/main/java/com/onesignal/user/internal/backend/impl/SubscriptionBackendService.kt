@@ -9,7 +9,7 @@ import com.onesignal.user.internal.backend.SubscriptionObject
 import org.json.JSONObject
 
 internal class SubscriptionBackendService(
-    private val _httpClient: IHttpClient
+    private val _httpClient: IHttpClient,
 ) : ISubscriptionBackendService {
 
     override suspend fun createSubscription(appId: String, aliasLabel: String, aliasValue: String, subscription: SubscriptionObject): String? {

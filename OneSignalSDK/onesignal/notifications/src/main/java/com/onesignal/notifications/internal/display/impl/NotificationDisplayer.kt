@@ -38,7 +38,7 @@ internal class NotificationDisplayer(
     private val _applicationService: IApplicationService,
     private val _notificationLimitManager: INotificationLimitManager,
     private val _summaryNotificationDisplayer: ISummaryNotificationDisplayer,
-    private val _notificationDisplayBuilder: INotificationDisplayBuilder
+    private val _notificationDisplayBuilder: INotificationDisplayBuilder,
 
 ) : INotificationDisplayer {
     private val contextResources: Resources?
@@ -86,7 +86,7 @@ internal class NotificationDisplayer(
                 group = NotificationHelper.grouplessSummaryKey
                 NotificationHelper.assignGrouplessNotifications(
                     currentContext,
-                    grouplessNotifs
+                    grouplessNotifs,
                 )
             }
         }
@@ -99,7 +99,7 @@ internal class NotificationDisplayer(
             intentGenerator,
             notifBuilder,
             notificationId,
-            null
+            null,
         )
 
         try {
@@ -125,7 +125,7 @@ internal class NotificationDisplayer(
                 intentGenerator,
                 fcmJson,
                 group,
-                notificationId
+                notificationId,
             )
             notification = _summaryNotificationDisplayer.createSingleNotificationBeforeSummaryBuilder(notificationJob, notifBuilder)
 
@@ -135,7 +135,7 @@ internal class NotificationDisplayer(
                     notificationJob,
                     intentGenerator,
                     grouplessNotifs.size + 1,
-                    _notificationDisplayBuilder.getGroupAlertBehavior()
+                    _notificationDisplayBuilder.getGroupAlertBehavior(),
                 )
             } else {
                 _summaryNotificationDisplayer.createSummaryNotification(notificationJob, oneSignalNotificationBuilder, _notificationDisplayBuilder.getGroupAlertBehavior())
@@ -145,7 +145,7 @@ internal class NotificationDisplayer(
                 notifBuilder,
                 intentGenerator,
                 fcmJson,
-                notificationId
+                notificationId,
             )
         }
 
@@ -171,18 +171,18 @@ internal class NotificationDisplayer(
         notifBuilder: NotificationCompat.Builder?,
         intentGenerator: IntentGeneratorForAttachingToNotifications,
         gcmBundle: JSONObject,
-        notificationId: Int
+        notificationId: Int,
     ): Notification {
         val random: Random = SecureRandom()
         val contentIntent: PendingIntent? = intentGenerator.getNewActionPendingIntent(
             random.nextInt(),
             intentGenerator.getNewBaseIntent(notificationId)
-                .putExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString())
+                .putExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString()),
         )
         notifBuilder!!.setContentIntent(contentIntent)
         val deleteIntent = _notificationDisplayBuilder.getNewDismissActionPendingIntent(
             random.nextInt(),
-            _notificationDisplayBuilder.getNewBaseDismissIntent(notificationId)
+            _notificationDisplayBuilder.getNewBaseDismissIntent(notificationId),
         )
         notifBuilder.setDeleteIntent(deleteIntent)
         return notifBuilder.build()
@@ -190,7 +190,7 @@ internal class NotificationDisplayer(
 
     private fun applyNotificationExtender(
         notificationJob: NotificationGenerationJob,
-        notificationBuilder: NotificationCompat.Builder?
+        notificationBuilder: NotificationCompat.Builder?,
     ) {
         if (!notificationJob.hasExtender()) return
         try {
@@ -253,14 +253,14 @@ internal class NotificationDisplayer(
                 jsonBgImage,
                 R.id.os_bgimage_notif_title,
                 "tc",
-                "onesignal_bgimage_notif_title_color"
+                "onesignal_bgimage_notif_title_color",
             )
             setTextColor(
                 customView,
                 jsonBgImage,
                 R.id.os_bgimage_notif_body,
                 "bc",
-                "onesignal_bgimage_notif_body_color"
+                "onesignal_bgimage_notif_body_color",
             )
             var alignSetting: String? = null
             if (jsonBgImage != null && jsonBgImage.has("img_align")) {
@@ -270,7 +270,7 @@ internal class NotificationDisplayer(
                 val iAlignSetting = contextResources!!.getIdentifier(
                     "onesignal_bgimage_notif_image_align",
                     "string",
-                    packageName
+                    packageName,
                 )
                 if (iAlignSetting != 0) alignSetting = contextResources!!.getString(iAlignSetting)
             }
@@ -283,12 +283,12 @@ internal class NotificationDisplayer(
                     -5000,
                     0,
                     0,
-                    0
+                    0,
                 )
                 customView.setImageViewBitmap(R.id.os_bgimage_notif_bgimage_right_aligned, bg_image)
                 customView.setViewVisibility(
                     R.id.os_bgimage_notif_bgimage_right_aligned,
-                    View.VISIBLE
+                    View.VISIBLE,
                 ) // visible
                 customView.setViewVisibility(R.id.os_bgimage_notif_bgimage, View.GONE) // gone
             } else {
@@ -307,7 +307,7 @@ internal class NotificationDisplayer(
         fcmJson: JSONObject?,
         viewId: Int,
         colorPayloadKey: String,
-        colorDefaultResource: String
+        colorDefaultResource: String,
     ) {
         val color = safeGetColorFromHex(fcmJson, colorPayloadKey)
         if (color != null) {
@@ -320,8 +320,8 @@ internal class NotificationDisplayer(
                     viewId,
                     AndroidSupportV4Compat.ContextCompat.getColor(
                         currentContext!!,
-                        colorId
-                    )
+                        colorId,
+                    ),
                 )
             }
         }
@@ -375,11 +375,11 @@ internal class NotificationDisplayer(
         val trimmedName = name.trim { it <= ' ' }
         return if (trimmedName.startsWith("http://") || trimmedName.startsWith("https://")) {
             getBitmapFromURL(
-                trimmedName
+                trimmedName,
             )
         } else {
             getBitmapFromAssetsOrResourceName(
-                name
+                name,
             )
         }
     }

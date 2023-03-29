@@ -26,7 +26,7 @@ import kotlinx.coroutines.withContext
 import java.io.Closeable
 
 internal class HmsLocationController(
-    private val _applicationService: IApplicationService
+    private val _applicationService: IApplicationService,
 ) : ILocationController {
     private val _locationHandlerThread = LocationHandlerThread()
     private val _startStopMutex = Mutex()
@@ -72,7 +72,7 @@ internal class HmsLocationController(
 
                                 _lastLocation = location
                                 waiter.wake(true)
-                            }
+                            },
                         )
                         .addOnFailureListener { e ->
                             Logging.error("Huawei LocationServices getLastLocation failed!", e)
@@ -85,7 +85,7 @@ internal class HmsLocationController(
                         locationUpdateListener = LocationUpdateListener(
                             self,
                             _applicationService,
-                            hmsFusedLocationClient!!
+                            hmsFusedLocationClient!!,
                         )
                     }
                 }
@@ -129,7 +129,7 @@ internal class HmsLocationController(
 
                         retVal = location
                         waiter.wake()
-                    }
+                    },
                 )
                 .addOnFailureListener { e ->
                     Logging.error("Huawei LocationServices getLastLocation failed!", e)
@@ -147,7 +147,7 @@ internal class HmsLocationController(
     internal class LocationUpdateListener(
         private val _parent: HmsLocationController,
         private val _applicationService: IApplicationService,
-        private val huaweiFusedLocationProviderClient: FusedLocationProviderClient
+        private val huaweiFusedLocationProviderClient: FusedLocationProviderClient,
     ) : LocationCallback(), IApplicationLifecycleHandler, Closeable {
 
         private var hasExistingRequest = false
@@ -199,7 +199,7 @@ internal class HmsLocationController(
             huaweiFusedLocationProviderClient.requestLocationUpdates(
                 locationRequest,
                 this,
-                _parent._locationHandlerThread.looper
+                _parent._locationHandlerThread.looper,
             )
             hasExistingRequest = true
         }

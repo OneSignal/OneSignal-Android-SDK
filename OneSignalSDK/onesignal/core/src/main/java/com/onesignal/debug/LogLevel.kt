@@ -7,12 +7,13 @@ enum class LogLevel {
     WARN,
     INFO,
     DEBUG,
-    VERBOSE;
+    VERBOSE,
+    ;
 
     companion object {
         @JvmStatic
-        fun fromInt(value: Int) : LogLevel {
-            return values()[value];
+        fun fromInt(value: Int): LogLevel {
+            return values()[value]
         }
     }
 }

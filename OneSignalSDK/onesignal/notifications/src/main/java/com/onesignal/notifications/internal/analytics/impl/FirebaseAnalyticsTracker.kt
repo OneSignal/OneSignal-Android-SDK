@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicLong
 internal class FirebaseAnalyticsTracker(
     private val _applicationService: IApplicationService,
     private val _configModelStore: ConfigModelStore,
-    private val _time: ITime
+    private val _time: ITime,
 ) : IAnalyticsTracker {
 
     private val isEnabled: Boolean
