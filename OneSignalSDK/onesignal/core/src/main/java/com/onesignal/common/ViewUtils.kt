@@ -23,7 +23,7 @@ object ViewUtils {
             getWindowHeightAPI23Plus(activity)
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             getWindowHeightLollipop(
-                activity
+                activity,
             )
         } else {
             getDisplaySizeY(activity)
@@ -51,7 +51,7 @@ object ViewUtils {
         // getDisplaySizeY - works correctly expect for landscape due to a bug.
         return if (activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
             getWindowVisibleDisplayFrame(
-                activity
+                activity,
             ).height()
         } else {
             getDisplaySizeY(activity)
@@ -86,7 +86,7 @@ object ViewUtils {
             topInset.roundToInt(),
             bottomInset.roundToInt(),
             rightInset.roundToInt(),
-            leftInset.roundToInt()
+            leftInset.roundToInt(),
         )
     }
 

@@ -30,12 +30,12 @@ class OSDatabaseTests : FunSpec({
             val values = ContentValues()
             values.put(
                 OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
-                1
+                1,
             )
             it.insertOrThrow(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
                 null,
-                values
+                values,
             )
             it.setTransactionSuccessful()
             it.endTransaction()

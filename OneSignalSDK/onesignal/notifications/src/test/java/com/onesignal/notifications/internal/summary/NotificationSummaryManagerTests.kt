@@ -24,7 +24,7 @@ import org.robolectric.annotation.Config
 @Config(
     packageName = "com.onesignal.example",
     shadows = [ShadowRoboNotificationManager::class],
-    sdk = [26]
+    sdk = [26],
 )
 @RobolectricTest
 @RunWith(KotestTestRunner::class)
@@ -46,7 +46,7 @@ class NotificationSummaryManagerTests : FunSpec({
             mockNotificationRepository,
             mockSummaryNotificationDisplayer,
             MockHelper.configModelStore(),
-            mockNotificationRestoreProcessor
+            mockNotificationRestoreProcessor,
         )
 
         /* When */
@@ -71,7 +71,7 @@ class NotificationSummaryManagerTests : FunSpec({
             mockNotificationRepository,
             mockSummaryNotificationDisplayer,
             MockHelper.configModelStore(),
-            mockNotificationRestoreProcessor
+            mockNotificationRestoreProcessor,
         )
 
         /* When */
@@ -92,7 +92,7 @@ class NotificationSummaryManagerTests : FunSpec({
         coEvery { mockNotificationRepository.getGroupId(1) } returns "groupId"
         coEvery { mockNotificationRepository.listNotificationsForGroup("groupId") } returns listOf(
             INotificationRepository.NotificationData(2, "notificationId2", "{key: \"value2\"}", 1111, "title2", "message2"),
-            INotificationRepository.NotificationData(3, "notificationId3", "{key: \"value3\"}", 1111, "title3", "message3")
+            INotificationRepository.NotificationData(3, "notificationId3", "{key: \"value3\"}", 1111, "title3", "message3"),
         )
         coEvery { mockNotificationRepository.getAndroidIdForGroup("groupId", true) } returns 99
         val mockSummaryNotificationDisplayer = mockk<ISummaryNotificationDisplayer>()
@@ -104,7 +104,7 @@ class NotificationSummaryManagerTests : FunSpec({
             mockNotificationRepository,
             mockSummaryNotificationDisplayer,
             MockHelper.configModelStore(),
-            mockNotificationRestoreProcessor
+            mockNotificationRestoreProcessor,
         )
 
         /* When */
@@ -122,7 +122,7 @@ class NotificationSummaryManagerTests : FunSpec({
         val mockNotificationRepository = mockk<INotificationRepository>()
         coEvery { mockNotificationRepository.getGroupId(1) } returns "groupId"
         coEvery { mockNotificationRepository.listNotificationsForGroup("groupId") } returns listOf(
-            INotificationRepository.NotificationData(2, "notificationId2", "{key: \"value2\"}", 1111, "title2", "message2")
+            INotificationRepository.NotificationData(2, "notificationId2", "{key: \"value2\"}", 1111, "title2", "message2"),
         )
         coEvery { mockNotificationRepository.getAndroidIdForGroup("groupId", true) } returns 99
         val mockSummaryNotificationDisplayer = mockk<ISummaryNotificationDisplayer>()
@@ -134,7 +134,7 @@ class NotificationSummaryManagerTests : FunSpec({
             mockNotificationRepository,
             mockSummaryNotificationDisplayer,
             MockHelper.configModelStore(),
-            mockNotificationRestoreProcessor
+            mockNotificationRestoreProcessor,
         )
 
         /* When */
@@ -152,7 +152,7 @@ class NotificationSummaryManagerTests : FunSpec({
                     it.createdAt shouldBe 1111
                     it.title shouldBe "title2"
                     it.message shouldBe "message2"
-                }
+                },
             )
         }
     }
@@ -169,7 +169,7 @@ class NotificationSummaryManagerTests : FunSpec({
             mockNotificationRepository,
             mockSummaryNotificationDisplayer,
             MockHelper.configModelStore(),
-            mockNotificationRestoreProcessor
+            mockNotificationRestoreProcessor,
         )
 
         /* When */
@@ -195,7 +195,7 @@ class NotificationSummaryManagerTests : FunSpec({
             mockNotificationRepository,
             mockSummaryNotificationDisplayer,
             mockConfig,
-            mockNotificationRestoreProcessor
+            mockNotificationRestoreProcessor,
         )
 
         /* When */

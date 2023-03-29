@@ -55,7 +55,7 @@ class OperationRepoTests : FunSpec({
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation
-                }
+                },
             )
             mockOperationModelStore.remove("operationId")
         }
@@ -90,13 +90,13 @@ class OperationRepoTests : FunSpec({
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation
-                }
+                },
             )
             mockExecutor.execute(
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation
-                }
+                },
             )
             mockOperationModelStore.remove("operationId")
         }
@@ -131,7 +131,7 @@ class OperationRepoTests : FunSpec({
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation
-                }
+                },
             )
             mockOperationModelStore.remove("operationId")
         }
@@ -169,14 +169,14 @@ class OperationRepoTests : FunSpec({
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation1
-                }
+                },
             )
             mockOperationModelStore.remove("operationId1")
             mockExecutor.execute(
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation2
-                }
+                },
             )
             mockOperationModelStore.remove("operationId2")
         }
@@ -215,7 +215,7 @@ class OperationRepoTests : FunSpec({
                     it.count() shouldBe 2
                     it[0] shouldBe operation1
                     it[1] shouldBe operation2
-                }
+                },
             )
             mockOperationModelStore.remove("operationId1")
             mockOperationModelStore.remove("operationId2")
@@ -255,7 +255,7 @@ class OperationRepoTests : FunSpec({
                     it.count() shouldBe 2
                     it[0] shouldBe operation2
                     it[1] shouldBe operation1
-                }
+                },
             )
             mockOperationModelStore.remove("operationId2")
             mockOperationModelStore.remove("operationId1")
@@ -294,7 +294,7 @@ class OperationRepoTests : FunSpec({
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation1
-                }
+                },
             )
             operation2.translateIds(mapOf("id1" to "id2"))
             mockOperationModelStore.remove("operationId1")
@@ -302,7 +302,7 @@ class OperationRepoTests : FunSpec({
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation2
-                }
+                },
             )
             mockOperationModelStore.remove("operationId2")
         }
@@ -316,7 +316,7 @@ class OperationRepoTests : FunSpec({
             groupComparisonType: GroupComparisonType = GroupComparisonType.NONE,
             createComparisonKey: String = "create-key",
             modifyComparisonKey: String = "modify-key",
-            operationIdSlot: CapturingSlot<String>? = null
+            operationIdSlot: CapturingSlot<String>? = null,
         ): Operation {
             val operation = mockk<Operation>()
             val opIdSlot = operationIdSlot ?: slot()

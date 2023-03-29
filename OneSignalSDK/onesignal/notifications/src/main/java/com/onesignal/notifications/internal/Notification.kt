@@ -59,7 +59,7 @@ open class Notification : INotification {
         groupedNotifications: List<Notification>?,
         jsonPayload: JSONObject,
         androidNotificationId: Int,
-        time: ITime
+        time: ITime,
     ) {
         initPayloadData(jsonPayload, time)
         this.groupedNotifications = groupedNotifications
@@ -107,20 +107,20 @@ open class Notification : INotification {
         if (currentJsonPayload.has(NotificationConstants.GOOGLE_TTL_KEY)) {
             sentTime = currentJsonPayload.optLong(
                 NotificationConstants.GOOGLE_SENT_TIME_KEY,
-                currentTime
+                currentTime,
             ) / 1000
             ttl = currentJsonPayload.optInt(
                 NotificationConstants.GOOGLE_TTL_KEY,
-                NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD
+                NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD,
             )
         } else if (currentJsonPayload.has(NotificationConstants.HMS_TTL_KEY)) {
             sentTime = currentJsonPayload.optLong(
                 NotificationConstants.HMS_SENT_TIME_KEY,
-                currentTime
+                currentTime,
             ) / 1000
             ttl = currentJsonPayload.optInt(
                 NotificationConstants.HMS_TTL_KEY,
-                NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD
+                NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD,
             )
         } else {
             sentTime = currentTime / 1000
@@ -187,7 +187,7 @@ open class Notification : INotification {
             backgroundImageLayout = BackgroundImageLayout(
                 jsonBgImage.safeString("img"),
                 jsonBgImage.safeString("tc"),
-                jsonBgImage.safeString("bc")
+                jsonBgImage.safeString("bc"),
             )
         }
     }

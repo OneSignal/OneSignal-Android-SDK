@@ -66,7 +66,7 @@ class ShadowRoboNotificationManager : ShadowNotificationManager() {
         lastNotifId = id
         notifications[id] = PostedNotification(
             id,
-            notification
+            notification,
         )
         super.notify(tag, id, notification)
     }

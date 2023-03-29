@@ -48,7 +48,7 @@ import kotlinx.coroutines.withContext
 internal class InAppMessageView(
     private var webView: WebView?,
     private val messageContent: InAppMessageContent,
-    private val disableDragDismiss: Boolean
+    private val disableDragDismiss: Boolean,
 ) {
     private var popupWindow: PopupWindow? = null
 
@@ -149,7 +149,7 @@ internal class InAppMessageView(
             //  all bases are covered and the draggableRelativeLayout will never have the wrong height
             if (draggableRelativeLayout != null) {
                 draggableRelativeLayout!!.setParams(
-                    createDraggableLayoutParams(pageHeight, displayPosition, disableDragDismiss)
+                    createDraggableLayoutParams(pageHeight, displayPosition, disableDragDismiss),
                 )
             }
         }
@@ -161,7 +161,7 @@ internal class InAppMessageView(
         this.currentActivity = currentActivity
         val webViewLayoutParams = RelativeLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            pageHeight
+            pageHeight,
         )
         webViewLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT)
         val relativeLayoutParams = if (hasBackground) createParentRelativeLayoutParams() else null
@@ -169,7 +169,7 @@ internal class InAppMessageView(
             displayPosition,
             webViewLayoutParams,
             relativeLayoutParams,
-            createDraggableLayoutParams(pageHeight, displayPosition, disableDragDismiss)
+            createDraggableLayoutParams(pageHeight, displayPosition, disableDragDismiss),
         )
     }
 
@@ -189,7 +189,7 @@ internal class InAppMessageView(
                 relativeLayoutParams.addRule(RelativeLayout.CENTER_HORIZONTAL)
             }
             WebViewManager.Position.CENTER_MODAL, WebViewManager.Position.FULL_SCREEN -> relativeLayoutParams.addRule(
-                RelativeLayout.CENTER_IN_PARENT
+                RelativeLayout.CENTER_IN_PARENT,
             )
         }
         return relativeLayoutParams
@@ -198,7 +198,7 @@ internal class InAppMessageView(
     private fun createDraggableLayoutParams(
         pageHeight: Int,
         displayLocation: WebViewManager.Position,
-        disableDragging: Boolean
+        disableDragging: Boolean,
     ): DraggableRelativeLayout.Params {
         var pageHeight = pageHeight
         val draggableParams = DraggableRelativeLayout.Params()
@@ -241,7 +241,7 @@ internal class InAppMessageView(
         displayLocation: WebViewManager.Position,
         relativeLayoutParams: RelativeLayout.LayoutParams,
         draggableRelativeLayoutParams: RelativeLayout.LayoutParams?,
-        webViewLayoutParams: DraggableRelativeLayout.Params
+        webViewLayoutParams: DraggableRelativeLayout.Params,
     ) {
         withContext(Dispatchers.Main) {
             if (webView == null) {
@@ -269,7 +269,7 @@ internal class InAppMessageView(
             parentRelativeLayout,
             if (hasBackground) WindowManager.LayoutParams.MATCH_PARENT else pageWidth,
             if (hasBackground) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT,
-            true
+            true,
         )
         popupWindow!!.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         popupWindow!!.isTouchable = true
@@ -290,13 +290,13 @@ internal class InAppMessageView(
             if (messageContent.isFullBleed) WindowManager.LayoutParams.TYPE_APPLICATION_PANEL else WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
         PopupWindowCompat.setWindowLayoutType(
             popupWindow!!,
-            displayType
+            displayType,
         )
         popupWindow!!.showAtLocation(
             currentActivity!!.window.decorView.rootView,
             gravity,
             0,
-            0
+            0,
         )
     }
 
@@ -311,12 +311,12 @@ internal class InAppMessageView(
     private fun setUpDraggableLayout(
         context: Context,
         relativeLayoutParams: RelativeLayout.LayoutParams?,
-        draggableParams: DraggableRelativeLayout.Params
+        draggableParams: DraggableRelativeLayout.Params,
     ) {
         draggableRelativeLayout = DraggableRelativeLayout(context)
         if (relativeLayoutParams != null) {
             draggableRelativeLayout!!.setLayoutParams(
-                relativeLayoutParams
+                relativeLayoutParams,
             )
         }
         draggableRelativeLayout!!.setParams(draggableParams)
@@ -347,7 +347,7 @@ internal class InAppMessageView(
             marginPxSizeLeft,
             marginPxSizeTop,
             marginPxSizeRight,
-            marginPxSizeBottom
+            marginPxSizeBottom,
         )
         draggableRelativeLayout!!.setClipChildren(false)
         draggableRelativeLayout!!.setClipToPadding(false)
@@ -364,7 +364,7 @@ internal class InAppMessageView(
             if (displayPosition == WebViewManager.Position.FULL_SCREEN) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT
         val cardViewLayoutParams = RelativeLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            height
+            height,
         )
         cardViewLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT)
         cardView.layoutParams = cardViewLayoutParams
@@ -493,28 +493,28 @@ internal class InAppMessageView(
     private fun animateInAppMessage(
         displayLocation: WebViewManager.Position,
         messageView: View,
-        backgroundView: View
+        backgroundView: View,
     ) {
         val messageViewCardView = messageView!!.findViewWithTag<CardView>(
-            IN_APP_MESSAGE_CARD_VIEW_TAG
+            IN_APP_MESSAGE_CARD_VIEW_TAG,
         )
         val cardViewAnimCallback = createAnimationListener(messageViewCardView)
         when (displayLocation) {
             WebViewManager.Position.TOP_BANNER -> animateTop(
                 messageViewCardView,
                 webView!!.height,
-                cardViewAnimCallback
+                cardViewAnimCallback,
             )
             WebViewManager.Position.BOTTOM_BANNER -> animateBottom(
                 messageViewCardView,
                 webView!!.height,
-                cardViewAnimCallback
+                cardViewAnimCallback,
             )
             WebViewManager.Position.CENTER_MODAL, WebViewManager.Position.FULL_SCREEN -> animateCenter(
                 messageView,
                 backgroundView,
                 cardViewAnimCallback,
-                null
+                null,
             )
         }
     }
@@ -539,7 +539,7 @@ internal class InAppMessageView(
     private fun animateTop(
         messageView: View,
         height: Int,
-        cardViewAnimCallback: Animation.AnimationListener
+        cardViewAnimCallback: Animation.AnimationListener,
     ) {
         // Animate the message view from above the screen downward to the top
         OneSignalAnimate.animateViewByTranslation(
@@ -550,7 +550,7 @@ internal class InAppMessageView(
             0f,
             IN_APP_BANNER_ANIMATION_DURATION_MS,
             OneSignalBounceInterpolator(0.1, 8.0),
-            cardViewAnimCallback
+            cardViewAnimCallback,
         )
             .start()
     }
@@ -558,7 +558,7 @@ internal class InAppMessageView(
     private fun animateBottom(
         messageView: View,
         height: Int,
-        cardViewAnimCallback: Animation.AnimationListener
+        cardViewAnimCallback: Animation.AnimationListener,
     ) {
         // Animate the message view from under the screen upward to the bottom
         OneSignalAnimate.animateViewByTranslation(
@@ -569,7 +569,7 @@ internal class InAppMessageView(
             0f,
             IN_APP_BANNER_ANIMATION_DURATION_MS,
             OneSignalBounceInterpolator(0.1, 8.0),
-            cardViewAnimCallback
+            cardViewAnimCallback,
         )
             .start()
     }
@@ -578,14 +578,14 @@ internal class InAppMessageView(
         messageView: View,
         backgroundView: View,
         cardViewAnimCallback: Animation.AnimationListener,
-        backgroundAnimCallback: Animator.AnimatorListener?
+        backgroundAnimCallback: Animator.AnimatorListener?,
     ) {
         // Animate the message view by scale since it settles at the center of the screen
         val messageAnimation = OneSignalAnimate.animateViewSmallToLarge(
             messageView,
             IN_APP_CENTER_ANIMATION_DURATION_MS,
             OneSignalBounceInterpolator(0.1, 8.0),
-            cardViewAnimCallback
+            cardViewAnimCallback,
         )
 
         // Animate background behind the message so it doesn't just show the dark transparency
@@ -594,7 +594,7 @@ internal class InAppMessageView(
             IN_APP_BACKGROUND_ANIMATION_DURATION_MS,
             ACTIVITY_BACKGROUND_COLOR_EMPTY,
             ACTIVITY_BACKGROUND_COLOR_FULL,
-            backgroundAnimCallback
+            backgroundAnimCallback,
         )
         messageAnimation.start()
         backgroundAnimation.start()
@@ -615,7 +615,7 @@ internal class InAppMessageView(
             IN_APP_BACKGROUND_ANIMATION_DURATION_MS,
             ACTIVITY_BACKGROUND_COLOR_FULL,
             ACTIVITY_BACKGROUND_COLOR_EMPTY,
-            animCallback
+            animCallback,
         )
             .start()
 
@@ -627,14 +627,14 @@ internal class InAppMessageView(
         duration: Int,
         startColor: Int,
         endColor: Int,
-        animCallback: Animator.AnimatorListener?
+        animCallback: Animator.AnimatorListener?,
     ): ValueAnimator {
         return OneSignalAnimate.animateViewColor(
             backgroundView,
             duration,
             startColor,
             endColor,
-            animCallback
+            animCallback,
         )
     }
 

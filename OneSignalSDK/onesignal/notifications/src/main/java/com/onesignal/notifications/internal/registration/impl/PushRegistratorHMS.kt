@@ -17,7 +17,7 @@ import kotlinx.coroutines.withTimeout
 
 internal class PushRegistratorHMS(
     private val _deviceService: IDeviceService,
-    private val _applicationService: IApplicationService
+    private val _applicationService: IApplicationService,
 ) : IPushRegistrator,
     IPushRegistratorCallback {
 
@@ -55,7 +55,7 @@ internal class PushRegistratorHMS(
         if (!_deviceService.hasAllHMSLibrariesForPushKit) {
             return IPushRegistrator.RegisterResult(
                 null,
-                SubscriptionStatus.MISSING_HMS_PUSHKIT_LIBRARY
+                SubscriptionStatus.MISSING_HMS_PUSHKIT_LIBRARY,
             )
         }
 
@@ -67,7 +67,7 @@ internal class PushRegistratorHMS(
             Logging.info("Device registered for HMS, push token = $pushToken")
             return IPushRegistrator.RegisterResult(
                 pushToken,
-                SubscriptionStatus.SUBSCRIBED
+                SubscriptionStatus.SUBSCRIBED,
             )
         } else {
             // If EMUI 9.x or older getToken will always return null.
@@ -82,13 +82,13 @@ internal class PushRegistratorHMS(
                 Logging.error("HMS registered with ID:$pushToken")
                 IPushRegistrator.RegisterResult(
                     pushToken,
-                    SubscriptionStatus.SUBSCRIBED
+                    SubscriptionStatus.SUBSCRIBED,
                 )
             } else {
                 Logging.error("HmsMessageServiceOneSignal.onNewToken timed out.")
                 IPushRegistrator.RegisterResult(
                     null,
-                    SubscriptionStatus.HMS_TOKEN_TIMEOUT
+                    SubscriptionStatus.HMS_TOKEN_TIMEOUT,
                 )
             }
         }

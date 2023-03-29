@@ -4,7 +4,7 @@ import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.user.internal.properties.PropertiesModelStore
 
 internal class LanguageContext(
-    private val _propertiesModelStore: PropertiesModelStore
+    private val _propertiesModelStore: PropertiesModelStore,
 ) : ILanguageContext {
 
     private var _deviceLanguageProvider = LanguageProviderDevice()

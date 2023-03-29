@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 internal class TriggerController(
     triggerModelStore: TriggerModelStore,
-    private var _dynamicTriggerController: DynamicTriggerController
+    private var _dynamicTriggerController: DynamicTriggerController,
 ) : ITriggerController, IModelStoreChangeHandler<TriggerModel> {
 
     val triggers: ConcurrentHashMap<String?, Any?> = ConcurrentHashMap()
@@ -95,7 +95,7 @@ internal class TriggerController(
     private fun triggerMatchesStringValue(
         triggerValue: String,
         deviceValue: String,
-        operator: Trigger.OSTriggerOperator
+        operator: Trigger.OSTriggerOperator,
     ): Boolean {
         return when (operator) {
             Trigger.OSTriggerOperator.EQUAL_TO -> triggerValue == deviceValue
@@ -111,7 +111,7 @@ internal class TriggerController(
     private fun triggerMatchesFlex(
         triggerValue: Any?,
         deviceValue: Any,
-        operator: Trigger.OSTriggerOperator
+        operator: Trigger.OSTriggerOperator,
     ): Boolean {
         if (triggerValue == null) return false
 
@@ -132,7 +132,7 @@ internal class TriggerController(
             triggerMatchesNumericValueFlex(
                 triggerValue,
                 deviceValue,
-                operator
+                operator,
             )
         } else {
             false
@@ -142,7 +142,7 @@ internal class TriggerController(
     private fun triggerMatchesNumericValueFlex(
         triggerValue: Number,
         deviceValue: String,
-        operator: Trigger.OSTriggerOperator
+        operator: Trigger.OSTriggerOperator,
     ): Boolean {
         val deviceDoubleValue: Double = try {
             deviceValue.toDouble()
@@ -155,7 +155,7 @@ internal class TriggerController(
     private fun triggerMatchesNumericValue(
         triggerValue: Number,
         deviceValue: Number,
-        operator: Trigger.OSTriggerOperator
+        operator: Trigger.OSTriggerOperator,
     ): Boolean {
         val triggerDoubleValue = triggerValue.toDouble()
         val deviceDoubleValue = deviceValue.toDouble()

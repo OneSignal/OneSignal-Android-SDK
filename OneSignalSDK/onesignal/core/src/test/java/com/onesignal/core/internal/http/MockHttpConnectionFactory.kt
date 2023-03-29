@@ -9,7 +9,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 internal class MockHttpConnectionFactory(
-    var mockResponse: MockResponse
+    var mockResponse: MockResponse,
 ) : IHttpConnectionFactory {
 
     val connections: MutableList<MockHttpURLConnection> = mutableListOf()
@@ -31,7 +31,7 @@ internal class MockHttpConnectionFactory(
 
     class MockHttpURLConnection(
         url: URL?,
-        private val mockResponse: MockResponse
+        private val mockResponse: MockResponse,
     ) : HttpURLConnection(url) {
         override fun disconnect() {}
         override fun usingProxy(): Boolean {

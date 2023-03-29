@@ -7,7 +7,7 @@ import com.onesignal.notifications.internal.backend.INotificationBackendService
 import org.json.JSONObject
 
 internal class NotificationBackendService(
-    private val _httpClient: IHttpClient
+    private val _httpClient: IHttpClient,
 ) : INotificationBackendService {
 
     override suspend fun updateNotificationAsReceived(appId: String, notificationId: String, subscriptionId: String, deviceType: IDeviceService.DeviceType) {

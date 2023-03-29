@@ -36,7 +36,7 @@ import com.onesignal.debug.internal.logging.Logging
 
 class SyncService : Service() {
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        if(!OneSignal.initWithContext(this)) {
+        if (!OneSignal.initWithContext(this)) {
             return START_STICKY
         }
 

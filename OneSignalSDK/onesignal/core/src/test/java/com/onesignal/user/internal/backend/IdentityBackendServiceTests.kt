@@ -40,7 +40,7 @@ class IdentityBackendServiceTests : FunSpec({
                     it.has("identity") shouldBe true
                     it.getJSONObject("identity").has("aliasKey1") shouldBe true
                     it.getJSONObject("identity").getString("aliasKey1") shouldBe "aliasValue1"
-                }
+                },
             )
         }
     }

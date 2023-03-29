@@ -54,33 +54,33 @@ class OutcomeEventsRepositoryTests : FunSpec({
                 "outcomeId2",
                 OutcomeSource(
                     OutcomeSourceBody(JSONArray().put("notificationId1")),
-                    OutcomeSourceBody(null, JSONArray().put("iamId1").put("iamId2"))
+                    OutcomeSourceBody(null, JSONArray().put("iamId1").put("iamId2")),
                 ),
                 .2f,
-                2222
-            )
+                2222,
+            ),
         )
         outcomeEventsRepository.saveOutcomeEvent(
             OutcomeEventParams(
                 "outcomeId3",
                 OutcomeSource(
                     OutcomeSourceBody(JSONArray().put("notificationId1"), JSONArray().put("iamId1")),
-                    null
+                    null,
                 ),
                 .4f,
-                3333
-            )
+                3333,
+            ),
         )
         outcomeEventsRepository.saveOutcomeEvent(
             OutcomeEventParams(
                 "outcomeId4",
                 OutcomeSource(
                     null,
-                    OutcomeSourceBody(JSONArray().put("notificationId1"), JSONArray().put("iamId1").put("iamId2"))
+                    OutcomeSourceBody(JSONArray().put("notificationId1"), JSONArray().put("iamId1").put("iamId2")),
                 ),
                 .6f,
-                4444
-            )
+                4444,
+            ),
         )
 
         /* Then */
@@ -96,7 +96,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     it[OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS] shouldBe JSONArray().toString()
                     it[OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE] shouldBe "unattributed"
                     it[OutcomeEventsTable.COLUMN_NAME_IAM_IDS] shouldBe JSONArray().toString()
-                }
+                },
             )
             mockDatabasePair.second.insert(
                 OutcomeEventsTable.TABLE_NAME,
@@ -109,7 +109,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     it[OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS] shouldBe JSONArray("[\"notificationId1\"]").toString()
                     it[OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE] shouldBe "indirect"
                     it[OutcomeEventsTable.COLUMN_NAME_IAM_IDS] shouldBe JSONArray("[\"iamId1\", \"iamId2\"]").toString()
-                }
+                },
             )
             mockDatabasePair.second.insert(
                 OutcomeEventsTable.TABLE_NAME,
@@ -122,7 +122,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     it[OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS] shouldBe JSONArray("[\"notificationId1\"]").toString()
                     it[OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE] shouldBe "direct"
                     it[OutcomeEventsTable.COLUMN_NAME_IAM_IDS] shouldBe JSONArray("[\"iamId1\"]").toString()
-                }
+                },
             )
             mockDatabasePair.second.insert(
                 OutcomeEventsTable.TABLE_NAME,
@@ -135,7 +135,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     it[OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS] shouldBe JSONArray("[\"notificationId1\"]").toString()
                     it[OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE] shouldBe "indirect"
                     it[OutcomeEventsTable.COLUMN_NAME_IAM_IDS] shouldBe JSONArray("[\"iamId1\", \"iamId2\"]").toString()
-                }
+                },
             )
         }
     }
@@ -160,7 +160,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                 OutcomeEventsTable.COLUMN_NAME_WEIGHT to 0.2f,
                 OutcomeEventsTable.COLUMN_NAME_TIMESTAMP to 1111L,
                 OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE to "unattributed",
-                OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE to "unattributed"
+                OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE to "unattributed",
             ),
             mapOf(
                 OutcomeEventsTable.COLUMN_NAME_NAME to "outcomeId2",
@@ -169,7 +169,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                 OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE to "indirect",
                 OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS to "[\"notificationId1\",\"notificationId2\"]",
                 OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE to "indirect",
-                OutcomeEventsTable.COLUMN_NAME_IAM_IDS to "[\"iamId1\",\"iamId2\"]"
+                OutcomeEventsTable.COLUMN_NAME_IAM_IDS to "[\"iamId1\",\"iamId2\"]",
             ),
             mapOf(
                 OutcomeEventsTable.COLUMN_NAME_NAME to "outcomeId3",
@@ -178,8 +178,8 @@ class OutcomeEventsRepositoryTests : FunSpec({
                 OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE to "direct",
                 OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS to "[\"notificationId3\"]",
                 OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE to "direct",
-                OutcomeEventsTable.COLUMN_NAME_IAM_IDS to "[\"iamId3\"]"
-            )
+                OutcomeEventsTable.COLUMN_NAME_IAM_IDS to "[\"iamId3\"]",
+            ),
         )
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(OutcomeEventsTable.TABLE_NAME, records)
 
@@ -243,11 +243,11 @@ class OutcomeEventsRepositoryTests : FunSpec({
                 "outcomeId1",
                 OutcomeSource(
                     OutcomeSourceBody(JSONArray().put("notificationId1")),
-                    OutcomeSourceBody(null, JSONArray().put("iamId1").put("iamId2"))
+                    OutcomeSourceBody(null, JSONArray().put("iamId1").put("iamId2")),
                 ),
                 .2f,
-                2222
-            )
+                2222,
+            ),
         )
 
         /* Then */
@@ -259,7 +259,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     it[CachedUniqueOutcomeTable.COLUMN_NAME_NAME] shouldBe "outcomeId1"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE] shouldBe "notification"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID] shouldBe "notificationId1"
-                }
+                },
             )
             mockDatabasePair.second.insert(
                 CachedUniqueOutcomeTable.TABLE_NAME,
@@ -268,7 +268,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     it[CachedUniqueOutcomeTable.COLUMN_NAME_NAME] shouldBe "outcomeId1"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE] shouldBe "iam"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID] shouldBe "iamId1"
-                }
+                },
             )
             mockDatabasePair.second.insert(
                 CachedUniqueOutcomeTable.TABLE_NAME,
@@ -277,7 +277,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     it[CachedUniqueOutcomeTable.COLUMN_NAME_NAME] shouldBe "outcomeId1"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE] shouldBe "iam"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID] shouldBe "iamId2"
-                }
+                },
             )
         }
     }
@@ -293,11 +293,11 @@ class OutcomeEventsRepositoryTests : FunSpec({
                 "outcomeId1",
                 OutcomeSource(
                     OutcomeSourceBody(null, JSONArray().put("iamId1")),
-                    OutcomeSourceBody(JSONArray().put("notificationId1").put("notificationId2"))
+                    OutcomeSourceBody(JSONArray().put("notificationId1").put("notificationId2")),
                 ),
                 .2f,
-                2222
-            )
+                2222,
+            ),
         )
 
         /* Then */
@@ -309,7 +309,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     it[CachedUniqueOutcomeTable.COLUMN_NAME_NAME] shouldBe "outcomeId1"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE] shouldBe "notification"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID] shouldBe "notificationId1"
-                }
+                },
             )
             mockDatabasePair.second.insert(
                 CachedUniqueOutcomeTable.TABLE_NAME,
@@ -318,7 +318,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     it[CachedUniqueOutcomeTable.COLUMN_NAME_NAME] shouldBe "outcomeId1"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE] shouldBe "notification"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID] shouldBe "notificationId2"
-                }
+                },
             )
             mockDatabasePair.second.insert(
                 CachedUniqueOutcomeTable.TABLE_NAME,
@@ -327,7 +327,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     it[CachedUniqueOutcomeTable.COLUMN_NAME_NAME] shouldBe "outcomeId1"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE] shouldBe "iam"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID] shouldBe "iamId1"
-                }
+                },
             )
         }
     }
@@ -343,11 +343,11 @@ class OutcomeEventsRepositoryTests : FunSpec({
                 "outcomeId1",
                 OutcomeSource(
                     OutcomeSourceBody(JSONArray().put("notificationId1"), JSONArray().put("iamId1")),
-                    null
+                    null,
                 ),
                 .2f,
-                2222
-            )
+                2222,
+            ),
         )
 
         /* Then */
@@ -359,7 +359,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     it[CachedUniqueOutcomeTable.COLUMN_NAME_NAME] shouldBe "outcomeId1"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE] shouldBe "notification"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID] shouldBe "notificationId1"
-                }
+                },
             )
             mockDatabasePair.second.insert(
                 CachedUniqueOutcomeTable.TABLE_NAME,
@@ -368,7 +368,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     it[CachedUniqueOutcomeTable.COLUMN_NAME_NAME] shouldBe "outcomeId1"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE] shouldBe "iam"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID] shouldBe "iamId1"
-                }
+                },
             )
         }
     }
@@ -384,11 +384,11 @@ class OutcomeEventsRepositoryTests : FunSpec({
                 "outcomeId1",
                 OutcomeSource(
                     null,
-                    OutcomeSourceBody(JSONArray().put("notificationId1").put("notificationId2"), JSONArray().put("iamId1").put("iamId2"))
+                    OutcomeSourceBody(JSONArray().put("notificationId1").put("notificationId2"), JSONArray().put("iamId1").put("iamId2")),
                 ),
                 .2f,
-                2222
-            )
+                2222,
+            ),
         )
 
         /* Then */
@@ -400,7 +400,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     it[CachedUniqueOutcomeTable.COLUMN_NAME_NAME] shouldBe "outcomeId1"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE] shouldBe "notification"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID] shouldBe "notificationId1"
-                }
+                },
             )
             mockDatabasePair.second.insert(
                 CachedUniqueOutcomeTable.TABLE_NAME,
@@ -409,7 +409,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     it[CachedUniqueOutcomeTable.COLUMN_NAME_NAME] shouldBe "outcomeId1"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE] shouldBe "notification"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID] shouldBe "notificationId2"
-                }
+                },
             )
             mockDatabasePair.second.insert(
                 CachedUniqueOutcomeTable.TABLE_NAME,
@@ -418,7 +418,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     it[CachedUniqueOutcomeTable.COLUMN_NAME_NAME] shouldBe "outcomeId1"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE] shouldBe "iam"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID] shouldBe "iamId1"
-                }
+                },
             )
             mockDatabasePair.second.insert(
                 CachedUniqueOutcomeTable.TABLE_NAME,
@@ -427,7 +427,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     it[CachedUniqueOutcomeTable.COLUMN_NAME_NAME] shouldBe "outcomeId1"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE] shouldBe "iam"
                     it[CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID] shouldBe "iamId2"
-                }
+                },
             )
         }
     }
@@ -443,8 +443,8 @@ class OutcomeEventsRepositoryTests : FunSpec({
             "outcomeId1",
             listOf(
                 Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray().put("notificationId1")),
-                Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray().put("notificationId2"))
-            )
+                Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray().put("notificationId2")),
+            ),
         )
 
         /* Then */
@@ -462,8 +462,8 @@ class OutcomeEventsRepositoryTests : FunSpec({
             "outcomeId1",
             listOf(
                 Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray().put("notificationId1")),
-                Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray().put("notificationId2"))
-            )
+                Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray().put("notificationId2")),
+            ),
         )
 
         /* Then */
