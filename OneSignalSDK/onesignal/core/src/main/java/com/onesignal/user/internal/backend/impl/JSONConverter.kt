@@ -29,7 +29,7 @@ object JSONConverter {
             propertiesJSON?.safeString("timezone_id"),
             propertiesJSON?.safeString("country"),
             propertiesJSON?.safeDouble("lat"),
-            propertiesJSON?.safeDouble("long")
+            propertiesJSON?.safeDouble("long"),
         )
 
         val respSubscriptions = jsonObject.expandJSONArray("subscriptions") {
@@ -47,7 +47,7 @@ object JSONConverter {
                     it.safeBool("rooted"),
                     it.safeInt("net_type"),
                     it.safeString("carrier"),
-                    it.safeString("app_version")
+                    it.safeString("app_version"),
                 )
             }
             return@expandJSONArray null

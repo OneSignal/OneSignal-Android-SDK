@@ -38,7 +38,7 @@ class SubscriptionBackendServiceTests : FunSpec({
             SubscriptionObjectType.ANDROID_PUSH,
             "pushToken",
             true,
-            SubscriptionStatus.SUBSCRIBED.value
+            SubscriptionStatus.SUBSCRIBED.value,
         )
 
         val response = subscriptionBackendService.createSubscription("appId", aliasLabel, aliasValue, subscription)
@@ -54,7 +54,7 @@ class SubscriptionBackendServiceTests : FunSpec({
                     it.getString("token") shouldBe "pushToken"
                     it.getBoolean("enabled") shouldBe true
                     it.getInt("notification_types") shouldBe 1
-                }
+                },
             )
         }
     }
@@ -73,14 +73,14 @@ class SubscriptionBackendServiceTests : FunSpec({
             SubscriptionObjectType.ANDROID_PUSH,
             "pushToken",
             true,
-            SubscriptionStatus.SUBSCRIBED.value
+            SubscriptionStatus.SUBSCRIBED.value,
         )
         val exception = shouldThrowUnit<BackendException> {
             subscriptionBackendService.createSubscription(
                 "appId",
                 aliasLabel,
                 aliasValue,
-                subscription
+                subscription,
             )
         }
 
@@ -96,7 +96,7 @@ class SubscriptionBackendServiceTests : FunSpec({
                     it.getString("token") shouldBe "pushToken"
                     it.getBoolean("enabled") shouldBe true
                     it.getInt("notification_types") shouldBe 1
-                }
+                },
             )
         }
     }

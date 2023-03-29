@@ -36,7 +36,7 @@ import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
 abstract class NotificationOpenedActivityBase : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if(!OneSignal.initWithContext(applicationContext)) {
+        if (!OneSignal.initWithContext(applicationContext)) {
             return
         }
 
@@ -52,7 +52,7 @@ abstract class NotificationOpenedActivityBase : Activity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if(!OneSignal.initWithContext(applicationContext)) {
+        if (!OneSignal.initWithContext(applicationContext)) {
             return
         }
 

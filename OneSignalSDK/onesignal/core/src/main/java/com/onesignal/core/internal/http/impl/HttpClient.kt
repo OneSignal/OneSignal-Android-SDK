@@ -28,7 +28,7 @@ import javax.net.ssl.HttpsURLConnection
 internal class HttpClient(
     private val _connectionFactory: IHttpConnectionFactory,
     private val _prefs: IPreferencesService,
-    private val _configModelStore: ConfigModelStore
+    private val _configModelStore: ConfigModelStore,
 ) : IHttpClient {
     override suspend fun post(url: String, body: JSONObject): HttpResponse {
         return makeRequest(url, "POST", body, _configModelStore.model.httpTimeout, null)
@@ -55,7 +55,7 @@ internal class HttpClient(
         method: String?,
         jsonBody: JSONObject?,
         timeout: Int,
-        cacheKey: String?
+        cacheKey: String?,
     ): HttpResponse {
         // If privacy consent is required but not yet given, any non-GET request should be blocked.
         if (method != null && _configModelStore.model.requiresPrivacyConsent == true && _configModelStore.model.givenPrivacyConsent != true) {
@@ -81,7 +81,7 @@ internal class HttpClient(
         method: String?,
         jsonBody: JSONObject?,
         timeout: Int,
-        cacheKey: String?
+        cacheKey: String?,
     ): HttpResponse {
         var retVal: HttpResponse? = null
 
@@ -102,7 +102,7 @@ internal class HttpClient(
                     val conHttps = con
                     conHttps.sslSocketFactory =
                         TLS12SocketFactory(
-                            conHttps.sslSocketFactory
+                            conHttps.sslSocketFactory,
                         )
                 }
 
@@ -111,7 +111,7 @@ internal class HttpClient(
                 con.readTimeout = timeout
                 con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignalUtils.sdkVersion)
 
-                if(OneSignalWrapper.sdkType != null && OneSignalWrapper.sdkVersion != null) {
+                if (OneSignalWrapper.sdkType != null && OneSignalWrapper.sdkVersion != null) {
                     con.setRequestProperty("SDK-Wrapper", "onesignal/${OneSignalWrapper.sdkType}/${OneSignalWrapper.sdkVersion}")
                 }
 

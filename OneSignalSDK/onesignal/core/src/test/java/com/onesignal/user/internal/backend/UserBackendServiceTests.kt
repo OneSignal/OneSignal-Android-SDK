@@ -67,7 +67,7 @@ class UserBackendServiceTests : FunSpec({
                     it.getJSONObject("identity").getString("aliasLabel1") shouldBe "aliasValue1"
                     it.has("properties") shouldBe false
                     it.has("subscriptions") shouldBe false
-                }
+                },
             )
         }
     }
@@ -102,7 +102,7 @@ class UserBackendServiceTests : FunSpec({
                     it.getJSONArray("subscriptions").length() shouldBe 1
                     it.getJSONArray("subscriptions").getJSONObject(0).has("type") shouldBe true
                     it.getJSONArray("subscriptions").getJSONObject(0).getString("type") shouldBe "AndroidPush"
-                }
+                },
             )
         }
     }
@@ -136,7 +136,7 @@ class UserBackendServiceTests : FunSpec({
                     it.getJSONObject("properties").getJSONObject("tags").has("tagkey1") shouldBe true
                     it.getJSONObject("properties").getJSONObject("tags").getString("tagkey1") shouldBe "tagValue1"
                     it.has("subscriptions") shouldBe false
-                }
+                },
             )
         }
     }
@@ -163,7 +163,7 @@ class UserBackendServiceTests : FunSpec({
                     it.getJSONObject("properties").has("tags") shouldBe true
                     it.getJSONObject("properties").getJSONObject("tags").has("tagkey1") shouldBe true
                     it.getJSONObject("properties").getJSONObject("tags").getString("tagkey1") shouldBe "tagValue1"
-                }
+                },
             )
         }
     }
@@ -189,7 +189,7 @@ class UserBackendServiceTests : FunSpec({
                     it.has("properties") shouldBe true
                     it.getJSONObject("properties").has("language") shouldBe true
                     it.getJSONObject("properties").getString("language") shouldBe "newLanguage"
-                }
+                },
             )
         }
     }
@@ -215,7 +215,7 @@ class UserBackendServiceTests : FunSpec({
                     it.has("properties") shouldBe true
                     it.getJSONObject("properties").has("timezone_id") shouldBe true
                     it.getJSONObject("properties").getString("timezone_id") shouldBe "America/New_York"
-                }
+                },
             )
         }
     }
@@ -241,7 +241,7 @@ class UserBackendServiceTests : FunSpec({
                     it.has("properties") shouldBe true
                     it.getJSONObject("properties").has("country") shouldBe true
                     it.getJSONObject("properties").getString("country") shouldBe "TV"
-                }
+                },
             )
         }
     }
@@ -269,7 +269,7 @@ class UserBackendServiceTests : FunSpec({
                     it.getJSONObject("properties").getDouble("lat") shouldBe 12.34
                     it.getJSONObject("properties").has("long") shouldBe true
                     it.getJSONObject("properties").getDouble("long") shouldBe 45.67
-                }
+                },
             )
         }
     }
@@ -293,7 +293,7 @@ class UserBackendServiceTests : FunSpec({
                 "apps/appId/users/by/$aliasLabel/$aliasValue",
                 withArg {
                     it.getBoolean("refresh_device_metadata") shouldBe true
-                }
+                },
             )
         }
     }
@@ -317,7 +317,7 @@ class UserBackendServiceTests : FunSpec({
                 "apps/appId/users/by/$aliasLabel/$aliasValue",
                 withArg {
                     it.getBoolean("refresh_device_metadata") shouldBe false
-                }
+                },
             )
         }
     }
@@ -345,7 +345,7 @@ class UserBackendServiceTests : FunSpec({
                     it.getJSONObject("deltas").getLong("session_time") shouldBe 1111
                     it.getJSONObject("deltas").has("session_count") shouldBe true
                     it.getJSONObject("deltas").getInt("session_count") shouldBe 1
-                }
+                },
             )
         }
     }
@@ -362,8 +362,8 @@ class UserBackendServiceTests : FunSpec({
             amountSpent = BigDecimal(1111),
             purchases = listOf(
                 PurchaseObject("sku1", "iso1", BigDecimal(2222)),
-                PurchaseObject("sku2", "iso2", BigDecimal(4444))
-            )
+                PurchaseObject("sku2", "iso2", BigDecimal(4444)),
+            ),
         )
 
         /* When */
@@ -391,7 +391,7 @@ class UserBackendServiceTests : FunSpec({
                     it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(1).getString("iso") shouldBe "iso2"
                     it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(1).has("amount") shouldBe true
                     it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(1).getDouble("amount") shouldBe 4444
-                }
+                },
             )
         }
     }

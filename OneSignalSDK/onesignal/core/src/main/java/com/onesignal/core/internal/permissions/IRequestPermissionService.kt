@@ -19,7 +19,7 @@ interface IRequestPermissionService {
      */
     fun registerAsCallback(
         permissionType: String,
-        callback: PermissionCallback
+        callback: PermissionCallback,
     )
 
     /**
@@ -37,6 +37,6 @@ interface IRequestPermissionService {
         fallbackCondition: Boolean,
         permissionRequestType: String?,
         androidPermissionString: String?,
-        callbackClass: Class<*>
+        callbackClass: Class<*>,
     )
 }

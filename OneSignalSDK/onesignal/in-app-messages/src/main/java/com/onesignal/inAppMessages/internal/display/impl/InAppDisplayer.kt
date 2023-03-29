@@ -39,7 +39,7 @@ internal class InAppDisplayer(
     private val _influenceManager: IInfluenceManager,
     private val _configModelStore: ConfigModelStore,
     private val _languageContext: ILanguageContext,
-    private val _time: ITime
+    private val _time: ITime,
 ) : IInAppDisplayer {
     private var lastInstance: WebViewManager? = null
 
@@ -119,7 +119,7 @@ internal class InAppDisplayer(
         try {
             val base64Str = Base64.encodeToString(
                 content.contentHtml!!.toByteArray(charset("UTF-8")),
-                Base64.NO_WRAP
+                Base64.NO_WRAP,
             )
             val webViewManager = WebViewManager(message, currentActivity, content, _lifecycle, _applicationService, _promptFactory)
             lastInstance = webViewManager

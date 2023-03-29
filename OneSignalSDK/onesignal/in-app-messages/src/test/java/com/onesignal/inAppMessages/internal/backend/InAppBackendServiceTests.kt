@@ -293,7 +293,7 @@ class InAppBackendServiceTests : FunSpec({
                     it.safeString("click_id") shouldBe "clickId"
                     it.safeString("variant_id") shouldBe "variantId"
                     it.safeBool("first_click") shouldBe true
-                }
+                },
             )
         }
     }
@@ -314,7 +314,7 @@ class InAppBackendServiceTests : FunSpec({
                 "variantId",
                 "messageId",
                 "clickId",
-                isFirstClick = true
+                isFirstClick = true,
             )
         }
 
@@ -331,7 +331,7 @@ class InAppBackendServiceTests : FunSpec({
                     it.safeString("click_id") shouldBe "clickId"
                     it.safeString("variant_id") shouldBe "variantId"
                     it.safeBool("first_click") shouldBe true
-                }
+                },
             )
         }
     }
@@ -357,7 +357,7 @@ class InAppBackendServiceTests : FunSpec({
                     it.safeString("player_id") shouldBe "subscriptionId"
                     it.safeString("variant_id") shouldBe "variantId"
                     it.safeBool("first_impression") shouldBe true
-                }
+                },
             )
         }
     }
@@ -387,7 +387,7 @@ class InAppBackendServiceTests : FunSpec({
                     it.safeString("player_id") shouldBe "subscriptionId"
                     it.safeString("variant_id") shouldBe "variantId"
                     it.safeBool("first_impression") shouldBe true
-                }
+                },
             )
         }
     }
@@ -413,7 +413,7 @@ class InAppBackendServiceTests : FunSpec({
                     it.safeString("player_id") shouldBe "subscriptionId"
                     it.safeString("variant_id") shouldBe "variantId"
                     it.safeString("page_id") shouldBe "pageId"
-                }
+                },
             )
         }
     }
@@ -443,7 +443,7 @@ class InAppBackendServiceTests : FunSpec({
                     it.safeString("player_id") shouldBe "subscriptionId"
                     it.safeString("variant_id") shouldBe "variantId"
                     it.safeString("page_id") shouldBe "pageId"
-                }
+                },
             )
         }
     }

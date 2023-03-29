@@ -50,7 +50,7 @@ open class Model(
      * The optional parent model property that references this model. When this is
      * specified, must also specify [_parentModel]
      */
-    private val _parentProperty: String? = null
+    private val _parentProperty: String? = null,
 
 ) : IEventNotifier<IModelChangedHandler> {
 

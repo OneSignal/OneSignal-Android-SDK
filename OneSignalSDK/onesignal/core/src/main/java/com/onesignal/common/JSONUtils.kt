@@ -153,7 +153,7 @@ object JSONUtils {
         return if (clazz == Float::class.java) {
             (`object` as Float?)?.let {
                 java.lang.Double.valueOf(
-                    it.toDouble()
+                    it.toDouble(),
                 )
             }
         } else {

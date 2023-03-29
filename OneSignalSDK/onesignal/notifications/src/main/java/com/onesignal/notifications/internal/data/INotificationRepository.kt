@@ -28,7 +28,7 @@ internal interface INotificationRepository {
         title: String?,
         body: String?,
         expireTime: Long,
-        jsonPayload: String
+        jsonPayload: String,
     )
 
     /**
@@ -114,6 +114,6 @@ internal interface INotificationRepository {
         val fullData: String,
         val createdAt: Long,
         val title: String?,
-        val message: String?
+        val message: String?,
     )
 }

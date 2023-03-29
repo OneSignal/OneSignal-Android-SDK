@@ -19,7 +19,7 @@ class HttpResponse(
     /**
      * When non-null, the throwable that was thrown during processing.
      */
-    val throwable: Throwable? = null
+    val throwable: Throwable? = null,
 ) {
 
     /**

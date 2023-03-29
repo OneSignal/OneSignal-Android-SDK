@@ -30,7 +30,7 @@ import java.util.Arrays
 
 internal class NotificationDisplayBuilder(
     private val _applicationService: IApplicationService,
-    private val _notificationChannelManager: INotificationChannelManager
+    private val _notificationChannelManager: INotificationChannelManager,
 
 ) : INotificationDisplayBuilder {
     private val notificationDismissedClass: Class<*> = NotificationDismissReceiver::class.java
@@ -58,7 +58,7 @@ internal class NotificationDisplayBuilder(
         val title: CharSequence? = fcmJson.optString("title", null)
         return title
             ?: currentContext!!.packageManager.getApplicationLabel(
-                currentContext!!.applicationInfo
+                currentContext!!.applicationInfo,
             )
     }
 
@@ -67,7 +67,7 @@ internal class NotificationDisplayBuilder(
             currentContext,
             requestCode,
             intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }
 
@@ -123,7 +123,7 @@ internal class NotificationDisplayBuilder(
         val bigPictureIcon = getBitmap(fcmJson.optString("bicon", null))
         if (bigPictureIcon != null) {
             notificationBuilder.setStyle(
-                NotificationCompat.BigPictureStyle().bigPicture(bigPictureIcon).setSummaryText(message)
+                NotificationCompat.BigPictureStyle().bigPicture(bigPictureIcon).setSummaryText(message),
             )
         }
         if (notificationJob.shownTimeStamp != null) {
@@ -190,7 +190,7 @@ internal class NotificationDisplayBuilder(
     //  When a large icon is set the small icon will no longer show.
     override fun addXiaomiSettings(
         oneSignalNotificationBuilder: OneSignalNotificationBuilder?,
-        notification: Notification
+        notification: Notification,
     ) {
         // Don't use unless a large icon is set.
         // The small white notification icon is hard to see with MIUI default light theme.
@@ -217,7 +217,7 @@ internal class NotificationDisplayBuilder(
             null
         } else {
             resizeBitmapForLargeIconArea(
-                bitmap
+                bitmap,
             )
         }
     }
@@ -293,11 +293,11 @@ internal class NotificationDisplayBuilder(
         val trimmedName = name.trim { it <= ' ' }
         return if (trimmedName.startsWith("http://") || trimmedName.startsWith("https://")) {
             getBitmapFromURL(
-                trimmedName
+                trimmedName,
             )
         } else {
             getBitmapFromAssetsOrResourceName(
-                name
+                name,
             )
         }
     }
@@ -375,7 +375,7 @@ internal class NotificationDisplayBuilder(
         intentGenerator: IntentGeneratorForAttachingToNotifications,
         mBuilder: NotificationCompat.Builder?,
         notificationId: Int,
-        groupSummary: String?
+        groupSummary: String?,
     ) {
         try {
             val customJson = JSONObject(fcmJson.optString("custom"))
@@ -394,12 +394,12 @@ internal class NotificationDisplayBuilder(
                 if (groupSummary != null) {
                     buttonIntent.putExtra(
                         "summary",
-                        groupSummary
+                        groupSummary,
                     )
                 } else if (fcmJson.has("grp")) {
                     buttonIntent.putExtra(
                         "grp",
-                        fcmJson.optString("grp")
+                        fcmJson.optString("grp"),
                     )
                 }
                 val buttonPIntent: PendingIntent? =
@@ -417,7 +417,7 @@ internal class NotificationDisplayBuilder(
         context: Context,
         fcmJson: JSONObject,
         buttonsLabels: MutableList<String>,
-        buttonsIds: MutableList<String>
+        buttonsIds: MutableList<String>,
     ) {
         try {
             addCustomAlertButtons(fcmJson, buttonsLabels, buttonsIds)
@@ -429,8 +429,8 @@ internal class NotificationDisplayBuilder(
                 AndroidUtils.getResourceString(
                     context,
                     "onesignal_in_app_alert_ok_button_text",
-                    "Ok"
-                )!!
+                    "Ok",
+                )!!,
             )
             buttonsIds.add(NotificationBundleProcessor.DEFAULT_ACTION)
         }
@@ -440,7 +440,7 @@ internal class NotificationDisplayBuilder(
     private fun addCustomAlertButtons(
         fcmJson: JSONObject,
         buttonsLabels: MutableList<String>,
-        buttonsIds: MutableList<String>
+        buttonsIds: MutableList<String>,
     ) {
         val customJson = JSONObject(fcmJson.optString("custom"))
         if (!customJson.has("a")) return

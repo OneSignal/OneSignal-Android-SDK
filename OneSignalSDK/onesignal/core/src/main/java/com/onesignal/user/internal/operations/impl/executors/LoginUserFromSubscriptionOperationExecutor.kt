@@ -19,7 +19,7 @@ import com.onesignal.user.internal.properties.PropertiesModelStore
 internal class LoginUserFromSubscriptionOperationExecutor(
     private val _subscriptionBackend: ISubscriptionBackendService,
     private val _identityModelStore: IdentityModelStore,
-    private val _propertiesModelStore: PropertiesModelStore
+    private val _propertiesModelStore: PropertiesModelStore,
 ) : IOperationExecutor {
 
     override val operations: List<String>
@@ -41,7 +41,7 @@ internal class LoginUserFromSubscriptionOperationExecutor(
         try {
             val identities = _subscriptionBackend.getIdentityFromSubscription(
                 loginUserOp.appId,
-                loginUserOp.subscriptionId
+                loginUserOp.subscriptionId,
             )
             val backendOneSignalId = identities.getOrDefault(IdentityConstants.ONESIGNAL_ID, null)
 
@@ -67,7 +67,7 @@ internal class LoginUserFromSubscriptionOperationExecutor(
                 propertiesModel.setStringProperty(PropertiesModel::onesignalId.name, backendOneSignalId, ModelChangeTags.HYDRATE)
             }
 
-            return ExecutionResponse(ExecutionResult.SUCCESS, idTranslations,listOf(RefreshUserOperation(loginUserOp.appId, backendOneSignalId)))
+            return ExecutionResponse(ExecutionResult.SUCCESS, idTranslations, listOf(RefreshUserOperation(loginUserOp.appId, backendOneSignalId)))
         } catch (ex: BackendException) {
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
 

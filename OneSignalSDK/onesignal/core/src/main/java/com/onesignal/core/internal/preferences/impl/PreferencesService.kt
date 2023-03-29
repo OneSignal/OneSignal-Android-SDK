@@ -18,11 +18,11 @@ import kotlinx.coroutines.delay
 
 internal class PreferencesService(
     private val _applicationService: IApplicationService,
-    private val _time: ITime
+    private val _time: ITime,
 ) : IPreferencesService, IStartableService {
     private val _prefsToApply: Map<String, MutableMap<String, Any?>> = mapOf(
         PreferenceStores.ONESIGNAL to mutableMapOf(),
-        PreferenceStores.PLAYER_PURCHASES to mutableMapOf()
+        PreferenceStores.PLAYER_PURCHASES to mutableMapOf(),
     )
     private var _queueJob: Deferred<Unit>? = null
 

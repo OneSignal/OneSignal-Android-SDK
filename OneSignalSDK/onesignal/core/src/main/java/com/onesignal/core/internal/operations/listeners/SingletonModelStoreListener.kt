@@ -19,7 +19,7 @@ import java.io.Closeable
  */
 internal abstract class SingletonModelStoreListener<TModel>(
     private val store: ISingletonModelStore<TModel>,
-    private val opRepo: IOperationRepo
+    private val opRepo: IOperationRepo,
 ) : ISingletonModelStoreChangeHandler<TModel>, IBootstrapService, Closeable where TModel : Model {
 
     override fun bootstrap() {

@@ -31,7 +31,7 @@ import com.onesignal.user.subscriptions.SubscriptionList
  * subscription model.
  */
 internal class SubscriptionManager(
-    private val _subscriptionModelStore: SubscriptionModelStore
+    private val _subscriptionModelStore: SubscriptionModelStore,
 ) : ISubscriptionManager, IModelStoreChangeHandler<SubscriptionModel> {
 
     private val _events = EventProducer<ISubscriptionChangedHandler>()
@@ -132,7 +132,7 @@ internal class SubscriptionManager(
         } else {
             (subscription as Subscription).changeHandlersNotifier.fireOnMain {
                 it.onSubscriptionChanged(
-                    subscription
+                    subscription,
                 )
             }
 

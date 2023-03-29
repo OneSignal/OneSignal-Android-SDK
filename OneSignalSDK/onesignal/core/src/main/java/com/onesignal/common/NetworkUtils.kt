@@ -6,7 +6,7 @@ object NetworkUtils {
         RETRYABLE,
         UNAUTHORIZED,
         MISSING,
-        CONFLICT
+        CONFLICT,
     }
 
     var MAX_NETWORK_REQUEST_ATTEMPT_COUNT = 3

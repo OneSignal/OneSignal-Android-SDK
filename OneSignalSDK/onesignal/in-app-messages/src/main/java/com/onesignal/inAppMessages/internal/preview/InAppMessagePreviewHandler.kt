@@ -26,7 +26,7 @@ internal class InAppMessagePreviewHandler(
     private val _notificationActivityOpener: INotificationActivityOpener,
     private val _notificationLifeCycle: INotificationLifecycleService,
     private val _state: InAppStateService,
-    private val _time: ITime
+    private val _time: ITime,
 ) : IStartableService, INotificationLifecycleCallback {
 
     override fun start() {

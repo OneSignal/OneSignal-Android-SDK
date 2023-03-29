@@ -64,5 +64,5 @@ class CreateUserResponse(
     /**
      * The subscriptions for the user.
      */
-    val subscriptions: List<SubscriptionObject>
+    val subscriptions: List<SubscriptionObject>,
 )
