@@ -53,7 +53,7 @@ object OneSignalHmsEventBridge {
     }
 
     fun onMessageReceived(context: Context, message: RemoteMessage) {
-        if(!OneSignal.initWithContext(context)) {
+        if (!OneSignal.initWithContext(context)) {
             return
         }
 

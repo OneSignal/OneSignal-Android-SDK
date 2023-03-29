@@ -68,7 +68,7 @@ internal class OutcomeTableProvider {
             db.execSQL(SQL_CREATE_OUTCOME_ENTRIES_V3)
             db.execSQL(
                 "INSERT INTO " + OutcomeEventsTable.TABLE_NAME + "(" + commonColumnsWithNewSessionColumn + ")" +
-                    " SELECT " + commonColumnsWithSessionColumn + " FROM " + auxOutcomeTableName + ";"
+                    " SELECT " + commonColumnsWithSessionColumn + " FROM " + auxOutcomeTableName + ";",
             )
             db.execSQL("DROP TABLE $auxOutcomeTableName;")
         } catch (e: SQLiteException) {
@@ -101,11 +101,11 @@ internal class OutcomeTableProvider {
             db.execSQL(SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2)
             db.execSQL(
                 "INSERT INTO " + CachedUniqueOutcomeTable.TABLE_NAME_V2 + "(" + commonColumnsWithNewInfluenceIdColumn + ")" +
-                    " SELECT " + commonColumnsWithNotificationIdColumn + " FROM " + oldCacheUniqueOutcomeTable + ";"
+                    " SELECT " + commonColumnsWithNotificationIdColumn + " FROM " + oldCacheUniqueOutcomeTable + ";",
             )
             db.execSQL(
                 "UPDATE " + CachedUniqueOutcomeTable.TABLE_NAME_V2 +
-                    " SET " + CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE + " = \'" + InfluenceChannel.NOTIFICATION.toString() + "\';"
+                    " SET " + CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE + " = \'" + InfluenceChannel.NOTIFICATION.toString() + "\';",
             )
             db.execSQL("DROP TABLE $oldCacheUniqueOutcomeTable;")
         } catch (e: SQLiteException) {

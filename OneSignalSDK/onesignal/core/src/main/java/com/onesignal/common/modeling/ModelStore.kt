@@ -29,7 +29,7 @@ abstract class ModelStore<TModel>(
      * The persistable name of the model store. If not specified no persisting will occur.
      */
     val name: String? = null,
-    private val _prefs: IPreferencesService? = null
+    private val _prefs: IPreferencesService? = null,
 ) : IEventNotifier<IModelStoreChangeHandler<TModel>>,
     IModelStore<TModel>,
     IModelChangedHandler where TModel : Model {

@@ -16,7 +16,7 @@ internal class NotificationSummaryManager(
     private val _dataController: INotificationRepository,
     private val _summaryNotificationDisplayer: ISummaryNotificationDisplayer,
     private val _configModelStore: ConfigModelStore,
-    private val _notificationRestoreProcessor: INotificationRestoreProcessor
+    private val _notificationRestoreProcessor: INotificationRestoreProcessor,
 ) : INotificationSummaryManager {
 
     // A notification was just dismissed, check if it was a child to a summary notification and update it.

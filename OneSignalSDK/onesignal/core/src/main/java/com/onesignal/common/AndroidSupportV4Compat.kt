@@ -55,7 +55,7 @@ class AndroidSupportV4Compat {
                 context.getColor(id)
             } else {
                 context.resources.getColor(
-                    id
+                    id,
                 )
             }
         }
@@ -73,7 +73,7 @@ class AndroidSupportV4Compat {
 
         fun shouldShowRequestPermissionRationale(
             activity: Activity?,
-            permission: String?
+            permission: String?,
         ): Boolean {
             return ActivityCompatApi23.shouldShowRequestPermissionRationale(activity, permission)
         }
@@ -84,7 +84,7 @@ class AndroidSupportV4Compat {
         fun requestPermissions(activity: Activity, permissions: Array<String?>?, requestCode: Int) {
             if (activity is RequestPermissionsRequestCodeValidator) {
                 (activity as RequestPermissionsRequestCodeValidator).validateRequestPermissionsRequestCode(
-                    requestCode
+                    requestCode,
                 )
             }
             activity.requestPermissions(permissions!!, requestCode)
@@ -92,11 +92,11 @@ class AndroidSupportV4Compat {
 
         fun shouldShowRequestPermissionRationale(
             activity: Activity?,
-            permission: String?
+            permission: String?,
         ): Boolean {
             return androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(
                 activity!!,
-                permission!!
+                permission!!,
             )
         }
     }

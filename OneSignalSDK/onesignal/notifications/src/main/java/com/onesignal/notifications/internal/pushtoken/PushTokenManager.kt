@@ -10,7 +10,7 @@ import com.onesignal.user.internal.subscriptions.SubscriptionStatus
  */
 internal class PushTokenManager(
     private val _pushRegistrator: IPushRegistrator,
-    private val _deviceService: IDeviceService
+    private val _deviceService: IDeviceService,
 ) : IPushTokenManager {
     var pushTokenStatus: SubscriptionStatus = SubscriptionStatus.NO_PERMISSION
     var pushToken: String? = null

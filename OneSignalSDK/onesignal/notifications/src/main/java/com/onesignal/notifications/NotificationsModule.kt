@@ -100,7 +100,7 @@ internal class NotificationsModule : IModule {
                 return@register FirebaseAnalyticsTracker(
                     it.getService(IApplicationService::class.java),
                     it.getService(ConfigModelStore::class.java),
-                    it.getService(ITime::class.java)
+                    it.getService(ITime::class.java),
                 )
             } else {
                 return@register NoAnalyticsTracker()
@@ -117,10 +117,10 @@ internal class NotificationsModule : IModule {
                     PushRegistratorFCM(
                         it.getService(ConfigModelStore::class.java),
                         it.getService(
-                            IApplicationService::class.java
+                            IApplicationService::class.java,
                         ),
                         it.getService(GooglePlayServicesUpgradePrompt::class.java),
-                        deviceService
+                        deviceService,
                     )
                 } else {
                     PushRegistratorNone()

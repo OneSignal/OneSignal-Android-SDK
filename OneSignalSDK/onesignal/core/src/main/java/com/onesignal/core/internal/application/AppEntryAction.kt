@@ -17,7 +17,9 @@ enum class AppEntryAction {
     /**
      * App came from the background
      */
-    APP_CLOSE;
+    APP_CLOSE,
+
+    ;
 
     val isNotificationClick: Boolean
         get() = this == NOTIFICATION_CLICK

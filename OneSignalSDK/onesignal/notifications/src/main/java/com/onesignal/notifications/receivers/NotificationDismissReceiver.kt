@@ -33,7 +33,7 @@ import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
 
 class NotificationDismissReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if(!OneSignal.initWithContext(context.applicationContext)) {
+        if (!OneSignal.initWithContext(context.applicationContext)) {
             return
         }
 

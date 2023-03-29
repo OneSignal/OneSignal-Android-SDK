@@ -5,7 +5,7 @@ import org.json.JSONObject
 
 internal class OutcomeSource(
     var directBody: OutcomeSourceBody?,
-    var indirectBody: OutcomeSourceBody?
+    var indirectBody: OutcomeSourceBody?,
 ) {
     @Throws(JSONException::class)
     fun toJSONObject(): JSONObject {

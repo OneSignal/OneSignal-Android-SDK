@@ -23,7 +23,7 @@ import org.json.JSONObject
 
 internal class NotificationLifecycleService(
     applicationService: IApplicationService,
-    private val _time: ITime
+    private val _time: ITime,
 ) : INotificationLifecycleService {
 
     private val _intLifecycleHandler = EventProducer<INotificationLifecycleEventHandler>()

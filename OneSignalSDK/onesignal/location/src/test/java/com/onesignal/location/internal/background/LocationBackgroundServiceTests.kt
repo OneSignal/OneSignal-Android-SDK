@@ -42,7 +42,7 @@ class LocationBackgroundServiceTests : FunSpec({
             mockLocationManager,
             mockLocationPreferencesService,
             mockLocationCapturer,
-            MockHelper.time(1111)
+            MockHelper.time(1111),
         )
 
         /* When */
@@ -65,7 +65,7 @@ class LocationBackgroundServiceTests : FunSpec({
             mockLocationManager,
             mockLocationPreferencesService,
             mockLocationCapturer,
-            MockHelper.time(1111)
+            MockHelper.time(1111),
         )
 
         /* When */
@@ -95,7 +95,7 @@ class LocationBackgroundServiceTests : FunSpec({
             mockLocationManager,
             mockLocationPreferencesService,
             mockLocationCapturer,
-            MockHelper.time(2222)
+            MockHelper.time(2222),
         )
 
         /* When */

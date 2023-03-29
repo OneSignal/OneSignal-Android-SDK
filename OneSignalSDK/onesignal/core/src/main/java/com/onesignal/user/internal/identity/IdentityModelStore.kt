@@ -5,5 +5,5 @@ import com.onesignal.common.modeling.SingletonModelStore
 import com.onesignal.core.internal.preferences.IPreferencesService
 
 open class IdentityModelStore(prefs: IPreferencesService) : SingletonModelStore<IdentityModel>(
-    SimpleModelStore({ IdentityModel() }, "identity", prefs)
+    SimpleModelStore({ IdentityModel() }, "identity", prefs),
 )

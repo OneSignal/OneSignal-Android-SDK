@@ -8,7 +8,7 @@ import com.onesignal.notifications.internal.receivereceipt.IReceiveReceiptProces
 
 internal class ReceiveReceiptProcessor(
     private val _deviceService: IDeviceService,
-    private val _backend: INotificationBackendService
+    private val _backend: INotificationBackendService,
 ) : IReceiveReceiptProcessor {
 
     override suspend fun sendReceiveReceipt(appId: String, subscriptionId: String, notificationId: String) {

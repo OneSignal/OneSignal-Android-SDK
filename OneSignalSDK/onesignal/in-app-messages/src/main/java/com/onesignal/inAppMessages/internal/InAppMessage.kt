@@ -14,7 +14,7 @@ import java.util.Date
  */
 internal class InAppMessage(
     override val messageId: String,
-    time: ITime
+    time: ITime,
 ) : IInAppMessage {
     /**
      * Allows in-app messages to use multiple language variants, or to have variations between
@@ -82,7 +82,7 @@ internal class InAppMessage(
         clickIds: Set<String>,
         displayedInSession: Boolean,
         redisplayStats: InAppMessageRedisplayStats,
-        time: ITime
+        time: ITime,
     ) : this(messageId, time) {
         clickedClickIds = clickIds.toMutableSet()
         isDisplayedInSession = displayedInSession

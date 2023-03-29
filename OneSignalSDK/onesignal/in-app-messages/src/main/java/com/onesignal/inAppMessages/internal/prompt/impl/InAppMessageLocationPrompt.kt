@@ -4,7 +4,7 @@ import com.onesignal.inAppMessages.internal.prompt.InAppMessagePromptTypes
 import com.onesignal.location.ILocationManager
 
 internal class InAppMessageLocationPrompt(
-    private val _locationManager: ILocationManager
+    private val _locationManager: ILocationManager,
 ) : InAppMessagePrompt() {
     override suspend fun handlePrompt(): PromptActionResult? {
         val result = _locationManager.requestPermission()

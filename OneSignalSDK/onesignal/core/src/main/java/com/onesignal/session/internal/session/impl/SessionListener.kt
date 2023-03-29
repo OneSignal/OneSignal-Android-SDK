@@ -32,7 +32,7 @@ internal class SessionListener(
     private val _sessionService: ISessionService,
     private val _configModelStore: ConfigModelStore,
     private val _identityModelStore: IdentityModelStore,
-    private val _outcomeEventsController: IOutcomeEventsController
+    private val _outcomeEventsController: IOutcomeEventsController,
 ) : IStartableService, ISessionLifecycleHandler {
 
     override fun start() {

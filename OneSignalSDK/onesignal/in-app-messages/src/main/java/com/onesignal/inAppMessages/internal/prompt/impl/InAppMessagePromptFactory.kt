@@ -7,7 +7,7 @@ import com.onesignal.notifications.INotificationsManager
 
 internal class InAppMessagePromptFactory(
     private val _notificationsManager: INotificationsManager,
-    private val _locationManager: ILocationManager
+    private val _locationManager: ILocationManager,
 ) : IInAppMessagePromptFactory {
 
     override fun createPrompt(promptType: String): InAppMessagePrompt? {

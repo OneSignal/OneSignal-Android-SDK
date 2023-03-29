@@ -49,5 +49,5 @@ class ModelChangedArgs(
     /**
      * The new value of the property, after it has been changed.
      */
-    val newValue: Any?
+    val newValue: Any?,
 )

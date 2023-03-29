@@ -51,7 +51,7 @@ internal class TrackAmazonPurchase(
     private val _applicationService: IApplicationService,
     private val _operationRepo: IOperationRepo,
     private val _configModelStore: ConfigModelStore,
-    private val _identityModelStore: IdentityModelStore
+    private val _identityModelStore: IdentityModelStore,
 ) : IStartableService, IApplicationLifecycleHandler {
     private var canTrack = false
     private var osPurchasingListener: OSPurchasingListener? = null
@@ -127,7 +127,7 @@ internal class TrackAmazonPurchase(
     private inner class OSPurchasingListener(
         private val _operationRepo: IOperationRepo,
         private val _configModelStore: ConfigModelStore,
-        private val _identityModelStore: IdentityModelStore
+        private val _identityModelStore: IdentityModelStore,
     ) : PurchasingListener {
         var orgPurchasingListener: PurchasingListener? = null
         private var lastRequestId: RequestId? = null
@@ -174,7 +174,7 @@ internal class TrackAmazonPurchase(
                 }
             } else if (orgPurchasingListener != null) {
                 orgPurchasingListener!!.onProductDataResponse(
-                    response
+                    response,
                 )
             }
         }
@@ -193,7 +193,7 @@ internal class TrackAmazonPurchase(
         override fun onPurchaseUpdatesResponse(response: PurchaseUpdatesResponse) {
             if (orgPurchasingListener != null) {
                 orgPurchasingListener!!.onPurchaseUpdatesResponse(
-                    response
+                    response,
                 )
             }
         }

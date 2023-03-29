@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit
 internal class ReceiveReceiptWorkManager(
     private val _applicationService: IApplicationService,
     private val _configModelStore: ConfigModelStore,
-    private val _subscriptionManager: ISubscriptionManager
+    private val _subscriptionManager: ISubscriptionManager,
 ) : IReceiveReceiptWorkManager {
 
     private val minDelay = 0
@@ -58,7 +58,7 @@ internal class ReceiveReceiptWorkManager(
             .enqueueUniqueWork(
                 notificationId + "_receive_receipt",
                 ExistingWorkPolicy.KEEP,
-                workRequest
+                workRequest,
             )
     }
 

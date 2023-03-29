@@ -15,7 +15,7 @@ internal object OSNotificationOpenAppSettings {
     fun getShouldOpenActivity(context: Context): Boolean {
         return "DISABLE" != AndroidUtils.getManifestMeta(
             context,
-            "com.onesignal.NotificationOpened.DEFAULT"
+            "com.onesignal.NotificationOpened.DEFAULT",
         )
     }
 

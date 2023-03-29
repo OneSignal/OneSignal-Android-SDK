@@ -27,7 +27,7 @@ class Influence {
     constructor(
         influenceChannel: InfluenceChannel,
         influenceType: InfluenceType,
-        ids: JSONArray?
+        ids: JSONArray?,
     ) {
         this.influenceChannel = influenceChannel
         this.influenceType = influenceType
@@ -41,7 +41,7 @@ class Influence {
     fun copy() = Influence(
         influenceChannel = this@Influence.influenceChannel,
         influenceType = this@Influence.influenceType,
-        ids = this@Influence.ids
+        ids = this@Influence.ids,
     )
 
     @Throws(JSONException::class)

@@ -9,13 +9,13 @@ import com.onesignal.notifications.activities.NotificationOpenedActivityAndroid2
 import com.onesignal.notifications.internal.common.NotificationConstants
 
 internal class IntentGeneratorForAttachingToNotifications(
-    val context: Context
+    val context: Context,
 ) {
     private val notificationOpenedClassAndroid23Plus: Class<*> = NotificationOpenedActivity::class.java
     private val notificationOpenedClassAndroid22AndOlder: Class<*> = NotificationOpenedActivityAndroid22AndOlder::class.java
 
     fun getNewBaseIntent(
-        notificationId: Int
+        notificationId: Int,
     ): Intent {
         val intent =
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
@@ -27,13 +27,13 @@ internal class IntentGeneratorForAttachingToNotifications(
         return intent
             .putExtra(
                 NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID,
-                notificationId
+                notificationId,
             )
             // We use SINGLE_TOP and CLEAR_TOP as we don't want more than one OneSignal invisible click
             //   tracking Activity instance around.
             .addFlags(
                 Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP,
             )
     }
 
@@ -41,7 +41,7 @@ internal class IntentGeneratorForAttachingToNotifications(
     private fun getNewBaseIntentAndroidAPI23Plus(): Intent {
         return Intent(
             context,
-            notificationOpenedClassAndroid23Plus
+            notificationOpenedClassAndroid23Plus,
         )
     }
 
@@ -50,26 +50,26 @@ internal class IntentGeneratorForAttachingToNotifications(
     private fun getNewBaseIntentAndroidAPI22AndOlder(): Intent {
         val intent = Intent(
             context,
-            notificationOpenedClassAndroid22AndOlder
+            notificationOpenedClassAndroid22AndOlder,
         )
         intent.addFlags(
             Intent.FLAG_ACTIVITY_NEW_TASK or
                 Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
-                Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET
+                Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET,
         )
         return intent
     }
 
     fun getNewActionPendingIntent(
         requestCode: Int,
-        oneSignalIntent: Intent
+        oneSignalIntent: Intent,
     ): PendingIntent? {
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         return PendingIntent.getActivity(
             context,
             requestCode,
             oneSignalIntent,
-            flags
+            flags,
         )
     }
 }
