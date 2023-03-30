@@ -6,7 +6,7 @@ class PropertiesObject(
     val timezoneId: String? = null,
     val country: String? = null,
     val latitude: Double? = null,
-    val longitude: Double? = null
+    val longitude: Double? = null,
 ) {
     val hasAtLeastOnePropertySet: Boolean
         get() = tags != null || language != null || timezoneId != null || country != null || latitude != null || longitude != null

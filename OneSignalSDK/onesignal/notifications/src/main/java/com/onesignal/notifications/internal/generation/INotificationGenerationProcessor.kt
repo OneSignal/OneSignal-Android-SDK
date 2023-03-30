@@ -9,6 +9,6 @@ internal interface INotificationGenerationProcessor {
         androidNotificationId: Int,
         jsonPayload: JSONObject,
         isRestoring: Boolean,
-        timestamp: Long
+        timestamp: Long,
     )
 }

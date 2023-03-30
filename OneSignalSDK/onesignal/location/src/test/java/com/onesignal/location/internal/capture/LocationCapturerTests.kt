@@ -48,7 +48,7 @@ class LocationCapturerTests : FunSpec({
             MockHelper.time(1111),
             mockLocationPreferencesService,
             mockPropertiesModelStore,
-            mockLocationController
+            mockLocationController,
         )
 
         /* When */
@@ -90,7 +90,7 @@ class LocationCapturerTests : FunSpec({
             MockHelper.time(1111),
             mockLocationPreferencesService,
             mockPropertiesModelStore,
-            mockLocationController
+            mockLocationController,
         )
 
         /* When */
@@ -126,7 +126,7 @@ class LocationCapturerTests : FunSpec({
             MockHelper.time(1111),
             mockLocationPreferencesService,
             mockPropertiesModelStore,
-            mockLocationController
+            mockLocationController,
         )
 
         /* When */

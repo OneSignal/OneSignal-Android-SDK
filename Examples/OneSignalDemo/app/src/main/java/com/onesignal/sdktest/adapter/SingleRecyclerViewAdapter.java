@@ -76,8 +76,10 @@ public class SingleRecyclerViewAdapter extends RecyclerView.Adapter<RecyclerView
 
             if (Util.isBoolean(value))
                 value += " (bool)";
-            else if (Util.isNumeric(value))
-                value += " (num)";
+            else if (Util.isInteger(value))
+                value += " (int)";
+            else if (Util.isFloat(value))
+                value += " (float)";
             else
                 value += " (str)";
             singleTextView.setText(value);

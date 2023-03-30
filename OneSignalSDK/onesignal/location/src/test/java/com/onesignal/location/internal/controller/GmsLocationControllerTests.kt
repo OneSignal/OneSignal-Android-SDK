@@ -23,7 +23,7 @@ import org.robolectric.annotation.Config
 @Config(
     packageName = "com.onesignal.example",
     shadows = [ShadowGoogleApiClientBuilder::class],
-    sdk = [26]
+    sdk = [26],
 )
 @RobolectricTest
 @RunWith(KotestTestRunner::class)
@@ -57,7 +57,7 @@ class GmsLocationControllerTests : FunSpec({
                 withArg {
                     it.latitude shouldBe 123.45
                     it.longitude shouldBe 678.91
-                }
+                },
             )
         }
     }
@@ -93,13 +93,13 @@ class GmsLocationControllerTests : FunSpec({
                 withArg {
                     it.latitude shouldBe 123.45
                     it.longitude shouldBe 678.91
-                }
+                },
             )
             spyLocationUpdateHandler.onLocationChanged(
                 withArg {
                     it.latitude shouldBe 123.45
                     it.longitude shouldBe 678.91
-                }
+                },
             )
         }
     }
@@ -137,7 +137,7 @@ class GmsLocationControllerTests : FunSpec({
                 withArg {
                     it.latitude shouldBe 123.45
                     it.longitude shouldBe 678.91
-                }
+                },
             )
         }
     }
@@ -172,7 +172,7 @@ class GmsLocationControllerTests : FunSpec({
                 withArg {
                     it.latitude shouldBe 123.45
                     it.longitude shouldBe 678.91
-                }
+                },
             )
         }
     }

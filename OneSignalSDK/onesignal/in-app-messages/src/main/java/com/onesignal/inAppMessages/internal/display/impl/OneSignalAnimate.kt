@@ -20,7 +20,7 @@ internal object OneSignalAnimate {
         deltaToY: Float,
         duration: Int,
         interpolator: Interpolator?,
-        animCallback: Animation.AnimationListener?
+        animCallback: Animation.AnimationListener?,
     ): Animation {
         val translateAnimation: Animation = TranslateAnimation(0f, 0f, deltaFromY, deltaToY)
         translateAnimation.duration = duration.toLong()
@@ -39,13 +39,13 @@ internal object OneSignalAnimate {
         duration: Int,
         colorStart: Int,
         colorEnd: Int,
-        animCallback: Animator.AnimatorListener?
+        animCallback: Animator.AnimatorListener?,
     ): ValueAnimator {
         val backgroundAnimation = ValueAnimator()
         backgroundAnimation.duration = duration.toLong()
         backgroundAnimation.setIntValues(
             colorStart,
-            colorEnd
+            colorEnd,
         )
         backgroundAnimation.setEvaluator(ArgbEvaluator())
         backgroundAnimation.addUpdateListener { valueAnimator -> view.setBackgroundColor((valueAnimator.animatedValue as Int)) }
@@ -60,7 +60,7 @@ internal object OneSignalAnimate {
         view: View,
         duration: Int,
         interpolator: Interpolator?,
-        animCallback: Animation.AnimationListener?
+        animCallback: Animation.AnimationListener?,
     ): Animation {
         val scaleAnimation: Animation = ScaleAnimation(
             0f,
@@ -70,7 +70,7 @@ internal object OneSignalAnimate {
             Animation.RELATIVE_TO_SELF,
             0.5f,
             Animation.RELATIVE_TO_SELF,
-            0.5f
+            0.5f,
         )
         scaleAnimation.duration = duration.toLong()
         scaleAnimation.interpolator = interpolator

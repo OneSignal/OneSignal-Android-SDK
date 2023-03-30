@@ -42,7 +42,7 @@ import java.io.IOException
 internal abstract class PushRegistratorAbstractGoogle(
     private val _deviceService: IDeviceService,
     private var _configModelStore: ConfigModelStore,
-    private val _upgradePrompt: GooglePlayServicesUpgradePrompt
+    private val _upgradePrompt: GooglePlayServicesUpgradePrompt,
 ) :
     IPushRegistrator, IPushRegistratorCallback {
     abstract val providerName: String
@@ -51,6 +51,10 @@ internal abstract class PushRegistratorAbstractGoogle(
     abstract suspend fun getToken(senderId: String): String
 
     override suspend fun registerForPush(): IPushRegistrator.RegisterResult {
+        if (!_configModelStore.model.isInitializedWithRemote) {
+            return IPushRegistrator.RegisterResult(null, SubscriptionStatus.FIREBASE_FCM_INIT_ERROR)
+        }
+
         if (!_deviceService.hasFCMLibrary) {
             Logging.fatal("The Firebase FCM library is missing! Please make sure to include it in your project.")
             return IPushRegistrator.RegisterResult(null, SubscriptionStatus.MISSING_FIREBASE_FCM_LIBRARY)
@@ -60,7 +64,7 @@ internal abstract class PushRegistratorAbstractGoogle(
             Logging.error("Missing Google Project number!\nPlease enter a Google Project number / Sender ID on under App Settings > Android > Configuration on the OneSignal dashboard.")
             IPushRegistrator.RegisterResult(
                 null,
-                SubscriptionStatus.INVALID_FCM_SENDER_ID
+                SubscriptionStatus.INVALID_FCM_SENDER_ID,
             )
         } else {
             internalRegisterForPush(_configModelStore.model.googleProjectNumber!!)
@@ -80,19 +84,19 @@ internal abstract class PushRegistratorAbstractGoogle(
                 Logging.error("'Google Play services' app not installed or disabled on the device.")
                 IPushRegistrator.RegisterResult(
                     null,
-                    SubscriptionStatus.OUTDATED_GOOGLE_PLAY_SERVICES_APP
+                    SubscriptionStatus.OUTDATED_GOOGLE_PLAY_SERVICES_APP,
                 )
             }
         } catch (t: Throwable) {
             Logging.error(
                 "Could not register with $providerName due to an issue with your AndroidManifest.xml or with 'Google Play services'.",
-                t
+                t,
             )
         }
 
         return IPushRegistrator.RegisterResult(
             null,
-            SubscriptionStatus.FIREBASE_FCM_INIT_ERROR
+            SubscriptionStatus.FIREBASE_FCM_INIT_ERROR,
         )
     }
 
@@ -109,7 +113,7 @@ internal abstract class PushRegistratorAbstractGoogle(
         // TODO: New error?
         return IPushRegistrator.RegisterResult(
             null,
-            SubscriptionStatus.FIREBASE_FCM_INIT_ERROR
+            SubscriptionStatus.FIREBASE_FCM_INIT_ERROR,
         )
     }
 
@@ -119,7 +123,7 @@ internal abstract class PushRegistratorAbstractGoogle(
             Logging.info("Device registered, push token = $registrationId")
             return IPushRegistrator.RegisterResult(
                 registrationId,
-                SubscriptionStatus.SUBSCRIBED
+                SubscriptionStatus.SUBSCRIBED,
             )
         } catch (e: IOException) {
             val pushStatus: SubscriptionStatus = pushStatusFromThrowable(e)
@@ -150,7 +154,7 @@ internal abstract class PushRegistratorAbstractGoogle(
             Logging.error("Unknown error getting $providerName Token", t)
             return IPushRegistrator.RegisterResult(
                 null,
-                SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION
+                SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION,
             )
         }
 

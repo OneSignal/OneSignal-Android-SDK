@@ -5,7 +5,7 @@ package com.onesignal.inAppMessages
  * such as an in-app webview
  */
 enum class InAppMessageActionUrlType(
-    private val text: String
+    private val text: String,
 ) {
 
     /**
@@ -21,7 +21,8 @@ enum class InAppMessageActionUrlType(
     /**
      * Loads the URL on the in-app message webview itself
      */
-    REPLACE_CONTENT("replacement");
+    REPLACE_CONTENT("replacement"),
+    ;
 
     companion object {
         fun fromString(text: String?): InAppMessageActionUrlType? {

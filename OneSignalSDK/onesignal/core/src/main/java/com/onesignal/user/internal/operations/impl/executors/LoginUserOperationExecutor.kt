@@ -46,7 +46,7 @@ internal class LoginUserOperationExecutor(
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
     private val _subscriptionsModelStore: SubscriptionModelStore,
-    private val _configModelStore: ConfigModelStore
+    private val _configModelStore: ConfigModelStore,
 ) : IOperationExecutor {
 
     override val operations: List<String>
@@ -208,7 +208,7 @@ internal class LoginUserOperationExecutor(
                 subscriptions[operation.subscriptionId]!!.rooted,
                 subscriptions[operation.subscriptionId]!!.netType,
                 subscriptions[operation.subscriptionId]!!.carrier,
-                subscriptions[operation.subscriptionId]!!.appVersion
+                subscriptions[operation.subscriptionId]!!.appVersion,
             )
         } else {
             mutableSubscriptions[operation.subscriptionId] = SubscriptionObject(operation.subscriptionId)
@@ -242,7 +242,7 @@ internal class LoginUserOperationExecutor(
             RootToolsInternalMethods.isRooted,
             DeviceUtils.getNetType(_application.appContext),
             DeviceUtils.getCarrierName(_application.appContext),
-            AndroidUtils.getAppVersion(_application.appContext)
+            AndroidUtils.getAppVersion(_application.appContext),
         )
 
         return mutableSubscriptions
@@ -263,7 +263,7 @@ internal class LoginUserOperationExecutor(
                 subscriptions[operation.subscriptionId]!!.rooted,
                 subscriptions[operation.subscriptionId]!!.netType,
                 subscriptions[operation.subscriptionId]!!.carrier,
-                subscriptions[operation.subscriptionId]!!.appVersion
+                subscriptions[operation.subscriptionId]!!.appVersion,
             )
         }
 

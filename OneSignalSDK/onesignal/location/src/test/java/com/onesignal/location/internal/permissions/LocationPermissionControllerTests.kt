@@ -29,7 +29,7 @@ class LocationPermissionControllerTests : FunSpec({
 
         val locationPermissionController = LocationPermissionController(
             mockRequestPermissionService,
-            AndroidMockHelper.applicationService()
+            AndroidMockHelper.applicationService(),
         )
 
         every { mockRequestPermissionService.startPrompt(any(), any(), any(), any()) } coAnswers {
@@ -56,7 +56,7 @@ class LocationPermissionControllerTests : FunSpec({
 
         val locationPermissionController = LocationPermissionController(
             mockRequestPermissionService,
-            AndroidMockHelper.applicationService()
+            AndroidMockHelper.applicationService(),
         )
 
         every { mockRequestPermissionService.startPrompt(any(), any(), any(), any()) } coAnswers {
@@ -83,7 +83,7 @@ class LocationPermissionControllerTests : FunSpec({
 
         val locationPermissionController = LocationPermissionController(
             mockRequestPermissionService,
-            AndroidMockHelper.applicationService()
+            AndroidMockHelper.applicationService(),
         )
 
         every { mockRequestPermissionService.startPrompt(any(), any(), any(), any()) } coAnswers {
@@ -105,7 +105,7 @@ class LocationPermissionControllerTests : FunSpec({
 
         val locationPermissionController = LocationPermissionController(
             mockRequestPermissionService,
-            AndroidMockHelper.applicationService()
+            AndroidMockHelper.applicationService(),
         )
 
         every { mockRequestPermissionService.startPrompt(any(), any(), any(), any()) } coAnswers {

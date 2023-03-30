@@ -9,8 +9,9 @@ object OneSignalUtils {
     const val sdkVersion: String = "050000"
 
     fun isValidEmail(email: String): Boolean {
-        if (email.isEmpty())
+        if (email.isEmpty()) {
             return false
+        }
 
         val emRegex = "^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\])|(([a-zA-Z\\-0-9]+\\.)+[a-zA-Z]{2,}))$"
         val pattern: Pattern = Pattern.compile(emRegex)
@@ -18,8 +19,9 @@ object OneSignalUtils {
     }
 
     fun isValidPhoneNumber(number: String): Boolean {
-        if (number.isEmpty())
+        if (number.isEmpty()) {
             return false
+        }
 
         val emRegex = "^\\+?[1-9]\\d{1,14}\$"
         val pattern: Pattern = Pattern.compile(emRegex)

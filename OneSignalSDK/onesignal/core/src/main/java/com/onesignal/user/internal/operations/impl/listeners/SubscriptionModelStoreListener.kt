@@ -16,7 +16,7 @@ internal class SubscriptionModelStoreListener(
     store: SubscriptionModelStore,
     opRepo: IOperationRepo,
     private val _identityModelStore: IdentityModelStore,
-    private val _configModelStore: ConfigModelStore
+    private val _configModelStore: ConfigModelStore,
 ) : ModelStoreListener<SubscriptionModel>(store, opRepo) {
 
     override fun getAddOperation(model: SubscriptionModel): Operation {

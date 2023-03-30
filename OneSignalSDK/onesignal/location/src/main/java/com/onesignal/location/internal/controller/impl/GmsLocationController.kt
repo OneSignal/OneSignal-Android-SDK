@@ -28,7 +28,7 @@ import kotlinx.coroutines.withTimeout
 import java.io.Closeable
 
 internal class GmsLocationController(
-    private val _applicationService: IApplicationService
+    private val _applicationService: IApplicationService,
 ) : ILocationController {
     private val _locationHandlerThread = LocationHandlerThread()
     private val _startStopMutex = Mutex()
@@ -153,7 +153,7 @@ internal class GmsLocationController(
     class LocationUpdateListener(
         private val _applicationService: IApplicationService,
         private val _parent: GmsLocationController,
-        private val googleApiClient: GoogleApiClient
+        private val googleApiClient: GoogleApiClient,
     ) : LocationListener, IApplicationLifecycleHandler, Closeable {
 
         private var hasExistingRequest = false

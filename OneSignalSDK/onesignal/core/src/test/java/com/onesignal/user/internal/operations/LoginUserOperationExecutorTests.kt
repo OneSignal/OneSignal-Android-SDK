@@ -50,7 +50,7 @@ class LoginUserOperationExecutorTests : FunSpec({
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
-                listOf()
+                listOf(),
             )
         /* Given */
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
@@ -66,7 +66,7 @@ class LoginUserOperationExecutorTests : FunSpec({
             mockIdentityModelStore,
             mockPropertiesModelStore,
             mockSubscriptionsModelStore,
-            MockHelper.configModelStore()
+            MockHelper.configModelStore(),
         )
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, null, null))
 
@@ -80,7 +80,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 appId,
                 mapOf(),
                 any(),
-                any()
+                any(),
             )
         }
     }
@@ -180,7 +180,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                     (it[0] as SetAliasOperation).onesignalId shouldBe "existingOneSignalId"
                     (it[0] as SetAliasOperation).label shouldBe IdentityConstants.EXTERNAL_ID
                     (it[0] as SetAliasOperation).value shouldBe "externalId"
-                }
+                },
             )
         }
     }
@@ -215,7 +215,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                     (it[0] as SetAliasOperation).onesignalId shouldBe "existingOneSignalId"
                     (it[0] as SetAliasOperation).label shouldBe IdentityConstants.EXTERNAL_ID
                     (it[0] as SetAliasOperation).value shouldBe "externalId"
-                }
+                },
             )
         }
     }
@@ -250,7 +250,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                     (it[0] as SetAliasOperation).onesignalId shouldBe "existingOneSignalId"
                     (it[0] as SetAliasOperation).label shouldBe IdentityConstants.EXTERNAL_ID
                     (it[0] as SetAliasOperation).value shouldBe "externalId"
-                }
+                },
             )
         }
         coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any(), any()) }
@@ -285,7 +285,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                     (it[0] as SetAliasOperation).onesignalId shouldBe "existingOneSignalId"
                     (it[0] as SetAliasOperation).label shouldBe IdentityConstants.EXTERNAL_ID
                     (it[0] as SetAliasOperation).value shouldBe "externalId"
-                }
+                },
             )
         }
         coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any(), any()) }
@@ -298,7 +298,7 @@ class LoginUserOperationExecutorTests : FunSpec({
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
-                listOf()
+                listOf(),
             )
         /* Given */
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
@@ -314,7 +314,7 @@ class LoginUserOperationExecutorTests : FunSpec({
             mockIdentityModelStore,
             mockPropertiesModelStore,
             mockSubscriptionsModelStore,
-            MockHelper.configModelStore()
+            MockHelper.configModelStore(),
         )
         val operations = listOf<Operation>(
             LoginUserOperation(appId, localOneSignalId, null, null),
@@ -339,7 +339,7 @@ class LoginUserOperationExecutorTests : FunSpec({
             SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationType.name, 1),
             SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationAccuracy.name, 0.15),
             SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationBackground.name, true),
-            SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationTimestamp.name, 1111L)
+            SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationTimestamp.name, 1111L),
         )
 
         /* When */
@@ -365,7 +365,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                     it[0].enabled shouldBe true
                     it[0].token shouldBe "pushToken2"
                     it[0].notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED
-                }
+                },
             )
         }
     }
@@ -377,7 +377,7 @@ class LoginUserOperationExecutorTests : FunSpec({
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
-                listOf(SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH), SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL))
+                listOf(SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH), SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL)),
             )
         /* Given */
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
@@ -408,12 +408,12 @@ class LoginUserOperationExecutorTests : FunSpec({
             mockIdentityModelStore,
             mockPropertiesModelStore,
             mockSubscriptionsModelStore,
-            MockHelper.configModelStore()
+            MockHelper.configModelStore(),
         )
         val operations = listOf<Operation>(
             LoginUserOperation(appId, localOneSignalId, null, null),
             CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken1", SubscriptionStatus.SUBSCRIBED),
-            CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId2, SubscriptionType.EMAIL, true, "name@company.com", SubscriptionStatus.SUBSCRIBED)
+            CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId2, SubscriptionType.EMAIL, true, "name@company.com", SubscriptionStatus.SUBSCRIBED),
         )
 
         /* When */
@@ -432,7 +432,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 appId,
                 mapOf(),
                 any(),
-                any()
+                any(),
             )
         }
     }
@@ -444,7 +444,7 @@ class LoginUserOperationExecutorTests : FunSpec({
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
-                listOf(SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH), SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL))
+                listOf(SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH), SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL)),
             )
         /* Given */
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
@@ -475,12 +475,12 @@ class LoginUserOperationExecutorTests : FunSpec({
             mockIdentityModelStore,
             mockPropertiesModelStore,
             mockSubscriptionsModelStore,
-            MockHelper.configModelStore()
+            MockHelper.configModelStore(),
         )
         val operations = listOf<Operation>(
             LoginUserOperation(appId, localOneSignalId, null, null),
             CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken1", SubscriptionStatus.SUBSCRIBED),
-            CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId2, SubscriptionType.EMAIL, true, "name@company.com", SubscriptionStatus.SUBSCRIBED)
+            CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId2, SubscriptionType.EMAIL, true, "name@company.com", SubscriptionStatus.SUBSCRIBED),
         )
 
         /* When */
@@ -499,7 +499,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 appId,
                 mapOf(),
                 any(),
-                any()
+                any(),
             )
         }
     }
@@ -511,7 +511,7 @@ class LoginUserOperationExecutorTests : FunSpec({
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
-                listOf(SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH), SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL))
+                listOf(SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH), SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL)),
             )
         /* Given */
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
@@ -528,12 +528,12 @@ class LoginUserOperationExecutorTests : FunSpec({
             mockIdentityModelStore,
             mockPropertiesModelStore,
             mockSubscriptionsModelStore,
-            MockHelper.configModelStore()
+            MockHelper.configModelStore(),
         )
         val operations = listOf<Operation>(
             LoginUserOperation(appId, localOneSignalId, null, null),
             CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken1", SubscriptionStatus.SUBSCRIBED),
-            CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId2, SubscriptionType.EMAIL, true, "name@company.com", SubscriptionStatus.SUBSCRIBED)
+            CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId2, SubscriptionType.EMAIL, true, "name@company.com", SubscriptionStatus.SUBSCRIBED),
         )
 
         /* When */
@@ -547,7 +547,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 appId,
                 mapOf(),
                 any(),
-                any()
+                any(),
             )
         }
     }

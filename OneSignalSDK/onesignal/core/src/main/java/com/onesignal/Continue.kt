@@ -26,7 +26,7 @@ class ContinueResult<R> (
     /**
      * The throwable that was thrown by the coroutine.  This will be `null` if [isSuccess] is `true`.
      */
-    val throwable: Throwable?
+    val throwable: Throwable?,
 )
 
 /**

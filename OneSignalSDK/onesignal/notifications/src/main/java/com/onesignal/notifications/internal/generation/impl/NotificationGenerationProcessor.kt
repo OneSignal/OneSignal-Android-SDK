@@ -35,7 +35,7 @@ internal class NotificationGenerationProcessor(
     private val _dataController: INotificationRepository,
     private val _notificationSummaryManager: INotificationSummaryManager,
     private val _lifecycleService: INotificationLifecycleService,
-    private val _time: ITime
+    private val _time: ITime,
 ) : INotificationGenerationProcessor {
 
     override suspend fun processNotificationData(
@@ -43,7 +43,7 @@ internal class NotificationGenerationProcessor(
         androidNotificationId: Int,
         jsonPayload: JSONObject,
         isRestoring: Boolean,
-        timestamp: Long
+        timestamp: Long,
     ) {
         if (!_lifecycleService.canReceiveNotification(jsonPayload)) {
             // Return early, we don't want the extender service or etc. to fire for IAM previews
@@ -91,7 +91,7 @@ internal class NotificationGenerationProcessor(
                     withTimeout(30000L) {
                         GlobalScope.launch(Dispatchers.IO) {
                             _lifecycleService.externalNotificationWillShowInForeground(
-                                foregroundReceivedEvent
+                                foregroundReceivedEvent,
                             )
                         }.join()
                     }
@@ -186,7 +186,7 @@ internal class NotificationGenerationProcessor(
 
     private fun shouldDisplayNotification(notificationJob: NotificationGenerationJob): Boolean {
         return notificationJob.hasExtender() || AndroidUtils.isStringNotEmpty(
-            notificationJob.jsonPayload!!.optString("alert")
+            notificationJob.jsonPayload!!.optString("alert"),
         )
     }
 
@@ -196,7 +196,7 @@ internal class NotificationGenerationProcessor(
     private suspend fun postProcessNotification(
         notificationJob: NotificationGenerationJob,
         wasOpened: Boolean,
-        wasDisplayed: Boolean
+        wasDisplayed: Boolean,
     ) {
         saveNotification(notificationJob, wasOpened)
         if (!wasDisplayed) {
@@ -227,11 +227,11 @@ internal class NotificationGenerationProcessor(
             // Set expire_time
             val sentTime = jsonPayload.optLong(
                 NotificationConstants.GOOGLE_SENT_TIME_KEY,
-                _time.currentTimeMillis
+                _time.currentTimeMillis,
             ) / 1000L
             val ttl = jsonPayload.optInt(
                 NotificationConstants.GOOGLE_TTL_KEY,
-                NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD
+                NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD,
             )
             val expireTime = sentTime + ttl
 
@@ -245,7 +245,7 @@ internal class NotificationGenerationProcessor(
                 if (notificationJob.title != null) notificationJob.title.toString() else null,
                 if (notificationJob.body != null) notificationJob.body.toString() else null,
                 expireTime,
-                jsonPayload.toString()
+                jsonPayload.toString(),
             )
         } catch (e: JSONException) {
             e.printStackTrace()

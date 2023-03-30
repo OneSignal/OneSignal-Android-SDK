@@ -6,7 +6,7 @@ import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.inAppMessages.internal.preferences.IInAppPreferencesController
 
 internal class InAppPreferencesController(
-    private val _prefs: IPreferencesService
+    private val _prefs: IPreferencesService,
 ) : IInAppPreferencesController {
     /**
      * Clean up 6 month old IAM ids in [android.content.SharedPreferences]:

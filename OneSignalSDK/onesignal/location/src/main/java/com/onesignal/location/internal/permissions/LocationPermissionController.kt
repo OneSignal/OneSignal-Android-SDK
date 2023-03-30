@@ -44,7 +44,7 @@ internal interface ILocationPermissionChangedHandler {
 
 internal class LocationPermissionController(
     private val _requestPermission: IRequestPermissionService,
-    private val _applicationService: IApplicationService
+    private val _applicationService: IApplicationService,
 ) : IRequestPermissionService.PermissionCallback,
     IStartableService,
     IEventNotifier<ILocationPermissionChangedHandler> {
@@ -66,7 +66,7 @@ internal class LocationPermissionController(
             fallbackToSettings,
             PERMISSION_TYPE,
             androidPermissionString,
-            this::class.java
+            this::class.java,
         )
 
         // this won't return until onAccept or onReject sends the response on the channel (either
@@ -117,7 +117,7 @@ internal class LocationPermissionController(
                     _waiter.wake(false)
                     _events.fire { it.onLocationPermissionChanged(false) }
                 }
-            }
+            },
         )
         return true
     }

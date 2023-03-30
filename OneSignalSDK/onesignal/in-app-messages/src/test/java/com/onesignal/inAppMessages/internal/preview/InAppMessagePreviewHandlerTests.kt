@@ -26,7 +26,7 @@ import org.robolectric.annotation.Config
 
 @Config(
     packageName = "com.onesignal.example",
-    sdk = [26]
+    sdk = [26],
 )
 @RobolectricTest
 @RunWith(KotestTestRunner::class)
@@ -55,7 +55,7 @@ class InAppMessagePreviewHandlerTests : FunSpec({
             mockNotificationActivityOpener,
             mockNotificationLifecycleService,
             stateService,
-            MockHelper.time(1111)
+            MockHelper.time(1111),
         )
 
         val jsonObject = JSONObject()
@@ -65,8 +65,8 @@ class InAppMessagePreviewHandlerTests : FunSpec({
                     .put(
                         "a",
                         JSONObject()
-                            .put("os_in_app_message_preview_id", "previewUUID")
-                    )
+                            .put("os_in_app_message_preview_id", "previewUUID"),
+                    ),
             )
 
         /* When */
@@ -96,7 +96,7 @@ class InAppMessagePreviewHandlerTests : FunSpec({
             mockNotificationActivityOpener,
             mockNotificationLifecycleService,
             stateService,
-            MockHelper.time(1111)
+            MockHelper.time(1111),
         )
 
         val jsonObject = JSONObject()
@@ -106,8 +106,8 @@ class InAppMessagePreviewHandlerTests : FunSpec({
                     .put(
                         "a",
                         JSONObject()
-                            .put("os_in_app_message_preview_id", "previewUUID")
-                    )
+                            .put("os_in_app_message_preview_id", "previewUUID"),
+                    ),
             )
 
         /* When */
@@ -135,7 +135,7 @@ class InAppMessagePreviewHandlerTests : FunSpec({
             mockNotificationActivityOpener,
             mockNotificationLifecycleService,
             stateService,
-            MockHelper.time(1111)
+            MockHelper.time(1111),
         )
 
         val jsonObject = JSONObject()
@@ -144,8 +144,8 @@ class InAppMessagePreviewHandlerTests : FunSpec({
                 JSONObject()
                     .put(
                         "a",
-                        JSONObject()
-                    )
+                        JSONObject(),
+                    ),
             )
 
         /* When */
@@ -174,7 +174,7 @@ class InAppMessagePreviewHandlerTests : FunSpec({
             mockNotificationActivityOpener,
             mockNotificationLifecycleService,
             stateService,
-            MockHelper.time(1111)
+            MockHelper.time(1111),
         )
 
         val jsonObject = JSONObject()
@@ -184,8 +184,8 @@ class InAppMessagePreviewHandlerTests : FunSpec({
                     .put(
                         "a",
                         JSONObject()
-                            .put("os_in_app_message_preview_id", "previewUUID")
-                    )
+                            .put("os_in_app_message_preview_id", "previewUUID"),
+                    ),
             )
 
         val activity: Activity
@@ -205,7 +205,7 @@ class InAppMessagePreviewHandlerTests : FunSpec({
                 withArg {
                     it.length() shouldBe 1
                     it.getJSONObject(0) shouldBe jsonObject
-                }
+                },
             )
         }
         coVerify(exactly = 1) { mockInAppDisplayer.displayPreviewMessage("previewUUID") }
@@ -228,7 +228,7 @@ class InAppMessagePreviewHandlerTests : FunSpec({
             mockNotificationActivityOpener,
             mockNotificationLifecycleService,
             stateService,
-            MockHelper.time(1111)
+            MockHelper.time(1111),
         )
 
         val jsonObject = JSONObject()
@@ -237,8 +237,8 @@ class InAppMessagePreviewHandlerTests : FunSpec({
                 JSONObject()
                     .put(
                         "a",
-                        JSONObject()
-                    )
+                        JSONObject(),
+                    ),
             )
 
         val activity: Activity

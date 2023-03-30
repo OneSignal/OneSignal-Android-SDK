@@ -15,7 +15,7 @@ import kotlinx.coroutines.withContext
 internal class GooglePlayServicesUpgradePrompt(
     private val _applicationService: IApplicationService,
     private val _deviceService: IDeviceService,
-    private val _configModelStore: ConfigModelStore
+    private val _configModelStore: ConfigModelStore,
 ) {
     // Google Play Store might not be installed, ignore exception if so
     private val isGooglePlayStoreInstalled: Boolean
@@ -24,7 +24,7 @@ internal class GooglePlayServicesUpgradePrompt(
                 val pm = _applicationService.appContext.packageManager
                 val info = pm.getPackageInfo(
                     GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE,
-                    PackageManager.GET_META_DATA
+                    PackageManager.GET_META_DATA,
                 )
                 val label = info.applicationInfo.loadLabel(pm) as String
                 return label != "Market"
@@ -50,22 +50,22 @@ internal class GooglePlayServicesUpgradePrompt(
             val alertBodyText = AndroidUtils.getResourceString(
                 activity,
                 "onesignal_gms_missing_alert_text",
-                "To receive push notifications please press 'Update' to enable 'Google Play services'."
+                "To receive push notifications please press 'Update' to enable 'Google Play services'.",
             )
             val alertButtonUpdate = AndroidUtils.getResourceString(
                 activity,
                 "onesignal_gms_missing_alert_button_update",
-                "Update"
+                "Update",
             )
             val alertButtonSkip = AndroidUtils.getResourceString(
                 activity,
                 "onesignal_gms_missing_alert_button_skip",
-                "Skip"
+                "Skip",
             )
             val alertButtonClose = AndroidUtils.getResourceString(
                 activity,
                 "onesignal_gms_missing_alert_button_close",
-                "Close"
+                "Close",
             )
 
             val builder = AlertDialog.Builder(activity)
@@ -86,7 +86,7 @@ internal class GooglePlayServicesUpgradePrompt(
             val pendingIntent = apiAvailability.getErrorResolutionPendingIntent(
                 activity,
                 resultCode,
-                PLAY_SERVICES_RESOLUTION_REQUEST
+                PLAY_SERVICES_RESOLUTION_REQUEST,
             )
             pendingIntent?.send()
         } catch (e: CanceledException) {

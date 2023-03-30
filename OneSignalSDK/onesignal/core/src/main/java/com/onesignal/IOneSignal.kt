@@ -83,7 +83,7 @@ interface IOneSignal {
      *
      * @return true if the SDK could be successfully initialized, false otherwise.
      */
-    fun initWithContext(context: Context, appId: String?) : Boolean
+    fun initWithContext(context: Context, appId: String?): Boolean
 
     /**
      * Login to OneSignal under the user identified by the [externalId] provided. The act of

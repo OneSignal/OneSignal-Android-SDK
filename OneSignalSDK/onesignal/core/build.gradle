@@ -90,4 +90,8 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
 }
 
+ktlint {
+    version = "$ktlintVersion"
+}
+
 apply from: '../maven-push.gradle'

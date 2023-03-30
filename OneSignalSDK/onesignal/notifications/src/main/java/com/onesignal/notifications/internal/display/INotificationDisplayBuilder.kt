@@ -32,7 +32,7 @@ internal interface INotificationDisplayBuilder {
     //  When a large icon is set the small icon will no longer show.
     fun addXiaomiSettings(
         oneSignalNotificationBuilder: NotificationDisplayBuilder.OneSignalNotificationBuilder?,
-        notification: Notification
+        notification: Notification,
     )
 
     fun addNotificationActionButtons(
@@ -40,6 +40,6 @@ internal interface INotificationDisplayBuilder {
         intentGenerator: IntentGeneratorForAttachingToNotifications,
         mBuilder: NotificationCompat.Builder?,
         notificationId: Int,
-        groupSummary: String?
+        groupSummary: String?,
     )
 }

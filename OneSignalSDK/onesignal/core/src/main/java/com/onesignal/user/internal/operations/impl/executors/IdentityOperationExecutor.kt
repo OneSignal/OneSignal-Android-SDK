@@ -18,7 +18,7 @@ import com.onesignal.user.internal.operations.SetAliasOperation
 internal class IdentityOperationExecutor(
     private val _identityBackend: IIdentityBackendService,
     private val _identityModelStore: IdentityModelStore,
-    private val _buildUserService: IRebuildUserService
+    private val _buildUserService: IRebuildUserService,
 ) : IOperationExecutor {
 
     override val operations: List<String>
@@ -38,7 +38,7 @@ internal class IdentityOperationExecutor(
                     lastOperation.appId,
                     IdentityConstants.ONESIGNAL_ID,
                     lastOperation.onesignalId,
-                    mapOf(lastOperation.label to lastOperation.value)
+                    mapOf(lastOperation.label to lastOperation.value),
                 )
 
                 // ensure the now created alias is in the model as long as the user is still current.
@@ -52,7 +52,8 @@ internal class IdentityOperationExecutor(
                     NetworkUtils.ResponseStatusType.RETRYABLE ->
                         ExecutionResponse(ExecutionResult.FAIL_RETRY)
                     NetworkUtils.ResponseStatusType.INVALID,
-                    NetworkUtils.ResponseStatusType.CONFLICT ->
+                    NetworkUtils.ResponseStatusType.CONFLICT,
+                    ->
                         ExecutionResponse(ExecutionResult.FAIL_NORETRY)
                     NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                         ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)

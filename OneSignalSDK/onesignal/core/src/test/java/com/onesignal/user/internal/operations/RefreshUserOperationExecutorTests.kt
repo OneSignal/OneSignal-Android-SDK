@@ -43,7 +43,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId, "aliasLabel1" to "aliasValue1"),
                 PropertiesObject(country = "US"),
-                listOf(SubscriptionObject(existingSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "pushToken1"), SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "pushToken2"), SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL, token = "name@company.com"))
+                listOf(SubscriptionObject(existingSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "pushToken1"), SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "pushToken2"), SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL, token = "name@company.com")),
             )
 
         /* Given */
@@ -76,7 +76,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
             mockPropertiesModelStore,
             mockSubscriptionsModelStore,
             mockConfigModelStore,
-            mockBuildUserService
+            mockBuildUserService,
         )
 
         val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
@@ -92,14 +92,14 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 withArg {
                     it["aliasLabel1"] shouldBe "aliasValue1"
                 },
-                ModelChangeTags.HYDRATE
+                ModelChangeTags.HYDRATE,
             )
             mockPropertiesModelStore.replace(
                 withArg {
                     it.country shouldBe "US"
                     it.language shouldBe null
                 },
-                ModelChangeTags.HYDRATE
+                ModelChangeTags.HYDRATE,
             )
             mockSubscriptionsModelStore.replaceAll(
                 withArg {
@@ -113,7 +113,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                     it[1].optedIn shouldBe true
                     it[1].address shouldBe "name@company.com"
                 },
-                ModelChangeTags.HYDRATE
+                ModelChangeTags.HYDRATE,
             )
         }
     }
@@ -125,7 +125,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
-                listOf()
+                listOf(),
             )
 
         /* Given */
@@ -149,7 +149,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
             mockPropertiesModelStore,
             mockSubscriptionsModelStore,
             MockHelper.configModelStore(),
-            mockBuildUserService
+            mockBuildUserService,
         )
 
         val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
@@ -184,7 +184,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
             mockPropertiesModelStore,
             mockSubscriptionsModelStore,
             MockHelper.configModelStore(),
-            mockBuildUserService
+            mockBuildUserService,
         )
 
         val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
@@ -216,7 +216,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
             mockPropertiesModelStore,
             mockSubscriptionsModelStore,
             MockHelper.configModelStore(),
-            mockBuildUserService
+            mockBuildUserService,
         )
 
         val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))

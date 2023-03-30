@@ -7,7 +7,7 @@ package com.onesignal.common.modeling
  */
 open class MapModel<V>(
     parentModel: Model? = null,
-    parentProperty: String? = null
+    parentProperty: String? = null,
 ) : Model(parentModel, parentProperty), MutableMap<String, V> {
 
     override val size: Int

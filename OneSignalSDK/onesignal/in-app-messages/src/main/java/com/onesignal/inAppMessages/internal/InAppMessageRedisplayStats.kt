@@ -6,7 +6,7 @@ import org.json.JSONException
 import org.json.JSONObject
 
 internal class InAppMessageRedisplayStats(
-    private val _time: ITime
+    private val _time: ITime,
 ) {
     // Last IAM display time in seconds
     var lastDisplayTime: Long = -1

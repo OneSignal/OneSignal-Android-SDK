@@ -83,7 +83,7 @@ object NotificationHelper {
                 )
             if (!isGroupSummary && isGroupless) {
                 grouplessStatusBarNotifications.add(
-                    statusBarNotification
+                    statusBarNotification,
                 )
             }
         }
@@ -101,7 +101,7 @@ object NotificationHelper {
     @RequiresApi(api = Build.VERSION_CODES.N)
     fun assignGrouplessNotifications(
         context: Context?,
-        grouplessNotifs: ArrayList<StatusBarNotification>
+        grouplessNotifs: ArrayList<StatusBarNotification>,
     ) {
         for (grouplessNotif in grouplessNotifs) {
             val grouplessNotifBuilder =
@@ -157,7 +157,7 @@ object NotificationHelper {
             if (customJSON.has("i")) {
                 return customJSON.optString(
                     "i",
-                    null
+                    null,
                 )
             } else {
                 Logging.debug("Not a OneSignal formatted FCM message. No 'i' field in custom.")
@@ -225,8 +225,8 @@ object NotificationHelper {
                     groupedNotifications.add(
                         com.onesignal.notifications.internal.Notification(
                             payload,
-                            time
-                        )
+                            time,
+                        ),
                     )
                 }
             } catch (t: Throwable) {
@@ -242,7 +242,7 @@ object NotificationHelper {
             groupedNotifications,
             payload!!,
             androidNotificationId,
-            time
+            time,
         )
         return NotificationClickResult(notification, notificationAction)
     }

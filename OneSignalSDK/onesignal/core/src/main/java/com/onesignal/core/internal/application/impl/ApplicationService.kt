@@ -82,7 +82,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
                 // If Activity contains the configChanges orientation flag, re-create the view this way
                 if (current != null && AndroidUtils.hasConfigChangeFlag(
                         current!!,
-                        ActivityInfo.CONFIG_ORIENTATION
+                        ActivityInfo.CONFIG_ORIENTATION,
                     )
                 ) {
                     onOrientationChanged(newConfig.orientation, current!!)
@@ -147,8 +147,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         if ((!isInForeground || _nextResumeIsFirstActivity) && !_isActivityChangingConfigurations) {
             _activityReferences = 1
             handleFocus()
-        }
-        else {
+        } else {
             _activityReferences++
         }
     }
@@ -227,7 +226,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
                                 }
                             }
                         },
-                        true
+                        true,
                     )
 
                     waiter.waitForWake()

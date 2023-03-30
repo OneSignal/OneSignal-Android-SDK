@@ -23,7 +23,7 @@ import com.onesignal.session.internal.outcomes.impl.OutcomesDbContract.SQL_CREAT
 internal open class OSDatabase(
     private val _outcomeTableProvider: OutcomeTableProvider,
     context: Context?,
-    version: Int = dbVersion
+    version: Int = dbVersion,
 ) : SQLiteOpenHelper(context, DATABASE_NAME, null, version), IDatabase {
 
     /**
@@ -85,7 +85,7 @@ internal open class OSDatabase(
         having: String?,
         orderBy: String?,
         limit: String?,
-        action: (ICursor) -> Unit
+        action: (ICursor) -> Unit,
     ) {
         val cursor: Cursor
         synchronized(LOCK) {
@@ -97,7 +97,7 @@ internal open class OSDatabase(
                     whereArgs,
                     groupBy,
                     having,
-                    orderBy
+                    orderBy,
                 )
             } else {
                 cursor = getSQLiteDatabaseWithRetries().query(
@@ -108,7 +108,7 @@ internal open class OSDatabase(
                     groupBy,
                     having,
                     orderBy,
-                    limit
+                    limit,
                 )
             }
         }
@@ -129,12 +129,12 @@ internal open class OSDatabase(
             } catch (e: SQLiteException) {
                 Logging.error(
                     "Error inserting on table: $table with nullColumnHack: $nullColumnHack and values: $values",
-                    e
+                    e,
                 )
             } catch (e: IllegalStateException) {
                 Logging.error(
                     "Error under inserting transaction under table: $table with nullColumnHack: $nullColumnHack and values: $values",
-                    e
+                    e,
                 )
             } finally {
                 try {
@@ -159,12 +159,12 @@ internal open class OSDatabase(
             } catch (e: SQLiteException) {
                 Logging.error(
                     "Error inserting or throw on table: $table with nullColumnHack: $nullColumnHack and values: $values",
-                    e
+                    e,
                 )
             } catch (e: IllegalStateException) {
                 Logging.error(
                     "Error under inserting or throw transaction under table: $table with nullColumnHack: $nullColumnHack and values: $values",
-                    e
+                    e,
                 )
             } finally {
                 try {
@@ -182,7 +182,7 @@ internal open class OSDatabase(
         table: String,
         values: ContentValues,
         whereClause: String?,
-        whereArgs: Array<String>?
+        whereArgs: Array<String>?,
     ): Int {
         var result = 0
         if (values.toString().isEmpty()) return result
@@ -195,12 +195,12 @@ internal open class OSDatabase(
             } catch (e: SQLiteException) {
                 Logging.error(
                     "Error updating on table: $table with whereClause: $whereClause and whereArgs: $whereArgs",
-                    e
+                    e,
                 )
             } catch (e: IllegalStateException) {
                 Logging.error(
                     "Error under update transaction under table: $table with whereClause: $whereClause and whereArgs: $whereArgs",
-                    e
+                    e,
                 )
             } finally {
                 try {
@@ -225,12 +225,12 @@ internal open class OSDatabase(
             } catch (e: SQLiteException) {
                 Logging.error(
                     "Error deleting on table: $table with whereClause: $whereClause and whereArgs: $whereArgs",
-                    e
+                    e,
                 )
             } catch (e: IllegalStateException) {
                 Logging.error(
                     "Error under delete transaction under table: $table with whereClause: $whereClause and whereArgs: $whereArgs",
-                    e
+                    e,
                 )
             } finally {
                 try {
@@ -284,7 +284,7 @@ internal open class OSDatabase(
         safeExecSQL(
             db,
             "ALTER TABLE " + OneSignalDbContract.NotificationTable.TABLE_NAME.toString() + " " +
-                "ADD COLUMN " + OneSignalDbContract.NotificationTable.COLUMN_NAME_COLLAPSE_ID.toString() + TEXT_TYPE + ";"
+                "ADD COLUMN " + OneSignalDbContract.NotificationTable.COLUMN_NAME_COLLAPSE_ID.toString() + TEXT_TYPE + ";",
         )
         safeExecSQL(db, OneSignalDbContract.NotificationTable.INDEX_CREATE_GROUP_ID)
     }
@@ -295,13 +295,13 @@ internal open class OSDatabase(
         safeExecSQL(
             db,
             "ALTER TABLE " + OneSignalDbContract.NotificationTable.TABLE_NAME.toString() + " " +
-                "ADD COLUMN " + OneSignalDbContract.NotificationTable.COLUMN_NAME_EXPIRE_TIME.toString() + " TIMESTAMP" + ";"
+                "ADD COLUMN " + OneSignalDbContract.NotificationTable.COLUMN_NAME_EXPIRE_TIME.toString() + " TIMESTAMP" + ";",
         )
         safeExecSQL(
             db,
             "UPDATE " + OneSignalDbContract.NotificationTable.TABLE_NAME.toString() + " " +
                 "SET " + OneSignalDbContract.NotificationTable.COLUMN_NAME_EXPIRE_TIME.toString() + " = " +
-                OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME.toString() + " + " + DEFAULT_TTL_IF_NOT_IN_PAYLOAD.toString() + ";"
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME.toString() + " + " + DEFAULT_TTL_IF_NOT_IN_PAYLOAD.toString() + ";",
         )
         safeExecSQL(db, OneSignalDbContract.NotificationTable.INDEX_CREATE_EXPIRE_TIME)
     }
@@ -399,7 +399,7 @@ internal open class OSDatabase(
             OneSignalDbContract.NotificationTable.INDEX_CREATE_GROUP_ID,
             OneSignalDbContract.NotificationTable.INDEX_CREATE_COLLAPSE_ID,
             OneSignalDbContract.NotificationTable.INDEX_CREATE_CREATED_TIME,
-            OneSignalDbContract.NotificationTable.INDEX_CREATE_EXPIRE_TIME
+            OneSignalDbContract.NotificationTable.INDEX_CREATE_EXPIRE_TIME,
         )
 
         const val DEFAULT_TTL_IF_NOT_IN_PAYLOAD = 259_200

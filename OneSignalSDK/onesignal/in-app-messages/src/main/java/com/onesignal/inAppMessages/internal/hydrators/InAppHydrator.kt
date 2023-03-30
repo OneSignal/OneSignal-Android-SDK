@@ -11,7 +11,7 @@ import org.json.JSONObject
 
 internal class InAppHydrator(
     private val _time: ITime,
-    private val _propertiesModelStore: PropertiesModelStore
+    private val _propertiesModelStore: PropertiesModelStore,
 ) {
 
     fun hydrateIAMMessages(jsonArray: JSONArray): List<InAppMessage> {

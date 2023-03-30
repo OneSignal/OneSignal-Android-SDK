@@ -26,7 +26,7 @@ import java.util.Random
 internal class SummaryNotificationDisplayer(
     private val _applicationService: IApplicationService,
     private val _dataController: INotificationRepository,
-    private val _notificationDisplayBuilder: INotificationDisplayBuilder
+    private val _notificationDisplayBuilder: INotificationDisplayBuilder,
 ) : ISummaryNotificationDisplayer {
     private val currentContext: Context
         get() = _applicationService.appContext
@@ -36,18 +36,18 @@ internal class SummaryNotificationDisplayer(
         intentGenerator: IntentGeneratorForAttachingToNotifications,
         gcmBundle: JSONObject,
         group: String,
-        notificationId: Int
+        notificationId: Int,
     ) {
         val random: Random = SecureRandom()
         val contentIntent: PendingIntent? = intentGenerator.getNewActionPendingIntent(
             random.nextInt(),
             intentGenerator.getNewBaseIntent(notificationId)
-                .putExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString()).putExtra("grp", group)
+                .putExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString()).putExtra("grp", group),
         )
         notifBuilder!!.setContentIntent(contentIntent)
         val deleteIntent = _notificationDisplayBuilder.getNewDismissActionPendingIntent(
             random.nextInt(),
-            _notificationDisplayBuilder.getNewBaseDismissIntent(notificationId).putExtra("grp", group)
+            _notificationDisplayBuilder.getNewBaseDismissIntent(notificationId).putExtra("grp", group),
         )
         notifBuilder.setDeleteIntent(deleteIntent)
         notifBuilder.setGroup(group)
@@ -62,7 +62,7 @@ internal class SummaryNotificationDisplayer(
     //   This prevents the sound from playing twice or both the default sound + a custom one.
     override fun createSingleNotificationBeforeSummaryBuilder(
         notificationJob: NotificationGenerationJob,
-        notifBuilder: NotificationCompat.Builder?
+        notifBuilder: NotificationCompat.Builder?,
     ): Notification {
         // Includes Android 4.3 through 6.0.1. Android 7.1 handles this correctly without this.
         // Android 4.2 and older just post the summary only.
@@ -70,7 +70,7 @@ internal class SummaryNotificationDisplayer(
             Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1 && Build.VERSION.SDK_INT < Build.VERSION_CODES.N && !notificationJob.isRestoring
         if (singleNotifWorkArounds) {
             if ((notificationJob.overriddenSound != null) && !notificationJob.overriddenSound!!
-                .equals(notificationJob.orgSound)
+                    .equals(notificationJob.orgSound)
             ) {
                 notifBuilder!!.setSound(null)
             }
@@ -88,7 +88,7 @@ internal class SummaryNotificationDisplayer(
     override suspend fun createSummaryNotification(
         notificationJob: NotificationGenerationJob,
         notifBuilder: NotificationDisplayBuilder.OneSignalNotificationBuilder?,
-        groupAlertBehavior: Int
+        groupAlertBehavior: Int,
     ) {
         val updateSummary: Boolean = notificationJob.isRestoring
         var fcmJson: JSONObject = notificationJob.jsonPayload!!
@@ -97,7 +97,7 @@ internal class SummaryNotificationDisplayer(
         val random = SecureRandom()
         val summaryDeleteIntent = _notificationDisplayBuilder.getNewDismissActionPendingIntent(
             random.nextInt(),
-            _notificationDisplayBuilder.getNewBaseDismissIntent(0).putExtra("summary", group)
+            _notificationDisplayBuilder.getNewBaseDismissIntent(0).putExtra("summary", group),
         )
         val summaryNotification: Notification
         var summaryNotificationId: Int? = null
@@ -136,7 +136,7 @@ internal class SummaryNotificationDisplayer(
 
         val summaryContentIntent: PendingIntent? = intentGenerator.getNewActionPendingIntent(
             random.nextInt(),
-            createBaseSummaryIntent(summaryNotificationId!!, intentGenerator, fcmJson, group)
+            createBaseSummaryIntent(summaryNotificationId!!, intentGenerator, fcmJson, group),
         )
 
         // 2 or more notifications with a group received, group them together as a single notification.
@@ -153,12 +153,12 @@ internal class SummaryNotificationDisplayer(
             } else {
                 if (notificationJob.overriddenSound != null) {
                     summaryBuilder!!.setSound(
-                        notificationJob.overriddenSound
+                        notificationJob.overriddenSound,
                     )
                 }
                 if (notificationJob.overriddenFlags != null) {
                     summaryBuilder!!.setDefaults(
-                        notificationJob.overriddenFlags!!
+                        notificationJob.overriddenFlags!!,
                     )
                 }
             }
@@ -169,8 +169,8 @@ internal class SummaryNotificationDisplayer(
                 .setDeleteIntent(summaryDeleteIntent)
                 .setContentTitle(
                     currentContext!!.packageManager.getApplicationLabel(
-                        currentContext!!.applicationInfo
-                    )
+                        currentContext!!.applicationInfo,
+                    ),
                 )
                 .setContentText(summaryMessage)
                 .setNumber(notificationCount)
@@ -204,7 +204,7 @@ internal class SummaryNotificationDisplayer(
                         StyleSpan(Typeface.BOLD),
                         0,
                         line1Title.length,
-                        0
+                        0,
                     )
                 }
                 inboxStyle.addLine(spannableString)
@@ -226,7 +226,7 @@ internal class SummaryNotificationDisplayer(
                 intentGenerator,
                 summaryBuilder,
                 summaryNotificationId!!,
-                group
+                group,
             )
             summaryBuilder.setContentIntent(summaryContentIntent)
                 .setDeleteIntent(summaryDeleteIntent)
@@ -251,7 +251,7 @@ internal class SummaryNotificationDisplayer(
         notificationJob: NotificationGenerationJob,
         intentGenerator: IntentGeneratorForAttachingToNotifications,
         grouplessNotifCount: Int,
-        groupAlertBehavior: Int
+        groupAlertBehavior: Int,
     ) {
         val fcmJson: JSONObject = notificationJob.jsonPayload!!
         val summaryNotification: Notification
@@ -262,17 +262,17 @@ internal class SummaryNotificationDisplayer(
         _dataController.createSummaryNotification(summaryNotificationId!!, group)
         val summaryContentIntent: PendingIntent? = intentGenerator.getNewActionPendingIntent(
             random.nextInt(),
-            createBaseSummaryIntent(summaryNotificationId, intentGenerator, fcmJson, group)
+            createBaseSummaryIntent(summaryNotificationId, intentGenerator, fcmJson, group),
         )
         val summaryDeleteIntent = _notificationDisplayBuilder.getNewDismissActionPendingIntent(
             random.nextInt(),
-            _notificationDisplayBuilder.getNewBaseDismissIntent(0).putExtra("summary", group)
+            _notificationDisplayBuilder.getNewBaseDismissIntent(0).putExtra("summary", group),
         )
         val summaryBuilder = _notificationDisplayBuilder.getBaseOneSignalNotificationBuilder(notificationJob).compatBuilder
         if (notificationJob.overriddenSound != null) summaryBuilder!!.setSound(notificationJob.overriddenSound)
         if (notificationJob.overriddenFlags != null) {
             summaryBuilder!!.setDefaults(
-                notificationJob.overriddenFlags!!
+                notificationJob.overriddenFlags!!,
             )
         }
 
@@ -282,8 +282,8 @@ internal class SummaryNotificationDisplayer(
             .setDeleteIntent(summaryDeleteIntent)
             .setContentTitle(
                 currentContext!!.packageManager.getApplicationLabel(
-                    currentContext!!.applicationInfo
-                )
+                    currentContext!!.applicationInfo,
+                ),
             )
             .setContentText(summaryMessage)
             .setNumber(grouplessNotifCount)
@@ -310,11 +310,11 @@ internal class SummaryNotificationDisplayer(
         summaryNotificationId: Int,
         intentGenerator: IntentGeneratorForAttachingToNotifications,
         fcmJson: JSONObject,
-        group: String
+        group: String,
     ): Intent {
         return intentGenerator.getNewBaseIntent(summaryNotificationId).putExtra(
             NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA,
-            fcmJson.toString()
+            fcmJson.toString(),
         ).putExtra("summary", group)
     }
 }
