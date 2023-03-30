@@ -63,7 +63,7 @@ import kotlinx.coroutines.launch
 internal class BackgroundManager(
     private val _applicationService: IApplicationService,
     private val _time: ITime,
-    private val _backgroundServices: List<(IBackgroundService)>
+    private val _backgroundServices: List<(IBackgroundService)>,
 ) : IApplicationLifecycleHandler, IBackgroundManager, IStartableService {
 
     override var needsJobReschedule = false
@@ -163,7 +163,7 @@ internal class BackgroundManager(
     private fun hasBootPermission(): Boolean {
         return AndroidSupportV4Compat.ContextCompat.checkSelfPermission(
             _applicationService.appContext,
-            "android.permission.RECEIVE_BOOT_COMPLETED"
+            "android.permission.RECEIVE_BOOT_COMPLETED",
         ) == PackageManager.PERMISSION_GRANTED
     }
 
@@ -203,7 +203,7 @@ internal class BackgroundManager(
             Logging.error(
                 "scheduleSyncServiceAsJob called JobScheduler.jobScheduler which " +
                     "triggered an internal null Android error. Skipping job.",
-                e
+                e,
             )
         }
     }
@@ -238,7 +238,7 @@ internal class BackgroundManager(
             _applicationService.appContext,
             SYNC_TASK_ID,
             Intent(_applicationService.appContext, syncServicePendingIntentClass),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }
 

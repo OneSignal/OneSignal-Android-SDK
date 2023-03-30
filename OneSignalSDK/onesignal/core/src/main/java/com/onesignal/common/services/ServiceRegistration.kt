@@ -47,7 +47,7 @@ abstract class ServiceRegistration<T> {
  * happen once.
  */
 class ServiceRegistrationReflection<T>(
-    private val clazz: Class<*>
+    private val clazz: Class<*>,
 ) : ServiceRegistration<T>() {
 
     private var obj: T? = null
@@ -137,7 +137,7 @@ class ServiceRegistrationReflection<T>(
  * instance whenever it is requested.
  */
 class ServiceRegistrationSingleton<T>(
-    private var obj: T
+    private var obj: T,
 ) : ServiceRegistration<T>() {
 
     override fun resolve(provider: IServiceProvider): Any? = obj
@@ -151,7 +151,7 @@ class ServiceRegistrationSingleton<T>(
  * happen once.
  */
 class ServiceRegistrationLambda<T>(
-    private val create: ((IServiceProvider) -> T)
+    private val create: ((IServiceProvider) -> T),
 ) : ServiceRegistration<T>() {
 
     private var obj: T? = null

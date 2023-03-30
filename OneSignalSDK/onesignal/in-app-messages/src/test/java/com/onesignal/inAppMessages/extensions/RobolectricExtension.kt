@@ -69,7 +69,7 @@ internal class RobolectricExtension : ConstructorExtension, TestCaseExtension {
 
     override suspend fun intercept(
         testCase: TestCase,
-        execute: suspend (TestCase) -> TestResult
+        execute: suspend (TestCase) -> TestResult,
     ): TestResult {
         // FIXED: Updated code based on https://github.com/kotest/kotest/issues/2717
         val hasRobolectricAnnotation = testCase.spec::class.annotations.any { annotation ->
@@ -92,5 +92,5 @@ internal class KotestDefaultApplication : Application()
 
 annotation class RobolectricTest(
     val application: KClass<out Application> = KotestDefaultApplication::class,
-    val sdk: Int = -1
+    val sdk: Int = -1,
 )

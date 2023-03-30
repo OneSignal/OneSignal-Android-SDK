@@ -48,7 +48,7 @@ internal class NotificationPermissionController(
     private val _application: IApplicationService,
     private val _requestPermission: IRequestPermissionService,
     private val _applicationService: IApplicationService,
-    private val _preferenceService: IPreferencesService
+    private val _preferenceService: IPreferencesService,
 ) : IRequestPermissionService.PermissionCallback,
     INotificationPermissionController {
 
@@ -58,8 +58,8 @@ internal class NotificationPermissionController(
     override val canRequestPermission: Boolean
         get() = !_preferenceService.getBool(
             PreferenceStores.ONESIGNAL,
-            "${PreferenceOneSignalKeys.PREFS_OS_USER_REJECTED_PERMISSION_PREFIX}${ANDROID_PERMISSION_STRING}",
-            false
+            "${PreferenceOneSignalKeys.PREFS_OS_USER_REJECTED_PERMISSION_PREFIX}$ANDROID_PERMISSION_STRING",
+            false,
         )!!
 
     init {
@@ -93,7 +93,7 @@ internal class NotificationPermissionController(
                 fallbackToSettings,
                 PERMISSION_TYPE,
                 ANDROID_PERMISSION_STRING,
-                this::class.java
+                this::class.java,
             )
         } else if (fallbackToSettings) {
             showFallbackAlertDialog()
@@ -154,7 +154,7 @@ internal class NotificationPermissionController(
                     _waiter.wake(false)
                     _events.fire { it.onNotificationPermissionChanged(false) }
                 }
-            }
+            },
         )
         return true
     }

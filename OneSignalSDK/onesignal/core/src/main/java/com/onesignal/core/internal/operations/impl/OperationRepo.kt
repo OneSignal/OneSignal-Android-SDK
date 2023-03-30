@@ -20,12 +20,12 @@ internal class OperationRepo(
     executors: List<IOperationExecutor>,
     private val _operationModelStore: OperationModelStore,
     private val _configModelStore: ConfigModelStore,
-    private val _time: ITime
+    private val _time: ITime,
 ) : IOperationRepo, IStartableService {
 
     private class OperationQueueItem(
         val operation: Operation,
-        val waiter: WaiterWithValue<Boolean>? = null
+        val waiter: WaiterWithValue<Boolean>? = null,
     )
 
     private val _executorsMap: Map<String, IOperationExecutor>
@@ -166,7 +166,8 @@ internal class OperationRepo(
                     ops.forEach { it.waiter?.wake(true) }
                 }
                 ExecutionResult.FAIL_UNAUTHORIZED, // TODO: Need to provide callback for app to reset JWT. For now, fail with no retry.
-                ExecutionResult.FAIL_NORETRY -> {
+                ExecutionResult.FAIL_NORETRY,
+                -> {
                     Logging.error("Operation execution failed without retry: $operations")
                     // on failure we remove the operation from the store and wake any waiters
                     ops.forEach { _operationModelStore.remove(it.operation.id) }

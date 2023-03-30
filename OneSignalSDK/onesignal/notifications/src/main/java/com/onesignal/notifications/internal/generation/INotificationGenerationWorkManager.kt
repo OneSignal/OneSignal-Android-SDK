@@ -11,6 +11,6 @@ internal interface INotificationGenerationWorkManager {
         jsonPayload: JSONObject?,
         timestamp: Long,
         isRestoring: Boolean,
-        isHighPriority: Boolean
+        isHighPriority: Boolean,
     ): Boolean
 }

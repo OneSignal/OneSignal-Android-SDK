@@ -6,7 +6,7 @@ import com.onesignal.user.internal.subscriptions.SubscriptionType
 import com.onesignal.user.subscriptions.IPushSubscription
 
 internal open class PushSubscription(
-    model: SubscriptionModel
+    model: SubscriptionModel,
 ) : Subscription(model), IPushSubscription {
 
     override val token: String

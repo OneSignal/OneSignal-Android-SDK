@@ -4,7 +4,7 @@ import android.database.Cursor
 import com.onesignal.core.internal.database.ICursor
 
 internal class DatabaseCursor(
-    private val _cursor: Cursor
+    private val _cursor: Cursor,
 ) : ICursor {
     override val count: Int get() = _cursor.count
     override fun moveToFirst(): Boolean = _cursor.moveToFirst()

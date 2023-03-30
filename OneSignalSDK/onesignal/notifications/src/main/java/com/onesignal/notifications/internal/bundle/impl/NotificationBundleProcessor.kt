@@ -14,7 +14,7 @@ import org.json.JSONObject
 
 internal class NotificationBundleProcessor(
     private val _workManager: INotificationGenerationWorkManager,
-    private val _time: ITime
+    private val _time: ITime,
 ) : INotificationBundleProcessor {
 
     // Format our short keys into more readable ones.
@@ -26,7 +26,7 @@ internal class NotificationBundleProcessor(
             additionalDataJSON =
                 if (customJSON.has(PUSH_ADDITIONAL_DATA_KEY)) {
                     customJSON.getJSONObject(
-                        PUSH_ADDITIONAL_DATA_KEY
+                        PUSH_ADDITIONAL_DATA_KEY,
                     )
                 } else {
                     JSONObject()
@@ -56,7 +56,7 @@ internal class NotificationBundleProcessor(
             if (!customJSON.has(PUSH_ADDITIONAL_DATA_KEY)) {
                 customJSON.put(
                     PUSH_ADDITIONAL_DATA_KEY,
-                    additionalDataJSON
+                    additionalDataJSON,
                 )
             }
             fcmBundle.putString("custom", customJSON.toString())
@@ -89,7 +89,7 @@ internal class NotificationBundleProcessor(
         if (bundle.containsKey(ANDROID_NOTIFICATION_ID)) {
             androidNotificationId =
                 bundle.getInt(
-                    ANDROID_NOTIFICATION_ID
+                    ANDROID_NOTIFICATION_ID,
                 )
         }
 
@@ -100,7 +100,7 @@ internal class NotificationBundleProcessor(
             jsonPayload,
             timestamp,
             isRestoring,
-            isHighPriority
+            isHighPriority,
         )
 
         bundleResult.isWorkManagerProcessing = processed

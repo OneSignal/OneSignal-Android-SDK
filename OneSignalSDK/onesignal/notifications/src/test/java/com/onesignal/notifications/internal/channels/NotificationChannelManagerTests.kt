@@ -26,7 +26,7 @@ import java.math.BigInteger
 @Config(
     packageName = "com.onesignal.example",
     shadows = [ShadowRoboNotificationManager::class],
-    sdk = [26]
+    sdk = [26],
 )
 @RobolectricTest
 @RunWith(KotestTestRunner::class)
@@ -64,7 +64,7 @@ class NotificationChannelManagerTests : FunSpec({
             .put(
                 "chnl",
                 JSONObject()
-                    .put("id", "test_id")
+                    .put("id", "test_id"),
             )
 
         /* When */
@@ -103,7 +103,7 @@ class NotificationChannelManagerTests : FunSpec({
                     .put("nm", "Test Name")
                     .put("dscr", "Some description")
                     .put("grp_id", "grp_id")
-                    .put("grp_nm", "Group Name")
+                    .put("grp_nm", "Group Name"),
             )
 
         /* When */
@@ -170,7 +170,7 @@ class NotificationChannelManagerTests : FunSpec({
                 "chnl",
                 JSONObject()
                     .put("id", "test_id")
-                    .put("nm", "Test Name")
+                    .put("nm", "Test Name"),
             )
 
         /* When */
@@ -207,7 +207,7 @@ class NotificationChannelManagerTests : FunSpec({
         val payload = JSONArray()
             .put(
                 JSONObject()
-                    .put("chnl", JSONObject().put("id", "OS_id1"))
+                    .put("chnl", JSONObject().put("id", "OS_id1")),
             )
 
         /* When */
@@ -228,7 +228,7 @@ class NotificationChannelManagerTests : FunSpec({
         val payload = JSONArray()
             .put(
                 JSONObject()
-                    .put("chnl", JSONObject().put("id", "OS_id1"))
+                    .put("chnl", JSONObject().put("id", "OS_id1")),
             )
 
         /* When */
@@ -260,10 +260,10 @@ class NotificationChannelManagerTests : FunSpec({
                                         JSONObject()
                                             .put("nm", "en_nm")
                                             .put("dscr", "en_dscr")
-                                            .put("grp_nm", "en_grp_nm")
-                                    )
-                            )
-                    )
+                                            .put("grp_nm", "en_grp_nm"),
+                                    ),
+                            ),
+                    ),
             )
 
         /* When */

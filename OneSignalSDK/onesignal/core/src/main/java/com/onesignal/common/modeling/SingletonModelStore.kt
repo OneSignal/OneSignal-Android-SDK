@@ -7,7 +7,7 @@ import com.onesignal.common.events.EventProducer
  * the single [Model] instance.
  */
 open class SingletonModelStore<TModel>(
-    val store: ModelStore<TModel>
+    val store: ModelStore<TModel>,
 ) : ISingletonModelStore<TModel>, IModelStoreChangeHandler<TModel> where TModel : Model {
 
     private val _changeSubscription: EventProducer<ISingletonModelStoreChangeHandler<TModel>> = EventProducer()

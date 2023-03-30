@@ -6,7 +6,7 @@ import org.json.JSONObject
 
 internal class OSNotificationOpenBehaviorFromPushPayload(
     private val context: Context,
-    private val fcmPayload: JSONObject
+    private val fcmPayload: JSONObject,
 ) {
 
     val shouldOpenApp: Boolean

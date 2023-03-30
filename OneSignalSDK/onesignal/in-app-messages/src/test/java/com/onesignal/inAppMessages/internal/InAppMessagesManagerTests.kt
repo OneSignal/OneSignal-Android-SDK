@@ -53,7 +53,7 @@ class InAppMessagesManagerTests : FunSpec({
             mockk<IInAppDisplayer>(),
             mockk<IInAppLifecycleService>(),
             MockHelper.languageContext(),
-            MockHelper.time(1000)
+            MockHelper.time(1000),
         )
 
         /* When */

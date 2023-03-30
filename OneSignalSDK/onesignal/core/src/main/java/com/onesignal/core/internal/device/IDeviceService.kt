@@ -15,12 +15,12 @@ interface IDeviceService {
     enum class AndroidSupportLibraryStatus {
         MISSING,
         OUTDATED,
-        OK
+        OK,
     }
 
     enum class DeviceType(val value: Int) {
         Fire(2),
         Android(1),
-        Huawei(13)
+        Huawei(13),
     }
 }

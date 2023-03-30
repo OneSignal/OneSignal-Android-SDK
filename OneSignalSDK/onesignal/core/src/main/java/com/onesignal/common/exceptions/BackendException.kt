@@ -12,5 +12,5 @@ class BackendException(
     /**
      * The response, if one exists.
      */
-    val response: String? = null
+    val response: String? = null,
 ) : Exception()

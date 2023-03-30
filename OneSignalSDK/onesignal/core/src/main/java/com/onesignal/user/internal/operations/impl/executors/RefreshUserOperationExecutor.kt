@@ -30,7 +30,7 @@ internal class RefreshUserOperationExecutor(
     private val _propertiesModelStore: PropertiesModelStore,
     private val _subscriptionsModelStore: SubscriptionModelStore,
     private val _configModelStore: ConfigModelStore,
-    private val _buildUserService: IRebuildUserService
+    private val _buildUserService: IRebuildUserService,
 ) : IOperationExecutor {
 
     override val operations: List<String>
@@ -52,7 +52,7 @@ internal class RefreshUserOperationExecutor(
             val response = _userBackend.getUser(
                 op.appId,
                 IdentityConstants.ONESIGNAL_ID,
-                op.onesignalId
+                op.onesignalId,
             )
 
             if (op.onesignalId != _identityModelStore.model.onesignalId) {

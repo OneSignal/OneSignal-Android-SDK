@@ -64,7 +64,7 @@ internal class InAppMessagesManager(
     private val _displayer: IInAppDisplayer,
     private val _lifecycle: IInAppLifecycleService,
     private val _languageContext: ILanguageContext,
-    private val _time: ITime
+    private val _time: ITime,
 ) : IInAppMessagesManager,
     IStartableService,
     ISubscriptionChangedHandler,
@@ -111,7 +111,7 @@ internal class InAppMessagesManager(
             Logging.debug("InAppMessagesManager.setPaused(value: $value)")
             _state.paused = value
 
-            if(!value) {
+            if (!value) {
                 suspendifyOnThread {
                     evaluateInAppMessages()
                 }
@@ -514,7 +514,7 @@ internal class InAppMessagesManager(
                     _configModelStore.model.appId,
                     _subscriptionManager.subscriptions.push.id,
                     variantId,
-                    message.messageId
+                    message.messageId,
                 )
 
                 _prefs.impressionesMessagesId = _impressionedMessages
@@ -740,7 +740,7 @@ internal class InAppMessagesManager(
                 _subscriptionManager.subscriptions.push.id,
                 variantId,
                 message.messageId,
-                pageId
+                pageId,
             )
 
             _prefs.viewPageImpressionedIds = _viewedPageIds
@@ -775,7 +775,7 @@ internal class InAppMessagesManager(
                 variantId,
                 message.messageId,
                 clickId,
-                action.isFirstClick
+                action.isFirstClick,
             )
 
             // Persist success click to disk. Id already added to set before making the network call

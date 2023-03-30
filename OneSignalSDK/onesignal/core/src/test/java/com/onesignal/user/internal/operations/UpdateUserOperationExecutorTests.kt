@@ -40,7 +40,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
             mockUserBackendService,
             mockIdentityModelStore,
             mockPropertiesModelStore,
-            mockBuildUserService
+            mockBuildUserService,
         )
         val operations = listOf<Operation>(SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1"))
 
@@ -58,7 +58,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                     it.tags shouldBe mapOf("tagKey1" to "tagValue1")
                 },
                 any(),
-                any()
+                any(),
             )
         }
     }
@@ -77,7 +77,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
             mockUserBackendService,
             mockIdentityModelStore,
             mockPropertiesModelStore,
-            mockBuildUserService
+            mockBuildUserService,
         )
         val operations = listOf<Operation>(
             SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1-1"),
@@ -94,7 +94,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
             SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationType.name, 1),
             SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationAccuracy.name, 0.15),
             SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationBackground.name, true),
-            SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationTimestamp.name, 1111L)
+            SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationTimestamp.name, 1111L),
         )
 
         /* When */
@@ -116,7 +116,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                     it.longitude shouldBe 678.90
                 },
                 any(),
-                any()
+                any(),
             )
         }
     }
@@ -135,10 +135,10 @@ class UpdateUserOperationExecutorTests : FunSpec({
             mockUserBackendService,
             mockIdentityModelStore,
             mockPropertiesModelStore,
-            mockBuildUserService
+            mockBuildUserService,
         )
         val operations = listOf<Operation>(
-            TrackSessionEndOperation(appId, remoteOneSignalId, 1111)
+            TrackSessionEndOperation(appId, remoteOneSignalId, 1111),
         )
 
         /* When */
@@ -157,7 +157,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 any(),
                 withArg {
                     it.sessionTime shouldBe 1111
-                }
+                },
             )
         }
     }
@@ -176,7 +176,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
             mockUserBackendService,
             mockIdentityModelStore,
             mockPropertiesModelStore,
-            mockBuildUserService
+            mockBuildUserService,
         )
         val operations = listOf<Operation>(
             TrackSessionEndOperation(appId, remoteOneSignalId, 1111),
@@ -187,10 +187,10 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 BigDecimal(2222),
                 listOf(
                     PurchaseInfo("sku1", "iso1", BigDecimal(1000)),
-                    PurchaseInfo("sku2", "iso2", BigDecimal(1222))
-                )
+                    PurchaseInfo("sku2", "iso2", BigDecimal(1222)),
+                ),
             ),
-            TrackSessionEndOperation(appId, remoteOneSignalId, 3333)
+            TrackSessionEndOperation(appId, remoteOneSignalId, 3333),
         )
 
         /* When */
@@ -218,7 +218,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                     it.purchases!![1].sku shouldBe "sku2"
                     it.purchases!![1].iso shouldBe "iso2"
                     it.purchases!![1].amount shouldBe BigDecimal(1222)
-                }
+                },
             )
         }
     }
@@ -237,12 +237,12 @@ class UpdateUserOperationExecutorTests : FunSpec({
             mockUserBackendService,
             mockIdentityModelStore,
             mockPropertiesModelStore,
-            mockBuildUserService
+            mockBuildUserService,
         )
         val operations = listOf<Operation>(
             TrackSessionEndOperation(appId, remoteOneSignalId, 1111),
             SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1"),
-            TrackSessionEndOperation(appId, remoteOneSignalId, 3333)
+            TrackSessionEndOperation(appId, remoteOneSignalId, 3333),
         )
 
         /* When */
@@ -261,7 +261,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 any(),
                 withArg {
                     it.sessionTime shouldBe (1111 + 3333)
-                }
+                },
             )
         }
     }
