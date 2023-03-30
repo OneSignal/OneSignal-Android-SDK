@@ -66,7 +66,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore(),
             mockSubscriptionManager,
-            MockHelper.time(now)
+            MockHelper.time(now),
         )
 
         /* When */
@@ -105,7 +105,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
             mockSubscriptionManager,
-            MockHelper.time(now)
+            MockHelper.time(now),
         )
 
         /* When */
@@ -150,7 +150,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
             mockSubscriptionManager,
-            MockHelper.time(now)
+            MockHelper.time(now),
         )
 
         /* When */
@@ -196,7 +196,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
             mockSubscriptionManager,
-            MockHelper.time(now)
+            MockHelper.time(now),
         )
 
         /* When */
@@ -242,7 +242,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
             mockSubscriptionManager,
-            MockHelper.time(now)
+            MockHelper.time(now),
         )
 
         /* When */
@@ -286,7 +286,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
             mockSubscriptionManager,
-            MockHelper.time(now)
+            MockHelper.time(now),
         )
 
         /* When */
@@ -339,7 +339,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
             mockSubscriptionManager,
-            MockHelper.time(now)
+            MockHelper.time(now),
         )
 
         /* When */
@@ -397,7 +397,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
             mockSubscriptionManager,
-            MockHelper.time(now)
+            MockHelper.time(now),
         )
 
         /* When */
@@ -457,7 +457,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore(),
             mockSubscriptionManager,
-            MockHelper.time(now)
+            MockHelper.time(now),
         )
 
         /* When */
@@ -472,7 +472,7 @@ class OutcomeEventsControllerTests : FunSpec({
                     it.outcomeId shouldBe "OUTCOME_1"
                     it.weight shouldBe 0
                     it.timestamp shouldBe now / 1000
-                }
+                },
             )
         }
     }
@@ -494,7 +494,7 @@ class OutcomeEventsControllerTests : FunSpec({
         coEvery { mockOutcomeEventsRepository.deleteOldOutcomeEvent(any()) } just runs
         coEvery { mockOutcomeEventsRepository.getAllEventsToSend() } returns listOf(
             OutcomeEventParams("outcomeId1", OutcomeSource(OutcomeSourceBody(JSONArray().put("notificationId1")), null), .4f, 1111),
-            OutcomeEventParams("outcomeId2", OutcomeSource(null, OutcomeSourceBody(JSONArray().put("notificationId2").put("notificationId3"))), .2f, 2222)
+            OutcomeEventParams("outcomeId2", OutcomeSource(null, OutcomeSourceBody(JSONArray().put("notificationId2").put("notificationId3"))), .2f, 2222),
         )
         val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
         val mockOutcomeEventsBackend = mockk<IOutcomeEventsBackendService>()
@@ -509,7 +509,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
             mockSubscriptionManager,
-            MockHelper.time(now)
+            MockHelper.time(now),
         )
 
         /* When */
@@ -529,7 +529,7 @@ class OutcomeEventsControllerTests : FunSpec({
                     it.weight shouldBe .4f
                     it.timestamp shouldBe 1111
                     it.notificationIds!!.getString(0) shouldBe "notificationId1"
-                }
+                },
             )
         }
         coVerify(exactly = 1) {
@@ -544,7 +544,7 @@ class OutcomeEventsControllerTests : FunSpec({
                     it.timestamp shouldBe 2222
                     it.notificationIds!!.getString(0) shouldBe "notificationId2"
                     it.notificationIds!!.getString(1) shouldBe "notificationId3"
-                }
+                },
             )
         }
         coVerify(exactly = 1) {
@@ -552,7 +552,7 @@ class OutcomeEventsControllerTests : FunSpec({
                 withArg {
                     it.outcomeId shouldBe "outcomeId1"
                     it.timestamp shouldBe 1111
-                }
+                },
             )
         }
         coVerify(exactly = 1) {
@@ -560,7 +560,7 @@ class OutcomeEventsControllerTests : FunSpec({
                 withArg {
                     it.outcomeId shouldBe "outcomeId2"
                     it.timestamp shouldBe 2222
-                }
+                },
             )
         }
     }
@@ -581,7 +581,7 @@ class OutcomeEventsControllerTests : FunSpec({
         coEvery { mockOutcomeEventsRepository.cleanCachedUniqueOutcomeEventNotifications() } just runs
         coEvery { mockOutcomeEventsRepository.getAllEventsToSend() } returns listOf(
             OutcomeEventParams("outcomeId1", OutcomeSource(OutcomeSourceBody(JSONArray().put("notificationId1")), null), .4f, 1111),
-            OutcomeEventParams("outcomeId2", OutcomeSource(null, OutcomeSourceBody(JSONArray().put("notificationId2").put("notificationId3"))), .2f, 2222)
+            OutcomeEventParams("outcomeId2", OutcomeSource(null, OutcomeSourceBody(JSONArray().put("notificationId2").put("notificationId3"))), .2f, 2222),
         )
         val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
         val mockOutcomeEventsBackend = mockk<IOutcomeEventsBackendService>()
@@ -596,7 +596,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
             mockSubscriptionManager,
-            MockHelper.time(now)
+            MockHelper.time(now),
         )
 
         /* When */
@@ -616,7 +616,7 @@ class OutcomeEventsControllerTests : FunSpec({
                     it.weight shouldBe .4f
                     it.timestamp shouldBe 1111
                     it.notificationIds!!.getString(0) shouldBe "notificationId1"
-                }
+                },
             )
         }
         coVerify(exactly = 1) {
@@ -631,7 +631,7 @@ class OutcomeEventsControllerTests : FunSpec({
                     it.timestamp shouldBe 2222
                     it.notificationIds!!.getString(0) shouldBe "notificationId2"
                     it.notificationIds!!.getString(1) shouldBe "notificationId3"
-                }
+                },
             )
         }
         coVerify(exactly = 0) { mockOutcomeEventsRepository.deleteOldOutcomeEvent(any()) }

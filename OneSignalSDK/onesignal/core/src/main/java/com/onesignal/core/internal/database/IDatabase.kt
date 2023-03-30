@@ -35,7 +35,7 @@ interface IDatabase {
         having: String? = null,
         orderBy: String? = null,
         limit: String? = null,
-        action: (ICursor) -> Unit
+        action: (ICursor) -> Unit,
     )
 
     /**

@@ -24,7 +24,7 @@ import java.net.HttpURLConnection
 internal class ConfigModelStoreListener(
     private val _configModelStore: ConfigModelStore,
     private val _paramsBackendService: IParamsBackendService,
-    private val _subscriptionManager: ISubscriptionManager
+    private val _subscriptionManager: ISubscriptionManager,
 ) : IStartableService, ISingletonModelStoreChangeHandler<ConfigModel> {
 
     override fun start() {

@@ -26,7 +26,7 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
         jsonPayload: JSONObject?,
         timestamp: Long,
         isRestoring: Boolean,
-        isHighPriority: Boolean
+        isHighPriority: Boolean,
     ): Boolean {
         val id: String? = NotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload)
 
@@ -60,7 +60,7 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
 
     class NotificationGenerationWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
         override suspend fun doWork(): Result {
-            if(!OneSignal.isInitialized) {
+            if (!OneSignal.isInitialized) {
                 return Result.failure()
             }
 

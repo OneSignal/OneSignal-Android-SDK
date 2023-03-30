@@ -23,7 +23,7 @@ internal class NotificationRepository(
     private val _queryHelper: INotificationQueryHelper,
     private val _databaseProvider: IDatabaseProvider,
     private val _time: ITime,
-    private val _badgeCountUpdater: IBadgeCountUpdater
+    private val _badgeCountUpdater: IBadgeCountUpdater,
 ) : INotificationRepository {
     /**
      * Deletes notifications with created timestamps older than 7 days
@@ -34,14 +34,14 @@ internal class NotificationRepository(
         withContext(Dispatchers.IO) {
             val whereStr: String = OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME.toString() + " < ?"
             val sevenDaysAgoInSeconds: String = java.lang.String.valueOf(
-                _time.currentTimeMillis / 1000L - NOTIFICATION_CACHE_DATA_LIFETIME
+                _time.currentTimeMillis / 1000L - NOTIFICATION_CACHE_DATA_LIFETIME,
             )
 
             val whereArgs = arrayOf(sevenDaysAgoInSeconds)
             _databaseProvider.os.delete(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
                 whereStr,
-                whereArgs
+                whereArgs,
             )
         }
     }
@@ -55,7 +55,7 @@ internal class NotificationRepository(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
                 columns = retColumn,
                 whereClause = OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED.toString() + " = 0 AND " +
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0"
+                    OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0",
             ) {
                 if (it.moveToFirst()) {
                     do {
@@ -93,7 +93,7 @@ internal class NotificationRepository(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
                 columns = retColumn,
                 whereClause = whereStr,
-                whereArgs = whereArgs
+                whereArgs = whereArgs,
             ) {
                 while (it.moveToNext()) {
                     val notificationId =
@@ -112,7 +112,7 @@ internal class NotificationRepository(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
                 values,
                 whereStr,
-                whereArgs
+                whereArgs,
             )
 
             _badgeCountUpdater.update()
@@ -165,7 +165,7 @@ internal class NotificationRepository(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
                 columns = retColumn,
                 whereClause = OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID + " = ?", // Where String
-                whereArgs = whereArgs
+                whereArgs = whereArgs,
             ) {
                 val exists = it.moveToFirst()
 
@@ -208,7 +208,7 @@ internal class NotificationRepository(
         title: String?,
         body: String?,
         expireTime: Long,
-        jsonPayload: String
+        jsonPayload: String,
     ) {
         withContext(Dispatchers.IO) {
             Logging.debug("Saving Notification id=$id")
@@ -224,7 +224,7 @@ internal class NotificationRepository(
                         OneSignalDbContract.NotificationTable.TABLE_NAME,
                         values,
                         whereStr,
-                        null
+                        null,
                     )
 
                     _badgeCountUpdater.update()
@@ -242,19 +242,19 @@ internal class NotificationRepository(
                 if (collapseKey != null) {
                     values.put(
                         OneSignalDbContract.NotificationTable.COLUMN_NAME_COLLAPSE_ID,
-                        collapseKey
+                        collapseKey,
                     )
                 }
 
                 values.put(
                     OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED,
-                    if (isOpened) 1 else 0
+                    if (isOpened) 1 else 0,
                 )
 
                 if (!isOpened) {
                     values.put(
                         OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
-                        androidId
+                        androidId,
                     )
                 }
 
@@ -268,14 +268,14 @@ internal class NotificationRepository(
 
                 values.put(
                     OneSignalDbContract.NotificationTable.COLUMN_NAME_EXPIRE_TIME,
-                    expireTime
+                    expireTime,
                 )
                 values.put(OneSignalDbContract.NotificationTable.COLUMN_NAME_FULL_DATA, jsonPayload)
 
                 _databaseProvider.os.insertOrThrow(
                     OneSignalDbContract.NotificationTable.TABLE_NAME,
                     null,
-                    values
+                    values,
                 )
                 Logging.debug("Notification saved values: $values")
 
@@ -313,7 +313,7 @@ internal class NotificationRepository(
                         } else {
                             arrayOf(
                                 summaryGroup,
-                                mostRecentId
+                                mostRecentId,
                             )
                         }
                     }
@@ -334,7 +334,7 @@ internal class NotificationRepository(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
                 values,
                 whereStr,
-                whereArgs
+                whereArgs,
             )
 
             _badgeCountUpdater.update()
@@ -348,7 +348,7 @@ internal class NotificationRepository(
             _databaseProvider.os.query(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
                 columns = arrayOf(OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID), // retColumn
-                whereClause = OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + androidId
+                whereClause = OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + androidId,
             ) {
                 if (it.moveToFirst()) {
                     groupId =
@@ -370,7 +370,7 @@ internal class NotificationRepository(
                 whereClause = OneSignalDbContract.NotificationTable.COLUMN_NAME_COLLAPSE_ID + " = ? AND " +
                     OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
                     OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 ",
-                whereArgs = arrayOf(collapseKey)
+                whereArgs = arrayOf(collapseKey),
             ) {
                 if (it.moveToFirst()) {
                     androidId = it.getInt(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID)
@@ -391,7 +391,7 @@ internal class NotificationRepository(
                     columns = arrayOf(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID),
                     whereClause = _queryHelper.recentUninteractedWithNotificationsWhere().toString(),
                     orderBy = BaseColumns._ID, // sort order, old to new
-                    limit = maxNumberOfNotificationsString + notificationsToMakeRoomFor // limit
+                    limit = maxNumberOfNotificationsString + notificationsToMakeRoomFor, // limit
                 ) {
                     var notificationsToClear =
                         it.count - maxNumberOfNotificationsInt + notificationsToMakeRoomFor
@@ -426,7 +426,7 @@ internal class NotificationRepository(
                     OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
                     OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0",
                 whereArgs = whereArgs,
-                orderBy = BaseColumns._ID + " DESC" // sort order, new to old);
+                orderBy = BaseColumns._ID + " DESC", // sort order, new to old);
             ) {
                 if (it.moveToFirst()) {
                     do {
@@ -445,8 +445,8 @@ internal class NotificationRepository(
                                     fullData,
                                     dateTime,
                                     title,
-                                    message
-                                )
+                                    message,
+                                ),
                             )
                         } catch (e: JSONException) {
                             Logging.error("Could not parse JSON of sub notification in group: $summaryGroup")
@@ -492,7 +492,7 @@ internal class NotificationRepository(
                 whereClause = whereStr,
                 whereArgs = whereArgs,
                 orderBy = OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME + " DESC",
-                limit = "1"
+                limit = "1",
             ) {
                 val hasRecord = it.moveToFirst()
                 recentId = if (!hasRecord) {
@@ -524,7 +524,7 @@ internal class NotificationRepository(
                 columns = COLUMNS_FOR_LIST_NOTIFICATIONS,
                 whereClause = dbQuerySelection.toString(),
                 orderBy = BaseColumns._ID + " DESC", // sort order, new to old
-                limit = INotificationLimitManager.Constants.maxNumberOfNotifications.toString() // limit
+                limit = INotificationLimitManager.Constants.maxNumberOfNotifications.toString(), // limit
             ) {
                 while (it.moveToNext()) {
                     val title =
@@ -547,8 +547,8 @@ internal class NotificationRepository(
                             fullData,
                             dateTime,
                             title,
-                            message
-                        )
+                            message,
+                        ),
                     )
                 }
             }
@@ -566,7 +566,7 @@ internal class NotificationRepository(
             OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID,
             OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID,
             OneSignalDbContract.NotificationTable.COLUMN_NAME_FULL_DATA,
-            OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME
+            OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME,
         )
     }
 }

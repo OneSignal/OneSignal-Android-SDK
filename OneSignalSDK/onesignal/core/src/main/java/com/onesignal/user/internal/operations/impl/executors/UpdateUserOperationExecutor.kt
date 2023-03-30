@@ -28,7 +28,7 @@ internal class UpdateUserOperationExecutor(
     private val _userBackend: IUserBackendService,
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
-    private val _buildUserService: IRebuildUserService
+    private val _buildUserService: IRebuildUserService,
 ) : IOperationExecutor {
 
     override val operations: List<String>

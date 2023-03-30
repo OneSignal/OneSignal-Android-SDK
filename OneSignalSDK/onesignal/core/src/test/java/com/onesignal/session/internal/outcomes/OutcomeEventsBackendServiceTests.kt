@@ -46,7 +46,7 @@ class OutcomeEventsBackendServiceTests : FunSpec({
                     it.has("notification_ids") shouldBe false
                     it.has("timestamp") shouldBe false
                     it.has("weight") shouldBe false
-                }
+                },
             )
         }
     }
@@ -74,7 +74,7 @@ class OutcomeEventsBackendServiceTests : FunSpec({
                     it.has("direct") shouldBe false
                     it.has("notification_ids") shouldBe false
                     it.has("timestamp") shouldBe false
-                }
+                },
             )
         }
     }
@@ -102,7 +102,7 @@ class OutcomeEventsBackendServiceTests : FunSpec({
                     it.has("notification_ids") shouldBe false
                     it.has("timestamp") shouldBe false
                     it.has("weight") shouldBe false
-                }
+                },
             )
         }
     }
@@ -130,7 +130,7 @@ class OutcomeEventsBackendServiceTests : FunSpec({
                     it.has("notification_ids") shouldBe false
                     it.has("timestamp") shouldBe false
                     it.has("weight") shouldBe false
-                }
+                },
             )
         }
     }
@@ -158,7 +158,7 @@ class OutcomeEventsBackendServiceTests : FunSpec({
                     it.has("notification_ids") shouldBe false
                     it.has("weight") shouldBe false
                     it.has("direct") shouldBe false
-                }
+                },
             )
         }
     }

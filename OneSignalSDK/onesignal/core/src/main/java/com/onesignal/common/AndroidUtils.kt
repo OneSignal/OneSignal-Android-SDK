@@ -86,7 +86,7 @@ object AndroidUtils {
         try {
             ai = context.packageManager.getApplicationInfo(
                 context.packageName,
-                PackageManager.GET_META_DATA
+                PackageManager.GET_META_DATA,
             )
             return ai.metaData
         } catch (e: PackageManager.NameNotFoundException) {
@@ -190,7 +190,7 @@ object AndroidUtils {
             else -> intent = Intent(Intent.ACTION_VIEW, uri)
         }
         intent.addFlags(
-            Intent.FLAG_ACTIVITY_NEW_TASK
+            Intent.FLAG_ACTIVITY_NEW_TASK,
         )
         return intent
     }
@@ -210,7 +210,7 @@ object AndroidUtils {
                 .packageManager
                 .getPackageInfo(
                     applicationService.appContext.packageName,
-                    PackageManager.GET_PERMISSIONS
+                    PackageManager.GET_PERMISSIONS,
                 )
             val permissionList = listOf(*packageInfo.requestedPermissions)
 
@@ -221,7 +221,7 @@ object AndroidUtils {
             } else {
                 val permissionGrant = AndroidSupportV4Compat.ContextCompat.checkSelfPermission(
                     applicationService.appContext,
-                    permission
+                    permission,
                 )
                 permissionGrant != PackageManager.PERMISSION_DENIED
             }

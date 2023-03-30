@@ -21,7 +21,7 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
             return
         }
 
-        if(!OneSignal.initWithContext(context)) {
+        if (!OneSignal.initWithContext(context)) {
             return
         }
 

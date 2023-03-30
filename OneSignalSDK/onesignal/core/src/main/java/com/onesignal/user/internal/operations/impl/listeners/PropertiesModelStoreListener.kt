@@ -13,7 +13,7 @@ import com.onesignal.user.internal.properties.PropertiesModelStore
 internal class PropertiesModelStoreListener(
     store: PropertiesModelStore,
     opRepo: IOperationRepo,
-    private val _configModelStore: ConfigModelStore
+    private val _configModelStore: ConfigModelStore,
 ) : SingletonModelStoreListener<PropertiesModel>(store, opRepo) {
 
     override fun getReplaceOperation(model: PropertiesModel): Operation? {

@@ -53,5 +53,5 @@ interface ISubscriptionBackendService {
      *
      * @return The identities associated to the subscription.
      */
-    suspend fun getIdentityFromSubscription(appId: String, subscriptionId: String) : Map<String, String>
+    suspend fun getIdentityFromSubscription(appId: String, subscriptionId: String): Map<String, String>
 }

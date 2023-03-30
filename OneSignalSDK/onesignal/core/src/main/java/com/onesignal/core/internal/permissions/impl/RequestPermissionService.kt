@@ -19,7 +19,7 @@ internal class RequestPermissionService(
 
     override fun registerAsCallback(
         permissionType: String,
-        callback: IRequestPermissionService.PermissionCallback
+        callback: IRequestPermissionService.PermissionCallback,
     ) {
         callbackMap[permissionType] =
             callback
@@ -33,7 +33,7 @@ internal class RequestPermissionService(
         fallbackCondition: Boolean,
         permissionRequestType: String?,
         androidPermissionString: String?,
-        callbackClass: Class<*>
+        callbackClass: Class<*>,
     ) {
         if (waiting) {
             return
@@ -58,7 +58,7 @@ internal class RequestPermissionService(
                     activity.startActivity(intent)
                     activity.overridePendingTransition(
                         R.anim.onesignal_fade_in,
-                        R.anim.onesignal_fade_out
+                        R.anim.onesignal_fade_out,
                     )
                 }
             }

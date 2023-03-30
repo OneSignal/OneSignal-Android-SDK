@@ -11,7 +11,7 @@ import com.onesignal.user.subscriptions.ISubscriptionChangedHandler
  * OneSignal and a user.
  */
 internal abstract class Subscription(
-    val model: SubscriptionModel
+    val model: SubscriptionModel,
 ) : ISubscription {
 
     val changeHandlersNotifier = EventProducer<ISubscriptionChangedHandler>()

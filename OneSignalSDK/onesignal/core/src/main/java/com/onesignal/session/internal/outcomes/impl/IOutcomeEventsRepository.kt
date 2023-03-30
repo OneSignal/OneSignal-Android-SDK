@@ -33,7 +33,7 @@ internal interface IOutcomeEventsRepository {
      */
     suspend fun getNotCachedUniqueInfluencesForOutcome(
         name: String,
-        influences: List<Influence>
+        influences: List<Influence>,
     ): List<Influence>
 
     /**

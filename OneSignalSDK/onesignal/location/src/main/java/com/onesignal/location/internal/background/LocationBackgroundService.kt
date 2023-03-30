@@ -15,7 +15,7 @@ internal class LocationBackgroundService(
     private val _locationManager: ILocationManager,
     private val _prefs: ILocationPreferencesService,
     private val _capturer: ILocationCapturer,
-    private val _time: ITime
+    private val _time: ITime,
 ) : IBackgroundService {
     override val scheduleBackgroundRunIn: Long?
         get() {

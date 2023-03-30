@@ -56,7 +56,7 @@ internal class TrackGooglePurchase(
     private val _prefs: IPreferencesService,
     private val _operationRepo: IOperationRepo,
     private val _configModelStore: ConfigModelStore,
-    private val _identityModelStore: IdentityModelStore
+    private val _identityModelStore: IdentityModelStore,
 ) : IStartableService, IApplicationLifecycleHandler {
     private var mServiceConn: ServiceConnection? = null
     private var mIInAppBillingService: Any? = null
@@ -143,7 +143,7 @@ internal class TrackGooglePurchase(
                     3,
                     _applicationService.appContext.packageName,
                     "inapp",
-                    null
+                    null,
                 ) as Bundle
                 if (ownedItems.getInt("RESPONSE_CODE") == 0) {
                     val skusToAdd = ArrayList<String>()
@@ -156,7 +156,7 @@ internal class TrackGooglePurchase(
                         val itemPurchased = JSONObject(purchaseData)
                         val purchaseToken = itemPurchased.getString("purchaseToken")
                         if (!purchaseTokens.contains(purchaseToken) && !newPurchaseTokens.contains(
-                                purchaseToken
+                                purchaseToken,
                             )
                         ) {
                             newPurchaseTokens.add(purchaseToken)
@@ -166,7 +166,7 @@ internal class TrackGooglePurchase(
                     if (skusToAdd.size > 0) {
                         sendPurchases(
                             skusToAdd,
-                            newPurchaseTokens
+                            newPurchaseTokens,
                         )
                     } else if (purchaseDataList.size == 0) {
                         newAsExisting = false
@@ -195,7 +195,7 @@ internal class TrackGooglePurchase(
                 3,
                 _applicationService.appContext.packageName,
                 "inapp",
-                querySkus
+                querySkus,
             ) as Bundle
             val response = skuDetails.getInt("RESPONSE_CODE")
             if (response == 0) {

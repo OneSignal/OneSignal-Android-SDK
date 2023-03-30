@@ -15,5 +15,5 @@ internal class CachedUniqueOutcome(
     /**
      * The channel this outcome is associated to.
      */
-    val channel: InfluenceChannel
+    val channel: InfluenceChannel,
 )

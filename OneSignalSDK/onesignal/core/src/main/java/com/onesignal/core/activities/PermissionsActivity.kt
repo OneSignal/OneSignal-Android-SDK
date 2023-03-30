@@ -22,8 +22,8 @@ class PermissionsActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        if(!OneSignal.initWithContext(this)) {
+
+        if (!OneSignal.initWithContext(this)) {
             return
         }
 
@@ -62,7 +62,7 @@ class PermissionsActivity : Activity() {
             Class.forName(className)
         } catch (e: ClassNotFoundException) {
             throw RuntimeException(
-                "Could not find callback class for PermissionActivity: $className"
+                "Could not find callback class for PermissionActivity: $className",
             )
         }
     }
@@ -73,12 +73,12 @@ class PermissionsActivity : Activity() {
             _requestPermissionService!!.shouldShowRequestPermissionRationaleBeforeRequest =
                 AndroidSupportV4Compat.ActivityCompat.shouldShowRequestPermissionRationale(
                     this@PermissionsActivity,
-                    androidPermissionString
+                    androidPermissionString,
                 )
             AndroidSupportV4Compat.ActivityCompat.requestPermissions(
                 this,
                 arrayOf(androidPermissionString),
-                ONESIGNAL_PERMISSION_REQUEST_CODE
+                ONESIGNAL_PERMISSION_REQUEST_CODE,
             )
         }
     }
@@ -86,7 +86,7 @@ class PermissionsActivity : Activity() {
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
-        grantResults: IntArray
+        grantResults: IntArray,
     ) {
         _requestPermissionService!!.waiting = false
 
@@ -115,8 +115,9 @@ class PermissionsActivity : Activity() {
     }
 
     private fun shouldShowSettings(): Boolean {
-        if (!_requestPermissionService!!.fallbackToSettings)
-            return false;
+        if (!_requestPermissionService!!.fallbackToSettings) {
+            return false
+        }
 
         // We want to show settings after the user has clicked "Don't Allow" 2 times.
         // After the first time shouldShowRequestPermissionRationale becomes true, after
@@ -126,22 +127,22 @@ class PermissionsActivity : Activity() {
         if (_requestPermissionService!!.shouldShowRequestPermissionRationaleBeforeRequest) {
             if (!AndroidSupportV4Compat.ActivityCompat.shouldShowRequestPermissionRationale(
                     this@PermissionsActivity,
-                    androidPermissionString
+                    androidPermissionString,
                 )
             ) {
                 _preferenceService!!.saveBool(
                     PreferenceStores.ONESIGNAL,
-                    "${PreferenceOneSignalKeys.PREFS_OS_USER_REJECTED_PERMISSION_PREFIX}${androidPermissionString}",
-                    true
+                    "${PreferenceOneSignalKeys.PREFS_OS_USER_REJECTED_PERMISSION_PREFIX}$androidPermissionString",
+                    true,
                 )
-                return false;
+                return false
             }
         }
 
         return _preferenceService!!.getBool(
             PreferenceStores.ONESIGNAL,
             "${PreferenceOneSignalKeys.PREFS_OS_USER_REJECTED_PERMISSION_PREFIX}$androidPermissionString",
-            false
+            false,
         )!!
     }
 
