@@ -25,10 +25,9 @@ interface IInAppMessagesManager {
      * to the current user.
      *
      * @param key The key of the trigger that is to be set.
-     * @param value The value of the trigger. Although this is defined as [Any] its [Any.toString]
-     * will be used for evaluation purposes.
+     * @param value The value of the trigger.
      */
-    fun addTrigger(key: String, value: Any)
+    fun addTrigger(key: String, value: String)
 
     /**
      * Add multiple triggers for the current user.  Triggers are currently explicitly used to determine
@@ -38,11 +37,9 @@ interface IInAppMessagesManager {
      * triggers are not persisted to the backend. They only exist on the local device and are applicable
      * to the current user.
      *
-     * @param triggers The map of triggers that are to be added to the current user.  Although the
-     * value of the [Map] is defined as [Any] its [Any.toString] will be used for evaluation
-     * purposes.
+     * @param triggers The map of triggers that are to be added to the current user.
      */
-    fun addTriggers(triggers: Map<String, Any>)
+    fun addTriggers(triggers: Map<String, String>)
 
     /**
      * Remove the trigger with the provided key from the current user.
