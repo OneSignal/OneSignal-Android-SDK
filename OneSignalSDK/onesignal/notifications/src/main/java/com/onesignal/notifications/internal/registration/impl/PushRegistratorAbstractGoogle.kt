@@ -51,7 +51,7 @@ internal abstract class PushRegistratorAbstractGoogle(
     abstract suspend fun getToken(senderId: String): String
 
     override suspend fun registerForPush(): IPushRegistrator.RegisterResult {
-        if(!_configModelStore.model.isInitializedWithRemote) {
+        if (!_configModelStore.model.isInitializedWithRemote) {
             return IPushRegistrator.RegisterResult(null, SubscriptionStatus.FIREBASE_FCM_INIT_ERROR)
         }
 
