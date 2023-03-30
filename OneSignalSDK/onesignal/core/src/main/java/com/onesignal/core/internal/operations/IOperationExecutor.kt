@@ -39,7 +39,7 @@ class ExecutionResponse(
     /**
      * When specified, any operations that should be prepended to the operation repo.
      */
-    val operations: List<Operation>? = null
+    val operations: List<Operation>? = null,
 )
 
 enum class ExecutionResult {
@@ -67,5 +67,5 @@ enum class ExecutionResult {
      * The operation failed because the request was not authorized.  The operation can be
      * retried if authorization can be achieved.
      */
-    FAIL_UNAUTHORIZED
+    FAIL_UNAUTHORIZED,
 }

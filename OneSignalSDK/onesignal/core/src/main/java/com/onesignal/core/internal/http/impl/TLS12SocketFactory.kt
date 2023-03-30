@@ -35,7 +35,7 @@ internal class TLS12SocketFactory(var sslSocketFactory: SSLSocketFactory) : SSLS
         host: String,
         port: Int,
         localHost: InetAddress,
-        localPort: Int
+        localPort: Int,
     ): Socket {
         return enableTLS(sslSocketFactory.createSocket(host, port, localHost, localPort))
     }
@@ -50,7 +50,7 @@ internal class TLS12SocketFactory(var sslSocketFactory: SSLSocketFactory) : SSLS
         address: InetAddress,
         port: Int,
         localAddress: InetAddress,
-        localPort: Int
+        localPort: Int,
     ): Socket {
         return enableTLS(sslSocketFactory.createSocket(address, port, localAddress, localPort))
     }

@@ -90,7 +90,7 @@ class SubscriptionManagerTests : FunSpec({
                     it.address shouldBe "name@company.com"
                     it.optedIn shouldBe true
                     it.status shouldBe SubscriptionStatus.SUBSCRIBED
-                }
+                },
             )
         }
     }
@@ -117,7 +117,7 @@ class SubscriptionManagerTests : FunSpec({
                     it.address shouldBe "+15558675309"
                     it.optedIn shouldBe true
                     it.status shouldBe SubscriptionStatus.SUBSCRIBED
-                }
+                },
             )
         }
     }
@@ -144,7 +144,7 @@ class SubscriptionManagerTests : FunSpec({
                     it.address shouldBe "pushToken"
                     it.optedIn shouldBe true
                     it.status shouldBe SubscriptionStatus.SUBSCRIBED
-                }
+                },
             )
         }
     }
@@ -265,7 +265,7 @@ class SubscriptionManagerTests : FunSpec({
                     it.id shouldBe smsSubscription.id
                     it should beInstanceOf<ISmsSubscription>()
                     (it as ISmsSubscription).number shouldBe smsSubscription.address
-                }
+                },
             )
         }
     }
@@ -334,7 +334,7 @@ class SubscriptionManagerTests : FunSpec({
                     it.id shouldBe smsSubscription.id
                     it should beInstanceOf<ISmsSubscription>()
                     (it as ISmsSubscription).number shouldBe smsSubscription.address
-                }
+                },
             )
         }
     }

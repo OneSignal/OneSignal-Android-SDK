@@ -32,7 +32,7 @@ class ParamsObject(
     var requiresUserPrivacyConsent: Boolean? = null,
     var opRepoExecutionInterval: Long? = null,
     var influenceParams: InfluenceParamsObject,
-    var fcmParams: FCMParamsObject
+    var fcmParams: FCMParamsObject,
 )
 
 class InfluenceParamsObject(
@@ -42,11 +42,11 @@ class InfluenceParamsObject(
     val iamLimit: Int? = null,
     val isDirectEnabled: Boolean? = null,
     val isIndirectEnabled: Boolean? = null,
-    val isUnattributedEnabled: Boolean? = null
+    val isUnattributedEnabled: Boolean? = null,
 )
 
 class FCMParamsObject(
     val projectId: String? = null,
     val appId: String? = null,
-    val apiKey: String? = null
+    val apiKey: String? = null,
 )

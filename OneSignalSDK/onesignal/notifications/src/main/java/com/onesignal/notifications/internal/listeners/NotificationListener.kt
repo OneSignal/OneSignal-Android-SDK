@@ -37,7 +37,7 @@ internal class NotificationListener(
     private val _receiveReceiptWorkManager: IReceiveReceiptWorkManager,
     private val _activityOpener: INotificationActivityOpener,
     private val _analyticsTracker: IAnalyticsTracker,
-    private val _time: ITime
+    private val _time: ITime,
 ) : IStartableService, INotificationLifecycleEventHandler {
 
     private val _postedOpenedNotifIds = mutableSetOf<String>()
@@ -65,7 +65,7 @@ internal class NotificationListener(
     override suspend fun onNotificationOpened(
         activity: Activity,
         data: JSONArray,
-        notificationId: String
+        notificationId: String,
     ) {
         val config = _configModelStore.model
         val appId: String = config.appId ?: ""
@@ -83,7 +83,7 @@ internal class NotificationListener(
                     appId,
                     notificationId,
                     subscriptionId,
-                    deviceType
+                    deviceType,
                 )
             } catch (ex: BackendException) {
                 Logging.error("Notification opened confirmation failed with statusCode: ${ex.statusCode} response: ${ex.response}")

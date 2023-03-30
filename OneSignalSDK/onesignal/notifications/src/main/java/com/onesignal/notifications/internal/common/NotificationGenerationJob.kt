@@ -42,7 +42,7 @@ class NotificationGenerationJob {
 
     constructor(jsonPayload: JSONObject?, time: ITime) : this(
         Notification(jsonPayload!!, time),
-        jsonPayload
+        jsonPayload,
     )
 
     internal constructor(notification: Notification, jsonPayload: JSONObject?) {

@@ -26,7 +26,7 @@ internal class OutcomeEventsController(
     private val _configModelStore: ConfigModelStore,
     private val _identityModelStore: IdentityModelStore,
     private val _subscriptionManager: ISubscriptionManager,
-    private val _time: ITime
+    private val _time: ITime,
 ) : IOutcomeEventsController, IStartableService, ISessionLifecycleHandler {
     // Keeps track of unique outcome events sent for UNATTRIBUTED sessions on a per session level
     private var unattributedUniqueOutcomeEventsSentOnSession: MutableSet<String> = mutableSetOf()
@@ -73,7 +73,7 @@ internal class OutcomeEventsController(
         } catch (ex: BackendException) {
             Logging.warn(
                 """OutcomeEventsController.sendSavedOutcomeEvent: Sending outcome with name: ${event.outcomeId} failed with status code: ${ex.statusCode} and response: ${ex.response}
-Outcome event was cached and will be reattempted on app cold start"""
+Outcome event was cached and will be reattempted on app cold start""",
             )
         }
     }
@@ -99,7 +99,7 @@ Outcome event was cached and will be reattempted on app cold start"""
      */
     private suspend fun sendUniqueOutcomeEvent(
         name: String,
-        sessionInfluences: List<Influence>
+        sessionInfluences: List<Influence>,
     ): OutcomeEvent? {
         val influences: List<Influence> = removeDisabledInfluences(sessionInfluences)
         if (influences.isEmpty()) {
@@ -125,7 +125,7 @@ Outcome event was cached and will be reattempted on app cold start"""
                         Measure endpoint will not send because unique outcome already sent for: 
                         SessionInfluences: $influences
                         Outcome name: $name
-                    """.trimIndent()
+                    """.trimIndent(),
                 )
 
                 // Return null to determine not a failure, but not a success in terms of the request made
@@ -140,7 +140,7 @@ Outcome event was cached and will be reattempted on app cold start"""
                         Measure endpoint will not send because unique outcome already sent for: 
                         Session: ${InfluenceType.UNATTRIBUTED}
                         Outcome name: $name
-                    """.trimIndent()
+                    """.trimIndent(),
                 )
 
                 // Return null to determine not a failure, but not a success in terms of the request made
@@ -154,7 +154,7 @@ Outcome event was cached and will be reattempted on app cold start"""
     private suspend fun sendAndCreateOutcomeEvent(
         name: String,
         weight: Float,
-        influences: List<Influence>
+        influences: List<Influence>,
     ): OutcomeEvent? {
         val timestampSeconds: Long = _time.currentTimeMillis / 1000
         var directSourceBody: OutcomeSourceBody? = null
@@ -164,11 +164,11 @@ Outcome event was cached and will be reattempted on app cold start"""
             when (influence.influenceType) {
                 InfluenceType.DIRECT -> directSourceBody = setSourceChannelIds(
                     influence,
-                    directSourceBody ?: OutcomeSourceBody()
+                    directSourceBody ?: OutcomeSourceBody(),
                 )
                 InfluenceType.INDIRECT -> indirectSourceBody = setSourceChannelIds(
                     influence,
-                    indirectSourceBody ?: OutcomeSourceBody()
+                    indirectSourceBody ?: OutcomeSourceBody(),
                 )
                 InfluenceType.UNATTRIBUTED -> unattributed = true
                 InfluenceType.DISABLED -> {
@@ -195,7 +195,7 @@ Outcome event was cached and will be reattempted on app cold start"""
         } catch (ex: BackendException) {
             Logging.warn(
                 """OutcomeEventsController.sendAndCreateOutcomeEvent: Sending outcome with name: $name failed with status code: ${ex.statusCode} and response: ${ex.response}
-Outcome event was cached and will be reattempted on app cold start"""
+Outcome event was cached and will be reattempted on app cold start""",
             )
 
             // Only if we need to save and retry the outcome, then we will save the timestamp for future sending
@@ -209,7 +209,7 @@ Outcome event was cached and will be reattempted on app cold start"""
 
     private fun setSourceChannelIds(
         influence: Influence,
-        sourceBody: OutcomeSourceBody
+        sourceBody: OutcomeSourceBody,
     ): OutcomeSourceBody {
         when (influence.influenceChannel) {
             InfluenceChannel.IAM -> sourceBody.inAppMessagesIds = influence.ids
@@ -234,7 +234,7 @@ Outcome event was cached and will be reattempted on app cold start"""
             saveUnattributedUniqueOutcomeEvents()
         } else {
             saveAttributedUniqueOutcomeNotifications(
-                eventParams
+                eventParams,
             )
         }
     }

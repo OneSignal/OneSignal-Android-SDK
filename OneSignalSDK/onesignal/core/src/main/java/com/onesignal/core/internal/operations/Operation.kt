@@ -57,5 +57,5 @@ abstract class Operation(name: String) : Model() {
 enum class GroupComparisonType {
     CREATE,
     ALTER,
-    NONE
+    NONE,
 }

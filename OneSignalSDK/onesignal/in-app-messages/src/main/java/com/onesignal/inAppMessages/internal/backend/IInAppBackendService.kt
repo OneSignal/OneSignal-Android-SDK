@@ -55,7 +55,7 @@ internal interface IInAppBackendService {
         variantId: String?,
         messageId: String,
         clickId: String?,
-        isFirstClick: Boolean
+        isFirstClick: Boolean,
     )
 
     /**
@@ -72,7 +72,7 @@ internal interface IInAppBackendService {
         appId: String,
         subscriptionId: String,
         variantId: String?,
-        messageId: String
+        messageId: String,
     )
 
     /**
@@ -91,7 +91,7 @@ internal interface IInAppBackendService {
         subscriptionId: String,
         variantId: String?,
         messageId: String,
-        pageId: String?
+        pageId: String?,
     )
 }
 
@@ -104,5 +104,5 @@ internal class GetIAMDataResponse(
     /**
      * Whether the call should be retried, when [content] is null
      */
-    val shouldRetry: Boolean
+    val shouldRetry: Boolean,
 )

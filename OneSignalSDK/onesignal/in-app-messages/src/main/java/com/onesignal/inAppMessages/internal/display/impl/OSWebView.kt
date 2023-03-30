@@ -15,7 +15,7 @@ internal class OSWebView(context: Context?) : WebView(context!!) {
         scrollRangeY: Int,
         maxOverScrollX: Int,
         maxOverScrollY: Int,
-        isTouchEvent: Boolean
+        isTouchEvent: Boolean,
     ): Boolean {
         return false
     }

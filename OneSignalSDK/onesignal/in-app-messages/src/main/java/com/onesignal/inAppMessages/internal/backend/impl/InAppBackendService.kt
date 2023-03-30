@@ -15,7 +15,7 @@ import org.json.JSONObject
 internal class InAppBackendService(
     private val _httpClient: IHttpClient,
     private val _deviceService: IDeviceService,
-    private val _hydrator: InAppHydrator
+    private val _hydrator: InAppHydrator,
 ) : IInAppBackendService {
     private var htmlNetworkRequestAttemptCount = 0
 
@@ -87,7 +87,7 @@ internal class InAppBackendService(
         variantId: String?,
         messageId: String,
         clickId: String?,
-        isFirstClick: Boolean
+        isFirstClick: Boolean,
     ) {
         val json: JSONObject = object : JSONObject() {
             init {
@@ -108,7 +108,7 @@ internal class InAppBackendService(
             printHttpErrorForInAppMessageRequest(
                 "engagement",
                 response.statusCode,
-                response.payload
+                response.payload,
             )
 
             throw BackendException(response.statusCode, response.payload)
@@ -120,7 +120,7 @@ internal class InAppBackendService(
         subscriptionId: String,
         variantId: String?,
         messageId: String,
-        pageId: String?
+        pageId: String?,
     ) {
         val json: JSONObject = object : JSONObject() {
             init {
@@ -146,7 +146,7 @@ internal class InAppBackendService(
         appId: String,
         subscriptionId: String,
         variantId: String?,
-        messageId: String
+        messageId: String,
     ) {
         val json: JSONObject = object : JSONObject() {
             init {
@@ -184,7 +184,7 @@ internal class InAppBackendService(
     private fun printHttpErrorForInAppMessageRequest(
         requestType: String,
         statusCode: Int,
-        response: String?
+        response: String?,
     ) {
         Logging.error("Encountered a $statusCode error while attempting in-app message $requestType request: $response")
     }

@@ -12,7 +12,7 @@ import org.json.JSONException
  */
 internal class InfluenceDataRepository(
     private val preferences: IPreferencesService,
-    private val _configModelStore: ConfigModelStore
+    private val _configModelStore: ConfigModelStore,
 ) :
     IInfluenceDataRepository {
     /**
@@ -22,7 +22,7 @@ internal class InfluenceDataRepository(
         preferences.saveString(
             PreferenceStores.ONESIGNAL,
             InfluenceConstants.PREFS_OS_OUTCOMES_CURRENT_NOTIFICATION_INFLUENCE,
-            influenceType.toString()
+            influenceType.toString(),
         )
     }
 
@@ -34,7 +34,7 @@ internal class InfluenceDataRepository(
             val influenceType = preferences.getString(
                 PreferenceStores.ONESIGNAL,
                 InfluenceConstants.PREFS_OS_OUTCOMES_CURRENT_NOTIFICATION_INFLUENCE,
-                InfluenceType.UNATTRIBUTED.toString()
+                InfluenceType.UNATTRIBUTED.toString(),
             )
             return InfluenceType.fromString(influenceType)
         }
@@ -46,7 +46,7 @@ internal class InfluenceDataRepository(
         preferences.saveString(
             PreferenceStores.ONESIGNAL,
             InfluenceConstants.PREFS_OS_OUTCOMES_CURRENT_IAM_INFLUENCE,
-            influenceType.toString()
+            influenceType.toString(),
         )
     }
 
@@ -59,7 +59,7 @@ internal class InfluenceDataRepository(
             val influenceType = preferences.getString(
                 PreferenceStores.ONESIGNAL,
                 InfluenceConstants.PREFS_OS_OUTCOMES_CURRENT_IAM_INFLUENCE,
-                defaultValue
+                defaultValue,
             )
             return InfluenceType.fromString(influenceType)
         }
@@ -71,7 +71,7 @@ internal class InfluenceDataRepository(
         preferences.saveString(
             PreferenceStores.ONESIGNAL,
             InfluenceConstants.PREFS_OS_LAST_ATTRIBUTED_NOTIFICATION_OPEN,
-            id
+            id,
         )
     }
 
@@ -82,14 +82,14 @@ internal class InfluenceDataRepository(
         get() = preferences.getString(
             PreferenceStores.ONESIGNAL,
             InfluenceConstants.PREFS_OS_LAST_ATTRIBUTED_NOTIFICATION_OPEN,
-            null
+            null,
         )
 
     override fun saveNotifications(notifications: JSONArray) {
         preferences.saveString(
             PreferenceStores.ONESIGNAL,
             InfluenceConstants.PREFS_OS_LAST_NOTIFICATIONS_RECEIVED,
-            notifications.toString()
+            notifications.toString(),
         )
     }
 
@@ -97,7 +97,7 @@ internal class InfluenceDataRepository(
         preferences.saveString(
             PreferenceStores.ONESIGNAL,
             InfluenceConstants.PREFS_OS_LAST_IAMS_RECEIVED,
-            iams.toString()
+            iams.toString(),
         )
     }
 
@@ -107,7 +107,7 @@ internal class InfluenceDataRepository(
             val notificationsReceived = preferences.getString(
                 PreferenceStores.ONESIGNAL,
                 InfluenceConstants.PREFS_OS_LAST_NOTIFICATIONS_RECEIVED,
-                "[]"
+                "[]",
             )
             return notificationsReceived?.let { JSONArray(it) } ?: JSONArray()
         }
@@ -118,7 +118,7 @@ internal class InfluenceDataRepository(
             val iamReceived = preferences.getString(
                 PreferenceStores.ONESIGNAL,
                 InfluenceConstants.PREFS_OS_LAST_IAMS_RECEIVED,
-                "[]"
+                "[]",
             )
             return iamReceived?.let { JSONArray(it) } ?: JSONArray()
         }

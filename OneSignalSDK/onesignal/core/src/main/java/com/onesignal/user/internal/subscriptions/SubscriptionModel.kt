@@ -5,7 +5,7 @@ import com.onesignal.common.modeling.Model
 enum class SubscriptionType() {
     EMAIL,
     SMS,
-    PUSH
+    PUSH,
 }
 
 enum class SubscriptionStatus(val value: Int) {
@@ -66,7 +66,8 @@ enum class SubscriptionStatus(val value: Int) {
     FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED(-29),
 
     /** The subscription is not enabled due to some other (unknown locally) error */
-    ERROR(9999);
+    ERROR(9999),
+    ;
 
     companion object {
         fun fromInt(value: Int): SubscriptionStatus? {

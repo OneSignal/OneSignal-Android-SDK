@@ -116,13 +116,13 @@ internal class DraggableRelativeLayout(context: Context?) : RelativeLayout(conte
                     }
                     if (mDragHelper!!.settleCapturedViewAt(
                             params!!.maxXPos,
-                            settleDestY
+                            settleDestY,
                         )
                     ) {
                         ViewCompat.postInvalidateOnAnimation(this@DraggableRelativeLayout)
                     }
                 }
-            }
+            },
         )
     }
 

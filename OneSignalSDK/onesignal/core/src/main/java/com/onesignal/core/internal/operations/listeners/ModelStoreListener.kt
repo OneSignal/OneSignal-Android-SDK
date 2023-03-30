@@ -17,7 +17,7 @@ import java.io.Closeable
  */
 internal abstract class ModelStoreListener<TModel>(
     private val store: IModelStore<TModel>,
-    private val opRepo: IOperationRepo
+    private val opRepo: IOperationRepo,
 ) : IModelStoreChangeHandler<TModel>, IBootstrapService, Closeable where TModel : Model {
 
     override fun bootstrap() {

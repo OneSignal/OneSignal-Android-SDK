@@ -24,7 +24,7 @@ import org.robolectric.annotation.Implements
 @Config(
     packageName = "com.onesignal.example",
     shadows = [ShadowINotificationLimitManagerConstants::class],
-    sdk = [26]
+    sdk = [26],
 )
 @RobolectricTest
 @RunWith(KotestTestRunner::class)

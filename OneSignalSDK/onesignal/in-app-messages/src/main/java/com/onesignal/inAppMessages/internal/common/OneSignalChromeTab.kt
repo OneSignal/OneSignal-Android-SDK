@@ -52,18 +52,18 @@ internal object OneSignalChromeTab {
         return CustomTabsClient.bindCustomTabsService(
             context,
             "com.android.chrome",
-            connection
+            connection,
         )
     }
 
     private class OneSignalCustomTabsServiceConnection internal constructor(
         private val url: String,
         private val openActivity: Boolean,
-        private val context: Context
+        private val context: Context,
     ) : CustomTabsServiceConnection() {
         override fun onCustomTabsServiceConnected(
             componentName: ComponentName,
-            customTabsClient: CustomTabsClient
+            customTabsClient: CustomTabsClient,
         ) {
             customTabsClient.warmup(0)
             val session = customTabsClient.newSession(null) ?: return
@@ -79,7 +79,7 @@ internal object OneSignalChromeTab {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
                     context.startActivity(
                         customTabsIntent.intent,
-                        customTabsIntent.startAnimationBundle
+                        customTabsIntent.startAnimationBundle,
                     )
                 } else {
                     context.startActivity(customTabsIntent.intent)

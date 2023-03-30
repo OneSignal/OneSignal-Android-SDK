@@ -7,7 +7,7 @@ import com.onesignal.notifications.internal.data.INotificationQueryHelper
 
 internal class NotificationQueryHelper(
     private val _configModelStore: ConfigModelStore,
-    private val _time: ITime
+    private val _time: ITime,
 ) : INotificationQueryHelper {
 
     override fun recentUninteractedWithNotificationsWhere(): StringBuilder {
@@ -17,7 +17,7 @@ internal class NotificationQueryHelper(
             OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME + " > " + createdAtCutoff + " AND " +
                 OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
                 OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-                OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0"
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0",
         )
         val useTtl = _configModelStore.model.restoreTTLFilter
         if (useTtl) {
