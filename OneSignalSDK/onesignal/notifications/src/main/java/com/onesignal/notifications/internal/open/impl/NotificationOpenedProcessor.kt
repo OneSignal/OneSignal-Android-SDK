@@ -52,7 +52,7 @@ internal class NotificationOpenedProcessor(
     private val _summaryManager: INotificationSummaryManager,
     private val _dataController: INotificationRepository,
     private val _configModelStore: ConfigModelStore,
-    private val _lifecycleService: INotificationLifecycleService
+    private val _lifecycleService: INotificationLifecycleService,
 ) : INotificationOpenedProcessor {
 
     override suspend fun processFromContext(context: Context, intent: Intent) {
@@ -68,7 +68,7 @@ internal class NotificationOpenedProcessor(
     // TODO: Could most likely be simplified checking if BUNDLE_KEY_ONESIGNAL_DATA is present
     private fun isOneSignalIntent(intent: Intent): Boolean {
         return intent.hasExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA) || intent.hasExtra("summary") || intent.hasExtra(
-            NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID
+            NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID,
         )
     }
 
@@ -79,8 +79,8 @@ internal class NotificationOpenedProcessor(
             NotificationManagerCompat.from(context!!).cancel(
                 intent.getIntExtra(
                     NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID,
-                    0
-                )
+                    0,
+                ),
             )
 
             // Only close the notifications shade on Android versions where it is allowed, Android 11 and lower.
@@ -127,7 +127,7 @@ internal class NotificationOpenedProcessor(
     private suspend fun processToOpenIntent(
         context: Context?,
         intent: Intent,
-        summaryGroup: String?
+        summaryGroup: String?,
     ): NotificationIntentExtras? {
         var dataArray: JSONArray? = null
         var jsonData: JSONObject? = null
@@ -142,11 +142,11 @@ internal class NotificationOpenedProcessor(
 
             jsonData.put(
                 NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID,
-                intent.getIntExtra(NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0)
+                intent.getIntExtra(NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0),
             )
             intent.putExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA, jsonData.toString())
             dataArray = JSONUtils.wrapInJsonArray(
-                JSONObject(intent.getStringExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA))
+                JSONObject(intent.getStringExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA)),
             )
         } catch (e: JSONException) {
             e.printStackTrace()
@@ -169,7 +169,7 @@ internal class NotificationOpenedProcessor(
     private suspend fun markNotificationsConsumed(
         context: Context,
         intent: Intent,
-        dismissed: Boolean
+        dismissed: Boolean,
     ) {
         val summaryGroup = intent.getStringExtra("summary")
 
@@ -178,7 +178,7 @@ internal class NotificationOpenedProcessor(
             intent.getIntExtra(NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0),
             dismissed,
             summaryGroup,
-            _configModelStore.model.clearGroupOnSummaryClick
+            _configModelStore.model.clearGroupOnSummaryClick,
         )
     }
 
@@ -210,12 +210,12 @@ internal class NotificationOpenedProcessor(
         if (dismissed) {
             values.put(
                 OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED,
-                1
+                1,
             )
         } else {
             values.put(
                 OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED,
-                1
+                1,
             )
         }
         return values

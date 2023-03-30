@@ -22,7 +22,7 @@ import java.util.regex.Pattern
 
 internal class NotificationChannelManager(
     private val _applicationService: IApplicationService,
-    private val _languageContext: ILanguageContext
+    private val _languageContext: ILanguageContext,
 ) : INotificationChannelManager {
     companion object {
         // Can't create a channel with the id 'miscellaneous' as an exception is thrown.
@@ -61,12 +61,12 @@ internal class NotificationChannelManager(
     // Language dependent fields will be passed localized
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Throws(
-        JSONException::class
+        JSONException::class,
     )
     private fun createChannel(
         context: Context,
         notificationManager: NotificationManager,
-        payload: JSONObject
+        payload: JSONObject,
     ): String {
         // 'chnl' will be a string if coming from FCM and it will be a JSONObject when coming from
         //   a cold start sync.
@@ -74,7 +74,7 @@ internal class NotificationChannelManager(
         var channelPayload: JSONObject? = null
         channelPayload = if (objChannelPayload is String) {
             JSONObject(
-                objChannelPayload
+                objChannelPayload,
             )
         } else {
             objChannelPayload as JSONObject
@@ -98,8 +98,8 @@ internal class NotificationChannelManager(
             notificationManager.createNotificationChannelGroup(
                 NotificationChannelGroup(
                     group_id,
-                    group_name
-                )
+                    group_name,
+                ),
             )
             channel.group = group_id
         }
@@ -131,7 +131,7 @@ internal class NotificationChannelManager(
             if (uri != null) {
                 channel.setSound(
                     uri,
-                    null
+                    null,
                 )
             } else if ("null" == sound || "nil" == sound) channel.setSound(null, null)
             // null = None for a sound.
@@ -161,7 +161,7 @@ internal class NotificationChannelManager(
         val channel = NotificationChannel(
             DEFAULT_CHANNEL_ID,
             "Miscellaneous",
-            NotificationManager.IMPORTANCE_DEFAULT
+            NotificationManager.IMPORTANCE_DEFAULT,
         )
         channel.enableLights(true)
         channel.enableVibration(true)
@@ -174,7 +174,7 @@ internal class NotificationChannelManager(
         val channel = NotificationChannel(
             RESTORE_CHANNEL_ID,
             "Restored",
-            NotificationManager.IMPORTANCE_LOW
+            NotificationManager.IMPORTANCE_LOW,
         )
         notificationManager.createNotificationChannel(channel)
         return RESTORE_CHANNEL_ID
@@ -192,8 +192,8 @@ internal class NotificationChannelManager(
                     createChannel(
                         _applicationService.appContext,
                         notificationManager,
-                        list.getJSONObject(i)
-                    )
+                        list.getJSONObject(i),
+                    ),
                 )
             } catch (e: JSONException) {
                 Logging.error("Could not create notification channel due to JSON payload error!", e)
@@ -215,7 +215,7 @@ internal class NotificationChannelManager(
             val id = existingChannel.id
             if (id.startsWith(CHANNEL_PREFIX) && !syncedChannelSet.contains(id)) {
                 notificationManager.deleteNotificationChannel(
-                    id
+                    id,
                 )
             }
         }

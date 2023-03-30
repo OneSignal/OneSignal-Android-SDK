@@ -15,7 +15,8 @@ enum class SubscriptionObjectType(val value: String) {
     MACOS_PUSH("macOSPush"),
     EMAIL("Email"),
     HUAWEI_PUSH("HuaweiPush"),
-    SMS("SMS");
+    SMS("SMS"),
+    ;
 
     companion object {
         fun fromDeviceType(type: IDeviceService.DeviceType): SubscriptionObjectType {

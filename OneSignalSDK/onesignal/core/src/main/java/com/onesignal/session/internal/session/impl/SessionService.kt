@@ -31,7 +31,7 @@ internal class SessionService(
     private val _applicationService: IApplicationService,
     private val _configModelStore: ConfigModelStore,
     private val _sessionModelStore: SessionModelStore,
-    private val _time: ITime
+    private val _time: ITime,
 ) : ISessionService, IStartableService, IBackgroundService, IApplicationLifecycleHandler {
 
     override val startTime: Long

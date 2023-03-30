@@ -24,7 +24,7 @@ import java.net.HttpURLConnection
 internal class ConfigModelStoreListener(
     private val _configModelStore: ConfigModelStore,
     private val _paramsBackendService: IParamsBackendService,
-    private val _subscriptionManager: ISubscriptionManager
+    private val _subscriptionManager: ISubscriptionManager,
 ) : IStartableService, ISingletonModelStoreChangeHandler<ConfigModel> {
 
     override fun start() {
@@ -67,6 +67,8 @@ internal class ConfigModelStoreListener(
                     // copy current model into new model, then override with what comes down.
                     val config = ConfigModel()
                     config.initializeFromModel(null, _configModelStore.model)
+
+                    config.isInitializedWithRemote = true
 
                     // these are always copied from the backend params
                     config.appId = appId

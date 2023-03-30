@@ -106,7 +106,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     private val _listOfModules = listOf(
         "com.onesignal.notifications.NotificationsModule",
         "com.onesignal.inAppMessages.InAppMessagesModule",
-        "com.onesignal.location.LocationModule"
+        "com.onesignal.location.LocationModule",
     )
 
     init {
@@ -134,7 +134,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         _services = serviceBuilder.build()
     }
 
-    override fun initWithContext(context: Context, appId: String?) : Boolean {
+    override fun initWithContext(context: Context, appId: String?): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
         // do not do this again if already initialized
@@ -204,12 +204,11 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
         if (forceCreateUser || !_identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)) {
             val legacyPlayerId = _preferencesService!!.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID)
-            if(legacyPlayerId == null) {
+            if (legacyPlayerId == null) {
                 Logging.debug("initWithContext: creating new device-scoped user")
                 createAndSwitchToNewUser()
                 _operationRepo!!.enqueue(LoginUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId, _identityModelStore!!.model.externalId))
-            }
-            else {
+            } else {
                 Logging.debug("initWithContext: creating user linked to subscription $legacyPlayerId")
 
                 // Converting a 4.x SDK to the 5.x SDK.  We pull the legacy user sync values to create the subscription model, then enqueue
@@ -218,7 +217,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 val legacyUserSyncString = _preferencesService!!.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_USER_SYNCVALUES)
                 var suppressBackendOperation = false
 
-                if(legacyUserSyncString != null) {
+                if (legacyUserSyncString != null) {
                     val legacyUserSyncJSON = JSONObject(legacyUserSyncString)
                     val notificationTypes = legacyUserSyncJSON.getInt("notification_types")
 
@@ -272,9 +271,9 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 _operationRepo!!.enqueue(
                     RefreshUserOperation(
                         _configModel!!.appId,
-                        _identityModelStore!!.model.onesignalId
+                        _identityModelStore!!.model.onesignalId,
                     ),
-                    true
+                    true,
                 )
                 return
             }
@@ -300,9 +299,9 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                     _configModel!!.appId,
                     newIdentityOneSignalId,
                     externalId,
-                    if (currentIdentityExternalId == null) currentIdentityOneSignalId else null
+                    if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
                 ),
-                true
+                true,
             )
 
             if (!result) {
@@ -316,9 +315,9 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             _operationRepo!!.enqueueAndWait(
                 RefreshUserOperation(
                     _configModel!!.appId,
-                    _identityModelStore!!.model.onesignalId
+                    _identityModelStore!!.model.onesignalId,
                 ),
-                true
+                true,
             )
         }
     }
@@ -341,8 +340,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 LoginUserOperation(
                     _configModel!!.appId,
                     _identityModelStore!!.model.onesignalId,
-                    _identityModelStore!!.model.externalId
-                )
+                    _identityModelStore!!.model.externalId,
+                ),
             )
 
             // TODO: remove JWT Token for all future requests.
@@ -395,7 +394,9 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         _identityModelStore!!.replace(identityModel)
         _propertiesModelStore!!.replace(propertiesModel)
 
-        if (currentPushSubscription != null) {
+        if (suppressBackendOperation) {
+            _subscriptionModelStore!!.replaceAll(subscriptions, ModelChangeTags.NO_PROPOGATE)
+        } else if (currentPushSubscription != null) {
             _operationRepo!!.enqueue(TransferSubscriptionOperation(_configModel!!.appId, currentPushSubscription.id, sdkId))
             _subscriptionModelStore!!.replaceAll(subscriptions, ModelChangeTags.NO_PROPOGATE)
         } else {

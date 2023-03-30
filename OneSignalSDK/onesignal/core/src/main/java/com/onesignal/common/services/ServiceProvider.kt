@@ -6,7 +6,7 @@ import com.onesignal.debug.internal.logging.Logging
  * A service provider gives access to the implementations of a service.
  */
 class ServiceProvider(
-    registrations: List<ServiceRegistration<*>>
+    registrations: List<ServiceRegistration<*>>,
 ) : IServiceProvider {
 
     private var _serviceMap: Map<Class<*>, List<ServiceRegistration<*>>>

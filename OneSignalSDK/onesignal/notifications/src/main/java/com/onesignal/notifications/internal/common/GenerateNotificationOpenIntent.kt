@@ -6,7 +6,7 @@ import android.content.Intent
 internal open class GenerateNotificationOpenIntent(
     private val context: Context,
     private val intent: Intent?,
-    private val startApp: Boolean
+    private val startApp: Boolean,
 ) {
     fun getIntentVisible(): Intent? {
         if (intent != null) return intent
@@ -28,7 +28,7 @@ internal open class GenerateNotificationOpenIntent(
         // Is null for apps that only provide a widget for it's UI.
         val launchIntent =
             context.packageManager.getLaunchIntentForPackage(
-                context.packageName
+                context.packageName,
             )
                 ?: return null
 

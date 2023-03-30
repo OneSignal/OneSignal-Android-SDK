@@ -52,6 +52,6 @@ interface INotificationAction {
         /**
          * The user tapped on an action from the notification.
          */
-        ActionTaken
+        ActionTaken,
     }
 }

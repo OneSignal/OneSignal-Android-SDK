@@ -14,7 +14,7 @@ import org.robolectric.plugins.ConfigConfigurer
 import java.lang.reflect.Method
 
 internal class ContainedRobolectricRunner(
-    private val config: Config?
+    private val config: Config?,
 ) : RobolectricTestRunner(PlaceholderTest::class.java, injector) {
     private val placeHolderMethod: FrameworkMethod = children[0]
     val sdkEnvironment = getSandbox(placeHolderMethod).also {

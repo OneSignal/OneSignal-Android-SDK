@@ -7,7 +7,7 @@ import com.onesignal.session.ISessionManager
 import com.onesignal.session.internal.outcomes.IOutcomeEventsController
 
 internal open class SessionManager(
-    private val _outcomeController: IOutcomeEventsController
+    private val _outcomeController: IOutcomeEventsController,
 ) : ISessionManager {
 
     override fun addOutcome(name: String) {

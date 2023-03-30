@@ -44,7 +44,7 @@ internal class WebViewManager(
     private val messageContent: InAppMessageContent,
     private val _lifecycle: IInAppLifecycleService,
     private val _applicationService: IApplicationService,
-    private val _promptFactory: IInAppMessagePromptFactory
+    private val _promptFactory: IInAppMessagePromptFactory,
 ) : IActivityLifecycleHandler {
 
     private val messageViewMutex: Mutex = Mutex()
@@ -108,7 +108,7 @@ internal class WebViewManager(
             return try {
                 pageRectToViewHeight(
                     activity,
-                    jsonObject.getJSONObject(IAM_PAGE_META_DATA_KEY)
+                    jsonObject.getJSONObject(IAM_PAGE_META_DATA_KEY),
                 )
             } catch (e: JSONException) {
                 -1
@@ -123,8 +123,8 @@ internal class WebViewManager(
                         Position.valueOf(
                             jsonObject.optString(
                                 IAM_DISPLAY_LOCATION_KEY,
-                                "FULL_SCREEN"
-                            ).uppercase(Locale.getDefault())
+                                "FULL_SCREEN",
+                            ).uppercase(Locale.getDefault()),
                         )
                 }
             } catch (e: JSONException) {
@@ -190,11 +190,11 @@ internal class WebViewManager(
                 insets[0],
                 insets[1],
                 insets[2],
-                insets[3]
+                insets[3],
             )
             val safeAreaInsetsFunction = String.format(
                 SET_SAFE_AREA_INSETS_JS_FUNCTION,
-                safeAreaInsetsObject
+                safeAreaInsetsObject,
             )
             webView!!.evaluateJavascript(safeAreaInsetsFunction, null)
         }
@@ -264,7 +264,7 @@ internal class WebViewManager(
      In app message activity stopped, cleaning views, currentActivityName: $currentActivityName
      activity: ${this.activity}
      messageView: $messageView
-            """.trimIndent()
+            """.trimIndent(),
         )
         if (messageView != null && activity.localClassName == currentActivityName) {
             messageView!!.removeAllViews()
@@ -293,7 +293,7 @@ internal class WebViewManager(
     suspend fun setupWebView(
         currentActivity: Activity,
         base64Message: String,
-        isFullScreen: Boolean
+        isFullScreen: Boolean,
     ) {
         enableWebViewRemoteDebugging()
         webView = OSWebView(currentActivity)
@@ -328,7 +328,7 @@ internal class WebViewManager(
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.KITKAT) {
             webView.setLayerType(
                 View.LAYER_TYPE_SOFTWARE,
-                null
+                null,
             )
         }
     }
@@ -388,6 +388,7 @@ internal class WebViewManager(
             dismissAndAwaitNextMessage()
         }
     }
+
     /**
      * Trigger the [.messageView] dismiss animation flow
      */
@@ -415,7 +416,7 @@ internal class WebViewManager(
             insets[0],
             insets[1],
             insets[2],
-            insets[3]
+            insets[3],
         )
         safeAreaInsetsScript = String.format(safeAreaInsetsScript, safeAreaJSObject)
         html += safeAreaInsetsScript

@@ -45,15 +45,15 @@ class InAppRepositoryTests : FunSpec({
                 OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS to "[clickId1, clickId2]",
                 OneSignalDbContract.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY to 1,
                 OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY to 1000L,
-                OneSignalDbContract.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION to 1
+                OneSignalDbContract.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION to 1,
             ),
             mapOf<String, Any>(
                 OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID to "messageId2",
                 OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS to "[clickId3, clickId4]",
                 OneSignalDbContract.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY to 2,
                 OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY to 1100L,
-                OneSignalDbContract.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION to 0
-            )
+                OneSignalDbContract.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION to 0,
+            ),
         )
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(OneSignalDbContract.InAppMessageTable.TABLE_NAME, records)
         val mockInAppPreferencesController = mockk<IInAppPreferencesController>()
@@ -93,7 +93,7 @@ class InAppRepositoryTests : FunSpec({
             mockInAppPreferencesController.cleanInAppMessageIds(
                 withArg {
                     it.size shouldBe 0
-                }
+                },
             )
         }
 
@@ -101,7 +101,7 @@ class InAppRepositoryTests : FunSpec({
             mockInAppPreferencesController.cleanInAppMessageClickedClickIds(
                 withArg {
                     it.size shouldBe 0
-                }
+                },
             )
         }
     }
@@ -111,12 +111,12 @@ class InAppRepositoryTests : FunSpec({
         val records = listOf(
             mapOf<String, Any>(
                 OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID to "messageId1",
-                OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS to "[clickId1, clickId2]"
+                OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS to "[clickId1, clickId2]",
             ),
             mapOf<String, Any>(
                 OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID to "messageId2",
-                OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS to "[clickId3, clickId4]"
-            )
+                OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS to "[clickId3, clickId4]",
+            ),
         )
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(OneSignalDbContract.InAppMessageTable.TABLE_NAME, records)
         val mockInAppPreferencesController = mockk<IInAppPreferencesController>()
@@ -133,7 +133,7 @@ class InAppRepositoryTests : FunSpec({
                 withArg {
                     it.size shouldBe 2
                     it.containsAll(listOf("messageId1", "messageId2"))
-                }
+                },
             )
         }
 
@@ -142,7 +142,7 @@ class InAppRepositoryTests : FunSpec({
                 withArg {
                     it.size shouldBe 4
                     it.containsAll(listOf("clickId1", "clickId2", "clickId3", "clickId4"))
-                }
+                },
             )
         }
     }

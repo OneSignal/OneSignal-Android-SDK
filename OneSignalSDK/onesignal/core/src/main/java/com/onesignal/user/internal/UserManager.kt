@@ -18,7 +18,7 @@ internal open class UserManager(
     private val _subscriptionManager: ISubscriptionManager,
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
-    private val _languageContext: ILanguageContext
+    private val _languageContext: ILanguageContext,
 ) : IUserManager {
 
     val externalId: String?
@@ -49,7 +49,7 @@ internal open class UserManager(
     override fun addAlias(label: String, id: String) {
         Logging.log(LogLevel.DEBUG, "setAlias(label: $label, id: $id)")
 
-        if(label.isEmpty()) {
+        if (label.isEmpty()) {
             throw Exception("Cannot add empty alias")
         }
 
@@ -64,7 +64,7 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "addAliases(aliases: $aliases")
 
         aliases.forEach {
-            if(it.key.isEmpty()) {
+            if (it.key.isEmpty()) {
                 throw Exception("Cannot add empty alias")
             }
 
@@ -81,7 +81,7 @@ internal open class UserManager(
     override fun removeAlias(label: String) {
         Logging.log(LogLevel.DEBUG, "removeAlias(label: $label)")
 
-        if(label.isEmpty()) {
+        if (label.isEmpty()) {
             throw Exception("Cannot remove empty alias")
         }
 
@@ -96,7 +96,7 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "removeAliases(labels: $labels)")
 
         labels.forEach {
-            if(it.isEmpty()) {
+            if (it.isEmpty()) {
                 throw Exception("Cannot remove empty alias")
             }
 
@@ -113,7 +113,7 @@ internal open class UserManager(
     override fun addEmail(email: String) {
         Logging.log(LogLevel.DEBUG, "addEmail(email: $email)")
 
-        if(!OneSignalUtils.isValidEmail(email)) {
+        if (!OneSignalUtils.isValidEmail(email)) {
             throw Exception("Cannot add invalid email address as subscription: $email")
         }
 
@@ -123,7 +123,7 @@ internal open class UserManager(
     override fun removeEmail(email: String) {
         Logging.log(LogLevel.DEBUG, "removeEmail(email: $email)")
 
-        if(!OneSignalUtils.isValidEmail(email)) {
+        if (!OneSignalUtils.isValidEmail(email)) {
             throw Exception("Cannot remove invalid email address as subscription: $email")
         }
 
@@ -133,7 +133,7 @@ internal open class UserManager(
     override fun addSms(sms: String) {
         Logging.log(LogLevel.DEBUG, "addSms(sms: $sms)")
 
-        if(!OneSignalUtils.isValidPhoneNumber(sms)) {
+        if (!OneSignalUtils.isValidPhoneNumber(sms)) {
             throw Exception("Cannot add invalid sms number as subscription: $sms")
         }
 
@@ -143,7 +143,7 @@ internal open class UserManager(
     override fun removeSms(sms: String) {
         Logging.log(LogLevel.DEBUG, "removeSms(sms: $sms)")
 
-        if(!OneSignalUtils.isValidPhoneNumber(sms)) {
+        if (!OneSignalUtils.isValidPhoneNumber(sms)) {
             throw Exception("Cannot remove invalid sms number as subscription: $sms")
         }
 
@@ -153,7 +153,7 @@ internal open class UserManager(
     override fun addTag(key: String, value: String) {
         Logging.log(LogLevel.DEBUG, "setTag(key: $key, value: $value)")
 
-        if(key.isEmpty()) {
+        if (key.isEmpty()) {
             throw Exception("Cannot add tag with empty key")
         }
 
@@ -164,7 +164,7 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "setTags(tags: $tags)")
 
         tags.forEach {
-            if(it.key.isEmpty()) {
+            if (it.key.isEmpty()) {
                 throw Exception("Cannot add tag with empty key")
             }
         }
@@ -177,7 +177,7 @@ internal open class UserManager(
     override fun removeTag(key: String) {
         Logging.log(LogLevel.DEBUG, "removeTag(key: $key)")
 
-        if(key.isEmpty()) {
+        if (key.isEmpty()) {
             throw Exception("Cannot remove tag with empty key")
         }
 
@@ -188,7 +188,7 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "removeTags(keys: $keys)")
 
         keys.forEach {
-            if(it.isEmpty()) {
+            if (it.isEmpty()) {
                 throw Exception("Cannot remove tag with empty key")
             }
         }

@@ -17,7 +17,7 @@ import kotlin.math.abs
 internal class DynamicTriggerController(
     private val _state: InAppStateService,
     private val _session: ISessionService,
-    private val _time: ITime
+    private val _time: ITime,
 
 ) : IEventNotifier<ITriggerHandler> {
 
@@ -70,7 +70,7 @@ internal class DynamicTriggerController(
             if (evaluateTimeIntervalWithOperator(
                     requiredTimeInterval.toDouble(),
                     currentTimeInterval.toDouble(),
-                    trigger.operatorType
+                    trigger.operatorType,
                 )
             ) {
                 events.fire { it.onTriggerCompleted(triggerId) }
@@ -95,7 +95,7 @@ internal class DynamicTriggerController(
                     }
                 },
                 triggerId,
-                offset
+                offset,
             )
 
             scheduledMessages.add(triggerId)
@@ -106,27 +106,27 @@ internal class DynamicTriggerController(
     private fun evaluateTimeIntervalWithOperator(
         timeInterval: Double,
         currentTimeInterval: Double,
-        operator: Trigger.OSTriggerOperator
+        operator: Trigger.OSTriggerOperator,
     ): Boolean {
         return when (operator) {
             Trigger.OSTriggerOperator.LESS_THAN -> currentTimeInterval < timeInterval
             Trigger.OSTriggerOperator.LESS_THAN_OR_EQUAL_TO -> currentTimeInterval <= timeInterval || roughlyEqual(
                 timeInterval,
-                currentTimeInterval
+                currentTimeInterval,
             )
             Trigger.OSTriggerOperator.GREATER_THAN -> // Counting equal as greater. This way we don't need to schedule a Runnable for 1ms in the future.
                 currentTimeInterval >= timeInterval
             Trigger.OSTriggerOperator.GREATER_THAN_OR_EQUAL_TO -> currentTimeInterval >= timeInterval || roughlyEqual(
                 timeInterval,
-                currentTimeInterval
+                currentTimeInterval,
             )
             Trigger.OSTriggerOperator.EQUAL_TO -> roughlyEqual(
                 timeInterval,
-                currentTimeInterval
+                currentTimeInterval,
             )
             Trigger.OSTriggerOperator.NOT_EQUAL_TO -> !roughlyEqual(
                 timeInterval,
-                currentTimeInterval
+                currentTimeInterval,
             )
             else -> {
                 Logging.error("Attempted to apply an invalid operator on a time-based in-app-message trigger: $operator")

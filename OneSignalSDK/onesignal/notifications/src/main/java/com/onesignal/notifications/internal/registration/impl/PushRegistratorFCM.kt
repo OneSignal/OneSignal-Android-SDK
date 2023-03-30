@@ -21,7 +21,7 @@ internal class PushRegistratorFCM(
     var _configModelStore: ConfigModelStore,
     val _applicationService: IApplicationService,
     upgradePrompt: GooglePlayServicesUpgradePrompt,
-    deviceService: IDeviceService
+    deviceService: IDeviceService,
 ) : PushRegistratorAbstractGoogle(deviceService, _configModelStore, upgradePrompt) {
 
     companion object {
@@ -104,7 +104,7 @@ internal class PushRegistratorFCM(
 
         throw Error(
             "Reflection error on FirebaseInstanceId.getInstance(firebaseApp).getToken(senderId, FirebaseMessaging.INSTANCE_ID_SCOPE)",
-            exception
+            exception,
         )
     }
 

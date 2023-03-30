@@ -16,7 +16,8 @@ internal class Trigger(json: JSONObject) {
         GREATER_THAN_OR_EQUAL_TO("greater_or_equal"),
         EXISTS("exists"),
         NOT_EXISTS("not_exists"),
-        CONTAINS("in");
+        CONTAINS("in"),
+        ;
 
         override fun toString(): String {
             return text
@@ -43,7 +44,8 @@ internal class Trigger(json: JSONObject) {
         TIME_SINCE_LAST_IN_APP("min_time_since"),
         SESSION_TIME("session_time"),
         CUSTOM("custom"),
-        UNKNOWN("unknown");
+        UNKNOWN("unknown"),
+        ;
 
         override fun toString(): String {
             return value

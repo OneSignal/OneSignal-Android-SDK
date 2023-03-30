@@ -18,7 +18,7 @@ open class SimpleModelStore<TModel>(
      * The persistable name of the model store. If not specified no persisting will occur.
      */
     name: String? = null,
-    _prefs: IPreferencesService? = null
+    _prefs: IPreferencesService? = null,
 ) : ModelStore<TModel>(name, _prefs) where TModel : Model {
 
     init {

@@ -11,7 +11,7 @@ internal class OutcomeEvent(
     override val notificationIds: JSONArray?,
     override val name: String,
     override val timestamp: Long,
-    override val weight: Float
+    override val weight: Float,
 ) : IOutcomeEvent {
     @Throws(JSONException::class)
     fun toJSONObject(): JSONObject {
@@ -76,7 +76,7 @@ internal class OutcomeEvent(
                 notificationId,
                 outcomeEventParams.outcomeId,
                 outcomeEventParams.timestamp,
-                outcomeEventParams.weight
+                outcomeEventParams.weight,
             )
         }
     }
