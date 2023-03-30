@@ -36,7 +36,7 @@ internal class SubscriptionOperationExecutor(
     private val _applicationService: IApplicationService,
     private val _subscriptionModelStore: SubscriptionModelStore,
     private val _configModelStore: ConfigModelStore,
-    private val _buildUserService: IRebuildUserService
+    private val _buildUserService: IRebuildUserService,
 ) : IOperationExecutor {
 
     override val operations: List<String>
@@ -86,14 +86,14 @@ internal class SubscriptionOperationExecutor(
                 RootToolsInternalMethods.isRooted,
                 DeviceUtils.getNetType(_applicationService.appContext),
                 DeviceUtils.getCarrierName(_applicationService.appContext),
-                AndroidUtils.getAppVersion(_applicationService.appContext)
+                AndroidUtils.getAppVersion(_applicationService.appContext),
             )
 
             val backendSubscriptionId = _subscriptionBackend.createSubscription(
                 createOperation.appId,
                 IdentityConstants.ONESIGNAL_ID,
                 createOperation.onesignalId,
-                subscription
+                subscription,
             ) ?: return ExecutionResponse(ExecutionResult.SUCCESS)
 
             // update the subscription model with the new ID, if it's still active.
@@ -101,7 +101,7 @@ internal class SubscriptionOperationExecutor(
             subscriptionModel?.setStringProperty(
                 SubscriptionModel::id.name,
                 backendSubscriptionId,
-                ModelChangeTags.HYDRATE
+                ModelChangeTags.HYDRATE,
             )
 
             if (_configModelStore.model.pushSubscriptionId == createOperation.subscriptionId) {
@@ -110,7 +110,7 @@ internal class SubscriptionOperationExecutor(
 
             return ExecutionResponse(
                 ExecutionResult.SUCCESS,
-                mapOf(createOperation.subscriptionId to backendSubscriptionId)
+                mapOf(createOperation.subscriptionId to backendSubscriptionId),
             )
         } catch (ex: BackendException) {
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
@@ -119,7 +119,8 @@ internal class SubscriptionOperationExecutor(
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
                     ExecutionResponse(ExecutionResult.FAIL_RETRY)
                 NetworkUtils.ResponseStatusType.CONFLICT,
-                NetworkUtils.ResponseStatusType.INVALID ->
+                NetworkUtils.ResponseStatusType.INVALID,
+                ->
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
@@ -151,7 +152,7 @@ internal class SubscriptionOperationExecutor(
                 RootToolsInternalMethods.isRooted,
                 DeviceUtils.getNetType(_applicationService.appContext),
                 DeviceUtils.getCarrierName(_applicationService.appContext),
-                AndroidUtils.getAppVersion(_applicationService.appContext)
+                AndroidUtils.getAppVersion(_applicationService.appContext),
             )
 
             _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription)

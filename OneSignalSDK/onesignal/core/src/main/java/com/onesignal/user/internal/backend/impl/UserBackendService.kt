@@ -1,7 +1,6 @@
 package com.onesignal.user.internal.backend.impl
 
 import com.onesignal.common.exceptions.BackendException
-import com.onesignal.common.putJSONObject
 import com.onesignal.common.putMap
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.user.internal.backend.CreateUserResponse
@@ -12,7 +11,7 @@ import com.onesignal.user.internal.backend.SubscriptionObject
 import org.json.JSONObject
 
 internal class UserBackendService(
-    private val _httpClient: IHttpClient
+    private val _httpClient: IHttpClient,
 ) : IUserBackendService {
 
     override suspend fun createUser(appId: String, identities: Map<String, String>, properties: PropertiesObject, subscriptions: List<SubscriptionObject>): CreateUserResponse {

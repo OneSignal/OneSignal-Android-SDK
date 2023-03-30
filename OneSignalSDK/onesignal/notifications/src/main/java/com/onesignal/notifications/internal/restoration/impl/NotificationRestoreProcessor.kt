@@ -15,7 +15,7 @@ internal class NotificationRestoreProcessor(
     private val _applicationService: IApplicationService,
     private val _workManager: INotificationGenerationWorkManager,
     private val _dataController: INotificationRepository,
-    private val _badgeCountUpdater: IBadgeCountUpdater
+    private val _badgeCountUpdater: IBadgeCountUpdater,
 ) : INotificationRestoreProcessor {
     override suspend fun process() {
         Logging.info("Restoring notifications")
@@ -42,7 +42,7 @@ internal class NotificationRestoreProcessor(
             JSONObject(notification.fullData),
             notification.createdAt,
             true,
-            false
+            false,
         )
 
         if (delay > 0) {

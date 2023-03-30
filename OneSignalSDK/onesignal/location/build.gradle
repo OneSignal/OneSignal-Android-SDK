@@ -90,4 +90,8 @@ dependencies {
     testImplementation("com.google.android.gms:play-services-location:18.0.0")
 }
 
+ktlint {
+    version = "$ktlintVersion"
+}
+
 apply from: '../maven-push.gradle'

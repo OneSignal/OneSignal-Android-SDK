@@ -53,7 +53,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
             AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore,
             MockHelper.configModelStore(),
-            mockBuildUserService
+            mockBuildUserService,
         )
 
         val operations = listOf<Operation>(CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionStatus.SUBSCRIBED))
@@ -74,7 +74,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                     it.enabled shouldBe true
                     it.token shouldBe "pushToken"
                     it.notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED.value
-                }
+                },
             )
         }
     }
@@ -93,7 +93,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
             AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore,
             MockHelper.configModelStore(),
-            mockBuildUserService
+            mockBuildUserService,
         )
 
         val operations = listOf<Operation>(CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionStatus.SUBSCRIBED))
@@ -113,7 +113,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                     it.enabled shouldBe true
                     it.token shouldBe "pushToken"
                     it.notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED.value
-                }
+                },
             )
         }
     }
@@ -132,7 +132,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
             AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore,
             MockHelper.configModelStore(),
-            mockBuildUserService
+            mockBuildUserService,
         )
 
         val operations = listOf<Operation>(CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionStatus.SUBSCRIBED))
@@ -152,7 +152,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                     it.enabled shouldBe true
                     it.token shouldBe "pushToken"
                     it.notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED.value
-                }
+                },
             )
         }
     }
@@ -174,12 +174,12 @@ class SubscriptionOperationExecutorTests : FunSpec({
             AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore,
             MockHelper.configModelStore(),
-            mockBuildUserService
+            mockBuildUserService,
         )
 
         val operations = listOf<Operation>(
             CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionStatus.SUBSCRIBED),
-            DeleteSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId)
+            DeleteSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId),
         )
 
         /* When */
@@ -207,12 +207,12 @@ class SubscriptionOperationExecutorTests : FunSpec({
             AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore,
             MockHelper.configModelStore(),
-            mockBuildUserService
+            mockBuildUserService,
         )
 
         val operations = listOf<Operation>(
             CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken1", SubscriptionStatus.SUBSCRIBED),
-            UpdateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED)
+            UpdateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED),
         )
 
         /* When */
@@ -231,7 +231,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                     it.enabled shouldBe true
                     it.token shouldBe "pushToken2"
                     it.notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED.value
-                }
+                },
             )
         }
     }
@@ -255,12 +255,12 @@ class SubscriptionOperationExecutorTests : FunSpec({
             AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore,
             MockHelper.configModelStore(),
-            mockBuildUserService
+            mockBuildUserService,
         )
 
         val operations = listOf<Operation>(
             UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED),
-            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken3", SubscriptionStatus.SUBSCRIBED)
+            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken3", SubscriptionStatus.SUBSCRIBED),
         )
 
         /* When */
@@ -278,7 +278,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                     it.enabled shouldBe true
                     it.token shouldBe "pushToken3"
                     it.notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED.value
-                }
+                },
             )
         }
     }
@@ -297,11 +297,11 @@ class SubscriptionOperationExecutorTests : FunSpec({
             AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore,
             MockHelper.configModelStore(),
-            mockBuildUserService
+            mockBuildUserService,
         )
 
         val operations = listOf<Operation>(
-            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED)
+            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED),
         )
 
         /* When */
@@ -318,7 +318,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                     it.enabled shouldBe true
                     it.token shouldBe "pushToken2"
                     it.notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED.value
-                }
+                },
             )
         }
     }
@@ -337,11 +337,11 @@ class SubscriptionOperationExecutorTests : FunSpec({
             AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore,
             MockHelper.configModelStore(),
-            mockBuildUserService
+            mockBuildUserService,
         )
 
         val operations = listOf<Operation>(
-            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED)
+            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED),
         )
 
         /* When */
@@ -358,7 +358,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                     it.enabled shouldBe true
                     it.token shouldBe "pushToken2"
                     it.notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED.value
-                }
+                },
             )
         }
     }
@@ -379,12 +379,12 @@ class SubscriptionOperationExecutorTests : FunSpec({
             AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore,
             MockHelper.configModelStore(),
-            mockBuildUserService
+            mockBuildUserService,
         )
 
         val operations = listOf<Operation>(
             UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED),
-            DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId)
+            DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
         )
 
         /* When */
@@ -410,11 +410,11 @@ class SubscriptionOperationExecutorTests : FunSpec({
             AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore,
             MockHelper.configModelStore(),
-            mockBuildUserService
+            mockBuildUserService,
         )
 
         val operations = listOf<Operation>(
-            DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId)
+            DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
         )
 
         /* When */
@@ -439,11 +439,11 @@ class SubscriptionOperationExecutorTests : FunSpec({
             AndroidMockHelper.applicationService(),
             mockSubscriptionsModelStore,
             MockHelper.configModelStore(),
-            mockBuildUserService
+            mockBuildUserService,
         )
 
         val operations = listOf<Operation>(
-            DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId)
+            DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
         )
 
         /* When */

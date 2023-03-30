@@ -37,7 +37,7 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
             .enqueueUniqueWork(
                 NOTIFICATION_RESTORE_WORKER_IDENTIFIER,
                 ExistingWorkPolicy.KEEP,
-                workRequest
+                workRequest,
             )
     }
 
@@ -46,7 +46,7 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
             val context = applicationContext
 
             if (!OneSignal.initWithContext(context)) {
-                return Result.success();
+                return Result.success()
             }
 
             if (!NotificationHelper.areNotificationsEnabled(context)) {

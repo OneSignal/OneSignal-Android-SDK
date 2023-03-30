@@ -32,7 +32,7 @@ import com.google.android.gms.common.api.GoogleApiClient
 // Allows compatibility with pre-8.1.0 of GMS via reflection.
 // This allows the methods below to be used even if the app developer is using an old version Google Play services.
 internal class GoogleApiClientCompatProxy(
-    val realInstance: GoogleApiClient
+    val realInstance: GoogleApiClient,
 ) {
 
     private val googleApiClientListenerClass: Class<*> = realInstance.javaClass

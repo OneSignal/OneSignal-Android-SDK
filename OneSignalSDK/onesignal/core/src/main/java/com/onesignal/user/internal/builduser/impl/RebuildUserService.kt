@@ -17,7 +17,7 @@ class RebuildUserService(
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
     private val _subscriptionsModelStore: SubscriptionModelStore,
-    private val _configModelStore: ConfigModelStore
+    private val _configModelStore: ConfigModelStore,
 ) : IRebuildUserService {
 
     override fun getRebuildOperationsIfCurrentUser(appId: String, onesignalId: String): List<Operation>? {

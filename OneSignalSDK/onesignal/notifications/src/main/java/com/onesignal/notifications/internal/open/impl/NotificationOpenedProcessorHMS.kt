@@ -12,13 +12,13 @@ import org.json.JSONException
 import org.json.JSONObject
 
 internal class NotificationOpenedProcessorHMS(
-    private val _lifecycleService: INotificationLifecycleService
+    private val _lifecycleService: INotificationLifecycleService,
 ) : INotificationOpenedProcessorHMS {
 
     override suspend fun handleHMSNotificationOpenIntent(activity: Activity, intent: Intent?) {
         if (intent == null) return
         val jsonData = covertHMSOpenIntentToJson(
-            intent
+            intent,
         )
             ?: return
         handleProcessJsonOpenData(activity, jsonData)

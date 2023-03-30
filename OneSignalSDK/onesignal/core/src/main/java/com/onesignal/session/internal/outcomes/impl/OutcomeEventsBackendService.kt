@@ -14,7 +14,7 @@ internal class OutcomeEventsBackendService(private val _http: IHttpClient) :
             .put(
                 "subscription",
                 JSONObject()
-                    .put("id", subscriptionId)
+                    .put("id", subscriptionId),
             )
 
         if (direct != null) {

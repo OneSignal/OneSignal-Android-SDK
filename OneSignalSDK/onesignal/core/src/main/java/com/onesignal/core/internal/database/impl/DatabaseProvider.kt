@@ -6,7 +6,7 @@ import com.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.session.internal.outcomes.impl.OutcomeTableProvider
 
 internal class DatabaseProvider(
-    private val _application: IApplicationService
+    private val _application: IApplicationService,
 ) : IDatabaseProvider {
 
     private val _lock = Any()

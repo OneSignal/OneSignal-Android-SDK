@@ -17,7 +17,7 @@ import com.onesignal.notifications.internal.limiting.INotificationLimitManager
 internal class BadgeCountUpdater(
     private val _applicationService: IApplicationService,
     private val _queryHelper: INotificationQueryHelper,
-    private val _databaseProvider: IDatabaseProvider
+    private val _databaseProvider: IDatabaseProvider,
 ) : IBadgeCountUpdater {
     // Cache for manifest setting.
     private var badgesEnabled = -1
@@ -26,7 +26,7 @@ internal class BadgeCountUpdater(
         try {
             val ai = _applicationService.appContext.packageManager.getApplicationInfo(
                 _applicationService.appContext.packageName,
-                PackageManager.GET_META_DATA
+                PackageManager.GET_META_DATA,
             )
             val bundle = ai.metaData
             if (bundle != null) {
@@ -72,7 +72,7 @@ internal class BadgeCountUpdater(
         _databaseProvider.os.query(
             OneSignalDbContract.NotificationTable.TABLE_NAME,
             whereClause = _queryHelper.recentUninteractedWithNotificationsWhere().toString(),
-            limit = INotificationLimitManager.Constants.maxNumberOfNotifications.toString()
+            limit = INotificationLimitManager.Constants.maxNumberOfNotifications.toString(),
         ) {
             notificationCount = it.count
         }

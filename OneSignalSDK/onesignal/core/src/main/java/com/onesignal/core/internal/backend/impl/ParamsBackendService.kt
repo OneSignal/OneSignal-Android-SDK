@@ -18,7 +18,7 @@ import com.onesignal.debug.internal.logging.Logging
 import org.json.JSONObject
 
 internal class ParamsBackendService(
-    private val _http: IHttpClient
+    private val _http: IHttpClient,
 ) : IParamsBackendService {
 
     override suspend fun fetchParams(appId: String, subscriptionId: String?): ParamsObject {
@@ -49,7 +49,7 @@ internal class ParamsBackendService(
             fcmParams = FCMParamsObject(
                 apiKey = it.safeString("api_key"),
                 appId = it.safeString("app_id"),
-                projectId = it.safeString("project_id")
+                projectId = it.safeString("project_id"),
             )
         }
 
@@ -68,7 +68,7 @@ internal class ParamsBackendService(
             requiresUserPrivacyConsent = responseJson.safeBool("requires_user_privacy_consent"),
             opRepoExecutionInterval = responseJson.safeLong("oprepo_execution_interval"), // TODO: New
             influenceParams = influenceParams ?: InfluenceParamsObject(),
-            fcmParams = fcmParams ?: FCMParamsObject()
+            fcmParams = fcmParams ?: FCMParamsObject(),
         )
     }
 
@@ -113,7 +113,7 @@ internal class ParamsBackendService(
             iamLimit,
             isDirectEnabled,
             isIndirectEnabled,
-            isUnattributedEnabled
+            isUnattributedEnabled,
         )
     }
 }

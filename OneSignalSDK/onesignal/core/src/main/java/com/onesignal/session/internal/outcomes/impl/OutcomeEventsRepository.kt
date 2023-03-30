@@ -15,7 +15,7 @@ import org.json.JSONException
 import java.util.Locale
 
 internal class OutcomeEventsRepository(
-    private val _databaseProvider: IDatabaseProvider
+    private val _databaseProvider: IDatabaseProvider,
 ) : IOutcomeEventsRepository {
 
     /**
@@ -26,7 +26,7 @@ internal class OutcomeEventsRepository(
             _databaseProvider.os.delete(
                 OutcomeEventsTable.TABLE_NAME,
                 OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + " = ?",
-                arrayOf(event.timestamp.toString())
+                arrayOf(event.timestamp.toString()),
             )
         }
     }
@@ -78,11 +78,11 @@ internal class OutcomeEventsRepository(
                 // Save influence types
                 put(
                     OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE,
-                    notificationInfluenceType.toString().lowercase(Locale.ROOT)
+                    notificationInfluenceType.toString().lowercase(Locale.ROOT),
                 )
                 put(
                     OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE,
-                    iamInfluenceType.toString().lowercase(Locale.ROOT)
+                    iamInfluenceType.toString().lowercase(Locale.ROOT),
                 )
                 // Save outcome data
                 put(OutcomeEventsTable.COLUMN_NAME_NAME, eventParams.outcomeId)
@@ -136,7 +136,7 @@ internal class OutcomeEventsRepository(
                                 notificationInfluenceType,
                                 directSourceBody,
                                 indirectSourceBody,
-                                notificationIds
+                                notificationIds,
                             )
                                 .also {
                                     getIAMInfluenceSource(
@@ -144,7 +144,7 @@ internal class OutcomeEventsRepository(
                                         directSourceBody,
                                         indirectSourceBody,
                                         iamIds,
-                                        it
+                                        it,
                                     )
                                 } ?: OutcomeSource(null, null)
                             OutcomeEventParams(name, source, weight, timestamp).also {
@@ -153,7 +153,7 @@ internal class OutcomeEventsRepository(
                         } catch (e: JSONException) {
                             Logging.error(
                                 "Generating JSONArray from notifications ids outcome:JSON Failed.",
-                                e
+                                e,
                             )
                         }
                     } while (cursor.moveToNext())
@@ -167,7 +167,7 @@ internal class OutcomeEventsRepository(
         notificationInfluenceType: InfluenceType,
         directSourceBody: OutcomeSourceBody,
         indirectSourceBody: OutcomeSourceBody,
-        notificationIds: String
+        notificationIds: String,
     ): OutcomeSource? {
         return when (notificationInfluenceType) {
             InfluenceType.DIRECT -> {
@@ -189,7 +189,7 @@ internal class OutcomeEventsRepository(
         directSourceBody: OutcomeSourceBody,
         indirectSourceBody: OutcomeSourceBody,
         iamIds: String,
-        source: OutcomeSource?
+        source: OutcomeSource?,
     ): OutcomeSource? {
         return when (iamInfluenceType) {
             InfluenceType.DIRECT -> {
@@ -248,11 +248,11 @@ internal class OutcomeEventsRepository(
                 ContentValues().apply {
                     put(
                         CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID,
-                        uniqueOutcome.influenceId
+                        uniqueOutcome.influenceId,
                     )
                     put(
                         CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE,
-                        uniqueOutcome.channel.toString()
+                        uniqueOutcome.channel.toString(),
                     )
                     put(CachedUniqueOutcomeTable.COLUMN_NAME_NAME, outcomeName)
                 }.also { values ->
@@ -287,7 +287,7 @@ internal class OutcomeEventsRepository(
                             columns = columns,
                             whereClause = where,
                             whereArgs = args,
-                            limit = "1"
+                            limit = "1",
                         ) {
                             // Item is not cached, we can use the influence id, add it to the JSONArray
                             if (it.count == 0) availableInfluenceIds.put(channelInfluenceId)
@@ -322,12 +322,12 @@ internal class OutcomeEventsRepository(
                 "SELECT NULL FROM " + notificationTableName + " n " +
                 "WHERE" + " n." + notificationIdColumnName + " = " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_INFLUENCE_ID +
                 " AND " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_TYPE + " = \"" + InfluenceChannel.NOTIFICATION.toString()
-                .lowercase(Locale.ROOT) +
+                    .lowercase(Locale.ROOT) +
                 "\")"
             _databaseProvider.os.delete(
                 OutcomesDbContract.CACHE_UNIQUE_OUTCOME_TABLE,
                 whereStr,
-                null
+                null,
             )
         }
     }

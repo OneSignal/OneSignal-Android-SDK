@@ -12,7 +12,7 @@ import com.onesignal.user.internal.operations.SetAliasOperation
 internal class IdentityModelStoreListener(
     store: IdentityModelStore,
     opRepo: IOperationRepo,
-    private val _configModelStore: ConfigModelStore
+    private val _configModelStore: ConfigModelStore,
 ) : SingletonModelStoreListener<IdentityModel>(store, opRepo) {
 
     override fun getReplaceOperation(model: IdentityModel): Operation? {

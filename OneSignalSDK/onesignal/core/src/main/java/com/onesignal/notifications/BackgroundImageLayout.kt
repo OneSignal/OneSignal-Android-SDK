@@ -18,5 +18,5 @@ class BackgroundImageLayout(
     /**
      * The body text color.
      */
-    val bodyTextColor: String? = null
+    val bodyTextColor: String? = null,
 )

@@ -21,7 +21,7 @@ internal class LocationManager(
     private val _applicationService: IApplicationService,
     private val _capturer: ILocationCapturer,
     private val _locationController: ILocationController,
-    private val _locationPermissionController: LocationPermissionController
+    private val _locationPermissionController: LocationPermissionController,
 ) : ILocationManager, IStartableService, ILocationPermissionChangedHandler {
 
     private var _isShared: Boolean = false
@@ -104,9 +104,9 @@ internal class LocationManager(
                         listOf(
                             LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING,
                             LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING,
-                            LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING
+                            LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING,
                         ),
-                        _applicationService
+                        _applicationService,
                     )
 
                     if (permissionList.contains(LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING)) {
