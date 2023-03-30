@@ -68,6 +68,8 @@ internal class ConfigModelStoreListener(
                     val config = ConfigModel()
                     config.initializeFromModel(null, _configModelStore.model)
 
+                    config.isInitializedWithRemote = true
+
                     // these are always copied from the backend params
                     config.appId = appId
                     config.notificationChannels = params.notificationChannels
