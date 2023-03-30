@@ -81,8 +81,10 @@ public class PairRecyclerViewAdapter extends RecyclerView.Adapter<RecyclerView.V
 
             if (Util.isBoolean(value))
                 value += " (bool)";
-            else if (Util.isNumeric(value))
-                value += " (num)";
+            else if (Util.isInteger(value))
+                value += " (int)";
+            else if (Util.isFloat(value))
+                value += " (float)";
             else
                 value += " (str)";
             pairValueTextView.setText(value);
