@@ -36,7 +36,7 @@ module.exports = async(context, osmetadata) => {
       console.log(foundString);
       return foundString;
     }
-    if (context.payload.comment && context.payload.comment.author_association != "MEMBER" &&  context.payload.comment.author_association != "OWNER") {
+    if (context.payload.comment && context.payload.comment.author_association != "MEMBER" &&  context.payload.comment.author_association != "OWNER" && context.payload.comment.author_association != "CONTRIBUTOR") {
       return;
     }
     const businessDaysResponseTime = calcResponseTimeForIssueCreatedAt(context.payload.issue.created_at);
