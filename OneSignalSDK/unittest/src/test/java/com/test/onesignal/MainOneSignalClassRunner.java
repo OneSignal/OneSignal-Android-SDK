@@ -96,7 +96,6 @@ import com.onesignal.example.MainActivity;
 import com.onesignal.influence.data.OSTrackerFactory;
 
 import org.awaitility.Awaitility;
-import org.awaitility.Duration;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -118,6 +117,7 @@ import org.robolectric.shadows.ShadowLog;
 
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -1238,8 +1238,8 @@ public class MainOneSignalClassRunner {
 
       FCMBroadcastReceiver_processBundle(blankActivity, bundle, processBundleReceiverCallback);
       Awaitility.await()
-              .atMost(new Duration(3, TimeUnit.SECONDS))
-              .pollInterval(new Duration(100, TimeUnit.MILLISECONDS))
+              .atMost(Duration.ofSeconds(3))
+              .pollInterval(Duration.ofMillis(100))
               .untilAsserted(() -> {
                  assertTrue(callbackEnded[0]);
               });
