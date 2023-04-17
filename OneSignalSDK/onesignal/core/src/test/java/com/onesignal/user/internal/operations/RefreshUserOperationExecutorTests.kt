@@ -31,6 +31,7 @@ import org.junit.runner.RunWith
 @RunWith(KotestTestRunner::class)
 class RefreshUserOperationExecutorTests : FunSpec({
     val appId = "appId"
+    val existingSubscriptionId1 = "existing-subscriptionId1"
     val remoteOneSignalId = "remote-onesignalId"
     val remoteSubscriptionId1 = "remote-subscriptionId1"
     val remoteSubscriptionId2 = "remote-subscriptionId2"
@@ -62,6 +63,10 @@ class RefreshUserOperationExecutorTests : FunSpec({
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         every { mockSubscriptionsModelStore.replaceAll(any(), any()) } just runs
+
+        val mockConfigModelStore = MockHelper.configModelStore {
+            it.pushSubscriptionId = existingSubscriptionId1
+        }
 
         val mockBuildUserService = mockk<IRebuildUserService>()
 
@@ -99,10 +104,10 @@ class RefreshUserOperationExecutorTests : FunSpec({
             mockSubscriptionsModelStore.replaceAll(
                 withArg {
                     it.count() shouldBe 2
-                    it[0].id shouldBe remoteSubscriptionId1
+                    it[0].id shouldBe existingSubscriptionId1
                     it[0].type shouldBe SubscriptionType.PUSH
                     it[0].optedIn shouldBe true
-                    it[0].address shouldBe "pushToken"
+                    it[0].address shouldBe "pushToken1"
                     it[1].id shouldBe remoteSubscriptionId2
                     it[1].type shouldBe SubscriptionType.EMAIL
                     it[1].optedIn shouldBe true
