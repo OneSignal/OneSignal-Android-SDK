@@ -59,11 +59,11 @@ The OneSignal SDK has been updated to be more modular in nature.  The SDK has be
 | Namespace     | Module                        | Kotlin                    | Java                           |
 | ------------- | ----------------------------- | ------------------------- | ------------------------------ |
 | User          | com.onesignal:core            | `OneSignal.User`          | `OneSignal.getUser()`          |
-| Session       | com.onesignal:core            | `OneSignal.session`       | `OneSignal.getSession()`       |
-| Notifications | com.onesignal:notifications   | `OneSignal.notifications` | `OneSignal.getNotifications()` |
-| Location      | com.onesignal:location        | `OneSignal.location`      | `OneSignal.getLocation()`      |
-| InAppMessages | com.onesignal:in-app-messages | `OneSignal.inAppMessages` | `OneSignal.getInAppMessages()` |
-| Debug         | com.onesignal:core            | `OneSignal.debug`         | `OneSignal.getDebug()`         |
+| Session       | com.onesignal:core            | `OneSignal.Session`       | `OneSignal.getSession()`       |
+| Notifications | com.onesignal:notifications   | `OneSignal.Notifications` | `OneSignal.getNotifications()` |
+| Location      | com.onesignal:location        | `OneSignal.Location`      | `OneSignal.getLocation()`      |
+| InAppMessages | com.onesignal:in-app-messages | `OneSignal.InAppMessages` | `OneSignal.getInAppMessages()` |
+| Debug         | com.onesignal:core            | `OneSignal.Debug`         | `OneSignal.getDebug()`         |
 
 
 
@@ -83,7 +83,7 @@ Initialization of the OneSignal SDK, although similar to past versions, has chan
     OneSignal.initWithContext(this, ONESIGNAL_APP_ID)
     // requestPermission will show the native Android notification permission prompt.
     // We recommend removing the following code and instead using an In-App Message to prompt for notification permission.
-    OneSignal.notifications.requestPermission(true)
+    OneSignal.Notifications.requestPermission(true)
 
 If your integration is not user-centric, there is no additional startup code required.  A user is automatically created as part of the push subscription creation, both of which are only accessible from the current device and the OneSignal dashboard.
 
@@ -246,7 +246,7 @@ The user name space is accessible via `OneSignal.User` (in Kotlin) or `OneSignal
 
 
 **Session Namespace**
-The session namespace is accessible via `OneSignal.session` (in Kotlin) or `OneSignal.getSession()` (in Java) and provides access to session-scoped functionality.
+The session namespace is accessible via `OneSignal.Session` (in Kotlin) or `OneSignal.getSession()` (in Java) and provides access to session-scoped functionality.
 
 | **Kotlin**                                            | **Java**                                             | **Description**                                                                          |
 | ----------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------- |
@@ -256,7 +256,7 @@ The session namespace is accessible via `OneSignal.session` (in Kotlin) or `OneS
 
 
 **Notifications Namespace**
-The notification namespace is accessible via `OneSignal.notifications` (in Kotlin) or `OneSignal.getNotifications()` (in Java) and provides access to notification-scoped functionality.
+The notification namespace is accessible via `OneSignal.Notifications` (in Kotlin) or `OneSignal.getNotifications()` (in Java) and provides access to notification-scoped functionality.
 
 | **Kotlin**                                                                                           | **Java**                                                                                             | **Description**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -272,7 +272,7 @@ The notification namespace is accessible via `OneSignal.notifications` (in Kotli
 
 
 **Location Namespace**
-The location namespace is accessible via `OneSignal.location` (in Kotlin) or `OneSignal.getLocation()` (in Java) and provide access to location-scoped functionality.
+The location namespace is accessible via `OneSignal.Location` (in Kotlin) or `OneSignal.getLocation()` (in Java) and provide access to location-scoped functionality.
 
 | **Kotlin**                                 | **Java**                                                           | **Description**                                                                                                                                          |
 | -------------------------------------------| -------------------------------------------------------------------| -------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -281,7 +281,7 @@ The location namespace is accessible via `OneSignal.location` (in Kotlin) or `On
 
 
 **InAppMessages Namespace**
-The In App Messages namespace is accessible via `OneSignal.inAppMessages` (in Kotlin) or `OneSignal.getInAppMessages()` (in Java) and provide access to in app messages-scoped functionality.
+The In App Messages namespace is accessible via `OneSignal.InAppMessages` (in Kotlin) or `OneSignal.getInAppMessages()` (in Java) and provide access to in app messages-scoped functionality.
 
 | **Kotlin**                                                                     | **Java**                                                                       | **Description**                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -296,7 +296,7 @@ The In App Messages namespace is accessible via `OneSignal.inAppMessages` (in Ko
 
 
 **Debug Namespace**
-The debug namespace is accessible via `OneSignal.debug` (in Kotlin) or `OneSignal.getDebug()` (in Java) and provide access to debug-scoped functionality.
+The debug namespace is accessible via `OneSignal.Debug` (in Kotlin) or `OneSignal.getDebug()` (in Java) and provide access to debug-scoped functionality.
 
 | **Kotlin**                 | **Java**                                                           | **Description**                                                                                      |
 | -------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |

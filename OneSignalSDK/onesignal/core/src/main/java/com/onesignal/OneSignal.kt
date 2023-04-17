@@ -50,32 +50,32 @@ object OneSignal {
      * has been called.
      */
     @JvmStatic
-    val session: ISessionManager
-        get() = oneSignal.session
+    val Session: ISessionManager
+        get() = oneSignal.Session
 
     /**
      * The notification manager for accessing device-scoped notification management. Initialized
      * only after [initWithContext] has been called.
      */
     @JvmStatic
-    val notifications: INotificationsManager
-        get() = oneSignal.notifications
+    val Notifications: INotificationsManager
+        get() = oneSignal.Notifications
 
     /**
      * The location manager for accessing device-scoped location management. Initialized
      * only after [initWithContext] has been called.
      */
     @JvmStatic
-    val location: ILocationManager
-        get() = oneSignal.location
+    val Location: ILocationManager
+        get() = oneSignal.Location
 
     /**
      * The In App Messaging manager for accessing device-scoped IAP management. Initialized
      * only after [initWithContext] has been called.
      */
     @JvmStatic
-    val inAppMessages: IInAppMessagesManager
-        get() = oneSignal.inAppMessages
+    val InAppMessages: IInAppMessagesManager
+        get() = oneSignal.InAppMessages
 
     /**
      * Access to debug the SDK in the additional information is required to diagnose any
@@ -84,8 +84,8 @@ object OneSignal {
      * WARNING: This should not be used in a production setting.
      */
     @JvmStatic
-    val debug: IDebugManager
-        get() = oneSignal.debug
+    val Debug: IDebugManager
+        get() = oneSignal.Debug
 
     /**
      * Determines whether a user must consent to privacy prior

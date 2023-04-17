@@ -74,11 +74,11 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         }
 
     // we hardcode the DebugManager implementation so it can be used prior to calling `initWithContext`
-    override val debug: IDebugManager = DebugManager()
-    override val session: ISessionManager get() = if (isInitialized) _session!! else throw Exception("Must call 'initWithContext' before use")
-    override val notifications: INotificationsManager get() = if (isInitialized) _notifications!! else throw Exception("Must call 'initWithContext' before use")
-    override val location: ILocationManager get() = if (isInitialized) _location!! else throw Exception("Must call 'initWithContext' before use")
-    override val inAppMessages: IInAppMessagesManager get() = if (isInitialized) _iam!! else throw Exception("Must call 'initWithContext' before use")
+    override val Debug: IDebugManager = DebugManager()
+    override val Session: ISessionManager get() = if (isInitialized) _session!! else throw Exception("Must call 'initWithContext' before use")
+    override val Notifications: INotificationsManager get() = if (isInitialized) _notifications!! else throw Exception("Must call 'initWithContext' before use")
+    override val Location: ILocationManager get() = if (isInitialized) _location!! else throw Exception("Must call 'initWithContext' before use")
+    override val InAppMessages: IInAppMessagesManager get() = if (isInitialized) _iam!! else throw Exception("Must call 'initWithContext' before use")
     override val User: IUserManager get() = if (isInitialized) _user!! else throw Exception("Must call 'initWithContext' before use")
 
     // Services required by this class
