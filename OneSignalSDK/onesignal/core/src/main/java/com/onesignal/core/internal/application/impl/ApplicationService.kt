@@ -102,7 +102,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
             if (isCurrentActivityNull && isContextActivity) {
                 current = context as Activity?
                 _activityReferences = 1
-                _nextResumeIsFirstActivity = true
+                _nextResumeIsFirstActivity = false
             }
         } else {
             _nextResumeIsFirstActivity = true
@@ -138,12 +138,17 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     override fun onActivityStarted(activity: Activity) {
         Logging.debug("ApplicationService.onActivityStarted($_activityReferences,$entryState): $activity")
 
+        if (current == activity) {
+            return
+        }
+
         current = activity
-        _activityReferences++
 
         if ((!isInForeground || _nextResumeIsFirstActivity) && !_isActivityChangingConfigurations) {
             _activityReferences = 1
             handleFocus()
+        } else {
+            _activityReferences++
         }
     }
 
