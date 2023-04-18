@@ -28,25 +28,25 @@ interface IOneSignal {
     /**
      * The session manager for accessing session-scoped management.
      */
-    val session: ISessionManager
+    val Session: ISessionManager
 
     /**
      * The notification manager for accessing device-scoped
      * notification management.
      */
-    val notifications: INotificationsManager
+    val Notifications: INotificationsManager
 
     /**
      * The location manager for accessing device-scoped
      * location management.
      */
-    val location: ILocationManager
+    val Location: ILocationManager
 
     /**
      * The In App Messaging manager for accessing device-scoped
      * IAP management.
      */
-    val inAppMessages: IInAppMessagesManager
+    val InAppMessages: IInAppMessagesManager
 
     /**
      * Access to debug the SDK in the event additional information is required to diagnose any
@@ -54,7 +54,7 @@ interface IOneSignal {
      *
      * WARNING: This should not be used in a production setting.
      */
-    val debug: IDebugManager
+    val Debug: IDebugManager
 
     /**
      * Determines whether a user must consent to privacy prior
