@@ -6,10 +6,13 @@ import com.onesignal.notifications.internal.Notification
 import org.json.JSONObject
 import java.security.SecureRandom
 
-class NotificationGenerationJob {
-    var notification: Notification?
+class NotificationGenerationJob(
+    private var _notification: Notification,
+    var jsonPayload: JSONObject
+) {
+    var notification: Notification
         get() = _notification
-        set(value) {
+        private set(value) {
             // If there is no android ID on the notification coming in, create one either
             // copying from the previous one or generating a new one.
             if (value != null && !value!!.hasNotificationId()) {
@@ -24,9 +27,6 @@ class NotificationGenerationJob {
             _notification = value
         }
 
-    private var _notification: Notification? = null
-
-    var jsonPayload: JSONObject? = null
     var isRestoring = false
     var isNotificationToDisplay = false
     var shownTimeStamp: Long? = null
@@ -37,18 +37,10 @@ class NotificationGenerationJob {
     var orgFlags: Int? = null
     var orgSound: Uri? = null
 
-    internal constructor() {
-    }
-
-    constructor(jsonPayload: JSONObject?, time: ITime) : this(
-        Notification(jsonPayload!!, time),
+    constructor(jsonPayload: JSONObject, time: ITime) : this(
+        Notification(jsonPayload, time),
         jsonPayload,
     )
-
-    internal constructor(notification: Notification, jsonPayload: JSONObject?) {
-        this.jsonPayload = jsonPayload
-        this.notification = notification
-    }
 
     /**
      * Get the notification title from the payload

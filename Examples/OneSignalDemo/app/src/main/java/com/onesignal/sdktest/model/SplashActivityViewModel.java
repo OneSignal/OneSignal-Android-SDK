@@ -141,7 +141,7 @@ public class SplashActivityViewModel implements ActivityViewModel {
     }
 
     @Override
-    public void onPermissionChanged(@Nullable boolean permission) {
+    public void onNotificationPermissionChange(@Nullable boolean permission) {
 
     }
 }

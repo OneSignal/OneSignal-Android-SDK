@@ -107,8 +107,9 @@ internal class SubscriptionManager(
     }
 
     override fun subscribe(handler: ISubscriptionChangedHandler) = _events.subscribe(handler)
-
     override fun unsubscribe(handler: ISubscriptionChangedHandler) = _events.unsubscribe(handler)
+    override val hasSubscribers: Boolean
+        get() = _events.hasSubscribers
 
     /**
      * Called when the model store has added a new subscription. The subscription list must be updated

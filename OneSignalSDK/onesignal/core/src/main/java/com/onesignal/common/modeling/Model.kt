@@ -334,4 +334,6 @@ open class Model(
 
     override fun subscribe(handler: IModelChangedHandler) = _changeNotifier.subscribe(handler)
     override fun unsubscribe(handler: IModelChangedHandler) = _changeNotifier.unsubscribe(handler)
+    override val hasSubscribers: Boolean
+        get() = _changeNotifier.hasSubscribers
 }
