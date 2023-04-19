@@ -12,6 +12,10 @@ package com.onesignal.common.events
  * @param THandler The type that the implementor is expecting to raise events to.
  */
 interface IEventNotifier<THandler> {
+    /**
+     * Whether there are currently any subscribers.
+     */
+    val hasSubscribers: Boolean
 
     /**
      * Subscribe to listen for events.

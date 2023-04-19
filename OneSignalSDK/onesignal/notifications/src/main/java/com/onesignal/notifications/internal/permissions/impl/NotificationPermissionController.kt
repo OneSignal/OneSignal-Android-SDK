@@ -108,6 +108,8 @@ internal class NotificationPermissionController(
 
     override fun subscribe(handler: INotificationPermissionChangedHandler) = _events.subscribe(handler)
     override fun unsubscribe(handler: INotificationPermissionChangedHandler) = _events.subscribe(handler)
+    override val hasSubscribers: Boolean
+        get() = _events.hasSubscribers
 
     override fun onAccept() {
         _waiter.wake(true)

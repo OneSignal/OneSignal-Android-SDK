@@ -147,4 +147,6 @@ abstract class ModelStore<TModel>(
 
     override fun subscribe(handler: IModelStoreChangeHandler<TModel>) = _changeSubscription.subscribe(handler)
     override fun unsubscribe(handler: IModelStoreChangeHandler<TModel>) = _changeSubscription.unsubscribe(handler)
+    override val hasSubscribers: Boolean
+        get() = _changeSubscription.hasSubscribers
 }

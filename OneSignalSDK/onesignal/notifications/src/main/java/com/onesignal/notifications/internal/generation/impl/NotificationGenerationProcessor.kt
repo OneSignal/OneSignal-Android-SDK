@@ -9,6 +9,7 @@ import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.Notification
 import com.onesignal.notifications.internal.NotificationReceivedEvent
+import com.onesignal.notifications.internal.NotificationWillDisplayEvent
 import com.onesignal.notifications.internal.common.NotificationConstants
 import com.onesignal.notifications.internal.common.NotificationGenerationJob
 import com.onesignal.notifications.internal.data.INotificationRepository
@@ -18,6 +19,7 @@ import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleServ
 import com.onesignal.notifications.internal.summary.INotificationSummaryManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
@@ -50,56 +52,76 @@ internal class NotificationGenerationProcessor(
             return
         }
 
-        var notification = Notification(null, jsonPayload, androidNotificationId, _time)
+        val notification = Notification(null, jsonPayload, androidNotificationId, _time)
 
         // When restoring it will always be seen as a duplicate, because we are restoring...
         if (!isRestoring && isDuplicateNotification(notification)) {
             return
         }
 
-        val notificationJob = NotificationGenerationJob()
+        val notificationJob = NotificationGenerationJob(notification, jsonPayload)
         notificationJob.shownTimeStamp = timestamp
         notificationJob.isRestoring = isRestoring
-        notificationJob.notification = notification
-        notificationJob.jsonPayload = jsonPayload
 
         var didDisplay = false
+        var wantsToDisplay = true
 
         Logging.info("Fire remoteNotificationReceived")
-        val serviceExtensionReceivedEvent = NotificationReceivedEvent(notification)
 
         try {
+            val notificationReceivedEvent = NotificationReceivedEvent(context, notification)
             withTimeout(30000L) {
                 GlobalScope.launch(Dispatchers.IO) {
-                    _lifecycleService.externalRemoteNotificationReceived(context, serviceExtensionReceivedEvent)
+                    _lifecycleService.externalRemoteNotificationReceived(notificationReceivedEvent)
+
+                    if(notificationReceivedEvent.isPreventDefault) {
+                        // wait on display waiter. If the caller calls `display` on the notification,
+                        // we will exit `waitForWake` and set `wantsToDisplay` to true. If the callback
+                        // never calls `display` we will timeout and never set `wantsToDisplay` to true.
+                        wantsToDisplay = false
+                        notification.displayWaiter.waitForWake()
+                        wantsToDisplay = true
+                    }
                 }.join()
             }
+        } catch(to: TimeoutCancellationException) {
+            Logging.error("remoteNotificationReceived timed out, continuing with wantsToDisplay=$wantsToDisplay.", to)
         } catch (t: Throwable) {
-            Logging.error("remoteNotificationReceived throw an exception. Displaying normal OneSignal notification.", t)
+            Logging.error("remoteNotificationReceived threw an exception. Displaying normal OneSignal notification.", t)
         }
 
-        var shouldDisplay = processHandlerResponse(notificationJob, serviceExtensionReceivedEvent.effectiveNotification?.copy(), isRestoring)
+        var shouldDisplay = processHandlerResponse(notificationJob, wantsToDisplay, isRestoring)
             ?: return
 
         if (shouldDisplay) {
             if (shouldFireForegroundHandlers(notificationJob)) {
                 Logging.info("Fire notificationWillShowInForegroundHandler")
 
-                val foregroundReceivedEvent = NotificationReceivedEvent(notificationJob.notification!!)
+                wantsToDisplay = true
 
                 try {
+                    val notificationWillDisplayEvent = NotificationWillDisplayEvent(notificationJob.notification)
                     withTimeout(30000L) {
                         GlobalScope.launch(Dispatchers.IO) {
-                            _lifecycleService.externalNotificationWillShowInForeground(
-                                foregroundReceivedEvent,
-                            )
+                            _lifecycleService.externalNotificationWillShowInForeground(notificationWillDisplayEvent)
+
+                            if(notificationWillDisplayEvent.isPreventDefault) {
+                                // wait on display waiter. If the caller calls `display` on the notification,
+                                // we will exit `waitForWake` and set `wantsToDisplay` to true. If the callback
+                                // never calls `display` we will timeout and never set `wantsToDisplay` to true.
+                                wantsToDisplay = false
+                                notification.displayWaiter.waitForWake()
+                                wantsToDisplay = true
+                            }
                         }.join()
                     }
+                } catch(to: TimeoutCancellationException) {
+                    Logging.error("notificationWillShowInForegroundHandler timed out, continuing with wantsToDisplay=$wantsToDisplay.", to)
                 } catch (t: Throwable) {
-                    Logging.error("Exception thrown while notification was being processed for display by notificationWillShowInForegroundHandler, showing notification in foreground!", t)
+                    Logging.error("notificationWillShowInForegroundHandler threw an exception. Displaying normal OneSignal notification.", t)
                 }
 
-                shouldDisplay = processHandlerResponse(notificationJob, foregroundReceivedEvent.effectiveNotification?.copy(), isRestoring)
+                shouldDisplay = processHandlerResponse(notificationJob, wantsToDisplay, isRestoring)
                     ?: return
             }
 
@@ -126,23 +148,20 @@ internal class NotificationGenerationProcessor(
      * Process the response to the external handler (either the foreground handler or the service extension).
      *
      * @param notificationJob The notification job covering the context the handler was called under.
-     * @param notification The notification that is to be displayed, as determined by the handler.
+     * @param wantsToDisplay Whether the SDK (and callback) wants to display the notification.
      * @param isRestoring Whether this notification is being processed because of a restore.
      *
      * @return true if the job should continue display, false if the job should continue but not display, null if processing should stop.
      */
-    private suspend fun processHandlerResponse(notificationJob: NotificationGenerationJob, notification: Notification?, isRestoring: Boolean): Boolean? {
-        if (notification != null) {
-            val canDisplay = AndroidUtils.isStringNotEmpty(notification.body)
-            val withinTtl: Boolean = isNotificationWithinTTL(notification)
+    private suspend fun processHandlerResponse(notificationJob: NotificationGenerationJob, wantsToDisplay: Boolean, isRestoring: Boolean): Boolean? {
+        if (wantsToDisplay) {
+            val canDisplay = AndroidUtils.isStringNotEmpty(notificationJob.notification.body)
+            val withinTtl: Boolean = isNotificationWithinTTL(notificationJob.notification)
 
             if (canDisplay && withinTtl) {
-                // Update the job to use the new notification
-                notificationJob.notification = notification
-
                 processCollapseKey(notificationJob)
 
-                var shouldDisplay = shouldDisplayNotification(notificationJob)
+                val shouldDisplay = shouldDisplayNotification(notificationJob)
 
                 if (shouldDisplay) {
                     notificationJob.isNotificationToDisplay = true
@@ -186,7 +205,7 @@ internal class NotificationGenerationProcessor(
 
     private fun shouldDisplayNotification(notificationJob: NotificationGenerationJob): Boolean {
         return notificationJob.hasExtender() || AndroidUtils.isStringNotEmpty(
-            notificationJob.jsonPayload!!.optString("alert"),
+            notificationJob.jsonPayload.optString("alert"),
         )
     }
 
@@ -218,7 +237,7 @@ internal class NotificationGenerationProcessor(
     private suspend fun saveNotification(notificationJob: NotificationGenerationJob, opened: Boolean) {
         Logging.debug("Saving Notification job: $notificationJob")
 
-        val jsonPayload = notificationJob.jsonPayload!!
+        val jsonPayload = notificationJob.jsonPayload
         try {
             val customJSON = getCustomJSONObject(jsonPayload)
 
@@ -268,16 +287,16 @@ internal class NotificationGenerationProcessor(
 
     private suspend fun processCollapseKey(notificationJob: NotificationGenerationJob) {
         if (notificationJob.isRestoring) return
-        if (!notificationJob.jsonPayload!!.has("collapse_key") || "do_not_collapse" == notificationJob.jsonPayload!!.optString("collapse_key")) {
+        if (!notificationJob.jsonPayload.has("collapse_key") || "do_not_collapse" == notificationJob.jsonPayload.optString("collapse_key")) {
             return
         }
 
-        val collapseId = notificationJob.jsonPayload!!.optString("collapse_key")
+        val collapseId = notificationJob.jsonPayload.optString("collapse_key")
 
         val androidNotificationId = _dataController.getAndroidIdFromCollapseKey(collapseId)
 
         if (androidNotificationId != null) {
-            notificationJob.notification?.androidNotificationId = androidNotificationId
+            notificationJob.notification.androidNotificationId = androidNotificationId
         }
     }
 

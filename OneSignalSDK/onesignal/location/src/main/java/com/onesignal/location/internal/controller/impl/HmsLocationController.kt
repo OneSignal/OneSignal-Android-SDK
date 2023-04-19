@@ -143,6 +143,8 @@ internal class HmsLocationController(
 
     override fun subscribe(handler: ILocationUpdatedHandler) = _event.subscribe(handler)
     override fun unsubscribe(handler: ILocationUpdatedHandler) = _event.unsubscribe(handler)
+    override val hasSubscribers: Boolean
+        get() = _event.hasSubscribers
 
     internal class LocationUpdateListener(
         private val _parent: HmsLocationController,

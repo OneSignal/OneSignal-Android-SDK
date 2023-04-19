@@ -10,6 +10,9 @@ import kotlinx.coroutines.withContext
  */
 open class EventProducer<THandler> : IEventNotifier<THandler> {
 
+    override val hasSubscribers: Boolean
+        get() = _subscribers.any()
+
     private val _subscribers: MutableList<THandler> = mutableListOf()
 
     override fun subscribe(handler: THandler) {
