@@ -55,51 +55,54 @@ interface INotificationsManager {
     fun clearAllNotifications()
 
     /**
-     * The [IPermissionChangedHandler.onPermissionChanged] method will be fired on the passed-in
-     * object when a notification permission setting changes. This happens when the user enables or
-     * disables notifications for your app from the system settings outside of your app. Disable
-     * detection is supported on Android 4.4+
+     * Add a permission observer that will run when the notification permission changes. This happens
+     * when the user enables or disables notifications for your app either within the app or from the
+     * system settings outside of your app. Disable detection is supported on Android 4.4+.
      *
-     * *Keep a reference<* - Make sure to hold a reference to your handler at the class level,
+     * *Keep a reference* - Make sure to hold a reference to your handler at the class level,
      * otherwise it may not fire.
      *
      * *Leak Safe* - OneSignal holds a weak reference to your handler so it's guaranteed not to
      * leak your `Activity`.
      *
-     * @param handler the instance of [IPermissionChangedHandler] that you want to process
-     *                the permission changes within
+     * @param observer the instance of [IPermissionObserver] that you want to process
+     *                 the permission changes within
      */
-    fun addPermissionChangedHandler(handler: IPermissionChangedHandler)
+    fun addPermissionObserver(observer: IPermissionObserver)
 
     /**
-     * Remove a push permission handler that has been previously added.
+     * Remove a permission observer that has been previously added.
      *
-     * @param handler The previously added handler that should be removed.
+     * @param observer The previously added observer that should be removed.
      */
-    fun removePermissionChangedHandler(handler: IPermissionChangedHandler)
+    fun removePermissionObserver(observer: IPermissionObserver)
 
     /**
-     * Sets the handler to run before displaying a notification while the app is in focus. Use this
-     * handler to read notification data or decide if the notification should show or not.
+     * Add a foreground lifecycle listener that will run whenever a notification lifecycle
+     * event occurs.
      *
-     * *Note:* this runs after the Notification Service Extension [IRemoteNotificationReceivedHandler]
-     * has been called (if one exists), which has the following differences:
-     *
-     * 1. The [IRemoteNotificationReceivedHandler] is configured within your `AndroidManifest.xml`.
-     * 2. The [IRemoteNotificationReceivedHandler] will be called regardless of the state of your
-     *    app, while [INotificationWillShowInForegroundHandler] is *only* called when your app is
-     *    in focus.
-     * 3. The [IRemoteNotificationReceivedHandler] can make changes to the notification, while
-     *    [INotificationWillShowInForegroundHandler] can only indicate not to show it.
-     *
-     * @param handler: The handler that is to be called when the even occurs.
+     * @param listener: The listener that is to be called when the event occurs.
      */
-    fun setNotificationWillShowInForegroundHandler(handler: INotificationWillShowInForegroundHandler?)
+    fun addForegroundLifecycleListener(listener: INotificationLifecycleListener)
 
     /**
-     * Sets a handler that will run whenever a notification is clicked on by the user.
+     * Remove a foreground lifecycle listener that has been previously added.
      *
-     * @param handler The handler that is to be called when the event occurs.
+     * @param listener The previously added listener that should be removed.
      */
-    fun setNotificationClickHandler(handler: INotificationClickHandler?)
+    fun removeForegroundLifecycleListener(listener: INotificationLifecycleListener)
+
+    /**
+     * Add a click listener that will run whenever a notification is clicked on by the user.
+     *
+     * @param listener The listener that is to be called when the event occurs.
+     */
+    fun addClickListener(listener: INotificationClickListener)
+
+    /**
+     * Remove a click listener that has been previously added.
+     *
+     * @param listener The previously added listener that should be removed.
+     */
+    fun removeClickListener(listener: INotificationClickListener)
 }

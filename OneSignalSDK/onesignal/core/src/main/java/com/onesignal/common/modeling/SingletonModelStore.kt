@@ -39,6 +39,8 @@ open class SingletonModelStore<TModel>(
 
     override fun subscribe(handler: ISingletonModelStoreChangeHandler<TModel>) = _changeSubscription.subscribe(handler)
     override fun unsubscribe(handler: ISingletonModelStoreChangeHandler<TModel>) = _changeSubscription.unsubscribe(handler)
+    override val hasSubscribers: Boolean
+        get() = _changeSubscription.hasSubscribers
 
     override fun onModelAdded(model: TModel, tag: String) {
         // singleton is assumed to always exist. It gets added transparently therefore no event.

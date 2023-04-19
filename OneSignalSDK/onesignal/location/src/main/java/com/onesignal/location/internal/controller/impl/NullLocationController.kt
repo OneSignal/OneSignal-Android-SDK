@@ -13,4 +13,6 @@ internal class NullLocationController : ILocationController {
     override fun getLastLocation(): Location? = null
     override fun subscribe(handler: ILocationUpdatedHandler) {}
     override fun unsubscribe(handler: ILocationUpdatedHandler) {}
+    override val hasSubscribers: Boolean
+        get() = false
 }

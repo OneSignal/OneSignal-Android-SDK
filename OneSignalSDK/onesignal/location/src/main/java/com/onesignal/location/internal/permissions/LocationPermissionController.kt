@@ -124,4 +124,6 @@ internal class LocationPermissionController(
 
     override fun subscribe(handler: ILocationPermissionChangedHandler) = _events.subscribe(handler)
     override fun unsubscribe(handler: ILocationPermissionChangedHandler) = _events.subscribe(handler)
+    override val hasSubscribers: Boolean
+        get() = _events.hasSubscribers
 }

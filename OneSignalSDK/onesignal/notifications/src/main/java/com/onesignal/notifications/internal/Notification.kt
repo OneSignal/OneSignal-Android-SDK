@@ -3,12 +3,12 @@ package com.onesignal.notifications.internal
 import androidx.core.app.NotificationCompat
 import com.onesignal.common.safeJSONObject
 import com.onesignal.common.safeString
+import com.onesignal.common.threading.Waiter
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.BackgroundImageLayout
 import com.onesignal.notifications.IActionButton
-import com.onesignal.notifications.IMutableNotification
-import com.onesignal.notifications.INotification
+import com.onesignal.notifications.IDisplayableMutableNotification
 import com.onesignal.notifications.internal.common.NotificationConstants
 import com.onesignal.notifications.internal.common.NotificationHelper
 import org.json.JSONArray
@@ -22,8 +22,9 @@ import org.json.JSONObject
  * [.groupedNotifications] - If the notification is a summary notification for a group, this will contain
  * all notification payloads it was created from.
  */
-open class Notification : INotification {
+class Notification : IDisplayableMutableNotification {
     var notificationExtender: NotificationCompat.Extender? = null
+    val displayWaiter: Waiter = Waiter()
 
     override var groupedNotifications: List<Notification>? = null
     override var androidNotificationId = 0
@@ -50,10 +51,8 @@ open class Notification : INotification {
     override var priority = 0
     override var sentTime: Long = 0
     override var ttl = 0
+    override var rawPayload: String = ""
 
-    override var rawPayload: String? = null
-
-    constructor() {}
     constructor(payload: JSONObject, time: ITime) : this(null, payload, 0, time) {}
     constructor(
         groupedNotifications: List<Notification>?,
@@ -64,36 +63,6 @@ open class Notification : INotification {
         initPayloadData(jsonPayload, time)
         this.groupedNotifications = groupedNotifications
         this.androidNotificationId = androidNotificationId
-    }
-
-    constructor(notification: Notification) {
-        notificationExtender = notification.notificationExtender
-        groupedNotifications = notification.groupedNotifications
-        androidNotificationId = notification.androidNotificationId
-        notificationId = notification.notificationId
-        templateName = notification.templateName
-        templateId = notification.templateId
-        title = notification.title
-        body = notification.body
-        additionalData = notification.additionalData
-        smallIcon = notification.smallIcon
-        largeIcon = notification.largeIcon
-        bigPicture = notification.bigPicture
-        smallIconAccentColor = notification.smallIconAccentColor
-        launchURL = notification.launchURL
-        sound = notification.sound
-        ledColor = notification.ledColor
-        lockScreenVisibility = notification.lockScreenVisibility
-        groupKey = notification.groupKey
-        groupMessage = notification.groupMessage
-        actionButtons = notification.actionButtons
-        fromProjectNumber = notification.fromProjectNumber
-        backgroundImageLayout = notification.backgroundImageLayout
-        collapseId = notification.collapseId
-        priority = notification.priority
-        rawPayload = notification.rawPayload
-        sentTime = notification.sentTime
-        ttl = notification.ttl
     }
 
     private fun initPayloadData(currentJsonPayload: JSONObject, time: ITime) {
@@ -164,13 +133,13 @@ open class Notification : INotification {
     private fun setActionButtonsFromData() {
         if (additionalData != null && additionalData!!.has("actionButtons")) {
             val jsonActionButtons = additionalData!!.getJSONArray("actionButtons")
-            var actionBtns = mutableListOf<IActionButton>()
+            val actionBtns = mutableListOf<IActionButton>()
             for (i in 0 until jsonActionButtons.length()) {
                 val jsonActionButton = jsonActionButtons.getJSONObject(i)
-                val actionButton = ActionButton()
-                actionButton.id = jsonActionButton.safeString("id")
-                actionButton.text = jsonActionButton.safeString("text")
-                actionButton.icon = jsonActionButton.safeString("icon")
+                val actionButton = ActionButton(
+                                    jsonActionButton.safeString("id"),
+                                    jsonActionButton.safeString("text"),
+                                    jsonActionButton.safeString("icon"))
                 actionBtns.add(actionButton)
             }
             actionButtons = actionBtns
@@ -192,40 +161,8 @@ open class Notification : INotification {
         }
     }
 
-    override fun mutableCopy(): IMutableNotification {
-        return MutableNotification(this)
-    }
-
-    fun copy(): Notification {
-        return OSNotificationBuilder()
-            .setNotificationExtender(notificationExtender)
-            .setGroupedNotifications(groupedNotifications)
-            .setAndroidNotificationId(androidNotificationId)
-            .setNotificationId(notificationId)
-            .setTemplateName(templateName)
-            .setTemplateId(templateId)
-            .setTitle(title)
-            .setBody(body)
-            .setAdditionalData(additionalData)
-            .setSmallIcon(smallIcon)
-            .setLargeIcon(largeIcon)
-            .setBigPicture(bigPicture)
-            .setSmallIconAccentColor(smallIconAccentColor)
-            .setLaunchURL(launchURL)
-            .setSound(sound)
-            .setLedColor(ledColor)
-            .setLockScreenVisibility(lockScreenVisibility)
-            .setGroupKey(groupKey)
-            .setGroupMessage(groupMessage)
-            .setActionButtons(actionButtons)
-            .setFromProjectNumber(fromProjectNumber)
-            .setBackgroundImageLayout(backgroundImageLayout)
-            .setCollapseId(collapseId)
-            .setPriority(priority)
-            .setRawPayload(rawPayload)
-            .setSenttime(sentTime)
-            .setTTL(ttl)
-            .build()
+    override fun setExtender(extender: NotificationCompat.Extender?) {
+        notificationExtender = extender
     }
 
     fun hasNotificationId(): Boolean {
@@ -304,27 +241,18 @@ open class Notification : INotification {
             '}'
     }
 
+    override fun display() {
+        displayWaiter.wake()
+    }
+
     /**
      * List of action buttons on the notification.
      */
-    class ActionButton : IActionButton {
-        override var id: String? = null
-        override var text: String? = null
-        override var icon: String? = null
-
-        constructor() {}
-        constructor(jsonObject: JSONObject) {
-            id = jsonObject.safeString("id")
-            text = jsonObject.safeString("text")
-            icon = jsonObject.safeString("icon")
-        }
-
-        constructor(id: String?, text: String?, icon: String?) {
-            this.id = id
-            this.text = text
-            this.icon = icon
-        }
-
+    class ActionButton(
+        override val id: String? = null,
+        override val text: String? = null,
+        override val icon: String? = null
+    ) : IActionButton {
         fun toJSONObject(): JSONObject {
             val json = JSONObject()
             try {
@@ -335,202 +263,6 @@ open class Notification : INotification {
                 t.printStackTrace()
             }
             return json
-        }
-    }
-
-    class OSNotificationBuilder {
-        private var notificationExtender: NotificationCompat.Extender? = null
-        private var groupedNotifications: List<Notification>? = null
-        private var androidNotificationId = 0
-        private var notificationId: String? = null
-        private var templateName: String? = null
-        private var templateId: String? = null
-        private var title: String? = null
-        private var body: String? = null
-        private var additionalData: JSONObject? = null
-        private var smallIcon: String? = null
-        private var largeIcon: String? = null
-        private var bigPicture: String? = null
-        private var smallIconAccentColor: String? = null
-        private var launchURL: String? = null
-        private var sound: String? = null
-        private var ledColor: String? = null
-        private var lockScreenVisibility = 1
-        private var groupKey: String? = null
-        private var groupMessage: String? = null
-        private var actionButtons: List<IActionButton>? = null
-        private var fromProjectNumber: String? = null
-        private var backgroundImageLayout: BackgroundImageLayout? = null
-        private var collapseId: String? = null
-        private var priority = 0
-        private var rawPayload: String? = null
-        private var sentTime: Long = 0
-        private var ttl = 0
-        fun setNotificationExtender(notificationExtender: NotificationCompat.Extender?): OSNotificationBuilder {
-            this.notificationExtender = notificationExtender
-            return this
-        }
-
-        fun setGroupedNotifications(groupedNotifications: List<Notification>?): OSNotificationBuilder {
-            this.groupedNotifications = groupedNotifications
-            return this
-        }
-
-        fun setAndroidNotificationId(androidNotificationId: Int): OSNotificationBuilder {
-            this.androidNotificationId = androidNotificationId
-            return this
-        }
-
-        fun setNotificationId(notificationId: String?): OSNotificationBuilder {
-            this.notificationId = notificationId
-            return this
-        }
-
-        fun setTemplateName(templateName: String?): OSNotificationBuilder {
-            this.templateName = templateName
-            return this
-        }
-
-        fun setTemplateId(templateId: String?): OSNotificationBuilder {
-            this.templateId = templateId
-            return this
-        }
-
-        fun setTitle(title: String?): OSNotificationBuilder {
-            this.title = title
-            return this
-        }
-
-        fun setBody(body: String?): OSNotificationBuilder {
-            this.body = body
-            return this
-        }
-
-        fun setAdditionalData(additionalData: JSONObject?): OSNotificationBuilder {
-            this.additionalData = additionalData
-            return this
-        }
-
-        fun setSmallIcon(smallIcon: String?): OSNotificationBuilder {
-            this.smallIcon = smallIcon
-            return this
-        }
-
-        fun setLargeIcon(largeIcon: String?): OSNotificationBuilder {
-            this.largeIcon = largeIcon
-            return this
-        }
-
-        fun setBigPicture(bigPicture: String?): OSNotificationBuilder {
-            this.bigPicture = bigPicture
-            return this
-        }
-
-        fun setSmallIconAccentColor(smallIconAccentColor: String?): OSNotificationBuilder {
-            this.smallIconAccentColor = smallIconAccentColor
-            return this
-        }
-
-        fun setLaunchURL(launchURL: String?): OSNotificationBuilder {
-            this.launchURL = launchURL
-            return this
-        }
-
-        fun setSound(sound: String?): OSNotificationBuilder {
-            this.sound = sound
-            return this
-        }
-
-        fun setLedColor(ledColor: String?): OSNotificationBuilder {
-            this.ledColor = ledColor
-            return this
-        }
-
-        fun setLockScreenVisibility(lockScreenVisibility: Int): OSNotificationBuilder {
-            this.lockScreenVisibility = lockScreenVisibility
-            return this
-        }
-
-        fun setGroupKey(groupKey: String?): OSNotificationBuilder {
-            this.groupKey = groupKey
-            return this
-        }
-
-        fun setGroupMessage(groupMessage: String?): OSNotificationBuilder {
-            this.groupMessage = groupMessage
-            return this
-        }
-
-        fun setActionButtons(actionButtons: List<IActionButton>?): OSNotificationBuilder {
-            this.actionButtons = actionButtons
-            return this
-        }
-
-        fun setFromProjectNumber(fromProjectNumber: String?): OSNotificationBuilder {
-            this.fromProjectNumber = fromProjectNumber
-            return this
-        }
-
-        fun setBackgroundImageLayout(backgroundImageLayout: BackgroundImageLayout?): OSNotificationBuilder {
-            this.backgroundImageLayout = backgroundImageLayout
-            return this
-        }
-
-        fun setCollapseId(collapseId: String?): OSNotificationBuilder {
-            this.collapseId = collapseId
-            return this
-        }
-
-        fun setPriority(priority: Int): OSNotificationBuilder {
-            this.priority = priority
-            return this
-        }
-
-        fun setRawPayload(rawPayload: String?): OSNotificationBuilder {
-            this.rawPayload = rawPayload
-            return this
-        }
-
-        fun setSenttime(sentTime: Long): OSNotificationBuilder {
-            this.sentTime = sentTime
-            return this
-        }
-
-        fun setTTL(ttl: Int): OSNotificationBuilder {
-            this.ttl = ttl
-            return this
-        }
-
-        fun build(): Notification {
-            val payload = Notification()
-            payload.notificationExtender = notificationExtender
-            payload.groupedNotifications = groupedNotifications
-            payload.androidNotificationId = androidNotificationId
-            payload.notificationId = notificationId
-            payload.templateName = templateName
-            payload.templateId = templateId
-            payload.title = title
-            payload.body = body
-            payload.additionalData = additionalData
-            payload.smallIcon = smallIcon
-            payload.largeIcon = largeIcon
-            payload.bigPicture = bigPicture
-            payload.smallIconAccentColor = smallIconAccentColor
-            payload.launchURL = launchURL
-            payload.sound = sound
-            payload.ledColor = ledColor
-            payload.lockScreenVisibility = lockScreenVisibility
-            payload.groupKey = groupKey
-            payload.groupMessage = groupMessage
-            payload.actionButtons = actionButtons
-            payload.fromProjectNumber = fromProjectNumber
-            payload.backgroundImageLayout = backgroundImageLayout
-            payload.collapseId = collapseId
-            payload.priority = priority
-            payload.rawPayload = rawPayload
-            payload.sentTime = sentTime
-            payload.ttl = ttl
-            return payload
         }
     }
 }

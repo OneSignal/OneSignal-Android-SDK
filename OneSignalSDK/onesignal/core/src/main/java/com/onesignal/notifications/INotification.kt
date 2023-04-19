@@ -133,15 +133,8 @@ interface INotification {
     val groupedNotifications: List<INotification>?
 
     /**
-     * The raw payload of the notification that can into the device. This should only be used to
+     * The raw payload of the notification that came into the device. This should only be used to
      * access any data that is not yet represented in a property.
      */
-    val rawPayload: String?
-
-    /**
-     * Create a mutable copy of this notification. Typically used in [IRemoteNotificationReceivedHandler]
-     * or [INotificationWillShowInForegroundHandler] to modify an incoming notification prior to it
-     * being displayed to the user.
-     */
-    fun mutableCopy(): IMutableNotification
+    val rawPayload: String
 }

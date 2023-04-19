@@ -13,7 +13,9 @@ import com.onesignal.inAppMessages.IInAppMessageClickHandler;
 import com.onesignal.inAppMessages.IInAppMessageClickResult;
 import com.onesignal.inAppMessages.IInAppMessageLifecycleHandler;
 import com.onesignal.debug.LogLevel;
-import com.onesignal.notifications.INotification;
+import com.onesignal.notifications.IDisplayableNotification;
+import com.onesignal.notifications.INotificationLifecycleListener;
+import com.onesignal.notifications.INotificationWillDisplayEvent;
 import com.onesignal.sdktest.BuildConfig;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.constant.Tag;
@@ -76,23 +78,40 @@ public class MainApplication extends MultiDexApplication {
             }
         });
 
-        OneSignal.getNotifications().setNotificationClickHandler(result ->
-                {
-                    Log.v("MainApplication", "INotificationOpenedResult: " + result);
-                });
+        OneSignal.getNotifications().addClickListener(event ->
+        {
+            Log.v("MainApplication", "INotificationClickListener.onClick fired!" +
+                    " with event: " + event);
+        });
 
-        OneSignal.getNotifications().setNotificationWillShowInForegroundHandler(notificationReceivedEvent ->
-                {
-                    Log.v("MainApplication", "NotificationWillShowInForegroundHandler fired!" +
-                    " with notification event: " + notificationReceivedEvent.toString());
+        OneSignal.getNotifications().addForegroundLifecycleListener(new INotificationLifecycleListener() {
+            @Override
+            public void onWillDisplay(@NonNull INotificationWillDisplayEvent event) {
+                Log.v("MainApplication", "INotificationLifecycleListener.onWillDisplay fired!" +
+                        " with event: " + event);
 
-                    INotification notification = notificationReceivedEvent.getNotification();
-                    JSONObject data = notification.getAdditionalData();
+                IDisplayableNotification notification = event.getNotification();
+                JSONObject data = notification.getAdditionalData();
 
-                    notificationReceivedEvent.complete(notification);
-                });
+                //Prevent OneSignal from displaying the notification immediately on return. Spin
+                //up a new thread to mimic some asynchronous behavior, when the async behavior (which
+                //takes 2 seconds) completes, then the notification can be displayed.
+                event.preventDefault();
+                Runnable r = () -> {
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
 
-//        OneSignal.getNotifications().setUnsubscribeWhenNotificationsAreDisabled(true);
+                    notification.display();
+                };
+
+                Thread t = new Thread(r);
+                t.start();
+            }
+        });
+
         OneSignal.getInAppMessages().setPaused(true);
         OneSignal.getLocation().setShared(false);
 
