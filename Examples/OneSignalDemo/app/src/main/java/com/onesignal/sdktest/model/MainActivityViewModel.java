@@ -359,7 +359,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
     }
 
     @Override
-    public void onPermissionChanged(@Nullable boolean permission) {
+    public void onNotificationPermissionChange(@Nullable boolean permission) {
         refreshSubscriptionState();
     }
 

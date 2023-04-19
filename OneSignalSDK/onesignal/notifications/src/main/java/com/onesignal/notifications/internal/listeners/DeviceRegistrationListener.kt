@@ -8,7 +8,7 @@ import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.notifications.INotificationsManager
-import com.onesignal.notifications.IPermissionChangedHandler
+import com.onesignal.notifications.IPermissionObserver
 import com.onesignal.notifications.internal.channels.INotificationChannelManager
 import com.onesignal.notifications.internal.pushtoken.IPushTokenManager
 import com.onesignal.user.internal.subscriptions.ISubscriptionChangedHandler
@@ -31,12 +31,12 @@ internal class DeviceRegistrationListener(
     private val _subscriptionManager: ISubscriptionManager,
 ) : IStartableService,
     ISingletonModelStoreChangeHandler<ConfigModel>,
-    IPermissionChangedHandler,
+    IPermissionObserver,
     ISubscriptionChangedHandler {
 
     override fun start() {
         _configModelStore.subscribe(this)
-        _notificationsManager.addPermissionChangedHandler(this)
+        _notificationsManager.addPermissionObserver(this)
         _subscriptionManager.subscribe(this)
 
         retrievePushTokenAndUpdateSubscription()
@@ -57,7 +57,7 @@ internal class DeviceRegistrationListener(
     override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
     }
 
-    override fun onPermissionChanged(permission: Boolean) {
+    override fun onNotificationPermissionChange(permission: Boolean) {
         retrievePushTokenAndUpdateSubscription()
     }
 

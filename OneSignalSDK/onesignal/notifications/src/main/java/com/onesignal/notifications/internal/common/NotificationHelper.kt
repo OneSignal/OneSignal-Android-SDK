@@ -14,9 +14,9 @@ import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.INotification
-import com.onesignal.notifications.INotificationAction
-import com.onesignal.notifications.internal.NotificationAction
+import com.onesignal.notifications.INotificationClickResult
 import com.onesignal.notifications.internal.NotificationClickResult
+import com.onesignal.notifications.internal.NotificationClickEvent
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -203,7 +203,7 @@ object NotificationHelper {
         return ""
     }
 
-    internal fun generateNotificationOpenedResult(jsonArray: JSONArray, time: ITime): NotificationClickResult {
+    internal fun generateNotificationOpenedResult(jsonArray: JSONArray, time: ITime): NotificationClickEvent {
         val jsonArraySize = jsonArray.length()
         var firstMessage = true
         val androidNotificationId = jsonArray.optJSONObject(0)
@@ -235,8 +235,8 @@ object NotificationHelper {
         }
 
         val actionType =
-            if (actionSelected != null) INotificationAction.ActionType.ActionTaken else INotificationAction.ActionType.Opened
-        val notificationAction = NotificationAction(actionType, actionSelected)
+            if (actionSelected != null) INotificationClickResult.ActionType.ActionButton else INotificationClickResult.ActionType.Opened
+        val notificationAction = NotificationClickResult(actionType, actionSelected)
 
         val notification = com.onesignal.notifications.internal.Notification(
             groupedNotifications,
@@ -244,6 +244,6 @@ object NotificationHelper {
             androidNotificationId,
             time,
         )
-        return NotificationClickResult(notification, notificationAction)
+        return NotificationClickEvent(notification, notificationAction)
     }
 }

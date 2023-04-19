@@ -148,4 +148,6 @@ internal class DynamicTriggerController(
 
     override fun subscribe(handler: ITriggerHandler) = events.subscribe(handler)
     override fun unsubscribe(handler: ITriggerHandler) = events.unsubscribe(handler)
+    override val hasSubscribers: Boolean
+        get() = events.hasSubscribers
 }

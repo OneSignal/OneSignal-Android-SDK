@@ -2,6 +2,8 @@ package com.onesignal.notifications.internal.summary.impl
 
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.time.ITime
+import com.onesignal.notifications.internal.Notification
 import com.onesignal.notifications.internal.common.NotificationGenerationJob
 import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.data.INotificationRepository
@@ -17,6 +19,7 @@ internal class NotificationSummaryManager(
     private val _summaryNotificationDisplayer: ISummaryNotificationDisplayer,
     private val _configModelStore: ConfigModelStore,
     private val _notificationRestoreProcessor: INotificationRestoreProcessor,
+    private val _time: ITime,
 ) : INotificationSummaryManager {
 
     // A notification was just dismissed, check if it was a child to a summary notification and update it.
@@ -66,11 +69,11 @@ internal class NotificationSummaryManager(
         //  - Don't need start a broadcast / service as the extender doesn't support overriding
         //      the summary notification.
         try {
-            var firstNotification = notifications.first()
-            val notificationJob = NotificationGenerationJob()
+            val firstNotification = notifications.first()
+            val jsonPayload = JSONObject(firstNotification.fullData)
+            val notificationJob = NotificationGenerationJob(jsonPayload, _time)
             notificationJob.isRestoring = true
             notificationJob.shownTimeStamp = firstNotification.createdAt
-            notificationJob.jsonPayload = JSONObject(firstNotification.fullData)
             _summaryNotificationDisplayer.updateSummaryNotification(notificationJob)
         } catch (e: JSONException) {
             e.printStackTrace()
