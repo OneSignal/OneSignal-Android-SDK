@@ -50,7 +50,7 @@ interface INotificationClickResult {
         Opened,
 
         /**
-         * The user clicked on an action button from the notification.
+         * The user clicked on the call-to-action button within the notification.
          */
         ActionButton,
     }
