@@ -26,6 +26,7 @@ import com.onesignal.sdktest.util.SharedPreferenceUtil;
 import org.json.JSONObject;
 
 public class MainApplication extends MultiDexApplication {
+    private static final int SLEEP_TIME_TO_MIMIC_ASYNC_OPERATION = 2000;
 
     public MainApplication() {
         // run strict mode default in debug mode to surface any potential issues easier
@@ -52,42 +53,42 @@ public class MainApplication extends MultiDexApplication {
         OneSignal.getInAppMessages().setInAppMessageLifecycleHandler(new IInAppMessageLifecycleHandler() {
             @Override
             public void onWillDisplayInAppMessage(@NonNull IInAppMessage message) {
-                Log.v("MainApplication", "onWillDisplayInAppMessage");
+                Log.v(Tag.LOG_TAG, "onWillDisplayInAppMessage");
             }
 
             @Override
             public void onDidDisplayInAppMessage(@NonNull IInAppMessage message) {
-                Log.v("MainApplication", "onDidDisplayInAppMessage");
+                Log.v(Tag.LOG_TAG, "onDidDisplayInAppMessage");
             }
 
             @Override
             public void onWillDismissInAppMessage(@NonNull IInAppMessage message) {
-                Log.v("MainApplication", "onWillDismissInAppMessage");
+                Log.v(Tag.LOG_TAG, "onWillDismissInAppMessage");
             }
 
             @Override
             public void onDidDismissInAppMessage(@NonNull IInAppMessage message) {
-                Log.v("MainApplication", "onDidDismissInAppMessage");
+                Log.v(Tag.LOG_TAG, "onDidDismissInAppMessage");
             }
         });
 
         OneSignal.getInAppMessages().setInAppMessageClickHandler(new IInAppMessageClickHandler() {
             @Override
             public void inAppMessageClicked(@Nullable IInAppMessageClickResult result) {
-                Log.v("MainApplication", "inAppMessageClicked");
+                Log.v(Tag.LOG_TAG, "INotificationClickListener.inAppMessageClicked");
             }
         });
 
         OneSignal.getNotifications().addClickListener(event ->
         {
-            Log.v("MainApplication", "INotificationClickListener.onClick fired!" +
+            Log.v(Tag.LOG_TAG, "INotificationClickListener.onClick fired" +
                     " with event: " + event);
         });
 
         OneSignal.getNotifications().addForegroundLifecycleListener(new INotificationLifecycleListener() {
             @Override
             public void onWillDisplay(@NonNull INotificationWillDisplayEvent event) {
-                Log.v("MainApplication", "INotificationLifecycleListener.onWillDisplay fired!" +
+                Log.v(Tag.LOG_TAG, "INotificationLifecycleListener.onWillDisplay fired" +
                         " with event: " + event);
 
                 IDisplayableNotification notification = event.getNotification();
@@ -99,9 +100,8 @@ public class MainApplication extends MultiDexApplication {
                 event.preventDefault();
                 Runnable r = () -> {
                     try {
-                        Thread.sleep(2000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        Thread.sleep(SLEEP_TIME_TO_MIMIC_ASYNC_OPERATION);
+                    } catch (InterruptedException ignored) {
                     }
 
                     notification.display();
@@ -115,7 +115,7 @@ public class MainApplication extends MultiDexApplication {
         OneSignal.getInAppMessages().setPaused(true);
         OneSignal.getLocation().setShared(false);
 
-        Log.d(Tag.DEBUG, Text.ONESIGNAL_SDK_INIT);
+        Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT);
     }
 
 }
