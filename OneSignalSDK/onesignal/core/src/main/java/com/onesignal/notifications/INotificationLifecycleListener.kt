@@ -12,7 +12,7 @@ interface INotificationLifecycleListener {
     /**
      * Called when a notification is to be displayed to the user. This callback
      * gives the implementor the ability to prevent the notification from displaying to the
-     * user entirely.
+     * user.
      *
      * *Note:* this runs after the Notification Service Extension [INotificationServiceExtension]
      * has been called (if one exists), which has the following differences:
