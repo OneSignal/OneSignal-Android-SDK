@@ -21,9 +21,10 @@ import android.content.Context
  *     thread {
  *       // do something async
  *
- *       // optionally, change the display
+ *       // optionally, change the display using a native Android Extender
  *       event.notification.setExtender(androidx.core.app.NotificationCompat.Extender {
- *         // alter the notification
+ *         // alter the notification, for example to change the title
+ *         it.setContentTitle("CUSTOM TITLE")
  *       })
  *
  *       // optionally, display the notification manually

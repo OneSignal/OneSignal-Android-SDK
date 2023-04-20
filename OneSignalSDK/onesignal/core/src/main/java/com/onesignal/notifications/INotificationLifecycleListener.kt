@@ -14,8 +14,8 @@ interface INotificationLifecycleListener {
      * gives the implementor the ability to prevent the notification from displaying to the
      * user.
      *
-     * *Note:* this runs after the Notification Service Extension [INotificationServiceExtension]
-     * has been called (if one exists), which has the following differences:
+     * *Note:* If a Notification Service Extension [INotificationServiceExtension] exists,
+     * [onWillDisplay] will run after the extension is called, which has the following differences:
      *
      * 1. The [INotificationServiceExtension] is configured within your `AndroidManifest.xml`.
      * 2. The [INotificationServiceExtension] will be called regardless of the state of your

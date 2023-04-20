@@ -71,7 +71,7 @@ public class SplashActivityViewModel implements ActivityViewModel {
         boolean isInAppMessagingPaused = SharedPreferenceUtil.getCachedInAppMessagingPausedStatus(context);
         OneSignal.getInAppMessages().setPaused(isInAppMessagingPaused);
 
-        Log.d(Tag.DEBUG, Text.PRIVACY_CONSENT_REQUIRED_SET + ": " + privacyConsent);
+        Log.d(Tag.LOG_TAG, Text.PRIVACY_CONSENT_REQUIRED_SET + ": " + privacyConsent);
 
 //        boolean isEmailCached = attemptSignIn(new EmailUpdateCallback() {
 //            @Override
