@@ -77,7 +77,7 @@ public class OneSignalNotificationSender {
                         if (scanner.useDelimiter("\\A").hasNext())
                             responseStr = scanner.next();
                         scanner.close();
-                        Log.d(Tag.DEBUG, "Success sending notification: " + responseStr);
+                        Log.d(Tag.LOG_TAG, "Success sending notification: " + responseStr);
                     }
                     else {
                         InputStream inputStream = con.getErrorStream();
@@ -86,7 +86,7 @@ public class OneSignalNotificationSender {
                         if (scanner.useDelimiter("\\A").hasNext())
                             responseStr = scanner.next();
                         scanner.close();
-                        Log.d(Tag.ERROR, "Failure sending notification: " + responseStr);
+                        Log.d(Tag.LOG_TAG, "Failure sending notification: " + responseStr);
                     }
                 }
             } catch (Exception e) {
