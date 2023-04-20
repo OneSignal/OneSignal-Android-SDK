@@ -5,7 +5,7 @@ package com.onesignal.notifications
  */
 interface IDisplayableNotification : INotification {
     /**
-     * Display the notification on the device.  Typically this is only possible within a short
+     * Display the notification on the device. Typically this is only possible within a short
      * time-frame (~30 seconds) after the notification has been received on the device.  See
      * [INotificationReceivedEvent] and [INotificationWillDisplayEvent] for more information
      * on how this might be used.
