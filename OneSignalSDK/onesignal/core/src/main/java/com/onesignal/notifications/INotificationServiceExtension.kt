@@ -15,7 +15,7 @@ package com.onesignal.notifications
 interface INotificationServiceExtension {
 
     /**
-     * Called when a notification has been received by the device.  This method
+     * Called when a notification has been received by the device. This method
      * gives the implementor the ability to modify or prevent the notification from displaying to the
      * user entirely.
      *
