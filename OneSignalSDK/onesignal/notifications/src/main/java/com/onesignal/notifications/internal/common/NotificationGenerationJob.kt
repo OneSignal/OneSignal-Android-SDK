@@ -8,7 +8,7 @@ import java.security.SecureRandom
 
 class NotificationGenerationJob(
     private var _notification: Notification,
-    var jsonPayload: JSONObject
+    var jsonPayload: JSONObject,
 ) {
     var notification: Notification
         get() = _notification

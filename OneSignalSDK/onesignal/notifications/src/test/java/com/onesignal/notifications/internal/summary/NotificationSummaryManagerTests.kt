@@ -47,7 +47,7 @@ class NotificationSummaryManagerTests : FunSpec({
             mockSummaryNotificationDisplayer,
             MockHelper.configModelStore(),
             mockNotificationRestoreProcessor,
-            MockHelper.time(111)
+            MockHelper.time(111),
         )
 
         /* When */
@@ -73,7 +73,7 @@ class NotificationSummaryManagerTests : FunSpec({
             mockSummaryNotificationDisplayer,
             MockHelper.configModelStore(),
             mockNotificationRestoreProcessor,
-            MockHelper.time(111)
+            MockHelper.time(111),
         )
 
         /* When */
@@ -107,7 +107,7 @@ class NotificationSummaryManagerTests : FunSpec({
             mockSummaryNotificationDisplayer,
             MockHelper.configModelStore(),
             mockNotificationRestoreProcessor,
-            MockHelper.time(111)
+            MockHelper.time(111),
         )
 
         /* When */
@@ -138,7 +138,7 @@ class NotificationSummaryManagerTests : FunSpec({
             mockSummaryNotificationDisplayer,
             MockHelper.configModelStore(),
             mockNotificationRestoreProcessor,
-            MockHelper.time(111)
+            MockHelper.time(111),
         )
 
         /* When */
@@ -174,7 +174,7 @@ class NotificationSummaryManagerTests : FunSpec({
             mockSummaryNotificationDisplayer,
             MockHelper.configModelStore(),
             mockNotificationRestoreProcessor,
-            MockHelper.time(111)
+            MockHelper.time(111),
         )
 
         /* When */
@@ -201,7 +201,7 @@ class NotificationSummaryManagerTests : FunSpec({
             mockSummaryNotificationDisplayer,
             mockConfig,
             mockNotificationRestoreProcessor,
-            MockHelper.time(111)
+            MockHelper.time(111),
         )
 
         /* When */

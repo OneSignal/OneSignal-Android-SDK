@@ -74,7 +74,7 @@ internal class NotificationGenerationProcessor(
                 GlobalScope.launch(Dispatchers.IO) {
                     _lifecycleService.externalRemoteNotificationReceived(notificationReceivedEvent)
 
-                    if(notificationReceivedEvent.isPreventDefault) {
+                    if (notificationReceivedEvent.isPreventDefault) {
                         // wait on display waiter. If the caller calls `display` on the notification,
                         // we will exit `waitForWake` and set `wantsToDisplay` to true. If the callback
                         // never calls `display` we will timeout and never set `wantsToDisplay` to true.
@@ -84,7 +84,7 @@ internal class NotificationGenerationProcessor(
                     }
                 }.join()
             }
-        } catch(to: TimeoutCancellationException) {
+        } catch (to: TimeoutCancellationException) {
             Logging.error("remoteNotificationReceived timed out, continuing with wantsToDisplay=$wantsToDisplay.", to)
         } catch (t: Throwable) {
             Logging.error("remoteNotificationReceived threw an exception. Displaying normal OneSignal notification.", t)
@@ -105,7 +105,7 @@ internal class NotificationGenerationProcessor(
                         GlobalScope.launch(Dispatchers.IO) {
                             _lifecycleService.externalNotificationWillShowInForeground(notificationWillDisplayEvent)
 
-                            if(notificationWillDisplayEvent.isPreventDefault) {
+                            if (notificationWillDisplayEvent.isPreventDefault) {
                                 // wait on display waiter. If the caller calls `display` on the notification,
                                 // we will exit `waitForWake` and set `wantsToDisplay` to true. If the callback
                                 // never calls `display` we will timeout and never set `wantsToDisplay` to true.
@@ -115,7 +115,7 @@ internal class NotificationGenerationProcessor(
                             }
                         }.join()
                     }
-                } catch(to: TimeoutCancellationException) {
+                } catch (to: TimeoutCancellationException) {
                     Logging.error("notificationWillShowInForegroundHandler timed out, continuing with wantsToDisplay=$wantsToDisplay.", to)
                 } catch (t: Throwable) {
                     Logging.error("notificationWillShowInForegroundHandler threw an exception. Displaying normal OneSignal notification.", t)
