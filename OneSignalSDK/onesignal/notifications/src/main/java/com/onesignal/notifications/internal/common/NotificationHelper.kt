@@ -15,8 +15,8 @@ import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.INotification
 import com.onesignal.notifications.INotificationClickResult
-import com.onesignal.notifications.internal.NotificationClickResult
 import com.onesignal.notifications.internal.NotificationClickEvent
+import com.onesignal.notifications.internal.NotificationClickResult
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
