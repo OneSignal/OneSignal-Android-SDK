@@ -1,9 +1,9 @@
 package com.onesignal.notifications.internal
 
 import com.onesignal.notifications.INotification
-import com.onesignal.notifications.INotificationClickResult
-import com.onesignal.notifications.INotificationClickListener
 import com.onesignal.notifications.INotificationClickEvent
+import com.onesignal.notifications.INotificationClickListener
+import com.onesignal.notifications.INotificationClickResult
 import org.json.JSONObject
 
 /**
@@ -12,7 +12,7 @@ import org.json.JSONObject
  */
 internal class NotificationClickEvent(
     private val _notification: Notification,
-    private val _result: NotificationClickResult
+    private val _result: NotificationClickResult,
 ) : INotificationClickEvent {
 
     /** The notification that was opened by the user. **/
