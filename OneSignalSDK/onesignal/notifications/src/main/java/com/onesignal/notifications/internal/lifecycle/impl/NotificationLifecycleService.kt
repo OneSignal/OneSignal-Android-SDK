@@ -9,10 +9,10 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.INotificationClickListener
-import com.onesignal.notifications.INotificationReceivedEvent
 import com.onesignal.notifications.INotificationLifecycleListener
-import com.onesignal.notifications.INotificationWillDisplayEvent
+import com.onesignal.notifications.INotificationReceivedEvent
 import com.onesignal.notifications.INotificationServiceExtension
+import com.onesignal.notifications.INotificationWillDisplayEvent
 import com.onesignal.notifications.internal.common.NotificationConstants
 import com.onesignal.notifications.internal.common.NotificationGenerationJob
 import com.onesignal.notifications.internal.common.NotificationHelper

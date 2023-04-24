@@ -2,10 +2,10 @@ package com.onesignal.notifications.internal.lifecycle
 
 import android.app.Activity
 import com.onesignal.notifications.INotificationClickListener
-import com.onesignal.notifications.INotificationReceivedEvent
 import com.onesignal.notifications.INotificationLifecycleListener
-import com.onesignal.notifications.INotificationWillDisplayEvent
+import com.onesignal.notifications.INotificationReceivedEvent
 import com.onesignal.notifications.INotificationServiceExtension
+import com.onesignal.notifications.INotificationWillDisplayEvent
 import com.onesignal.notifications.internal.common.NotificationGenerationJob
 import org.json.JSONArray
 import org.json.JSONObject

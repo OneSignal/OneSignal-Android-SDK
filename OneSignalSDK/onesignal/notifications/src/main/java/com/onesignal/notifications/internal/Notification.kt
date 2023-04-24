@@ -137,9 +137,10 @@ class Notification : IDisplayableMutableNotification {
             for (i in 0 until jsonActionButtons.length()) {
                 val jsonActionButton = jsonActionButtons.getJSONObject(i)
                 val actionButton = ActionButton(
-                                    jsonActionButton.safeString("id"),
-                                    jsonActionButton.safeString("text"),
-                                    jsonActionButton.safeString("icon"))
+                    jsonActionButton.safeString("id"),
+                    jsonActionButton.safeString("text"),
+                    jsonActionButton.safeString("icon"),
+                )
                 actionBtns.add(actionButton)
             }
             actionButtons = actionBtns
@@ -251,7 +252,7 @@ class Notification : IDisplayableMutableNotification {
     class ActionButton(
         override val id: String? = null,
         override val text: String? = null,
-        override val icon: String? = null
+        override val icon: String? = null,
     ) : IActionButton {
         fun toJSONObject(): JSONObject {
             val json = JSONObject()
