@@ -4,7 +4,7 @@ import android.app.AlertDialog
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.IDManager
 import com.onesignal.common.JSONUtils
-import com.onesignal.common.events.CallbackProducer
+import com.onesignal.common.events.EventProducer
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
@@ -16,8 +16,8 @@ import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.inAppMessages.IInAppMessageClickHandler
-import com.onesignal.inAppMessages.IInAppMessageLifecycleHandler
+import com.onesignal.inAppMessages.IInAppMessageClickListener
+import com.onesignal.inAppMessages.IInAppMessageLifecycleListener
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.inAppMessages.InAppMessageActionUrlType
 import com.onesignal.inAppMessages.R
@@ -73,8 +73,8 @@ internal class InAppMessagesManager(
     ITriggerHandler,
     ISessionLifecycleHandler {
 
-    private val _lifecycleCallback = CallbackProducer<IInAppMessageLifecycleHandler>()
-    private val _messageClickCallback = CallbackProducer<IInAppMessageClickHandler>()
+    private val _lifecycleCallback = EventProducer<IInAppMessageLifecycleListener>()
+    private val _messageClickCallback = EventProducer<IInAppMessageClickListener>()
 
     // IAMs loaded remotely from on_session
     //   If on_session won't be called this will be loaded from cache
@@ -146,14 +146,24 @@ internal class InAppMessagesManager(
         }
     }
 
-    override fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler?) {
-        Logging.debug("InAppMessagesManager.setInAppMessageLifecycleHandler(handler: $handler)")
-        _lifecycleCallback.set(handler)
+    override fun addLifecycleListener(listener: IInAppMessageLifecycleListener) {
+        Logging.debug("InAppMessagesManager.addLifecycleListener(listener: $listener)")
+        _lifecycleCallback.subscribe(listener)
     }
 
-    override fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler?) {
-        Logging.debug("InAppMessagesManager.setInAppMessageClickHandler(handler: $handler)")
-        _messageClickCallback.set(handler)
+    override fun removeLifecycleListener(listener: IInAppMessageLifecycleListener) {
+        Logging.debug("InAppMessagesManager.removeLifecycleListener(listener: $listener)")
+        _lifecycleCallback.unsubscribe(listener)
+    }
+
+    override fun addClickListener(listener: IInAppMessageClickListener) {
+        Logging.debug("InAppMessagesManager.addClickListener(listener: $listener)")
+        _messageClickCallback.subscribe(listener)
+    }
+
+    override fun removeClickListener(listener: IInAppMessageClickListener) {
+        Logging.debug("InAppMessagesManager.removeClickListener(listener: $listener)")
+        _messageClickCallback.unsubscribe(listener)
     }
 
     override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
@@ -383,11 +393,11 @@ internal class InAppMessagesManager(
         }
 
         // fire the external callback
-        if (!_lifecycleCallback.hasCallback) {
+        if (!_lifecycleCallback.hasSubscribers) {
             Logging.verbose("InAppMessagesManager.messageWasDismissed: inAppMessageLifecycleHandler is null")
             return
         }
-        _lifecycleCallback.fireOnMain { it.onDidDismissInAppMessage(message) }
+        _lifecycleCallback.fireOnMain { it.onDidDismiss(InAppMessageLifecycleEvent(message)) }
 
         _state.inAppMessageIdShowing = null
 
@@ -482,19 +492,19 @@ internal class InAppMessagesManager(
 
     // IAM LIFECYCLE CALLBACKS
     override fun onMessageWillDisplay(message: InAppMessage) {
-        if (!_lifecycleCallback.hasCallback) {
+        if (!_lifecycleCallback.hasSubscribers) {
             Logging.verbose("InAppMessagesManager.onMessageWillDisplay: inAppMessageLifecycleHandler is null")
             return
         }
-        _lifecycleCallback.fireOnMain { it.onWillDisplayInAppMessage(message) }
+        _lifecycleCallback.fireOnMain { it.onWillDisplay(InAppMessageLifecycleEvent(message)) }
     }
 
     override fun onMessageWasDisplayed(message: InAppMessage) {
-        if (!_lifecycleCallback.hasCallback) {
+        if (!_lifecycleCallback.hasSubscribers) {
             Logging.verbose("InAppMessagesManager.onMessageWasDisplayed: inAppMessageLifecycleHandler is null")
             return
         }
-        _lifecycleCallback.fireOnMain { it.onDidDisplayInAppMessage(message) }
+        _lifecycleCallback.fireOnMain { it.onDidDisplay(InAppMessageLifecycleEvent(message)) }
 
         if (message.isPreview) {
             return
@@ -525,7 +535,7 @@ internal class InAppMessagesManager(
         }
     }
 
-    override fun onMessageActionOccurredOnPreview(message: InAppMessage, action: InAppMessageAction) {
+    override fun onMessageActionOccurredOnPreview(message: InAppMessage, action: InAppMessageClickResult) {
         suspendifyOnThread {
             action.isFirstClick = message.takeActionAsUnique()
 
@@ -536,7 +546,7 @@ internal class InAppMessagesManager(
         }
     }
 
-    override fun onMessageActionOccurredOnMessage(message: InAppMessage, action: InAppMessageAction) {
+    override fun onMessageActionOccurredOnMessage(message: InAppMessage, action: InAppMessageClickResult) {
         suspendifyOnThread {
             action.isFirstClick = message.takeActionAsUnique()
             firePublicClickHandler(message, action)
@@ -559,11 +569,11 @@ internal class InAppMessagesManager(
     }
 
     override fun onMessageWillDismiss(message: InAppMessage) {
-        if (!_lifecycleCallback.hasCallback) {
+        if (!_lifecycleCallback.hasSubscribers) {
             Logging.verbose("InAppMessagesManager.onMessageWillDismiss: inAppMessageLifecycleHandler is null")
             return
         }
-        _lifecycleCallback.fireOnMain { it.onWillDismissInAppMessage(message) }
+        _lifecycleCallback.fireOnMain { it.onWillDismiss(InAppMessageLifecycleEvent(message)) }
     }
 
     override fun onMessageWasDismissed(message: InAppMessage) {
@@ -645,7 +655,7 @@ internal class InAppMessagesManager(
         }
     }
 
-    private fun fireTagCallForClick(action: InAppMessageAction) {
+    private fun fireTagCallForClick(action: InAppMessageClickResult) {
         if (action.tags != null) {
             val tags = action.tags
             if (tags?.tagsToAdd != null) {
@@ -686,18 +696,18 @@ internal class InAppMessagesManager(
         }
     }
 
-    private fun fireClickAction(action: InAppMessageAction) {
-        if (action.clickUrl != null && action.clickUrl.isNotEmpty()) {
+    private fun fireClickAction(action: InAppMessageClickResult) {
+        if (action.url != null && action.url.isNotEmpty()) {
             if (action.urlTarget == InAppMessageActionUrlType.BROWSER) {
-                AndroidUtils.openURLInBrowser(_applicationService.appContext, action.clickUrl)
+                AndroidUtils.openURLInBrowser(_applicationService.appContext, action.url)
             } else if (action.urlTarget == InAppMessageActionUrlType.IN_APP_WEBVIEW) {
-                OneSignalChromeTab.open(action.clickUrl, true, _applicationService.appContext)
+                OneSignalChromeTab.open(action.url, true, _applicationService.appContext)
             }
         }
     }
 
     /* End IAM Lifecycle methods */
-    private fun logInAppMessagePreviewActions(action: InAppMessageAction) {
+    private fun logInAppMessagePreviewActions(action: InAppMessageClickResult) {
         if (action.tags != null) {
             Logging.debug("InAppMessagesManager.logInAppMessagePreviewActions: Tags detected inside of the action click payload, ignoring because action came from IAM preview:: " + action.tags.toString())
         }
@@ -709,8 +719,8 @@ internal class InAppMessagesManager(
         // TODO: Add more action payload preview logs here in future
     }
 
-    private suspend fun firePublicClickHandler(message: InAppMessage, action: InAppMessageAction) {
-        if (!_messageClickCallback.hasCallback) {
+    private suspend fun firePublicClickHandler(message: InAppMessage, action: InAppMessageClickResult) {
+        if (!_messageClickCallback.hasSubscribers) {
             return
         }
 
@@ -718,8 +728,8 @@ internal class InAppMessagesManager(
         // Check that only on the handler
         // Any outcome sent on this callback should count as DIRECT from this IAM
         _influenceManager.onDirectInfluenceFromIAM(message.messageId)
-        val result = InAppMessageClickResult(message, action)
-        _messageClickCallback.suspendingFireOnMain { it.inAppMessageClicked(result) }
+        val result = InAppMessageClickEvent(message, action)
+        _messageClickCallback.suspendingFireOnMain { it.onClick(result) }
     }
 
     private suspend fun fireRESTCallForPageChange(message: InAppMessage, page: InAppMessagePage) {
@@ -750,7 +760,7 @@ internal class InAppMessagesManager(
         }
     }
 
-    private suspend fun fireRESTCallForClick(message: InAppMessage, action: InAppMessageAction) {
+    private suspend fun fireRESTCallForClick(message: InAppMessage, action: InAppMessageClickResult) {
         val variantId = InAppHelper.variantIdForMessage(message, _languageContext) ?: return
         val clickId = action.clickId
 
