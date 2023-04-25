@@ -122,6 +122,8 @@ internal class GmsLocationController(
 
     override fun subscribe(handler: ILocationUpdatedHandler) = _event.subscribe(handler)
     override fun unsubscribe(handler: ILocationUpdatedHandler) = _event.unsubscribe(handler)
+    override val hasSubscribers: Boolean
+        get() = _event.hasSubscribers
 
     private fun setLocationAndFire(location: Location) {
         Logging.debug("GMSLocationController lastLocation: $_lastLocation")
