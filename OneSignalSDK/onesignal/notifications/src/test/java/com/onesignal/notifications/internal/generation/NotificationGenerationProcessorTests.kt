@@ -7,6 +7,7 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.notifications.INotificationReceivedEvent
+import com.onesignal.notifications.INotificationWillDisplayEvent
 import com.onesignal.notifications.extensions.RobolectricTest
 import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.display.INotificationDisplayer
@@ -53,6 +54,8 @@ class NotificationGenerationProcessorTests : FunSpec({
         val mockNotificationLifecycleService = mockk<INotificationLifecycleService>()
         coEvery { mockNotificationLifecycleService.canReceiveNotification(any()) } returns true
         coEvery { mockNotificationLifecycleService.notificationReceived(any()) } just runs
+        coEvery { mockNotificationLifecycleService.externalRemoteNotificationReceived(any()) } just runs
+        coEvery { mockNotificationLifecycleService.externalNotificationWillShowInForeground(any()) } just runs
 
         val notificationGenerationProcessor = NotificationGenerationProcessor(
             mockApplicationService,
@@ -108,6 +111,8 @@ class NotificationGenerationProcessorTests : FunSpec({
         val mockNotificationLifecycleService = mockk<INotificationLifecycleService>()
         coEvery { mockNotificationLifecycleService.canReceiveNotification(any()) } returns true
         coEvery { mockNotificationLifecycleService.notificationReceived(any()) } just runs
+        coEvery { mockNotificationLifecycleService.externalRemoteNotificationReceived(any()) } just runs
+        coEvery { mockNotificationLifecycleService.externalNotificationWillShowInForeground(any()) } just runs
 
         val notificationGenerationProcessor = NotificationGenerationProcessor(
             mockApplicationService,
@@ -160,9 +165,9 @@ class NotificationGenerationProcessorTests : FunSpec({
         val mockNotificationLifecycleService = mockk<INotificationLifecycleService>()
         coEvery { mockNotificationLifecycleService.canReceiveNotification(any()) } returns true
         coEvery { mockNotificationLifecycleService.notificationReceived(any()) } just runs
-        coEvery { mockNotificationLifecycleService.externalRemoteNotificationReceived(any(), any()) } answers {
-            val receivedEvent = secondArg<INotificationReceivedEvent>()
-            receivedEvent.complete(null)
+        coEvery { mockNotificationLifecycleService.externalRemoteNotificationReceived(any()) } answers {
+            val receivedEvent = firstArg<INotificationReceivedEvent>()
+            receivedEvent.preventDefault()
         }
 
         val notificationGenerationProcessor = NotificationGenerationProcessor(
@@ -205,7 +210,7 @@ class NotificationGenerationProcessorTests : FunSpec({
         val mockNotificationLifecycleService = mockk<INotificationLifecycleService>()
         coEvery { mockNotificationLifecycleService.canReceiveNotification(any()) } returns true
         coEvery { mockNotificationLifecycleService.notificationReceived(any()) } just runs
-        coEvery { mockNotificationLifecycleService.externalRemoteNotificationReceived(any(), any()) } coAnswers {
+        coEvery { mockNotificationLifecycleService.externalRemoteNotificationReceived(any()) } coAnswers {
             delay(40000)
         }
 
@@ -260,9 +265,10 @@ class NotificationGenerationProcessorTests : FunSpec({
         val mockNotificationLifecycleService = mockk<INotificationLifecycleService>()
         coEvery { mockNotificationLifecycleService.canReceiveNotification(any()) } returns true
         coEvery { mockNotificationLifecycleService.notificationReceived(any()) } just runs
+        coEvery { mockNotificationLifecycleService.externalRemoteNotificationReceived(any()) } just runs
         coEvery { mockNotificationLifecycleService.externalNotificationWillShowInForeground(any()) } answers {
-            val receivedEvent = firstArg<INotificationReceivedEvent>()
-            receivedEvent.complete(null)
+            val receivedEvent = firstArg<INotificationWillDisplayEvent>()
+            receivedEvent.preventDefault()
         }
 
         val notificationGenerationProcessor = NotificationGenerationProcessor(

@@ -6,6 +6,7 @@ import android.util.Log;
 import com.huawei.hms.push.HmsMessageService;
 import com.huawei.hms.push.RemoteMessage;
 import com.onesignal.notifications.bridges.OneSignalHmsEventBridge;
+import com.onesignal.sdktest.constant.Tag;
 
 public class HmsMessageServiceAppLevel extends HmsMessageService {
 
@@ -19,7 +20,7 @@ public class HmsMessageServiceAppLevel extends HmsMessageService {
      */
     @Override
     public void onNewToken(String token, Bundle bundle) {
-        Log.d("MainApplication", "HmsMessageServiceAppLevel onNewToken refresh token:" + token + " bundle: " + bundle);
+        Log.d(Tag.LOG_TAG, "HmsMessageServiceAppLevel onNewToken refresh token:" + token + " bundle: " + bundle);
 
         // Forward event on to OneSignal SDK
         OneSignalHmsEventBridge.INSTANCE.onNewToken(this, token, bundle);
@@ -28,7 +29,7 @@ public class HmsMessageServiceAppLevel extends HmsMessageService {
     @Deprecated
     @Override
     public void onNewToken(String token) {
-        Log.d("MainApplication", "HmsMessageServiceAppLevel onNewToken refresh token:" + token);
+        Log.d(Tag.LOG_TAG, "HmsMessageServiceAppLevel onNewToken refresh token:" + token);
 
         // Forward event on to OneSignal SDK
         OneSignalHmsEventBridge.INSTANCE.onNewToken(this, token);
@@ -44,16 +45,16 @@ public class HmsMessageServiceAppLevel extends HmsMessageService {
      */
     @Override
     public void onMessageReceived(RemoteMessage message) {
-        Log.d("MainApplication", "HMS onMessageReceived: " + message);
-        Log.d("MainApplication", "HMS onMessageReceived.ttl:" + message.getTtl());
-        Log.d("MainApplication", "HMS onMessageReceived.data:" + message.getData());
-        Log.d("MainApplication", "HMS onMessageReceived.title: " + message.getNotification().getTitle());
-        Log.d("MainApplication", "HMS onMessageReceived.body: " + message.getNotification().getBody());
-        Log.d("MainApplication", "HMS onMessageReceived.icon: " + message.getNotification().getIcon());
-        Log.d("MainApplication", "HMS onMessageReceived.color: " + message.getNotification().getColor());
-        Log.d("MainApplication", "HMS onMessageReceived.channelId: " + message.getNotification().getChannelId());
-        Log.d("MainApplication", "HMS onMessageReceived.imageURL: " + message.getNotification().getImageUrl());
-        Log.d("MainApplication", "HMS onMessageReceived.tag: " + message.getNotification().getTag());
+        Log.d(Tag.LOG_TAG, "HMS onMessageReceived: " + message);
+        Log.d(Tag.LOG_TAG, "HMS onMessageReceived.ttl:" + message.getTtl());
+        Log.d(Tag.LOG_TAG, "HMS onMessageReceived.data:" + message.getData());
+        Log.d(Tag.LOG_TAG, "HMS onMessageReceived.title: " + message.getNotification().getTitle());
+        Log.d(Tag.LOG_TAG, "HMS onMessageReceived.body: " + message.getNotification().getBody());
+        Log.d(Tag.LOG_TAG, "HMS onMessageReceived.icon: " + message.getNotification().getIcon());
+        Log.d(Tag.LOG_TAG, "HMS onMessageReceived.color: " + message.getNotification().getColor());
+        Log.d(Tag.LOG_TAG, "HMS onMessageReceived.channelId: " + message.getNotification().getChannelId());
+        Log.d(Tag.LOG_TAG, "HMS onMessageReceived.imageURL: " + message.getNotification().getImageUrl());
+        Log.d(Tag.LOG_TAG, "HMS onMessageReceived.tag: " + message.getNotification().getTag());
 
         // Forward event on to OneSignal SDK
         OneSignalHmsEventBridge.INSTANCE.onMessageReceived(this, message);

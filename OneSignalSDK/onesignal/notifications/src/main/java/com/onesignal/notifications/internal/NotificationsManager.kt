@@ -6,10 +6,10 @@ import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.notifications.INotificationClickHandler
-import com.onesignal.notifications.INotificationWillShowInForegroundHandler
+import com.onesignal.notifications.INotificationClickListener
+import com.onesignal.notifications.INotificationLifecycleListener
 import com.onesignal.notifications.INotificationsManager
-import com.onesignal.notifications.IPermissionChangedHandler
+import com.onesignal.notifications.IPermissionObserver
 import com.onesignal.notifications.internal.common.GenerateNotificationOpenIntentFromPushPayload
 import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.data.INotificationRepository
@@ -48,7 +48,7 @@ internal class NotificationsManager(
     override val canRequestPermission: Boolean
         get() = _notificationPermissionController.canRequestPermission
 
-    private val _permissionChangedNotifier = EventProducer<IPermissionChangedHandler>()
+    private val _permissionChangedNotifier = EventProducer<IPermissionObserver>()
 
     init {
         _applicationService.addApplicationLifecycleHandler(this)
@@ -98,17 +98,10 @@ internal class NotificationsManager(
 
         if (oldPermissionStatus != isEnabled) {
             // switch over to the main thread for the firing of the event
-            _permissionChangedNotifier.fireOnMain { it.onPermissionChanged(isEnabled) }
+            _permissionChangedNotifier.fireOnMain { it.onNotificationPermissionChange(isEnabled) }
         }
     }
 
-    /**
-     * Cancels a single OneSignal notification based on its Android notification integer ID. Use
-     * instead of Android's [android.app.NotificationManager.cancel}, otherwise the notification will be restored
-     * when your app is restarted.
-     *
-     * @param id
-     */
     override fun removeNotification(id: Int) {
         Logging.debug("NotificationsManager.removeNotification(id: $id)")
 
@@ -127,11 +120,6 @@ internal class NotificationsManager(
         }
     }
 
-    /**
-     * Removes all OneSignal notifications from the Notification Shade. If you just use
-     * [android.app.NotificationManager.cancelAll], OneSignal notifications will be restored when
-     * your app is restarted.
-     */
     override fun clearAllNotifications() {
         Logging.debug("NotificationsManager.clearAllNotifications()")
 
@@ -140,59 +128,34 @@ internal class NotificationsManager(
         }
     }
 
-    /**
-     * The [com.onesignal.OSPermissionObserver.onOSPermissionChanged]
-     * method will be fired on the passed-in object when a notification permission setting changes.
-     * This happens when the user enables or disables notifications for your app from the system
-     * settings outside of your app. Disable detection is supported on Android 4.4+
-     *
-     *
-     * *Keep a reference<* - Make sure to hold a reference to your observable at the class level,
-     * otherwise it may not fire
-     *
-     * *Leak Safe* - OneSignal holds a weak reference to your observer so it's guaranteed not to
-     * leak your `Activity`
-     *
-     * @param handler the instance of [com.onesignal.OSPermissionObserver] that you want to process
-     *                 the permission changes within
-     */
-    override fun addPermissionChangedHandler(handler: IPermissionChangedHandler) {
-        Logging.debug("NotificationsManager.addPermissionChangedHandler(handler: $handler)")
-        _permissionChangedNotifier.subscribe(handler)
+    override fun addPermissionObserver(observer: IPermissionObserver) {
+        Logging.debug("NotificationsManager.addPermissionObserver(observer: $observer)")
+        _permissionChangedNotifier.subscribe(observer)
     }
 
-    /**
-     * Remove a push permission handler that has been previously added.
-     *
-     * @param handler The previously added handler that should be removed.
-     */
-    override fun removePermissionChangedHandler(handler: IPermissionChangedHandler) {
-        Logging.debug("NotificationsManager.removePermissionChangedHandler(handler: $handler)")
-        _permissionChangedNotifier.unsubscribe(handler)
+    override fun removePermissionObserver(observer: IPermissionObserver) {
+        Logging.debug("NotificationsManager.removePermissionObserver(observer: $observer)")
+        _permissionChangedNotifier.unsubscribe(observer)
     }
 
-    /**
-     * Sets a handler to run before displaying a notification while the app is in focus. Use this handler to read
-     * notification data and change it or decide if the notification should show or not.
-     *
-     * *Note:* this runs after the Notification Service Extension which can be used to modify the notification
-     * before showing it.
-     *
-     * @param handler: The handler that is to be called when the even occurs.
-     */
-    override fun setNotificationWillShowInForegroundHandler(handler: INotificationWillShowInForegroundHandler?) {
-        Logging.debug("NotificationsManager.setNotificationWillShowInForegroundHandler(handler: $handler)")
-        _notificationLifecycleService.setExternalWillShowInForegroundHandler(handler)
+    override fun addForegroundLifecycleListener(listener: INotificationLifecycleListener) {
+        Logging.debug("NotificationsManager.addForegroundLifecycleListener(listener: $listener)")
+        _notificationLifecycleService.addExternalForegroundLifecycleListener(listener)
     }
 
-    /**
-     * Sets a handler that will run whenever a notification is tapped on by the user.
-     *
-     * @param handler The handler that is to be called when the event occurs.
-     */
-    override fun setNotificationClickHandler(handler: INotificationClickHandler?) {
-        Logging.debug("NotificationsManager.setNotificationClickHandler(handler: $handler)")
-        _notificationLifecycleService.setExternalNotificationOpenedHandler(handler)
+    override fun removeForegroundLifecycleListener(listener: INotificationLifecycleListener) {
+        Logging.debug("NotificationsManager.removeForegroundLifecycleListener(listener: $listener)")
+        _notificationLifecycleService.removeExternalForegroundLifecycleListener(listener)
+    }
+
+    override fun addClickListener(listener: INotificationClickListener) {
+        Logging.debug("NotificationsManager.addClickListener(handler: $listener)")
+        _notificationLifecycleService.addExternalClickListener(listener)
+    }
+
+    override fun removeClickListener(listener: INotificationClickListener) {
+        Logging.debug("NotificationsManager.removeClickListener(listener: $listener)")
+        _notificationLifecycleService.removeExternalClickListener(listener)
     }
 
     override suspend fun openDestinationActivity(activity: Activity, pushPayloads: JSONArray) {
