@@ -1,17 +1,28 @@
 package com.onesignal.inAppMessages
 
 /**
- * The data provided to [IInAppMessageClickHandler.inAppMessageClicked] when an IAM
- * has been clicked by the user.
+ * An IAM action represents an action performed by the user in reaction to an IAM
+ * being displayed.
  */
 interface IInAppMessageClickResult {
     /**
-     * The IAM that was clicked by the user.
+     * An optional action ID that defines the action taken.
+     * See [Click Actions | OneSignal Docs](https://documentation.onesignal.com/docs/iam-click-actions#how-to-collect-custom-click-actions).
      */
-    val message: IInAppMessage
+    val actionId: String?
 
     /**
-     * The action the user took to open the message.
+     * Determines where the URL is opened, ie. Default browser.
      */
-    val action: IInAppMessageAction
+    val urlTarget: InAppMessageActionUrlType?
+
+    /**
+     * An optional URL that opens when the action takes place
+     */
+    val url: String?
+
+    /**
+     * Determines if tapping on the element is closing the IAM.
+     */
+    val closingMessage: Boolean
 }
