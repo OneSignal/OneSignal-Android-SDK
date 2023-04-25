@@ -63,18 +63,31 @@ interface IInAppMessagesManager {
     fun clearTriggers()
 
     /**
-     * Set the IAM lifecycle handler.
+     * Add a lifecycle listener that will run whenever an In App Message lifecycle
+     * event occurs.
      *
-     * @param handler: The handler that will be called at various times throughout
-     *                 the IAM lifecycle.
+     * @param listener: The listener that is to be called when the event occurs.
      */
-    fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler?)
+    fun addLifecycleListener(listener: IInAppMessageLifecycleListener)
 
     /**
-     * Set the IAM click handler.
+     * Remove a lifecycle listener that has been previously added.
      *
-     * @param handler: The handler that will be called when the IAM has been
-     *                 clicked.
+     * @param listener The previously added listener that should be removed.
      */
-    fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler?)
+    fun removeLifecycleListener(listener: IInAppMessageLifecycleListener)
+
+    /**
+     * Add a click listener that will run whenever an In App Message is clicked on by the user.
+     *
+     * @param listener The listener that is to be called when the event occurs.
+     */
+    fun addClickListener(listener: IInAppMessageClickListener)
+
+    /**
+     * Remove a click listener that has been previously added.
+     *
+     * @param listener The previously added listener that should be removed.
+     */
+    fun removeClickListener(listener: IInAppMessageClickListener)
 }
