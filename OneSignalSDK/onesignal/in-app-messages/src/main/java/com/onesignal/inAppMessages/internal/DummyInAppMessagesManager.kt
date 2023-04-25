@@ -1,7 +1,7 @@
 package com.onesignal.inAppMessages.internal
 
-import com.onesignal.inAppMessages.IInAppMessageClickHandler
-import com.onesignal.inAppMessages.IInAppMessageLifecycleHandler
+import com.onesignal.inAppMessages.IInAppMessageClickListener
+import com.onesignal.inAppMessages.IInAppMessageLifecycleListener
 import com.onesignal.inAppMessages.IInAppMessagesManager
 
 internal class DummyInAppMessagesManager : IInAppMessagesManager {
@@ -21,9 +21,15 @@ internal class DummyInAppMessagesManager : IInAppMessagesManager {
     override fun clearTriggers() {
     }
 
-    override fun setInAppMessageLifecycleHandler(handler: IInAppMessageLifecycleHandler?) {
+    override fun addLifecycleListener(listener: IInAppMessageLifecycleListener) {
     }
 
-    override fun setInAppMessageClickHandler(handler: IInAppMessageClickHandler?) {
+    override fun removeLifecycleListener(listener: IInAppMessageLifecycleListener) {
+    }
+
+    override fun addClickListener(listener: IInAppMessageClickListener) {
+    }
+
+    override fun removeClickListener(listener: IInAppMessageClickListener) {
     }
 }
