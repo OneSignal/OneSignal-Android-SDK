@@ -1,15 +1,15 @@
 package com.onesignal.notifications
 
 /**
- * Implement this interface and provide an instance to [INotificationsManager.addPermissionChangedHandler]
+ * Implement this interface and provide an instance to [INotificationsManager.addPermissionObserver]
  * in order to receive control when the push permission state has changed on the current device.
  */
-interface IPermissionChangedHandler {
+interface IPermissionObserver {
 
     /**
      * Called when the permission state has changed.
      *
      * @param permission Whether this app/device now has push notification permission.
      */
-    fun onPermissionChanged(permission: Boolean)
+    fun onNotificationPermissionChange(permission: Boolean)
 }

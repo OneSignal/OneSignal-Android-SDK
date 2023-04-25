@@ -96,6 +96,7 @@ internal class SessionService(
     }
 
     override fun subscribe(handler: ISessionLifecycleHandler) = _sessionLifeCycleNotifier.subscribe(handler)
-
     override fun unsubscribe(handler: ISessionLifecycleHandler) = _sessionLifeCycleNotifier.unsubscribe(handler)
+    override val hasSubscribers: Boolean
+        get() = _sessionLifeCycleNotifier.hasSubscribers
 }

@@ -8,10 +8,11 @@ import com.onesignal.common.events.EventProducer
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.notifications.INotificationClickHandler
+import com.onesignal.notifications.INotificationClickListener
+import com.onesignal.notifications.INotificationLifecycleListener
 import com.onesignal.notifications.INotificationReceivedEvent
-import com.onesignal.notifications.INotificationWillShowInForegroundHandler
-import com.onesignal.notifications.IRemoteNotificationReceivedHandler
+import com.onesignal.notifications.INotificationServiceExtension
+import com.onesignal.notifications.INotificationWillDisplayEvent
 import com.onesignal.notifications.internal.common.NotificationConstants
 import com.onesignal.notifications.internal.common.NotificationGenerationJob
 import com.onesignal.notifications.internal.common.NotificationHelper
@@ -28,26 +29,29 @@ internal class NotificationLifecycleService(
 
     private val _intLifecycleHandler = EventProducer<INotificationLifecycleEventHandler>()
     private val _intLifecycleCallback = CallbackProducer<INotificationLifecycleCallback>()
-    private val _extRemoteReceivedCallback = CallbackProducer<IRemoteNotificationReceivedHandler>()
-    private val _extWillShowInForegroundCallback = CallbackProducer<INotificationWillShowInForegroundHandler>()
-    private val _extOpenedCallback = CallbackProducer<INotificationClickHandler>()
+    private val _extRemoteReceivedCallback = CallbackProducer<INotificationServiceExtension>()
+    private val _extWillShowInForegroundCallback = EventProducer<INotificationLifecycleListener>()
+    private val _extOpenedCallback = EventProducer<INotificationClickListener>()
     private val _unprocessedOpenedNotifs: ArrayDeque<JSONArray> = ArrayDeque()
 
     override fun addInternalNotificationLifecycleEventHandler(handler: INotificationLifecycleEventHandler) = _intLifecycleHandler.subscribe(handler)
     override fun removeInternalNotificationLifecycleEventHandler(handler: INotificationLifecycleEventHandler) = _intLifecycleHandler.unsubscribe(handler)
     override fun setInternalNotificationLifecycleCallback(callback: INotificationLifecycleCallback?) = _intLifecycleCallback.set(callback)
-    override fun setExternalWillShowInForegroundHandler(callback: INotificationWillShowInForegroundHandler?) = _extWillShowInForegroundCallback.set(callback)
-    override fun setExternalNotificationOpenedHandler(callback: INotificationClickHandler?) {
-        _extOpenedCallback.set(callback)
+    override fun addExternalForegroundLifecycleListener(listener: INotificationLifecycleListener) = _extWillShowInForegroundCallback.subscribe(listener)
+    override fun removeExternalForegroundLifecycleListener(listener: INotificationLifecycleListener) = _extWillShowInForegroundCallback.unsubscribe(listener)
+    override fun addExternalClickListener(callback: INotificationClickListener) {
+        _extOpenedCallback.subscribe(callback)
 
         // Ensure we process any queued up notifications that came in prior to this being set.
-        if (_extOpenedCallback.hasCallback && _unprocessedOpenedNotifs.any()) {
+        if (_extOpenedCallback.hasSubscribers && _unprocessedOpenedNotifs.any()) {
             for (data in _unprocessedOpenedNotifs) {
                 val openedResult = NotificationHelper.generateNotificationOpenedResult(data, _time)
-                _extOpenedCallback.fireOnMain { it.notificationClicked(openedResult) }
+                _extOpenedCallback.fireOnMain { it.onClick(openedResult) }
             }
         }
     }
+
+    override fun removeExternalClickListener(listener: INotificationClickListener) = _extOpenedCallback.unsubscribe(listener)
 
     init {
         setupNotificationServiceExtension(applicationService.appContext)
@@ -74,20 +78,20 @@ internal class NotificationLifecycleService(
 
         // queue up the opened notification in case the handler hasn't been set yet. Once set,
         // we will immediately fire the handler.
-        if (_extOpenedCallback.hasCallback) {
+        if (_extOpenedCallback.hasSubscribers) {
             val openResult = NotificationHelper.generateNotificationOpenedResult(data, _time)
-            _extOpenedCallback.fireOnMain { it.notificationClicked(openResult) }
+            _extOpenedCallback.fireOnMain { it.onClick(openResult) }
         } else {
             _unprocessedOpenedNotifs.add(data)
         }
     }
 
-    override fun externalRemoteNotificationReceived(context: Context, notificationReceivedEvent: INotificationReceivedEvent) {
-        _extRemoteReceivedCallback.fire { it.remoteNotificationReceived(context, notificationReceivedEvent) }
+    override fun externalRemoteNotificationReceived(notificationReceivedEvent: INotificationReceivedEvent) {
+        _extRemoteReceivedCallback.fire { it.onNotificationReceived(notificationReceivedEvent) }
     }
 
-    override fun externalNotificationWillShowInForeground(notificationReceivedEvent: INotificationReceivedEvent) {
-        _extWillShowInForegroundCallback.fire { it.notificationWillShowInForeground(notificationReceivedEvent) }
+    override fun externalNotificationWillShowInForeground(willDisplayEvent: INotificationWillDisplayEvent) {
+        _extWillShowInForegroundCallback.fire { it.onWillDisplay(willDisplayEvent) }
     }
 
     /**
@@ -124,7 +128,7 @@ internal class NotificationLifecycleService(
             val clazz = Class.forName(className)
             val clazzInstance = clazz.newInstance()
             // Make sure a OSRemoteNotificationReceivedHandler exists and remoteNotificationReceivedHandler has not been set yet
-            if (clazzInstance is IRemoteNotificationReceivedHandler && !_extRemoteReceivedCallback.hasCallback) {
+            if (clazzInstance is INotificationServiceExtension && !_extRemoteReceivedCallback.hasCallback) {
                 _extRemoteReceivedCallback.set(clazzInstance)
             }
         } catch (e: IllegalAccessException) {
