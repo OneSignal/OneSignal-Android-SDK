@@ -1,4 +1,9 @@
-package com.onesignal.user.subscriptions
+package com.onesignal.user.internal.subscriptions
+
+import com.onesignal.user.subscriptions.IEmailSubscription
+import com.onesignal.user.subscriptions.IPushSubscription
+import com.onesignal.user.subscriptions.ISmsSubscription
+import com.onesignal.user.subscriptions.ISubscription
 
 /**
  * A readonly list of subscriptions.  Wraps a standard [List] to help navigate the list of
