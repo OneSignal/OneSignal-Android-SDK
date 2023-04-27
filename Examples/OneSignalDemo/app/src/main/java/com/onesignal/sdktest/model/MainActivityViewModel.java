@@ -16,6 +16,7 @@ import androidx.appcompat.widget.Toolbar;
 
 import android.content.Intent;
 import android.os.Build;
+import android.util.Log;
 import android.util.Pair;
 import android.view.View;
 import android.view.ViewTreeObserver;
@@ -54,14 +55,15 @@ import com.onesignal.sdktest.util.SharedPreferenceUtil;
 import com.onesignal.sdktest.util.ProfileUtil;
 import com.onesignal.sdktest.util.Toaster;
 import com.onesignal.user.subscriptions.ISubscription;
-import com.onesignal.user.subscriptions.ISubscriptionChangedHandler;
+import com.onesignal.user.subscriptions.IPushSubscriptionObserver;
+import com.onesignal.user.subscriptions.PushSubscriptionChangedState;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 @RequiresApi(api = Build.VERSION_CODES.N)
-public class MainActivityViewModel implements ActivityViewModel, ISubscriptionChangedHandler {
+public class MainActivityViewModel implements ActivityViewModel, IPushSubscriptionObserver {
 
     private Animate animate;
     private Dialog dialog;
@@ -290,7 +292,7 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
         triggerSet = new HashMap<>();
         triggerArrayList = new ArrayList<>();
 
-        OneSignal.getUser().getPushSubscription().addChangeHandler(this);
+        OneSignal.getUser().getPushSubscription().addObserver(this);
         return this;
     }
 
@@ -494,6 +496,11 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
         });
     }
 
+    @Override
+    public void onPushSubscriptionChange(@NonNull PushSubscriptionChangedState state) {
+        refreshSubscriptionState();
+    }
+
     private class DummySubscription implements ISubscription {
 
         private String _id;
@@ -505,16 +512,6 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
         @Override
         public String getId() {
             return _id;
-        }
-
-        @Override
-        public void addChangeHandler(@NonNull ISubscriptionChangedHandler handler) {
-
-        }
-
-        @Override
-        public void removeChangeHandler(@NonNull ISubscriptionChangedHandler handler) {
-
         }
     }
 
@@ -823,19 +820,6 @@ public class MainActivityViewModel implements ActivityViewModel, ISubscriptionCh
         promptPushButton.setOnClickListener(v -> {
             OneSignal.getUser().getPushSubscription().optIn();
         });
-    }
-
-    @Override
-    public void onSubscriptionChanged(@NonNull ISubscription subscription) {
-        if(subscription instanceof IPushSubscription) {
-            refreshSubscriptionState();
-        }
-        else if(subscription instanceof  IEmailSubscription) {
-            refreshEmailRecyclerView();
-        }
-        else if(subscription instanceof ISmsSubscription) {
-            refreshSMSRecyclerView();
-        }
     }
 
     private void refreshSubscriptionState() {

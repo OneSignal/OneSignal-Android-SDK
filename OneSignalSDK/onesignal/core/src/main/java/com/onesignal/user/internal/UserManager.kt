@@ -12,7 +12,7 @@ import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.subscriptions.IPushSubscription
-import com.onesignal.user.subscriptions.SubscriptionList
+import com.onesignal.user.internal.subscriptions.SubscriptionList
 
 internal open class UserManager(
     private val _subscriptionManager: ISubscriptionManager,

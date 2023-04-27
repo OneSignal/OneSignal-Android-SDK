@@ -18,7 +18,8 @@ import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 import com.onesignal.user.subscriptions.ISubscription
-import com.onesignal.user.subscriptions.SubscriptionList
+import com.onesignal.user.internal.subscriptions.SubscriptionList
+import com.onesignal.user.subscriptions.PushSubscriptionChangedState
 
 /**
  * The subscription manager is responsible for managing the external representation of the
@@ -130,10 +131,12 @@ internal class SubscriptionManager(
             // this shouldn't happen, but create a new subscription if a model was updated and we
             // don't yet have a representation for it in the subscription list.
             createSubscriptionAndAddToSubscriptionList(args.model as SubscriptionModel)
-        } else {
-            (subscription as Subscription).changeHandlersNotifier.fireOnMain {
-                it.onSubscriptionChanged(
-                    subscription,
+        } else if (subscription is PushSubscription) {
+            subscription.changeHandlersNotifier.fireOnMain {
+                it.onPushSubscriptionChange(
+                    PushSubscriptionChangedState(
+                        subscription.savedState,
+                        subscription.refreshState())
                 )
             }
 
@@ -161,7 +164,7 @@ internal class SubscriptionManager(
 
         // There can only be 1 push subscription, always transfer any subscribers from the old one to the new
         if (subscriptionModel.type == SubscriptionType.PUSH) {
-            val existingPushSubscription = this.subscriptions.push as Subscription
+            val existingPushSubscription = this.subscriptions.push as PushSubscription
             ((subscription as PushSubscription).changeHandlersNotifier).subscribeAll(existingPushSubscription.changeHandlersNotifier)
             subscriptions.remove(existingPushSubscription)
         }
