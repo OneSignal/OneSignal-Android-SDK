@@ -78,7 +78,7 @@ public class MainApplication extends MultiDexApplication {
 
         OneSignal.getInAppMessages().addClickListener(new IInAppMessageClickListener() {
             @Override
-            public void onClick(@Nullable IInAppMessageClickEvent result) {
+            public void onClick(@Nullable IInAppMessageClickEvent event) {
                 Log.v(Tag.LOG_TAG, "INotificationClickListener.inAppMessageClicked");
             }
         });
