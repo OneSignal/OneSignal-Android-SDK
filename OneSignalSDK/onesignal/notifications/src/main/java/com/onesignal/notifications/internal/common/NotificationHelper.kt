@@ -234,16 +234,15 @@ object NotificationHelper {
             }
         }
 
-        val actionType =
-            if (actionSelected != null) INotificationClickResult.ActionType.ActionButton else INotificationClickResult.ActionType.Opened
-        val notificationAction = NotificationClickResult(actionType, actionSelected)
-
         val notification = com.onesignal.notifications.internal.Notification(
             groupedNotifications,
             payload!!,
             androidNotificationId,
             time,
         )
-        return NotificationClickEvent(notification, notificationAction)
+
+        val notificationResult = NotificationClickResult(actionSelected, notification.launchURL)
+
+        return NotificationClickEvent(notification, notificationResult)
     }
 }
