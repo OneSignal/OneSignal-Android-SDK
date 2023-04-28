@@ -131,15 +131,16 @@ internal class SubscriptionManager(
             // this shouldn't happen, but create a new subscription if a model was updated and we
             // don't yet have a representation for it in the subscription list.
             createSubscriptionAndAddToSubscriptionList(args.model as SubscriptionModel)
-        } else if (subscription is PushSubscription) {
-            subscription.changeHandlersNotifier.fireOnMain {
-                it.onPushSubscriptionChange(
-                    PushSubscriptionChangedState(
-                        subscription.savedState,
-                        subscription.refreshState())
-                )
+        } else {
+            if (subscription is PushSubscription) {
+                subscription.changeHandlersNotifier.fireOnMain {
+                    it.onPushSubscriptionChange(
+                            PushSubscriptionChangedState(
+                                    subscription.savedState,
+                                    subscription.refreshState())
+                    )
+                }
             }
-
             // the model has already been updated, so fire the update event
             _events.fire { it.onSubscriptionChanged(subscription, args) }
         }
