@@ -111,9 +111,8 @@ internal class InAppMessageClickResult(json: JSONObject, promptFactory: IInAppMe
             if (tags != null) {
                 mainObj.put(TAGS, tags!!.toJSONObject())
             }
-            // Omitted for now until necessary
-//            if (urlTarget != null)
-//                mainObj.put("url_target", urlTarget.toJSONObject());
+            if (urlTarget != null)
+                mainObj.put("url_target", urlTarget.toString());
         } catch (e: JSONException) {
             e.printStackTrace()
         }

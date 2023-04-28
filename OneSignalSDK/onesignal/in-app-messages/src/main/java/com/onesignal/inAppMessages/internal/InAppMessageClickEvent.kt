@@ -10,14 +10,14 @@ internal class InAppMessageClickEvent(msg: InAppMessage, actn: InAppMessageClick
         get() = _message
 
     override val result: IInAppMessageClickResult
-        get() = _action
+        get() = _result
 
     private val _message: InAppMessage = msg
-    private val _action: InAppMessageClickResult = actn
+    private val _result: InAppMessageClickResult = actn
 
     fun toJSONObject(): JSONObject {
         return JSONObject()
             .put("message", _message.toJSONObject())
-            .put("action", _action.toJSONObject())
+            .put("action", _result.toJSONObject())
     }
 }
