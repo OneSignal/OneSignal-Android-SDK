@@ -3,7 +3,7 @@ package com.onesignal.user.internal
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
-import com.onesignal.user.subscriptions.SubscriptionList
+import com.onesignal.user.internal.subscriptions.SubscriptionList
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.runner.junit4.KotestTestRunner
