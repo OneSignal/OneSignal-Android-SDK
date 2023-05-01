@@ -11,15 +11,4 @@ interface ISubscription {
      * been successfully assigned.
      */
     val id: String
-
-    /**
-     * Add a change handler to this subscription, allowing the provider to be
-     * notified whenever the subscription has changed.
-     */
-    fun addChangeHandler(handler: ISubscriptionChangedHandler)
-
-    /**
-     * Remove a change handler from this subscription.
-     */
-    fun removeChangeHandler(handler: ISubscriptionChangedHandler)
 }

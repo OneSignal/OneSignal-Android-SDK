@@ -5,7 +5,6 @@ package com.onesignal.user.subscriptions
  * channel.
  */
 interface IPushSubscription : ISubscription {
-
     /**
      * The token which identifies the device/app that notifications are to be sent. May
      * be an empty string, indicating the push token has not yet been retrieved.
@@ -34,4 +33,15 @@ interface IPushSubscription : ISubscription {
      * notifications, although the app permission state will not be changed.
      */
     fun optOut()
+
+    /**
+     * Add an observer to this subscription, allowing the provider to be
+     * notified whenever the subscription has changed.
+     */
+    fun addObserver(observer: IPushSubscriptionObserver)
+
+    /**
+     * Remove an observer from this subscription.
+     */
+    fun removeObserver(observer: IPushSubscriptionObserver)
 }
