@@ -2,7 +2,7 @@ package com.onesignal.inAppMessages.internal.lifecycle.impl
 
 import com.onesignal.common.events.EventProducer
 import com.onesignal.inAppMessages.internal.InAppMessage
-import com.onesignal.inAppMessages.internal.InAppMessageAction
+import com.onesignal.inAppMessages.internal.InAppMessageClickResult
 import com.onesignal.inAppMessages.internal.InAppMessagePage
 import com.onesignal.inAppMessages.internal.lifecycle.IInAppLifecycleEventHandler
 import com.onesignal.inAppMessages.internal.lifecycle.IInAppLifecycleService
@@ -19,11 +19,11 @@ internal class IAMLifecycleService() :
         fire { it.onMessageWasDisplayed(message) }
     }
 
-    override fun messageActionOccurredOnPreview(message: InAppMessage, action: InAppMessageAction) {
+    override fun messageActionOccurredOnPreview(message: InAppMessage, action: InAppMessageClickResult) {
         fire { it.onMessageActionOccurredOnPreview(message, action) }
     }
 
-    override fun messageActionOccurredOnMessage(message: InAppMessage, action: InAppMessageAction) {
+    override fun messageActionOccurredOnMessage(message: InAppMessage, action: InAppMessageClickResult) {
         fire { it.onMessageActionOccurredOnMessage(message, action) }
     }
 

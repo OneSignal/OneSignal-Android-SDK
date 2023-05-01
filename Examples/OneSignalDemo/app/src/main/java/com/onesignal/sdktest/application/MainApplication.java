@@ -9,10 +9,14 @@ import androidx.multidex.MultiDexApplication;
 
 import com.onesignal.OneSignal;
 import com.onesignal.inAppMessages.IInAppMessage;
-import com.onesignal.inAppMessages.IInAppMessageClickHandler;
-import com.onesignal.inAppMessages.IInAppMessageClickResult;
-import com.onesignal.inAppMessages.IInAppMessageLifecycleHandler;
+import com.onesignal.inAppMessages.IInAppMessageClickListener;
+import com.onesignal.inAppMessages.IInAppMessageClickEvent;
+import com.onesignal.inAppMessages.IInAppMessageDidDismissEvent;
+import com.onesignal.inAppMessages.IInAppMessageDidDisplayEvent;
+import com.onesignal.inAppMessages.IInAppMessageLifecycleListener;
 import com.onesignal.debug.LogLevel;
+import com.onesignal.inAppMessages.IInAppMessageWillDismissEvent;
+import com.onesignal.inAppMessages.IInAppMessageWillDisplayEvent;
 import com.onesignal.notifications.IDisplayableNotification;
 import com.onesignal.notifications.INotificationLifecycleListener;
 import com.onesignal.notifications.INotificationWillDisplayEvent;
@@ -50,31 +54,31 @@ public class MainApplication extends MultiDexApplication {
         OneSignalNotificationSender.setAppId(appId);
         OneSignal.initWithContext(this, appId);
 
-        OneSignal.getInAppMessages().setInAppMessageLifecycleHandler(new IInAppMessageLifecycleHandler() {
+        OneSignal.getInAppMessages().addLifecycleListener(new IInAppMessageLifecycleListener() {
             @Override
-            public void onWillDisplayInAppMessage(@NonNull IInAppMessage message) {
+            public void onWillDisplay(@NonNull IInAppMessageWillDisplayEvent event) {
                 Log.v(Tag.LOG_TAG, "onWillDisplayInAppMessage");
             }
 
             @Override
-            public void onDidDisplayInAppMessage(@NonNull IInAppMessage message) {
+            public void onDidDisplay(@NonNull IInAppMessageDidDisplayEvent event) {
                 Log.v(Tag.LOG_TAG, "onDidDisplayInAppMessage");
             }
 
             @Override
-            public void onWillDismissInAppMessage(@NonNull IInAppMessage message) {
+            public void onWillDismiss(@NonNull IInAppMessageWillDismissEvent event) {
                 Log.v(Tag.LOG_TAG, "onWillDismissInAppMessage");
             }
 
             @Override
-            public void onDidDismissInAppMessage(@NonNull IInAppMessage message) {
+            public void onDidDismiss(@NonNull IInAppMessageDidDismissEvent event) {
                 Log.v(Tag.LOG_TAG, "onDidDismissInAppMessage");
             }
         });
 
-        OneSignal.getInAppMessages().setInAppMessageClickHandler(new IInAppMessageClickHandler() {
+        OneSignal.getInAppMessages().addClickListener(new IInAppMessageClickListener() {
             @Override
-            public void inAppMessageClicked(@Nullable IInAppMessageClickResult result) {
+            public void onClick(@Nullable IInAppMessageClickEvent event) {
                 Log.v(Tag.LOG_TAG, "INotificationClickListener.inAppMessageClicked");
             }
         });
