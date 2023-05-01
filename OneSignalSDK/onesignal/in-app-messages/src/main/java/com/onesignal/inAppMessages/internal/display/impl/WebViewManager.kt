@@ -16,7 +16,7 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.inAppMessages.internal.InAppMessage
-import com.onesignal.inAppMessages.internal.InAppMessageAction
+import com.onesignal.inAppMessages.internal.InAppMessageClickResult
 import com.onesignal.inAppMessages.internal.InAppMessageContent
 import com.onesignal.inAppMessages.internal.InAppMessagePage
 import com.onesignal.inAppMessages.internal.lifecycle.IInAppLifecycleService
@@ -147,10 +147,10 @@ internal class WebViewManager(
             val id = body.safeString("id")
             closing = body.getBoolean("close")
             if (message.isPreview) {
-                var action = InAppMessageAction(body, _promptFactory)
+                var action = InAppMessageClickResult(body, _promptFactory)
                 _lifecycle.messageActionOccurredOnPreview(message, action)
             } else if (id != null) {
-                var action = InAppMessageAction(body, _promptFactory)
+                var action = InAppMessageClickResult(body, _promptFactory)
                 _lifecycle.messageActionOccurredOnMessage(message, action)
             }
             if (closing) {
