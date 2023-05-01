@@ -30,28 +30,13 @@ package com.onesignal.notifications
  * The action a user has taken when opening a notification.
  */
 interface INotificationClickResult {
-    /**
-     * The type of action the user took on this notification.
-     */
-    val type: ActionType
-
     /** When [type] is [ActionType.ActionButton], this will be the custom id of action taken.
      *  See [Action Buttons | OneSignal Docs](https://documentation.onesignal.com/docs/action-buttons).
      **/
     val actionId: String?
 
     /**
-     * The type of actions the user can take on a notification.
+     * The launch url for the notification.
      */
-    enum class ActionType {
-        /**
-         * The notification was clicked on.
-         */
-        Opened,
-
-        /**
-         * The user clicked on the call-to-action button within the notification.
-         */
-        ActionButton,
-    }
+    val url: String?
 }
