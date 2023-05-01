@@ -24,7 +24,7 @@ enum class InAppMessageActionUrlType(
     REPLACE_CONTENT("replacement"),
     ;
 
-    fun toString(): String {
+    override fun toString(): String {
         return text
     }
 
