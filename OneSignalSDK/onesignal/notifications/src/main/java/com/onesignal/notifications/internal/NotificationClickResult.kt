@@ -31,12 +31,12 @@ import com.onesignal.notifications.INotificationClickResult
 import org.json.JSONObject
 
 internal class NotificationClickResult(
-    override val type: INotificationClickResult.ActionType,
     override val actionId: String?,
+    override val url: String?
 ) : INotificationClickResult {
     fun toJSONObject(): JSONObject {
         return JSONObject()
-            .put("type", type)
             .putSafe("actionId", actionId)
+            .putSafe("url", url)
     }
 }

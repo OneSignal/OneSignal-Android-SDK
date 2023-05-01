@@ -24,6 +24,10 @@ enum class InAppMessageActionUrlType(
     REPLACE_CONTENT("replacement"),
     ;
 
+    fun toString(): String {
+        return text
+    }
+
     companion object {
         fun fromString(text: String?): InAppMessageActionUrlType? {
             for (type in values()) {
