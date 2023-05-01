@@ -149,6 +149,34 @@ To resume receiving of push notifications (driving the native permission prompt 
 
     pushSubscription.optIn()
 
+To observe changes to the push subscription a class can implement the IPushSubscriptionObserver interface, and can then be added as an observer:
+
+**Java**
+
+    @Override
+    public void onPushSubscriptionChange(@NonNull PushSubscriptionChangedState state) {
+        ...
+    }
+
+    pushSubscription.addObserver(this);
+
+**Kotlin**
+
+    override fun onPushSubscriptionChange(state: PushSubscriptionChangedState) {
+        ...
+    }
+
+    pushSubscription.addObserver(this)
+
+If you would like to stop observing the subscription you can remove the observer:
+
+**Java**
+
+    pushSubscription.removeObserver(this);
+
+**Kotlin**
+
+    pushSubscription.removeObserver(this)
 
 **Email/SMS Subscriptions**
 Email and/or SMS subscriptions can be added or removed via:
@@ -186,12 +214,12 @@ The OneSignal SDK has been rewritten in Kotlin. This is typically transparent to
 In Java this is surfaced on a method via an additional parameter to the method of type `Continuation`.  The `Continuation` is a callback mechanism which allows a Java function to gain control when execution has resumed.  If this concept is newer to your application codebase, OneSignal provides an optional java helper class to facilitate the callback model.  Method `com.onesignal.Continue.none()` can be used to indicate no callback is necessary:
 
 
-    OneSignal.getNotifications().requestPermission(Continue.none());
+    OneSignal.getNotifications().requestPermission(true, Continue.none());
 
 `com.onesignal.Continue.with()` can be used to create a callback lambda expression, which is passed a `ContinueResult` containing information on the success of the underlying coroutine, it's return data, and/or the exception that was thrown:
 
 
-    OneSignal.getNotifications().requestPermission(Continue.with(r -> {
+    OneSignal.getNotifications().requestPermission(true, Continue.with(r -> {
         if (r.isSuccess()) {
           if (r.getData()) {
             // code to execute once requestPermission has completed successfully and the user has accepted permission.

@@ -3,7 +3,6 @@ package com.onesignal.user.internal.subscriptions
 import com.onesignal.common.events.IEventNotifier
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.user.subscriptions.ISubscription
-import com.onesignal.user.subscriptions.SubscriptionList
 
 interface ISubscriptionManager : IEventNotifier<ISubscriptionChangedHandler> {
     var subscriptions: SubscriptionList
