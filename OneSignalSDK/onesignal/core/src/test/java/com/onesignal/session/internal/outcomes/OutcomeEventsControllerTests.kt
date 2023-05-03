@@ -43,6 +43,14 @@ class OutcomeEventsControllerTests : FunSpec({
         Logging.logLevel = LogLevel.NONE
     }
 
+    fun createTestSubscriptionModel(): SubscriptionModel {
+        val subModel = SubscriptionModel()
+        subModel.id = "subscriptionId"
+        subModel.address = "subscriptionAddress"
+        subModel.optedIn = true
+        return subModel
+    }
+
     test("send outcome with disabled influences") {
         /* Given */
         val now = 111L
@@ -86,8 +94,7 @@ class OutcomeEventsControllerTests : FunSpec({
         val mockInfluenceManager = mockk<IInfluenceManager>()
         every { mockInfluenceManager.influences } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.UNATTRIBUTED, null))
 
-        val subscriptionModel = SubscriptionModel()
-        subscriptionModel.id = "subscriptionId"
+        val subscriptionModel = createTestSubscriptionModel()
 
         val mockSubscriptionManager = mockk<ISubscriptionManager>()
         every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
@@ -132,8 +139,8 @@ class OutcomeEventsControllerTests : FunSpec({
         val mockInfluenceManager = mockk<IInfluenceManager>()
         every { mockInfluenceManager.influences } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.INDIRECT, JSONArray(notificationIds)))
 
-        val subscriptionModel = SubscriptionModel()
-        subscriptionModel.id = "subscriptionId"
+        val subscriptionModel = createTestSubscriptionModel()
+
         val mockSubscriptionManager = mockk<ISubscriptionManager>()
         every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
 
@@ -178,8 +185,8 @@ class OutcomeEventsControllerTests : FunSpec({
         val mockInfluenceManager = mockk<IInfluenceManager>()
         every { mockInfluenceManager.influences } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray(notificationIds)))
 
-        val subscriptionModel = SubscriptionModel()
-        subscriptionModel.id = "subscriptionId"
+        val subscriptionModel = createTestSubscriptionModel()
+
         val mockSubscriptionManager = mockk<ISubscriptionManager>()
         every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
 
@@ -224,8 +231,8 @@ class OutcomeEventsControllerTests : FunSpec({
         val mockInfluenceManager = mockk<IInfluenceManager>()
         every { mockInfluenceManager.influences } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.UNATTRIBUTED, null))
 
-        val subscriptionModel = SubscriptionModel()
-        subscriptionModel.id = "subscriptionId"
+        val subscriptionModel = createTestSubscriptionModel()
+
         val mockSubscriptionManager = mockk<ISubscriptionManager>()
         every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
 
@@ -268,8 +275,8 @@ class OutcomeEventsControllerTests : FunSpec({
         val mockInfluenceManager = mockk<IInfluenceManager>()
         every { mockInfluenceManager.influences } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.UNATTRIBUTED, null))
 
-        val subscriptionModel = SubscriptionModel()
-        subscriptionModel.id = "subscriptionId"
+        val subscriptionModel = createTestSubscriptionModel()
+
         val mockSubscriptionManager = mockk<ISubscriptionManager>()
         every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
 
@@ -322,8 +329,8 @@ class OutcomeEventsControllerTests : FunSpec({
         coEvery { mockOutcomeEventsRepository.getNotCachedUniqueInfluencesForOutcome("OUTCOME_1", any()) } returns listOf(notificationInfluence) andThen listOf()
         coEvery { mockOutcomeEventsRepository.saveUniqueOutcomeEventParams(any()) } answers { waiter.wake() }
 
-        val subscriptionModel = SubscriptionModel()
-        subscriptionModel.id = "subscriptionId"
+        val subscriptionModel = createTestSubscriptionModel()
+
         val mockSubscriptionManager = mockk<ISubscriptionManager>()
         every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
 
@@ -376,8 +383,8 @@ class OutcomeEventsControllerTests : FunSpec({
         val notificationInfluence2 = Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray(notificationIds2))
         every { mockInfluenceManager.influences } returns listOf(notificationInfluence1) andThen listOf(notificationInfluence2)
 
-        val subscriptionModel = SubscriptionModel()
-        subscriptionModel.id = "subscriptionId"
+        val subscriptionModel = createTestSubscriptionModel()
+
         val mockSubscriptionManager = mockk<ISubscriptionManager>()
         every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
 
@@ -438,8 +445,8 @@ class OutcomeEventsControllerTests : FunSpec({
         val mockInfluenceManager = mockk<IInfluenceManager>()
         every { mockInfluenceManager.influences } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.UNATTRIBUTED, null))
 
-        val subscriptionModel = SubscriptionModel()
-        subscriptionModel.id = "subscriptionId"
+        val subscriptionModel = createTestSubscriptionModel()
+
         val mockSubscriptionManager = mockk<ISubscriptionManager>()
         every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
 
@@ -483,8 +490,8 @@ class OutcomeEventsControllerTests : FunSpec({
         val mockSessionService = mockk<ISessionService>()
         every { mockSessionService.subscribe(any()) } just Runs
 
-        val subscriptionModel = SubscriptionModel()
-        subscriptionModel.id = "subscriptionId"
+        val subscriptionModel = createTestSubscriptionModel()
+
         val mockSubscriptionManager = mockk<ISubscriptionManager>()
         every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
 
@@ -571,8 +578,8 @@ class OutcomeEventsControllerTests : FunSpec({
         val mockSessionService = mockk<ISessionService>()
         every { mockSessionService.subscribe(any()) } just Runs
 
-        val subscriptionModel = SubscriptionModel()
-        subscriptionModel.id = "subscriptionId"
+        val subscriptionModel = createTestSubscriptionModel()
+
         val mockSubscriptionManager = mockk<ISubscriptionManager>()
         every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
 
