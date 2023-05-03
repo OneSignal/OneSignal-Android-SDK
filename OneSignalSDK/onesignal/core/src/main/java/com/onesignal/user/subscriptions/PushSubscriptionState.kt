@@ -1,5 +1,7 @@
 package com.onesignal.user.subscriptions
 
+import org.json.JSONObject
+
 /**
  * A subscription state.
  */
@@ -24,5 +26,14 @@ class PushSubscriptionState(
      *  user will not receive notifications through this subscription (even when the user has
      *  granted app permission).
      */
-    val optedIn: Boolean
-)
+    val optedIn: Boolean,
+) {
+    fun toJSONObject(): JSONObject {
+        return JSONObject()
+                .put("id", id)
+                .put("token", token)
+                .put("optedIn", optedIn)
+    }
+}
+
+
