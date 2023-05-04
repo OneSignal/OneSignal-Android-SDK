@@ -36,16 +36,16 @@ class ConfigModel : Model() {
     /**
      * Whether the SDK requires privacy consent to send data to backend.
      */
-    var requiresPrivacyConsent: Boolean?
-        get() = getOptBooleanProperty(::requiresPrivacyConsent.name)
-        set(value) { setOptBooleanProperty(::requiresPrivacyConsent.name, value) }
+    var consentRequired: Boolean?
+        get() = getOptBooleanProperty(::consentRequired.name)
+        set(value) { setOptBooleanProperty(::consentRequired.name, value) }
 
     /**
      * Whether the SDK has been given consent to privacy.
      */
-    var givenPrivacyConsent: Boolean?
-        get() = getOptBooleanProperty(::givenPrivacyConsent.name)
-        set(value) { setOptBooleanProperty(::givenPrivacyConsent.name, value) }
+    var consentGiven: Boolean?
+        get() = getOptBooleanProperty(::consentGiven.name)
+        set(value) { setOptBooleanProperty(::consentGiven.name, value) }
 
     /**
      * Whether location is shared.

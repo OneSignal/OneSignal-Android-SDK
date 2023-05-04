@@ -58,7 +58,7 @@ internal class HttpClient(
         cacheKey: String?,
     ): HttpResponse {
         // If privacy consent is required but not yet given, any non-GET request should be blocked.
-        if (method != null && _configModelStore.model.requiresPrivacyConsent == true && _configModelStore.model.givenPrivacyConsent != true) {
+        if (method != null && _configModelStore.model.consentRequired == true && _configModelStore.model.consentGiven != true) {
             Logging.warn("$method `$url` was called before the user provided privacy consent. Your application is set to require the user's privacy consent before the OneSignal SDK can be initialized. Please ensure the user has provided consent before calling this method. You can check the latest OneSignal consent status by calling OneSignal.privacyConsent")
             return HttpResponse(0, null, null)
         }
