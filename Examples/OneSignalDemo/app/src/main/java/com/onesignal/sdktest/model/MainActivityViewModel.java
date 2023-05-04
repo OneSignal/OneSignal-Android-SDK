@@ -884,7 +884,7 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
     }
 
     private void togglePrivacyConsent(boolean hasConsent) {
-        OneSignal.setPrivacyConsent(hasConsent);
+        OneSignal.setConsentGiven(hasConsent);
         SharedPreferenceUtil.cacheUserPrivacyConsent(context, hasConsent);
 
         shouldScrollTop = hasConsent;

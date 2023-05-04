@@ -62,13 +62,13 @@ interface IOneSignal {
      * should be set to `true` prior to the invocation of
      * [initWithContext] to ensure compliance.
      */
-    var requiresPrivacyConsent: Boolean
+    var consentRequired: Boolean
 
     /**
      * Indicates whether privacy consent has been granted. This field is only relevant when
-     * the application has opted into data privacy protections. See [requiresPrivacyConsent].
+     * the application has opted into data privacy protections. See [consentRequired].
      */
-    var privacyConsent: Boolean
+    var consentGiven: Boolean
 
     /**
      * Whether to disable the "GMS is missing" prompt to the user.
