@@ -53,18 +53,18 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val sdkVersion: String = OneSignalUtils.sdkVersion
     override var isInitialized: Boolean = false
 
-    override var requiresPrivacyConsent: Boolean
-        get() = _configModel?.requiresPrivacyConsent ?: (_requiresPrivacyConsent == true)
+    override var consentRequired: Boolean
+        get() = _configModel?.consentRequired ?: (_consentRequired == true)
         set(value) {
-            _requiresPrivacyConsent = value
-            _configModel?.requiresPrivacyConsent = value
+            _consentRequired = value
+            _configModel?.consentRequired = value
         }
 
-    override var privacyConsent: Boolean
-        get() = _configModel?.givenPrivacyConsent ?: (_givenPrivacyConsent == true)
+    override var consentGiven: Boolean
+        get() = _configModel?.consentGiven ?: (_consentGiven == true)
         set(value) {
-            _givenPrivacyConsent = value
-            _configModel?.givenPrivacyConsent = value
+            _consentGiven = value
+            _configModel?.consentGiven = value
         }
 
     override var disableGMSMissingPrompt: Boolean
@@ -99,8 +99,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     private val _services: ServiceProvider
     private var _configModel: ConfigModel? = null
     private var _sessionModel: SessionModel? = null
-    private var _requiresPrivacyConsent: Boolean? = null
-    private var _givenPrivacyConsent: Boolean? = null
+    private var _consentRequired: Boolean? = null
+    private var _consentGiven: Boolean? = null
     private var _disableGMSMissingPrompt: Boolean? = null
     private val _loginLock: Any = Any()
 
@@ -174,13 +174,13 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         }
 
         // if requires privacy consent was set prior to init, set it in the model now
-        if (_requiresPrivacyConsent != null) {
-            _configModel!!.requiresPrivacyConsent = _requiresPrivacyConsent!!
+        if (_consentRequired != null) {
+            _configModel!!.consentRequired = _consentRequired!!
         }
 
         // if privacy consent was set prior to init, set it in the model now
-        if (_givenPrivacyConsent != null) {
-            _configModel!!.givenPrivacyConsent = _givenPrivacyConsent!!
+        if (_consentGiven != null) {
+            _configModel!!.consentGiven = _consentGiven!!
         }
 
         if (_disableGMSMissingPrompt != null) {

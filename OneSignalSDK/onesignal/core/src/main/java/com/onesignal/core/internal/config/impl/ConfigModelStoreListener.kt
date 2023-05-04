@@ -88,7 +88,7 @@ internal class ConfigModelStoreListener(
                     params.disableGMSMissingPrompt?.let { config.disableGMSMissingPrompt = it }
                     params.unsubscribeWhenNotificationsDisabled?.let { config.unsubscribeWhenNotificationsDisabled = it }
                     params.locationShared?.let { config.locationShared = it }
-                    params.requiresUserPrivacyConsent?.let { config.requiresPrivacyConsent = it }
+                    params.requiresUserPrivacyConsent?.let { config.consentRequired = it }
                     params.opRepoExecutionInterval?.let { config.opRepoExecutionInterval = it }
                     params.influenceParams.notificationLimit?.let { config.influenceParams.notificationLimit = it }
                     params.influenceParams.indirectNotificationAttributionWindow?.let { config.influenceParams.indirectNotificationAttributionWindow = it }
