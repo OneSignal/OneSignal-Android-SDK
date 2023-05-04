@@ -1,4 +1,4 @@
-# Android v5.0.0-beta3 Migration Guide
+# Android v5.0.0-beta4 Migration Guide
 In this release, we are making a significant shift from a device-centered model to a user-centered model.  A user-centered model allows for more powerful omni-channel integrations within the OneSignal platform.
 
 This migration guide will walk you through the Android SDK v5.0.0 changes as a result of this shift.
