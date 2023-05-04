@@ -94,18 +94,18 @@ object OneSignal {
      * [initWithContext] to ensure compliance.
      */
     @JvmStatic
-    var requiresPrivacyConsent: Boolean
-        get() = oneSignal.requiresPrivacyConsent
-        set(value) { oneSignal.requiresPrivacyConsent = value }
+    var consentRequired: Boolean
+        get() = oneSignal.consentRequired
+        set(value) { oneSignal.consentRequired = value }
 
     /**
      * Indicates whether privacy consent has been granted. This field is only relevant when
      * the application has opted into data privacy protections. See [requiresPrivacyConsent].
      */
     @JvmStatic
-    var privacyConsent: Boolean
-        get() = oneSignal.privacyConsent
-        set(value) { oneSignal.privacyConsent = value }
+    var consentGiven: Boolean
+        get() = oneSignal.consentGiven
+        set(value) { oneSignal.consentGiven = value }
 
     /**
      * Whether to disable the "GMS is missing" prompt to the user.

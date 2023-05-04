@@ -63,7 +63,7 @@ public class SplashActivityViewModel implements ActivityViewModel {
     private void setupOneSignalSDK() {
         boolean privacyConsent = true;
 
-        OneSignal.setRequiresPrivacyConsent(privacyConsent);
+        OneSignal.setConsentRequired(privacyConsent);
 
         boolean isLocationShared = SharedPreferenceUtil.getCachedLocationSharedStatus(context);
         OneSignal.getLocation().setShared(isLocationShared);
