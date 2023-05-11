@@ -179,8 +179,14 @@ class ActivityLifecycleHandler implements OSSystemConditionController.OSSystemCo
         if (focusHandler == null || focusHandler.hasBackgrounded() && !focusHandler.hasCompleted())
             return;
 
-        OneSignal.getFocusTimeController().appStopped();
-        focusHandler.startOnLostFocusWorker(FOCUS_LOST_WORKER_TAG, SYNC_AFTER_BG_DELAY_MS, OneSignal.appContext);
+        new Thread() {
+            public void run() {
+                // Run on it's own thread since both these calls do disk I/O
+                // which could contribute a significant amount to ANRs.
+                OneSignal.getFocusTimeController().appStopped();
+                focusHandler.startOnLostFocusWorker(FOCUS_LOST_WORKER_TAG, SYNC_AFTER_BG_DELAY_MS, OneSignal.appContext);
+            }
+        }.start();
     }
 
     private void handleFocus() {
