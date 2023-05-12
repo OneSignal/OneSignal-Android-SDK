@@ -2332,7 +2332,7 @@ public class OneSignal {
 
       // TODO: Once the NotificationOpenedHandler gets a Worker, we should make sure we add a catch
       //    like we have implemented for the OSRemoteNotificationReceivedHandler and NotificationWillShowInForegroundHandlers
-      OSUtils.runOnMainUIThread(new Runnable() {
+      CallbackThreadManager.Companion.runOnPreferred(new Runnable() {
          @Override
          public void run() {
             notificationOpenedHandler.notificationOpened(openedResult);

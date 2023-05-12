@@ -479,7 +479,7 @@ class OSInAppMessageController extends OSBackgroundManager implements OSDynamicT
         if (OneSignal.inAppMessageClickHandler == null)
             return;
 
-        OSUtils.runOnMainUIThread(new Runnable() {
+        CallbackThreadManager.Companion.runOnPreferred(new Runnable() {
             @Override
             public void run() {
                 // Send public outcome from handler

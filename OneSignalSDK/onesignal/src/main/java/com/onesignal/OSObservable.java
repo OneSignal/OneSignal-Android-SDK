@@ -79,7 +79,7 @@ class OSObservable<ObserverType, StateType> {
                final Method method = clazz.getDeclaredMethod(methodName, state.getClass());
                method.setAccessible(true);
                if (fireOnMainThread) {
-                  OSUtils.runOnMainUIThread(
+                  CallbackThreadManager.Companion.runOnPreferred(
                       new Runnable() {
                           @Override
                           public void run() {
