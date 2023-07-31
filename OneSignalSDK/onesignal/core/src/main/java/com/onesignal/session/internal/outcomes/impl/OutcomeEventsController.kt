@@ -4,6 +4,7 @@ import android.os.Process
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
@@ -14,6 +15,7 @@ import com.onesignal.session.internal.influence.InfluenceType
 import com.onesignal.session.internal.outcomes.IOutcomeEventsController
 import com.onesignal.session.internal.session.ISessionLifecycleHandler
 import com.onesignal.session.internal.session.ISessionService
+import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 
@@ -26,6 +28,7 @@ internal class OutcomeEventsController(
     private val _configModelStore: ConfigModelStore,
     private val _identityModelStore: IdentityModelStore,
     private val _subscriptionManager: ISubscriptionManager,
+    private val _deviceService: IDeviceService,
     private val _time: ITime,
 ) : IOutcomeEventsController, IStartableService, ISessionLifecycleHandler {
     // Keeps track of unique outcome events sent for UNATTRIBUTED sessions on a per session level
@@ -267,10 +270,11 @@ Outcome event was cached and will be reattempted on app cold start""",
     private suspend fun requestMeasureOutcomeEvent(eventParams: OutcomeEventParams) {
         val appId: String = _configModelStore.model.appId
         val subscriptionId = _subscriptionManager.subscriptions.push.id
+        val deviceType = SubscriptionObjectType.fromDeviceType(_deviceService.deviceType).value
 
         // if we don't have a subscription ID yet, throw an exception. The outcome will be saved and processed
         // later, when we do have a subscription ID.
-        if (subscriptionId.isEmpty()) {
+        if (subscriptionId.isEmpty() || deviceType.isEmpty()) {
             throw BackendException(0)
         }
 
@@ -282,6 +286,6 @@ Outcome event was cached and will be reattempted on app cold start""",
             else -> null
         }
 
-        _outcomeEventsBackend.sendOutcomeEvent(appId, _identityModelStore.model.onesignalId, subscriptionId, direct, event)
+        _outcomeEventsBackend.sendOutcomeEvent(appId, _identityModelStore.model.onesignalId, subscriptionId, deviceType, direct, event)
     }
 }
