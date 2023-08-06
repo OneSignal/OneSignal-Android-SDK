@@ -88,12 +88,12 @@ Outcome event was cached and will be reattempted on app cold start""",
 
     override suspend fun sendOutcomeEvent(name: String): OutcomeEvent? {
         val influences: List<Influence> = _influenceManager.influences
-        return sendAndCreateOutcomeEvent(name, 0f, influences)
+        return sendAndCreateOutcomeEvent(name, 0f, 0, influences)
     }
 
     override suspend fun sendOutcomeEventWithValue(name: String, weight: Float): OutcomeEvent? {
         val influences: List<Influence> = _influenceManager.influences
-        return sendAndCreateOutcomeEvent(name, weight, influences)
+        return sendAndCreateOutcomeEvent(name, weight, 0, influences)
     }
 
     /**
@@ -134,7 +134,7 @@ Outcome event was cached and will be reattempted on app cold start""",
                 // Return null to determine not a failure, but not a success in terms of the request made
                 return null
             }
-            return sendAndCreateOutcomeEvent(name, 0f, uniqueInfluences)
+            return sendAndCreateOutcomeEvent(name, 0f, 0, uniqueInfluences)
         } else {
             // Make sure unique outcome has not been sent for current unattributed session
             if (unattributedUniqueOutcomeEventsSentOnSession.contains(name)) {
@@ -150,13 +150,14 @@ Outcome event was cached and will be reattempted on app cold start""",
                 return null
             }
             unattributedUniqueOutcomeEventsSentOnSession.add(name)
-            return sendAndCreateOutcomeEvent(name, 0f, influences)
+            return sendAndCreateOutcomeEvent(name, 0f, 0, influences)
         }
     }
 
     private suspend fun sendAndCreateOutcomeEvent(
         name: String,
         weight: Float,
+        sessionTime: Long, // Note: this is optional
         influences: List<Influence>,
     ): OutcomeEvent? {
         val timestampSeconds: Long = _time.currentTimeMillis / 1000
@@ -186,7 +187,7 @@ Outcome event was cached and will be reattempted on app cold start""",
         }
 
         val source = OutcomeSource(directSourceBody, indirectSourceBody)
-        val eventParams = OutcomeEventParams(name, source, weight, 0)
+        val eventParams = OutcomeEventParams(name, source, weight, sessionTime, 0)
 
         try {
             requestMeasureOutcomeEvent(eventParams)
