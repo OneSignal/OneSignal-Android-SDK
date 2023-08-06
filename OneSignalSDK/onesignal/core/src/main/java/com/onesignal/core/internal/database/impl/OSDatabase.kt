@@ -16,7 +16,7 @@ import com.onesignal.core.internal.database.IDatabase
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.session.internal.outcomes.impl.OutcomeTableProvider
 import com.onesignal.session.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V1
-import com.onesignal.session.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V3
+import com.onesignal.session.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_OUTCOME_ENTRIES_V4
 import com.onesignal.session.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V1
 import com.onesignal.session.internal.outcomes.impl.OutcomesDbContract.SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2
 
@@ -246,7 +246,7 @@ internal open class OSDatabase(
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(SQL_CREATE_ENTRIES)
-        db.execSQL(SQL_CREATE_OUTCOME_ENTRIES_V3)
+        db.execSQL(SQL_CREATE_OUTCOME_ENTRIES_V4)
         db.execSQL(SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V2)
         db.execSQL(SQL_CREATE_IN_APP_MESSAGE_ENTRIES)
         for (ind in SQL_INDEX_ENTRIES) {
@@ -277,6 +277,7 @@ internal open class OSDatabase(
         if (oldVersion == 5 && newVersion >= 6) upgradeFromV5ToV6(db)
         if (oldVersion < 7 && newVersion >= 7) upgradeToV7(db)
         if (oldVersion < 8 && newVersion >= 8) upgradeToV8(db)
+        if (oldVersion < 9 && newVersion >= 9) upgradeToV9(db)
     }
 
     // Add collapse_id field and index
@@ -342,6 +343,10 @@ internal open class OSDatabase(
         _outcomeTableProvider.upgradeCacheOutcomeTableRevision1To2(db)
     }
 
+    private fun upgradeToV9(db: SQLiteDatabase) {
+        _outcomeTableProvider.upgradeOutcomeTableRevision3To4(db)
+    }
+
     override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         Logging.warn("SDK version rolled back! Clearing $DATABASE_NAME as it could be in an unexpected state.")
 
@@ -357,7 +362,7 @@ internal open class OSDatabase(
     }
 
     companion object {
-        private const val dbVersion = 8
+        private const val dbVersion = 9
         private val LOCK = Any()
         private const val DATABASE_NAME = "OneSignal.db"
         private const val INTEGER_PRIMARY_KEY_TYPE = " INTEGER PRIMARY KEY"

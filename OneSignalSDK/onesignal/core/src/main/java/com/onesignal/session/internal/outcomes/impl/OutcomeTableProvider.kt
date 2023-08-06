@@ -79,6 +79,24 @@ internal class OutcomeTableProvider {
     }
 
     /**
+     * On the outcome table this adds the new session_time column.
+     *
+     * @param db
+     */
+    fun upgradeOutcomeTableRevision3To4(db: SQLiteDatabase) {
+        try {
+            db.execSQL("BEGIN TRANSACTION;")
+            db.execSQL("ALTER TABLE " + OutcomeEventsTable.TABLE_NAME + " ADD COLUMN " + OutcomeEventsTable.COLUMN_NAME_SESSION_TIME + " INTEGER DEFAULT 1;")
+            // We intentionally choose to default session_time to 1 to address a bug on cached outcomes from v5.0.0-beta's
+            // os__session_duration requests expect a session_time and these will keep failing and caching, so let's just send them with a time of 1 for migrations
+        } catch (e: SQLiteException) {
+            e.printStackTrace()
+        } finally {
+            db.execSQL("COMMIT;")
+        }
+    }
+
+    /**
      * On the cache unique outcome table rename table, rename column notification id to influence id
      * Add column channel type
      *
