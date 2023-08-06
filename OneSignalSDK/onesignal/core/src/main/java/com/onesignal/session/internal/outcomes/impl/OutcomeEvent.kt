@@ -11,6 +11,7 @@ internal class OutcomeEvent(
     override val notificationIds: JSONArray?,
     override val name: String,
     override val timestamp: Long,
+    override val sessionTime: Long,
     override val weight: Float,
 ) : IOutcomeEvent {
     @Throws(JSONException::class)
@@ -20,6 +21,7 @@ internal class OutcomeEvent(
         json.put(NOTIFICATION_IDS, notificationIds)
         json.put(OUTCOME_ID, name)
         json.put(TIMESTAMP, timestamp)
+        json.put(SESSION_TIME, sessionTime)
         json.put(WEIGHT, weight)
         return json
     }
@@ -28,11 +30,11 @@ internal class OutcomeEvent(
         if (this === o) return true
         if (o == null || this.javaClass != o.javaClass) return false
         val event = o as OutcomeEvent
-        return session == event.session && notificationIds == event.notificationIds && name == event.name && timestamp == event.timestamp && weight == event.weight
+        return session == event.session && notificationIds == event.notificationIds && name == event.name && timestamp == event.timestamp && sessionTime == event.sessionTime && weight == event.weight
     }
 
     override fun hashCode(): Int {
-        val a = arrayOf(session, notificationIds, name, timestamp, weight)
+        val a = arrayOf(session, notificationIds, name, timestamp, sessionTime, weight)
         var result = 1
         for (element in a) result = 31 * result + (element?.hashCode() ?: 0)
         return result
@@ -44,6 +46,7 @@ internal class OutcomeEvent(
             ", notificationIds=" + notificationIds +
             ", name='" + name + '\'' +
             ", timestamp=" + timestamp +
+            ", sessionTime=" + sessionTime +
             ", weight=" + weight +
             '}'
     }
@@ -53,6 +56,7 @@ internal class OutcomeEvent(
         private const val NOTIFICATION_IDS = "notification_ids"
         private const val OUTCOME_ID = "id"
         private const val TIMESTAMP = "timestamp"
+        private const val SESSION_TIME = "session_time"
         private const val WEIGHT = "weight"
 
         /**
@@ -76,6 +80,7 @@ internal class OutcomeEvent(
                 notificationId,
                 outcomeEventParams.outcomeId,
                 outcomeEventParams.timestamp,
+                outcomeEventParams.sessionTime,
                 outcomeEventParams.weight,
             )
         }
