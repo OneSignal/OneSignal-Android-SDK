@@ -36,7 +36,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
         val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
 
         /* When */
-        outcomeEventsRepository.deleteOldOutcomeEvent(OutcomeEventParams("outcomeId", null, 0f, 1111))
+        outcomeEventsRepository.deleteOldOutcomeEvent(OutcomeEventParams("outcomeId", null, 0f, 0, 1111))
 
         /* Then */
         verify(exactly = 1) { mockDatabasePair.second.delete(OutcomeEventsTable.TABLE_NAME, withArg { it.contains(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP) }, withArg { it.contains("1111") }) }
@@ -48,7 +48,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
         val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
 
         /* When */
-        outcomeEventsRepository.saveOutcomeEvent(OutcomeEventParams("outcomeId1", null, 0f, 1111))
+        outcomeEventsRepository.saveOutcomeEvent(OutcomeEventParams("outcomeId1", null, 0f, 0, 1111))
         outcomeEventsRepository.saveOutcomeEvent(
             OutcomeEventParams(
                 "outcomeId2",
@@ -57,6 +57,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     OutcomeSourceBody(null, JSONArray().put("iamId1").put("iamId2")),
                 ),
                 .2f,
+                0,
                 2222,
             ),
         )
@@ -68,6 +69,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     null,
                 ),
                 .4f,
+                0,
                 3333,
             ),
         )
@@ -79,6 +81,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     OutcomeSourceBody(JSONArray().put("notificationId1"), JSONArray().put("iamId1").put("iamId2")),
                 ),
                 .6f,
+                0,
                 4444,
             ),
         )
@@ -226,7 +229,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
         val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
 
         /* When */
-        outcomeEventsRepository.saveUniqueOutcomeEventParams(OutcomeEventParams("outcomeId1", null, 0f, 1111))
+        outcomeEventsRepository.saveUniqueOutcomeEventParams(OutcomeEventParams("outcomeId1", null, 0f, 0, 1111))
 
         /* Then */
         verify(exactly = 0) { mockDatabasePair.second.insert(CachedUniqueOutcomeTable.COLUMN_NAME_NAME, null, any()) }
@@ -246,6 +249,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     OutcomeSourceBody(null, JSONArray().put("iamId1").put("iamId2")),
                 ),
                 .2f,
+                0,
                 2222,
             ),
         )
@@ -296,6 +300,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     OutcomeSourceBody(JSONArray().put("notificationId1").put("notificationId2")),
                 ),
                 .2f,
+                0,
                 2222,
             ),
         )
@@ -346,6 +351,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     null,
                 ),
                 .2f,
+                0,
                 2222,
             ),
         )
@@ -387,6 +393,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     OutcomeSourceBody(JSONArray().put("notificationId1").put("notificationId2"), JSONArray().put("iamId1").put("iamId2")),
                 ),
                 .2f,
+                0,
                 2222,
             ),
         )
