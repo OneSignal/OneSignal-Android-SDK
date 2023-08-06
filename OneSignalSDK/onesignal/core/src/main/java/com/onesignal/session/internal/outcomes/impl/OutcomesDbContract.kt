@@ -20,6 +20,9 @@ internal object OutcomeEventsTable {
     const val COLUMN_NAME_WEIGHT = "weight" // Added on DB v5 SDK v3.12.1, migration added on DB v6 SDK v3.12.2
     const val COLUMN_NAME_TIMESTAMP = "timestamp" // Added on DB v4 SDK v3.12.0
     const val COLUMN_NAME_PARAMS = "params" // Added on DB v4 SDK v3.12.0 replaced with weight on DB v5 SDK v3.12.1, migration added on DB v6 SDK v3.12.2
+
+    // Session time
+    const val COLUMN_NAME_SESSION_TIME = "session_time" // Added on DB v9 SDK v5.0.0 (note that 5.0.0-beta's were still on v8)
 }
 
 internal object CachedUniqueOutcomeTable {
@@ -72,6 +75,22 @@ internal object OutcomesDbContract {
         OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + TIMESTAMP_TYPE + "," + // "params TEXT" Added in v4, removed in v5.
         OutcomeEventsTable.COLUMN_NAME_WEIGHT + FLOAT_TYPE + // New in v5, missing migration added in v6
         ");"
+
+    /**
+     * Adds a new column called session_time
+     */
+    const val SQL_CREATE_OUTCOME_ENTRIES_V4 = "CREATE TABLE " + OutcomeEventsTable.TABLE_NAME + " (" +
+        OutcomeEventsTable.ID + INTEGER_PRIMARY_KEY_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE + TEXT_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE + TEXT_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + TEXT_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_IAM_IDS + TEXT_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_NAME + TEXT_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + TIMESTAMP_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_WEIGHT + FLOAT_TYPE + "," +
+        OutcomeEventsTable.COLUMN_NAME_SESSION_TIME + INT_TYPE +
+        ");"
+
     const val SQL_CREATE_UNIQUE_OUTCOME_ENTRIES_V1 = "CREATE TABLE " + CachedUniqueOutcomeTable.TABLE_NAME_V1 + " (" +
         CachedUniqueOutcomeTable.ID + INTEGER_PRIMARY_KEY_TYPE + "," +
         CachedUniqueOutcomeTable.COLUMN_NAME_NOTIFICATION_ID + TEXT_TYPE + "," +
