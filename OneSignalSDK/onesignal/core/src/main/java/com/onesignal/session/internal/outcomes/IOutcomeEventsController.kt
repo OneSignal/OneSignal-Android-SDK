@@ -5,6 +5,11 @@ package com.onesignal.session.internal.outcomes
  */
 interface IOutcomeEventsController {
     /**
+     * Send a session ending outcome event to the backend.
+     */
+    suspend fun sendSessionEndOutcomeEvent(duration: Long): IOutcomeEvent?
+
+    /**
      * Send a unique outcome event to the backend.
      */
     suspend fun sendUniqueOutcomeEvent(name: String): IOutcomeEvent?
