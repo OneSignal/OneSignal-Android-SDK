@@ -35,6 +35,10 @@ internal class OutcomeEventsBackendService(private val _http: IHttpClient) :
             jsonObject.put("timestamp", event.timestamp)
         }
 
+        if (event.sessionTime > 0) {
+            jsonObject.put("session_time", event.sessionTime)
+        }
+
         val response = _http.post("outcomes/measure", jsonObject)
 
         if (!response.isSuccess) {

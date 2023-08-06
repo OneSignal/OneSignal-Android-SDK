@@ -7,7 +7,8 @@ internal class OutcomeEventParams constructor(
     val outcomeId: String,
     val outcomeSource: OutcomeSource?, // This field is optional
     var weight: Float, // This field is optional.
-    var timestamp: Long = 0,
+    var sessionTime: Long, // This field is optional
+    var timestamp: Long,
 ) {
     @Throws(JSONException::class)
     fun toJSONObject(): JSONObject {
@@ -18,6 +19,7 @@ internal class OutcomeEventParams constructor(
         }
         if (weight > 0) json.put(OutcomeConstants.WEIGHT, weight)
         if (timestamp > 0) json.put(OutcomeConstants.TIMESTAMP, timestamp)
+        if (sessionTime > 0) json.put(OutcomeConstants.SESSION_TIME, sessionTime)
         return json
     }
 
@@ -29,6 +31,7 @@ internal class OutcomeEventParams constructor(
             ", outcomeSource=" + outcomeSource +
             ", weight=" + weight +
             ", timestamp=" + timestamp +
+            ", sessionTime=" + sessionTime +
             '}'
     }
 }

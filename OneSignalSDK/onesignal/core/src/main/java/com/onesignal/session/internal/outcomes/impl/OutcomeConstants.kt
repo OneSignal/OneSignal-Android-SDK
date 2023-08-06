@@ -6,6 +6,7 @@ internal object OutcomeConstants {
     const val OUTCOME_SOURCES = "sources"
     const val WEIGHT = "weight"
     const val TIMESTAMP = "timestamp"
+    const val SESSION_TIME = "session_time"
 
     // OSOutcomeSource Constants
     const val DIRECT = "direct"
