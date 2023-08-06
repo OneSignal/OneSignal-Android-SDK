@@ -47,10 +47,11 @@ internal class SessionListener(
     }
 
     override fun onSessionEnded(duration: Long) {
-        _operationRepo.enqueue(TrackSessionEndOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, duration))
+        val durationInSeconds = duration / 1000
+        _operationRepo.enqueue(TrackSessionEndOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, durationInSeconds))
 
         suspendifyOnThread {
-            _outcomeEventsController.sendOutcomeEvent("os__session_duration")
+            _outcomeEventsController.sendSessionEndOutcomeEvent(durationInSeconds)
         }
     }
 }

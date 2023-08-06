@@ -81,6 +81,18 @@ Outcome event was cached and will be reattempted on app cold start""",
         }
     }
 
+    override suspend fun sendSessionEndOutcomeEvent(duration: Long): OutcomeEvent? {
+        val influences: List<Influence> = _influenceManager.influences
+
+        // only send the outcome if there are any influences associated with the session
+        for (influence in influences) {
+            if (influence.ids != null) {
+                return sendAndCreateOutcomeEvent("os__session_duration", 0f, duration, influences)
+            }
+        }
+        return null
+    }
+
     override suspend fun sendUniqueOutcomeEvent(name: String): OutcomeEvent? {
         val sessionResult: List<Influence> = _influenceManager.influences
         return sendUniqueOutcomeEvent(name, sessionResult)
