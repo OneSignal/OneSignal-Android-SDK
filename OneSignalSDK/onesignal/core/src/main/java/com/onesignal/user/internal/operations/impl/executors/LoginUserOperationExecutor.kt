@@ -18,18 +18,13 @@ import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.IUserBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
-import com.onesignal.user.internal.backend.PropertiesObject
 import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
-import com.onesignal.user.internal.operations.DeleteAliasOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
-import com.onesignal.user.internal.operations.DeleteTagOperation
 import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.operations.SetAliasOperation
-import com.onesignal.user.internal.operations.SetPropertyOperation
-import com.onesignal.user.internal.operations.SetTagOperation
 import com.onesignal.user.internal.operations.TransferSubscriptionOperation
 import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
 import com.onesignal.user.internal.properties.PropertiesModel
@@ -103,7 +98,6 @@ internal class LoginUserOperationExecutor(
 
     private suspend fun createUser(createUserOperation: LoginUserOperation, operations: List<Operation>): ExecutionResponse {
         var identities = mapOf<String, String>()
-        var propertiesObject = PropertiesObject()
         var subscriptions = mapOf<String, SubscriptionObject>()
 
         if (createUserOperation.externalId != null) {
@@ -115,21 +109,16 @@ internal class LoginUserOperationExecutor(
         // go through the operations grouped with this create user and apply them to the appropriate objects.
         for (operation in operations) {
             when (operation) {
-                is SetAliasOperation -> identities = createIdentityFromOperation(operation, identities)
-                is DeleteAliasOperation -> identities = createIdentityFromOperation(operation, identities)
                 is CreateSubscriptionOperation -> subscriptions = createSubscriptionsFromOperation(operation, subscriptions)
                 is TransferSubscriptionOperation -> subscriptions = createSubscriptionsFromOperation(operation, subscriptions)
                 is UpdateSubscriptionOperation -> subscriptions = createSubscriptionsFromOperation(operation, subscriptions)
                 is DeleteSubscriptionOperation -> subscriptions = createSubscriptionsFromOperation(operation, subscriptions)
-                is SetTagOperation -> propertiesObject = PropertyOperationHelper.createPropertiesFromOperation(operation, propertiesObject)
-                is DeleteTagOperation -> propertiesObject = PropertyOperationHelper.createPropertiesFromOperation(operation, propertiesObject)
-                is SetPropertyOperation -> propertiesObject = PropertyOperationHelper.createPropertiesFromOperation(operation, propertiesObject)
             }
         }
 
         try {
             val subscriptionList = subscriptions.toList()
-            val response = _userBackend.createUser(createUserOperation.appId, identities, propertiesObject, subscriptionList.map { it.second })
+            val response = _userBackend.createUser(createUserOperation.appId, identities, subscriptionList.map { it.second })
             val idTranslations = mutableMapOf<String, String>()
             // Add the "local-to-backend" ID translation to the IdentifierTranslator for any operations that were
             // *not* executed but still reference the locally-generated IDs.
@@ -179,18 +168,6 @@ internal class LoginUserOperationExecutor(
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)
             }
         }
-    }
-
-    private fun createIdentityFromOperation(operation: SetAliasOperation, identity: Map<String, String>): Map<String, String> {
-        val mutableIdentity = identity.toMutableMap()
-        mutableIdentity[operation.label] = operation.value
-        return mutableIdentity
-    }
-
-    private fun createIdentityFromOperation(operation: DeleteAliasOperation, identity: Map<String, String>): Map<String, String> {
-        val mutableIdentity = identity.toMutableMap()
-        mutableIdentity.remove(operation.label)
-        return mutableIdentity
     }
 
     private fun createSubscriptionsFromOperation(operation: TransferSubscriptionOperation, subscriptions: Map<String, SubscriptionObject>): Map<String, SubscriptionObject> {

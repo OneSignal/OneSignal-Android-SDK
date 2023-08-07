@@ -39,7 +39,7 @@ class SetTagOperation() : Operation(UpdateUserOperationExecutor.SET_TAG) {
         get() = getStringProperty(::value.name)
         private set(value) { setStringProperty(::value.name, value) }
 
-    override val createComparisonKey: String get() = "$appId.User.$onesignalId"
+    override val createComparisonKey: String get() = ""
     override val modifyComparisonKey: String get() = createComparisonKey
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.ALTER
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
