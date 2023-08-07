@@ -38,7 +38,7 @@ class SetPropertyOperation() : Operation(UpdateUserOperationExecutor.SET_PROPERT
         get() = getOptAnyProperty(::value.name)
         private set(value) { setOptAnyProperty(::value.name, value) }
 
-    override val createComparisonKey: String get() = "$appId.User.$onesignalId"
+    override val createComparisonKey: String get() = ""
     override val modifyComparisonKey: String get() = createComparisonKey
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.ALTER
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
