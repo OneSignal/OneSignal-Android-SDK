@@ -46,7 +46,7 @@ class LoginUserOperationExecutorTests : FunSpec({
     test("login anonymous user successfully creates user") {
         /* Given */
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -80,7 +80,6 @@ class LoginUserOperationExecutorTests : FunSpec({
                 appId,
                 mapOf(),
                 any(),
-                any(),
             )
         }
     }
@@ -88,7 +87,7 @@ class LoginUserOperationExecutorTests : FunSpec({
     test("login anonymous user fails with retry when network condition exists") {
         /* Given */
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(408, "TIMEOUT")
+        coEvery { mockUserBackendService.createUser(any(), any(), any()) } throws BackendException(408, "TIMEOUT")
 
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
 
@@ -104,13 +103,13 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         /* Then */
         response.result shouldBe ExecutionResult.FAIL_RETRY
-        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any()) }
     }
 
     test("login anonymous user fails with no retry when backend error condition exists") {
         /* Given */
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(404, "NOT FOUND")
+        coEvery { mockUserBackendService.createUser(any(), any(), any()) } throws BackendException(404, "NOT FOUND")
 
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
 
@@ -126,13 +125,13 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         /* Then */
         response.result shouldBe ExecutionResult.FAIL_NORETRY
-        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any()) }
     }
 
     test("login identified user without association successfully creates user") {
         /* Given */
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
@@ -149,7 +148,7 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         /* Then */
         response.result shouldBe ExecutionResult.SUCCESS
-        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any()) }
     }
 
     test("login identified user with association succeeds when association is successful") {
@@ -188,7 +187,7 @@ class LoginUserOperationExecutorTests : FunSpec({
     test("login identified user with association fails with retry when association fails with retry") {
         /* Given */
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
@@ -223,7 +222,7 @@ class LoginUserOperationExecutorTests : FunSpec({
     test("login identified user with association successfully creates user when association fails with no retry") {
         /* Given */
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
@@ -253,13 +252,13 @@ class LoginUserOperationExecutorTests : FunSpec({
                 },
             )
         }
-        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any()) }
     }
 
     test("login identified user with association fails with retry when association fails with no retry and network condition exists") {
         /* Given */
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(408, "TIMEOUT")
+        coEvery { mockUserBackendService.createUser(any(), any(), any()) } throws BackendException(408, "TIMEOUT")
 
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
         coEvery { mockIdentityOperationExecutor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_NORETRY)
@@ -288,13 +287,13 @@ class LoginUserOperationExecutorTests : FunSpec({
                 },
             )
         }
-        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any()) }
     }
 
     test("creating user will merge operations into one backend call") {
         /* Given */
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -352,14 +351,6 @@ class LoginUserOperationExecutorTests : FunSpec({
                 appId,
                 mapOf("aliasLabel1" to "aliasValue1-2"),
                 withArg {
-                    it.country shouldBe "country"
-                    it.language shouldBe "lang2"
-                    it.timezoneId shouldBe "timezone"
-                    it.latitude shouldBe 123.45
-                    it.longitude shouldBe 678.90
-                    it.tags shouldBe mapOf("tagKey1" to "tagValue1-2")
-                },
-                withArg {
                     it.count() shouldBe 1
                     it[0].type shouldBe SubscriptionObjectType.ANDROID_PUSH
                     it[0].enabled shouldBe true
@@ -373,7 +364,7 @@ class LoginUserOperationExecutorTests : FunSpec({
     test("creating user will hydrate when the user hasn't changed") {
         /* Given */
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -432,7 +423,6 @@ class LoginUserOperationExecutorTests : FunSpec({
                 appId,
                 mapOf(),
                 any(),
-                any(),
             )
         }
     }
@@ -440,7 +430,7 @@ class LoginUserOperationExecutorTests : FunSpec({
     test("creating user will not hydrate when the user has changed") {
         /* Given */
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -499,7 +489,6 @@ class LoginUserOperationExecutorTests : FunSpec({
                 appId,
                 mapOf(),
                 any(),
-                any(),
             )
         }
     }
@@ -507,7 +496,7 @@ class LoginUserOperationExecutorTests : FunSpec({
     test("creating user will provide local to remote translations") {
         /* Given */
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -546,7 +535,6 @@ class LoginUserOperationExecutorTests : FunSpec({
             mockUserBackendService.createUser(
                 appId,
                 mapOf(),
-                any(),
                 any(),
             )
         }
