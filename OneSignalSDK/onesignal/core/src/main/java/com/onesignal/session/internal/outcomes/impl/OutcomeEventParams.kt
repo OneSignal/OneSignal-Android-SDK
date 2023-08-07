@@ -8,7 +8,7 @@ internal class OutcomeEventParams constructor(
     val outcomeSource: OutcomeSource?, // This field is optional
     var weight: Float, // This field is optional.
     var sessionTime: Long, // This field is optional
-    var timestamp: Long,
+    var timestamp: Long, // This should start out as zero
 ) {
     @Throws(JSONException::class)
     fun toJSONObject(): JSONObject {
