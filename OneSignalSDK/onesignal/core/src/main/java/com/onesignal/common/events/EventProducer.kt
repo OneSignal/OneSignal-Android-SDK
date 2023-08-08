@@ -3,6 +3,7 @@ package com.onesignal.common.events
 import com.onesignal.common.threading.suspendifyOnMain
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.*
 
 /**
  * A standard implementation that implements [IEventNotifier] and additional functionality to make
@@ -13,7 +14,7 @@ open class EventProducer<THandler> : IEventNotifier<THandler> {
     override val hasSubscribers: Boolean
         get() = _subscribers.any()
 
-    private val _subscribers: MutableList<THandler> = mutableListOf()
+    private val _subscribers: MutableList<THandler> = Collections.synchronizedList(mutableListOf())
 
     override fun subscribe(handler: THandler) {
         _subscribers.add(handler)
