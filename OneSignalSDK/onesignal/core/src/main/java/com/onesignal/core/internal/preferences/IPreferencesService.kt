@@ -156,7 +156,7 @@ object PreferenceOneSignalKeys {
      * (Boolean) A prefix key for the permission state. When true, the user has rejected this
      * permission too many times and will not be prompted again.
      */
-    const val PREFS_OS_USER_REJECTED_PERMISSION_PREFIX = "USER_REJECTED_PERMISSION_"
+    const val PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX = "USER_RESOLVED_PERMISSION_"
 
     // HTTP
     /**
