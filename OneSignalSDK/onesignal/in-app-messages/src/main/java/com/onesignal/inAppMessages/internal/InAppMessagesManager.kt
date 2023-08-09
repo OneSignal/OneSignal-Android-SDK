@@ -393,11 +393,9 @@ internal class InAppMessagesManager(
         }
 
         // fire the external callback
-        if (!_lifecycleCallback.hasSubscribers) {
-            Logging.verbose("InAppMessagesManager.messageWasDismissed: inAppMessageLifecycleHandler is null")
-            return
+        if (_lifecycleCallback.hasSubscribers) {
+            _lifecycleCallback.fireOnMain { it.onDidDismiss(InAppMessageLifecycleEvent(message)) }
         }
-        _lifecycleCallback.fireOnMain { it.onDidDismiss(InAppMessageLifecycleEvent(message)) }
 
         _state.inAppMessageIdShowing = null
 
