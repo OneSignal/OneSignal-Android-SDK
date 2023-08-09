@@ -104,6 +104,11 @@ class PermissionsActivity : Activity() {
                     ?: throw RuntimeException("Missing handler for permissionRequestType: $permissionRequestType")
                 if (granted) {
                     callback.onAccept()
+                    _preferenceService!!.saveBool(
+                        PreferenceStores.ONESIGNAL,
+                        "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$androidPermissionString",
+                        true,
+                    )
                 } else {
                     callback.onReject(shouldShowSettings())
                 }
@@ -132,7 +137,7 @@ class PermissionsActivity : Activity() {
             ) {
                 _preferenceService!!.saveBool(
                     PreferenceStores.ONESIGNAL,
-                    "${PreferenceOneSignalKeys.PREFS_OS_USER_REJECTED_PERMISSION_PREFIX}$androidPermissionString",
+                    "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$androidPermissionString",
                     true,
                 )
                 return false
@@ -141,7 +146,7 @@ class PermissionsActivity : Activity() {
 
         return _preferenceService!!.getBool(
             PreferenceStores.ONESIGNAL,
-            "${PreferenceOneSignalKeys.PREFS_OS_USER_REJECTED_PERMISSION_PREFIX}$androidPermissionString",
+            "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$androidPermissionString",
             false,
         )!!
     }
