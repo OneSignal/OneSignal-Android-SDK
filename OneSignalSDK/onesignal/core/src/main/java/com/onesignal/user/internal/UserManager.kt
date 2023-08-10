@@ -50,11 +50,13 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "setAlias(label: $label, id: $id)")
 
         if (label.isEmpty()) {
-            throw Exception("Cannot add empty alias")
+            Logging.log(LogLevel.ERROR, "Cannot add empty alias")
+            return
         }
 
         if (label == IdentityConstants.ONESIGNAL_ID) {
-            throw Exception("Cannot add '${IdentityConstants.ONESIGNAL_ID}' alias")
+            Logging.log(LogLevel.ERROR, "Cannot add '${IdentityConstants.ONESIGNAL_ID}' alias")
+            return
         }
 
         _identityModel[label] = id
@@ -65,11 +67,13 @@ internal open class UserManager(
 
         aliases.forEach {
             if (it.key.isEmpty()) {
-                throw Exception("Cannot add empty alias")
+                Logging.log(LogLevel.ERROR, "Cannot add empty alias")
+                return
             }
 
             if (it.key == IdentityConstants.ONESIGNAL_ID) {
-                throw Exception("Cannot add '${IdentityConstants.ONESIGNAL_ID}' alias")
+                Logging.log(LogLevel.ERROR, "Cannot add '${IdentityConstants.ONESIGNAL_ID}' alias")
+                return
             }
         }
 
@@ -82,11 +86,13 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "removeAlias(label: $label)")
 
         if (label.isEmpty()) {
-            throw Exception("Cannot remove empty alias")
+            Logging.log(LogLevel.ERROR, "Cannot remove empty alias")
+            return
         }
 
         if (label == IdentityConstants.ONESIGNAL_ID) {
-            throw Exception("Cannot remove '${IdentityConstants.ONESIGNAL_ID}' alias")
+            Logging.log(LogLevel.ERROR, "Cannot remove '${IdentityConstants.ONESIGNAL_ID}' alias")
+            return
         }
 
         _identityModel.remove(label)
@@ -97,11 +103,13 @@ internal open class UserManager(
 
         labels.forEach {
             if (it.isEmpty()) {
-                throw Exception("Cannot remove empty alias")
+                Logging.log(LogLevel.ERROR, "Cannot remove empty alias")
+                return
             }
 
             if (it == IdentityConstants.ONESIGNAL_ID) {
-                throw Exception("Cannot remove '${IdentityConstants.ONESIGNAL_ID}' alias")
+                Logging.log(LogLevel.ERROR, "Cannot remove '${IdentityConstants.ONESIGNAL_ID}' alias")
+                return
             }
         }
 
@@ -114,7 +122,8 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "addEmail(email: $email)")
 
         if (!OneSignalUtils.isValidEmail(email)) {
-            throw Exception("Cannot add invalid email address as subscription: $email")
+            Logging.log(LogLevel.ERROR, "Cannot add invalid email address as subscription: $email")
+            return
         }
 
         _subscriptionManager.addEmailSubscription(email)
@@ -124,7 +133,8 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "removeEmail(email: $email)")
 
         if (!OneSignalUtils.isValidEmail(email)) {
-            throw Exception("Cannot remove invalid email address as subscription: $email")
+            Logging.log(LogLevel.ERROR, "Cannot remove invalid email address as subscription: $email")
+            return
         }
 
         _subscriptionManager.removeEmailSubscription(email)
@@ -134,7 +144,8 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "addSms(sms: $sms)")
 
         if (!OneSignalUtils.isValidPhoneNumber(sms)) {
-            throw Exception("Cannot add invalid sms number as subscription: $sms")
+            Logging.log(LogLevel.ERROR, "Cannot add invalid sms number as subscription: $sms")
+            return
         }
 
         _subscriptionManager.addSmsSubscription(sms)
@@ -144,7 +155,8 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "removeSms(sms: $sms)")
 
         if (!OneSignalUtils.isValidPhoneNumber(sms)) {
-            throw Exception("Cannot remove invalid sms number as subscription: $sms")
+            Logging.log(LogLevel.ERROR, "Cannot remove invalid sms number as subscription: $sms")
+            return
         }
 
         _subscriptionManager.removeSmsSubscription(sms)
@@ -154,7 +166,8 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "setTag(key: $key, value: $value)")
 
         if (key.isEmpty()) {
-            throw Exception("Cannot add tag with empty key")
+            Logging.log(LogLevel.ERROR, "Cannot add tag with empty key")
+            return
         }
 
         _propertiesModel.tags[key] = value
@@ -165,7 +178,8 @@ internal open class UserManager(
 
         tags.forEach {
             if (it.key.isEmpty()) {
-                throw Exception("Cannot add tag with empty key")
+                Logging.log(LogLevel.ERROR, "Cannot add tag with empty key")
+                return
             }
         }
 
@@ -178,7 +192,8 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "removeTag(key: $key)")
 
         if (key.isEmpty()) {
-            throw Exception("Cannot remove tag with empty key")
+            Logging.log(LogLevel.ERROR, "Cannot remove tag with empty key")
+            return
         }
 
         _propertiesModel.tags.remove(key)
@@ -189,7 +204,8 @@ internal open class UserManager(
 
         keys.forEach {
             if (it.isEmpty()) {
-                throw Exception("Cannot remove tag with empty key")
+                Logging.log(LogLevel.ERROR, "Cannot remove tag with empty key")
+                return
             }
         }
 
