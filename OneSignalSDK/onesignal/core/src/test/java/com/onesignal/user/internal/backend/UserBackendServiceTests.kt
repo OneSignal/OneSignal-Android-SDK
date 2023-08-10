@@ -28,12 +28,11 @@ class UserBackendServiceTests : FunSpec({
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(403, "FORBIDDEN")
         val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf<String, String>()
-        val properties = PropertiesObject()
         val subscriptions = listOf<SubscriptionObject>()
 
         /* When */
         val exception = shouldThrowUnit<BackendException> {
-            userBackendService.createUser("appId", identities, properties, subscriptions)
+            userBackendService.createUser("appId", identities, subscriptions)
         }
 
         /* Then */
@@ -48,11 +47,10 @@ class UserBackendServiceTests : FunSpec({
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\", aliasLabel1: \"aliasValue1\"}}")
         val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf("aliasLabel1" to "aliasValue1")
-        val properties = PropertiesObject()
         val subscriptions = listOf<SubscriptionObject>()
 
         /* When */
-        val response = userBackendService.createUser("appId", identities, properties, subscriptions)
+        val response = userBackendService.createUser("appId", identities, subscriptions)
 
         /* Then */
         response.identities["onesignal_id"] shouldBe osId
@@ -79,12 +77,11 @@ class UserBackendServiceTests : FunSpec({
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\"}, subscriptions:[{id:\"subscriptionId1\", type:\"AndroidPush\"}]}")
         val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf<String, String>()
-        val properties = PropertiesObject()
         val subscriptions = mutableListOf<SubscriptionObject>()
         subscriptions.add(SubscriptionObject("SHOULDNOTUSE", SubscriptionObjectType.ANDROID_PUSH))
 
         /* When */
-        val response = userBackendService.createUser("appId", identities, properties, subscriptions)
+        val response = userBackendService.createUser("appId", identities, subscriptions)
 
         /* Then */
         response.identities["onesignal_id"] shouldBe osId
@@ -102,40 +99,6 @@ class UserBackendServiceTests : FunSpec({
                     it.getJSONArray("subscriptions").length() shouldBe 1
                     it.getJSONArray("subscriptions").getJSONObject(0).has("type") shouldBe true
                     it.getJSONArray("subscriptions").getJSONObject(0).getString("type") shouldBe "AndroidPush"
-                },
-            )
-        }
-    }
-
-    test("create user with an alias and properties creates a new user") {
-        /* Given */
-        val osId = "11111111-1111-1111-1111-111111111111"
-        val spyHttpClient = mockk<IHttpClient>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\", aliasLabel1: \"aliasValue1\"}, properties: { tags: {tagKey1: tagValue1}}}")
-        val userBackendService = UserBackendService(spyHttpClient)
-        val identities = mapOf("aliasLabel1" to "aliasValue1")
-        val properties = PropertiesObject(tags = mapOf("tagkey1" to "tagValue1"))
-        val subscriptions = listOf<SubscriptionObject>()
-
-        /* When */
-        val response = userBackendService.createUser("appId", identities, properties, subscriptions)
-
-        /* Then */
-        response.identities["onesignal_id"] shouldBe osId
-        response.identities["aliasLabel1"] shouldBe "aliasValue1"
-        response.subscriptions.count() shouldBe 0
-        coVerify {
-            spyHttpClient.post(
-                "apps/appId/users",
-                withArg {
-                    it.has("identity") shouldBe true
-                    it.getJSONObject("identity").has("aliasLabel1") shouldBe true
-                    it.getJSONObject("identity").getString("aliasLabel1") shouldBe "aliasValue1"
-                    it.has("properties") shouldBe true
-                    it.getJSONObject("properties").has("tags") shouldBe true
-                    it.getJSONObject("properties").getJSONObject("tags").has("tagkey1") shouldBe true
-                    it.getJSONObject("properties").getJSONObject("tags").getString("tagkey1") shouldBe "tagValue1"
-                    it.has("subscriptions") shouldBe false
                 },
             )
         }
