@@ -4,6 +4,7 @@ import android.os.Process
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
@@ -14,6 +15,7 @@ import com.onesignal.session.internal.influence.InfluenceType
 import com.onesignal.session.internal.outcomes.IOutcomeEventsController
 import com.onesignal.session.internal.session.ISessionLifecycleHandler
 import com.onesignal.session.internal.session.ISessionService
+import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 
@@ -26,6 +28,7 @@ internal class OutcomeEventsController(
     private val _configModelStore: ConfigModelStore,
     private val _identityModelStore: IdentityModelStore,
     private val _subscriptionManager: ISubscriptionManager,
+    private val _deviceService: IDeviceService,
     private val _time: ITime,
 ) : IOutcomeEventsController, IStartableService, ISessionLifecycleHandler {
     // Keeps track of unique outcome events sent for UNATTRIBUTED sessions on a per session level
@@ -78,6 +81,18 @@ Outcome event was cached and will be reattempted on app cold start""",
         }
     }
 
+    override suspend fun sendSessionEndOutcomeEvent(duration: Long): OutcomeEvent? {
+        val influences: List<Influence> = _influenceManager.influences
+
+        // only send the outcome if there are any influences associated with the session
+        for (influence in influences) {
+            if (influence.ids != null) {
+                return sendAndCreateOutcomeEvent("os__session_duration", 0f, duration, influences)
+            }
+        }
+        return null
+    }
+
     override suspend fun sendUniqueOutcomeEvent(name: String): OutcomeEvent? {
         val sessionResult: List<Influence> = _influenceManager.influences
         return sendUniqueOutcomeEvent(name, sessionResult)
@@ -85,12 +100,12 @@ Outcome event was cached and will be reattempted on app cold start""",
 
     override suspend fun sendOutcomeEvent(name: String): OutcomeEvent? {
         val influences: List<Influence> = _influenceManager.influences
-        return sendAndCreateOutcomeEvent(name, 0f, influences)
+        return sendAndCreateOutcomeEvent(name, 0f, 0, influences)
     }
 
     override suspend fun sendOutcomeEventWithValue(name: String, weight: Float): OutcomeEvent? {
         val influences: List<Influence> = _influenceManager.influences
-        return sendAndCreateOutcomeEvent(name, weight, influences)
+        return sendAndCreateOutcomeEvent(name, weight, 0, influences)
     }
 
     /**
@@ -131,7 +146,7 @@ Outcome event was cached and will be reattempted on app cold start""",
                 // Return null to determine not a failure, but not a success in terms of the request made
                 return null
             }
-            return sendAndCreateOutcomeEvent(name, 0f, uniqueInfluences)
+            return sendAndCreateOutcomeEvent(name, 0f, 0, uniqueInfluences)
         } else {
             // Make sure unique outcome has not been sent for current unattributed session
             if (unattributedUniqueOutcomeEventsSentOnSession.contains(name)) {
@@ -147,13 +162,14 @@ Outcome event was cached and will be reattempted on app cold start""",
                 return null
             }
             unattributedUniqueOutcomeEventsSentOnSession.add(name)
-            return sendAndCreateOutcomeEvent(name, 0f, influences)
+            return sendAndCreateOutcomeEvent(name, 0f, 0, influences)
         }
     }
 
     private suspend fun sendAndCreateOutcomeEvent(
         name: String,
         weight: Float,
+        sessionTime: Long, // Note: this is optional
         influences: List<Influence>,
     ): OutcomeEvent? {
         val timestampSeconds: Long = _time.currentTimeMillis / 1000
@@ -183,7 +199,7 @@ Outcome event was cached and will be reattempted on app cold start""",
         }
 
         val source = OutcomeSource(directSourceBody, indirectSourceBody)
-        val eventParams = OutcomeEventParams(name, source, weight, 0)
+        val eventParams = OutcomeEventParams(name, source, weight, sessionTime, 0)
 
         try {
             requestMeasureOutcomeEvent(eventParams)
@@ -267,10 +283,11 @@ Outcome event was cached and will be reattempted on app cold start""",
     private suspend fun requestMeasureOutcomeEvent(eventParams: OutcomeEventParams) {
         val appId: String = _configModelStore.model.appId
         val subscriptionId = _subscriptionManager.subscriptions.push.id
+        val deviceType = SubscriptionObjectType.fromDeviceType(_deviceService.deviceType).value
 
         // if we don't have a subscription ID yet, throw an exception. The outcome will be saved and processed
         // later, when we do have a subscription ID.
-        if (subscriptionId.isEmpty()) {
+        if (subscriptionId.isEmpty() || deviceType.isEmpty()) {
             throw BackendException(0)
         }
 
@@ -282,6 +299,6 @@ Outcome event was cached and will be reattempted on app cold start""",
             else -> null
         }
 
-        _outcomeEventsBackend.sendOutcomeEvent(appId, _identityModelStore.model.onesignalId, subscriptionId, direct, event)
+        _outcomeEventsBackend.sendOutcomeEvent(appId, _identityModelStore.model.onesignalId, subscriptionId, deviceType, direct, event)
     }
 }
