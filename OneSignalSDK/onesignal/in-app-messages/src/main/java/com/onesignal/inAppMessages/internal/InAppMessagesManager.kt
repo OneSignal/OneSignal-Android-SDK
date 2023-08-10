@@ -350,7 +350,6 @@ internal class InAppMessagesManager(
         // If there was a message dequeued, display it
         if (messageToDisplay != null) {
             var result = _displayer.displayMessage(messageToDisplay!!)
-            _state.inAppMessageIdShowing = null
 
             if (result == null) {
                 _state.inAppMessageIdShowing = null
