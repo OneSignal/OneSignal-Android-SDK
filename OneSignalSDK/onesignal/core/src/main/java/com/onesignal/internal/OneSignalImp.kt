@@ -4,6 +4,7 @@ import android.content.Context
 import com.onesignal.IOneSignal
 import com.onesignal.common.IDManager
 import com.onesignal.common.OneSignalUtils
+import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modules.IModule
 import com.onesignal.common.safeString
@@ -254,7 +255,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
         if (!isInitialized) {
-            throw Exception("Must call 'initWithContext' before use")
+            Logging.log(LogLevel.ERROR, "Must call 'initWithContext' before using Login")
         }
 
         var currentIdentityExternalId: String? = null
@@ -306,20 +307,20 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             )
 
             if (!result) {
-                throw Exception("Could not login user")
+                Logging.log(LogLevel.ERROR, "Could not login user")
+            } else {
+                // enqueue a RefreshUserOperation to pull the user from the backend and refresh the models.
+                // This is a separate enqueue operation to ensure any outstanding operations that happened
+                // after the createAndSwitchToNewUser have been executed, and the retrieval will be the
+                // most up to date reflection of the user.
+                _operationRepo!!.enqueueAndWait(
+                        RefreshUserOperation(
+                                _configModel!!.appId,
+                                _identityModelStore!!.model.onesignalId,
+                        ),
+                        true,
+                )
             }
-
-            // enqueue a RefreshUserOperation to pull the user from the backend and refresh the models.
-            // This is a separate enqueue operation to ensure any outstanding operations that happened
-            // after the createAndSwitchToNewUser have been executed, and the retrieval will be the
-            // most up to date reflection of the user.
-            _operationRepo!!.enqueueAndWait(
-                RefreshUserOperation(
-                    _configModel!!.appId,
-                    _identityModelStore!!.model.onesignalId,
-                ),
-                true,
-            )
         }
     }
 
@@ -327,7 +328,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         Logging.log(LogLevel.DEBUG, "logout()")
 
         if (!isInitialized) {
-            throw Exception("Must call 'initWithContext' before use")
+            Logging.log(LogLevel.ERROR, "Must call 'initWithContext' before using Login")
+            return
         }
 
         // only allow one login/logout at a time
