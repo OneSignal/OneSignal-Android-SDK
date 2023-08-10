@@ -122,7 +122,8 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "addEmail(email: $email)")
 
         if (!OneSignalUtils.isValidEmail(email)) {
-            throw Exception("Cannot add invalid email address as subscription: $email")
+            Logging.log(LogLevel.ERROR, "Cannot add invalid email address as subscription: $email")
+            return
         }
 
         _subscriptionManager.addEmailSubscription(email)
@@ -132,7 +133,8 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "removeEmail(email: $email)")
 
         if (!OneSignalUtils.isValidEmail(email)) {
-            throw Exception("Cannot remove invalid email address as subscription: $email")
+            Logging.log(LogLevel.ERROR, "Cannot remove invalid email address as subscription: $email")
+            return
         }
 
         _subscriptionManager.removeEmailSubscription(email)
@@ -142,7 +144,8 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "addSms(sms: $sms)")
 
         if (!OneSignalUtils.isValidPhoneNumber(sms)) {
-            throw Exception("Cannot add invalid sms number as subscription: $sms")
+            Logging.log(LogLevel.ERROR, "Cannot add invalid sms number as subscription: $sms")
+            return
         }
 
         _subscriptionManager.addSmsSubscription(sms)
@@ -152,7 +155,8 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "removeSms(sms: $sms)")
 
         if (!OneSignalUtils.isValidPhoneNumber(sms)) {
-            throw Exception("Cannot remove invalid sms number as subscription: $sms")
+            Logging.log(LogLevel.ERROR, "Cannot remove invalid sms number as subscription: $sms")
+            return
         }
 
         _subscriptionManager.removeSmsSubscription(sms)
