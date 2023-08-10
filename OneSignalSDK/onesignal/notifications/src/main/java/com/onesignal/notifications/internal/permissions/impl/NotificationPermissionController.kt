@@ -58,7 +58,7 @@ internal class NotificationPermissionController(
     override val canRequestPermission: Boolean
         get() = !_preferenceService.getBool(
             PreferenceStores.ONESIGNAL,
-            "${PreferenceOneSignalKeys.PREFS_OS_USER_REJECTED_PERMISSION_PREFIX}$ANDROID_PERMISSION_STRING",
+            "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$ANDROID_PERMISSION_STRING",
             false,
         )!!
 
