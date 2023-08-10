@@ -12,13 +12,13 @@ interface IUserBackendService {
      * @param appId The ID of the OneSignal application this user will be created under.
      * @param identities The identities to retrieve/modify this user in subsequent requests.  Each identity key/value pair must be unique within
      * the application.
-     * @param properties The properties for this user.
      * @param subscriptions The subscriptions that should also be created and associated with the user. If subscriptions are already owned by a different user
      * they will be transferred to this user.
      *
      * @return The backend response
      */
-    suspend fun createUser(appId: String, identities: Map<String, String>, properties: PropertiesObject, subscriptions: List<SubscriptionObject>): CreateUserResponse
+    suspend fun createUser(appId: String, identities: Map<String, String>, subscriptions: List<SubscriptionObject>): CreateUserResponse
+    // TODO: Change to send only the push subscription, optimally
 
     /**
      * Update the user identified by the [appId]/[aliasId]/[aliasLabel] on the backend.
