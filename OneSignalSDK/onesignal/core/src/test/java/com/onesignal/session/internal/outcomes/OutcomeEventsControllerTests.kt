@@ -74,6 +74,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore(),
             mockSubscriptionManager,
+            MockHelper.deviceService(),
             MockHelper.time(now),
         )
 
@@ -82,7 +83,7 @@ class OutcomeEventsControllerTests : FunSpec({
 
         /* Then */
         evnt shouldBe null
-        coVerify(exactly = 0) { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any(), any(), any()) }
     }
 
     test("send outcome with unattributed influences") {
@@ -112,6 +113,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
             mockSubscriptionManager,
+            MockHelper.deviceService(),
             MockHelper.time(now),
         )
 
@@ -126,7 +128,7 @@ class OutcomeEventsControllerTests : FunSpec({
         evnt.session shouldBe InfluenceType.UNATTRIBUTED
         evnt.timestamp shouldBe 0 // timestamp only set when it had to be saved.
 
-        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", null, evnt) }
+        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", "AndroidPush", null, evnt) }
     }
 
     test("send outcome with indirect influences") {
@@ -157,6 +159,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
             mockSubscriptionManager,
+            MockHelper.deviceService(),
             MockHelper.time(now),
         )
 
@@ -172,7 +175,7 @@ class OutcomeEventsControllerTests : FunSpec({
         evnt.session shouldBe InfluenceType.INDIRECT
         evnt.timestamp shouldBe 0 // timestamp only set when it had to be saved.
 
-        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", false, evnt) }
+        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", "AndroidPush", false, evnt) }
     }
 
     test("send outcome with direct influence") {
@@ -203,6 +206,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
             mockSubscriptionManager,
+            MockHelper.deviceService(),
             MockHelper.time(now),
         )
 
@@ -218,7 +222,7 @@ class OutcomeEventsControllerTests : FunSpec({
         evnt.session shouldBe InfluenceType.DIRECT
         evnt.timestamp shouldBe 0 // timestamp only set when it had to be saved.
 
-        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", true, evnt) }
+        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", "AndroidPush", true, evnt) }
     }
 
     test("send outcome with weight") {
@@ -249,6 +253,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
             mockSubscriptionManager,
+            MockHelper.deviceService(),
             MockHelper.time(now),
         )
 
@@ -263,7 +268,7 @@ class OutcomeEventsControllerTests : FunSpec({
         evnt.session shouldBe InfluenceType.UNATTRIBUTED
         evnt.timestamp shouldBe 0 // timestamp only set when it had to be saved.
 
-        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", null, evnt) }
+        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", "AndroidPush", null, evnt) }
     }
 
     test("send unique outcome with unattributed influences") {
@@ -293,6 +298,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
             mockSubscriptionManager,
+            MockHelper.deviceService(),
             MockHelper.time(now),
         )
 
@@ -310,7 +316,7 @@ class OutcomeEventsControllerTests : FunSpec({
 
         evnt2 shouldBe null
 
-        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", any(), any()) }
+        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", "AndroidPush", any(), any()) }
     }
 
     test("send unique outcome with same indirect influences") {
@@ -346,6 +352,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
             mockSubscriptionManager,
+            MockHelper.deviceService(),
             MockHelper.time(now),
         )
 
@@ -366,7 +373,7 @@ class OutcomeEventsControllerTests : FunSpec({
 
         evnt2 shouldBe null
 
-        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", any(), any()) }
+        coVerify(exactly = 1) { mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", "AndroidPush", any(), any()) }
     }
 
     test("send unique outcome with different indirect influences") {
@@ -404,6 +411,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
             mockSubscriptionManager,
+            MockHelper.deviceService(),
             MockHelper.time(now),
         )
 
@@ -431,8 +439,8 @@ class OutcomeEventsControllerTests : FunSpec({
         evnt2.timestamp shouldBe 0 // timestamp only set when it had to be saved.
 
         coVerifySequence {
-            mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", false, evnt1)
-            mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", true, evnt2)
+            mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", "AndroidPush", false, evnt1)
+            mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", "AndroidPush", true, evnt2)
         }
     }
 
@@ -453,7 +461,7 @@ class OutcomeEventsControllerTests : FunSpec({
         val mockOutcomeEventsRepository = spyk<IOutcomeEventsRepository>()
         val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
         val mockOutcomeEventsBackend = mockk<IOutcomeEventsBackendService>()
-        coEvery { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any(), any()) } throws BackendException(408, null)
+        coEvery { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any(), any(), any()) } throws BackendException(408, null)
 
         val outcomeEventsController = OutcomeEventsController(
             mockSessionService,
@@ -464,6 +472,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore(),
             mockSubscriptionManager,
+            MockHelper.deviceService(),
             MockHelper.time(now),
         )
 
@@ -500,12 +509,12 @@ class OutcomeEventsControllerTests : FunSpec({
         coEvery { mockOutcomeEventsRepository.cleanCachedUniqueOutcomeEventNotifications() } just runs
         coEvery { mockOutcomeEventsRepository.deleteOldOutcomeEvent(any()) } just runs
         coEvery { mockOutcomeEventsRepository.getAllEventsToSend() } returns listOf(
-            OutcomeEventParams("outcomeId1", OutcomeSource(OutcomeSourceBody(JSONArray().put("notificationId1")), null), .4f, 1111),
-            OutcomeEventParams("outcomeId2", OutcomeSource(null, OutcomeSourceBody(JSONArray().put("notificationId2").put("notificationId3"))), .2f, 2222),
+            OutcomeEventParams("outcomeId1", OutcomeSource(OutcomeSourceBody(JSONArray().put("notificationId1")), null), .4f, 0, 1111),
+            OutcomeEventParams("outcomeId2", OutcomeSource(null, OutcomeSourceBody(JSONArray().put("notificationId2").put("notificationId3"))), .2f, 0, 2222),
         )
         val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
         val mockOutcomeEventsBackend = mockk<IOutcomeEventsBackendService>()
-        coEvery { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any(), any()) } just runs
+        coEvery { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any(), any(), any()) } just runs
 
         val outcomeEventsController = OutcomeEventsController(
             mockSessionService,
@@ -516,6 +525,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
             mockSubscriptionManager,
+            MockHelper.deviceService(),
             MockHelper.time(now),
         )
 
@@ -530,6 +540,7 @@ class OutcomeEventsControllerTests : FunSpec({
                 "appId",
                 "onesignalId",
                 "subscriptionId",
+                "AndroidPush",
                 true,
                 withArg {
                     it.name shouldBe "outcomeId1"
@@ -544,6 +555,7 @@ class OutcomeEventsControllerTests : FunSpec({
                 "appId",
                 "onesignalId",
                 "subscriptionId",
+                "AndroidPush",
                 false,
                 withArg {
                     it.name shouldBe "outcomeId2"
@@ -587,12 +599,12 @@ class OutcomeEventsControllerTests : FunSpec({
         val mockOutcomeEventsRepository = mockk<IOutcomeEventsRepository>()
         coEvery { mockOutcomeEventsRepository.cleanCachedUniqueOutcomeEventNotifications() } just runs
         coEvery { mockOutcomeEventsRepository.getAllEventsToSend() } returns listOf(
-            OutcomeEventParams("outcomeId1", OutcomeSource(OutcomeSourceBody(JSONArray().put("notificationId1")), null), .4f, 1111),
-            OutcomeEventParams("outcomeId2", OutcomeSource(null, OutcomeSourceBody(JSONArray().put("notificationId2").put("notificationId3"))), .2f, 2222),
+            OutcomeEventParams("outcomeId1", OutcomeSource(OutcomeSourceBody(JSONArray().put("notificationId1")), null), .4f, 0, 1111),
+            OutcomeEventParams("outcomeId2", OutcomeSource(null, OutcomeSourceBody(JSONArray().put("notificationId2").put("notificationId3"))), .2f, 0, 2222),
         )
         val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
         val mockOutcomeEventsBackend = mockk<IOutcomeEventsBackendService>()
-        coEvery { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any(), any()) } throws BackendException(408, null)
+        coEvery { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any(), any(), any()) } throws BackendException(408, null)
 
         val outcomeEventsController = OutcomeEventsController(
             mockSessionService,
@@ -603,6 +615,7 @@ class OutcomeEventsControllerTests : FunSpec({
             MockHelper.configModelStore(),
             MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
             mockSubscriptionManager,
+            MockHelper.deviceService(),
             MockHelper.time(now),
         )
 
@@ -617,6 +630,7 @@ class OutcomeEventsControllerTests : FunSpec({
                 "appId",
                 "onesignalId",
                 "subscriptionId",
+                "AndroidPush",
                 true,
                 withArg {
                     it.name shouldBe "outcomeId1"
@@ -631,6 +645,7 @@ class OutcomeEventsControllerTests : FunSpec({
                 "appId",
                 "onesignalId",
                 "subscriptionId",
+                "AndroidPush",
                 false,
                 withArg {
                     it.name shouldBe "outcomeId2"

@@ -15,8 +15,9 @@ internal interface IOutcomeEventsBackendService {
      * @param appId The ID of the application this outcome event occurred under.
      * @param userId The OneSignal user ID that is active during the outcome event.
      * @param subscriptionId The subscription ID that is active during the outcome event.
+     * @param deviceType The type of device that the outcome event occurred on.
      * @param direct Whether this outcome event is direct. `true` if it is, `false` if it isn't, `null` if should not be specified.
      * @param event The outcome event to send up.
      */
-    suspend fun sendOutcomeEvent(appId: String, userId: String, subscriptionId: String, direct: Boolean?, event: OutcomeEvent)
+    suspend fun sendOutcomeEvent(appId: String, userId: String, subscriptionId: String, deviceType: String, direct: Boolean?, event: OutcomeEvent)
 }

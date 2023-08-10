@@ -88,6 +88,7 @@ internal class OutcomeEventsRepository(
                 put(OutcomeEventsTable.COLUMN_NAME_NAME, eventParams.outcomeId)
                 put(OutcomeEventsTable.COLUMN_NAME_WEIGHT, eventParams.weight)
                 put(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP, eventParams.timestamp)
+                put(OutcomeEventsTable.COLUMN_NAME_SESSION_TIME, eventParams.sessionTime)
             }.also { values ->
                 _databaseProvider.os.insert(OutcomeEventsTable.TABLE_NAME, null, values)
             }
@@ -128,6 +129,8 @@ internal class OutcomeEventsRepository(
                             cursor.getFloat(OutcomeEventsTable.COLUMN_NAME_WEIGHT)
                         val timestamp =
                             cursor.getLong(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP)
+                        val sessionTime =
+                            cursor.getLong(OutcomeEventsTable.COLUMN_NAME_SESSION_TIME)
 
                         try {
                             val directSourceBody = OutcomeSourceBody()
@@ -147,7 +150,7 @@ internal class OutcomeEventsRepository(
                                         it,
                                     )
                                 } ?: OutcomeSource(null, null)
-                            OutcomeEventParams(name, source, weight, timestamp).also {
+                            OutcomeEventParams(name, source, weight, sessionTime, timestamp).also {
                                 events.add(it)
                             }
                         } catch (e: JSONException) {
