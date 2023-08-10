@@ -166,7 +166,8 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "setTag(key: $key, value: $value)")
 
         if (key.isEmpty()) {
-            throw Exception("Cannot add tag with empty key")
+            Logging.log(LogLevel.ERROR, "Cannot add tag with empty key")
+            return
         }
 
         _propertiesModel.tags[key] = value
@@ -177,7 +178,8 @@ internal open class UserManager(
 
         tags.forEach {
             if (it.key.isEmpty()) {
-                throw Exception("Cannot add tag with empty key")
+                Logging.log(LogLevel.ERROR, "Cannot add tag with empty key")
+                return
             }
         }
 
@@ -190,7 +192,8 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "removeTag(key: $key)")
 
         if (key.isEmpty()) {
-            throw Exception("Cannot remove tag with empty key")
+            Logging.log(LogLevel.ERROR, "Cannot remove tag with empty key")
+            return
         }
 
         _propertiesModel.tags.remove(key)
@@ -201,7 +204,8 @@ internal open class UserManager(
 
         keys.forEach {
             if (it.isEmpty()) {
-                throw Exception("Cannot remove tag with empty key")
+                Logging.log(LogLevel.ERROR, "Cannot remove tag with empty key")
+                return
             }
         }
 
