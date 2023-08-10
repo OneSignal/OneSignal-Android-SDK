@@ -50,11 +50,13 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "setAlias(label: $label, id: $id)")
 
         if (label.isEmpty()) {
-            throw Exception("Cannot add empty alias")
+            Logging.log(LogLevel.ERROR, "Cannot add empty alias")
+            return
         }
 
         if (label == IdentityConstants.ONESIGNAL_ID) {
-            throw Exception("Cannot add '${IdentityConstants.ONESIGNAL_ID}' alias")
+            Logging.log(LogLevel.ERROR, "Cannot add '${IdentityConstants.ONESIGNAL_ID}' alias")
+            return
         }
 
         _identityModel[label] = id
@@ -65,11 +67,13 @@ internal open class UserManager(
 
         aliases.forEach {
             if (it.key.isEmpty()) {
-                throw Exception("Cannot add empty alias")
+                Logging.log(LogLevel.ERROR, "Cannot add empty alias")
+                return
             }
 
             if (it.key == IdentityConstants.ONESIGNAL_ID) {
-                throw Exception("Cannot add '${IdentityConstants.ONESIGNAL_ID}' alias")
+                Logging.log(LogLevel.ERROR, "Cannot add '${IdentityConstants.ONESIGNAL_ID}' alias")
+                return
             }
         }
 
@@ -82,11 +86,13 @@ internal open class UserManager(
         Logging.log(LogLevel.DEBUG, "removeAlias(label: $label)")
 
         if (label.isEmpty()) {
-            throw Exception("Cannot remove empty alias")
+            Logging.log(LogLevel.ERROR, "Cannot remove empty alias")
+            return
         }
 
         if (label == IdentityConstants.ONESIGNAL_ID) {
-            throw Exception("Cannot remove '${IdentityConstants.ONESIGNAL_ID}' alias")
+            Logging.log(LogLevel.ERROR, "Cannot remove '${IdentityConstants.ONESIGNAL_ID}' alias")
+            return
         }
 
         _identityModel.remove(label)
@@ -97,11 +103,13 @@ internal open class UserManager(
 
         labels.forEach {
             if (it.isEmpty()) {
-                throw Exception("Cannot remove empty alias")
+                Logging.log(LogLevel.ERROR, "Cannot remove empty alias")
+                return
             }
 
             if (it == IdentityConstants.ONESIGNAL_ID) {
-                throw Exception("Cannot remove '${IdentityConstants.ONESIGNAL_ID}' alias")
+                Logging.log(LogLevel.ERROR, "Cannot remove '${IdentityConstants.ONESIGNAL_ID}' alias")
+                return
             }
         }
 
