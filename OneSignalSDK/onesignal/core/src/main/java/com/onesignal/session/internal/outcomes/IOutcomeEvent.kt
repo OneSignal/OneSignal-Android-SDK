@@ -8,5 +8,6 @@ interface IOutcomeEvent {
     val notificationIds: JSONArray?
     val name: String
     val timestamp: Long
+    val sessionTime: Long // in seconds
     val weight: Float
 }
