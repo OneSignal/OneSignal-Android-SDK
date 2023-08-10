@@ -41,7 +41,7 @@ internal class InAppBackendService(
 
     override suspend fun getIAMData(appId: String, messageId: String, variantId: String?): GetIAMDataResponse {
         val htmlPath = htmlPathForMessage(messageId, variantId, appId)
-            ?: throw Exception("variantId not valid: $variantId")
+            ?: return GetIAMDataResponse(null, false)
 
         val response = _httpClient.get(htmlPath, null)
 
