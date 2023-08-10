@@ -1,4 +1,4 @@
-# Android v5.0.0-beta4 Migration Guide
+# Android v5.0.0 Migration Guide
 In this release, we are making a significant shift from a device-centered model to a user-centered model.  A user-centered model allows for more powerful omni-channel integrations within the OneSignal platform.
 
 This migration guide will walk you through the Android SDK v5.0.0 changes as a result of this shift.
@@ -32,7 +32,7 @@ Open your App’s `build.gradle (Module: app)` file, add (or update) the followi
 
 
     dependencies {
-      implementation 'com.onesignal:OneSignal:5.0.0-beta2'
+      implementation 'com.onesignal:OneSignal:5.0.0'
     }
 
 The above statement will bring in the entire OneSignalSDK and is the desired state for most integrations.  For greater flexibility you can alternatively specify individual modules that make up the full SDK.  The possible modules are:
@@ -44,10 +44,10 @@ The above statement will bring in the entire OneSignalSDK and is the desired sta
 
 
     dependencies {
-      implementation 'com.onesignal:core:5.0.0-beta2'
-      implementation 'com.onesignal:in-app-messages:5.0.0-beta2'
-      implementation 'com.onesignal:notifications:5.0.0-beta2'
-      implementation 'com.onesignal:location:5.0.0-beta2'
+      implementation 'com.onesignal:core:5.0.0'
+      implementation 'com.onesignal:in-app-messages:5.0.0'
+      implementation 'com.onesignal:notifications:5.0.0'
+      implementation 'com.onesignal:location:5.0.0'
     }
 
 
@@ -338,10 +338,11 @@ The debug namespace is accessible via `OneSignal.Debug` (in Kotlin) or `OneSigna
 
 
 
-# Limitations 
-- Recommend using only in development and staging environments for Beta releases.
-- Outcomes will be available in a future release
+# Limitations
+- Changing app IDs is not supported.
+- Any `User` namespace calls must be invoked **after** initialization. Example: `OneSignal.User.addTag("tag", "2")`
+- In the SDK, the user state is only refreshed from the server when a new session is started (cold start or backgrounded for over 30 seconds) or when the user is logged in. This is by design.
 
 # Known issues
 - Identity Verification
-    - We will be introducing JWT in follow up Alpha or Beta release 
+    - We will be introducing Identity Verification using JWT in a follow up release
