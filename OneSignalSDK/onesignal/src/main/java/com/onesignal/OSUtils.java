@@ -53,7 +53,6 @@ import android.text.TextUtils;
 import androidx.legacy.content.WakefulBroadcastReceiver;
 
 import com.google.android.gms.common.GoogleApiAvailability;
-import com.huawei.hms.api.HuaweiApiAvailability;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -167,35 +166,19 @@ class OSUtils {
    }
 
    private static boolean hasHMSAvailabilityLibrary() {
-      try {
-         return opaqueHasClass(com.huawei.hms.api.HuaweiApiAvailability.class);
-      } catch (NoClassDefFoundError e) {
-         return false;
-      }
+      return false;
    }
 
    private static boolean hasHMSPushKitLibrary() {
-      try {
-         return opaqueHasClass(com.huawei.hms.aaid.HmsInstanceId.class);
-      } catch (NoClassDefFoundError e) {
-         return false;
-      }
+      return false;
    }
 
    private static boolean hasHMSAGConnectLibrary() {
-      try {
-         return opaqueHasClass(com.huawei.agconnect.config.AGConnectServicesConfig.class);
-      } catch (NoClassDefFoundError e) {
-         return false;
-      }
+      return false;
    }
 
    static boolean hasHMSLocationLibrary() {
-      try {
-         return opaqueHasClass(com.huawei.hms.location.LocationCallback.class);
-      } catch (NoClassDefFoundError e) {
-         return false;
-      }
+      return false;
    }
 
    static boolean hasAllHMSLibrariesForPushKit() {
@@ -290,8 +273,7 @@ class OSUtils {
 
    private static final int HMS_AVAILABLE_SUCCESSFUL = 0;
    private static boolean isHMSCoreInstalledAndEnabled() {
-      HuaweiApiAvailability availability = HuaweiApiAvailability.getInstance();
-      return availability.isHuaweiMobileServicesAvailable(OneSignal.appContext) == HMS_AVAILABLE_SUCCESSFUL;
+      return false;
    }
 
    private static final String HMS_CORE_SERVICES_PACKAGE = "com.huawei.hwid"; // = HuaweiApiAvailability.SERVICES_PACKAGE

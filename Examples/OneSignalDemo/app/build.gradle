@@ -43,12 +43,8 @@ android {
     }
 
     task flavorSelection() {
-        if (getGradle().getStartParameter().getTaskRequests().toString().contains("Gms")) {
             apply plugin: 'com.google.gms.google-services'
             googleServices { disableVersionCheck = true }
-        } else {
-            apply plugin: 'com.huawei.agconnect'
-        }
     }
 }
 
@@ -68,17 +64,4 @@ dependencies {
     gmsImplementation('com.onesignal:OneSignal:4.6.3')
     /** END - Google Play Builds **/
 
-    /** START - Huawei Builds **/
-    // Omit Google / Firebase libraries for Huawei builds.
-    huaweiImplementation('com.onesignal:OneSignal:4.6.3') {
-        exclude group: 'com.google.android.gms', module: 'play-services-gcm'
-        exclude group: 'com.google.android.gms', module: 'play-services-analytics'
-        exclude group: 'com.google.android.gms', module: 'play-services-location'
-        exclude group: 'com.google.firebase', module: 'firebase-messaging'
-    }
-    // Add HMS Push library
-    huaweiImplementation 'com.huawei.hms:push:6.3.0.304'
-    // Optionally add HMS location
-    huaweiImplementation 'com.huawei.hms:location:4.0.0.300'
-    /** END - Huawei Builds **/
 }

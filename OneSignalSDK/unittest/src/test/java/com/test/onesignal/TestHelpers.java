@@ -33,9 +33,6 @@ import com.onesignal.ShadowFocusHandler;
 import com.onesignal.ShadowFusedLocationApiWrapper;
 import com.onesignal.ShadowGenerateNotification;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
-import com.onesignal.ShadowHMSFusedLocationProviderClient;
-import com.onesignal.ShadowHmsInstanceId;
-import com.onesignal.ShadowHmsNotificationPayloadProcessor;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowNotificationReceivedEvent;
 import com.onesignal.ShadowOSUtils;
@@ -46,7 +43,6 @@ import com.onesignal.ShadowOneSignalRestClient;
 import com.onesignal.ShadowOneSignalRestClientWithMockConnection;
 import com.onesignal.ShadowPushRegistratorADM;
 import com.onesignal.ShadowPushRegistratorFCM;
-import com.onesignal.ShadowPushRegistratorHMS;
 import com.onesignal.ShadowTimeoutHandler;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.SyncJobService;
@@ -102,8 +98,6 @@ public class TestHelpers {
 
       ShadowPushRegistratorFCM.resetStatics();
       ShadowPushRegistratorADM.resetStatics();
-      ShadowHmsInstanceId.resetStatics();
-      ShadowPushRegistratorHMS.resetStatics();
 
       ShadowNotificationManagerCompat.enabled = true;
 
@@ -111,7 +105,6 @@ public class TestHelpers {
       ShadowFCMBroadcastReceiver.resetStatics();
 
       ShadowFusedLocationApiWrapper.resetStatics();
-      ShadowHMSFusedLocationProviderClient.resetStatics();
 
       ShadowFirebaseAnalytics.resetStatics();
 
@@ -131,7 +124,6 @@ public class TestHelpers {
       ShadowNotificationReceivedEvent.resetStatics();
       ShadowOneSignalNotificationManager.resetStatics();
       ShadowBadgeCountUpdater.resetStatics();
-      ShadowHmsNotificationPayloadProcessor.resetStatics();
       ShadowFocusHandler.Companion.resetStatics();
 
       lastException = null;

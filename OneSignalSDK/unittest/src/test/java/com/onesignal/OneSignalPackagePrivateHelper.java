@@ -9,7 +9,6 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.huawei.hms.push.RemoteMessage;
 import com.onesignal.influence.data.OSTrackerFactory;
 
 import org.json.JSONArray;
@@ -182,14 +181,6 @@ public class OneSignalPackagePrivateHelper {
       intent.putExtras(bundle);
       receiver.onReceive(context,intent);
       threadAndTaskWait();
-   }
-
-   public static void HMSEventBridge_onMessageReceive(final Context context, final RemoteMessage message) {
-      OneSignalHmsEventBridge.onMessageReceived(context, message);
-   }
-
-   public static void HMSProcessor_processDataMessageReceived(final Context context, final String jsonStrPayload) {
-      NotificationPayloadProcessorHMS.processDataMessageReceived(context, jsonStrPayload);
    }
 
    public static int NotificationBundleProcessor_Process(Context context, boolean restoring, JSONObject jsonPayload) {
@@ -651,7 +642,6 @@ public class OneSignalPackagePrivateHelper {
 
    public static class OSNotificationFormatHelper extends com.onesignal.OSNotificationFormatHelper {}
 
-   public static class NotificationPayloadProcessorHMS extends com.onesignal.NotificationPayloadProcessorHMS {}
 
    public static class OSTestNotification extends com.onesignal.OSNotification {
       public OSTestNotification(@NonNull JSONObject payload) {

@@ -9,7 +9,6 @@ import android.location.Location;
 
 import androidx.test.core.app.ApplicationProvider;
 
-import com.huawei.hms.location.HWLocation;
 import com.onesignal.MockOSLog;
 import com.onesignal.MockOSSharedPreferences;
 import com.onesignal.MockOSTimeImpl;
@@ -25,10 +24,6 @@ import com.onesignal.ShadowGMSLocationController;
 import com.onesignal.ShadowGMSLocationUpdateListener;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
-import com.onesignal.ShadowHMSFusedLocationProviderClient;
-import com.onesignal.ShadowHMSLocationUpdateListener;
-import com.onesignal.ShadowHmsInstanceId;
-import com.onesignal.ShadowHuaweiTask;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOneSignal;
 import com.onesignal.ShadowOneSignalRestClient;
@@ -77,7 +72,6 @@ import static org.robolectric.Shadows.shadowOf;
                 ShadowOSUtils.class,
                 ShadowCustomTabsClient.class,
                 ShadowCustomTabsSession.class,
-                ShadowHmsInstanceId.class,
                 ShadowFocusHandler.class
         },
         sdk = 21
@@ -373,223 +367,7 @@ public class LocationIntegrationTests {
         assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/on_session", request.url);
     }
 
-    // ####### Unit Test Huawei Location ########
 
-    @Test
-    @Config(shadows = {ShadowHMSFusedLocationProviderClient.class})
-    public void shouldUpdateAllLocationFieldsWhenTimeStampChanges_Huawei() throws Exception {
-        ShadowOSUtils.supportsHMS(true);
-        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
-        OneSignalInit();
-        threadAndTaskWait();
-        assertEquals(1.0, ShadowOneSignalRestClient.lastPost.getDouble("lat"));
-        assertEquals(2.0, ShadowOneSignalRestClient.lastPost.getDouble("long"));
-        assertEquals(3.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_acc"));
-        assertEquals(0.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_type"));
-
-        ShadowOneSignalRestClient.lastPost = null;
-        ShadowHMSFusedLocationProviderClient.resetStatics();
-        ShadowHMSFusedLocationProviderClient.lat = 30d;
-        ShadowHMSFusedLocationProviderClient.log = 2.0d;
-        ShadowHMSFusedLocationProviderClient.accuracy = 5.0f;
-        ShadowHMSFusedLocationProviderClient.time = 2L;
-        restartAppAndElapseTimeToNextSession(time);
-        OneSignalInit();
-        threadAndTaskWait();
-
-        assertEquals(30.0, ShadowOneSignalRestClient.lastPost.getDouble("lat"));
-        assertEquals(2.0, ShadowOneSignalRestClient.lastPost.getDouble("long"));
-        assertEquals(5.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_acc"));
-        assertEquals(0.0, ShadowOneSignalRestClient.lastPost.getDouble("loc_type"));
-    }
-
-    @Test
-    @Config(shadows = {
-            ShadowHMSFusedLocationProviderClient.class
-    }, sdk = 19)
-    public void testLocationSchedule_Huawei() throws Exception {
-        ShadowOSUtils.supportsHMS(true);
-        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_FINE_LOCATION");
-        ShadowHMSFusedLocationProviderClient.lat = 1.0d;
-        ShadowHMSFusedLocationProviderClient.log = 2.0d;
-        ShadowHMSFusedLocationProviderClient.accuracy = 3.0f;
-        ShadowHMSFusedLocationProviderClient.time = 12345L;
-
-        // location if we have permission
-        OneSignalInit();
-        threadAndTaskWait();
-        assertEquals(1.0, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
-        assertEquals(2.0, ShadowOneSignalRestClient.lastPost.optDouble("long"));
-        assertEquals(3.0, ShadowOneSignalRestClient.lastPost.optDouble("loc_acc"));
-        assertEquals(1, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
-
-        // Checking make sure an update is scheduled.
-        AlarmManager alarmManager = (AlarmManager)ApplicationProvider.getApplicationContext().getSystemService(Context.ALARM_SERVICE);
-        assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
-        Intent intent = shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent();
-        assertEquals(SyncService.class, shadowOf(intent).getIntentClass());
-
-        // Setting up a new point and testing it is sent
-        HWLocation fakeLocation = new HWLocation();
-        fakeLocation.setLatitude(1.1d);
-        fakeLocation.setLongitude(2.2d);
-        fakeLocation.setAccuracy(3.3f);
-        fakeLocation.setTime(12346L);
-        ShadowHMSLocationUpdateListener.provideFakeLocation_Huawei(fakeLocation);
-
-        Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
-        threadAndTaskWait();
-        assertEquals(1.1d, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
-        assertEquals(2.2d, ShadowOneSignalRestClient.lastPost.optDouble("long"));
-        assertEquals(3.3f, ShadowOneSignalRestClient.lastPost.opt("loc_acc"));
-
-        assertEquals(false, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
-
-        // Testing loc_bg
-        blankActivityController.pause();
-        threadAndTaskWait();
-
-        fakeLocation.setTime(12347L);
-        ShadowHMSLocationUpdateListener.provideFakeLocation_Huawei(fakeLocation);
-        Robolectric.buildService(SyncService.class, intent).startCommand(0, 0);
-        threadAndTaskWait();
-        assertEquals(1.1d, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
-        assertEquals(2.2d, ShadowOneSignalRestClient.lastPost.optDouble("long"));
-        assertEquals(3.3f, ShadowOneSignalRestClient.lastPost.opt("loc_acc"));
-        assertEquals(true, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
-        assertEquals(1, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
-    }
-
-    @Test
-    @Config(shadows = {
-            ShadowHMSFusedLocationProviderClient.class,
-            ShadowHuaweiTask.class
-    }, sdk = 19)
-    public void testLocationFromSyncAlarm_Huawei() throws Exception {
-        ShadowOSUtils.supportsHMS(true);
-        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
-
-        ShadowHMSFusedLocationProviderClient.lat = 1.1d;
-        ShadowHMSFusedLocationProviderClient.log = 2.1d;
-        ShadowHMSFusedLocationProviderClient.accuracy = 3.1f;
-        ShadowHMSFusedLocationProviderClient.time = 12346L;
-
-        OneSignalInit();
-        threadAndTaskWait();
-
-        fastColdRestartApp();
-        AlarmManager alarmManager = (AlarmManager)ApplicationProvider.getApplicationContext().getSystemService(Context.ALARM_SERVICE);
-        shadowOf(alarmManager).getScheduledAlarms().clear();
-
-        ShadowOneSignalRestClient.lastPost = null;
-        ShadowHMSFusedLocationProviderClient.resetStatics();
-        ShadowHMSFusedLocationProviderClient.lat = 1.0;
-        ShadowHMSFusedLocationProviderClient.log = 2.0d;
-        ShadowHMSFusedLocationProviderClient.accuracy = 3.0f;
-        ShadowHMSFusedLocationProviderClient.time = 12345L;
-        ShadowHMSFusedLocationProviderClient.shadowTask = true;
-        ShadowHuaweiTask.result = ShadowHMSFusedLocationProviderClient.getLocation();
-
-        Robolectric.buildService(SyncService.class, new Intent()).startCommand(0, 0);
-        threadAndTaskWait();
-
-        assertEquals(1.0, ShadowOneSignalRestClient.lastPost.optDouble("lat"));
-        assertEquals(2.0, ShadowOneSignalRestClient.lastPost.optDouble("long"));
-        assertEquals(3.0, ShadowOneSignalRestClient.lastPost.optDouble("loc_acc"));
-        assertEquals(0, ShadowOneSignalRestClient.lastPost.optInt("loc_type"));
-        assertEquals(12345L, ShadowOneSignalRestClient.lastPost.optInt("loc_time_stamp"));
-        assertEquals(true, ShadowOneSignalRestClient.lastPost.opt("loc_bg"));
-
-        // Checking make sure an update is scheduled.
-        alarmManager = (AlarmManager)ApplicationProvider.getApplicationContext().getSystemService(Context.ALARM_SERVICE);
-        assertEquals(1, shadowOf(alarmManager).getScheduledAlarms().size());
-        Intent intent = shadowOf(shadowOf(alarmManager).getNextScheduledAlarm().operation).getSavedIntent();
-        assertEquals(SyncService.class, shadowOf(intent).getIntentClass());
-        shadowOf(alarmManager).getScheduledAlarms().clear();
-    }
-
-    @Test
-    @Config(shadows = {ShadowHMSFusedLocationProviderClient.class})
-    public void shouldSendLocationToEmailRecord_Huawei() throws Exception {
-        ShadowOSUtils.supportsHMS(true);
-        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
-
-        OneSignalInit();
-        OneSignal.setEmail("josh@onesignal.com");
-        threadAndTaskWait();
-
-        JSONObject postEmailPayload = ShadowOneSignalRestClient.requests.get(2).payload;
-        assertEquals(11, postEmailPayload.getInt("device_type"));
-        assertEquals(1.0, postEmailPayload.getDouble("lat"));
-        assertEquals(2.0, postEmailPayload.getDouble("long"));
-        assertEquals(3.0, postEmailPayload.getDouble("loc_acc"));
-        assertEquals(0.0, postEmailPayload.getDouble("loc_type"));
-    }
-
-    @Test
-    @Config(shadows = {ShadowHMSFusedLocationProviderClient.class})
-    public void shouldSendLocationToSMSRecord_Huawei() throws Exception {
-        ShadowOSUtils.supportsHMS(true);
-        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
-
-        OneSignalInit();
-        OneSignal.setSMSNumber("123456789");
-        threadAndTaskWait();
-
-        JSONObject postEmailPayload = ShadowOneSignalRestClient.requests.get(2).payload;
-        assertEquals(OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_SMS, postEmailPayload.getInt("device_type"));
-        assertEquals(1.0, postEmailPayload.getDouble("lat"));
-        assertEquals(2.0, postEmailPayload.getDouble("long"));
-        assertEquals(3.0, postEmailPayload.getDouble("loc_acc"));
-        assertEquals(0.0, postEmailPayload.getDouble("loc_type"));
-    }
-
-    @Test
-    @Config(shadows = {ShadowHMSFusedLocationProviderClient.class, ShadowHuaweiTask.class})
-    public void shouldRegisterWhenPromptingAfterInit_Huawei() throws Exception {
-        ShadowOSUtils.supportsHMS(true);
-        ShadowHMSFusedLocationProviderClient.skipOnGetLocation = true;
-        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
-
-        // Test promptLocation right after init race condition
-        OneSignalInit();
-        OneSignal.promptLocation();
-
-        ShadowHuaweiTask.callSuccessListener(ShadowHMSFusedLocationProviderClient.getLocation());
-        threadAndTaskWait();
-
-        ShadowOneSignalRestClient.Request request = ShadowOneSignalRestClient.requests.get(1);
-        assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, request.method);
-        assertEquals(OneSignalPackagePrivateHelper.UserState.DEVICE_TYPE_HUAWEI, request.payload.get("device_type"));
-        assertEquals(ShadowHmsInstanceId.token, request.payload.get("identifier"));
-    }
-
-    @Test
-    @Config(shadows = {ShadowHMSFusedLocationProviderClient.class, ShadowHuaweiTask.class})
-    public void shouldCallOnSessionEvenIfSyncJobStarted_Huawei() throws Exception {
-        ShadowOSUtils.supportsHMS(true);
-        ShadowHMSFusedLocationProviderClient.shadowTask = true;
-        ShadowHuaweiTask.result = ShadowHMSFusedLocationProviderClient.getLocation();
-        shadowOf(RuntimeEnvironment.application).grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
-
-        OneSignalInit();
-        threadAndTaskWait();
-
-        restartAppAndElapseTimeToNextSession(time);
-        ShadowHMSFusedLocationProviderClient.skipOnGetLocation = true;
-        OneSignalInit();
-
-        SyncJobService syncJobService = Robolectric.buildService(SyncJobService.class).create().get();
-        syncJobService.onStartJob(null);
-        TestHelpers.getThreadByName("OS_SYNCSRV_BG_SYNC").join();
-        OneSignalPackagePrivateHelper.runAllNetworkRunnables();
-        ShadowHuaweiTask.callSuccessListener(ShadowHMSFusedLocationProviderClient.getLocation());
-        threadAndTaskWait();
-
-        ShadowOneSignalRestClient.Request request = ShadowOneSignalRestClient.requests.get(3);
-        assertEquals(ShadowOneSignalRestClient.REST_METHOD.POST, request.method);
-        assertEquals("players/a2f7f967-e8cc-11e4-bed1-118f05be4511/on_session", request.url);
-    }
 
     private void OneSignalInit() {
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);

@@ -13,12 +13,10 @@ import com.onesignal.OneSignal;
 import com.onesignal.OneSignalPackagePrivateHelper.UserState;
 import com.onesignal.ShadowCustomTabsClient;
 import com.onesignal.ShadowCustomTabsSession;
-import com.onesignal.ShadowHmsInstanceId;
 import com.onesignal.ShadowOSUtils;
 import com.onesignal.ShadowOSViewUtils;
 import com.onesignal.ShadowOSWebView;
 import com.onesignal.ShadowOneSignalRestClient;
-import com.onesignal.ShadowPushRegistratorHMS;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.example.BlankActivity;
 
@@ -56,14 +54,12 @@ import static org.robolectric.Shadows.shadowOf;
     packageName = "com.onesignal.example",
     shadows = {
         ShadowOSUtils.class,
-        ShadowPushRegistratorHMS.class,
         ShadowOneSignalRestClient.class,
         ShadowCustomTabsClient.class,
         ShadowOSWebView.class,
         ShadowOSViewUtils.class,
         ShadowCustomTabsClient.class,
         ShadowCustomTabsSession.class,
-            ShadowHmsInstanceId.class,
     },
     sdk = 26
 )

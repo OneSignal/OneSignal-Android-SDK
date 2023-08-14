@@ -77,7 +77,6 @@ import com.onesignal.ShadowGMSLocationController;
 import com.onesignal.ShadowGenerateNotification;
 import com.onesignal.ShadowGoogleApiClientBuilder;
 import com.onesignal.ShadowGoogleApiClientCompatProxy;
-import com.onesignal.ShadowHmsInstanceId;
 import com.onesignal.ShadowJobService;
 import com.onesignal.ShadowNotificationManagerCompat;
 import com.onesignal.ShadowOSUtils;
@@ -189,7 +188,6 @@ import static org.robolectric.Shadows.shadowOf;
             ShadowCustomTabsSession.class,
             ShadowNotificationManagerCompat.class,
             ShadowJobService.class,
-            ShadowHmsInstanceId.class,
             ShadowFocusHandler.class,
             OneSignalShadowPackageManager.class
         },

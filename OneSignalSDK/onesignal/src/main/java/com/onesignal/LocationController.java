@@ -308,8 +308,6 @@ class LocationController {
       try {
          if (isGooglePlayServicesAvailable()) {
             GMSLocationController.startGetLocation();
-         } else if (isHMSAvailable()) {
-            HMSLocationController.startGetLocation();
          } else {
             OneSignal.Log(OneSignal.LOG_LEVEL.WARN, "LocationController startGetLocation not possible, no location dependency found");
             fireFailedComplete();
@@ -324,11 +322,7 @@ class LocationController {
       synchronized (syncLock) {
          if (isGooglePlayServicesAvailable()) {
             GMSLocationController.onFocusChange();
-            return;
          }
-
-         if (isHMSAvailable())
-            HMSLocationController.onFocusChange();
       }
    }
 
@@ -346,8 +340,6 @@ class LocationController {
       synchronized (syncLock) {
          if (isGooglePlayServicesAvailable())
             GMSLocationController.fireFailedComplete();
-         else if (isHMSAvailable())
-            HMSLocationController.fireFailedComplete();
       }
       fireComplete(null);
    }

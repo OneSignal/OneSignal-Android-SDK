@@ -15,7 +15,6 @@ import com.onesignal.shortcutbadger.impl.ApexHomeBadger;
 import com.onesignal.shortcutbadger.impl.AsusHomeBadger;
 import com.onesignal.shortcutbadger.impl.DefaultBadger;
 import com.onesignal.shortcutbadger.impl.EverythingMeHomeBadger;
-import com.onesignal.shortcutbadger.impl.HuaweiHomeBadger;
 import com.onesignal.shortcutbadger.impl.NewHtcHomeBadger;
 import com.onesignal.shortcutbadger.impl.NovaHomeBadger;
 import com.onesignal.shortcutbadger.impl.OPPOHomeBader;
@@ -50,7 +49,6 @@ public final class ShortcutBadger {
         BADGERS.add(NovaHomeBadger.class);
         BADGERS.add(SonyHomeBadger.class);
         BADGERS.add(AsusHomeBadger.class);
-        BADGERS.add(HuaweiHomeBadger.class);
         BADGERS.add(OPPOHomeBader.class);
         BADGERS.add(SamsungHomeBadger.class);
         BADGERS.add(ZukHomeBadger.class);

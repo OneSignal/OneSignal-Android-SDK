@@ -42,8 +42,7 @@ import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
 import static com.onesignal.NotificationBundleProcessor.PUSH_ADDITIONAL_DATA_KEY;
 import static com.onesignal.OSNotificationController.GOOGLE_SENT_TIME_KEY;
 import static com.onesignal.OSNotificationController.GOOGLE_TTL_KEY;
-import static com.onesignal.OneSignalHmsEventBridge.HMS_SENT_TIME_KEY;
-import static com.onesignal.OneSignalHmsEventBridge.HMS_TTL_KEY;
+
 
 /**
  * The notification the user received
@@ -150,10 +149,7 @@ public class OSNotification {
       if (currentJsonPayload.has(GOOGLE_TTL_KEY)) {
          sentTime = currentJsonPayload.optLong(GOOGLE_SENT_TIME_KEY, currentTime) / 1_000;
          ttl = currentJsonPayload.optInt(GOOGLE_TTL_KEY, OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
-      } else if (currentJsonPayload.has(HMS_TTL_KEY)) {
-         sentTime = currentJsonPayload.optLong(HMS_SENT_TIME_KEY, currentTime) / 1_000;
-         ttl = currentJsonPayload.optInt(HMS_TTL_KEY, OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD);
-      } else {
+      }  else {
          sentTime = currentTime / 1_000;
          ttl = OSNotificationRestoreWorkManager.DEFAULT_TTL_IF_NOT_IN_PAYLOAD;
       }

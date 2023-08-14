@@ -46,10 +46,6 @@
     <!-- Solid -->
     <uses-permission android:name="com.majeur.launcher.permission.UPDATE_BADGE"/>
 
-    <!-- Huawei -->
-    <uses-permission android:name="com.huawei.android.launcher.permission.CHANGE_BADGE" />
-    <uses-permission android:name="com.huawei.android.launcher.permission.READ_SETTINGS" />
-    <uses-permission android:name="com.huawei.android.launcher.permission.WRITE_SETTINGS" />
 
     <!-- ZUK -->
     <uses-permission android:name="android.permission.READ_APP_BADGE"/>
@@ -66,23 +62,6 @@
 
     <application>
 
-        <service
-            android:name="com.onesignal.HmsMessageServiceOneSignal"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.huawei.push.action.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
-
-        <activity
-          android:name="com.onesignal.NotificationOpenedActivityHMS"
-          android:noHistory="true"
-          android:theme="@android:style/Theme.Translucent.NoTitleBar"
-          android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-            </intent-filter>
-        </activity>
 
         <service
             android:name="com.onesignal.FCMIntentService"

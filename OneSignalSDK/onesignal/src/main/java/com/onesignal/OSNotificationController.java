@@ -28,8 +28,6 @@
 package com.onesignal;
 
 import static com.onesignal.OSUtils.isStringNotEmpty;
-import static com.onesignal.OneSignalHmsEventBridge.HMS_SENT_TIME_KEY;
-import static com.onesignal.OneSignalHmsEventBridge.HMS_TTL_KEY;
 
 import android.content.Context;
 

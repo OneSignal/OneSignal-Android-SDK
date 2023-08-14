@@ -1,6 +1,6 @@
 ext {
     buildVersions = [
-            minSdkVersion: 17,
+            minSdkVersion: 19,
             versionCode: 1,
             versionName: '1.0'
     ]
@@ -64,9 +64,6 @@ dependencies {
 
     implementation "com.google.android.gms:play-services-location:$googlePlayServicesVersion"
     implementation "com.google.firebase:firebase-analytics:$firebaseAnalytics"
-
-    implementation "com.huawei.hms:push:$huaweiHMSPushVersion"
-    implementation "com.huawei.hms:location:$huaweiHMSLocationVersion"
 
     testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
     testImplementation "junit:junit:$jUnitVersion"

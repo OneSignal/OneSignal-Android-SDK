@@ -77,11 +77,6 @@ dependencies {
         }
     }
 
-    // Huawei PushKit
-    // KEEP as "compileOnly", so OneSignal isn't a direct dependency in the POM file.
-    compileOnly "com.huawei.hms:push:$huaweiHMSPushVersion"
-    compileOnly "com.huawei.hms:location:$huaweiHMSLocationVersion"
-
     api('androidx.cardview:cardview') {
         version {
             require '[1.0.0, 1.0.99]'

@@ -1060,8 +1060,7 @@ public class OneSignal {
       else if (OSUtils.isAndroidDeviceType()) {
          if (OSUtils.hasFCMLibrary())
             mPushRegistrator = getPushRegistratorFCM();
-      } else
-         mPushRegistrator = new PushRegistratorHMS();
+      }
 
       return mPushRegistrator;
    }
