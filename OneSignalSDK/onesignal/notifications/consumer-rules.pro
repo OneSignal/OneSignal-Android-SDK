@@ -49,3 +49,5 @@
 -keep public class com.onesignal.notifications.services.ADMMessageHandlerJob {*;}
 
 -keep class com.onesignal.JobIntentService$* {*;}
+
+-keepclassmembers class com.onesignal.notifications.** { *; }
