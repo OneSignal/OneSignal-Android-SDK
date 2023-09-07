@@ -12,6 +12,18 @@
     java.lang.String getToken(java.lang.String, java.lang.String);
 }
 
+-keep class ** implements com.onesignal.notifications.IPermissionObserver{
+    void onNotificationPermissionChange(java.lang.Boolean);
+}
+
+-keep class ** implements com.onesignal.user.subscriptions.IPushSubscriptionObserver {
+    void onPushSubscriptionChange(com.onesignal.user.subscriptions.PushSubscriptionChangedState);
+}
+
+-keep class ** implements com.onesignal.notifications.INotificationServiceExtension{
+   void onNotificationReceived(com.onesignal.notifications.INotificationReceivedEvent);
+}
+
 -keep class com.onesignal.notifications.internal.badges.impl.shortcutbadger.impl.AdwHomeBadger { <init>(...); }
 -keep class com.onesignal.notifications.internal.badges.impl.shortcutbadger.impl.ApexHomeBadger { <init>(...); }
 -keep class com.onesignal.notifications.internal.badges.impl.shortcutbadger.impl.AsusHomeBadger { <init>(...); }
@@ -37,3 +49,5 @@
 -keep public class com.onesignal.notifications.services.ADMMessageHandlerJob {*;}
 
 -keep class com.onesignal.JobIntentService$* {*;}
+
+-keepclassmembers class com.onesignal.notifications.** { *; }
