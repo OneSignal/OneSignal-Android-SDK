@@ -7,25 +7,17 @@ import org.json.JSONObject
 import java.security.SecureRandom
 
 class NotificationGenerationJob(
-    private var _notification: Notification,
+    inNotification: Notification,
     var jsonPayload: JSONObject,
 ) {
-    var notification: Notification
-        get() = _notification
-        private set(value) {
-            // If there is no android ID on the notification coming in, create one either
-            // copying from the previous one or generating a new one.
-            if (value != null && !value!!.hasNotificationId()) {
-                val curNotification = _notification
-                if (curNotification != null && curNotification.hasNotificationId()) {
-                    value.androidNotificationId = curNotification.androidNotificationId
-                } else {
-                    value.androidNotificationId = SecureRandom().nextInt()
-                }
-            }
+    val notification: Notification = inNotification.setAndroidNotificationId()
 
-            _notification = value
+    private fun Notification.setAndroidNotificationId() = this.also {
+        // If there is no android ID on the notification coming in, generate a new one.
+        if (it != null && !it.hasNotificationId()) {
+            it.androidNotificationId = SecureRandom().nextInt()
         }
+    }
 
     var isRestoring = false
     var isNotificationToDisplay = false
