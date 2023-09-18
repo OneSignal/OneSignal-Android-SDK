@@ -28,11 +28,12 @@ class UserBackendServiceTests : FunSpec({
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(403, "FORBIDDEN")
         val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf<String, String>()
+        val properties = mapOf<String, String>()
         val subscriptions = listOf<SubscriptionObject>()
 
         /* When */
         val exception = shouldThrowUnit<BackendException> {
-            userBackendService.createUser("appId", identities, subscriptions)
+            userBackendService.createUser("appId", identities, subscriptions, properties)
         }
 
         /* Then */
@@ -44,17 +45,19 @@ class UserBackendServiceTests : FunSpec({
         /* Given */
         val osId = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\", aliasLabel1: \"aliasValue1\"}}")
+        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\", aliasLabel1: \"aliasValue1\"}, properties:{timezone_id: \"testTimeZone\"}}")
         val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf("aliasLabel1" to "aliasValue1")
+        val properties = mapOf("timzone_id" to "testTimeZone")
         val subscriptions = listOf<SubscriptionObject>()
 
         /* When */
-        val response = userBackendService.createUser("appId", identities, subscriptions)
+        val response = userBackendService.createUser("appId", identities, subscriptions, properties)
 
         /* Then */
         response.identities["onesignal_id"] shouldBe osId
         response.identities["aliasLabel1"] shouldBe "aliasValue1"
+        response.properties.timezoneId shouldBe "testTimeZone"
         response.subscriptions.count() shouldBe 0
         coVerify {
             spyHttpClient.post(
@@ -63,7 +66,7 @@ class UserBackendServiceTests : FunSpec({
                     it.has("identity") shouldBe true
                     it.getJSONObject("identity").has("aliasLabel1") shouldBe true
                     it.getJSONObject("identity").getString("aliasLabel1") shouldBe "aliasValue1"
-                    it.has("properties") shouldBe false
+                    it.has("properties") shouldBe true
                     it.has("subscriptions") shouldBe false
                 },
             )
@@ -74,17 +77,19 @@ class UserBackendServiceTests : FunSpec({
         /* Given */
         val osId = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\"}, subscriptions:[{id:\"subscriptionId1\", type:\"AndroidPush\"}]}")
+        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\"}, subscriptions:[{id:\"subscriptionId1\", type:\"AndroidPush\"}], properties:{timezone_id: \"testTimeZone\"}}")
         val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf<String, String>()
         val subscriptions = mutableListOf<SubscriptionObject>()
+        val properties = mapOf("timzone_id" to "testTimeZone")
         subscriptions.add(SubscriptionObject("SHOULDNOTUSE", SubscriptionObjectType.ANDROID_PUSH))
 
         /* When */
-        val response = userBackendService.createUser("appId", identities, subscriptions)
+        val response = userBackendService.createUser("appId", identities, subscriptions, properties)
 
         /* Then */
         response.identities["onesignal_id"] shouldBe osId
+        response.properties.timezoneId shouldBe "testTimeZone"
         response.subscriptions.count() shouldBe 1
         response.subscriptions[0].id shouldBe "subscriptionId1"
         response.subscriptions[0].type shouldBe SubscriptionObjectType.ANDROID_PUSH
@@ -94,7 +99,7 @@ class UserBackendServiceTests : FunSpec({
                 "apps/appId/users",
                 withArg {
                     it.has("identity") shouldBe false
-                    it.has("properties") shouldBe false
+                    it.has("properties") shouldBe true
                     it.has("subscriptions") shouldBe true
                     it.getJSONArray("subscriptions").length() shouldBe 1
                     it.getJSONArray("subscriptions").getJSONObject(0).has("type") shouldBe true
