@@ -116,7 +116,7 @@ internal class NotificationGenerationProcessor(
                         }.join()
                     }
                 } catch (to: TimeoutCancellationException) {
-                    Logging.error("notificationWillShowInForegroundHandler timed out, continuing with wantsToDisplay=$wantsToDisplay.", to)
+                    Logging.info("notificationWillShowInForegroundHandler timed out, continuing with wantsToDisplay=$wantsToDisplay.", to)
                 } catch (t: Throwable) {
                     Logging.error("notificationWillShowInForegroundHandler threw an exception. Displaying normal OneSignal notification.", t)
                 }
