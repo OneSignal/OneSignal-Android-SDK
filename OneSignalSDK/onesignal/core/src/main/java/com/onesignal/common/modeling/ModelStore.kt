@@ -126,7 +126,7 @@ abstract class ModelStore<TModel>(
             val str = _prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, "[]")
             val jsonArray = JSONArray(str)
             for (index in 0 until jsonArray.length()) {
-                val newModel = create(jsonArray.getJSONObject(index))
+                val newModel = create(jsonArray.getJSONObject(index)) ?: continue
                 _models.add(newModel)
                 // listen for changes to this model
                 newModel.subscribe(this)
