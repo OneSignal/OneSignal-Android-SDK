@@ -279,13 +279,14 @@ internal class WebViewManager(
             }
             Logging.debug("In app message, showing first one with height: $newHeight")
 
-            messageView!!.setWebView(webView!!)
+            messageView?.setWebView(webView!!)
             if (newHeight != null) {
                 lastPageHeight = newHeight
-                messageView!!.updateHeight(newHeight)
+                messageView?.updateHeight(newHeight)
             }
-            messageView!!.showView(activity)
-            messageView!!.checkIfShouldDismiss()
+            messageView?.showView(activity)
+            // Executed in the same thread
+            messageView?.checkIfShouldDismiss()
         }
     }
 
