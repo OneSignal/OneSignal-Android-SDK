@@ -24,7 +24,7 @@ open class SingletonModelStore<TModel>(
                 return model
             }
 
-            val createdModel = store.create()
+            val createdModel = store.create() ?: throw Exception("Unable to initialize model from store $store")
             createdModel.id = _singletonId
             store.add(createdModel)
             return createdModel
