@@ -5,6 +5,7 @@ import com.onesignal.common.events.IEventNotifier
 import org.json.JSONArray
 import org.json.JSONObject
 import java.math.BigDecimal
+import java.util.*
 
 /**
  * The base class for a [Model].  A model is effectively a map of data, each key in the map being
@@ -61,7 +62,7 @@ open class Model(
         get() = getStringProperty(::id.name)
         set(value) { setStringProperty(::id.name, value) }
 
-    protected val data: MutableMap<String, Any?> = mutableMapOf()
+    protected val data: MutableMap<String, Any?> = Collections.synchronizedMap(mutableMapOf())
     private val _changeNotifier = EventProducer<IModelChangedHandler>()
 
     init {
