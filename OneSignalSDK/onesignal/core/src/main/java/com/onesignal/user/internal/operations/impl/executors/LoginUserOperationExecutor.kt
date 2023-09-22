@@ -7,6 +7,7 @@ import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IDeviceService
+import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.IOperationExecutor
@@ -26,7 +27,6 @@ import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionType
-import java.util.Locale
 
 internal class LoginUserOperationExecutor(
     private val _identityOperationExecutor: IdentityOperationExecutor,
@@ -37,6 +37,7 @@ internal class LoginUserOperationExecutor(
     private val _propertiesModelStore: PropertiesModelStore,
     private val _subscriptionsModelStore: SubscriptionModelStore,
     private val _configModelStore: ConfigModelStore,
+    private val _languageContext: ILanguageContext
 ) : IOperationExecutor {
 
     override val operations: List<String>
@@ -96,7 +97,7 @@ internal class LoginUserOperationExecutor(
         var subscriptions = mapOf<String, SubscriptionObject>()
         val properties = mutableMapOf<String, String>()
         properties["timezone_id"] = TimeUtils.getTimeZoneId()!!
-        properties["language"] = Locale.getDefault().getLanguage()
+        properties["language"] = _languageContext.language
 
         if (createUserOperation.externalId != null) {
             val mutableIdentities = identities.toMutableMap()
