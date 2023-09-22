@@ -51,10 +51,10 @@ internal class IdentityOperationExecutor(
                 return when (responseType) {
                     NetworkUtils.ResponseStatusType.RETRYABLE ->
                         ExecutionResponse(ExecutionResult.FAIL_RETRY)
-                    NetworkUtils.ResponseStatusType.INVALID,
-                    NetworkUtils.ResponseStatusType.CONFLICT,
-                    ->
+                    NetworkUtils.ResponseStatusType.INVALID ->
                         ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+                    NetworkUtils.ResponseStatusType.CONFLICT ->
+                        ExecutionResponse(ExecutionResult.FAIL_CONFLICT)
                     NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                         ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
                     NetworkUtils.ResponseStatusType.MISSING -> {
