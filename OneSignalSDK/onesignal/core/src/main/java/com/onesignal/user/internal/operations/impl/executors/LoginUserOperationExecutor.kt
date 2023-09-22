@@ -103,8 +103,7 @@ internal class LoginUserOperationExecutor(
         var identities = mapOf<String, String>()
         var subscriptions = mapOf<String, SubscriptionObject>()
         val properties = mutableMapOf<String, String>()
-        properties["timezone_id"] = TimeUtils.getTimeZoneId()!!
-        properties["language"] = _languageContext.language
+        properties["timezone_id"] = TimeUtils.getTimeZoneId()
 
         if (createUserOperation.externalId != null) {
             val mutableIdentities = identities.toMutableMap()
