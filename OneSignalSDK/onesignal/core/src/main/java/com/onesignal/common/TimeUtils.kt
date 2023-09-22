@@ -17,7 +17,7 @@ object TimeUtils {
         return offset / 1000
     }
 
-    fun getTimeZoneId(): String? {
+    fun getTimeZoneId(): String {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             ZoneId.systemDefault().id
         } else {
