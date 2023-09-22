@@ -284,8 +284,8 @@ internal class WebViewManager(
                 lastPageHeight = newHeight
                 messageView?.updateHeight(newHeight)
             }
+            // showView does not return until in-app is dismissed
             messageView?.showView(activity)
-            // Executed in the same thread
             messageView?.checkIfShouldDismiss()
         }
     }
