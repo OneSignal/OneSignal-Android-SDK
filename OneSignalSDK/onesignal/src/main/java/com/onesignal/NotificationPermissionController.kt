@@ -42,15 +42,15 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
         PermissionsActivity.registerAsCallback(PERMISSION_TYPE, this)
     }
 
-    @ChecksSdkIntAtLeast(api = 33)
-    val supportsNativePrompt =
-        Build.VERSION.SDK_INT > 32 &&
-            OSUtils.getTargetSdkVersion(OneSignal.appContext) > 32
-
     fun prompt(
         fallbackToSettings: Boolean,
         callback: OneSignal.PromptForPushNotificationPermissionResponseHandler?
     ) {
+
+        val supportsNativePrompt =
+        Build.VERSION.SDK_INT > 32 &&
+            OSUtils.getTargetSdkVersion(OneSignal.appContext) > 32
+
         if (callback != null) callbacks.add(callback)
 
         if (notificationsEnabled()) {
