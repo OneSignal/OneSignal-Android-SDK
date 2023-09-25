@@ -68,4 +68,10 @@ enum class ExecutionResult {
      * retried if authorization can be achieved.
      */
     FAIL_UNAUTHORIZED,
+
+    /**
+     * Used in special login case.
+     * The operation failed due to a conflict and can be handled.
+     */
+    FAIL_CONFLICT,
 }

@@ -16,7 +16,7 @@ interface IModelStore<TModel> :
      *
      * @param jsonObject The optional [JSONObject] to initialize the new model with.
      */
-    fun create(jsonObject: JSONObject? = null): TModel
+    fun create(jsonObject: JSONObject? = null): TModel?
 
     /**
      * List the models that are owned by this model store.
