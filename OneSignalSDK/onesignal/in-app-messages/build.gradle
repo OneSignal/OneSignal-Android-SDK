@@ -42,6 +42,8 @@ android {
         jvmTarget = '1.8'
     }
     namespace 'com.onesignal.inAppMessages'
+
+    kotlinOptions.freeCompilerArgs += ['-module-name', namespace]
 }
 
 tasks.withType(Test) {
