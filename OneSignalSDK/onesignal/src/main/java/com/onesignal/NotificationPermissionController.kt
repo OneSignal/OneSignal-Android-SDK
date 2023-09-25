@@ -50,7 +50,6 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
         fallbackToSettings: Boolean,
         callback: OneSignal.PromptForPushNotificationPermissionResponseHandler?
     ) {
-
         if (callback != null) callbacks.add(callback)
 
         if (notificationsEnabled()) {
