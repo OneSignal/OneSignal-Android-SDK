@@ -82,9 +82,16 @@ internal class LoginUserOperationExecutor(
 
                     ExecutionResponse(ExecutionResult.SUCCESS_STARTING_ONLY, mapOf(loginUserOp.onesignalId to backendOneSignalId))
                 }
+                ExecutionResult.FAIL_CONFLICT -> {
+                    // When the SetAliasOperation fails with conflict that *most likely* means the externalId provided
+                    // is already associated to a user.  This *expected* condition means we must create a user.
+                    // We hardcode the response of "user-2" in the log to provide information to the SDK consumer
+                    Logging.debug("LoginUserOperationExecutor now handling 409 response with \"code\": \"user-2\" by switching to user with \"external_id\": \"${loginUserOp.externalId}\"")
+                    createUser(loginUserOp, operations)
+                }
                 ExecutionResult.FAIL_NORETRY -> {
-                    // When the SetAliasOperation fails without retry that *most likely* means the externalId provided
-                    // is already associated to a user.  This expected condition means we must create a user.
+                    // Some other failure occurred, still try to recover by creating the user
+                    Logging.error("LoginUserOperationExecutor encountered error. Attempt to recover by switching to user with \"external_id\": \"${loginUserOp.externalId}\"")
                     createUser(loginUserOp, operations)
                 }
                 else -> ExecutionResponse(result.result)
@@ -96,8 +103,7 @@ internal class LoginUserOperationExecutor(
         var identities = mapOf<String, String>()
         var subscriptions = mapOf<String, SubscriptionObject>()
         val properties = mutableMapOf<String, String>()
-        properties["timezone_id"] = TimeUtils.getTimeZoneId()!!
-        properties["language"] = _languageContext.language
+        properties["timezone_id"] = TimeUtils.getTimeZoneId()
 
         if (createUserOperation.externalId != null) {
             val mutableIdentities = identities.toMutableMap()
