@@ -14,7 +14,7 @@ internal class UserBackendService(
     private val _httpClient: IHttpClient,
 ) : IUserBackendService {
 
-    override suspend fun createUser(appId: String, identities: Map<String, String>, subscriptions: List<SubscriptionObject>): CreateUserResponse {
+    override suspend fun createUser(appId: String, identities: Map<String, String>, subscriptions: List<SubscriptionObject>, properties: Map<String, String>): CreateUserResponse {
         val requestJSON = JSONObject()
 
         if (identities.isNotEmpty()) {
@@ -24,6 +24,10 @@ internal class UserBackendService(
         if (subscriptions.isNotEmpty()) {
             requestJSON
                 .put("subscriptions", JSONConverter.convertToJSON(subscriptions))
+        }
+
+        if (properties.isNotEmpty()) {
+            requestJSON.put("properties", JSONObject().putMap(properties))
         }
 
         val response = _httpClient.post("apps/$appId/users", requestJSON)

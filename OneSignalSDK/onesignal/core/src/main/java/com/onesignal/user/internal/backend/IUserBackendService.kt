@@ -14,10 +14,11 @@ interface IUserBackendService {
      * the application.
      * @param subscriptions The subscriptions that should also be created and associated with the user. If subscriptions are already owned by a different user
      * they will be transferred to this user.
+     * @param properties The properties for this user. For new users this should include the timezone_id property.
      *
      * @return The backend response
      */
-    suspend fun createUser(appId: String, identities: Map<String, String>, subscriptions: List<SubscriptionObject>): CreateUserResponse
+    suspend fun createUser(appId: String, identities: Map<String, String>, subscriptions: List<SubscriptionObject>, properties: Map<String, String>): CreateUserResponse
     // TODO: Change to send only the push subscription, optimally
 
     /**

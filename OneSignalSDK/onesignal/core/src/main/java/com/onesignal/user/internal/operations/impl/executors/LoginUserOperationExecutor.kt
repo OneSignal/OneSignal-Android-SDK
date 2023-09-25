@@ -1,11 +1,7 @@
 package com.onesignal.user.internal.operations.impl.executors
 
 import android.os.Build
-import com.onesignal.common.AndroidUtils
-import com.onesignal.common.DeviceUtils
-import com.onesignal.common.NetworkUtils
-import com.onesignal.common.OneSignalUtils
-import com.onesignal.common.RootToolsInternalMethods
+import com.onesignal.common.*
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.application.IApplicationService
@@ -16,10 +12,8 @@ import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.user.internal.backend.IUserBackendService
+import com.onesignal.user.internal.backend.*
 import com.onesignal.user.internal.backend.IdentityConstants
-import com.onesignal.user.internal.backend.SubscriptionObject
-import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
@@ -106,6 +100,8 @@ internal class LoginUserOperationExecutor(
     private suspend fun createUser(createUserOperation: LoginUserOperation, operations: List<Operation>): ExecutionResponse {
         var identities = mapOf<String, String>()
         var subscriptions = mapOf<String, SubscriptionObject>()
+        val properties = mutableMapOf<String, String>()
+        properties["timezone_id"] = TimeUtils.getTimeZoneId()
 
         if (createUserOperation.externalId != null) {
             val mutableIdentities = identities.toMutableMap()
@@ -125,7 +121,7 @@ internal class LoginUserOperationExecutor(
 
         try {
             val subscriptionList = subscriptions.toList()
-            val response = _userBackend.createUser(createUserOperation.appId, identities, subscriptionList.map { it.second })
+            val response = _userBackend.createUser(createUserOperation.appId, identities, subscriptionList.map { it.second }, properties)
             val idTranslations = mutableMapOf<String, String>()
             // Add the "local-to-backend" ID translation to the IdentifierTranslator for any operations that were
             // *not* executed but still reference the locally-generated IDs.
