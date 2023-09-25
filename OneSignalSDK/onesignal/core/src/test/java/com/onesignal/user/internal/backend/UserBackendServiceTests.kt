@@ -45,10 +45,10 @@ class UserBackendServiceTests : FunSpec({
         /* Given */
         val osId = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\", aliasLabel1: \"aliasValue1\"}, properties:{timezone_id: \"testTimeZone\"}}")
+        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\", aliasLabel1: \"aliasValue1\"}, properties:{timezone_id: \"testTimeZone\", language: \"testLanguage\"}}")
         val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf("aliasLabel1" to "aliasValue1")
-        val properties = mapOf("timzone_id" to "testTimeZone")
+        val properties = mapOf("timezone_id" to "testTimeZone", "language" to "testLanguage")
         val subscriptions = listOf<SubscriptionObject>()
 
         /* When */
@@ -58,6 +58,7 @@ class UserBackendServiceTests : FunSpec({
         response.identities["onesignal_id"] shouldBe osId
         response.identities["aliasLabel1"] shouldBe "aliasValue1"
         response.properties.timezoneId shouldBe "testTimeZone"
+        response.properties.language shouldBe "testLanguage"
         response.subscriptions.count() shouldBe 0
         coVerify {
             spyHttpClient.post(
@@ -77,11 +78,11 @@ class UserBackendServiceTests : FunSpec({
         /* Given */
         val osId = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\"}, subscriptions:[{id:\"subscriptionId1\", type:\"AndroidPush\"}], properties:{timezone_id: \"testTimeZone\"}}")
+        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\"}, subscriptions:[{id:\"subscriptionId1\", type:\"AndroidPush\"}], properties:{timezone_id: \"testTimeZone\", language: \"testLanguage\"}}")
         val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf<String, String>()
         val subscriptions = mutableListOf<SubscriptionObject>()
-        val properties = mapOf("timzone_id" to "testTimeZone")
+        val properties = mapOf("timezone_id" to "testTimeZone", "language" to "testLanguage")
         subscriptions.add(SubscriptionObject("SHOULDNOTUSE", SubscriptionObjectType.ANDROID_PUSH))
 
         /* When */
@@ -90,6 +91,7 @@ class UserBackendServiceTests : FunSpec({
         /* Then */
         response.identities["onesignal_id"] shouldBe osId
         response.properties.timezoneId shouldBe "testTimeZone"
+        response.properties.language shouldBe "testLanguage"
         response.subscriptions.count() shouldBe 1
         response.subscriptions[0].id shouldBe "subscriptionId1"
         response.subscriptions[0].type shouldBe SubscriptionObjectType.ANDROID_PUSH
