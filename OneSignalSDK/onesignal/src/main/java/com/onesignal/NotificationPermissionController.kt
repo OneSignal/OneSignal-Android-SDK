@@ -42,6 +42,7 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
         PermissionsActivity.registerAsCallback(PERMISSION_TYPE, this)
     }
 
+    @ChecksSdkIntAtLeast(api = 33)
     val supportsNativePrompt: Boolean by lazy = {
         Build.VERSION.SDK_INT > 32 &&
             OSUtils.getTargetSdkVersion(OneSignal.appContext) > 32
