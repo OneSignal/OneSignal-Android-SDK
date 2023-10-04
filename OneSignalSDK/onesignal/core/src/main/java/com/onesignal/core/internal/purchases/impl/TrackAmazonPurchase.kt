@@ -66,17 +66,18 @@ internal class TrackAmazonPurchase(
         try {
             // 2.0.1
             val listenerHandlerClass = Class.forName("com.amazon.device.iap.internal.d")
-            listenerHandlerObject = try {
+            try {
                 // iap v2.x
-                listenerHandlerClass.getMethod("d").invoke(null)
+                listenerHandlerObject = listenerHandlerClass.getMethod("d").invoke(null)
             } catch (e: NullPointerException) {
                 // appstore v3.x
-                listenerHandlerClass.getMethod("e").invoke(null)
+                listenerHandlerObject = listenerHandlerClass.getMethod("e").invoke(null)
+                registerListenerOnMainThread = true
             }
             val locListenerHandlerField = listenerHandlerClass.getDeclaredField("f")
             locListenerHandlerField.isAccessible = true
             osPurchasingListener = OSPurchasingListener(_operationRepo, _configModelStore, _identityModelStore)
-            osPurchasingListener!!.orgPurchasingListener = locListenerHandlerField.get(listenerHandlerObject) as PurchasingListener
+            osPurchasingListener!!.orgPurchasingListener = locListenerHandlerField.get(listenerHandlerObject) as PurchasingListener?
 
             listenerHandlerField = locListenerHandlerField
             canTrack = true
