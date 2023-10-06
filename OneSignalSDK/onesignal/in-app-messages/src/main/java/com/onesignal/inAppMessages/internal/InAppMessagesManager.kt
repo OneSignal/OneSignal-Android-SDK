@@ -119,6 +119,10 @@ internal class InAppMessagesManager(
         }
 
     override fun start() {
+        val tempDismissedSet = _prefs.dismissedMessagesId
+        if (tempDismissedSet != null)
+            _dismissedMessages.addAll(tempDismissedSet)
+
         val tempLastTimeInAppDismissed = _prefs.lastTimeInAppDismissed
         if (tempLastTimeInAppDismissed != null) {
             _state.lastTimeInAppDismissed = tempLastTimeInAppDismissed
