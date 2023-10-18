@@ -17,19 +17,25 @@ open class EventProducer<THandler> : IEventNotifier<THandler> {
     private val _subscribers: MutableList<THandler> = Collections.synchronizedList(mutableListOf())
 
     override fun subscribe(handler: THandler) {
-        _subscribers.add(handler)
+        synchronized(_subscribers) {
+            _subscribers.add(handler)
+        }
     }
 
     override fun unsubscribe(handler: THandler) {
-        _subscribers.remove(handler)
+        synchronized(_subscribers) {
+            _subscribers.remove(handler)
+        }
     }
 
     /**
      * Subscribe all from an existing producer to this subscriber.
      */
     fun subscribeAll(from: EventProducer<THandler>) {
-        for (s in from._subscribers) {
-            subscribe(s)
+        synchronized(_subscribers) {
+            for (s in from._subscribers) {
+                subscribe(s)
+            }
         }
     }
 
@@ -40,8 +46,10 @@ open class EventProducer<THandler> : IEventNotifier<THandler> {
      * @param callback The callback will be invoked for each subscribed handler, allowing you to call the handler.
      */
     fun fire(callback: (THandler) -> Unit) {
-        for (s in _subscribers) {
-            callback(s)
+        synchronized(_subscribers) {
+            for (s in _subscribers) {
+                callback(s)
+            }
         }
     }
 
