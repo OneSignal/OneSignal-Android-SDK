@@ -53,6 +53,8 @@ open class Model(
      */
     private val _parentProperty: String? = null,
 
+    private val initializationLock: Any = Any()
+
 ) : IEventNotifier<IModelChangedHandler> {
 
     /**
@@ -120,19 +122,21 @@ open class Model(
      * @param model The model to initialize this model from.
      */
     fun initializeFromModel(id: String?, model: Model) {
-        data.clear()
-        for (item in model.data) {
-            if (item.value is Model) {
-                val childModel = item.value as Model
-                childModel._parentModel = this
-                data[item.key] = childModel
-            } else {
-                data[item.key] = item.value
+        synchronized(initializationLock) {
+            data.clear()
+            for (item in model.data) {
+                if (item.value is Model) {
+                    val childModel = item.value as Model
+                    childModel._parentModel = this
+                    data[item.key] = childModel
+                } else {
+                    data[item.key] = item.value
+                }
             }
-        }
 
-        if (id != null) {
-            data[::id.name] = id
+            if (id != null) {
+                data[::id.name] = id
+            }
         }
     }
 
@@ -308,29 +312,31 @@ open class Model(
      * @return The resulting [JSONObject].
      */
     fun toJSON(): JSONObject {
-        val jsonObject = JSONObject()
-        for (kvp in data) {
-            when (val value = kvp.value) {
-                is Model -> {
-                    jsonObject.put(kvp.key, value.toJSON())
-                }
-                is List<*> -> {
-                    val jsonArray = JSONArray()
-                    for (arrayItem in value) {
-                        if (arrayItem is Model) {
-                            jsonArray.put(arrayItem.toJSON())
-                        } else {
-                            jsonArray.put(arrayItem)
-                        }
+        synchronized(initializationLock) {
+            val jsonObject = JSONObject()
+            for (kvp in data) {
+                when (val value = kvp.value) {
+                    is Model -> {
+                        jsonObject.put(kvp.key, value.toJSON())
                     }
-                    jsonObject.put(kvp.key, jsonArray)
-                }
-                else -> {
-                    jsonObject.put(kvp.key, value)
+                    is List<*> -> {
+                        val jsonArray = JSONArray()
+                        for (arrayItem in value) {
+                            if (arrayItem is Model) {
+                                jsonArray.put(arrayItem.toJSON())
+                            } else {
+                                jsonArray.put(arrayItem)
+                            }
+                        }
+                        jsonObject.put(kvp.key, jsonArray)
+                    }
+                    else -> {
+                        jsonObject.put(kvp.key, value)
+                    }
                 }
             }
+            return jsonObject
         }
-        return jsonObject
     }
 
     override fun subscribe(handler: IModelChangedHandler) = _changeNotifier.subscribe(handler)
