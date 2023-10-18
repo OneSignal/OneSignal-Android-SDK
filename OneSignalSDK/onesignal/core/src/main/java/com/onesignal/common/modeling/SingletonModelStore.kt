@@ -13,6 +13,8 @@ open class SingletonModelStore<TModel>(
     private val _changeSubscription: EventProducer<ISingletonModelStoreChangeHandler<TModel>> = EventProducer()
     private val _singletonId: String = "-singleton-"
 
+    private val replaceLock = Any()
+
     init {
         store.subscribe(this)
     }
@@ -31,10 +33,12 @@ open class SingletonModelStore<TModel>(
         }
 
     override fun replace(model: TModel, tag: String) {
-        val existingModel = this.model
-        existingModel.initializeFromModel(_singletonId, model)
-        store.persist()
-        _changeSubscription.fire { it.onModelReplaced(existingModel, tag) }
+        synchronized(replaceLock) {
+            val existingModel = this.model
+            existingModel.initializeFromModel(_singletonId, model)
+            store.persist()
+            _changeSubscription.fire { it.onModelReplaced(existingModel, tag) }
+        }
     }
 
     override fun subscribe(handler: ISingletonModelStoreChangeHandler<TModel>) = _changeSubscription.subscribe(handler)
