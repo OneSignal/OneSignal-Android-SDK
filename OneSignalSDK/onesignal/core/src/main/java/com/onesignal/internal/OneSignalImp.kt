@@ -15,6 +15,7 @@ import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.CoreModule
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
+import com.onesignal.core.internal.application.impl.ApplicationServiceUtil
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
@@ -150,6 +151,9 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         val applicationService = _services.getService<IApplicationService>()
         (applicationService as ApplicationService).start(context)
 
+        if (!ApplicationServiceUtil.isValidInstance(applicationService)) {
+            return false
+        }
         // Give the logging singleton access to the application service to support visual logging.
         Logging.applicationService = applicationService
 
