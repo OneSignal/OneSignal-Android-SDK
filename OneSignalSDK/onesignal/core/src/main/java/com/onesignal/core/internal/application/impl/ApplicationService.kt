@@ -344,3 +344,25 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         }
     }
 }
+
+object ApplicationServiceUtil {
+    fun isValidInstance(_applicationService: IApplicationService?): Boolean {
+        return try {
+            if (_applicationService == null) {
+                println("Error: _applicationService is null")
+                false
+            } else if (_applicationService.appContext == null) {
+                println("Error: _applicationService.appContext is null")
+                false
+            } else {
+                true
+            }
+        } catch (e: NullPointerException) {
+            println("ApplicationService's AppContext not initialized: ${e.message}")
+            false
+        } catch (e: Exception) {
+            println("Exception thrown while checking ApplicationService's App Context: ${e.message}")
+            false
+        }
+    }
+}

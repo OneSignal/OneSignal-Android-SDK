@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.onesignal.common.threading.Waiter
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.application.impl.ApplicationServiceUtil
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.core.internal.startup.IStartableService
@@ -17,7 +18,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 
 internal class PreferencesService(
-    private val _applicationService: IApplicationService,
+    private val _applicationService: IApplicationService?,
     private val _time: ITime,
 ) : IPreferencesService, IStartableService {
     private val _prefsToApply: Map<String, MutableMap<String, Any?>> = mapOf(
@@ -154,7 +155,12 @@ internal class PreferencesService(
 
     @Synchronized
     private fun getSharedPrefsByName(store: String): SharedPreferences? {
-        return _applicationService.appContext.getSharedPreferences(store, Context.MODE_PRIVATE)
+
+        if (!ApplicationServiceUtil.isValidInstance(_applicationService)) {
+            return null
+        }
+
+        return _applicationService!!.appContext.getSharedPreferences(store, Context.MODE_PRIVATE)
     }
 
     companion object {
