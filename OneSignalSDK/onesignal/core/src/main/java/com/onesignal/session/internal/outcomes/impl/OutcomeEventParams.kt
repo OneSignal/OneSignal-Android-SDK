@@ -5,10 +5,14 @@ import org.json.JSONObject
 
 internal class OutcomeEventParams constructor(
     val outcomeId: String,
-    val outcomeSource: OutcomeSource?, // This field is optional
-    var weight: Float, // This field is optional.
-    var sessionTime: Long, // This field is optional
-    var timestamp: Long, // This should start out as zero
+    // This field is optional
+    val outcomeSource: OutcomeSource?,
+    // This field is optional
+    var weight: Float,
+    // This field is optional
+    var sessionTime: Long,
+    // This should start out as zero
+    var timestamp: Long,
 ) {
     @Throws(JSONException::class)
     fun toJSONObject(): JSONObject {

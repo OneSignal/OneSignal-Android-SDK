@@ -162,6 +162,7 @@ object PreferenceStores {
 
 object PreferencePlayerPurchasesKeys {
     // Player Purchase Keys
+
     /**
      * (String) The purchase tokens that have been tracked.
      */
@@ -175,6 +176,7 @@ object PreferencePlayerPurchasesKeys {
 
 object PreferenceOneSignalKeys {
     // Legacy
+
     /**
      * (String) The legacy player ID from SDKs prior to 5.
      */
@@ -186,12 +188,14 @@ object PreferenceOneSignalKeys {
     const val PREFS_LEGACY_USER_SYNCVALUES = "ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE"
 
     // Location
+
     /**
      * (Long) The last time the device location was captured, in Unix time milliseconds.
      */
     const val PREFS_OS_LAST_LOCATION_TIME = "OS_LAST_LOCATION_TIME"
 
     // Permissions
+
     /**
      * (Boolean) A prefix key for the permission state. When true, the user has rejected this
      * permission too many times and will not be prompted again.
@@ -199,6 +203,7 @@ object PreferenceOneSignalKeys {
     const val PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX = "USER_RESOLVED_PERMISSION_"
 
     // HTTP
+
     /**
      * (String) A prefix key for retrieving the ETAG for a given HTTP GET cache key. The cache
      * key should be appended to this prefix.
@@ -212,12 +217,14 @@ object PreferenceOneSignalKeys {
     const val PREFS_OS_HTTP_CACHE_PREFIX = "PREFS_OS_HTTP_CACHE_PREFIX_"
 
     // Outcomes
+
     /**
      * (String Set) The set of unattributed outcome events that have occurred to ensure uniqueness when requested.
      */
     const val PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT = "PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT"
 
     // In-App Messaging
+
     /**
      * (String) The serialized IAMs TODO: This isn't currently used, determine if actually needed for cold start IAM fetch delay
      */
@@ -249,6 +256,7 @@ object PreferenceOneSignalKeys {
     const val PREFS_OS_IAM_LAST_DISMISSED_TIME = "PREFS_OS_IAM_LAST_DISMISSED_TIME"
 
     // Models
+
     /**
      * (String) A prefix key for retrieving a specific model store contents.  The name of the model
      * store should be appended to this prefix.

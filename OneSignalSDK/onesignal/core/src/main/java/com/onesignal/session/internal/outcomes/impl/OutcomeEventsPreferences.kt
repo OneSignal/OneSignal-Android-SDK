@@ -17,7 +17,8 @@ internal class OutcomeEventsPreferences(
         set(value) {
             preferences.saveStringSet(
                 PreferenceStores.ONESIGNAL,
-                PreferenceOneSignalKeys.PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT, // Post success, store unattributed unique outcome event names
+                // Post success, store unattributed unique outcome event names
+                PreferenceOneSignalKeys.PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT,
                 value,
             )
         }
