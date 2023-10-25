@@ -173,7 +173,8 @@ Outcome event was cached and will be reattempted on app cold start""",
     private suspend fun sendAndCreateOutcomeEvent(
         name: String,
         weight: Float,
-        sessionTime: Long, // Note: this is optional
+        // Note: this is optional
+        sessionTime: Long,
         influences: List<Influence>,
     ): OutcomeEvent? {
         val timestampSeconds: Long = _time.currentTimeMillis / 1000
