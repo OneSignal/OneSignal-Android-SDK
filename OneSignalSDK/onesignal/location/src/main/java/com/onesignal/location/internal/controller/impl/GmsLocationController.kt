@@ -30,26 +30,26 @@ import java.io.Closeable
 internal class GmsLocationController(
     private val _applicationService: IApplicationService,
 ) : ILocationController {
-    private val _locationHandlerThread = LocationHandlerThread()
-    private val _startStopMutex = Mutex()
-    private val _event = EventProducer<ILocationUpdatedHandler>()
+    private val locationHandlerThread = LocationHandlerThread()
+    private val startStopMutex = Mutex()
+    private val event = EventProducer<ILocationUpdatedHandler>()
 
     // exist after start and before stop. updates are protected by the startStopMutex
-    private var _googleApiClient: GoogleApiClientCompatProxy? = null
-    private var _locationUpdateListener: LocationUpdateListener? = null
+    private var googleApiClient: GoogleApiClientCompatProxy? = null
+    private var locationUpdateListener: LocationUpdateListener? = null
 
     // contains the last location received from location services
-    private var _lastLocation: Location? = null
+    private var lastLocation: Location? = null
 
     override suspend fun start(): Boolean {
         var self = this
         var wasSuccessful = false
 
         withContext(Dispatchers.IO) {
-            _startStopMutex.withLock {
-                if (_googleApiClient != null) {
-                    if (_lastLocation != null) {
-                        _event.fire { it.onLocationChanged(_lastLocation!!) }
+            startStopMutex.withLock {
+                if (googleApiClient != null) {
+                    if (lastLocation != null) {
+                        event.fire { it.onLocationChanged(lastLocation!!) }
                     } else {
                         val localLastLocation = getLastLocation()
                         if (localLastLocation != null) {
@@ -66,7 +66,7 @@ internal class GmsLocationController(
                                     .addApi(LocationServices.API)
                                     .addConnectionCallbacks(googleApiClientListener)
                                     .addOnConnectionFailedListener(googleApiClientListener)
-                                    .setHandler(_locationHandlerThread.mHandler)
+                                    .setHandler(locationHandlerThread.mHandler)
                                     .build()
                             var proxyGoogleApiClient = GoogleApiClientCompatProxy(googleApiClient)
 
@@ -74,7 +74,7 @@ internal class GmsLocationController(
                             var result = proxyGoogleApiClient.blockingConnect()
 
                             if (result?.isSuccess == true) {
-                                if (_lastLocation == null) {
+                                if (lastLocation == null) {
                                     var lastLocation = FusedLocationApiWrapper.getLastLocation(googleApiClient)
                                     if (lastLocation != null) {
                                         setLocationAndFire(lastLocation)
@@ -82,8 +82,8 @@ internal class GmsLocationController(
                                 }
 
                                 // only after the connect do we save
-                                self._locationUpdateListener = LocationUpdateListener(_applicationService, self, proxyGoogleApiClient.realInstance)
-                                self._googleApiClient = proxyGoogleApiClient
+                                self.locationUpdateListener = LocationUpdateListener(_applicationService, self, proxyGoogleApiClient.realInstance)
+                                self.googleApiClient = proxyGoogleApiClient
                                 wasSuccessful = true
                             } else {
                                 Logging.debug(
@@ -104,39 +104,39 @@ internal class GmsLocationController(
     }
 
     override suspend fun stop() {
-        _startStopMutex.withLock {
-            if (_locationUpdateListener != null) {
-                _locationUpdateListener!!.close()
-                _locationUpdateListener = null
+        startStopMutex.withLock {
+            if (locationUpdateListener != null) {
+                locationUpdateListener!!.close()
+                locationUpdateListener = null
             }
 
-            if (_googleApiClient != null) {
-                _googleApiClient!!.disconnect()
-                _googleApiClient = null
+            if (googleApiClient != null) {
+                googleApiClient!!.disconnect()
+                googleApiClient = null
             }
 
-            _lastLocation = null
+            lastLocation = null
         }
     }
 
     override fun getLastLocation(): Location? {
-        val apiInstance = _googleApiClient?.realInstance ?: return null
+        val apiInstance = googleApiClient?.realInstance ?: return null
         return FusedLocationApiWrapper.getLastLocation(apiInstance)
     }
 
-    override fun subscribe(handler: ILocationUpdatedHandler) = _event.subscribe(handler)
+    override fun subscribe(handler: ILocationUpdatedHandler) = event.subscribe(handler)
 
-    override fun unsubscribe(handler: ILocationUpdatedHandler) = _event.unsubscribe(handler)
+    override fun unsubscribe(handler: ILocationUpdatedHandler) = event.unsubscribe(handler)
 
     override val hasSubscribers: Boolean
-        get() = _event.hasSubscribers
+        get() = event.hasSubscribers
 
     private fun setLocationAndFire(location: Location) {
-        Logging.debug("GMSLocationController lastLocation: $_lastLocation")
+        Logging.debug("GMSLocationController lastLocation: $lastLocation")
 
-        _lastLocation = location
+        lastLocation = location
 
-        _event.fire { it.onLocationChanged(location) }
+        event.fire { it.onLocationChanged(location) }
     }
 
     private class GoogleApiClientListener(private val _parent: GmsLocationController) : GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
