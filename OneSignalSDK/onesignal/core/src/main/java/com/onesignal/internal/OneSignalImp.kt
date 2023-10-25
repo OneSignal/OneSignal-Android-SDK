@@ -4,7 +4,6 @@ import android.content.Context
 import com.onesignal.IOneSignal
 import com.onesignal.common.IDManager
 import com.onesignal.common.OneSignalUtils
-import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modules.IModule
 import com.onesignal.common.safeString
@@ -76,10 +75,38 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
     // we hardcode the DebugManager implementation so it can be used prior to calling `initWithContext`
     override val Debug: IDebugManager = DebugManager()
-    override val Session: ISessionManager get() = if (isInitialized) _session!! else throw Exception("Must call 'initWithContext' before use")
-    override val Notifications: INotificationsManager get() = if (isInitialized) _notifications!! else throw Exception("Must call 'initWithContext' before use")
-    override val Location: ILocationManager get() = if (isInitialized) _location!! else throw Exception("Must call 'initWithContext' before use")
-    override val InAppMessages: IInAppMessagesManager get() = if (isInitialized) _iam!! else throw Exception("Must call 'initWithContext' before use")
+    override val Session: ISessionManager get() =
+        if (isInitialized) {
+            _session!!
+        } else {
+            throw Exception(
+                "Must call 'initWithContext' before use",
+            )
+        }
+    override val Notifications: INotificationsManager get() =
+        if (isInitialized) {
+            _notifications!!
+        } else {
+            throw Exception(
+                "Must call 'initWithContext' before use",
+            )
+        }
+    override val Location: ILocationManager get() =
+        if (isInitialized) {
+            _location!!
+        } else {
+            throw Exception(
+                "Must call 'initWithContext' before use",
+            )
+        }
+    override val InAppMessages: IInAppMessagesManager get() =
+        if (isInitialized) {
+            _iam!!
+        } else {
+            throw Exception(
+                "Must call 'initWithContext' before use",
+            )
+        }
     override val User: IUserManager get() = if (isInitialized) _user!! else throw Exception("Must call 'initWithContext' before use")
 
     // Services required by this class
@@ -104,11 +131,12 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     private var _disableGMSMissingPrompt: Boolean? = null
     private val _loginLock: Any = Any()
 
-    private val _listOfModules = listOf(
-        "com.onesignal.notifications.NotificationsModule",
-        "com.onesignal.inAppMessages.InAppMessagesModule",
-        "com.onesignal.location.LocationModule",
-    )
+    private val _listOfModules =
+        listOf(
+            "com.onesignal.notifications.NotificationsModule",
+            "com.onesignal.inAppMessages.InAppMessagesModule",
+            "com.onesignal.location.LocationModule",
+        )
 
     init {
         val serviceBuilder = ServiceBuilder()
@@ -135,7 +163,10 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         _services = serviceBuilder.build()
     }
 
-    override fun initWithContext(context: Context, appId: String?): Boolean {
+    override fun initWithContext(
+        context: Context,
+        appId: String?,
+    ): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
         // do not do this again if already initialized
@@ -208,14 +239,24 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             if (legacyPlayerId == null) {
                 Logging.debug("initWithContext: creating new device-scoped user")
                 createAndSwitchToNewUser()
-                _operationRepo!!.enqueue(LoginUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId, _identityModelStore!!.model.externalId))
+                _operationRepo!!.enqueue(
+                    LoginUserOperation(
+                        _configModel!!.appId,
+                        _identityModelStore!!.model.onesignalId,
+                        _identityModelStore!!.model.externalId,
+                    ),
+                )
             } else {
                 Logging.debug("initWithContext: creating user linked to subscription $legacyPlayerId")
 
                 // Converting a 4.x SDK to the 5.x SDK.  We pull the legacy user sync values to create the subscription model, then enqueue
                 // a specialized `LoginUserFromSubscriptionOperation`, which will drive fetching/refreshing of the local user
                 // based on the subscription ID we do have.
-                val legacyUserSyncString = _preferencesService!!.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_USER_SYNCVALUES)
+                val legacyUserSyncString =
+                    _preferencesService!!.getString(
+                        PreferenceStores.ONESIGNAL,
+                        PreferenceOneSignalKeys.PREFS_LEGACY_USER_SYNCVALUES,
+                    )
                 var suppressBackendOperation = false
 
                 if (legacyUserSyncString != null) {
@@ -235,7 +276,9 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
                 createAndSwitchToNewUser(suppressBackendOperation = suppressBackendOperation)
 
-                _operationRepo!!.enqueue(LoginUserFromSubscriptionOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId, legacyPlayerId))
+                _operationRepo!!.enqueue(
+                    LoginUserFromSubscriptionOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId, legacyPlayerId),
+                )
                 _preferencesService!!.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID, null)
             }
         } else {
@@ -250,7 +293,10 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         return true
     }
 
-    override fun login(externalId: String, jwtBearerToken: String?) {
+    override fun login(
+        externalId: String,
+        jwtBearerToken: String?,
+    ) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
         if (!isInitialized) {
@@ -295,15 +341,16 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             // time if network conditions prevent the operation to succeed.  This allows us to
             // provide a callback to the caller when we can absolutely say the user is logged
             // in, so they may take action on their own backend.
-            val result = _operationRepo!!.enqueueAndWait(
-                LoginUserOperation(
-                    _configModel!!.appId,
-                    newIdentityOneSignalId,
-                    externalId,
-                    if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
-                ),
-                true,
-            )
+            val result =
+                _operationRepo!!.enqueueAndWait(
+                    LoginUserOperation(
+                        _configModel!!.appId,
+                        newIdentityOneSignalId,
+                        externalId,
+                        if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
+                    ),
+                    true,
+                )
 
             if (!result) {
                 Logging.log(LogLevel.ERROR, "Could not login user")
@@ -313,11 +360,11 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 // after the createAndSwitchToNewUser have been executed, and the retrieval will be the
                 // most up to date reflection of the user.
                 _operationRepo!!.enqueueAndWait(
-                        RefreshUserOperation(
-                                _configModel!!.appId,
-                                _identityModelStore!!.model.onesignalId,
-                        ),
-                        true,
+                    RefreshUserOperation(
+                        _configModel!!.appId,
+                        _identityModelStore!!.model.onesignalId,
+                    ),
+                    true,
                 )
             }
         }
@@ -350,7 +397,12 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         }
     }
 
-    private fun createAndSwitchToNewUser(suppressBackendOperation: Boolean = false, modify: ((identityModel: IdentityModel, propertiesModel: PropertiesModel) -> Unit)? = null) {
+    private fun createAndSwitchToNewUser(
+        suppressBackendOperation: Boolean = false,
+        modify: (
+            (identityModel: IdentityModel, propertiesModel: PropertiesModel) -> Unit
+        )? = null,
+    ) {
         Logging.debug("createAndSwitchToNewUser()")
 
         // create a new identity and properties model locally
@@ -407,7 +459,10 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     }
 
     override fun <T> hasService(c: Class<T>): Boolean = _services.hasService(c)
+
     override fun <T> getService(c: Class<T>): T = _services.getService(c)
+
     override fun <T> getServiceOrNull(c: Class<T>): T? = _services.getServiceOrNull(c)
+
     override fun <T> getAllServices(c: Class<T>): List<T> = _services.getAllServices(c)
 }

@@ -8,7 +8,6 @@ package com.onesignal.notifications
  * @see [Foreground Notification Received Event | OneSignal Docs](https://documentation.onesignal.com/docs/sdk-notification-event-handlers#foreground-notification-received-event)
  */
 interface INotificationLifecycleListener {
-
     /**
      * Called when a notification is to be displayed to the user. This callback
      * gives the implementor the ability to prevent the notification from displaying to the

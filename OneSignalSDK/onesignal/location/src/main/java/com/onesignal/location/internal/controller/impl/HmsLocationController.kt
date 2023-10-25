@@ -82,11 +82,12 @@ internal class HmsLocationController(
 
                     if (wasSuccessful) {
                         _event.fire { it.onLocationChanged(_lastLocation!!) }
-                        locationUpdateListener = LocationUpdateListener(
-                            self,
-                            _applicationService,
-                            hmsFusedLocationClient!!,
-                        )
+                        locationUpdateListener =
+                            LocationUpdateListener(
+                                self,
+                                _applicationService,
+                                hmsFusedLocationClient!!,
+                            )
                     }
                 }
             }
@@ -142,7 +143,9 @@ internal class HmsLocationController(
     }
 
     override fun subscribe(handler: ILocationUpdatedHandler) = _event.subscribe(handler)
+
     override fun unsubscribe(handler: ILocationUpdatedHandler) = _event.unsubscribe(handler)
+
     override val hasSubscribers: Boolean
         get() = _event.hasSubscribers
 
@@ -151,7 +154,6 @@ internal class HmsLocationController(
         private val _applicationService: IApplicationService,
         private val huaweiFusedLocationProviderClient: FusedLocationProviderClient,
     ) : LocationCallback(), IApplicationLifecycleHandler, Closeable {
-
         private var hasExistingRequest = false
 
         init {
@@ -192,11 +194,12 @@ internal class HmsLocationController(
                 updateInterval =
                     LocationConstants.FOREGROUND_UPDATE_TIME_MS
             }
-            val locationRequest = LocationRequest.create()
-                .setFastestInterval(updateInterval)
-                .setInterval(updateInterval)
-                .setMaxWaitTime((updateInterval * 1.5).toLong())
-                .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY)
+            val locationRequest =
+                LocationRequest.create()
+                    .setFastestInterval(updateInterval)
+                    .setInterval(updateInterval)
+                    .setMaxWaitTime((updateInterval * 1.5).toLong())
+                    .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY)
             Logging.debug("HMSLocationController Huawei LocationServices requestLocationUpdates!")
             huaweiFusedLocationProviderClient.requestLocationUpdates(
                 locationRequest,
@@ -209,11 +212,11 @@ internal class HmsLocationController(
 
     class LocationHandlerThread internal constructor() :
         HandlerThread("OSH_LocationHandlerThread") {
-        var mHandler: Handler
+            var mHandler: Handler
 
-        init {
-            start()
-            mHandler = Handler(looper)
+            init {
+                start()
+                mHandler = Handler(looper)
+            }
         }
-    }
 }

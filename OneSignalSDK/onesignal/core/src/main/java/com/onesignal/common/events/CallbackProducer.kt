@@ -9,7 +9,6 @@ import kotlinx.coroutines.withContext
  * make callbacks less burdensome to the user.
  */
 open class CallbackProducer<THandler>() : ICallbackNotifier<THandler> {
-
     private var _callback: THandler? = null
 
     override val hasCallback: Boolean

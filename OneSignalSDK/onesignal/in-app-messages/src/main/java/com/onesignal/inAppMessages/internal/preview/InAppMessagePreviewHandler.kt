@@ -28,7 +28,6 @@ internal class InAppMessagePreviewHandler(
     private val _state: InAppStateService,
     private val _time: ITime,
 ) : IStartableService, INotificationLifecycleCallback {
-
     override fun start() {
         _notificationLifeCycle.setInternalNotificationLifecycleCallback(this)
     }
@@ -52,7 +51,10 @@ internal class InAppMessagePreviewHandler(
         return false
     }
 
-    override suspend fun canOpenNotification(activity: Activity, jsonData: JSONObject): Boolean {
+    override suspend fun canOpenNotification(
+        activity: Activity,
+        jsonData: JSONObject,
+    ): Boolean {
         val previewUUID = inAppPreviewPushUUID(jsonData) ?: return true
 
         _notificationActivityOpener.openDestinationActivity(activity, JSONArray().put(jsonData))
@@ -66,11 +68,12 @@ internal class InAppMessagePreviewHandler(
     }
 
     private fun inAppPreviewPushUUID(payload: JSONObject): String? {
-        val osCustom: JSONObject = try {
-            NotificationHelper.getCustomJSONObject(payload)
-        } catch (e: JSONException) {
-            return null
-        }
+        val osCustom: JSONObject =
+            try {
+                NotificationHelper.getCustomJSONObject(payload)
+            } catch (e: JSONException) {
+                return null
+            }
 
         if (!osCustom.has(NotificationConstants.PUSH_ADDITIONAL_DATA_KEY)) {
             return null

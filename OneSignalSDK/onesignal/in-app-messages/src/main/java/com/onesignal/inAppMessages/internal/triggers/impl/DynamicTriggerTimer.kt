@@ -11,7 +11,11 @@ import java.util.TimerTask
  *       that schedules the timer.
  */
 internal object DynamicTriggerTimer {
-    fun scheduleTrigger(task: TimerTask?, triggerId: String, delay: Long) {
+    fun scheduleTrigger(
+        task: TimerTask?,
+        triggerId: String,
+        delay: Long,
+    ) {
         Logging.debug("scheduleTrigger: $triggerId delay: $delay")
         val timer = Timer("trigger_timer:$triggerId")
         timer.schedule(task, delay)

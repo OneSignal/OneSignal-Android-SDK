@@ -13,14 +13,12 @@ open class SimpleModelStore<TModel>(
      * Will be called whenever a new [TModel] needs to be instantiated.
      */
     private val _create: () -> TModel,
-
     /**
      * The persistable name of the model store. If not specified no persisting will occur.
      */
     name: String? = null,
     _prefs: IPreferencesService? = null,
 ) : ModelStore<TModel>(name, _prefs) where TModel : Model {
-
     init {
         load()
     }

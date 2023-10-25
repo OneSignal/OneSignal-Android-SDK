@@ -33,11 +33,13 @@ abstract class ModelStore<TModel>(
 ) : IEventNotifier<IModelStoreChangeHandler<TModel>>,
     IModelStore<TModel>,
     IModelChangedHandler where TModel : Model {
-
     private val _changeSubscription: EventProducer<IModelStoreChangeHandler<TModel>> = EventProducer()
     private val _models: MutableList<TModel> = mutableListOf()
 
-    override fun add(model: TModel, tag: String) {
+    override fun add(
+        model: TModel,
+        tag: String,
+    ) {
         val oldModel = _models.firstOrNull { it.id == model.id }
         if (oldModel != null) {
             removeItem(oldModel, tag)
@@ -46,7 +48,11 @@ abstract class ModelStore<TModel>(
         addItem(model, tag)
     }
 
-    override fun add(index: Int, model: TModel, tag: String) {
+    override fun add(
+        index: Int,
+        model: TModel,
+        tag: String,
+    ) {
         val oldModel = _models.firstOrNull { it.id == model.id }
         if (oldModel != null) {
             removeItem(oldModel, tag)
@@ -63,18 +69,27 @@ abstract class ModelStore<TModel>(
         return _models.firstOrNull { it.id == id }
     }
 
-    override fun remove(id: String, tag: String) {
+    override fun remove(
+        id: String,
+        tag: String,
+    ) {
         val model = _models.firstOrNull { it.id == id } ?: return
         removeItem(model, tag)
     }
 
-    override fun onChanged(args: ModelChangedArgs, tag: String) {
+    override fun onChanged(
+        args: ModelChangedArgs,
+        tag: String,
+    ) {
         persist()
 
         _changeSubscription.fire { it.onModelUpdated(args, tag) }
     }
 
-    override fun replaceAll(models: List<TModel>, tag: String) {
+    override fun replaceAll(
+        models: List<TModel>,
+        tag: String,
+    ) {
         clear(tag)
 
         for (model in models) {
@@ -95,7 +110,11 @@ abstract class ModelStore<TModel>(
         }
     }
 
-    private fun addItem(model: TModel, tag: String, index: Int? = null) {
+    private fun addItem(
+        model: TModel,
+        tag: String,
+        index: Int? = null,
+    ) {
         if (index != null) {
             _models.add(index, model)
         } else {
@@ -110,7 +129,10 @@ abstract class ModelStore<TModel>(
         _changeSubscription.fire { it.onModelAdded(model, tag) }
     }
 
-    private fun removeItem(model: TModel, tag: String) {
+    private fun removeItem(
+        model: TModel,
+        tag: String,
+    ) {
         _models.remove(model)
 
         // no longer listen for changes to this model
@@ -146,7 +168,9 @@ abstract class ModelStore<TModel>(
     }
 
     override fun subscribe(handler: IModelStoreChangeHandler<TModel>) = _changeSubscription.subscribe(handler)
+
     override fun unsubscribe(handler: IModelStoreChangeHandler<TModel>) = _changeSubscription.unsubscribe(handler)
+
     override val hasSubscribers: Boolean
         get() = _changeSubscription.hasSubscribers
 }

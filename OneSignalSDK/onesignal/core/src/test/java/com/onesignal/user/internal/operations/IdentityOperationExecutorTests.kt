@@ -27,7 +27,7 @@ import org.junit.runner.RunWith
 class IdentityOperationExecutorTests : FunSpec({
 
     test("execution of set alias operation") {
-        /* Given */
+        // Given
         val mockIdentityBackendService = mockk<IIdentityBackendService>()
         coEvery { mockIdentityBackendService.setAlias(any(), any(), any(), any()) } returns mapOf()
 
@@ -43,17 +43,19 @@ class IdentityOperationExecutorTests : FunSpec({
         val identityOperationExecutor = IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService)
         val operations = listOf<Operation>(SetAliasOperation("appId", "onesignalId", "aliasKey1", "aliasValue1"))
 
-        /* When */
+        // When
         val response = identityOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.SUCCESS
-        coVerify(exactly = 1) { mockIdentityBackendService.setAlias("appId", IdentityConstants.ONESIGNAL_ID, "onesignalId", mapOf("aliasKey1" to "aliasValue1")) }
+        coVerify(exactly = 1) {
+            mockIdentityBackendService.setAlias("appId", IdentityConstants.ONESIGNAL_ID, "onesignalId", mapOf("aliasKey1" to "aliasValue1"))
+        }
         verify(exactly = 1) { mockIdentityModel.setStringProperty("aliasKey1", "aliasValue1", ModelChangeTags.HYDRATE) }
     }
 
     test("execution of set alias operation with network timeout") {
-        /* Given */
+        // Given
         val mockIdentityBackendService = mockk<IIdentityBackendService>()
         coEvery { mockIdentityBackendService.setAlias(any(), any(), any(), any()) } throws BackendException(408, "TIMEOUT")
 
@@ -63,16 +65,16 @@ class IdentityOperationExecutorTests : FunSpec({
         val identityOperationExecutor = IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService)
         val operations = listOf<Operation>(SetAliasOperation("appId", "onesignalId", "aliasKey1", "aliasValue1"))
 
-        /* When */
+        // When
 
         val response = identityOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.FAIL_RETRY
     }
 
     test("execution of set alias operation with non-retryable error") {
-        /* Given */
+        // Given
         val mockIdentityBackendService = mockk<IIdentityBackendService>()
         coEvery { mockIdentityBackendService.setAlias(any(), any(), any(), any()) } throws BackendException(400, "INVALID")
 
@@ -82,16 +84,16 @@ class IdentityOperationExecutorTests : FunSpec({
         val identityOperationExecutor = IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService)
         val operations = listOf<Operation>(SetAliasOperation("appId", "onesignalId", "aliasKey1", "aliasValue1"))
 
-        /* When */
+        // When
 
         val response = identityOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.FAIL_NORETRY
     }
 
     test("execution of delete alias operation") {
-        /* Given */
+        // Given
         val mockIdentityBackendService = mockk<IIdentityBackendService>()
         coEvery { mockIdentityBackendService.deleteAlias(any(), any(), any(), any()) } just runs
 
@@ -107,17 +109,19 @@ class IdentityOperationExecutorTests : FunSpec({
         val identityOperationExecutor = IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService)
         val operations = listOf<Operation>(DeleteAliasOperation("appId", "onesignalId", "aliasKey1"))
 
-        /* When */
+        // When
         val response = identityOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.SUCCESS
-        coVerify(exactly = 1) { mockIdentityBackendService.deleteAlias("appId", IdentityConstants.ONESIGNAL_ID, "onesignalId", "aliasKey1") }
+        coVerify(
+            exactly = 1,
+        ) { mockIdentityBackendService.deleteAlias("appId", IdentityConstants.ONESIGNAL_ID, "onesignalId", "aliasKey1") }
         verify(exactly = 1) { mockIdentityModel.setOptStringProperty("aliasKey1", null, ModelChangeTags.HYDRATE) }
     }
 
     test("execution of delete alias operation with network timeout") {
-        /* Given */
+        // Given
         val mockIdentityBackendService = mockk<IIdentityBackendService>()
         coEvery { mockIdentityBackendService.deleteAlias(any(), any(), any(), any()) } throws BackendException(408, "TIMEOUT")
 
@@ -127,16 +131,16 @@ class IdentityOperationExecutorTests : FunSpec({
         val identityOperationExecutor = IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService)
         val operations = listOf<Operation>(DeleteAliasOperation("appId", "onesignalId", "aliasKey1"))
 
-        /* When */
+        // When
 
         val response = identityOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.FAIL_RETRY
     }
 
     test("execution of delete alias operation with non-retryable error") {
-        /* Given */
+        // Given
         val mockIdentityBackendService = mockk<IIdentityBackendService>()
         coEvery { mockIdentityBackendService.deleteAlias(any(), any(), any(), any()) } throws BackendException(400, "INVALID")
 
@@ -146,11 +150,11 @@ class IdentityOperationExecutorTests : FunSpec({
         val identityOperationExecutor = IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService)
         val operations = listOf<Operation>(DeleteAliasOperation("appId", "onesignalId", "aliasKey1"))
 
-        /* When */
+        // When
 
         val response = identityOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.FAIL_NORETRY
     }
 })

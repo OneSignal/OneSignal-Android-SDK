@@ -65,7 +65,6 @@ internal class BackgroundManager(
     private val _time: ITime,
     private val _backgroundServices: List<(IBackgroundService)>,
 ) : IApplicationLifecycleHandler, IBackgroundManager, IStartableService {
-
     override var needsJobReschedule = false
 
     private val _lock = Any()
@@ -114,19 +113,21 @@ internal class BackgroundManager(
     }
 
     // Entry point from SyncJobService and SyncService when the job is kicked off
-    override suspend fun runBackgroundServices() = coroutineScope {
-        Logging.debug("OSBackground sync, calling initWithContext")
+    override suspend fun runBackgroundServices() =
+        coroutineScope {
+            Logging.debug("OSBackground sync, calling initWithContext")
 
-        backgroundSyncJob = launch(Dispatchers.Unconfined) {
-            synchronized(_lock) { _nextScheduledSyncTimeMs = 0L }
+            backgroundSyncJob =
+                launch(Dispatchers.Unconfined) {
+                    synchronized(_lock) { _nextScheduledSyncTimeMs = 0L }
 
-            for (backgroundService in _backgroundServices) {
-                backgroundService.backgroundRun()
-            }
+                    for (backgroundService in _backgroundServices) {
+                        backgroundService.backgroundRun()
+                    }
 
-            scheduleBackground()
+                    scheduleBackground()
+                }
         }
-    }
 
     override fun cancelRunBackgroundServices(): Boolean {
         if (backgroundSyncJob == null) return false

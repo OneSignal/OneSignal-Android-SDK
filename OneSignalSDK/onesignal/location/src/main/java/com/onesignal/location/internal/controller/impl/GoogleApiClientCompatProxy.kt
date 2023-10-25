@@ -34,7 +34,6 @@ import com.google.android.gms.common.api.GoogleApiClient
 internal class GoogleApiClientCompatProxy(
     val realInstance: GoogleApiClient,
 ) {
-
     private val googleApiClientListenerClass: Class<*> = realInstance.javaClass
 
     fun blockingConnect(): ConnectionResult? {

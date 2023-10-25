@@ -33,7 +33,6 @@ internal class DeviceRegistrationListener(
     ISingletonModelStoreChangeHandler<ConfigModel>,
     IPermissionObserver,
     ISubscriptionChangedHandler {
-
     override fun start() {
         _configModelStore.subscribe(this)
         _notificationsManager.addPermissionObserver(this)
@@ -42,7 +41,10 @@ internal class DeviceRegistrationListener(
         retrievePushTokenAndUpdateSubscription()
     }
 
-    override fun onModelReplaced(model: ConfigModel, tag: String) {
+    override fun onModelReplaced(
+        model: ConfigModel,
+        tag: String,
+    ) {
         // we only need to do things when the config model was replaced
         // via a hydration from the backend.
         if (tag != ModelChangeTags.HYDRATE) {
@@ -54,7 +56,10 @@ internal class DeviceRegistrationListener(
         retrievePushTokenAndUpdateSubscription()
     }
 
-    override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
+    override fun onModelUpdated(
+        args: ModelChangedArgs,
+        tag: String,
+    ) {
     }
 
     override fun onNotificationPermissionChange(permission: Boolean) {
@@ -66,7 +71,10 @@ internal class DeviceRegistrationListener(
 
         if (pushSubscription.token.isNotEmpty()) {
             val permission = _notificationsManager.permission
-            _subscriptionManager.addOrUpdatePushSubscription(null, if (permission) SubscriptionStatus.SUBSCRIBED else SubscriptionStatus.NO_PERMISSION)
+            _subscriptionManager.addOrUpdatePushSubscription(
+                null,
+                if (permission) SubscriptionStatus.SUBSCRIBED else SubscriptionStatus.NO_PERMISSION,
+            )
         } else {
             suspendifyOnThread {
                 val pushTokenAndStatus = _pushTokenManager.retrievePushToken()
@@ -80,8 +88,13 @@ internal class DeviceRegistrationListener(
     }
 
     override fun onSubscriptionRemoved(subscription: ISubscription) { }
+
     override fun onSubscriptionAdded(subscription: ISubscription) { }
-    override fun onSubscriptionChanged(subscription: ISubscription, args: ModelChangedArgs) {
+
+    override fun onSubscriptionChanged(
+        subscription: ISubscription,
+        args: ModelChangedArgs,
+    ) {
         // when setting optedIn=true and there aren't permissions, automatically drive
         // permission request.
         if (args.path == SubscriptionModel::optedIn.name && args.newValue == true && !_notificationsManager.permission) {

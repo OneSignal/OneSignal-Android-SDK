@@ -39,16 +39,18 @@ internal class SummaryNotificationDisplayer(
         notificationId: Int,
     ) {
         val random: Random = SecureRandom()
-        val contentIntent: PendingIntent? = intentGenerator.getNewActionPendingIntent(
-            random.nextInt(),
-            intentGenerator.getNewBaseIntent(notificationId)
-                .putExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString()).putExtra("grp", group),
-        )
+        val contentIntent: PendingIntent? =
+            intentGenerator.getNewActionPendingIntent(
+                random.nextInt(),
+                intentGenerator.getNewBaseIntent(notificationId)
+                    .putExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString()).putExtra("grp", group),
+            )
         notifBuilder!!.setContentIntent(contentIntent)
-        val deleteIntent = _notificationDisplayBuilder.getNewDismissActionPendingIntent(
-            random.nextInt(),
-            _notificationDisplayBuilder.getNewBaseDismissIntent(notificationId).putExtra("grp", group),
-        )
+        val deleteIntent =
+            _notificationDisplayBuilder.getNewDismissActionPendingIntent(
+                random.nextInt(),
+                _notificationDisplayBuilder.getNewBaseDismissIntent(notificationId).putExtra("grp", group),
+            )
         notifBuilder.setDeleteIntent(deleteIntent)
         notifBuilder.setGroup(group)
         try {
@@ -69,7 +71,8 @@ internal class SummaryNotificationDisplayer(
         val singleNotifWorkArounds =
             Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1 && Build.VERSION.SDK_INT < Build.VERSION_CODES.N && !notificationJob.isRestoring
         if (singleNotifWorkArounds) {
-            if ((notificationJob.overriddenSound != null) && !notificationJob.overriddenSound!!
+            if ((notificationJob.overriddenSound != null) &&
+                !notificationJob.overriddenSound!!
                     .equals(notificationJob.orgSound)
             ) {
                 notifBuilder!!.setSound(null)
@@ -95,10 +98,11 @@ internal class SummaryNotificationDisplayer(
         val intentGenerator = IntentGeneratorForAttachingToNotifications(currentContext!!)
         val group = fcmJson.optString("grp", null)
         val random = SecureRandom()
-        val summaryDeleteIntent = _notificationDisplayBuilder.getNewDismissActionPendingIntent(
-            random.nextInt(),
-            _notificationDisplayBuilder.getNewBaseDismissIntent(0).putExtra("summary", group),
-        )
+        val summaryDeleteIntent =
+            _notificationDisplayBuilder.getNewDismissActionPendingIntent(
+                random.nextInt(),
+                _notificationDisplayBuilder.getNewBaseDismissIntent(0).putExtra("summary", group),
+            )
         val summaryNotification: Notification
         var summaryNotificationId: Int? = null
         var firstFullData: String? = null
@@ -134,10 +138,11 @@ internal class SummaryNotificationDisplayer(
             }
         }
 
-        val summaryContentIntent: PendingIntent? = intentGenerator.getNewActionPendingIntent(
-            random.nextInt(),
-            createBaseSummaryIntent(summaryNotificationId!!, intentGenerator, fcmJson, group),
-        )
+        val summaryContentIntent: PendingIntent? =
+            intentGenerator.getNewActionPendingIntent(
+                random.nextInt(),
+                createBaseSummaryIntent(summaryNotificationId!!, intentGenerator, fcmJson, group),
+            )
 
         // 2 or more notifications with a group received, group them together as a single notification.
         if (updateSummary && summaryList.size > 1 ||
@@ -260,14 +265,16 @@ internal class SummaryNotificationDisplayer(
         val summaryMessage = "$grouplessNotifCount new messages"
         val summaryNotificationId: Int = NotificationHelper.grouplessSummaryId
         _dataController.createSummaryNotification(summaryNotificationId!!, group)
-        val summaryContentIntent: PendingIntent? = intentGenerator.getNewActionPendingIntent(
-            random.nextInt(),
-            createBaseSummaryIntent(summaryNotificationId, intentGenerator, fcmJson, group),
-        )
-        val summaryDeleteIntent = _notificationDisplayBuilder.getNewDismissActionPendingIntent(
-            random.nextInt(),
-            _notificationDisplayBuilder.getNewBaseDismissIntent(0).putExtra("summary", group),
-        )
+        val summaryContentIntent: PendingIntent? =
+            intentGenerator.getNewActionPendingIntent(
+                random.nextInt(),
+                createBaseSummaryIntent(summaryNotificationId, intentGenerator, fcmJson, group),
+            )
+        val summaryDeleteIntent =
+            _notificationDisplayBuilder.getNewDismissActionPendingIntent(
+                random.nextInt(),
+                _notificationDisplayBuilder.getNewBaseDismissIntent(0).putExtra("summary", group),
+            )
         val summaryBuilder = _notificationDisplayBuilder.getBaseOneSignalNotificationBuilder(notificationJob).compatBuilder
         if (notificationJob.overriddenSound != null) summaryBuilder!!.setSound(notificationJob.overriddenSound)
         if (notificationJob.overriddenFlags != null) {

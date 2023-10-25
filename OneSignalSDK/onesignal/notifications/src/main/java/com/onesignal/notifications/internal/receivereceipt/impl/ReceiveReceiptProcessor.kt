@@ -10,8 +10,11 @@ internal class ReceiveReceiptProcessor(
     private val _deviceService: IDeviceService,
     private val _backend: INotificationBackendService,
 ) : IReceiveReceiptProcessor {
-
-    override suspend fun sendReceiveReceipt(appId: String, subscriptionId: String, notificationId: String) {
+    override suspend fun sendReceiveReceipt(
+        appId: String,
+        subscriptionId: String,
+        notificationId: String,
+    ) {
         val deviceType = _deviceService.deviceType
 
         try {

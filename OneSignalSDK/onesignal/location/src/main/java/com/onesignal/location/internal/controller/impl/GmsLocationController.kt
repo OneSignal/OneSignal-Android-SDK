@@ -86,11 +86,15 @@ internal class GmsLocationController(
                                 self._googleApiClient = proxyGoogleApiClient
                                 wasSuccessful = true
                             } else {
-                                Logging.debug("GMSLocationController connection to GoogleApiService failed: (${result?.errorCode}) ${result?.errorMessage}")
+                                Logging.debug(
+                                    "GMSLocationController connection to GoogleApiService failed: (${result?.errorCode}) ${result?.errorMessage}",
+                                )
                             }
                         }
                     } catch (e: TimeoutCancellationException) {
-                        Logging.warn("Location permission exists but GoogleApiClient timed out. Maybe related to mismatch google-play aar versions.")
+                        Logging.warn(
+                            "Location permission exists but GoogleApiClient timed out. Maybe related to mismatch google-play aar versions.",
+                        )
                     }
                 }
             }
@@ -121,7 +125,9 @@ internal class GmsLocationController(
     }
 
     override fun subscribe(handler: ILocationUpdatedHandler) = _event.subscribe(handler)
+
     override fun unsubscribe(handler: ILocationUpdatedHandler) = _event.unsubscribe(handler)
+
     override val hasSubscribers: Boolean
         get() = _event.hasSubscribers
 
@@ -157,7 +163,6 @@ internal class GmsLocationController(
         private val _parent: GmsLocationController,
         private val googleApiClient: GoogleApiClient,
     ) : LocationListener, IApplicationLifecycleHandler, Closeable {
-
         private var hasExistingRequest = false
 
         init {
@@ -197,17 +202,19 @@ internal class GmsLocationController(
                 FusedLocationApiWrapper.cancelLocationUpdates(googleApiClient, this)
             }
 
-            val updateInterval = if (_applicationService.isInForeground) {
-                LocationConstants.FOREGROUND_UPDATE_TIME_MS
-            } else {
-                LocationConstants.BACKGROUND_UPDATE_TIME_MS
-            }
+            val updateInterval =
+                if (_applicationService.isInForeground) {
+                    LocationConstants.FOREGROUND_UPDATE_TIME_MS
+                } else {
+                    LocationConstants.BACKGROUND_UPDATE_TIME_MS
+                }
 
-            val locationRequest = LocationRequest.create()
-                .setFastestInterval(updateInterval)
-                .setInterval(updateInterval)
-                .setMaxWaitTime((updateInterval * 1.5).toLong())
-                .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY)
+            val locationRequest =
+                LocationRequest.create()
+                    .setFastestInterval(updateInterval)
+                    .setInterval(updateInterval)
+                    .setMaxWaitTime((updateInterval * 1.5).toLong())
+                    .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY)
             Logging.debug("GMSLocationController GoogleApiClient requestLocationUpdates!")
             FusedLocationApiWrapper.requestLocationUpdates(googleApiClient, locationRequest, this)
             hasExistingRequest = true
@@ -220,11 +227,18 @@ internal class GmsLocationController(
     }
 
     internal object FusedLocationApiWrapper {
-        fun cancelLocationUpdates(googleApiClient: GoogleApiClient, locationListener: LocationListener) {
+        fun cancelLocationUpdates(
+            googleApiClient: GoogleApiClient,
+            locationListener: LocationListener,
+        ) {
             LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationListener)
         }
 
-        fun requestLocationUpdates(googleApiClient: GoogleApiClient, locationRequest: LocationRequest, locationListener: LocationListener) {
+        fun requestLocationUpdates(
+            googleApiClient: GoogleApiClient,
+            locationRequest: LocationRequest,
+            locationListener: LocationListener,
+        ) {
             try {
                 if (Looper.myLooper() == null) {
                     Looper.prepare()
@@ -247,13 +261,13 @@ internal class GmsLocationController(
 
     protected class LocationHandlerThread internal constructor() :
         HandlerThread("OSH_LocationHandlerThread") {
-        var mHandler: Handler
+            var mHandler: Handler
 
-        init {
-            start()
-            mHandler = Handler(looper)
+            init {
+                start()
+                mHandler = Handler(looper)
+            }
         }
-    }
 
     companion object {
         val API_FALLBACK_TIME = 30000

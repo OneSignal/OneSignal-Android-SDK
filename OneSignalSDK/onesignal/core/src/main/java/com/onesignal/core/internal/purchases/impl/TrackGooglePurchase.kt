@@ -75,7 +75,12 @@ internal class TrackGooglePurchase(
         }
 
         try {
-            val purchaseTokensString = _prefs.getString(PreferenceStores.PLAYER_PURCHASES, PreferencePlayerPurchasesKeys.PREFS_PURCHASE_TOKENS, "[]")
+            val purchaseTokensString =
+                _prefs.getString(
+                    PreferenceStores.PLAYER_PURCHASES,
+                    PreferencePlayerPurchasesKeys.PREFS_PURCHASE_TOKENS,
+                    "[]",
+                )
             val jsonPurchaseTokens = JSONArray(purchaseTokensString)
 
             for (i in 0 until jsonPurchaseTokens.length())
@@ -101,25 +106,29 @@ internal class TrackGooglePurchase(
 
     private fun trackIAP() {
         if (mServiceConn == null) {
-            val serviceConn = object : ServiceConnection {
-                override fun onServiceDisconnected(name: ComponentName) {
-                    iapEnabled = -99
-                    mIInAppBillingService = null
-                }
+            val serviceConn =
+                object : ServiceConnection {
+                    override fun onServiceDisconnected(name: ComponentName) {
+                        iapEnabled = -99
+                        mIInAppBillingService = null
+                    }
 
-                override fun onServiceConnected(name: ComponentName, service: IBinder) {
-                    try {
-                        val stubClass =
-                            Class.forName("com.android.vending.billing.IInAppBillingService\$Stub")
-                        val asInterfaceMethod = getAsInterfaceMethod(stubClass)
-                        asInterfaceMethod!!.isAccessible = true
-                        mIInAppBillingService = asInterfaceMethod.invoke(null, service)
-                        queryBoughtItems()
-                    } catch (t: Throwable) {
-                        t.printStackTrace()
+                    override fun onServiceConnected(
+                        name: ComponentName,
+                        service: IBinder,
+                    ) {
+                        try {
+                            val stubClass =
+                                Class.forName("com.android.vending.billing.IInAppBillingService\$Stub")
+                            val asInterfaceMethod = getAsInterfaceMethod(stubClass)
+                            asInterfaceMethod!!.isAccessible = true
+                            mIInAppBillingService = asInterfaceMethod.invoke(null, service)
+                            queryBoughtItems()
+                        } catch (t: Throwable) {
+                            t.printStackTrace()
+                        }
                     }
                 }
-            }
             mServiceConn = serviceConn
             val serviceIntent = Intent("com.android.vending.billing.InAppBillingService.BIND")
             serviceIntent.setPackage("com.android.vending")
@@ -138,13 +147,14 @@ internal class TrackGooglePurchase(
                     getPurchasesMethod = getGetPurchasesMethod(IInAppBillingServiceClass)
                     getPurchasesMethod!!.isAccessible = true
                 }
-                val ownedItems = getPurchasesMethod!!.invoke(
-                    mIInAppBillingService,
-                    3,
-                    _applicationService.appContext.packageName,
-                    "inapp",
-                    null,
-                ) as Bundle
+                val ownedItems =
+                    getPurchasesMethod!!.invoke(
+                        mIInAppBillingService,
+                        3,
+                        _applicationService.appContext.packageName,
+                        "inapp",
+                        null,
+                    ) as Bundle
                 if (ownedItems.getInt("RESPONSE_CODE") == 0) {
                     val skusToAdd = ArrayList<String>()
                     val newPurchaseTokens = ArrayList<String>()
@@ -155,7 +165,8 @@ internal class TrackGooglePurchase(
                         val sku = ownedSkus!![i]
                         val itemPurchased = JSONObject(purchaseData)
                         val purchaseToken = itemPurchased.getString("purchaseToken")
-                        if (!purchaseTokens.contains(purchaseToken) && !newPurchaseTokens.contains(
+                        if (!purchaseTokens.contains(purchaseToken) &&
+                            !newPurchaseTokens.contains(
                                 purchaseToken,
                             )
                         ) {
@@ -182,7 +193,10 @@ internal class TrackGooglePurchase(
         }.start()
     }
 
-    private fun sendPurchases(skusToAdd: ArrayList<String>, newPurchaseTokens: ArrayList<String>) {
+    private fun sendPurchases(
+        skusToAdd: ArrayList<String>,
+        newPurchaseTokens: ArrayList<String>,
+    ) {
         try {
             if (getSkuDetailsMethod == null) {
                 getSkuDetailsMethod = getGetSkuDetailsMethod(IInAppBillingServiceClass)
@@ -190,13 +204,14 @@ internal class TrackGooglePurchase(
             }
             val querySkus = Bundle()
             querySkus.putStringArrayList("ITEM_ID_LIST", skusToAdd)
-            val skuDetails = getSkuDetailsMethod!!.invoke(
-                mIInAppBillingService,
-                3,
-                _applicationService.appContext.packageName,
-                "inapp",
-                querySkus,
-            ) as Bundle
+            val skuDetails =
+                getSkuDetailsMethod!!.invoke(
+                    mIInAppBillingService,
+                    3,
+                    _applicationService.appContext.packageName,
+                    "inapp",
+                    querySkus,
+                ) as Bundle
             val response = skuDetails.getInt("RESPONSE_CODE")
             if (response == 0) {
                 val responseList = skuDetails.getStringArrayList("DETAILS_LIST")
@@ -220,9 +235,21 @@ internal class TrackGooglePurchase(
 
                 // New purchases to report. If successful then mark them as tracked.
                 if (purchasesToReport.isNotEmpty()) {
-                    _operationRepo.enqueue(TrackPurchaseOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, newAsExisting, BigDecimal(0), purchasesToReport))
+                    _operationRepo.enqueue(
+                        TrackPurchaseOperation(
+                            _configModelStore.model.appId,
+                            _identityModelStore.model.onesignalId,
+                            newAsExisting,
+                            BigDecimal(0),
+                            purchasesToReport,
+                        ),
+                    )
                     purchaseTokens.addAll(newPurchaseTokens)
-                    _prefs.saveString(PreferenceStores.PLAYER_PURCHASES, PreferencePlayerPurchasesKeys.PREFS_PURCHASE_TOKENS, purchaseTokens.toString())
+                    _prefs.saveString(
+                        PreferenceStores.PLAYER_PURCHASES,
+                        PreferencePlayerPurchasesKeys.PREFS_PURCHASE_TOKENS,
+                        purchaseTokens.toString(),
+                    )
                     _prefs.saveBool(PreferenceStores.PLAYER_PURCHASES, PreferencePlayerPurchasesKeys.PREFS_EXISTING_PURCHASES, true)
                     newAsExisting = false
                     isWaitingForPurchasesRequest = false
@@ -236,6 +263,7 @@ internal class TrackGooglePurchase(
     companion object {
         private var iapEnabled = -99
         private var IInAppBillingServiceClass: Class<*>? = null
+
         fun canTrack(context: Context): Boolean {
             if (iapEnabled == -99) {
                 iapEnabled =

@@ -29,7 +29,10 @@ internal interface ITriggerController : IEventNotifier<ITriggerHandler> {
      *
      * @return true if the provided message contains at least one of the [triggersKeys], false otherwise.
      */
-    fun isTriggerOnMessage(message: InAppMessage, triggersKeys: Collection<String>): Boolean
+    fun isTriggerOnMessage(
+        message: InAppMessage,
+        triggersKeys: Collection<String>,
+    ): Boolean
 
     /**
      * Determine if the provided message only has dynamic triggers.

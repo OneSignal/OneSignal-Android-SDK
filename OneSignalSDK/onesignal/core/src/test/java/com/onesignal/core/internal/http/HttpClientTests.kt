@@ -24,48 +24,49 @@ class HttpClientTests : FunSpec({
     }
 
     test("timeout request will give a bad response") {
-        /* Given */
+        // Given
         val mockResponse = MockHttpConnectionFactory.MockResponse()
         mockResponse.mockRequestTime = 10000 // HttpClient will add 5 seconds to the httpTimeout to "give up" so we need to fail the request more than 5 seconds beyond our timeout.
 
-        val mockConfigModel = MockHelper.configModelStore {
-            it.httpTimeout = 200
-            it.httpGetTimeout = 200
-        }
+        val mockConfigModel =
+            MockHelper.configModelStore {
+                it.httpTimeout = 200
+                it.httpGetTimeout = 200
+            }
 
         val factory = MockHttpConnectionFactory(mockResponse)
         val httpClient = HttpClient(factory, MockPreferencesService(), mockConfigModel)
 
-        /* When */
+        // When
         val response = httpClient.get("URL")
 
-        /* Then */
+        // Then
         response.statusCode shouldBe 0
         response.throwable shouldNotBe null
         response.throwable should beInstanceOf<TimeoutCancellationException>()
     }
 
     test("SDKHeader is included in all requests") {
-        /* Given */
+        // Given
         val mockResponse = MockHttpConnectionFactory.MockResponse()
         val factory = MockHttpConnectionFactory(mockResponse)
         val httpClient = HttpClient(factory, MockPreferencesService(), MockHelper.configModelStore())
 
-        /* When */
+        // When
         httpClient.get("URL")
         httpClient.delete("URL")
         httpClient.patch("URL", JSONObject())
         httpClient.post("URL", JSONObject())
         httpClient.put("URL", JSONObject())
 
-        /* Then */
+        // Then
         for (connection in factory.connections) {
             connection.getRequestProperty("SDK-Version") shouldBe "onesignal/android/${OneSignalUtils.sdkVersion}"
         }
     }
 
     test("GET with cache key uses cache when unchanged") {
-        /* Given */
+        // Given
         val payload = "RESPONSE IS THIS"
         val mockResponse1 = MockHttpConnectionFactory.MockResponse()
         mockResponse1.status = 200
@@ -78,13 +79,13 @@ class HttpClientTests : FunSpec({
         val factory = MockHttpConnectionFactory(mockResponse1)
         val httpClient = HttpClient(factory, MockPreferencesService(), MockHelper.configModelStore())
 
-        /* When */
+        // When
         var response1 = httpClient.get("URL", "CACHE_KEY")
 
         factory.mockResponse = mockResponse2
         var response2 = httpClient.get("URL", "CACHE_KEY")
 
-        /* Then */
+        // Then
         response1.statusCode shouldBe 200
         response1.payload shouldBe payload
         response2.statusCode shouldBe 304
@@ -93,7 +94,7 @@ class HttpClientTests : FunSpec({
     }
 
     test("GET with cache key replaces cache when changed") {
-        /* Given */
+        // Given
         val payload1 = "RESPONSE IS THIS"
         val payload2 = "A DIFFERENT RESPONSE"
         val mockResponse1 = MockHttpConnectionFactory.MockResponse()
@@ -112,7 +113,7 @@ class HttpClientTests : FunSpec({
         val factory = MockHttpConnectionFactory(mockResponse1)
         val httpClient = HttpClient(factory, MockPreferencesService(), MockHelper.configModelStore())
 
-        /* When */
+        // When
         var response1 = httpClient.get("URL", "CACHE_KEY")
 
         factory.mockResponse = mockResponse2
@@ -121,7 +122,7 @@ class HttpClientTests : FunSpec({
         factory.mockResponse = mockResponse3
         var response3 = httpClient.get("URL", "CACHE_KEY")
 
-        /* Then */
+        // Then
         response1.statusCode shouldBe 200
         response1.payload shouldBe payload1
         response2.statusCode shouldBe 200
@@ -133,7 +134,7 @@ class HttpClientTests : FunSpec({
     }
 
     test("Error response") {
-        /* Given */
+        // Given
         val payload = "ERROR RESPONSE"
         val mockResponse = MockHttpConnectionFactory.MockResponse()
         mockResponse.status = 400
@@ -142,10 +143,10 @@ class HttpClientTests : FunSpec({
         val factory = MockHttpConnectionFactory(mockResponse)
         val httpClient = HttpClient(factory, MockPreferencesService(), MockHelper.configModelStore())
 
-        /* When */
+        // When
         var response = httpClient.post("URL", JSONObject())
 
-        /* Then */
+        // Then
         response.statusCode shouldBe 400
         response.payload shouldBe payload
     }

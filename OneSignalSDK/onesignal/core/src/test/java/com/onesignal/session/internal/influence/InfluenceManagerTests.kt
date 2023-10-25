@@ -20,23 +20,25 @@ import org.junit.runner.RunWith
 class InfluenceManagerTests : FunSpec({
 
     test("default are disabled influences") {
-        /* Given */
+        // Given
         val mockSessionService = mockk<ISessionService>()
         every { mockSessionService.subscribe(any()) } just Runs
 
         val mockApplicationService = mockk<IApplicationService>()
-        val mockConfigModelStore = MockHelper.configModelStore {
-            it.influenceParams.isDirectEnabled = false
-            it.influenceParams.isIndirectEnabled = false
-            it.influenceParams.isUnattributedEnabled = false
-        }
+        val mockConfigModelStore =
+            MockHelper.configModelStore {
+                it.influenceParams.isDirectEnabled = false
+                it.influenceParams.isIndirectEnabled = false
+                it.influenceParams.isUnattributedEnabled = false
+            }
         val mockPreferences = MockPreferencesService()
-        val influenceManager = InfluenceManager(mockSessionService, mockApplicationService, mockConfigModelStore, mockPreferences, MockHelper.time(1111))
+        val influenceManager =
+            InfluenceManager(mockSessionService, mockApplicationService, mockConfigModelStore, mockPreferences, MockHelper.time(1111))
 
-        /* When */
+        // When
         val influences = influenceManager.influences
 
-        /* Then */
+        // Then
         influences.count() shouldBe 2
         val notificationInfluence = influences.first { it.influenceChannel == InfluenceChannel.NOTIFICATION }
         notificationInfluence.influenceType.isDisabled() shouldBe true
@@ -50,26 +52,28 @@ class InfluenceManagerTests : FunSpec({
     }
 
     test("session begin are unattributed influences") {
-        /* Given */
+        // Given
         val mockSessionService = mockk<ISessionService>()
         every { mockSessionService.subscribe(any()) } just Runs
 
         val mockApplicationService = mockk<IApplicationService>()
         every { mockApplicationService.entryState } returns AppEntryAction.APP_OPEN
 
-        val mockConfigModelStore = MockHelper.configModelStore {
-            it.influenceParams.isDirectEnabled = true
-            it.influenceParams.isIndirectEnabled = true
-            it.influenceParams.isUnattributedEnabled = true
-        }
+        val mockConfigModelStore =
+            MockHelper.configModelStore {
+                it.influenceParams.isDirectEnabled = true
+                it.influenceParams.isIndirectEnabled = true
+                it.influenceParams.isUnattributedEnabled = true
+            }
         val mockPreferences = MockPreferencesService()
-        val influenceManager = InfluenceManager(mockSessionService, mockApplicationService, mockConfigModelStore, mockPreferences, MockHelper.time(1111))
+        val influenceManager =
+            InfluenceManager(mockSessionService, mockApplicationService, mockConfigModelStore, mockPreferences, MockHelper.time(1111))
 
-        /* When */
+        // When
         influenceManager.onSessionStarted()
         val influences = influenceManager.influences
 
-        /* Then */
+        // Then
         influences.count() shouldBe 2
         val notificationInfluence = influences.first { it.influenceChannel == InfluenceChannel.NOTIFICATION }
         notificationInfluence.influenceType.isUnattributed() shouldBe true
@@ -83,27 +87,29 @@ class InfluenceManagerTests : FunSpec({
     }
 
     test("notification received creates notification indirect influence") {
-        /* Given */
+        // Given
         val mockSessionService = mockk<ISessionService>()
         every { mockSessionService.subscribe(any()) } just Runs
 
         val mockApplicationService = mockk<IApplicationService>()
         every { mockApplicationService.entryState } returns AppEntryAction.APP_OPEN
 
-        val mockConfigModelStore = MockHelper.configModelStore {
-            it.influenceParams.isDirectEnabled = true
-            it.influenceParams.isIndirectEnabled = true
-            it.influenceParams.isUnattributedEnabled = true
-        }
+        val mockConfigModelStore =
+            MockHelper.configModelStore {
+                it.influenceParams.isDirectEnabled = true
+                it.influenceParams.isIndirectEnabled = true
+                it.influenceParams.isUnattributedEnabled = true
+            }
         val mockPreferences = MockPreferencesService()
-        val influenceManager = InfluenceManager(mockSessionService, mockApplicationService, mockConfigModelStore, mockPreferences, MockHelper.time(1111))
+        val influenceManager =
+            InfluenceManager(mockSessionService, mockApplicationService, mockConfigModelStore, mockPreferences, MockHelper.time(1111))
 
-        /* When */
+        // When
         influenceManager.onNotificationReceived("notificationId")
         influenceManager.onSessionActive()
         val influences = influenceManager.influences
 
-        /* Then */
+        // Then
         influences.count() shouldBe 2
         val notificationInfluence = influences.first { it.influenceChannel == InfluenceChannel.NOTIFICATION }
         notificationInfluence.influenceType.isIndirect() shouldBe true
@@ -117,25 +123,27 @@ class InfluenceManagerTests : FunSpec({
     }
 
     test("IAM received creates IAM indirect influence") {
-        /* Given */
+        // Given
         val mockSessionService = mockk<ISessionService>()
         every { mockSessionService.subscribe(any()) } just Runs
 
         val mockApplicationService = mockk<IApplicationService>()
-        val mockConfigModelStore = MockHelper.configModelStore {
-            it.influenceParams.isDirectEnabled = true
-            it.influenceParams.isIndirectEnabled = true
-            it.influenceParams.isUnattributedEnabled = true
-        }
+        val mockConfigModelStore =
+            MockHelper.configModelStore {
+                it.influenceParams.isDirectEnabled = true
+                it.influenceParams.isIndirectEnabled = true
+                it.influenceParams.isUnattributedEnabled = true
+            }
         val mockPreferences = MockPreferencesService()
-        val influenceManager = InfluenceManager(mockSessionService, mockApplicationService, mockConfigModelStore, mockPreferences, MockHelper.time(1111))
+        val influenceManager =
+            InfluenceManager(mockSessionService, mockApplicationService, mockConfigModelStore, mockPreferences, MockHelper.time(1111))
 
-        /* When */
+        // When
         influenceManager.onInAppMessageDisplayed("inAppMessageId")
         influenceManager.onInAppMessageDismissed()
         val influences = influenceManager.influences
 
-        /* Then */
+        // Then
         influences.count() shouldBe 2
         val notificationInfluence = influences.first { it.influenceChannel == InfluenceChannel.NOTIFICATION }
         notificationInfluence.influenceType.isUnattributed() shouldBe true
@@ -151,25 +159,27 @@ class InfluenceManagerTests : FunSpec({
     }
 
     test("notification opened creates notification direct influence") {
-        /* Given */
+        // Given
         val mockSessionService = mockk<ISessionService>()
         every { mockSessionService.subscribe(any()) } just Runs
 
         val mockApplicationService = mockk<IApplicationService>()
-        val mockConfigModelStore = MockHelper.configModelStore {
-            it.influenceParams.isDirectEnabled = true
-            it.influenceParams.isIndirectEnabled = true
-            it.influenceParams.isUnattributedEnabled = true
-        }
+        val mockConfigModelStore =
+            MockHelper.configModelStore {
+                it.influenceParams.isDirectEnabled = true
+                it.influenceParams.isIndirectEnabled = true
+                it.influenceParams.isUnattributedEnabled = true
+            }
         val mockPreferences = MockPreferencesService()
-        val influenceManager = InfluenceManager(mockSessionService, mockApplicationService, mockConfigModelStore, mockPreferences, MockHelper.time(1111))
+        val influenceManager =
+            InfluenceManager(mockSessionService, mockApplicationService, mockConfigModelStore, mockPreferences, MockHelper.time(1111))
 
-        /* When */
+        // When
         influenceManager.onNotificationReceived("notificationId")
         influenceManager.onDirectInfluenceFromNotification("notificationId")
         val influences = influenceManager.influences
 
-        /* Then */
+        // Then
         influences.count() shouldBe 2
         val notificationInfluence = influences.first { it.influenceChannel == InfluenceChannel.NOTIFICATION }
         notificationInfluence.influenceType.isDirect() shouldBe true
@@ -183,25 +193,27 @@ class InfluenceManagerTests : FunSpec({
     }
 
     test("IAM clicked while open creates IAM direct influence") {
-        /* Given */
+        // Given
         val mockSessionService = mockk<ISessionService>()
         every { mockSessionService.subscribe(any()) } just Runs
 
         val mockApplicationService = mockk<IApplicationService>()
-        val mockConfigModelStore = MockHelper.configModelStore {
-            it.influenceParams.isDirectEnabled = true
-            it.influenceParams.isIndirectEnabled = true
-            it.influenceParams.isUnattributedEnabled = true
-        }
+        val mockConfigModelStore =
+            MockHelper.configModelStore {
+                it.influenceParams.isDirectEnabled = true
+                it.influenceParams.isIndirectEnabled = true
+                it.influenceParams.isUnattributedEnabled = true
+            }
         val mockPreferences = MockPreferencesService()
-        val influenceManager = InfluenceManager(mockSessionService, mockApplicationService, mockConfigModelStore, mockPreferences, MockHelper.time(1111))
+        val influenceManager =
+            InfluenceManager(mockSessionService, mockApplicationService, mockConfigModelStore, mockPreferences, MockHelper.time(1111))
 
-        /* When */
+        // When
         influenceManager.onInAppMessageDisplayed("inAppMessageId")
         influenceManager.onDirectInfluenceFromIAM("inAppMessageId")
         val influences = influenceManager.influences
 
-        /* Then */
+        // Then
         influences.count() shouldBe 2
         val notificationInfluence = influences.first { it.influenceChannel == InfluenceChannel.NOTIFICATION }
         notificationInfluence.influenceType.isUnattributed() shouldBe true
@@ -215,26 +227,28 @@ class InfluenceManagerTests : FunSpec({
     }
 
     test("IAM clicked then dismissed creates IAM indirect influence") {
-        /* Given */
+        // Given
         val mockSessionService = mockk<ISessionService>()
         every { mockSessionService.subscribe(any()) } just Runs
 
         val mockApplicationService = mockk<IApplicationService>()
-        val mockConfigModelStore = MockHelper.configModelStore {
-            it.influenceParams.isDirectEnabled = true
-            it.influenceParams.isIndirectEnabled = true
-            it.influenceParams.isUnattributedEnabled = true
-        }
+        val mockConfigModelStore =
+            MockHelper.configModelStore {
+                it.influenceParams.isDirectEnabled = true
+                it.influenceParams.isIndirectEnabled = true
+                it.influenceParams.isUnattributedEnabled = true
+            }
         val mockPreferences = MockPreferencesService()
-        val influenceManager = InfluenceManager(mockSessionService, mockApplicationService, mockConfigModelStore, mockPreferences, MockHelper.time(1111))
+        val influenceManager =
+            InfluenceManager(mockSessionService, mockApplicationService, mockConfigModelStore, mockPreferences, MockHelper.time(1111))
 
-        /* When */
+        // When
         influenceManager.onInAppMessageDisplayed("inAppMessageId")
         influenceManager.onDirectInfluenceFromIAM("inAppMessageId")
         influenceManager.onInAppMessageDismissed()
         val influences = influenceManager.influences
 
-        /* Then */
+        // Then
         influences.count() shouldBe 2
         val notificationInfluence = influences.first { it.influenceChannel == InfluenceChannel.NOTIFICATION }
         notificationInfluence.influenceType.isUnattributed() shouldBe true

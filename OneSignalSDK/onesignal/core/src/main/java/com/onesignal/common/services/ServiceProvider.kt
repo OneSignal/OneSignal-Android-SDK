@@ -8,7 +8,6 @@ import com.onesignal.debug.internal.logging.Logging
 class ServiceProvider(
     registrations: List<ServiceRegistration<*>>,
 ) : IServiceProvider {
-
     private var _serviceMap: Map<Class<*>, List<ServiceRegistration<*>>>
 
     init {
@@ -53,8 +52,9 @@ class ServiceProvider(
 
         if (_serviceMap.containsKey(c)) {
             for (serviceReg in _serviceMap!![c]!!) {
-                val service = serviceReg.resolve(this) as T?
-                    ?: throw Exception("Could not instantiate service: $serviceReg")
+                val service =
+                    serviceReg.resolve(this) as T?
+                        ?: throw Exception("Could not instantiate service: $serviceReg")
 
                 listOfServices.add(service)
             }

@@ -9,7 +9,6 @@ open class MapModel<V>(
     parentModel: Model? = null,
     parentProperty: String? = null,
 ) : Model(parentModel, parentProperty), MutableMap<String, V> {
-
     override val size: Int
         get() = data.size
 
@@ -43,7 +42,10 @@ open class MapModel<V>(
             setOptAnyProperty(property, null)
     }
 
-    override fun put(key: String, value: V): V {
+    override fun put(
+        key: String,
+        value: V,
+    ): V {
         setOptAnyProperty(key, value)
         return value
     }

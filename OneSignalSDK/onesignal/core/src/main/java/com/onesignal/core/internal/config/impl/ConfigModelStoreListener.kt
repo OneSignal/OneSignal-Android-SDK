@@ -26,13 +26,15 @@ internal class ConfigModelStoreListener(
     private val _paramsBackendService: IParamsBackendService,
     private val _subscriptionManager: ISubscriptionManager,
 ) : IStartableService, ISingletonModelStoreChangeHandler<ConfigModel> {
-
     override fun start() {
         _configModelStore.subscribe(this)
         fetchParams()
     }
 
-    override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
+    override fun onModelUpdated(
+        args: ModelChangedArgs,
+        tag: String,
+    ) {
         if (args.property != ConfigModel::appId.name) {
             return
         }
@@ -40,7 +42,10 @@ internal class ConfigModelStoreListener(
         fetchParams()
     }
 
-    override fun onModelReplaced(model: ConfigModel, tag: String) {
+    override fun onModelReplaced(
+        model: ConfigModel,
+        tag: String,
+    ) {
         if (tag != ModelChangeTags.NORMAL) {
             return
         }

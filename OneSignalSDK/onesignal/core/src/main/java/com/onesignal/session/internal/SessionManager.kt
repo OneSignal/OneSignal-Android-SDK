@@ -9,7 +9,6 @@ import com.onesignal.session.internal.outcomes.IOutcomeEventsController
 internal open class SessionManager(
     private val _outcomeController: IOutcomeEventsController,
 ) : ISessionManager {
-
     override fun addOutcome(name: String) {
         Logging.log(LogLevel.DEBUG, "sendOutcome(name: $name)")
 
@@ -26,7 +25,10 @@ internal open class SessionManager(
         }
     }
 
-    override fun addOutcomeWithValue(name: String, value: Float) {
+    override fun addOutcomeWithValue(
+        name: String,
+        value: Float,
+    ) {
         Logging.log(LogLevel.DEBUG, "sendOutcomeWithValue(name: $name, value: $value)")
 
         suspendifyOnThread {

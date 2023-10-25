@@ -8,7 +8,6 @@ import com.onesignal.common.services.ServiceBuilder
  * property.
  */
 interface IModule {
-
     /**
      * Register all services and behaviors for this module.  This is called during the initialization
      * of the OneSignal SDK.
