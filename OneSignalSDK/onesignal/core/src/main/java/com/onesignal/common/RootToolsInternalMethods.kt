@@ -1,3 +1,5 @@
+// Namespaced in com.onesignal to prevent class name conflicts if app developer includes the full RootTools library.
+
 /**
  * This file is part of the RootTools Project: http://code.google.com/p/roottools/
  *
@@ -20,7 +22,6 @@
  * limitations under that License.
  */
 
-// Namespaced in com.onesignal to prevent class name conflicts if app developer includes the full RootTools library.
 package com.onesignal.common
 
 import java.io.File
