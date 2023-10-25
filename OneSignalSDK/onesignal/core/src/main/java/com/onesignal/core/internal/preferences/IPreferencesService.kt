@@ -16,7 +16,11 @@ interface IPreferencesService {
      *
      * @return the value in the preference store, or [defValue] if not previously saved.
      */
-    fun getString(store: String, key: String, defValue: String? = null): String?
+    fun getString(
+        store: String,
+        key: String,
+        defValue: String? = null,
+    ): String?
 
     /**
      * Retrieve a [Boolean] value identified by the [store] and [key] provided.
@@ -27,7 +31,11 @@ interface IPreferencesService {
      *
      * @return the value in the preference store, or [defValue] if not previously saved.
      */
-    fun getBool(store: String, key: String, defValue: Boolean? = null): Boolean?
+    fun getBool(
+        store: String,
+        key: String,
+        defValue: Boolean? = null,
+    ): Boolean?
 
     /**
      * Retrieve a [Int] value identified by the [store] and [key] provided.
@@ -38,7 +46,11 @@ interface IPreferencesService {
      *
      * @return the value in the preference store, or [defValue] if not previously saved.
      */
-    fun getInt(store: String, key: String, defValue: Int? = null): Int?
+    fun getInt(
+        store: String,
+        key: String,
+        defValue: Int? = null,
+    ): Int?
 
     /**
      * Retrieve a [Long] value identified by the [store] and [key] provided.
@@ -49,7 +61,11 @@ interface IPreferencesService {
      *
      * @return the value in the preference store, or [defValue] if not previously saved.
      */
-    fun getLong(store: String, key: String, defValue: Long? = null): Long?
+    fun getLong(
+        store: String,
+        key: String,
+        defValue: Long? = null,
+    ): Long?
 
     /**
      * Retrieve a [Set] of [String] value identified by the [store] and [key] provided.
@@ -60,7 +76,11 @@ interface IPreferencesService {
      *
      * @return the value in the preference store, or [defValue] if not previously saved.
      */
-    fun getStringSet(store: String, key: String, defValue: Set<String>? = null): Set<String>?
+    fun getStringSet(
+        store: String,
+        key: String,
+        defValue: Set<String>? = null,
+    ): Set<String>?
 
     /**
      * Save a [String] value identified by the [store] and [key] provided.
@@ -69,7 +89,11 @@ interface IPreferencesService {
      * @param key The key to retrieve.
      * @param value The value to save.
      */
-    fun saveString(store: String, key: String, value: String?)
+    fun saveString(
+        store: String,
+        key: String,
+        value: String?,
+    )
 
     /**
      * Save a [Boolean] value identified by the [store] and [key] provided.
@@ -78,7 +102,11 @@ interface IPreferencesService {
      * @param key The key to retrieve.
      * @param value The value to save.
      */
-    fun saveBool(store: String, key: String, value: Boolean?)
+    fun saveBool(
+        store: String,
+        key: String,
+        value: Boolean?,
+    )
 
     /**
      * Save a [Int] value identified by the [store] and [key] provided.
@@ -87,7 +115,11 @@ interface IPreferencesService {
      * @param key The key to retrieve.
      * @param value The value to save.
      */
-    fun saveInt(store: String, key: String, value: Int?)
+    fun saveInt(
+        store: String,
+        key: String,
+        value: Int?,
+    )
 
     /**
      * Save a [Long] value identified by the [store] and [key] provided.
@@ -96,7 +128,11 @@ interface IPreferencesService {
      * @param key The key to retrieve.
      * @param value The value to save.
      */
-    fun saveLong(store: String, key: String, value: Long?)
+    fun saveLong(
+        store: String,
+        key: String,
+        value: Long?,
+    )
 
     /**
      * Save a [Set] of [String] value identified by the [store] and [key] provided.
@@ -105,7 +141,11 @@ interface IPreferencesService {
      * @param key The key to retrieve.
      * @param value The value to save.
      */
-    fun saveStringSet(store: String, key: String, value: Set<String>?)
+    fun saveStringSet(
+        store: String,
+        key: String,
+        value: Set<String>?,
+    )
 }
 
 object PreferenceStores {

@@ -10,7 +10,6 @@ import java.util.*
  * event firing less burdensome to the user.
  */
 open class EventProducer<THandler> : IEventNotifier<THandler> {
-
     override val hasSubscribers: Boolean
         get() = _subscribers.any()
 

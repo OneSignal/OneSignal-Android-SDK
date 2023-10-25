@@ -24,7 +24,10 @@ import org.json.JSONArray
 import org.json.JSONException
 
 interface INotificationActivityOpener {
-    suspend fun openDestinationActivity(activity: Activity, pushPayloads: JSONArray)
+    suspend fun openDestinationActivity(
+        activity: Activity,
+        pushPayloads: JSONArray,
+    )
 }
 
 /**
@@ -42,7 +45,6 @@ internal class NotificationsManager(
     INotificationActivityOpener,
     INotificationPermissionChangedHandler,
     IApplicationLifecycleHandler {
-
     override var permission: Boolean = NotificationHelper.areNotificationsEnabled(_applicationService.appContext)
 
     override val canRequestPermission: Boolean
@@ -158,7 +160,10 @@ internal class NotificationsManager(
         _notificationLifecycleService.removeExternalClickListener(listener)
     }
 
-    override suspend fun openDestinationActivity(activity: Activity, pushPayloads: JSONArray) {
+    override suspend fun openDestinationActivity(
+        activity: Activity,
+        pushPayloads: JSONArray,
+    ) {
         try {
             // Always use the top most notification if user tapped on the summary notification
             val firstPayloadItem = pushPayloads.getJSONObject(0)

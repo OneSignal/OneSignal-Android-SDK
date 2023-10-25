@@ -8,12 +8,16 @@ class TriggerModel : Model() {
      */
     var key: String
         get() = getStringProperty(::key.name) { "" }
-        set(value) { setStringProperty(::key.name, value) }
+        set(value) {
+            setStringProperty(::key.name, value)
+        }
 
     /**
      * The value of this trigger
      */
     var value: Any
         get() = getAnyProperty(::value.name) { "" }
-        set(value) { setAnyProperty(::value.name, value) }
+        set(value) {
+            setAnyProperty(::value.name, value)
+        }
 }

@@ -21,7 +21,6 @@ internal class LoginUserFromSubscriptionOperationExecutor(
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
 ) : IOperationExecutor {
-
     override val operations: List<String>
         get() = listOf(LOGIN_USER_FROM_SUBSCRIPTION_USER)
 
@@ -39,10 +38,11 @@ internal class LoginUserFromSubscriptionOperationExecutor(
 
     private suspend fun loginUser(loginUserOp: LoginUserFromSubscriptionOperation): ExecutionResponse {
         try {
-            val identities = _subscriptionBackend.getIdentityFromSubscription(
-                loginUserOp.appId,
-                loginUserOp.subscriptionId,
-            )
+            val identities =
+                _subscriptionBackend.getIdentityFromSubscription(
+                    loginUserOp.appId,
+                    loginUserOp.subscriptionId,
+                )
             val backendOneSignalId = identities.getOrDefault(IdentityConstants.ONESIGNAL_ID, null)
 
             if (backendOneSignalId == null) {
@@ -67,7 +67,11 @@ internal class LoginUserFromSubscriptionOperationExecutor(
                 propertiesModel.setStringProperty(PropertiesModel::onesignalId.name, backendOneSignalId, ModelChangeTags.HYDRATE)
             }
 
-            return ExecutionResponse(ExecutionResult.SUCCESS, idTranslations, listOf(RefreshUserOperation(loginUserOp.appId, backendOneSignalId)))
+            return ExecutionResponse(
+                ExecutionResult.SUCCESS,
+                idTranslations,
+                listOf(RefreshUserOperation(loginUserOp.appId, backendOneSignalId)),
+            )
         } catch (ex: BackendException) {
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
 

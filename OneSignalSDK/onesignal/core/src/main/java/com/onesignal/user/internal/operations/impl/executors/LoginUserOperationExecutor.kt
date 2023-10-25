@@ -37,9 +37,8 @@ internal class LoginUserOperationExecutor(
     private val _propertiesModelStore: PropertiesModelStore,
     private val _subscriptionsModelStore: SubscriptionModelStore,
     private val _configModelStore: ConfigModelStore,
-    private val _languageContext: ILanguageContext
+    private val _languageContext: ILanguageContext,
 ) : IOperationExecutor {
-
     override val operations: List<String>
         get() = listOf(LOGIN_USER)
 
@@ -55,7 +54,10 @@ internal class LoginUserOperationExecutor(
         throw Exception("Unrecognized operation: $startingOp")
     }
 
-    private suspend fun loginUser(loginUserOp: LoginUserOperation, operations: List<Operation>): ExecutionResponse {
+    private suspend fun loginUser(
+        loginUserOp: LoginUserOperation,
+        operations: List<Operation>,
+    ): ExecutionResponse {
         if (loginUserOp.existingOnesignalId == null || loginUserOp.externalId == null) {
             // When there is no existing user to attempt to associate with the externalId provided, we go right to
             // createUser.  If there is no externalId provided this is an insert, if there is this will be an
@@ -65,7 +67,17 @@ internal class LoginUserOperationExecutor(
             // before we create a user we attempt to associate the user defined by existingOnesignalId with the
             // externalId provided. If that association cannot be made, typically because the externalId is already
             // associated to a user, we fall back to our "upsert with retrieval" method.
-            val result = _identityOperationExecutor.execute(listOf(SetAliasOperation(loginUserOp.appId, loginUserOp.existingOnesignalId!!, IdentityConstants.EXTERNAL_ID, loginUserOp.externalId!!)))
+            val result =
+                _identityOperationExecutor.execute(
+                    listOf(
+                        SetAliasOperation(
+                            loginUserOp.appId,
+                            loginUserOp.existingOnesignalId!!,
+                            IdentityConstants.EXTERNAL_ID,
+                            loginUserOp.externalId!!,
+                        ),
+                    ),
+                )
 
             return when (result.result) {
                 ExecutionResult.SUCCESS -> {
@@ -73,11 +85,19 @@ internal class LoginUserOperationExecutor(
                     // because the set alias was successful any grouped operations could not be executed, let the
                     // caller know those still need to be executed.
                     if (_identityModelStore.model.onesignalId == loginUserOp.onesignalId) {
-                        _identityModelStore.model.setStringProperty(IdentityConstants.ONESIGNAL_ID, backendOneSignalId, ModelChangeTags.HYDRATE)
+                        _identityModelStore.model.setStringProperty(
+                            IdentityConstants.ONESIGNAL_ID,
+                            backendOneSignalId,
+                            ModelChangeTags.HYDRATE,
+                        )
                     }
 
                     if (_propertiesModelStore.model.onesignalId == loginUserOp.onesignalId) {
-                        _propertiesModelStore.model.setStringProperty(PropertiesModel::onesignalId.name, backendOneSignalId, ModelChangeTags.HYDRATE)
+                        _propertiesModelStore.model.setStringProperty(
+                            PropertiesModel::onesignalId.name,
+                            backendOneSignalId,
+                            ModelChangeTags.HYDRATE,
+                        )
                     }
 
                     ExecutionResponse(ExecutionResult.SUCCESS_STARTING_ONLY, mapOf(loginUserOp.onesignalId to backendOneSignalId))
@@ -86,12 +106,16 @@ internal class LoginUserOperationExecutor(
                     // When the SetAliasOperation fails with conflict that *most likely* means the externalId provided
                     // is already associated to a user.  This *expected* condition means we must create a user.
                     // We hardcode the response of "user-2" in the log to provide information to the SDK consumer
-                    Logging.debug("LoginUserOperationExecutor now handling 409 response with \"code\": \"user-2\" by switching to user with \"external_id\": \"${loginUserOp.externalId}\"")
+                    Logging.debug(
+                        "LoginUserOperationExecutor now handling 409 response with \"code\": \"user-2\" by switching to user with \"external_id\": \"${loginUserOp.externalId}\"",
+                    )
                     createUser(loginUserOp, operations)
                 }
                 ExecutionResult.FAIL_NORETRY -> {
                     // Some other failure occurred, still try to recover by creating the user
-                    Logging.error("LoginUserOperationExecutor encountered error. Attempt to recover by switching to user with \"external_id\": \"${loginUserOp.externalId}\"")
+                    Logging.error(
+                        "LoginUserOperationExecutor encountered error. Attempt to recover by switching to user with \"external_id\": \"${loginUserOp.externalId}\"",
+                    )
                     createUser(loginUserOp, operations)
                 }
                 else -> ExecutionResponse(result.result)
@@ -99,7 +123,10 @@ internal class LoginUserOperationExecutor(
         }
     }
 
-    private suspend fun createUser(createUserOperation: LoginUserOperation, operations: List<Operation>): ExecutionResponse {
+    private suspend fun createUser(
+        createUserOperation: LoginUserOperation,
+        operations: List<Operation>,
+    ): ExecutionResponse {
         var identities = mapOf<String, String>()
         var subscriptions = mapOf<String, SubscriptionObject>()
         val properties = mutableMapOf<String, String>()
@@ -176,23 +203,27 @@ internal class LoginUserOperationExecutor(
         }
     }
 
-    private fun createSubscriptionsFromOperation(operation: TransferSubscriptionOperation, subscriptions: Map<String, SubscriptionObject>): Map<String, SubscriptionObject> {
+    private fun createSubscriptionsFromOperation(
+        operation: TransferSubscriptionOperation,
+        subscriptions: Map<String, SubscriptionObject>,
+    ): Map<String, SubscriptionObject> {
         val mutableSubscriptions = subscriptions.toMutableMap()
         if (mutableSubscriptions.containsKey(operation.subscriptionId)) {
-            mutableSubscriptions[operation.subscriptionId] = SubscriptionObject(
-                operation.subscriptionId,
-                subscriptions[operation.subscriptionId]!!.type,
-                subscriptions[operation.subscriptionId]!!.token,
-                subscriptions[operation.subscriptionId]!!.enabled,
-                subscriptions[operation.subscriptionId]!!.notificationTypes,
-                subscriptions[operation.subscriptionId]!!.sdk,
-                subscriptions[operation.subscriptionId]!!.deviceModel,
-                subscriptions[operation.subscriptionId]!!.deviceOS,
-                subscriptions[operation.subscriptionId]!!.rooted,
-                subscriptions[operation.subscriptionId]!!.netType,
-                subscriptions[operation.subscriptionId]!!.carrier,
-                subscriptions[operation.subscriptionId]!!.appVersion,
-            )
+            mutableSubscriptions[operation.subscriptionId] =
+                SubscriptionObject(
+                    operation.subscriptionId,
+                    subscriptions[operation.subscriptionId]!!.type,
+                    subscriptions[operation.subscriptionId]!!.token,
+                    subscriptions[operation.subscriptionId]!!.enabled,
+                    subscriptions[operation.subscriptionId]!!.notificationTypes,
+                    subscriptions[operation.subscriptionId]!!.sdk,
+                    subscriptions[operation.subscriptionId]!!.deviceModel,
+                    subscriptions[operation.subscriptionId]!!.deviceOS,
+                    subscriptions[operation.subscriptionId]!!.rooted,
+                    subscriptions[operation.subscriptionId]!!.netType,
+                    subscriptions[operation.subscriptionId]!!.carrier,
+                    subscriptions[operation.subscriptionId]!!.appVersion,
+                )
         } else {
             mutableSubscriptions[operation.subscriptionId] = SubscriptionObject(operation.subscriptionId)
         }
@@ -200,60 +231,72 @@ internal class LoginUserOperationExecutor(
         return mutableSubscriptions
     }
 
-    private fun createSubscriptionsFromOperation(operation: CreateSubscriptionOperation, subscriptions: Map<String, SubscriptionObject>): Map<String, SubscriptionObject> {
+    private fun createSubscriptionsFromOperation(
+        operation: CreateSubscriptionOperation,
+        subscriptions: Map<String, SubscriptionObject>,
+    ): Map<String, SubscriptionObject> {
         val mutableSubscriptions = subscriptions.toMutableMap()
-        val subscriptionType: SubscriptionObjectType = when (operation.type) {
-            SubscriptionType.SMS -> {
-                SubscriptionObjectType.SMS
+        val subscriptionType: SubscriptionObjectType =
+            when (operation.type) {
+                SubscriptionType.SMS -> {
+                    SubscriptionObjectType.SMS
+                }
+                SubscriptionType.EMAIL -> {
+                    SubscriptionObjectType.EMAIL
+                }
+                else -> {
+                    SubscriptionObjectType.fromDeviceType(_deviceService.deviceType)
+                }
             }
-            SubscriptionType.EMAIL -> {
-                SubscriptionObjectType.EMAIL
-            }
-            else -> {
-                SubscriptionObjectType.fromDeviceType(_deviceService.deviceType)
-            }
-        }
-        mutableSubscriptions[operation.subscriptionId] = SubscriptionObject(
-            id = null,
-            subscriptionType,
-            operation.address,
-            operation.enabled,
-            operation.status.value,
-            OneSignalUtils.sdkVersion,
-            Build.MODEL,
-            Build.VERSION.RELEASE,
-            RootToolsInternalMethods.isRooted,
-            DeviceUtils.getNetType(_application.appContext),
-            DeviceUtils.getCarrierName(_application.appContext),
-            AndroidUtils.getAppVersion(_application.appContext),
-        )
-
-        return mutableSubscriptions
-    }
-
-    private fun createSubscriptionsFromOperation(operation: UpdateSubscriptionOperation, subscriptions: Map<String, SubscriptionObject>): Map<String, SubscriptionObject> {
-        val mutableSubscriptions = subscriptions.toMutableMap()
-        if (mutableSubscriptions.containsKey(operation.subscriptionId)) {
-            mutableSubscriptions[operation.subscriptionId] = SubscriptionObject(
-                subscriptions[operation.subscriptionId]!!.id,
-                subscriptions[operation.subscriptionId]!!.type,
+        mutableSubscriptions[operation.subscriptionId] =
+            SubscriptionObject(
+                id = null,
+                subscriptionType,
                 operation.address,
                 operation.enabled,
                 operation.status.value,
-                subscriptions[operation.subscriptionId]!!.sdk,
-                subscriptions[operation.subscriptionId]!!.deviceModel,
-                subscriptions[operation.subscriptionId]!!.deviceOS,
-                subscriptions[operation.subscriptionId]!!.rooted,
-                subscriptions[operation.subscriptionId]!!.netType,
-                subscriptions[operation.subscriptionId]!!.carrier,
-                subscriptions[operation.subscriptionId]!!.appVersion,
+                OneSignalUtils.sdkVersion,
+                Build.MODEL,
+                Build.VERSION.RELEASE,
+                RootToolsInternalMethods.isRooted,
+                DeviceUtils.getNetType(_application.appContext),
+                DeviceUtils.getCarrierName(_application.appContext),
+                AndroidUtils.getAppVersion(_application.appContext),
             )
+
+        return mutableSubscriptions
+    }
+
+    private fun createSubscriptionsFromOperation(
+        operation: UpdateSubscriptionOperation,
+        subscriptions: Map<String, SubscriptionObject>,
+    ): Map<String, SubscriptionObject> {
+        val mutableSubscriptions = subscriptions.toMutableMap()
+        if (mutableSubscriptions.containsKey(operation.subscriptionId)) {
+            mutableSubscriptions[operation.subscriptionId] =
+                SubscriptionObject(
+                    subscriptions[operation.subscriptionId]!!.id,
+                    subscriptions[operation.subscriptionId]!!.type,
+                    operation.address,
+                    operation.enabled,
+                    operation.status.value,
+                    subscriptions[operation.subscriptionId]!!.sdk,
+                    subscriptions[operation.subscriptionId]!!.deviceModel,
+                    subscriptions[operation.subscriptionId]!!.deviceOS,
+                    subscriptions[operation.subscriptionId]!!.rooted,
+                    subscriptions[operation.subscriptionId]!!.netType,
+                    subscriptions[operation.subscriptionId]!!.carrier,
+                    subscriptions[operation.subscriptionId]!!.appVersion,
+                )
         }
 
         return mutableSubscriptions
     }
 
-    private fun createSubscriptionsFromOperation(operation: DeleteSubscriptionOperation, subscriptions: Map<String, SubscriptionObject>): Map<String, SubscriptionObject> {
+    private fun createSubscriptionsFromOperation(
+        operation: DeleteSubscriptionOperation,
+        subscriptions: Map<String, SubscriptionObject>,
+    ): Map<String, SubscriptionObject> {
         val mutableSubscriptions = subscriptions.toMutableMap()
         mutableSubscriptions.remove(operation.subscriptionId)
         return mutableSubscriptions

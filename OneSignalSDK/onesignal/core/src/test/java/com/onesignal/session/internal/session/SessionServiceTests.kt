@@ -13,23 +13,25 @@ import org.junit.runner.RunWith
 class SessionServiceTests : FunSpec({
 
     test("session created on focus when current session invalid") {
-        /* Given */
+        // Given
         val currentTime = 1111L
 
         val configModelStoreMock = MockHelper.configModelStore()
-        val sessionModelStoreMock = MockHelper.sessionModelStore {
-            it.isValid = false
-        }
+        val sessionModelStoreMock =
+            MockHelper.sessionModelStore {
+                it.isValid = false
+            }
         val spyCallback = spyk<ISessionLifecycleHandler>()
 
-        val sessionService = SessionService(MockHelper.applicationService(), configModelStoreMock, sessionModelStoreMock, MockHelper.time(currentTime))
+        val sessionService =
+            SessionService(MockHelper.applicationService(), configModelStoreMock, sessionModelStoreMock, MockHelper.time(currentTime))
         sessionService.start()
         sessionService.subscribe(spyCallback)
 
-        /* When */
+        // When
         sessionService.onFocus()
 
-        /* Then */
+        // Then
         sessionModelStoreMock.model.isValid shouldBe true
         sessionModelStoreMock.model.startTime shouldBe currentTime
         sessionModelStoreMock.model.focusTime shouldBe currentTime
@@ -37,25 +39,27 @@ class SessionServiceTests : FunSpec({
     }
 
     test("session focus time updated when current session valid") {
-        /* Given */
+        // Given
         val currentTime = 1111L
         val startTime = 555L
 
         val configModelStoreMock = MockHelper.configModelStore()
-        val sessionModelStoreMock = MockHelper.sessionModelStore {
-            it.isValid = true
-            it.startTime = startTime
-        }
+        val sessionModelStoreMock =
+            MockHelper.sessionModelStore {
+                it.isValid = true
+                it.startTime = startTime
+            }
         val spyCallback = spyk<ISessionLifecycleHandler>()
 
-        val sessionService = SessionService(MockHelper.applicationService(), configModelStoreMock, sessionModelStoreMock, MockHelper.time(currentTime))
+        val sessionService =
+            SessionService(MockHelper.applicationService(), configModelStoreMock, sessionModelStoreMock, MockHelper.time(currentTime))
         sessionService.start()
         sessionService.subscribe(spyCallback)
 
-        /* When */
+        // When
         sessionService.onFocus()
 
-        /* Then */
+        // Then
         sessionModelStoreMock.model.isValid shouldBe true
         sessionModelStoreMock.model.startTime shouldBe startTime
         sessionModelStoreMock.model.focusTime shouldBe currentTime
@@ -63,52 +67,56 @@ class SessionServiceTests : FunSpec({
     }
 
     test("session active duration updated when unfocused") {
-        /* Given */
+        // Given
         val startTime = 555L
         val focusTime = 666L
         val startingDuration = 1000L
         val currentTime = 1111L
 
         val configModelStoreMock = MockHelper.configModelStore()
-        val sessionModelStoreMock = MockHelper.sessionModelStore {
-            it.isValid = true
-            it.startTime = startTime
-            it.focusTime = focusTime
-            it.activeDuration = startingDuration
-        }
+        val sessionModelStoreMock =
+            MockHelper.sessionModelStore {
+                it.isValid = true
+                it.startTime = startTime
+                it.focusTime = focusTime
+                it.activeDuration = startingDuration
+            }
 
-        val sessionService = SessionService(MockHelper.applicationService(), configModelStoreMock, sessionModelStoreMock, MockHelper.time(currentTime))
+        val sessionService =
+            SessionService(MockHelper.applicationService(), configModelStoreMock, sessionModelStoreMock, MockHelper.time(currentTime))
         sessionService.start()
 
-        /* When */
+        // When
         sessionService.onUnfocused()
 
-        /* Then */
+        // Then
         sessionModelStoreMock.model.isValid shouldBe true
         sessionModelStoreMock.model.startTime shouldBe startTime
         sessionModelStoreMock.model.activeDuration shouldBe startingDuration + (currentTime - focusTime)
     }
 
     test("session ended when background run") {
-        /* Given */
+        // Given
         val activeDuration = 555L
         val currentTime = 1111L
 
         val configModelStoreMock = MockHelper.configModelStore()
-        val sessionModelStoreMock = MockHelper.sessionModelStore {
-            it.isValid = true
-            it.activeDuration = activeDuration
-        }
+        val sessionModelStoreMock =
+            MockHelper.sessionModelStore {
+                it.isValid = true
+                it.activeDuration = activeDuration
+            }
         val spyCallback = spyk<ISessionLifecycleHandler>()
 
-        val sessionService = SessionService(MockHelper.applicationService(), configModelStoreMock, sessionModelStoreMock, MockHelper.time(currentTime))
+        val sessionService =
+            SessionService(MockHelper.applicationService(), configModelStoreMock, sessionModelStoreMock, MockHelper.time(currentTime))
         sessionService.start()
         sessionService.subscribe(spyCallback)
 
-        /* When */
+        // When
         sessionService.backgroundRun()
 
-        /* Then */
+        // Then
         sessionModelStoreMock.model.isValid shouldBe false
         verify(exactly = 1) { spyCallback.onSessionEnded(activeDuration) }
     }

@@ -32,7 +32,7 @@ import org.json.JSONObject
 
 internal class NotificationClickResult(
     override val actionId: String?,
-    override val url: String?
+    override val url: String?,
 ) : INotificationClickResult {
     fun toJSONObject(): JSONObject {
         return JSONObject()

@@ -100,8 +100,9 @@ class PermissionsActivity : Activity() {
             Handler().postDelayed({
                 val granted =
                     grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED
-                val callback = _requestPermissionService!!.getCallback(permissionRequestType!!)
-                    ?: throw RuntimeException("Missing handler for permissionRequestType: $permissionRequestType")
+                val callback =
+                    _requestPermissionService!!.getCallback(permissionRequestType!!)
+                        ?: throw RuntimeException("Missing handler for permissionRequestType: $permissionRequestType")
                 if (granted) {
                     callback.onAccept()
                     _preferenceService!!.saveBool(

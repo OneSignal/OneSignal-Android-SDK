@@ -72,7 +72,6 @@ internal class InAppMessagesManager(
     IInAppLifecycleEventHandler,
     ITriggerHandler,
     ISessionLifecycleHandler {
-
     private val _lifecycleCallback = EventProducer<IInAppMessageLifecycleListener>()
     private val _messageClickCallback = EventProducer<IInAppMessageClickListener>()
 
@@ -120,8 +119,9 @@ internal class InAppMessagesManager(
 
     override fun start() {
         val tempDismissedSet = _prefs.dismissedMessagesId
-        if (tempDismissedSet != null)
+        if (tempDismissedSet != null) {
             _dismissedMessages.addAll(tempDismissedSet)
+        }
 
         val tempLastTimeInAppDismissed = _prefs.lastTimeInAppDismissed
         if (tempLastTimeInAppDismissed != null) {
@@ -170,7 +170,10 @@ internal class InAppMessagesManager(
         _messageClickCallback.unsubscribe(listener)
     }
 
-    override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
+    override fun onModelUpdated(
+        args: ModelChangedArgs,
+        tag: String,
+    ) {
         if (args.property != ConfigModel::appId.name) {
             return
         }
@@ -180,15 +183,23 @@ internal class InAppMessagesManager(
         }
     }
 
-    override fun onModelReplaced(model: ConfigModel, tag: String) {
+    override fun onModelReplaced(
+        model: ConfigModel,
+        tag: String,
+    ) {
         suspendifyOnThread {
             fetchMessages()
         }
     }
 
     override fun onSubscriptionAdded(subscription: ISubscription) { }
+
     override fun onSubscriptionRemoved(subscription: ISubscription) { }
-    override fun onSubscriptionChanged(subscription: ISubscription, args: ModelChangedArgs) {
+
+    override fun onSubscriptionChanged(
+        subscription: ISubscription,
+        args: ModelChangedArgs,
+    ) {
         if (subscription !is IPushSubscription || args.path != SubscriptionModel::id.name) {
             return
         }
@@ -209,6 +220,7 @@ internal class InAppMessagesManager(
     }
 
     override fun onSessionActive() { }
+
     override fun onSessionEnded(duration: Long) { }
 
     // called when a new push subscription is added, or the app id is updated, or a new session starts
@@ -316,7 +328,9 @@ internal class InAppMessagesManager(
             // Make sure no message is ever added to the queue more than once
             if (!_messageDisplayQueue.contains(message) && _state.inAppMessageIdShowing != message.messageId) {
                 _messageDisplayQueue.add(message)
-                Logging.debug("InAppMessagesManager.queueMessageForDisplay: In app message with id: " + message.messageId + ", added to the queue")
+                Logging.debug(
+                    "InAppMessagesManager.queueMessageForDisplay: In app message with id: " + message.messageId + ", added to the queue",
+                )
             }
         }
 
@@ -336,7 +350,9 @@ internal class InAppMessagesManager(
             Logging.debug("InAppMessagesManager.attemptToShowInAppMessage: $_messageDisplayQueue")
             // If there are IAMs in the queue and nothing showing, show first in the queue
             if (paused) {
-                Logging.warn("InAppMessagesManager.attemptToShowInAppMessage: In app messaging is currently paused, in app messages will not be shown!")
+                Logging.warn(
+                    "InAppMessagesManager.attemptToShowInAppMessage: In app messaging is currently paused, in app messages will not be shown!",
+                )
             } else if (_messageDisplayQueue.isEmpty()) {
                 Logging.debug("InAppMessagesManager.attemptToShowInAppMessage: There are no IAMs left in the queue!")
             } else if (_state.inAppMessageIdShowing != null) {
@@ -371,7 +387,10 @@ internal class InAppMessagesManager(
     /**
      * Called after an In-App message is closed and it's dismiss animation has completed
      */
-    private suspend fun messageWasDismissed(message: InAppMessage, failed: Boolean = false) {
+    private suspend fun messageWasDismissed(
+        message: InAppMessage,
+        failed: Boolean = false,
+    ) {
         if (!message.isPreview) {
             _dismissedMessages.add(message.messageId)
 
@@ -392,7 +411,9 @@ internal class InAppMessagesManager(
         _influenceManager.onInAppMessageDismissed()
 
         if (_state.currentPrompt != null) {
-            Logging.debug("InAppMessagesManager.messageWasDismissed: Stop evaluateMessageDisplayQueue because prompt is currently displayed")
+            Logging.debug(
+                "InAppMessagesManager.messageWasDismissed: Stop evaluateMessageDisplayQueue because prompt is currently displayed",
+            )
             return
         }
 
@@ -460,7 +481,10 @@ internal class InAppMessagesManager(
         triggers.forEach { addTrigger(it.key, it.value) }
     }
 
-    override fun addTrigger(key: String, value: String) {
+    override fun addTrigger(
+        key: String,
+        value: String,
+    ) {
         Logging.debug("InAppMessagesManager.addTrigger(key: $key, value: $value)")
 
         var triggerModel = _triggerModelStore.get(key)
@@ -537,7 +561,10 @@ internal class InAppMessagesManager(
         }
     }
 
-    override fun onMessageActionOccurredOnPreview(message: InAppMessage, action: InAppMessageClickResult) {
+    override fun onMessageActionOccurredOnPreview(
+        message: InAppMessage,
+        action: InAppMessageClickResult,
+    ) {
         suspendifyOnThread {
             action.isFirstClick = message.takeActionAsUnique()
 
@@ -548,7 +575,10 @@ internal class InAppMessagesManager(
         }
     }
 
-    override fun onMessageActionOccurredOnMessage(message: InAppMessage, action: InAppMessageClickResult) {
+    override fun onMessageActionOccurredOnMessage(
+        message: InAppMessage,
+        action: InAppMessageClickResult,
+    ) {
         suspendifyOnThread {
             action.isFirstClick = message.takeActionAsUnique()
             firePublicClickHandler(message, action)
@@ -560,7 +590,10 @@ internal class InAppMessagesManager(
         }
     }
 
-    override fun onMessagePageChanged(message: InAppMessage, page: InAppMessagePage) {
+    override fun onMessagePageChanged(
+        message: InAppMessage,
+        page: InAppMessagePage,
+    ) {
         if (message.isPreview) {
             return
         }
@@ -586,6 +619,7 @@ internal class InAppMessagesManager(
     // END IAM LIFECYCLE CALLBACKS
 
     // TRIGGER FIRED CALLBACKS
+
     /**
      * Part of redisplay logic
      *
@@ -632,7 +666,10 @@ internal class InAppMessagesManager(
 
     // END TRIGGER FIRED CALLBACKS
 
-    private suspend fun beginProcessingPrompts(message: InAppMessage, prompts: List<InAppMessagePrompt>) {
+    private suspend fun beginProcessingPrompts(
+        message: InAppMessage,
+        prompts: List<InAppMessagePrompt>,
+    ) {
         if (prompts.isNotEmpty()) {
             Logging.debug("InAppMessagesManager.beginProcessingPrompts: IAM showing prompts from IAM: $message")
 
@@ -642,7 +679,10 @@ internal class InAppMessagesManager(
         }
     }
 
-    private suspend fun fireOutcomesForClick(messageId: String, outcomes: List<InAppMessageOutcome>) {
+    private suspend fun fireOutcomesForClick(
+        messageId: String,
+        outcomes: List<InAppMessageOutcome>,
+    ) {
         _influenceManager.onDirectInfluenceFromIAM(messageId)
 
         for (outcome in outcomes) {
@@ -672,7 +712,10 @@ internal class InAppMessagesManager(
         }
     }
 
-    private suspend fun showMultiplePrompts(inAppMessage: InAppMessage, prompts: List<InAppMessagePrompt>) {
+    private suspend fun showMultiplePrompts(
+        inAppMessage: InAppMessage,
+        prompts: List<InAppMessagePrompt>,
+    ) {
         for (prompt in prompts) {
             // Don't show prompt twice
             if (!prompt.hasPrompted()) {
@@ -708,20 +751,27 @@ internal class InAppMessagesManager(
         }
     }
 
-    /* End IAM Lifecycle methods */
+    // End IAM Lifecycle methods
     private fun logInAppMessagePreviewActions(action: InAppMessageClickResult) {
         if (action.tags != null) {
-            Logging.debug("InAppMessagesManager.logInAppMessagePreviewActions: Tags detected inside of the action click payload, ignoring because action came from IAM preview:: " + action.tags.toString())
+            Logging.debug(
+                "InAppMessagesManager.logInAppMessagePreviewActions: Tags detected inside of the action click payload, ignoring because action came from IAM preview:: " + action.tags.toString(),
+            )
         }
 
         if (action.outcomes.size > 0) {
-            Logging.debug("InAppMessagesManager.logInAppMessagePreviewActions: Outcomes detected inside of the action click payload, ignoring because action came from IAM preview: " + action.outcomes.toString())
+            Logging.debug(
+                "InAppMessagesManager.logInAppMessagePreviewActions: Outcomes detected inside of the action click payload, ignoring because action came from IAM preview: " + action.outcomes.toString(),
+            )
         }
 
         // TODO: Add more action payload preview logs here in future
     }
 
-    private suspend fun firePublicClickHandler(message: InAppMessage, action: InAppMessageClickResult) {
+    private suspend fun firePublicClickHandler(
+        message: InAppMessage,
+        action: InAppMessageClickResult,
+    ) {
         if (!_messageClickCallback.hasSubscribers) {
             return
         }
@@ -734,7 +784,10 @@ internal class InAppMessagesManager(
         _messageClickCallback.suspendingFireOnMain { it.onClick(result) }
     }
 
-    private suspend fun fireRESTCallForPageChange(message: InAppMessage, page: InAppMessagePage) {
+    private suspend fun fireRESTCallForPageChange(
+        message: InAppMessage,
+        page: InAppMessagePage,
+    ) {
         val variantId = InAppHelper.variantIdForMessage(message, _languageContext) ?: return
         val pageId = page.pageId
         val messagePrefixedPageId = message.messageId + pageId
@@ -762,7 +815,10 @@ internal class InAppMessagesManager(
         }
     }
 
-    private suspend fun fireRESTCallForClick(message: InAppMessage, action: InAppMessageClickResult) {
+    private suspend fun fireRESTCallForClick(
+        message: InAppMessage,
+        action: InAppMessageClickResult,
+    ) {
         val variantId = InAppHelper.variantIdForMessage(message, _languageContext) ?: return
         val clickId = action.clickId
 
@@ -801,7 +857,10 @@ internal class InAppMessagesManager(
         }
     }
 
-    private fun showAlertDialogMessage(inAppMessage: InAppMessage, prompts: List<InAppMessagePrompt>) {
+    private fun showAlertDialogMessage(
+        inAppMessage: InAppMessage,
+        prompts: List<InAppMessagePrompt>,
+    ) {
         val messageTitle = _applicationService.appContext.getString(R.string.location_permission_missing_title)
         val message = _applicationService.appContext.getString(R.string.location_permission_missing_message)
         AlertDialog.Builder(_applicationService.current)

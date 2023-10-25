@@ -15,7 +15,9 @@ class RefreshUserOperation() : Operation(RefreshUserOperationExecutor.REFRESH_US
      */
     var appId: String
         get() = getStringProperty(::appId.name)
-        private set(value) { setStringProperty(::appId.name, value) }
+        private set(value) {
+            setStringProperty(::appId.name, value)
+        }
 
     /**
      * The user ID this subscription will be associated with. This ID *may* be locally generated
@@ -23,7 +25,9 @@ class RefreshUserOperation() : Operation(RefreshUserOperationExecutor.REFRESH_US
      */
     var onesignalId: String
         get() = getStringProperty(::onesignalId.name)
-        private set(value) { setStringProperty(::onesignalId.name, value) }
+        private set(value) {
+            setStringProperty(::onesignalId.name, value)
+        }
 
     override val createComparisonKey: String get() = "$appId.User.$onesignalId.Refresh"
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Refresh"

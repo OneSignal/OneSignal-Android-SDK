@@ -20,7 +20,10 @@ internal class OSWebView(context: Context?) : WebView(context!!) {
         return false
     }
 
-    override fun scrollTo(x: Int, y: Int) {
+    override fun scrollTo(
+        x: Int,
+        y: Int,
+    ) {
         // Do nothing
     }
 

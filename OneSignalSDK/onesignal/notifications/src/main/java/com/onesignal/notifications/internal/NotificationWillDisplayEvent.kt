@@ -6,7 +6,6 @@ import com.onesignal.notifications.INotificationWillDisplayEvent
 internal class NotificationWillDisplayEvent(
     override val notification: Notification,
 ) : INotificationWillDisplayEvent {
-
     var isPreventDefault: Boolean = false
 
     override fun preventDefault() {

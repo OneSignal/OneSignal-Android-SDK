@@ -18,7 +18,12 @@ interface IUserBackendService {
      *
      * @return The backend response
      */
-    suspend fun createUser(appId: String, identities: Map<String, String>, subscriptions: List<SubscriptionObject>, properties: Map<String, String>): CreateUserResponse
+    suspend fun createUser(
+        appId: String,
+        identities: Map<String, String>,
+        subscriptions: List<SubscriptionObject>,
+        properties: Map<String, String>,
+    ): CreateUserResponse
     // TODO: Change to send only the push subscription, optimally
 
     /**
@@ -35,7 +40,14 @@ interface IUserBackendService {
      *
      * @return The updated properties for this user.
      */
-    suspend fun updateUser(appId: String, aliasLabel: String, aliasValue: String, properties: PropertiesObject, refreshDeviceMetadata: Boolean, propertyiesDelta: PropertiesDeltasObject)
+    suspend fun updateUser(
+        appId: String,
+        aliasLabel: String,
+        aliasValue: String,
+        properties: PropertiesObject,
+        refreshDeviceMetadata: Boolean,
+        propertyiesDelta: PropertiesDeltasObject,
+    )
 
     /**
      * Retrieve a user from the backend.
@@ -48,7 +60,11 @@ interface IUserBackendService {
      *
      * @return The backend response
      */
-    suspend fun getUser(appId: String, aliasLabel: String, aliasValue: String): CreateUserResponse
+    suspend fun getUser(
+        appId: String,
+        aliasLabel: String,
+        aliasValue: String,
+    ): CreateUserResponse
 }
 
 class CreateUserResponse(
@@ -56,12 +72,10 @@ class CreateUserResponse(
      * The identities for the created user.
      */
     val identities: Map<String, String>,
-
     /**
      * The properties for the user.
      */
     val properties: PropertiesObject,
-
     /**
      * The subscriptions for the user.
      */

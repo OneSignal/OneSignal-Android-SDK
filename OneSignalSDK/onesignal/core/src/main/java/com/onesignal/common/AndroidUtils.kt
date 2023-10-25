@@ -20,7 +20,10 @@ import com.onesignal.debug.internal.logging.Logging
 import java.util.Random
 
 object AndroidUtils {
-    fun getRandomDelay(minDelay: Int, maxDelay: Int): Int {
+    fun getRandomDelay(
+        minDelay: Int,
+        maxDelay: Int,
+    ): Int {
         return Random().nextInt(maxDelay + 1 - minDelay) + minDelay
     }
 
@@ -47,7 +50,10 @@ object AndroidUtils {
         }
     }
 
-    fun hasConfigChangeFlag(activity: Activity, configChangeFlag: Int): Boolean {
+    fun hasConfigChangeFlag(
+        activity: Activity,
+        configChangeFlag: Int,
+    ): Boolean {
         var hasFlag = false
         try {
             val configChanges =
@@ -71,12 +77,18 @@ object AndroidUtils {
         return appVersion?.toString()
     }
 
-    fun getManifestMeta(context: Context, metaName: String?): String? {
+    fun getManifestMeta(
+        context: Context,
+        metaName: String?,
+    ): String? {
         val bundle = getManifestMetaBundle(context)
         return bundle?.getString(metaName)
     }
 
-    fun getManifestMetaBoolean(context: Context, metaName: String?): Boolean {
+    fun getManifestMetaBoolean(
+        context: Context,
+        metaName: String?,
+    ): Boolean {
         val bundle = getManifestMetaBundle(context)
         return bundle?.getBoolean(metaName) ?: false
     }
@@ -84,10 +96,11 @@ object AndroidUtils {
     fun getManifestMetaBundle(context: Context): Bundle? {
         val ai: ApplicationInfo
         try {
-            ai = context.packageManager.getApplicationInfo(
-                context.packageName,
-                PackageManager.GET_META_DATA,
-            )
+            ai =
+                context.packageManager.getApplicationInfo(
+                    context.packageName,
+                    PackageManager.GET_META_DATA,
+                )
             return ai.metaData
         } catch (e: PackageManager.NameNotFoundException) {
             Logging.error("Manifest application info not found", e)
@@ -95,7 +108,11 @@ object AndroidUtils {
         return null
     }
 
-    fun getResourceString(context: Context, key: String?, defaultStr: String?): String? {
+    fun getResourceString(
+        context: Context,
+        key: String?,
+        defaultStr: String?,
+    ): String? {
         val resources = context.resources
         val bodyResId = resources.getIdentifier(key, "string", context.packageName)
         return if (bodyResId != 0) resources.getString(bodyResId) else defaultStr
@@ -160,11 +177,17 @@ object AndroidUtils {
         }
     }
 
-    fun openURLInBrowser(appContext: Context, url: String) {
+    fun openURLInBrowser(
+        appContext: Context,
+        url: String,
+    ) {
         openURLInBrowser(appContext, Uri.parse(url.trim { it <= ' ' }))
     }
 
-    fun openURLInBrowser(appContext: Context, uri: Uri) {
+    fun openURLInBrowser(
+        appContext: Context,
+        uri: Uri,
+    ) {
         val intent = openURLInBrowserIntent(uri)
         appContext.startActivity(intent)
     }
@@ -204,14 +227,19 @@ object AndroidUtils {
      *
      * @return true if the permission is granted, false otherwise.
      */
-    fun hasPermission(permission: String, isUserGranted: Boolean, applicationService: IApplicationService): Boolean {
+    fun hasPermission(
+        permission: String,
+        isUserGranted: Boolean,
+        applicationService: IApplicationService,
+    ): Boolean {
         try {
-            val packageInfo: PackageInfo = applicationService.appContext
-                .packageManager
-                .getPackageInfo(
-                    applicationService.appContext.packageName,
-                    PackageManager.GET_PERMISSIONS,
-                )
+            val packageInfo: PackageInfo =
+                applicationService.appContext
+                    .packageManager
+                    .getPackageInfo(
+                        applicationService.appContext.packageName,
+                        PackageManager.GET_PERMISSIONS,
+                    )
             val permissionList = listOf(*packageInfo.requestedPermissions)
 
             return if (!permissionList.contains(permission)) {
@@ -219,10 +247,11 @@ object AndroidUtils {
             } else if (!isUserGranted) {
                 true
             } else {
-                val permissionGrant = AndroidSupportV4Compat.ContextCompat.checkSelfPermission(
-                    applicationService.appContext,
-                    permission,
-                )
+                val permissionGrant =
+                    AndroidSupportV4Compat.ContextCompat.checkSelfPermission(
+                        applicationService.appContext,
+                        permission,
+                    )
                 permissionGrant != PackageManager.PERMISSION_DENIED
             }
         } catch (e: PackageManager.NameNotFoundException) {
@@ -239,11 +268,15 @@ object AndroidUtils {
      *
      * @return The list of permissions within [permissions] that are granted.
      */
-    fun filterManifestPermissions(permissions: List<String>, applicationService: IApplicationService): List<String> {
+    fun filterManifestPermissions(
+        permissions: List<String>,
+        applicationService: IApplicationService,
+    ): List<String> {
         var requestPermission: String? = null
-        val packageInfo: PackageInfo = applicationService.appContext
-            .packageManager
-            .getPackageInfo(applicationService.appContext.packageName, PackageManager.GET_PERMISSIONS)
+        val packageInfo: PackageInfo =
+            applicationService.appContext
+                .packageManager
+                .getPackageInfo(applicationService.appContext.packageName, PackageManager.GET_PERMISSIONS)
         val permissionList = listOf(*packageInfo.requestedPermissions)
 
         return permissions.filter { permissionList.contains(it) }
@@ -262,7 +295,10 @@ object AndroidUtils {
     }
 
     enum class SchemaType(private val text: String) {
-        DATA("data"), HTTPS("https"), HTTP("http");
+        DATA("data"),
+        HTTPS("https"),
+        HTTP("http"),
+        ;
 
         companion object {
             fun fromString(text: String?): SchemaType? {

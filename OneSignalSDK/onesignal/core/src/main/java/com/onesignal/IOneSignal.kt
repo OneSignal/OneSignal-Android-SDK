@@ -83,7 +83,10 @@ interface IOneSignal {
      *
      * @return true if the SDK could be successfully initialized, false otherwise.
      */
-    fun initWithContext(context: Context, appId: String?): Boolean
+    fun initWithContext(
+        context: Context,
+        appId: String?,
+    ): Boolean
 
     /**
      * Login to OneSignal under the user identified by the [externalId] provided. The act of
@@ -106,7 +109,11 @@ interface IOneSignal {
      * trust for the login operation.  Required when identity verification has been enabled. See
      * [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
      */
-    fun login(externalId: String, jwtBearerToken: String? = null)
+    fun login(
+        externalId: String,
+        jwtBearerToken: String? = null,
+    )
+
     fun login(externalId: String) = login(externalId, null)
 
     /**

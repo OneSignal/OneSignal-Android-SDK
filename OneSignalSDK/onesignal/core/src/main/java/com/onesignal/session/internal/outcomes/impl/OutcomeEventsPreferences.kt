@@ -7,13 +7,13 @@ import com.onesignal.core.internal.preferences.PreferenceStores
 internal class OutcomeEventsPreferences(
     private val preferences: IPreferencesService,
 ) : IOutcomeEventsPreferences {
-
     override var unattributedUniqueOutcomeEventsSentByChannel: Set<String>?
-        get() = preferences.getStringSet(
-            PreferenceStores.ONESIGNAL,
-            PreferenceOneSignalKeys.PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT,
-            null,
-        )
+        get() =
+            preferences.getStringSet(
+                PreferenceStores.ONESIGNAL,
+                PreferenceOneSignalKeys.PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT,
+                null,
+            )
         set(value) {
             preferences.saveStringSet(
                 PreferenceStores.ONESIGNAL,

@@ -13,7 +13,7 @@ internal open class PushSubscription(
 ) : Subscription(model), IPushSubscription {
     val changeHandlersNotifier = EventProducer<IPushSubscriptionObserver>()
     var savedState = fetchState()
-        private set;
+        private set
 
     override val token: String
         get() = model.address
@@ -32,14 +32,15 @@ internal open class PushSubscription(
     }
 
     override fun addObserver(observer: IPushSubscriptionObserver) = changeHandlersNotifier.subscribe(observer)
+
     override fun removeObserver(observer: IPushSubscriptionObserver) = changeHandlersNotifier.unsubscribe(observer)
 
-    fun refreshState() : PushSubscriptionState {
+    fun refreshState(): PushSubscriptionState {
         savedState = fetchState()
         return savedState
     }
 
-    private fun fetchState() : PushSubscriptionState {
+    private fun fetchState(): PushSubscriptionState {
         return PushSubscriptionState(id, token, optedIn)
     }
 }

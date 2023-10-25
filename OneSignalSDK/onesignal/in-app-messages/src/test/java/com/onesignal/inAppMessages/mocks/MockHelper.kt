@@ -40,6 +40,7 @@ object MockHelper {
     }
 
     const val DEFAULT_APP_ID = "appId"
+
     fun configModelStore(action: ((ConfigModel) -> Unit)? = null): ConfigModelStore {
         val configModel = ConfigModel()
 

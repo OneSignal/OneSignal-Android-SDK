@@ -13,7 +13,6 @@ internal class InAppHydrator(
     private val _time: ITime,
     private val _propertiesModelStore: PropertiesModelStore,
 ) {
-
     fun hydrateIAMMessages(jsonArray: JSONArray): List<InAppMessage> {
         val newMessages = ArrayList<InAppMessage>()
         for (i in 0 until jsonArray.length()) {
@@ -53,9 +52,10 @@ internal class InAppHydrator(
     }
 
     companion object {
-        private const val LIQUID_TAG_SCRIPT = "\n\n" +
-            "<script>\n" +
-            "    setPlayerTags(%s);\n" +
-            "</script>"
+        private const val LIQUID_TAG_SCRIPT =
+            "\n\n" +
+                "<script>\n" +
+                "    setPlayerTags(%s);\n" +
+                "</script>"
     }
 }

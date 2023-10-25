@@ -20,7 +20,6 @@ internal class PushRegistratorHMS(
     private val _applicationService: IApplicationService,
 ) : IPushRegistrator,
     IPushRegistratorCallback {
-
     companion object {
         private const val HMS_CLIENT_APP_ID = "client/app_id"
     }
@@ -30,19 +29,20 @@ internal class PushRegistratorHMS(
     override suspend fun registerForPush(): IPushRegistrator.RegisterResult {
         var result: IPushRegistrator.RegisterResult? = null
 
-        result = try {
-            getHMSTokenTask(_applicationService.appContext)
-        } catch (e: ApiException) {
-            Logging.error("HMS ApiException getting Huawei push token!", e)
-            val pushStatus: SubscriptionStatus =
-                if (e.statusCode == CommonCode.ErrorCode.ARGUMENTS_INVALID) {
-                    SubscriptionStatus.HMS_ARGUMENTS_INVALID
-                } else {
-                    SubscriptionStatus.HMS_API_EXCEPTION_OTHER
-                }
+        result =
+            try {
+                getHMSTokenTask(_applicationService.appContext)
+            } catch (e: ApiException) {
+                Logging.error("HMS ApiException getting Huawei push token!", e)
+                val pushStatus: SubscriptionStatus =
+                    if (e.statusCode == CommonCode.ErrorCode.ARGUMENTS_INVALID) {
+                        SubscriptionStatus.HMS_ARGUMENTS_INVALID
+                    } else {
+                        SubscriptionStatus.HMS_API_EXCEPTION_OTHER
+                    }
 
-            IPushRegistrator.RegisterResult(null, pushStatus)
-        }
+                IPushRegistrator.RegisterResult(null, pushStatus)
+            }
 
         return result!!
     }

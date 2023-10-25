@@ -13,7 +13,9 @@ internal interface ISummaryNotificationDisplayer {
         notifBuilder: NotificationDisplayBuilder.OneSignalNotificationBuilder?,
         groupAlertBehavior: Int,
     )
+
     suspend fun updateSummaryNotification(notificationJob: NotificationGenerationJob)
+
     fun createGenericPendingIntentsForGroup(
         notifBuilder: NotificationCompat.Builder?,
         intentGenerator: IntentGeneratorForAttachingToNotifications,
@@ -21,10 +23,12 @@ internal interface ISummaryNotificationDisplayer {
         group: String,
         notificationId: Int,
     )
+
     fun createSingleNotificationBeforeSummaryBuilder(
         notificationJob: NotificationGenerationJob,
         notifBuilder: NotificationCompat.Builder?,
     ): Notification
+
     suspend fun createGrouplessSummaryNotification(
         notificationJob: NotificationGenerationJob,
         intentGenerator: IntentGeneratorForAttachingToNotifications,

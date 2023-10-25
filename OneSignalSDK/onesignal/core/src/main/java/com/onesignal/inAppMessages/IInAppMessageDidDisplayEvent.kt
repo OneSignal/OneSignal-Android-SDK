@@ -5,7 +5,6 @@ package com.onesignal.inAppMessages
  * to the In App Message that has been displayed.
  */
 interface IInAppMessageDidDisplayEvent {
-
     /**
      * The In App Message that has been displayed.
      */

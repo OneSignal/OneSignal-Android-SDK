@@ -13,7 +13,12 @@ interface IIdentityBackendService {
      * @param aliasValue The identifier within the [aliasLabel] that identifies the user to retrieve.
      * @param identities The identities that are to be created.
      */
-    suspend fun setAlias(appId: String, aliasLabel: String, aliasValue: String, identities: Map<String, String>): Map<String, String>
+    suspend fun setAlias(
+        appId: String,
+        aliasLabel: String,
+        aliasValue: String,
+        identities: Map<String, String>,
+    ): Map<String, String>
 
     /**
      * Delete the [aliasLabelToDelete] from the user identified by the [aliasLabel]/[aliasValue] provided.
@@ -25,7 +30,12 @@ interface IIdentityBackendService {
      * @param aliasValue The identifier within the [aliasLabel] that identifies the user to retrieve.
      * @param aliasLabelToDelete The alias label to delete from the user identified.
      */
-    suspend fun deleteAlias(appId: String, aliasLabel: String, aliasValue: String, aliasLabelToDelete: String)
+    suspend fun deleteAlias(
+        appId: String,
+        aliasLabel: String,
+        aliasValue: String,
+        aliasLabelToDelete: String,
+    )
 }
 
 internal object IdentityConstants {

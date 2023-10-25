@@ -22,10 +22,11 @@ internal class GooglePlayServicesUpgradePrompt(
         private get() {
             try {
                 val pm = _applicationService.appContext.packageManager
-                val info = pm.getPackageInfo(
-                    GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE,
-                    PackageManager.GET_META_DATA,
-                )
+                val info =
+                    pm.getPackageInfo(
+                        GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE,
+                        PackageManager.GET_META_DATA,
+                    )
                 val label = info.applicationInfo.loadLabel(pm) as String
                 return label != "Market"
             } catch (e: PackageManager.NameNotFoundException) {
@@ -47,26 +48,30 @@ internal class GooglePlayServicesUpgradePrompt(
             val activity = _applicationService.current ?: return@withContext
 
             // Load resource strings so a developer can customize this dialog
-            val alertBodyText = AndroidUtils.getResourceString(
-                activity,
-                "onesignal_gms_missing_alert_text",
-                "To receive push notifications please press 'Update' to enable 'Google Play services'.",
-            )
-            val alertButtonUpdate = AndroidUtils.getResourceString(
-                activity,
-                "onesignal_gms_missing_alert_button_update",
-                "Update",
-            )
-            val alertButtonSkip = AndroidUtils.getResourceString(
-                activity,
-                "onesignal_gms_missing_alert_button_skip",
-                "Skip",
-            )
-            val alertButtonClose = AndroidUtils.getResourceString(
-                activity,
-                "onesignal_gms_missing_alert_button_close",
-                "Close",
-            )
+            val alertBodyText =
+                AndroidUtils.getResourceString(
+                    activity,
+                    "onesignal_gms_missing_alert_text",
+                    "To receive push notifications please press 'Update' to enable 'Google Play services'.",
+                )
+            val alertButtonUpdate =
+                AndroidUtils.getResourceString(
+                    activity,
+                    "onesignal_gms_missing_alert_button_update",
+                    "Update",
+                )
+            val alertButtonSkip =
+                AndroidUtils.getResourceString(
+                    activity,
+                    "onesignal_gms_missing_alert_button_skip",
+                    "Skip",
+                )
+            val alertButtonClose =
+                AndroidUtils.getResourceString(
+                    activity,
+                    "onesignal_gms_missing_alert_button_close",
+                    "Close",
+                )
 
             val builder = AlertDialog.Builder(activity)
             builder.setMessage(alertBodyText)
@@ -83,11 +88,12 @@ internal class GooglePlayServicesUpgradePrompt(
             val apiAvailability = GoogleApiAvailability.getInstance()
             val resultCode = apiAvailability.isGooglePlayServicesAvailable(_applicationService.appContext)
             // Send the Intent to trigger opening the store
-            val pendingIntent = apiAvailability.getErrorResolutionPendingIntent(
-                activity,
-                resultCode,
-                PLAY_SERVICES_RESOLUTION_REQUEST,
-            )
+            val pendingIntent =
+                apiAvailability.getErrorResolutionPendingIntent(
+                    activity,
+                    resultCode,
+                    PLAY_SERVICES_RESOLUTION_REQUEST,
+                )
             pendingIntent?.send()
         } catch (e: CanceledException) {
             e.printStackTrace()
