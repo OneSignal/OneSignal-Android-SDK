@@ -72,37 +72,37 @@ internal class InAppMessagesManager(
     IInAppLifecycleEventHandler,
     ITriggerHandler,
     ISessionLifecycleHandler {
-    private val _lifecycleCallback = EventProducer<IInAppMessageLifecycleListener>()
-    private val _messageClickCallback = EventProducer<IInAppMessageClickListener>()
+    private val lifecycleCallback = EventProducer<IInAppMessageLifecycleListener>()
+    private val messageClickCallback = EventProducer<IInAppMessageClickListener>()
 
     // IAMs loaded remotely from on_session
     //   If on_session won't be called this will be loaded from cache
-    private var _messages: List<InAppMessage> = listOf()
+    private var messages: List<InAppMessage> = listOf()
 
     // IAMs that have been dismissed by the user
     //   This mean they have already displayed to the user
-    private val _dismissedMessages: MutableSet<String> = mutableSetOf()
+    private val dismissedMessages: MutableSet<String> = mutableSetOf()
 
     // IAMs that have been displayed to the user
     //   This means their impression has been successfully posted to our backend and should not be counted again
-    private val _impressionedMessages: MutableSet<String> = mutableSetOf()
+    private val impressionedMessages: MutableSet<String> = mutableSetOf()
 
     //   This means their impression has been successfully posted to our backend and should not be counted again
-    private val _viewedPageIds: MutableSet<String> = mutableSetOf()
+    private val viewedPageIds: MutableSet<String> = mutableSetOf()
 
     // IAM clicks that have been successfully posted to our backend and should not be counted again
-    private val _clickedClickIds: MutableSet<String> = mutableSetOf()
+    private val clickedClickIds: MutableSet<String> = mutableSetOf()
 
     // Ordered IAMs queued to display, includes the message currently displaying, if any.
-    private val _messageDisplayQueue: MutableList<InAppMessage> = mutableListOf()
-    private val _messageDisplayQueueMutex = Mutex()
+    private val messageDisplayQueue: MutableList<InAppMessage> = mutableListOf()
+    private val messageDisplayQueueMutex = Mutex()
 
     // IAMs displayed with last displayed time and quantity of displays data
     // This is retrieved from a DB Table that take care of each object to be unique
-    private val _redisplayedInAppMessages: MutableList<InAppMessage> = mutableListOf()
+    private val redisplayedInAppMessages: MutableList<InAppMessage> = mutableListOf()
 
-    private val _fetchIAMMutex = Mutex()
-    private var _lastTimeFetchedIAMs: Long? = null
+    private val fetchIAMMutex = Mutex()
+    private var lastTimeFetchedIAMs: Long? = null
 
     override var paused: Boolean
         get() = _state.paused
@@ -120,7 +120,7 @@ internal class InAppMessagesManager(
     override fun start() {
         val tempDismissedSet = _prefs.dismissedMessagesId
         if (tempDismissedSet != null) {
-            _dismissedMessages.addAll(tempDismissedSet)
+            dismissedMessages.addAll(tempDismissedSet)
         }
 
         val tempLastTimeInAppDismissed = _prefs.lastTimeInAppDismissed
@@ -138,10 +138,10 @@ internal class InAppMessagesManager(
             _repository.cleanCachedInAppMessages()
 
             // get saved IAMs from database
-            _redisplayedInAppMessages.addAll(_repository.listInAppMessages())
+            redisplayedInAppMessages.addAll(_repository.listInAppMessages())
 
             // reset all messages for redisplay to indicate not shown
-            for (redisplayInAppMessage in _redisplayedInAppMessages) {
+            for (redisplayInAppMessage in redisplayedInAppMessages) {
                 redisplayInAppMessage.isDisplayedInSession = false
             }
 
@@ -152,22 +152,22 @@ internal class InAppMessagesManager(
 
     override fun addLifecycleListener(listener: IInAppMessageLifecycleListener) {
         Logging.debug("InAppMessagesManager.addLifecycleListener(listener: $listener)")
-        _lifecycleCallback.subscribe(listener)
+        lifecycleCallback.subscribe(listener)
     }
 
     override fun removeLifecycleListener(listener: IInAppMessageLifecycleListener) {
         Logging.debug("InAppMessagesManager.removeLifecycleListener(listener: $listener)")
-        _lifecycleCallback.unsubscribe(listener)
+        lifecycleCallback.unsubscribe(listener)
     }
 
     override fun addClickListener(listener: IInAppMessageClickListener) {
         Logging.debug("InAppMessagesManager.addClickListener(listener: $listener)")
-        _messageClickCallback.subscribe(listener)
+        messageClickCallback.subscribe(listener)
     }
 
     override fun removeClickListener(listener: IInAppMessageClickListener) {
         Logging.debug("InAppMessagesManager.removeClickListener(listener: $listener)")
-        _messageClickCallback.unsubscribe(listener)
+        messageClickCallback.unsubscribe(listener)
     }
 
     override fun onModelUpdated(
@@ -210,7 +210,7 @@ internal class InAppMessagesManager(
     }
 
     override fun onSessionStarted() {
-        for (redisplayInAppMessage in _redisplayedInAppMessages) {
+        for (redisplayInAppMessage in redisplayedInAppMessages) {
             redisplayInAppMessage.isDisplayedInSession = false
         }
 
@@ -232,19 +232,19 @@ internal class InAppMessagesManager(
             return
         }
 
-        _fetchIAMMutex.withLock {
+        fetchIAMMutex.withLock {
             val now = _time.currentTimeMillis
-            if (_lastTimeFetchedIAMs != null && (now - _lastTimeFetchedIAMs!!) < _configModelStore.model.fetchIAMMinInterval) {
+            if (lastTimeFetchedIAMs != null && (now - lastTimeFetchedIAMs!!) < _configModelStore.model.fetchIAMMinInterval) {
                 return
             }
 
-            _lastTimeFetchedIAMs = now
+            lastTimeFetchedIAMs = now
         }
 
         val newMessages = _backend.listInAppMessages(appId, subscriptionId)
 
         if (newMessages != null) {
-            this._messages = newMessages
+            this.messages = newMessages
             evaluateInAppMessages()
         }
     }
@@ -255,11 +255,11 @@ internal class InAppMessagesManager(
     private suspend fun evaluateInAppMessages() {
         Logging.debug("InAppMessagesManager.evaluateInAppMessages()")
 
-        for (message in _messages) {
+        for (message in messages) {
             // Make trigger evaluation first, dynamic trigger might change "trigger changed" flag value for redisplay messages
             if (_triggerController.evaluateMessageTriggers(message)) {
                 setDataForRedisplay(message)
-                if (!_dismissedMessages.contains(message.messageId) && !message.isFinished) {
+                if (!dismissedMessages.contains(message.messageId) && !message.isFinished) {
                     queueMessageForDisplay(message)
                 }
             }
@@ -281,10 +281,10 @@ internal class InAppMessagesManager(
      * For click counting, every message has it click id array
      */
     private fun setDataForRedisplay(message: InAppMessage) {
-        val messageDismissed: Boolean = _dismissedMessages.contains(message.messageId)
-        val index: Int = _redisplayedInAppMessages.indexOf(message)
+        val messageDismissed: Boolean = dismissedMessages.contains(message.messageId)
+        val index: Int = redisplayedInAppMessages.indexOf(message)
         if (messageDismissed && index != -1) {
-            val savedIAM: InAppMessage = _redisplayedInAppMessages.get(index)
+            val savedIAM: InAppMessage = redisplayedInAppMessages.get(index)
             message.redisplayStats.setDisplayStats(savedIAM.redisplayStats)
             message.isDisplayedInSession = savedIAM.isDisplayedInSession
 
@@ -297,12 +297,12 @@ internal class InAppMessagesManager(
                 message.redisplayStats.shouldDisplayAgain()
             ) {
                 Logging.debug("InAppMessagesManager.setDataForRedisplay message available for redisplay: " + message.messageId)
-                _dismissedMessages.remove(message.messageId)
-                _impressionedMessages.remove(message.messageId)
+                dismissedMessages.remove(message.messageId)
+                impressionedMessages.remove(message.messageId)
                 // Pages from different IAMs should not impact each other so we can clear the entire
                 // list when an IAM is dismissed or we are re-displaying the same one
-                _viewedPageIds.clear()
-                _prefs.viewPageImpressionedIds = _viewedPageIds
+                viewedPageIds.clear()
+                _prefs.viewPageImpressionedIds = viewedPageIds
                 message.clearClickIds()
             }
         }
@@ -324,10 +324,10 @@ internal class InAppMessagesManager(
      * Display message now or add it to the queue to be displayed.
      */
     private suspend fun queueMessageForDisplay(message: InAppMessage) {
-        _messageDisplayQueueMutex.withLock {
+        messageDisplayQueueMutex.withLock {
             // Make sure no message is ever added to the queue more than once
-            if (!_messageDisplayQueue.contains(message) && _state.inAppMessageIdShowing != message.messageId) {
-                _messageDisplayQueue.add(message)
+            if (!messageDisplayQueue.contains(message) && _state.inAppMessageIdShowing != message.messageId) {
+                messageDisplayQueue.add(message)
                 Logging.debug(
                     "InAppMessagesManager.queueMessageForDisplay: In app message with id: " + message.messageId + ", added to the queue",
                 )
@@ -346,20 +346,20 @@ internal class InAppMessagesManager(
 
         var messageToDisplay: InAppMessage? = null
 
-        _messageDisplayQueueMutex.withLock {
-            Logging.debug("InAppMessagesManager.attemptToShowInAppMessage: $_messageDisplayQueue")
+        messageDisplayQueueMutex.withLock {
+            Logging.debug("InAppMessagesManager.attemptToShowInAppMessage: $messageDisplayQueue")
             // If there are IAMs in the queue and nothing showing, show first in the queue
             if (paused) {
                 Logging.warn(
                     "InAppMessagesManager.attemptToShowInAppMessage: In app messaging is currently paused, in app messages will not be shown!",
                 )
-            } else if (_messageDisplayQueue.isEmpty()) {
+            } else if (messageDisplayQueue.isEmpty()) {
                 Logging.debug("InAppMessagesManager.attemptToShowInAppMessage: There are no IAMs left in the queue!")
             } else if (_state.inAppMessageIdShowing != null) {
                 Logging.debug("InAppMessagesManager.attemptToShowInAppMessage: There is an IAM currently showing!")
             } else {
                 Logging.debug("InAppMessagesManager.attemptToShowInAppMessage: No IAM showing currently, showing first item in the queue!")
-                messageToDisplay = _messageDisplayQueue.removeAt(0)
+                messageToDisplay = messageDisplayQueue.removeAt(0)
 
                 // set the state while the mutex is held so the next one coming in will pick up
                 // the correct state.
@@ -392,11 +392,11 @@ internal class InAppMessagesManager(
         failed: Boolean = false,
     ) {
         if (!message.isPreview) {
-            _dismissedMessages.add(message.messageId)
+            dismissedMessages.add(message.messageId)
 
             // If failed we will retry on next session
             if (!failed) {
-                _prefs.dismissedMessagesId = _dismissedMessages
+                _prefs.dismissedMessagesId = dismissedMessages
 
                 // Don't keep track of last displayed time for a preview
                 _state.lastTimeInAppDismissed = _time.currentTimeMillis
@@ -404,7 +404,7 @@ internal class InAppMessagesManager(
                 persistInAppMessage(message)
             }
 
-            Logging.debug("InAppMessagesManager.messageWasDismissed: dismissedMessages: $_dismissedMessages")
+            Logging.debug("InAppMessagesManager.messageWasDismissed: dismissedMessages: $dismissedMessages")
         }
 
         // Remove DIRECT influence due to ClickHandler of ClickAction outcomes
@@ -418,14 +418,14 @@ internal class InAppMessagesManager(
         }
 
         // fire the external callback
-        if (_lifecycleCallback.hasSubscribers) {
-            _lifecycleCallback.fireOnMain { it.onDidDismiss(InAppMessageLifecycleEvent(message)) }
+        if (lifecycleCallback.hasSubscribers) {
+            lifecycleCallback.fireOnMain { it.onDidDismiss(InAppMessageLifecycleEvent(message)) }
         }
 
         _state.inAppMessageIdShowing = null
 
         // Display the next message in the queue, or attempt to add more IAMs to the queue
-        if (_messageDisplayQueue.isNotEmpty()) {
+        if (messageDisplayQueue.isNotEmpty()) {
             Logging.debug("InAppMessagesManager.messageWasDismissed: In app message on queue available, attempting to show")
             attemptToShowInAppMessage()
         } else {
@@ -443,8 +443,8 @@ internal class InAppMessagesManager(
      * - At least one Trigger has changed
      */
     private fun makeRedisplayMessagesAvailableWithTriggers(newTriggersKeys: Collection<String>) {
-        for (message in _messages) {
-            if (!message.isTriggerChanged && _redisplayedInAppMessages.contains(message) &&
+        for (message in messages) {
+            if (!message.isTriggerChanged && redisplayedInAppMessages.contains(message) &&
                 _triggerController.isTriggerOnMessage(message, newTriggersKeys)
             ) {
                 Logging.debug("InAppMessagesManager.makeRedisplayMessagesAvailableWithTriggers: Trigger changed for message: $message")
@@ -465,14 +465,14 @@ internal class InAppMessagesManager(
 
         // Update the data to enable future re displays
         // Avoid calling the repository data again
-        val index = _redisplayedInAppMessages.indexOf(message)
+        val index = redisplayedInAppMessages.indexOf(message)
         if (index != -1) {
-            _redisplayedInAppMessages.set(index, message)
+            redisplayedInAppMessages.set(index, message)
         } else {
-            _redisplayedInAppMessages.add(message)
+            redisplayedInAppMessages.add(message)
         }
 
-        Logging.debug("InAppMessagesManager.persistInAppMessage: $message with msg array data: $_redisplayedInAppMessages")
+        Logging.debug("InAppMessagesManager.persistInAppMessage: $message with msg array data: $redisplayedInAppMessages")
     }
 
     override fun addTriggers(triggers: Map<String, String>) {
@@ -518,29 +518,29 @@ internal class InAppMessagesManager(
 
     // IAM LIFECYCLE CALLBACKS
     override fun onMessageWillDisplay(message: InAppMessage) {
-        if (!_lifecycleCallback.hasSubscribers) {
+        if (!lifecycleCallback.hasSubscribers) {
             Logging.verbose("InAppMessagesManager.onMessageWillDisplay: inAppMessageLifecycleHandler is null")
             return
         }
-        _lifecycleCallback.fireOnMain { it.onWillDisplay(InAppMessageLifecycleEvent(message)) }
+        lifecycleCallback.fireOnMain { it.onWillDisplay(InAppMessageLifecycleEvent(message)) }
     }
 
     override fun onMessageWasDisplayed(message: InAppMessage) {
-        if (!_lifecycleCallback.hasSubscribers) {
+        if (!lifecycleCallback.hasSubscribers) {
             Logging.verbose("InAppMessagesManager.onMessageWasDisplayed: inAppMessageLifecycleHandler is null")
             return
         }
-        _lifecycleCallback.fireOnMain { it.onDidDisplay(InAppMessageLifecycleEvent(message)) }
+        lifecycleCallback.fireOnMain { it.onDidDisplay(InAppMessageLifecycleEvent(message)) }
 
         if (message.isPreview) {
             return
         }
 
         // Check that the messageId is in impressioned messages so we return early without a second post being made
-        if (_impressionedMessages.contains(message.messageId)) return
+        if (impressionedMessages.contains(message.messageId)) return
 
         // Add the messageId to impressioned messages so no second request is made
-        _impressionedMessages.add(message.messageId)
+        impressionedMessages.add(message.messageId)
 
         val variantId = InAppHelper.variantIdForMessage(message, _languageContext) ?: return
 
@@ -553,10 +553,10 @@ internal class InAppMessagesManager(
                     message.messageId,
                 )
 
-                _prefs.impressionesMessagesId = _impressionedMessages
+                _prefs.impressionesMessagesId = impressionedMessages
             } catch (ex: BackendException) {
                 // Post failed, impressioned messages should be removed and this way another post can be attempted
-                _impressionedMessages.remove(message.messageId)
+                impressionedMessages.remove(message.messageId)
             }
         }
     }
@@ -604,11 +604,11 @@ internal class InAppMessagesManager(
     }
 
     override fun onMessageWillDismiss(message: InAppMessage) {
-        if (!_lifecycleCallback.hasSubscribers) {
+        if (!lifecycleCallback.hasSubscribers) {
             Logging.verbose("InAppMessagesManager.onMessageWillDismiss: inAppMessageLifecycleHandler is null")
             return
         }
-        _lifecycleCallback.fireOnMain { it.onWillDismiss(InAppMessageLifecycleEvent(message)) }
+        lifecycleCallback.fireOnMain { it.onWillDismiss(InAppMessageLifecycleEvent(message)) }
     }
 
     override fun onMessageWasDismissed(message: InAppMessage) {
@@ -772,7 +772,7 @@ internal class InAppMessagesManager(
         message: InAppMessage,
         action: InAppMessageClickResult,
     ) {
-        if (!_messageClickCallback.hasSubscribers) {
+        if (!messageClickCallback.hasSubscribers) {
             return
         }
 
@@ -781,7 +781,7 @@ internal class InAppMessagesManager(
         // Any outcome sent on this callback should count as DIRECT from this IAM
         _influenceManager.onDirectInfluenceFromIAM(message.messageId)
         val result = InAppMessageClickEvent(message, action)
-        _messageClickCallback.suspendingFireOnMain { it.onClick(result) }
+        messageClickCallback.suspendingFireOnMain { it.onClick(result) }
     }
 
     private suspend fun fireRESTCallForPageChange(
@@ -793,11 +793,11 @@ internal class InAppMessagesManager(
         val messagePrefixedPageId = message.messageId + pageId
 
         // Never send multiple page impressions for the same message UUID unless that page change is from an IAM with redisplay
-        if (_viewedPageIds.contains(messagePrefixedPageId)) {
+        if (viewedPageIds.contains(messagePrefixedPageId)) {
             Logging.verbose("InAppMessagesManager: Already sent page impression for id: $pageId")
             return
         }
-        _viewedPageIds.add(messagePrefixedPageId)
+        viewedPageIds.add(messagePrefixedPageId)
 
         try {
             _backend.sendIAMPageImpression(
@@ -808,10 +808,10 @@ internal class InAppMessagesManager(
                 pageId,
             )
 
-            _prefs.viewPageImpressionedIds = _viewedPageIds
+            _prefs.viewPageImpressionedIds = viewedPageIds
         } catch (ex: BackendException) {
             // Post failed, viewed page should be removed and this way another post can be attempted
-            _viewedPageIds.remove(messagePrefixedPageId)
+            viewedPageIds.remove(messagePrefixedPageId)
         }
     }
 
@@ -826,12 +826,12 @@ internal class InAppMessagesManager(
         val clickAvailableByRedisplay = message.redisplayStats.isRedisplayEnabled && clickId != null && message.isClickAvailable(clickId)
 
         // Never count multiple clicks for the same click UUID unless that click is from an IAM with redisplay
-        if (!clickAvailableByRedisplay && _clickedClickIds.contains(clickId)) {
+        if (!clickAvailableByRedisplay && clickedClickIds.contains(clickId)) {
             return
         }
 
         if (clickId != null) {
-            _clickedClickIds.add(clickId)
+            clickedClickIds.add(clickId)
             // Track clickId per IAM
             message.addClickId(clickId)
         }
@@ -847,9 +847,9 @@ internal class InAppMessagesManager(
             )
 
             // Persist success click to disk. Id already added to set before making the network call
-            _prefs.clickedMessagesId = _clickedClickIds
+            _prefs.clickedMessagesId = clickedClickIds
         } catch (ex: BackendException) {
-            _clickedClickIds.remove(clickId)
+            clickedClickIds.remove(clickId)
 
             if (clickId != null) {
                 message.removeClickId(clickId)

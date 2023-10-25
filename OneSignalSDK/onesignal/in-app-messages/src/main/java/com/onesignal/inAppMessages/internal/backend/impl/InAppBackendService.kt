@@ -62,7 +62,7 @@ internal class InAppBackendService(
             printHttpErrorForInAppMessageRequest("html", response.statusCode, response.payload)
 
             return if (NetworkUtils.getResponseStatusType(response.statusCode) != NetworkUtils.ResponseStatusType.RETRYABLE ||
-                htmlNetworkRequestAttemptCount >= NetworkUtils.MAX_NETWORK_REQUEST_ATTEMPT_COUNT
+                htmlNetworkRequestAttemptCount >= NetworkUtils.maxNetworkRequestAttemptCount
             ) {
                 // Failure limit reached, reset
                 htmlNetworkRequestAttemptCount = 0
