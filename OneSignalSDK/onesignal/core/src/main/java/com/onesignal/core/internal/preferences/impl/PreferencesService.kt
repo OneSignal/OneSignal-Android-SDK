@@ -20,18 +20,18 @@ internal class PreferencesService(
     private val _applicationService: IApplicationService,
     private val _time: ITime,
 ) : IPreferencesService, IStartableService {
-    private val _prefsToApply: Map<String, MutableMap<String, Any?>> =
+    private val prefsToApply: Map<String, MutableMap<String, Any?>> =
         mapOf(
             PreferenceStores.ONESIGNAL to mutableMapOf(),
             PreferenceStores.PLAYER_PURCHASES to mutableMapOf(),
         )
-    private var _queueJob: Deferred<Unit>? = null
+    private var queueJob: Deferred<Unit>? = null
 
-    private val _waiter = Waiter()
+    private val waiter = Waiter()
 
     override fun start() {
         // fire up an async job that will run "forever" so we don't hold up the other startable services.
-        _queueJob = doWorkAsync()
+        queueJob = doWorkAsync()
     }
 
     override fun getString(
@@ -118,11 +118,11 @@ internal class PreferencesService(
         type: Class<*>,
         defValue: Any?,
     ): Any? {
-        if (!_prefsToApply.containsKey(store)) {
+        if (!prefsToApply.containsKey(store)) {
             throw Exception("Store not found: $store")
         }
 
-        val storeMap = _prefsToApply[store]!!
+        val storeMap = prefsToApply[store]!!
 
         synchronized(storeMap) {
             val cachedValue = storeMap[key]
@@ -162,16 +162,16 @@ internal class PreferencesService(
         key: String,
         value: Any?,
     ) {
-        if (!_prefsToApply.containsKey(store)) {
+        if (!prefsToApply.containsKey(store)) {
             throw Exception("Store not found: $store")
         }
 
-        val storeMap = _prefsToApply[store]!!
+        val storeMap = prefsToApply[store]!!
         synchronized(storeMap) {
             storeMap[key] = value
         }
 
-        _waiter.wake()
+        waiter.wake()
     }
 
     private fun doWorkAsync() =
@@ -181,14 +181,14 @@ internal class PreferencesService(
             while (true) {
                 try {
                     // go through all outstanding items to process
-                    for (storeKey in _prefsToApply.keys) {
-                        val storeMap = _prefsToApply[storeKey]!!
+                    for (storeKey in prefsToApply.keys) {
+                        val storeMap = prefsToApply[storeKey]!!
                         val prefsToWrite = getSharedPrefsByName(storeKey)
 
                         if (prefsToWrite == null) {
                             // the assumption here is there is no context yet, but will be. So ensure
                             // we wake up to try again and persist the preference.
-                            _waiter.wake()
+                            waiter.wake()
                             continue
                         }
 
@@ -222,7 +222,7 @@ internal class PreferencesService(
                     }
 
                     // wait to be woken up for the next pass
-                    _waiter.waitForWake()
+                    waiter.waitForWake()
                 } catch (e: Throwable) {
                     Logging.log(LogLevel.ERROR, "Error with Preference work loop", e)
                 }

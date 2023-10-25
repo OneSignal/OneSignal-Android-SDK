@@ -144,7 +144,7 @@ internal class TrackGooglePurchase(
             isWaitingForPurchasesRequest = true
             try {
                 if (getPurchasesMethod == null) {
-                    getPurchasesMethod = getGetPurchasesMethod(IInAppBillingServiceClass)
+                    getPurchasesMethod = getGetPurchasesMethod(iInAppBillingServiceClass)
                     getPurchasesMethod!!.isAccessible = true
                 }
                 val ownedItems =
@@ -199,7 +199,7 @@ internal class TrackGooglePurchase(
     ) {
         try {
             if (getSkuDetailsMethod == null) {
-                getSkuDetailsMethod = getGetSkuDetailsMethod(IInAppBillingServiceClass)
+                getSkuDetailsMethod = getGetSkuDetailsMethod(iInAppBillingServiceClass)
                 getSkuDetailsMethod!!.isAccessible = true
             }
             val querySkus = Bundle()
@@ -218,10 +218,10 @@ internal class TrackGooglePurchase(
                 val currentSkus: MutableMap<String, PurchaseInfo> = mutableMapOf()
 
                 for (thisResponse in responseList!!) {
-                    val `object` = JSONObject(thisResponse)
-                    val sku = `object`.getString("productId")
-                    val iso = `object`.getString("price_currency_code")
-                    var price = BigDecimal(`object`.getString("price_amount_micros"))
+                    val responseObject = JSONObject(thisResponse)
+                    val sku = responseObject.getString("productId")
+                    val iso = responseObject.getString("price_currency_code")
+                    var price = BigDecimal(responseObject.getString("price_amount_micros"))
                     price = price.divide(BigDecimal(1000000))
 
                     currentSkus[sku] = PurchaseInfo(sku, iso, price)
@@ -262,7 +262,7 @@ internal class TrackGooglePurchase(
 
     companion object {
         private var iapEnabled = -99
-        private var IInAppBillingServiceClass: Class<*>? = null
+        private var iInAppBillingServiceClass: Class<*>? = null
 
         fun canTrack(context: Context): Boolean {
             if (iapEnabled == -99) {
@@ -271,7 +271,7 @@ internal class TrackGooglePurchase(
             }
             try {
                 if (iapEnabled == PackageManager.PERMISSION_GRANTED) {
-                    IInAppBillingServiceClass =
+                    iInAppBillingServiceClass =
                         Class.forName("com.android.vending.billing.IInAppBillingService")
                 }
             } catch (t: Throwable) {
