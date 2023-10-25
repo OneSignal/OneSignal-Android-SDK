@@ -15,8 +15,8 @@ buildscript {
         huaweiHMSLocationVersion = '4.0.0.300'
         kotlinVersion = '1.7.10'
         kotestVersion = '5.5.0'
-        ktlintPluginVersion = '11.3.1'
-        ktlintVersion = '0.48.2'
+        ktlintPluginVersion = '11.6.1'
+        ktlintVersion = '1.0.1'
         detektVersion = '1.21.0'
         junitVersion = '4.13.2'
     }
