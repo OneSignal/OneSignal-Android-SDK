@@ -9,8 +9,8 @@ import com.onesignal.common.events.EventProducer
 open class SingletonModelStore<TModel>(
     val store: ModelStore<TModel>,
 ) : ISingletonModelStore<TModel>, IModelStoreChangeHandler<TModel> where TModel : Model {
-    private val _changeSubscription: EventProducer<ISingletonModelStoreChangeHandler<TModel>> = EventProducer()
-    private val _singletonId: String = "-singleton-"
+    private val changeSubscription: EventProducer<ISingletonModelStoreChangeHandler<TModel>> = EventProducer()
+    private val singletonId: String = "-singleton-"
 
     init {
         store.subscribe(this)
@@ -18,13 +18,13 @@ open class SingletonModelStore<TModel>(
 
     override val model: TModel
         get() {
-            val model = store.get(_singletonId)
+            val model = store.get(singletonId)
             if (model != null) {
                 return model
             }
 
             val createdModel = store.create() ?: throw Exception("Unable to initialize model from store $store")
-            createdModel.id = _singletonId
+            createdModel.id = singletonId
             store.add(createdModel)
             return createdModel
         }
@@ -34,17 +34,17 @@ open class SingletonModelStore<TModel>(
         tag: String,
     ) {
         val existingModel = this.model
-        existingModel.initializeFromModel(_singletonId, model)
+        existingModel.initializeFromModel(singletonId, model)
         store.persist()
-        _changeSubscription.fire { it.onModelReplaced(existingModel, tag) }
+        changeSubscription.fire { it.onModelReplaced(existingModel, tag) }
     }
 
-    override fun subscribe(handler: ISingletonModelStoreChangeHandler<TModel>) = _changeSubscription.subscribe(handler)
+    override fun subscribe(handler: ISingletonModelStoreChangeHandler<TModel>) = changeSubscription.subscribe(handler)
 
-    override fun unsubscribe(handler: ISingletonModelStoreChangeHandler<TModel>) = _changeSubscription.unsubscribe(handler)
+    override fun unsubscribe(handler: ISingletonModelStoreChangeHandler<TModel>) = changeSubscription.unsubscribe(handler)
 
     override val hasSubscribers: Boolean
-        get() = _changeSubscription.hasSubscribers
+        get() = changeSubscription.hasSubscribers
 
     override fun onModelAdded(
         model: TModel,
@@ -57,7 +57,7 @@ open class SingletonModelStore<TModel>(
         args: ModelChangedArgs,
         tag: String,
     ) {
-        _changeSubscription.fire { it.onModelUpdated(args, tag) }
+        changeSubscription.fire { it.onModelUpdated(args, tag) }
     }
 
     override fun onModelRemoved(

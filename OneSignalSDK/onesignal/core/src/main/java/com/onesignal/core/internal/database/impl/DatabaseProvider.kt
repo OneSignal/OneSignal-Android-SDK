@@ -8,19 +8,19 @@ import com.onesignal.session.internal.outcomes.impl.OutcomeTableProvider
 internal class DatabaseProvider(
     private val _application: IApplicationService,
 ) : IDatabaseProvider {
-    private val _lock = Any()
-    private var _osDatabase: OSDatabase? = null
+    private val lock = Any()
+    private var osDatabase: OSDatabase? = null
 
     override val os: IDatabase
         get() {
-            if (_osDatabase == null) {
-                synchronized(_lock) {
-                    if (_osDatabase == null) {
-                        _osDatabase = OSDatabase(OutcomeTableProvider(), _application.appContext)
+            if (osDatabase == null) {
+                synchronized(lock) {
+                    if (osDatabase == null) {
+                        osDatabase = OSDatabase(OutcomeTableProvider(), _application.appContext)
                     }
                 }
             }
 
-            return _osDatabase!!
+            return osDatabase!!
         }
 }

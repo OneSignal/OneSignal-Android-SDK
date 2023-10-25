@@ -34,7 +34,7 @@ import com.onesignal.user.subscriptions.PushSubscriptionChangedState
 internal class SubscriptionManager(
     private val _subscriptionModelStore: SubscriptionModelStore,
 ) : ISubscriptionManager, IModelStoreChangeHandler<SubscriptionModel> {
-    private val _events = EventProducer<ISubscriptionChangedHandler>()
+    private val events = EventProducer<ISubscriptionChangedHandler>()
     override var subscriptions: SubscriptionList = SubscriptionList(listOf(), UninitializedPushSubscription())
     override val pushSubscriptionModel: SubscriptionModel
         get() = (subscriptions.push as PushSubscription).model
@@ -113,12 +113,12 @@ internal class SubscriptionManager(
         _subscriptionModelStore.remove(subscription.id)
     }
 
-    override fun subscribe(handler: ISubscriptionChangedHandler) = _events.subscribe(handler)
+    override fun subscribe(handler: ISubscriptionChangedHandler) = events.subscribe(handler)
 
-    override fun unsubscribe(handler: ISubscriptionChangedHandler) = _events.unsubscribe(handler)
+    override fun unsubscribe(handler: ISubscriptionChangedHandler) = events.unsubscribe(handler)
 
     override val hasSubscribers: Boolean
-        get() = _events.hasSubscribers
+        get() = events.hasSubscribers
 
     /**
      * Called when the model store has added a new subscription. The subscription list must be updated
@@ -157,7 +157,7 @@ internal class SubscriptionManager(
                 }
             }
             // the model has already been updated, so fire the update event
-            _events.fire { it.onSubscriptionChanged(subscription, args) }
+            events.fire { it.onSubscriptionChanged(subscription, args) }
         }
     }
 
@@ -191,7 +191,7 @@ internal class SubscriptionManager(
         subscriptions.add(subscription)
         this.subscriptions = SubscriptionList(subscriptions, UninitializedPushSubscription())
 
-        _events.fire { it.onSubscriptionAdded(subscription) }
+        events.fire { it.onSubscriptionAdded(subscription) }
     }
 
     private fun removeSubscriptionFromSubscriptionList(subscription: ISubscription) {
@@ -199,7 +199,7 @@ internal class SubscriptionManager(
         subscriptions.remove(subscription)
         this.subscriptions = SubscriptionList(subscriptions, UninitializedPushSubscription())
 
-        _events.fire { it.onSubscriptionRemoved(subscription) }
+        events.fire { it.onSubscriptionRemoved(subscription) }
     }
 
     private fun createSubscriptionFromModel(subscriptionModel: SubscriptionModel): ISubscription {
