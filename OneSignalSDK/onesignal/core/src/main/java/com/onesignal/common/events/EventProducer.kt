@@ -3,7 +3,7 @@ package com.onesignal.common.events
 import com.onesignal.common.threading.suspendifyOnMain
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.*
+import java.util.Collections
 
 /**
  * A standard implementation that implements [IEventNotifier] and additional functionality to make
