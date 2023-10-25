@@ -33,14 +33,14 @@ abstract class ModelStore<TModel>(
 ) : IEventNotifier<IModelStoreChangeHandler<TModel>>,
     IModelStore<TModel>,
     IModelChangedHandler where TModel : Model {
-    private val _changeSubscription: EventProducer<IModelStoreChangeHandler<TModel>> = EventProducer()
-    private val _models: MutableList<TModel> = mutableListOf()
+    private val changeSubscription: EventProducer<IModelStoreChangeHandler<TModel>> = EventProducer()
+    private val models: MutableList<TModel> = mutableListOf()
 
     override fun add(
         model: TModel,
         tag: String,
     ) {
-        val oldModel = _models.firstOrNull { it.id == model.id }
+        val oldModel = models.firstOrNull { it.id == model.id }
         if (oldModel != null) {
             removeItem(oldModel, tag)
         }
@@ -54,7 +54,7 @@ abstract class ModelStore<TModel>(
         model: TModel,
         tag: String,
     ) {
-        val oldModel = _models.firstOrNull { it.id == model.id }
+        val oldModel = models.firstOrNull { it.id == model.id }
         if (oldModel != null) {
             removeItem(oldModel, tag)
         }
@@ -64,18 +64,18 @@ abstract class ModelStore<TModel>(
     }
 
     override fun list(): Collection<TModel> {
-        return _models
+        return models
     }
 
     override fun get(id: String): TModel? {
-        return _models.firstOrNull { it.id == id }
+        return models.firstOrNull { it.id == id }
     }
 
     override fun remove(
         id: String,
         tag: String,
     ) {
-        val model = _models.firstOrNull { it.id == id } ?: return
+        val model = models.firstOrNull { it.id == id } ?: return
         removeItem(model, tag)
     }
 
@@ -85,8 +85,7 @@ abstract class ModelStore<TModel>(
     ) {
         persist()
 
-            _changeSubscription.fire { it.onModelUpdated(args, tag) }
-        }
+        changeSubscription.fire { it.onModelUpdated(args, tag) }
     }
 
     override fun replaceAll(
@@ -102,17 +101,15 @@ abstract class ModelStore<TModel>(
     }
 
     override fun clear(tag: String) {
-        synchronized(_models) {
-            val localList = _models.toList()
-            _models.clear()
+        val localList = models.toList()
+        models.clear()
 
             persist()
 
-            for (item in localList) {
-                // no longer listen for changes to this model
-                item.unsubscribe(this)
-                _changeSubscription.fire { it.onModelRemoved(item, tag) }
-            }
+        for (item in localList) {
+            // no longer listen for changes to this model
+            item.unsubscribe(this)
+            changeSubscription.fire { it.onModelRemoved(item, tag) }
         }
     }
 
@@ -122,9 +119,9 @@ abstract class ModelStore<TModel>(
         index: Int? = null,
     ) {
         if (index != null) {
-            _models.add(index, model)
+            models.add(index, model)
         } else {
-            _models.add(model)
+            models.add(model)
         }
 
             // listen for changes to this model
@@ -132,57 +129,49 @@ abstract class ModelStore<TModel>(
 
             persist()
 
-            _changeSubscription.fire { it.onModelAdded(model, tag) }
-        }
+        changeSubscription.fire { it.onModelAdded(model, tag) }
     }
 
     private fun removeItem(
         model: TModel,
         tag: String,
     ) {
-        _models.remove(model)
+        models.remove(model)
 
             // no longer listen for changes to this model
             model.unsubscribe(this)
 
             persist()
 
-            _changeSubscription.fire { it.onModelRemoved(model, tag) }
-        }
+        changeSubscription.fire { it.onModelRemoved(model, tag) }
     }
 
     protected fun load() {
-        synchronized(_models) {
-            if (name != null && _prefs != null) {
-                val str = _prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, "[]")
-                val jsonArray = JSONArray(str)
-                for (index in 0 until jsonArray.length()) {
-                    val newModel = create(jsonArray.getJSONObject(index)) ?: continue
-                    _models.add(newModel)
-                    // listen for changes to this model
-                    newModel.subscribe(this)
-                }
+        if (name != null && _prefs != null) {
+            val str = _prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, "[]")
+            val jsonArray = JSONArray(str)
+            for (index in 0 until jsonArray.length()) {
+                val newModel = create(jsonArray.getJSONObject(index)) ?: continue
+                models.add(newModel)
+                // listen for changes to this model
+                newModel.subscribe(this)
             }
         }
     }
 
     fun persist() {
-        synchronized(_models) {
-            if (name != null && _prefs != null) {
-                val jsonArray = JSONArray()
-                for (model in _models) {
-                    jsonArray.put(model.toJSON())
-                }
-
-                _prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, jsonArray.toString())
+        if (name != null && _prefs != null) {
+            val jsonArray = JSONArray()
+            for (model in models) {
+                jsonArray.put(model.toJSON())
             }
         }
     }
 
-    override fun subscribe(handler: IModelStoreChangeHandler<TModel>) = _changeSubscription.subscribe(handler)
+    override fun subscribe(handler: IModelStoreChangeHandler<TModel>) = changeSubscription.subscribe(handler)
 
-    override fun unsubscribe(handler: IModelStoreChangeHandler<TModel>) = _changeSubscription.unsubscribe(handler)
+    override fun unsubscribe(handler: IModelStoreChangeHandler<TModel>) = changeSubscription.unsubscribe(handler)
 
     override val hasSubscribers: Boolean
-        get() = _changeSubscription.hasSubscribers
+        get() = changeSubscription.hasSubscribers
 }

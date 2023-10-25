@@ -67,8 +67,8 @@ internal class BackgroundManager(
 ) : IApplicationLifecycleHandler, IBackgroundManager, IStartableService {
     override var needsJobReschedule = false
 
-    private val _lock = Any()
-    private var _nextScheduledSyncTimeMs = 0L
+    private val lock = Any()
+    private var nextScheduledSyncTimeMs = 0L
     private var backgroundSyncJob: Job? = null
 
     @SuppressLint("NewApi") // can suppress because we are only retrieving the class, not necessarily using it
@@ -106,8 +106,8 @@ internal class BackgroundManager(
     }
 
     private fun cancelSyncTask() {
-        synchronized(_lock) {
-            _nextScheduledSyncTimeMs = 0L
+        synchronized(lock) {
+            nextScheduledSyncTimeMs = 0L
             cancelBackgroundSyncTask()
         }
     }
@@ -119,7 +119,7 @@ internal class BackgroundManager(
 
             backgroundSyncJob =
                 launch(Dispatchers.Unconfined) {
-                    synchronized(_lock) { _nextScheduledSyncTimeMs = 0L }
+                    synchronized(lock) { nextScheduledSyncTimeMs = 0L }
 
                     for (backgroundService in _backgroundServices) {
                         backgroundService.backgroundRun()
@@ -138,21 +138,21 @@ internal class BackgroundManager(
 
     private fun scheduleSyncTask(delayMs: Long) {
         var delayMs = delayMs
-        synchronized(_lock) {
-            if (_nextScheduledSyncTimeMs != 0L &&
-                _time.currentTimeMillis + delayMs > _nextScheduledSyncTimeMs
+        synchronized(lock) {
+            if (nextScheduledSyncTimeMs != 0L &&
+                _time.currentTimeMillis + delayMs > nextScheduledSyncTimeMs
             ) {
-                Logging.debug("OSSyncService scheduleSyncTask already update scheduled nextScheduledSyncTimeMs: $_nextScheduledSyncTimeMs")
+                Logging.debug("OSSyncService scheduleSyncTask already update scheduled nextScheduledSyncTimeMs: $nextScheduledSyncTimeMs")
                 return
             }
             if (delayMs < 5000) delayMs = 5000
             scheduleBackgroundSyncTask(delayMs)
-            _nextScheduledSyncTimeMs = _time.currentTimeMillis + delayMs
+            nextScheduledSyncTimeMs = _time.currentTimeMillis + delayMs
         }
     }
 
     private fun scheduleBackgroundSyncTask(delayMs: Long) {
-        synchronized(_lock) {
+        synchronized(lock) {
             if (useJob()) {
                 scheduleSyncServiceAsJob(delayMs)
             } else {
@@ -220,7 +220,7 @@ internal class BackgroundManager(
     private fun cancelBackgroundSyncTask() {
         Logging.debug(this.javaClass.simpleName + " cancel background sync")
 
-        synchronized(_lock) {
+        synchronized(lock) {
             if (useJob()) {
                 val jobScheduler = _applicationService.appContext.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
                 jobScheduler.cancel(SYNC_TASK_ID)

@@ -23,7 +23,7 @@ import com.onesignal.session.internal.outcomes.impl.OutcomesDbContract.SQL_CREAT
 internal open class OSDatabase(
     private val _outcomeTableProvider: OutcomeTableProvider,
     context: Context?,
-    version: Int = dbVersion,
+    version: Int = DB_VERSION,
 ) : SQLiteOpenHelper(context, DATABASE_NAME, null, version), IDatabase {
     /**
      * Should be used in the event that we don't want to retry getting the a [SQLiteDatabase] instance
@@ -390,7 +390,7 @@ internal open class OSDatabase(
     }
 
     companion object {
-        private const val dbVersion = 9
+        private const val DB_VERSION = 9
         private val LOCK = Any()
         private const val DATABASE_NAME = "OneSignal.db"
         private const val INTEGER_PRIMARY_KEY_TYPE = " INTEGER PRIMARY KEY"

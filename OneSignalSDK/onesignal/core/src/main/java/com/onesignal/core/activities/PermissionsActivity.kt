@@ -15,8 +15,8 @@ import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 
 class PermissionsActivity : Activity() {
-    private var _requestPermissionService: RequestPermissionService? = null
-    private var _preferenceService: IPreferencesService? = null
+    private var requestPermissionService: RequestPermissionService? = null
+    private var preferenceService: IPreferencesService? = null
     private var permissionRequestType: String? = null
     private var androidPermissionString: String? = null
 
@@ -27,8 +27,8 @@ class PermissionsActivity : Activity() {
             return
         }
 
-        _requestPermissionService = OneSignal.getService()
-        _preferenceService = OneSignal.getService()
+        requestPermissionService = OneSignal.getService()
+        preferenceService = OneSignal.getService()
 
         handleBundleParams(intent.extras)
     }
@@ -68,9 +68,9 @@ class PermissionsActivity : Activity() {
     }
 
     private fun requestPermission(androidPermissionString: String?) {
-        if (!_requestPermissionService!!.waiting) {
-            _requestPermissionService!!.waiting = true
-            _requestPermissionService!!.shouldShowRequestPermissionRationaleBeforeRequest =
+        if (!requestPermissionService!!.waiting) {
+            requestPermissionService!!.waiting = true
+            requestPermissionService!!.shouldShowRequestPermissionRationaleBeforeRequest =
                 AndroidSupportV4Compat.ActivityCompat.shouldShowRequestPermissionRationale(
                     this@PermissionsActivity,
                     androidPermissionString,
@@ -88,7 +88,7 @@ class PermissionsActivity : Activity() {
         permissions: Array<String>,
         grantResults: IntArray,
     ) {
-        _requestPermissionService!!.waiting = false
+        requestPermissionService!!.waiting = false
 
         // TODO improve this method
         // TODO after we remove IAM from being an activity window we may be able to remove this handler
@@ -101,11 +101,11 @@ class PermissionsActivity : Activity() {
                 val granted =
                     grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED
                 val callback =
-                    _requestPermissionService!!.getCallback(permissionRequestType!!)
+                    requestPermissionService!!.getCallback(permissionRequestType!!)
                         ?: throw RuntimeException("Missing handler for permissionRequestType: $permissionRequestType")
                 if (granted) {
                     callback.onAccept()
-                    _preferenceService!!.saveBool(
+                    preferenceService!!.saveBool(
                         PreferenceStores.ONESIGNAL,
                         "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$androidPermissionString",
                         true,
@@ -121,7 +121,7 @@ class PermissionsActivity : Activity() {
     }
 
     private fun shouldShowSettings(): Boolean {
-        if (!_requestPermissionService!!.fallbackToSettings) {
+        if (!requestPermissionService!!.fallbackToSettings) {
             return false
         }
 
@@ -130,13 +130,13 @@ class PermissionsActivity : Activity() {
         // the second time shouldShowRequestPermissionRationale becomes false again. We
         // look for the change from `true` -> `false`. When this happens we remember this
         // rejection, as the user will never be prompted again.
-        if (_requestPermissionService!!.shouldShowRequestPermissionRationaleBeforeRequest) {
+        if (requestPermissionService!!.shouldShowRequestPermissionRationaleBeforeRequest) {
             if (!AndroidSupportV4Compat.ActivityCompat.shouldShowRequestPermissionRationale(
                     this@PermissionsActivity,
                     androidPermissionString,
                 )
             ) {
-                _preferenceService!!.saveBool(
+                preferenceService!!.saveBool(
                     PreferenceStores.ONESIGNAL,
                     "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$androidPermissionString",
                     true,
@@ -145,7 +145,7 @@ class PermissionsActivity : Activity() {
             }
         }
 
-        return _preferenceService!!.getBool(
+        return preferenceService!!.getBool(
             PreferenceStores.ONESIGNAL,
             "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$androidPermissionString",
             false,

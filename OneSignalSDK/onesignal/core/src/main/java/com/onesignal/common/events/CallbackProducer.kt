@@ -9,13 +9,13 @@ import kotlinx.coroutines.withContext
  * make callbacks less burdensome to the user.
  */
 open class CallbackProducer<THandler>() : ICallbackNotifier<THandler> {
-    private var _callback: THandler? = null
+    private var callback: THandler? = null
 
     override val hasCallback: Boolean
-        get() = _callback != null
+        get() = callback != null
 
     override fun set(handler: THandler?) {
-        _callback = handler
+        callback = handler
     }
 
     /**
@@ -26,8 +26,8 @@ open class CallbackProducer<THandler>() : ICallbackNotifier<THandler> {
      * @param callback The callback will be invoked if one exists, allowing you to call the handler.
      */
     fun fire(callback: (THandler) -> Unit) {
-        if (_callback != null) {
-            callback(_callback!!)
+        if (this.callback != null) {
+            callback(this.callback!!)
         }
     }
 
@@ -42,8 +42,8 @@ open class CallbackProducer<THandler>() : ICallbackNotifier<THandler> {
      */
     fun fireOnMain(callback: (THandler) -> Unit) {
         suspendifyOnMain {
-            if (_callback != null) {
-                callback(_callback!!)
+            if (this.callback != null) {
+                callback(this.callback!!)
             }
         }
     }
@@ -56,8 +56,8 @@ open class CallbackProducer<THandler>() : ICallbackNotifier<THandler> {
      * @param callback The callback will be invoked if one exists, allowing you to call the handler.
      */
     suspend fun suspendingFire(callback: suspend (THandler) -> Unit) {
-        if (_callback != null) {
-            callback(_callback!!)
+        if (this.callback != null) {
+            callback(this.callback!!)
         }
     }
 
@@ -70,9 +70,9 @@ open class CallbackProducer<THandler>() : ICallbackNotifier<THandler> {
      * @param callback The callback will be invoked if one exists, allowing you to call the handler.
      */
     suspend fun suspendingFireOnMain(callback: suspend (THandler) -> Unit) {
-        if (_callback != null) {
+        if (this.callback != null) {
             withContext(Dispatchers.Main) {
-                callback(_callback!!)
+                callback(this@CallbackProducer.callback!!)
             }
         }
     }
