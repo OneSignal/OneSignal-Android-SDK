@@ -16,6 +16,7 @@ internal class DraggableRelativeLayout(context: Context?) : RelativeLayout(conte
 
         // Callbacks for knowing when dragging has started and ended
         fun onDragStart()
+
         fun onDragEnd()
     }
 
@@ -45,6 +46,7 @@ internal class DraggableRelativeLayout(context: Context?) : RelativeLayout(conte
     }
 
     private var params: Params? = null
+
     fun setListener(listener: DraggableListener?) {
         mListener = listener
     }
@@ -64,66 +66,83 @@ internal class DraggableRelativeLayout(context: Context?) : RelativeLayout(conte
     }
 
     private fun createDragHelper() {
-        mDragHelper = ViewDragHelper.create(
-            this,
-            1.0f,
-            object : ViewDragHelper.Callback() {
-                private var lastYPos = 0
-                override fun tryCaptureView(child: View, pointerId: Int): Boolean {
-                    return true
-                }
+        mDragHelper =
+            ViewDragHelper.create(
+                this,
+                1.0f,
+                object : ViewDragHelper.Callback() {
+                    private var lastYPos = 0
 
-                override fun clampViewPositionVertical(child: View, top: Int, dy: Int): Int {
-                    if (params!!.draggingDisabled) {
-                        return params!!.maxYPos
+                    override fun tryCaptureView(
+                        child: View,
+                        pointerId: Int,
+                    ): Boolean {
+                        return true
                     }
-                    lastYPos = top
-                    if (params!!.dragDirection == Params.DRAGGABLE_DIRECTION_DOWN) {
-                        // Dragging down
-                        // If the top of the message is past the dragThresholdY trigger the onDragStart() callback
-                        if (top >= params!!.dragThresholdY && mListener != null) mListener!!.onDragStart()
-                        if (top < params!!.maxYPos) return params!!.maxYPos
-                    } else {
-                        // Dragging up
-                        // If the top of the message is past the dragThresholdY trigger the onDragStart() callback
-                        if (top <= params!!.dragThresholdY && mListener != null) mListener!!.onDragStart()
-                        if (top > params!!.maxYPos) return params!!.maxYPos
-                    }
-                    return top
-                }
 
-                override fun clampViewPositionHorizontal(child: View, right: Int, dy: Int): Int {
-                    return params!!.maxXPos
-                }
-
-                // Base on position and scroll speed decide if we need to dismiss
-                override fun onViewReleased(releasedChild: View, xvel: Float, yvel: Float) {
-                    var settleDestY = params!!.maxYPos
-                    if (!dismissing) {
+                    override fun clampViewPositionVertical(
+                        child: View,
+                        top: Int,
+                        dy: Int,
+                    ): Int {
+                        if (params!!.draggingDisabled) {
+                            return params!!.maxYPos
+                        }
+                        lastYPos = top
                         if (params!!.dragDirection == Params.DRAGGABLE_DIRECTION_DOWN) {
-                            if (lastYPos > params!!.dismissingYPos || yvel > params!!.dismissingYVelocity) {
-                                settleDestY = params!!.offScreenYPos
-                                dismissing = true
-                                if (mListener != null) mListener!!.onDismiss()
-                            }
+                            // Dragging down
+                            // If the top of the message is past the dragThresholdY trigger the onDragStart() callback
+                            if (top >= params!!.dragThresholdY && mListener != null) mListener!!.onDragStart()
+                            if (top < params!!.maxYPos) return params!!.maxYPos
                         } else {
-                            if (lastYPos < params!!.dismissingYPos || yvel < params!!.dismissingYVelocity) {
-                                settleDestY = params!!.offScreenYPos
-                                dismissing = true
-                                if (mListener != null) mListener!!.onDismiss()
+                            // Dragging up
+                            // If the top of the message is past the dragThresholdY trigger the onDragStart() callback
+                            if (top <= params!!.dragThresholdY && mListener != null) mListener!!.onDragStart()
+                            if (top > params!!.maxYPos) return params!!.maxYPos
+                        }
+                        return top
+                    }
+
+                    override fun clampViewPositionHorizontal(
+                        child: View,
+                        right: Int,
+                        dy: Int,
+                    ): Int {
+                        return params!!.maxXPos
+                    }
+
+                    // Base on position and scroll speed decide if we need to dismiss
+                    override fun onViewReleased(
+                        releasedChild: View,
+                        xvel: Float,
+                        yvel: Float,
+                    ) {
+                        var settleDestY = params!!.maxYPos
+                        if (!dismissing) {
+                            if (params!!.dragDirection == Params.DRAGGABLE_DIRECTION_DOWN) {
+                                if (lastYPos > params!!.dismissingYPos || yvel > params!!.dismissingYVelocity) {
+                                    settleDestY = params!!.offScreenYPos
+                                    dismissing = true
+                                    if (mListener != null) mListener!!.onDismiss()
+                                }
+                            } else {
+                                if (lastYPos < params!!.dismissingYPos || yvel < params!!.dismissingYVelocity) {
+                                    settleDestY = params!!.offScreenYPos
+                                    dismissing = true
+                                    if (mListener != null) mListener!!.onDismiss()
+                                }
                             }
                         }
+                        if (mDragHelper!!.settleCapturedViewAt(
+                                params!!.maxXPos,
+                                settleDestY,
+                            )
+                        ) {
+                            ViewCompat.postInvalidateOnAnimation(this@DraggableRelativeLayout)
+                        }
                     }
-                    if (mDragHelper!!.settleCapturedViewAt(
-                            params!!.maxXPos,
-                            settleDestY,
-                        )
-                    ) {
-                        ViewCompat.postInvalidateOnAnimation(this@DraggableRelativeLayout)
-                    }
-                }
-            },
-        )
+                },
+            )
     }
 
     override fun onInterceptTouchEvent(event: MotionEvent): Boolean {

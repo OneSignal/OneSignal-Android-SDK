@@ -65,32 +65,38 @@ class Notification : IDisplayableMutableNotification {
         this.androidNotificationId = androidNotificationId
     }
 
-    private fun initPayloadData(currentJsonPayload: JSONObject, time: ITime) {
-        val customJson: JSONObject = try {
-            NotificationHelper.getCustomJSONObject(currentJsonPayload)
-        } catch (t: Throwable) {
-            Logging.error("Error assigning OSNotificationReceivedEvent payload values!", t)
-            return
-        }
+    private fun initPayloadData(
+        currentJsonPayload: JSONObject,
+        time: ITime,
+    ) {
+        val customJson: JSONObject =
+            try {
+                NotificationHelper.getCustomJSONObject(currentJsonPayload)
+            } catch (t: Throwable) {
+                Logging.error("Error assigning OSNotificationReceivedEvent payload values!", t)
+                return
+            }
         val currentTime = time.currentTimeMillis
         if (currentJsonPayload.has(NotificationConstants.GOOGLE_TTL_KEY)) {
             sentTime = currentJsonPayload.optLong(
                 NotificationConstants.GOOGLE_SENT_TIME_KEY,
                 currentTime,
             ) / 1000
-            ttl = currentJsonPayload.optInt(
-                NotificationConstants.GOOGLE_TTL_KEY,
-                NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD,
-            )
+            ttl =
+                currentJsonPayload.optInt(
+                    NotificationConstants.GOOGLE_TTL_KEY,
+                    NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD,
+                )
         } else if (currentJsonPayload.has(NotificationConstants.HMS_TTL_KEY)) {
             sentTime = currentJsonPayload.optLong(
                 NotificationConstants.HMS_SENT_TIME_KEY,
                 currentTime,
             ) / 1000
-            ttl = currentJsonPayload.optInt(
-                NotificationConstants.HMS_TTL_KEY,
-                NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD,
-            )
+            ttl =
+                currentJsonPayload.optInt(
+                    NotificationConstants.HMS_TTL_KEY,
+                    NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD,
+                )
         } else {
             sentTime = currentTime / 1000
             ttl = NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD
@@ -136,11 +142,12 @@ class Notification : IDisplayableMutableNotification {
             val actionBtns = mutableListOf<IActionButton>()
             for (i in 0 until jsonActionButtons.length()) {
                 val jsonActionButton = jsonActionButtons.getJSONObject(i)
-                val actionButton = ActionButton(
-                    jsonActionButton.safeString("id"),
-                    jsonActionButton.safeString("text"),
-                    jsonActionButton.safeString("icon"),
-                )
+                val actionButton =
+                    ActionButton(
+                        jsonActionButton.safeString("id"),
+                        jsonActionButton.safeString("text"),
+                        jsonActionButton.safeString("icon"),
+                    )
                 actionBtns.add(actionButton)
             }
             actionButtons = actionBtns
@@ -154,11 +161,12 @@ class Notification : IDisplayableMutableNotification {
         val jsonStrBgImage = currentJsonPayload.safeString("bg_img")
         if (jsonStrBgImage != null) {
             val jsonBgImage = JSONObject(jsonStrBgImage)
-            backgroundImageLayout = BackgroundImageLayout(
-                jsonBgImage.safeString("img"),
-                jsonBgImage.safeString("tc"),
-                jsonBgImage.safeString("bc"),
-            )
+            backgroundImageLayout =
+                BackgroundImageLayout(
+                    jsonBgImage.safeString("img"),
+                    jsonBgImage.safeString("tc"),
+                    jsonBgImage.safeString("bc"),
+                )
         }
     }
 

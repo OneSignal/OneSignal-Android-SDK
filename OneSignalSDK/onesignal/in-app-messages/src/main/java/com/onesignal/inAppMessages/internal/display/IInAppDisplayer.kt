@@ -6,7 +6,6 @@ import com.onesignal.inAppMessages.internal.InAppMessage
  * Handles the displaying of an IAM on the device.
  */
 internal interface IInAppDisplayer {
-
     /**
      * Displays the provided IAM on the device
      *

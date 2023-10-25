@@ -8,7 +8,6 @@ internal class NotificationReceivedEvent(
     override val context: Context,
     override val notification: Notification,
 ) : INotificationReceivedEvent {
-
     var isPreventDefault: Boolean = false
 
     override fun preventDefault() {

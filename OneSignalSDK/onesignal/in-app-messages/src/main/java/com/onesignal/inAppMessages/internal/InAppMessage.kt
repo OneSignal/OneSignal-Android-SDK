@@ -106,11 +106,12 @@ internal class InAppMessage(
 
     private fun parseEndTimeJson(json: JSONObject): Date? {
         val endTimeString: String
-        endTimeString = try {
-            json.getString(END_TIME)
-        } catch (e: JSONException) {
-            return null
-        }
+        endTimeString =
+            try {
+                json.getString(END_TIME)
+            } catch (e: JSONException) {
+                return null
+            }
         if (endTimeString == "null") return null
         try {
             val format = DateUtils.iso8601Format()

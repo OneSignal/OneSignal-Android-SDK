@@ -19,7 +19,6 @@ internal abstract class ModelStoreListener<TModel>(
     private val store: IModelStore<TModel>,
     private val opRepo: IOperationRepo,
 ) : IModelStoreChangeHandler<TModel>, IBootstrapService, Closeable where TModel : Model {
-
     override fun bootstrap() {
         store.subscribe(this)
     }
@@ -28,7 +27,10 @@ internal abstract class ModelStoreListener<TModel>(
         store.unsubscribe(this)
     }
 
-    override fun onModelAdded(model: TModel, tag: String) {
+    override fun onModelAdded(
+        model: TModel,
+        tag: String,
+    ) {
         if (tag != ModelChangeTags.NORMAL) {
             return
         }
@@ -39,7 +41,10 @@ internal abstract class ModelStoreListener<TModel>(
         }
     }
 
-    override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
+    override fun onModelUpdated(
+        args: ModelChangedArgs,
+        tag: String,
+    ) {
         if (tag != ModelChangeTags.NORMAL) {
             return
         }
@@ -50,7 +55,10 @@ internal abstract class ModelStoreListener<TModel>(
         }
     }
 
-    override fun onModelRemoved(model: TModel, tag: String) {
+    override fun onModelRemoved(
+        model: TModel,
+        tag: String,
+    ) {
         if (tag != ModelChangeTags.NORMAL) {
             return
         }
@@ -80,5 +88,11 @@ internal abstract class ModelStoreListener<TModel>(
      *
      * @return The operation to enqueue when the model has been updated, or null if no operation should be enqueued.
      */
-    abstract fun getUpdateOperation(model: TModel, path: String, property: String, oldValue: Any?, newValue: Any?): Operation?
+    abstract fun getUpdateOperation(
+        model: TModel,
+        path: String,
+        property: String,
+        oldValue: Any?,
+        newValue: Any?,
+    ): Operation?
 }

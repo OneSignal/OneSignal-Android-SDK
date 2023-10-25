@@ -30,10 +30,10 @@ class PreferencesServiceTests : FunSpec({
     }
 
     test("throws exception when store is not known") {
-        /* Given */
+        // Given
         val preferencesService = PreferencesService(AndroidMockHelper.applicationService(), MockHelper.time(1000))
 
-        /* When */
+        // When
         shouldThrowUnit<Exception> {
             preferencesService.getBool("not-known-store", mockBoolPrefStoreKey)
         }
@@ -42,21 +42,21 @@ class PreferencesServiceTests : FunSpec({
             preferencesService.saveBool("not-known-store", mockBoolPrefStoreKey, false)
         }
 
-        /* Then */
+        // Then
     }
 
     test("retrieve preference with no default returns internal default when not in android shared preferences") {
-        /* Given */
+        // Given
         val preferencesService = PreferencesService(AndroidMockHelper.applicationService(), MockHelper.time(1000))
 
-        /* When */
+        // When
         val boolValue = preferencesService.getBool(mockPrefStoreName, mockBoolPrefStoreKey)
         val intValue = preferencesService.getInt(mockPrefStoreName, mockIntPrefStoreKey)
         val longValue = preferencesService.getLong(mockPrefStoreName, mockLongPrefStoreKey)
         val stringValue = preferencesService.getString(mockPrefStoreName, mockStringPrefStoreKey)
         val stringSetValue = preferencesService.getStringSet(mockPrefStoreName, mockStringSetPrefStoreKey)
 
-        /* Then */
+        // Then
         boolValue shouldBe false
         intValue shouldBe 0
         longValue shouldBe 0
@@ -65,17 +65,17 @@ class PreferencesServiceTests : FunSpec({
     }
 
     test("retrieve preference with default returns specified default when not in android shared preferences") {
-        /* Given */
+        // Given
         val preferencesService = PreferencesService(AndroidMockHelper.applicationService(), MockHelper.time(1000))
 
-        /* When */
+        // When
         val boolValue = preferencesService.getBool(mockPrefStoreName, mockBoolPrefStoreKey, true)
         val intValue = preferencesService.getInt(mockPrefStoreName, mockIntPrefStoreKey, 10)
         val longValue = preferencesService.getLong(mockPrefStoreName, mockLongPrefStoreKey, 20)
         val stringValue = preferencesService.getString(mockPrefStoreName, mockStringPrefStoreKey, "default")
         val stringSetValue = preferencesService.getStringSet(mockPrefStoreName, mockStringSetPrefStoreKey, setOf("default1", "default2"))
 
-        /* Then */
+        // Then
         boolValue shouldBe true
         intValue shouldBe 10
         longValue shouldBe 20
@@ -84,7 +84,7 @@ class PreferencesServiceTests : FunSpec({
     }
 
     test("retrieve preference returns what's in android shared preferences") {
-        /* Given */
+        // Given
         val store = ApplicationProvider.getApplicationContext<Context>().getSharedPreferences(mockPrefStoreName, Context.MODE_PRIVATE)
         val editor = store.edit()
         editor.putBoolean(mockBoolPrefStoreKey, true)
@@ -96,14 +96,14 @@ class PreferencesServiceTests : FunSpec({
 
         val preferencesService = PreferencesService(AndroidMockHelper.applicationService(), MockHelper.time(1000))
 
-        /* When */
+        // When
         val boolValue = preferencesService.getBool(mockPrefStoreName, mockBoolPrefStoreKey)
         val intValue = preferencesService.getInt(mockPrefStoreName, mockIntPrefStoreKey)
         val longValue = preferencesService.getLong(mockPrefStoreName, mockLongPrefStoreKey)
         val stringValue = preferencesService.getString(mockPrefStoreName, mockStringPrefStoreKey)
         val stringSetValue = preferencesService.getStringSet(mockPrefStoreName, mockStringSetPrefStoreKey)
 
-        /* Then */
+        // Then
         boolValue shouldBe true
         intValue shouldBe 10
         longValue shouldBe 20
@@ -112,7 +112,7 @@ class PreferencesServiceTests : FunSpec({
     }
 
     test("retrieve preference returns default value when in android shared preferences but is different type") {
-        /* Given */
+        // Given
         val store = ApplicationProvider.getApplicationContext<Context>().getSharedPreferences(mockPrefStoreName, Context.MODE_PRIVATE)
         val editor = store.edit()
         editor.putInt(mockBoolPrefStoreKey, 0)
@@ -124,14 +124,14 @@ class PreferencesServiceTests : FunSpec({
 
         val preferencesService = PreferencesService(AndroidMockHelper.applicationService(), MockHelper.time(1000))
 
-        /* When */
+        // When
         val boolValue = preferencesService.getBool(mockPrefStoreName, mockBoolPrefStoreKey)
         val intValue = preferencesService.getInt(mockPrefStoreName, mockIntPrefStoreKey)
         val longValue = preferencesService.getLong(mockPrefStoreName, mockLongPrefStoreKey)
         val stringValue = preferencesService.getString(mockPrefStoreName, mockStringPrefStoreKey)
         val stringSetValue = preferencesService.getStringSet(mockPrefStoreName, mockStringSetPrefStoreKey)
 
-        /* Then */
+        // Then
         boolValue shouldBe false
         intValue shouldBe 0
         longValue shouldBe 0
@@ -140,7 +140,7 @@ class PreferencesServiceTests : FunSpec({
     }
 
     test("retrieve preference returns what's in cache rather than android shared preferences") {
-        /* Given */
+        // Given
         val store = ApplicationProvider.getApplicationContext<Context>().getSharedPreferences(mockPrefStoreName, Context.MODE_PRIVATE)
         val editor = store.edit()
         editor.putBoolean(mockBoolPrefStoreKey, false)
@@ -152,7 +152,7 @@ class PreferencesServiceTests : FunSpec({
 
         val preferencesService = PreferencesService(AndroidMockHelper.applicationService(), MockHelper.time(1000))
 
-        /* When */
+        // When
         preferencesService.saveBool(mockPrefStoreName, mockBoolPrefStoreKey, true)
         preferencesService.saveInt(mockPrefStoreName, mockIntPrefStoreKey, 10)
         preferencesService.saveLong(mockPrefStoreName, mockLongPrefStoreKey, 20)
@@ -165,7 +165,7 @@ class PreferencesServiceTests : FunSpec({
         val stringValue = preferencesService.getString(mockPrefStoreName, mockStringPrefStoreKey)
         val stringSetValue = preferencesService.getStringSet(mockPrefStoreName, mockStringSetPrefStoreKey)
 
-        /* Then */
+        // Then
         boolValue shouldBe true
         intValue shouldBe 10
         longValue shouldBe 20
@@ -174,10 +174,10 @@ class PreferencesServiceTests : FunSpec({
     }
 
     test("save preference are stored in android shared preferences") {
-        /* Given */
+        // Given
         val preferencesService = PreferencesService(AndroidMockHelper.applicationService(), MockHelper.time(1000))
 
-        /* When */
+        // When
         preferencesService.saveBool(mockPrefStoreName, mockBoolPrefStoreKey, true)
         preferencesService.saveInt(mockPrefStoreName, mockIntPrefStoreKey, 10)
         preferencesService.saveLong(mockPrefStoreName, mockLongPrefStoreKey, 20)
@@ -187,9 +187,13 @@ class PreferencesServiceTests : FunSpec({
 
         delay(1000)
 
-        val store = ApplicationProvider.getApplicationContext<Context>().getSharedPreferences(PreferenceStores.ONESIGNAL, Context.MODE_PRIVATE)
+        val store =
+            ApplicationProvider.getApplicationContext<Context>().getSharedPreferences(
+                PreferenceStores.ONESIGNAL,
+                Context.MODE_PRIVATE,
+            )
 
-        /* Then */
+        // Then
         store.getBoolean(mockBoolPrefStoreKey, false) shouldBe true
         store.getInt(mockIntPrefStoreKey, 0) shouldBe 10
         store.getLong(mockLongPrefStoreKey, 0) shouldBe 20
@@ -198,7 +202,7 @@ class PreferencesServiceTests : FunSpec({
     }
 
     test("save preference as null will remove from android shared preferences store") {
-        /* Given */
+        // Given
         val store = ApplicationProvider.getApplicationContext<Context>().getSharedPreferences(mockPrefStoreName, Context.MODE_PRIVATE)
         val editor = store.edit()
         editor.putBoolean(mockBoolPrefStoreKey, false)
@@ -210,7 +214,7 @@ class PreferencesServiceTests : FunSpec({
 
         val preferencesService = PreferencesService(AndroidMockHelper.applicationService(), MockHelper.time(1000))
 
-        /* When */
+        // When
         preferencesService.saveBool(mockPrefStoreName, mockBoolPrefStoreKey, null)
         preferencesService.saveInt(mockPrefStoreName, mockIntPrefStoreKey, null)
         preferencesService.saveLong(mockPrefStoreName, mockLongPrefStoreKey, null)
@@ -220,7 +224,7 @@ class PreferencesServiceTests : FunSpec({
 
         delay(1000)
 
-        /* Then */
+        // Then
         store.contains(mockBoolPrefStoreKey) shouldBe false
         store.contains(mockIntPrefStoreKey) shouldBe false
         store.contains(mockLongPrefStoreKey) shouldBe false

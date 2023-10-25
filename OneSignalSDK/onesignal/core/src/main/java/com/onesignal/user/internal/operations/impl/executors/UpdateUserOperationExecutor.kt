@@ -30,7 +30,6 @@ internal class UpdateUserOperationExecutor(
     private val _propertiesModelStore: PropertiesModelStore,
     private val _buildUserService: IRebuildUserService,
 ) : IOperationExecutor {
-
     override val operations: List<String>
         get() = listOf(SET_TAG, DELETE_TAG, SET_PROPERTY, TRACK_SESSION_START, TRACK_SESSION_END, TRACK_PURCHASE)
 
@@ -120,15 +119,37 @@ internal class UpdateUserOperationExecutor(
 
         if (appId != null && onesignalId != null) {
             try {
-                _userBackend.updateUser(appId, IdentityConstants.ONESIGNAL_ID, onesignalId, propertiesObject, refreshDeviceMetadata, deltasObject)
+                _userBackend.updateUser(
+                    appId,
+                    IdentityConstants.ONESIGNAL_ID,
+                    onesignalId,
+                    propertiesObject,
+                    refreshDeviceMetadata,
+                    deltasObject,
+                )
 
                 if (_identityModelStore.model.onesignalId == onesignalId) {
                     // go through and make sure any properties are in the correct model state
                     for (operation in ops) {
                         when (operation) {
-                            is SetTagOperation -> _propertiesModelStore.model.tags.setStringProperty(operation.key, operation.value, ModelChangeTags.HYDRATE)
-                            is DeleteTagOperation -> _propertiesModelStore.model.tags.setOptStringProperty(operation.key, null, ModelChangeTags.HYDRATE)
-                            is SetPropertyOperation -> _propertiesModelStore.model.setOptAnyProperty(operation.property, operation.value, ModelChangeTags.HYDRATE)
+                            is SetTagOperation ->
+                                _propertiesModelStore.model.tags.setStringProperty(
+                                    operation.key,
+                                    operation.value,
+                                    ModelChangeTags.HYDRATE,
+                                )
+                            is DeleteTagOperation ->
+                                _propertiesModelStore.model.tags.setOptStringProperty(
+                                    operation.key,
+                                    null,
+                                    ModelChangeTags.HYDRATE,
+                                )
+                            is SetPropertyOperation ->
+                                _propertiesModelStore.model.setOptAnyProperty(
+                                    operation.property,
+                                    operation.value,
+                                    ModelChangeTags.HYDRATE,
+                                )
                         }
                     }
                 }

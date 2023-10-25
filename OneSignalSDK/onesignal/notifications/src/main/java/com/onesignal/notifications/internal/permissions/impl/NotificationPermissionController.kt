@@ -51,16 +51,16 @@ internal class NotificationPermissionController(
     private val _preferenceService: IPreferencesService,
 ) : IRequestPermissionService.PermissionCallback,
     INotificationPermissionController {
-
     private val _waiter = WaiterWithValue<Boolean>()
     private val _events = EventProducer<INotificationPermissionChangedHandler>()
 
     override val canRequestPermission: Boolean
-        get() = !_preferenceService.getBool(
-            PreferenceStores.ONESIGNAL,
-            "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$ANDROID_PERMISSION_STRING",
-            false,
-        )!!
+        get() =
+            !_preferenceService.getBool(
+                PreferenceStores.ONESIGNAL,
+                "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$ANDROID_PERMISSION_STRING",
+                false,
+            )!!
 
     init {
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)
@@ -107,7 +107,9 @@ internal class NotificationPermissionController(
     }
 
     override fun subscribe(handler: INotificationPermissionChangedHandler) = _events.subscribe(handler)
+
     override fun unsubscribe(handler: INotificationPermissionChangedHandler) = _events.subscribe(handler)
+
     override val hasSubscribers: Boolean
         get() = _events.hasSubscribers
 
@@ -141,17 +143,20 @@ internal class NotificationPermissionController(
             object : AlertDialogPrepromptForAndroidSettings.Callback {
                 override fun onAccept() {
                     // wait for focus to be regained, and check the current permission status.
-                    _applicationService.addApplicationLifecycleHandler(object : ApplicationLifecycleHandlerBase() {
-                        override fun onFocus() {
-                            super.onFocus()
-                            _applicationService.removeApplicationLifecycleHandler(this)
-                            val hasPermission = AndroidUtils.hasPermission(ANDROID_PERMISSION_STRING, true, _applicationService)
-                            _waiter.wake(hasPermission)
-                            _events.fire { it.onNotificationPermissionChanged(hasPermission) }
-                        }
-                    })
+                    _applicationService.addApplicationLifecycleHandler(
+                        object : ApplicationLifecycleHandlerBase() {
+                            override fun onFocus() {
+                                super.onFocus()
+                                _applicationService.removeApplicationLifecycleHandler(this)
+                                val hasPermission = AndroidUtils.hasPermission(ANDROID_PERMISSION_STRING, true, _applicationService)
+                                _waiter.wake(hasPermission)
+                                _events.fire { it.onNotificationPermissionChanged(hasPermission) }
+                            }
+                        },
+                    )
                     NavigateToAndroidSettingsForNotifications.show(activity)
                 }
+
                 override fun onDecline() {
                     _waiter.wake(false)
                     _events.fire { it.onNotificationPermissionChanged(false) }

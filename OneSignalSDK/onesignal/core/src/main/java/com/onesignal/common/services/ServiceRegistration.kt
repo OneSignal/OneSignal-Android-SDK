@@ -49,7 +49,6 @@ abstract class ServiceRegistration<T> {
 class ServiceRegistrationReflection<T>(
     private val clazz: Class<*>,
 ) : ServiceRegistration<T>() {
-
     private var obj: T? = null
 
     override fun resolve(provider: IServiceProvider): Any? {
@@ -95,7 +94,10 @@ class ServiceRegistrationReflection<T>(
         return obj
     }
 
-    private fun doesHaveAllParameters(constructor: Constructor<*>, provider: IServiceProvider): Boolean {
+    private fun doesHaveAllParameters(
+        constructor: Constructor<*>,
+        provider: IServiceProvider,
+    ): Boolean {
         for (param in constructor.genericParameterTypes) {
             if (param is ParameterizedType) {
                 val argType = param.actualTypeArguments.firstOrNull()
@@ -139,7 +141,6 @@ class ServiceRegistrationReflection<T>(
 class ServiceRegistrationSingleton<T>(
     private var obj: T,
 ) : ServiceRegistration<T>() {
-
     override fun resolve(provider: IServiceProvider): Any? = obj
 }
 
@@ -153,7 +154,6 @@ class ServiceRegistrationSingleton<T>(
 class ServiceRegistrationLambda<T>(
     private val create: ((IServiceProvider) -> T),
 ) : ServiceRegistration<T>() {
-
     private var obj: T? = null
 
     override fun resolve(provider: IServiceProvider): Any? {

@@ -2,8 +2,11 @@ package com.onesignal.inAppMessages.internal.prompt.impl
 
 internal abstract class InAppMessagePrompt() {
     private var prompted = false
+
     abstract suspend fun handlePrompt(): PromptActionResult?
+
     abstract val promptKey: String
+
     fun hasPrompted(): Boolean {
         return prompted
     }
@@ -20,13 +23,16 @@ internal abstract class InAppMessagePrompt() {
     }
 
     /*
-    * End OneSignalOutcome module
-    */
+     * End OneSignalOutcome module
+     */
     internal interface OSPromptActionCompletionCallback {
         fun onCompleted(result: PromptActionResult?)
     }
 
     internal enum class PromptActionResult {
-        PERMISSION_GRANTED, PERMISSION_DENIED, LOCATION_PERMISSIONS_MISSING_MANIFEST, ERROR
+        PERMISSION_GRANTED,
+        PERMISSION_DENIED,
+        LOCATION_PERMISSIONS_MISSING_MANIFEST,
+        ERROR,
     }
 }

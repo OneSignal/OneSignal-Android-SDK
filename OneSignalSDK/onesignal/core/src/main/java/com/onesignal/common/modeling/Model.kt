@@ -46,23 +46,20 @@ open class Model(
      * this is specified, must also specify [_parentProperty]
      */
     private var _parentModel: Model? = null,
-
     /**
      * The optional parent model property that references this model. When this is
      * specified, must also specify [_parentModel]
      */
     private val _parentProperty: String? = null,
-
-    private val initializationLock: Any = Any()
-
 ) : IEventNotifier<IModelChangedHandler> {
-
     /**
      * A unique identifier for this model.
      */
     var id: String
         get() = getStringProperty(::id.name)
-        set(value) { setStringProperty(::id.name, value) }
+        set(value) {
+            setStringProperty(::id.name, value)
+        }
 
     protected val data: MutableMap<String, Any?> = Collections.synchronizedMap(mutableMapOf())
     private val _changeNotifier = EventProducer<IModelChangedHandler>()
@@ -122,9 +119,11 @@ open class Model(
      * @param id The id of the model to initialze to.
      * @param model The model to initialize this model from.
      */
-    fun initializeFromModel(id: String?, model: Model) {
-        val newData = Collections.synchronizedMap(mutableMapOf<String, Any?>())
-
+    fun initializeFromModel(
+        id: String?,
+        model: Model,
+    ) {
+        data.clear()
         for (item in model.data) {
             if (item.value is Model) {
                 val childModel = item.value as Model
@@ -156,7 +155,10 @@ open class Model(
      *
      * @return The created [Model], or null if the property should not be set.
      */
-    protected open fun createModelForProperty(property: String, jsonObject: JSONObject): Model? = null
+    protected open fun createModelForProperty(
+        property: String,
+        jsonObject: JSONObject,
+    ): Model? = null
 
     /**
      * Called via [initializeFromJson] when the property being initialized is a [JSONArray],
@@ -169,32 +171,269 @@ open class Model(
      *
      * @return The created [List], or null if the property should not be set.
      */
-    protected open fun createListForProperty(property: String, jsonArray: JSONArray): List<*>? = null
+    protected open fun createListForProperty(
+        property: String,
+        jsonArray: JSONArray,
+    ): List<*>? = null
 
-    inline fun <reified T : Enum<T>> setEnumProperty(name: String, value: T, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptEnumProperty(name, value, tag, forceChange)
-    fun <T> setMapModelProperty(name: String, value: MapModel<T>, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptMapModelProperty(name, value, tag, forceChange)
-    fun <T> setListProperty(name: String, value: List<T>, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptListProperty(name, value, tag, forceChange)
-    fun setStringProperty(name: String, value: String, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptStringProperty(name, value, tag, forceChange)
-    fun setBooleanProperty(name: String, value: Boolean, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptBooleanProperty(name, value, tag, forceChange)
-    fun setLongProperty(name: String, value: Long, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptLongProperty(name, value, tag, forceChange)
-    fun setDoubleProperty(name: String, value: Double, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptDoubleProperty(name, value, tag, forceChange)
-    fun setFloatProperty(name: String, value: Float, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptFloatProperty(name, value, tag, forceChange)
-    fun setIntProperty(name: String, value: Int, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptIntProperty(name, value, tag, forceChange)
-    fun setBigDecimalProperty(name: String, value: BigDecimal, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptBigDecimalProperty(name, value, tag, forceChange)
-    fun setAnyProperty(name: String, value: Any, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value, tag, forceChange)
+    inline fun <reified T : Enum<T>> setEnumProperty(
+        name: String,
+        value: T,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptEnumProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
 
-    inline fun <reified T : Enum<T>> setOptEnumProperty(name: String, value: T?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value?.toString(), tag, forceChange)
-    fun <T> setOptMapModelProperty(name: String, value: MapModel<T>?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value, tag, forceChange)
-    fun <T> setOptListProperty(name: String, value: List<T>?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value, tag, forceChange)
-    fun setOptStringProperty(name: String, value: String?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value, tag, forceChange)
-    fun setOptBooleanProperty(name: String, value: Boolean?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value, tag, forceChange)
-    fun setOptLongProperty(name: String, value: Long?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value, tag, forceChange)
-    fun setOptDoubleProperty(name: String, value: Double?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value, tag, forceChange)
-    fun setOptFloatProperty(name: String, value: Float?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value, tag, forceChange)
-    fun setOptIntProperty(name: String, value: Int?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value, tag, forceChange)
-    fun setOptBigDecimalProperty(name: String, value: BigDecimal?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) = setOptAnyProperty(name, value?.toString(), tag, forceChange)
+    fun <T> setMapModelProperty(
+        name: String,
+        value: MapModel<T>,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptMapModelProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
 
-    fun setOptAnyProperty(name: String, value: Any?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false) {
+    fun <T> setListProperty(
+        name: String,
+        value: List<T>,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptListProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
+
+    fun setStringProperty(
+        name: String,
+        value: String,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptStringProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
+
+    fun setBooleanProperty(
+        name: String,
+        value: Boolean,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptBooleanProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
+
+    fun setLongProperty(
+        name: String,
+        value: Long,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptLongProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
+
+    fun setDoubleProperty(
+        name: String,
+        value: Double,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptDoubleProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
+
+    fun setFloatProperty(
+        name: String,
+        value: Float,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptFloatProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
+
+    fun setIntProperty(
+        name: String,
+        value: Int,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptIntProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
+
+    fun setBigDecimalProperty(
+        name: String,
+        value: BigDecimal,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptBigDecimalProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
+
+    fun setAnyProperty(
+        name: String,
+        value: Any,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptAnyProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
+
+    inline fun <reified T : Enum<T>> setOptEnumProperty(
+        name: String,
+        value: T?,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptAnyProperty(
+        name,
+        value?.toString(),
+        tag,
+        forceChange,
+    )
+
+    fun <T> setOptMapModelProperty(
+        name: String,
+        value: MapModel<T>?,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptAnyProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
+
+    fun <T> setOptListProperty(
+        name: String,
+        value: List<T>?,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptAnyProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
+
+    fun setOptStringProperty(
+        name: String,
+        value: String?,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptAnyProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
+
+    fun setOptBooleanProperty(
+        name: String,
+        value: Boolean?,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptAnyProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
+
+    fun setOptLongProperty(
+        name: String,
+        value: Long?,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptAnyProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
+
+    fun setOptDoubleProperty(
+        name: String,
+        value: Double?,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptAnyProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
+
+    fun setOptFloatProperty(
+        name: String,
+        value: Float?,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptAnyProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
+
+    fun setOptIntProperty(
+        name: String,
+        value: Int?,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptAnyProperty(
+        name,
+        value,
+        tag,
+        forceChange,
+    )
+
+    fun setOptBigDecimalProperty(
+        name: String,
+        value: BigDecimal?,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) = setOptAnyProperty(
+        name,
+        value?.toString(),
+        tag,
+        forceChange,
+    )
+
+    fun setOptAnyProperty(
+        name: String,
+        value: Any?,
+        tag: String = ModelChangeTags.NORMAL,
+        forceChange: Boolean = false,
+    ) {
         val oldValue = data[name]
 
         if (oldValue == value && !forceChange) {
@@ -220,16 +459,68 @@ open class Model(
     fun hasProperty(name: String): Boolean = data.containsKey(name)
 
     protected inline fun <reified T : Enum<T>> getEnumProperty(name: String): T = getOptEnumProperty<T>(name) as T
-    protected fun <T> getMapModelProperty(name: String, create: (() -> MapModel<T>)? = null): MapModel<T> = getOptMapModelProperty(name, create) as MapModel<T>
-    protected fun <T> getListProperty(name: String, create: (() -> List<T>)? = null): List<T> = getOptListProperty(name, create) as List<T>
-    protected fun getStringProperty(name: String, create: (() -> String)? = null): String = getOptStringProperty(name, create) as String
-    protected fun getBooleanProperty(name: String, create: (() -> Boolean)? = null): Boolean = getOptBooleanProperty(name, create) as Boolean
-    protected fun getLongProperty(name: String, create: (() -> Long)? = null): Long = getOptLongProperty(name, create) as Long
-    protected fun getDoubleProperty(name: String, create: (() -> Double)? = null): Double = getOptDoubleProperty(name, create) as Double
-    protected fun getFloatProperty(name: String, create: (() -> Float)? = null): Float = getOptFloatProperty(name, create) as Float
-    protected fun getIntProperty(name: String, create: (() -> Int)? = null): Int = getOptIntProperty(name, create) as Int
-    protected fun getBigDecimalProperty(name: String, create: (() -> BigDecimal)? = null): BigDecimal = getOptBigDecimalProperty(name, create) as BigDecimal
-    protected fun getAnyProperty(name: String, create: (() -> Any)? = null): Any = getOptAnyProperty(name, create) as Any
+
+    protected fun <T> getMapModelProperty(
+        name: String,
+        create: (() -> MapModel<T>)? = null,
+    ): MapModel<T> =
+        getOptMapModelProperty(
+            name,
+            create,
+        ) as MapModel<T>
+
+    protected fun <T> getListProperty(
+        name: String,
+        create: (() -> List<T>)? = null,
+    ): List<T> = getOptListProperty(name, create) as List<T>
+
+    protected fun getStringProperty(
+        name: String,
+        create: (() -> String)? = null,
+    ): String = getOptStringProperty(name, create) as String
+
+    protected fun getBooleanProperty(
+        name: String,
+        create: (() -> Boolean)? = null,
+    ): Boolean =
+        getOptBooleanProperty(
+            name,
+            create,
+        ) as Boolean
+
+    protected fun getLongProperty(
+        name: String,
+        create: (() -> Long)? = null,
+    ): Long = getOptLongProperty(name, create) as Long
+
+    protected fun getDoubleProperty(
+        name: String,
+        create: (() -> Double)? = null,
+    ): Double = getOptDoubleProperty(name, create) as Double
+
+    protected fun getFloatProperty(
+        name: String,
+        create: (() -> Float)? = null,
+    ): Float = getOptFloatProperty(name, create) as Float
+
+    protected fun getIntProperty(
+        name: String,
+        create: (() -> Int)? = null,
+    ): Int = getOptIntProperty(name, create) as Int
+
+    protected fun getBigDecimalProperty(
+        name: String,
+        create: (() -> BigDecimal)? = null,
+    ): BigDecimal =
+        getOptBigDecimalProperty(
+            name,
+            create,
+        ) as BigDecimal
+
+    protected fun getAnyProperty(
+        name: String,
+        create: (() -> Any)? = null,
+    ): Any = getOptAnyProperty(name, create) as Any
 
     protected inline fun <reified T : Enum<T>> getOptEnumProperty(name: String): T? {
         val value = getOptAnyProperty(name) ?: return null
@@ -239,11 +530,42 @@ open class Model(
         return value as T
     }
 
-    protected fun <T> getOptMapModelProperty(name: String, create: (() -> MapModel<T>?)? = null): MapModel<T>? = getOptAnyProperty(name, create) as MapModel<T>?
-    protected fun <T> getOptListProperty(name: String, create: (() -> List<T>?)? = null): List<T>? = getOptAnyProperty(name, create) as List<T>?
-    protected fun getOptStringProperty(name: String, create: (() -> String?)? = null): String? = getOptAnyProperty(name, create) as String?
-    protected fun getOptBooleanProperty(name: String, create: (() -> Boolean?)? = null): Boolean? = getOptAnyProperty(name, create) as Boolean?
-    protected fun getOptLongProperty(name: String, create: (() -> Long?)? = null): Long? {
+    protected fun <T> getOptMapModelProperty(
+        name: String,
+        create: (() -> MapModel<T>?)? = null,
+    ): MapModel<T>? =
+        getOptAnyProperty(
+            name,
+            create,
+        ) as MapModel<T>?
+
+    protected fun <T> getOptListProperty(
+        name: String,
+        create: (() -> List<T>?)? = null,
+    ): List<T>? =
+        getOptAnyProperty(
+            name,
+            create,
+        ) as List<T>?
+
+    protected fun getOptStringProperty(
+        name: String,
+        create: (() -> String?)? = null,
+    ): String? = getOptAnyProperty(name, create) as String?
+
+    protected fun getOptBooleanProperty(
+        name: String,
+        create: (() -> Boolean?)? = null,
+    ): Boolean? =
+        getOptAnyProperty(
+            name,
+            create,
+        ) as Boolean?
+
+    protected fun getOptLongProperty(
+        name: String,
+        create: (() -> Long?)? = null,
+    ): Long? {
         val value = getOptAnyProperty(name, create) ?: return null
 
         if (value is Long) return value
@@ -252,7 +574,11 @@ open class Model(
         if (value is Double) return value.toLong()
         return value as Long?
     }
-    protected fun getOptFloatProperty(name: String, create: (() -> Float?)? = null): Float? {
+
+    protected fun getOptFloatProperty(
+        name: String,
+        create: (() -> Float?)? = null,
+    ): Float? {
         val value = getOptAnyProperty(name, create) ?: return null
 
         if (value is Float) return value
@@ -261,7 +587,11 @@ open class Model(
         if (value is Long) return value.toFloat()
         return value as Float?
     }
-    protected fun getOptDoubleProperty(name: String, create: (() -> Double?)? = null): Double? {
+
+    protected fun getOptDoubleProperty(
+        name: String,
+        create: (() -> Double?)? = null,
+    ): Double? {
         val value = getOptAnyProperty(name, create) ?: return null
 
         if (value is Double) return value
@@ -270,7 +600,11 @@ open class Model(
         if (value is Long) return value.toDouble()
         return value as Double?
     }
-    protected fun getOptIntProperty(name: String, create: (() -> Int?)? = null): Int? {
+
+    protected fun getOptIntProperty(
+        name: String,
+        create: (() -> Int?)? = null,
+    ): Int? {
         val value = getOptAnyProperty(name, create) ?: return null
 
         if (value is Int) return value
@@ -279,7 +613,11 @@ open class Model(
         if (value is Double) return value.toInt()
         return value as Int?
     }
-    protected fun getOptBigDecimalProperty(name: String, create: (() -> BigDecimal?)? = null): BigDecimal? {
+
+    protected fun getOptBigDecimalProperty(
+        name: String,
+        create: (() -> BigDecimal?)? = null,
+    ): BigDecimal? {
         val value = getOptAnyProperty(name, create) ?: return null
 
         if (value is Int) return BigDecimal(value)
@@ -289,7 +627,11 @@ open class Model(
         if (value is String) return BigDecimal(value)
         return value as BigDecimal?
     }
-    protected fun getOptAnyProperty(name: String, create: (() -> Any?)? = null): Any? {
+
+    protected fun getOptAnyProperty(
+        name: String,
+        create: (() -> Any?)? = null,
+    ): Any? {
         return if (data.containsKey(name) || create == null) {
             data[name]
         } else {
@@ -299,7 +641,13 @@ open class Model(
         }
     }
 
-    private fun notifyChanged(path: String, property: String, tag: String, oldValue: Any?, newValue: Any?) {
+    private fun notifyChanged(
+        path: String,
+        property: String,
+        tag: String,
+        oldValue: Any?,
+        newValue: Any?,
+    ) {
         // if there are any changed listeners for this specific model, notify them.
         val changeArgs = ModelChangedArgs(this, path, property, oldValue, newValue)
         _changeNotifier.fire { it.onChanged(changeArgs, tag) }
@@ -345,7 +693,9 @@ open class Model(
     }
 
     override fun subscribe(handler: IModelChangedHandler) = _changeNotifier.subscribe(handler)
+
     override fun unsubscribe(handler: IModelChangedHandler) = _changeNotifier.unsubscribe(handler)
+
     override val hasSubscribers: Boolean
         get() = _changeNotifier.hasSubscribers
 }

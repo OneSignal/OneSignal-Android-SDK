@@ -28,7 +28,7 @@ import org.junit.runner.RunWith
 class InAppMessagesManagerTests : FunSpec({
 
     test("triggers are backed by the trigger model store") {
-        /* Given */
+        // Given
         val mockTriggerModelStore = mockk<com.onesignal.inAppMessages.internal.triggers.TriggerModelStore>()
         val triggerModelSlots = mutableListOf<com.onesignal.inAppMessages.internal.triggers.TriggerModel>()
         every { mockTriggerModelStore.get(any()) } returns null
@@ -36,34 +36,35 @@ class InAppMessagesManagerTests : FunSpec({
         every { mockTriggerModelStore.remove(any()) } just runs
         every { mockTriggerModelStore.clear() } just runs
 
-        val iamManager = InAppMessagesManager(
-            MockHelper.applicationService(),
-            mockk<ISessionService>(),
-            mockk<IInfluenceManager>(),
-            mockk<ConfigModelStore>(),
-            mockk<IUserManager>(),
-            mockk<ISubscriptionManager>(),
-            mockk<IOutcomeEventsController>(),
-            mockk<InAppStateService>(),
-            mockk<IInAppPreferencesController>(),
-            mockk<IInAppRepository>(),
-            mockk<IInAppBackendService>(),
-            mockk<ITriggerController>(),
-            mockTriggerModelStore,
-            mockk<IInAppDisplayer>(),
-            mockk<IInAppLifecycleService>(),
-            MockHelper.languageContext(),
-            MockHelper.time(1000),
-        )
+        val iamManager =
+            InAppMessagesManager(
+                MockHelper.applicationService(),
+                mockk<ISessionService>(),
+                mockk<IInfluenceManager>(),
+                mockk<ConfigModelStore>(),
+                mockk<IUserManager>(),
+                mockk<ISubscriptionManager>(),
+                mockk<IOutcomeEventsController>(),
+                mockk<InAppStateService>(),
+                mockk<IInAppPreferencesController>(),
+                mockk<IInAppRepository>(),
+                mockk<IInAppBackendService>(),
+                mockk<ITriggerController>(),
+                mockTriggerModelStore,
+                mockk<IInAppDisplayer>(),
+                mockk<IInAppLifecycleService>(),
+                MockHelper.languageContext(),
+                MockHelper.time(1000),
+            )
 
-        /* When */
+        // When
         iamManager.addTrigger("trigger-key1", "trigger-value1")
         iamManager.addTriggers(mapOf("trigger-key2" to "trigger-value2", "trigger-key3" to "trigger-value3"))
         iamManager.removeTrigger("trigger-key4")
         iamManager.removeTriggers(listOf("trigger-key5", "trigger-key6"))
         iamManager.clearTriggers()
 
-        /* Then */
+        // Then
         triggerModelSlots[0].key shouldBe "trigger-key1"
         triggerModelSlots[0].value shouldBe "trigger-value1"
         triggerModelSlots[1].key shouldBe "trigger-key2"

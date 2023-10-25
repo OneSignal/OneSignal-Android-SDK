@@ -60,7 +60,10 @@ internal class LocationPermissionController(
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)
     }
 
-    suspend fun prompt(fallbackToSettings: Boolean, androidPermissionString: String): Boolean {
+    suspend fun prompt(
+        fallbackToSettings: Boolean,
+        androidPermissionString: String,
+    ): Boolean {
         _currPermission = androidPermissionString
         _requestPermission.startPrompt(
             fallbackToSettings,
@@ -102,17 +105,20 @@ internal class LocationPermissionController(
             object : AlertDialogPrepromptForAndroidSettings.Callback {
                 override fun onAccept() {
                     // wait for focus to be regained, and check the current permission status.
-                    _applicationService.addApplicationLifecycleHandler(object : ApplicationLifecycleHandlerBase() {
-                        override fun onFocus() {
-                            super.onFocus()
-                            _applicationService.removeApplicationLifecycleHandler(this)
-                            val hasPermission = AndroidUtils.hasPermission(_currPermission, true, _applicationService)
-                            _waiter.wake(hasPermission)
-                            _events.fire { it.onLocationPermissionChanged(hasPermission) }
-                        }
-                    })
+                    _applicationService.addApplicationLifecycleHandler(
+                        object : ApplicationLifecycleHandlerBase() {
+                            override fun onFocus() {
+                                super.onFocus()
+                                _applicationService.removeApplicationLifecycleHandler(this)
+                                val hasPermission = AndroidUtils.hasPermission(_currPermission, true, _applicationService)
+                                _waiter.wake(hasPermission)
+                                _events.fire { it.onLocationPermissionChanged(hasPermission) }
+                            }
+                        },
+                    )
                     NavigateToAndroidSettingsForLocation.show(activity)
                 }
+
                 override fun onDecline() {
                     _waiter.wake(false)
                     _events.fire { it.onLocationPermissionChanged(false) }
@@ -123,7 +129,9 @@ internal class LocationPermissionController(
     }
 
     override fun subscribe(handler: ILocationPermissionChangedHandler) = _events.subscribe(handler)
+
     override fun unsubscribe(handler: ILocationPermissionChangedHandler) = _events.subscribe(handler)
+
     override val hasSubscribers: Boolean
         get() = _events.hasSubscribers
 }

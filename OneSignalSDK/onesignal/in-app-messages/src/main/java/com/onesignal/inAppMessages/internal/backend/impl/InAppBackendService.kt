@@ -19,7 +19,10 @@ internal class InAppBackendService(
 ) : IInAppBackendService {
     private var htmlNetworkRequestAttemptCount = 0
 
-    override suspend fun listInAppMessages(appId: String, subscriptionId: String): List<InAppMessage>? {
+    override suspend fun listInAppMessages(
+        appId: String,
+        subscriptionId: String,
+    ): List<InAppMessage>? {
         // Retrieve any in app messages that might exist
         val response = _httpClient.get("apps/$appId/subscriptions/$subscriptionId/iams")
 
@@ -39,9 +42,14 @@ internal class InAppBackendService(
         return null
     }
 
-    override suspend fun getIAMData(appId: String, messageId: String, variantId: String?): GetIAMDataResponse {
-        val htmlPath = htmlPathForMessage(messageId, variantId, appId)
-            ?: return GetIAMDataResponse(null, false)
+    override suspend fun getIAMData(
+        appId: String,
+        messageId: String,
+        variantId: String?,
+    ): GetIAMDataResponse {
+        val htmlPath =
+            htmlPathForMessage(messageId, variantId, appId)
+                ?: return GetIAMDataResponse(null, false)
 
         val response = _httpClient.get(htmlPath, null)
 
@@ -67,7 +75,10 @@ internal class InAppBackendService(
         }
     }
 
-    override suspend fun getIAMPreviewData(appId: String, previewUUID: String): InAppMessageContent? {
+    override suspend fun getIAMPreviewData(
+        appId: String,
+        previewUUID: String,
+    ): InAppMessageContent? {
         val htmlPath = "in_app_messages/device_preview?preview_id=$previewUUID&app_id=$appId"
 
         val response = _httpClient.get(htmlPath, null)
@@ -89,16 +100,17 @@ internal class InAppBackendService(
         clickId: String?,
         isFirstClick: Boolean,
     ) {
-        val json: JSONObject = object : JSONObject() {
-            init {
-                put("app_id", appId)
-                put("device_type", _deviceService.deviceType.value)
-                put("player_id", subscriptionId)
-                put("click_id", clickId)
-                put("variant_id", variantId)
-                if (isFirstClick) put("first_click", true)
+        val json: JSONObject =
+            object : JSONObject() {
+                init {
+                    put("app_id", appId)
+                    put("device_type", _deviceService.deviceType.value)
+                    put("player_id", subscriptionId)
+                    put("click_id", clickId)
+                    put("variant_id", variantId)
+                    if (isFirstClick) put("first_click", true)
+                }
             }
-        }
 
         val response = _httpClient.post("in_app_messages/$messageId/click", json)
 
@@ -122,15 +134,16 @@ internal class InAppBackendService(
         messageId: String,
         pageId: String?,
     ) {
-        val json: JSONObject = object : JSONObject() {
-            init {
-                put("app_id", appId)
-                put("player_id", subscriptionId)
-                put("variant_id", variantId)
-                put("device_type", _deviceService.deviceType.value)
-                put("page_id", pageId)
+        val json: JSONObject =
+            object : JSONObject() {
+                init {
+                    put("app_id", appId)
+                    put("player_id", subscriptionId)
+                    put("variant_id", variantId)
+                    put("device_type", _deviceService.deviceType.value)
+                    put("page_id", pageId)
+                }
             }
-        }
 
         val response = _httpClient.post("in_app_messages/$messageId/pageImpression", json)
 
@@ -148,15 +161,16 @@ internal class InAppBackendService(
         variantId: String?,
         messageId: String,
     ) {
-        val json: JSONObject = object : JSONObject() {
-            init {
-                put("app_id", appId)
-                put("player_id", subscriptionId)
-                put("variant_id", variantId)
-                put("device_type", _deviceService.deviceType.value)
-                put("first_impression", true)
+        val json: JSONObject =
+            object : JSONObject() {
+                init {
+                    put("app_id", appId)
+                    put("player_id", subscriptionId)
+                    put("variant_id", variantId)
+                    put("device_type", _deviceService.deviceType.value)
+                    put("first_impression", true)
+                }
             }
-        }
 
         val response = _httpClient.post("in_app_messages/$messageId/impression", json)
 
@@ -168,7 +182,11 @@ internal class InAppBackendService(
         }
     }
 
-    private fun htmlPathForMessage(messageId: String, variantId: String?, appId: String): String? {
+    private fun htmlPathForMessage(
+        messageId: String,
+        variantId: String?,
+        appId: String,
+    ): String? {
         if (variantId == null) {
             Logging.error("Unable to find a variant for in-app message $messageId")
             return null
@@ -177,7 +195,10 @@ internal class InAppBackendService(
         return "in_app_messages/$messageId/variants/$variantId/html?app_id=$appId"
     }
 
-    private fun printHttpSuccessForInAppMessageRequest(requestType: String, response: String) {
+    private fun printHttpSuccessForInAppMessageRequest(
+        requestType: String,
+        response: String,
+    ) {
         Logging.debug("Successful post for in-app message $requestType request: $response")
     }
 

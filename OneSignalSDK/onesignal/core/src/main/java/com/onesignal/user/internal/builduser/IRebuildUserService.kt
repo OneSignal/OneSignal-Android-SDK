@@ -13,5 +13,8 @@ interface IRebuildUserService {
      * @return the list of operations if [onesignalId] represents the current
      * user, null otherwise.
      */
-    fun getRebuildOperationsIfCurrentUser(appId: String, onesignalId: String): List<Operation>?
+    fun getRebuildOperationsIfCurrentUser(
+        appId: String,
+        onesignalId: String,
+    ): List<Operation>?
 }

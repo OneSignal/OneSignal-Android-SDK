@@ -33,7 +33,6 @@ internal class SessionService(
     private val _sessionModelStore: SessionModelStore,
     private val _time: ITime,
 ) : ISessionService, IStartableService, IBackgroundService, IApplicationLifecycleHandler {
-
     override val startTime: Long
         get() = _session!!.startTime
 
@@ -96,7 +95,9 @@ internal class SessionService(
     }
 
     override fun subscribe(handler: ISessionLifecycleHandler) = _sessionLifeCycleNotifier.subscribe(handler)
+
     override fun unsubscribe(handler: ISessionLifecycleHandler) = _sessionLifeCycleNotifier.unsubscribe(handler)
+
     override val hasSubscribers: Boolean
         get() = _sessionLifeCycleNotifier.hasSubscribers
 }

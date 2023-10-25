@@ -20,6 +20,7 @@ internal interface IChannelTracker {
     val currentSessionInfluence: Influence
 
     fun cacheState()
+
     fun resetAndInitInfluence()
 
     /**

@@ -25,25 +25,26 @@ class SubscriptionBackendServiceTests : FunSpec({
     }
 
     test("create subscription") {
-        /* Given */
+        // Given
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{id: \"subscriptionId\"}")
         val subscriptionBackendService = SubscriptionBackendService(spyHttpClient)
 
-        /* When */
-        val subscription = SubscriptionObject(
-            "no-id",
-            SubscriptionObjectType.ANDROID_PUSH,
-            "pushToken",
-            true,
-            SubscriptionStatus.SUBSCRIBED.value,
-        )
+        // When
+        val subscription =
+            SubscriptionObject(
+                "no-id",
+                SubscriptionObjectType.ANDROID_PUSH,
+                "pushToken",
+                true,
+                SubscriptionStatus.SUBSCRIBED.value,
+            )
 
         val response = subscriptionBackendService.createSubscription("appId", aliasLabel, aliasValue, subscription)
 
-        /* Then */
+        // Then
         response shouldBe "subscriptionId"
         coVerify {
             spyHttpClient.post(
@@ -60,33 +61,35 @@ class SubscriptionBackendServiceTests : FunSpec({
     }
 
     test("create subscription throws exception when bad response") {
-        /* Given */
+        // Given
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(404, "NOT FOUND")
         val subscriptionBackendService = SubscriptionBackendService(spyHttpClient)
 
-        /* When */
-        val subscription = SubscriptionObject(
-            "no-id",
-            SubscriptionObjectType.ANDROID_PUSH,
-            "pushToken",
-            true,
-            SubscriptionStatus.SUBSCRIBED.value,
-        )
-        val exception = shouldThrowUnit<BackendException> {
-            subscriptionBackendService.createSubscription(
-                "appId",
-                aliasLabel,
-                aliasValue,
-                subscription,
+        // When
+        val subscription =
+            SubscriptionObject(
+                "no-id",
+                SubscriptionObjectType.ANDROID_PUSH,
+                "pushToken",
+                true,
+                SubscriptionStatus.SUBSCRIBED.value,
             )
-        }
+        val exception =
+            shouldThrowUnit<BackendException> {
+                subscriptionBackendService.createSubscription(
+                    "appId",
+                    aliasLabel,
+                    aliasValue,
+                    subscription,
+                )
+            }
 
         exception.statusCode shouldBe 404
         exception.response shouldBe "NOT FOUND"
-        /* Then */
+        // Then
         coVerify {
             spyHttpClient.post(
                 "apps/appId/user/by/$aliasLabel/$aliasValue/subscription",

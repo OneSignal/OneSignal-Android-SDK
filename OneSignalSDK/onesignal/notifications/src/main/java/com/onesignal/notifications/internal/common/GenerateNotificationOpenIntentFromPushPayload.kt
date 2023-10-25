@@ -12,15 +12,18 @@ import org.json.JSONObject
  *    * Payload
  */
 internal object GenerateNotificationOpenIntentFromPushPayload {
-
     /**
      * Create a new [GenerateNotificationOpenIntent] from the FCM payload
      */
-    fun create(context: Context, fcmPayload: JSONObject): GenerateNotificationOpenIntent {
-        val behavior = OSNotificationOpenBehaviorFromPushPayload(
-            context,
-            fcmPayload,
-        )
+    fun create(
+        context: Context,
+        fcmPayload: JSONObject,
+    ): GenerateNotificationOpenIntent {
+        val behavior =
+            OSNotificationOpenBehaviorFromPushPayload(
+                context,
+                fcmPayload,
+            )
 
         return GenerateNotificationOpenIntent(
             context,
@@ -29,9 +32,7 @@ internal object GenerateNotificationOpenIntentFromPushPayload {
         )
     }
 
-    private fun openBrowserIntent(
-        uri: Uri?,
-    ): Intent? {
+    private fun openBrowserIntent(uri: Uri?): Intent? {
         if (uri == null) return null
         return AndroidUtils.openURLInBrowserIntent(uri)
     }

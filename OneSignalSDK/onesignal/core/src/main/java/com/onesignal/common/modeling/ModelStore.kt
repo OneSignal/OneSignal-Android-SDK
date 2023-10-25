@@ -33,27 +33,31 @@ abstract class ModelStore<TModel>(
 ) : IEventNotifier<IModelStoreChangeHandler<TModel>>,
     IModelStore<TModel>,
     IModelChangedHandler where TModel : Model {
-
     private val _changeSubscription: EventProducer<IModelStoreChangeHandler<TModel>> = EventProducer()
     private val _models: MutableList<TModel> = mutableListOf()
 
-    override fun add(model: TModel, tag: String) {
-        synchronized(_models) {
-            val oldModel = _models.firstOrNull { it.id == model.id }
-            if (oldModel != null) {
-                removeItem(oldModel, tag)
-            }
+    override fun add(
+        model: TModel,
+        tag: String,
+    ) {
+        val oldModel = _models.firstOrNull { it.id == model.id }
+        if (oldModel != null) {
+            removeItem(oldModel, tag)
+        }
 
             addItem(model, tag)
         }
     }
 
-    override fun add(index: Int, model: TModel, tag: String) {
-        synchronized(_models) {
-            val oldModel = _models.firstOrNull { it.id == model.id }
-            if (oldModel != null) {
-                removeItem(oldModel, tag)
-            }
+    override fun add(
+        index: Int,
+        model: TModel,
+        tag: String,
+    ) {
+        val oldModel = _models.firstOrNull { it.id == model.id }
+        if (oldModel != null) {
+            removeItem(oldModel, tag)
+        }
 
             addItem(model, tag, index)
         }
@@ -67,24 +71,29 @@ abstract class ModelStore<TModel>(
         return _models.firstOrNull { it.id == id }
     }
 
-    override fun remove(id: String, tag: String) {
-        synchronized(_models) {
-            val model = _models.firstOrNull { it.id == id } ?: return
-            removeItem(model, tag)
-        }
+    override fun remove(
+        id: String,
+        tag: String,
+    ) {
+        val model = _models.firstOrNull { it.id == id } ?: return
+        removeItem(model, tag)
     }
 
-    override fun onChanged(args: ModelChangedArgs, tag: String) {
-        synchronized(_models) {
-            persist()
+    override fun onChanged(
+        args: ModelChangedArgs,
+        tag: String,
+    ) {
+        persist()
 
             _changeSubscription.fire { it.onModelUpdated(args, tag) }
         }
     }
 
-    override fun replaceAll(models: List<TModel>, tag: String) {
-        synchronized(_models) {
-            clear(tag)
+    override fun replaceAll(
+        models: List<TModel>,
+        tag: String,
+    ) {
+        clear(tag)
 
             for (model in models) {
                 add(model, tag)
@@ -107,13 +116,16 @@ abstract class ModelStore<TModel>(
         }
     }
 
-    private fun addItem(model: TModel, tag: String, index: Int? = null) {
-        synchronized(_models) {
-            if (index != null) {
-                _models.add(index, model)
-            } else {
-                _models.add(model)
-            }
+    private fun addItem(
+        model: TModel,
+        tag: String,
+        index: Int? = null,
+    ) {
+        if (index != null) {
+            _models.add(index, model)
+        } else {
+            _models.add(model)
+        }
 
             // listen for changes to this model
             model.subscribe(this)
@@ -124,9 +136,11 @@ abstract class ModelStore<TModel>(
         }
     }
 
-    private fun removeItem(model: TModel, tag: String) {
-        synchronized(_models) {
-            _models.remove(model)
+    private fun removeItem(
+        model: TModel,
+        tag: String,
+    ) {
+        _models.remove(model)
 
             // no longer listen for changes to this model
             model.unsubscribe(this)
@@ -166,7 +180,9 @@ abstract class ModelStore<TModel>(
     }
 
     override fun subscribe(handler: IModelStoreChangeHandler<TModel>) = _changeSubscription.subscribe(handler)
+
     override fun unsubscribe(handler: IModelStoreChangeHandler<TModel>) = _changeSubscription.unsubscribe(handler)
+
     override val hasSubscribers: Boolean
         get() = _changeSubscription.hasSubscribers
 }

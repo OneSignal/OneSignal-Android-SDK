@@ -6,7 +6,6 @@ import com.onesignal.common.exceptions.BackendException
  * The backend service for outcomes.
  */
 internal interface IOutcomeEventsBackendService {
-
     /**
      * Send an outcome event to the backend.
      *
@@ -19,5 +18,12 @@ internal interface IOutcomeEventsBackendService {
      * @param direct Whether this outcome event is direct. `true` if it is, `false` if it isn't, `null` if should not be specified.
      * @param event The outcome event to send up.
      */
-    suspend fun sendOutcomeEvent(appId: String, userId: String, subscriptionId: String, deviceType: String, direct: Boolean?, event: OutcomeEvent)
+    suspend fun sendOutcomeEvent(
+        appId: String,
+        userId: String,
+        subscriptionId: String,
+        deviceType: String,
+        direct: Boolean?,
+        event: OutcomeEvent,
+    )
 }

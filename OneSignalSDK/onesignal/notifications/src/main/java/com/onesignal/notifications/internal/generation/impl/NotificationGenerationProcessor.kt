@@ -39,7 +39,6 @@ internal class NotificationGenerationProcessor(
     private val _lifecycleService: INotificationLifecycleService,
     private val _time: ITime,
 ) : INotificationGenerationProcessor {
-
     override suspend fun processNotificationData(
         context: Context,
         androidNotificationId: Int,
@@ -90,8 +89,9 @@ internal class NotificationGenerationProcessor(
             Logging.error("remoteNotificationReceived threw an exception. Displaying normal OneSignal notification.", t)
         }
 
-        var shouldDisplay = processHandlerResponse(notificationJob, wantsToDisplay, isRestoring)
-            ?: return
+        var shouldDisplay =
+            processHandlerResponse(notificationJob, wantsToDisplay, isRestoring)
+                ?: return
 
         if (shouldDisplay) {
             if (shouldFireForegroundHandlers(notificationJob)) {
@@ -118,7 +118,10 @@ internal class NotificationGenerationProcessor(
                 } catch (to: TimeoutCancellationException) {
                     Logging.info("notificationWillShowInForegroundHandler timed out, continuing with wantsToDisplay=$wantsToDisplay.", to)
                 } catch (t: Throwable) {
-                    Logging.error("notificationWillShowInForegroundHandler threw an exception. Displaying normal OneSignal notification.", t)
+                    Logging.error(
+                        "notificationWillShowInForegroundHandler threw an exception. Displaying normal OneSignal notification.",
+                        t,
+                    )
                 }
 
                 shouldDisplay = processHandlerResponse(notificationJob, wantsToDisplay, isRestoring)
@@ -153,7 +156,11 @@ internal class NotificationGenerationProcessor(
      *
      * @return true if the job should continue display, false if the job should continue but not display, null if processing should stop.
      */
-    private suspend fun processHandlerResponse(notificationJob: NotificationGenerationJob, wantsToDisplay: Boolean, isRestoring: Boolean): Boolean? {
+    private suspend fun processHandlerResponse(
+        notificationJob: NotificationGenerationJob,
+        wantsToDisplay: Boolean,
+        isRestoring: Boolean,
+    ): Boolean? {
         if (wantsToDisplay) {
             val canDisplay = AndroidUtils.isStringNotEmpty(notificationJob.notification.body)
             val withinTtl: Boolean = isNotificationWithinTTL(notificationJob.notification)
@@ -204,9 +211,10 @@ internal class NotificationGenerationProcessor(
     }
 
     private fun shouldDisplayNotification(notificationJob: NotificationGenerationJob): Boolean {
-        return notificationJob.hasExtender() || AndroidUtils.isStringNotEmpty(
-            notificationJob.jsonPayload.optString("alert"),
-        )
+        return notificationJob.hasExtender() ||
+            AndroidUtils.isStringNotEmpty(
+                notificationJob.jsonPayload.optString("alert"),
+            )
     }
 
     /**
@@ -234,24 +242,36 @@ internal class NotificationGenerationProcessor(
     //   * Collapse key / id support - Used to lookup the android notification id later
     //   * Redisplay notifications after reboot, upgrade of app, or cold boot after a force kill.
     //   * Future - Public API to get a list of notifications
-    private suspend fun saveNotification(notificationJob: NotificationGenerationJob, opened: Boolean) {
+    private suspend fun saveNotification(
+        notificationJob: NotificationGenerationJob,
+        opened: Boolean,
+    ) {
         Logging.debug("Saving Notification job: $notificationJob")
 
         val jsonPayload = notificationJob.jsonPayload
         try {
             val customJSON = getCustomJSONObject(jsonPayload)
 
-            val collapseKey: String? = if (jsonPayload.has("collapse_key") && "do_not_collapse" != jsonPayload.optString("collapse_key")) jsonPayload.optString("collapse_key") else null
+            val collapseKey: String? =
+                if (jsonPayload.has("collapse_key") && "do_not_collapse" != jsonPayload.optString("collapse_key")) {
+                    jsonPayload.optString(
+                        "collapse_key",
+                    )
+                } else {
+                    null
+                }
 
             // Set expire_time
-            val sentTime = jsonPayload.optLong(
-                NotificationConstants.GOOGLE_SENT_TIME_KEY,
-                _time.currentTimeMillis,
-            ) / 1000L
-            val ttl = jsonPayload.optInt(
-                NotificationConstants.GOOGLE_TTL_KEY,
-                NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD,
-            )
+            val sentTime =
+                jsonPayload.optLong(
+                    NotificationConstants.GOOGLE_SENT_TIME_KEY,
+                    _time.currentTimeMillis,
+                ) / 1000L
+            val ttl =
+                jsonPayload.optInt(
+                    NotificationConstants.GOOGLE_TTL_KEY,
+                    NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD,
+                )
             val expireTime = sentTime + ttl
 
             _dataController.createNotification(

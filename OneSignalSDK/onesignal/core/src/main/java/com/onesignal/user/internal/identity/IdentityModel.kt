@@ -17,12 +17,16 @@ class IdentityModel : MapModel<String>() {
      */
     var onesignalId: String
         get() = getStringProperty(IdentityConstants.ONESIGNAL_ID)
-        set(value) { setStringProperty(IdentityConstants.ONESIGNAL_ID, value) }
+        set(value) {
+            setStringProperty(IdentityConstants.ONESIGNAL_ID, value)
+        }
 
     /**
      * The (developer managed) identifier that uniquely identifies this user.
      */
     var externalId: String?
         get() = getOptStringProperty(IdentityConstants.EXTERNAL_ID)
-        set(value) { setOptStringProperty(IdentityConstants.EXTERNAL_ID, value) }
+        set(value) {
+            setOptStringProperty(IdentityConstants.EXTERNAL_ID, value)
+        }
 }

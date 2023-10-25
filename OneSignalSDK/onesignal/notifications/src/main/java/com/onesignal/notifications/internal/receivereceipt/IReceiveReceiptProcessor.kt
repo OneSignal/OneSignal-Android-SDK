@@ -6,7 +6,6 @@ package com.onesignal.notifications.internal.receivereceipt
  * assurance of success.
  */
 internal interface IReceiveReceiptProcessor {
-
     /**
      * Send the receive receipt to the backend on the current thread.
      *
@@ -14,5 +13,9 @@ internal interface IReceiveReceiptProcessor {
      * @param subscriptionId The id of the subscription the notification was received under.
      * @param notificationId The id of the notification that has been received.
      */
-    suspend fun sendReceiveReceipt(appId: String, subscriptionId: String, notificationId: String)
+    suspend fun sendReceiveReceipt(
+        appId: String,
+        subscriptionId: String,
+        notificationId: String,
+    )
 }

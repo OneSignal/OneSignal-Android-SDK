@@ -9,7 +9,6 @@ import com.onesignal.common.events.EventProducer
 open class SingletonModelStore<TModel>(
     val store: ModelStore<TModel>,
 ) : ISingletonModelStore<TModel>, IModelStoreChangeHandler<TModel> where TModel : Model {
-
     private val _changeSubscription: EventProducer<ISingletonModelStoreChangeHandler<TModel>> = EventProducer()
     private val _singletonId: String = "-singleton-"
 
@@ -34,29 +33,41 @@ open class SingletonModelStore<TModel>(
             }
         }
 
-    override fun replace(model: TModel, tag: String) {
-        synchronized(replaceLock) {
-            val existingModel = this.model
-            existingModel.initializeFromModel(_singletonId, model)
-            store.persist()
-            _changeSubscription.fire { it.onModelReplaced(existingModel, tag) }
-        }
+    override fun replace(
+        model: TModel,
+        tag: String,
+    ) {
+        val existingModel = this.model
+        existingModel.initializeFromModel(_singletonId, model)
+        store.persist()
+        _changeSubscription.fire { it.onModelReplaced(existingModel, tag) }
     }
 
     override fun subscribe(handler: ISingletonModelStoreChangeHandler<TModel>) = _changeSubscription.subscribe(handler)
+
     override fun unsubscribe(handler: ISingletonModelStoreChangeHandler<TModel>) = _changeSubscription.unsubscribe(handler)
+
     override val hasSubscribers: Boolean
         get() = _changeSubscription.hasSubscribers
 
-    override fun onModelAdded(model: TModel, tag: String) {
+    override fun onModelAdded(
+        model: TModel,
+        tag: String,
+    ) {
         // singleton is assumed to always exist. It gets added transparently therefore no event.
     }
 
-    override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
+    override fun onModelUpdated(
+        args: ModelChangedArgs,
+        tag: String,
+    ) {
         _changeSubscription.fire { it.onModelUpdated(args, tag) }
     }
 
-    override fun onModelRemoved(model: TModel, tag: String) {
+    override fun onModelRemoved(
+        model: TModel,
+        tag: String,
+    ) {
         // singleton is assumed to always exist. It never gets removed therefore no event.
     }
 }

@@ -8,7 +8,6 @@ internal class OSNotificationOpenBehaviorFromPushPayload(
     private val context: Context,
     private val fcmPayload: JSONObject,
 ) {
-
     val shouldOpenApp: Boolean
         get() {
             return OSNotificationOpenAppSettings.getShouldOpenActivity(context) &&

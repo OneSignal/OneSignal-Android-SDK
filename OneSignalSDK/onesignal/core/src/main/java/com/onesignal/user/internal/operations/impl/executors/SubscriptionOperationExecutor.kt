@@ -38,7 +38,6 @@ internal class SubscriptionOperationExecutor(
     private val _configModelStore: ConfigModelStore,
     private val _buildUserService: IRebuildUserService,
 ) : IOperationExecutor {
-
     override val operations: List<String>
         get() = listOf(CREATE_SUBSCRIPTION, UPDATE_SUBSCRIPTION, DELETE_SUBSCRIPTION, TRANSFER_SUBSCRIPTION)
 
@@ -60,7 +59,10 @@ internal class SubscriptionOperationExecutor(
         }
     }
 
-    private suspend fun createSubscription(createOperation: CreateSubscriptionOperation, operations: List<Operation>): ExecutionResponse {
+    private suspend fun createSubscription(
+        createOperation: CreateSubscriptionOperation,
+        operations: List<Operation>,
+    ): ExecutionResponse {
         // if there are any deletes all operations should be tossed, nothing to do.
         if (operations.any { it is DeleteSubscriptionOperation }) {
             return ExecutionResponse(ExecutionResult.SUCCESS)
@@ -74,27 +76,29 @@ internal class SubscriptionOperationExecutor(
         val status = lastUpdateOperation?.status ?: createOperation.status
 
         try {
-            val subscription = SubscriptionObject(
-                id = null,
-                convert(createOperation.type),
-                address,
-                enabled,
-                status.value,
-                OneSignalUtils.sdkVersion,
-                Build.MODEL,
-                Build.VERSION.RELEASE,
-                RootToolsInternalMethods.isRooted,
-                DeviceUtils.getNetType(_applicationService.appContext),
-                DeviceUtils.getCarrierName(_applicationService.appContext),
-                AndroidUtils.getAppVersion(_applicationService.appContext),
-            )
+            val subscription =
+                SubscriptionObject(
+                    id = null,
+                    convert(createOperation.type),
+                    address,
+                    enabled,
+                    status.value,
+                    OneSignalUtils.sdkVersion,
+                    Build.MODEL,
+                    Build.VERSION.RELEASE,
+                    RootToolsInternalMethods.isRooted,
+                    DeviceUtils.getNetType(_applicationService.appContext),
+                    DeviceUtils.getCarrierName(_applicationService.appContext),
+                    AndroidUtils.getAppVersion(_applicationService.appContext),
+                )
 
-            val backendSubscriptionId = _subscriptionBackend.createSubscription(
-                createOperation.appId,
-                IdentityConstants.ONESIGNAL_ID,
-                createOperation.onesignalId,
-                subscription,
-            ) ?: return ExecutionResponse(ExecutionResult.SUCCESS)
+            val backendSubscriptionId =
+                _subscriptionBackend.createSubscription(
+                    createOperation.appId,
+                    IdentityConstants.ONESIGNAL_ID,
+                    createOperation.onesignalId,
+                    subscription,
+                ) ?: return ExecutionResponse(ExecutionResult.SUCCESS)
 
             // update the subscription model with the new ID, if it's still active.
             val subscriptionModel = _subscriptionModelStore.get(createOperation.subscriptionId)
@@ -136,24 +140,28 @@ internal class SubscriptionOperationExecutor(
         }
     }
 
-    private suspend fun updateSubscription(startingOperation: UpdateSubscriptionOperation, operations: List<Operation>): ExecutionResponse {
+    private suspend fun updateSubscription(
+        startingOperation: UpdateSubscriptionOperation,
+        operations: List<Operation>,
+    ): ExecutionResponse {
         // the effective enabled/address is the last update performed
         val lastOperation = operations.last() as UpdateSubscriptionOperation
         try {
-            val subscription = SubscriptionObject(
-                id = null,
-                convert(lastOperation.type),
-                lastOperation.address,
-                lastOperation.enabled,
-                lastOperation.status.value,
-                OneSignalUtils.sdkVersion,
-                Build.MODEL,
-                Build.VERSION.RELEASE,
-                RootToolsInternalMethods.isRooted,
-                DeviceUtils.getNetType(_applicationService.appContext),
-                DeviceUtils.getCarrierName(_applicationService.appContext),
-                AndroidUtils.getAppVersion(_applicationService.appContext),
-            )
+            val subscription =
+                SubscriptionObject(
+                    id = null,
+                    convert(lastOperation.type),
+                    lastOperation.address,
+                    lastOperation.enabled,
+                    lastOperation.status.value,
+                    OneSignalUtils.sdkVersion,
+                    Build.MODEL,
+                    Build.VERSION.RELEASE,
+                    RootToolsInternalMethods.isRooted,
+                    DeviceUtils.getNetType(_applicationService.appContext),
+                    DeviceUtils.getCarrierName(_applicationService.appContext),
+                    AndroidUtils.getAppVersion(_applicationService.appContext),
+                )
 
             _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription)
         } catch (ex: BackendException) {
@@ -164,7 +172,21 @@ internal class SubscriptionOperationExecutor(
                     ExecutionResponse(ExecutionResult.FAIL_RETRY)
                 NetworkUtils.ResponseStatusType.MISSING ->
                     // toss this, but create an identical CreateSubscriptionOperation to re-create the subscription being updated.
-                    ExecutionResponse(ExecutionResult.FAIL_NORETRY, operations = listOf(CreateSubscriptionOperation(lastOperation.appId, lastOperation.onesignalId, lastOperation.subscriptionId, lastOperation.type, lastOperation.enabled, lastOperation.address, lastOperation.status)))
+                    ExecutionResponse(
+                        ExecutionResult.FAIL_NORETRY,
+                        operations =
+                            listOf(
+                                CreateSubscriptionOperation(
+                                    lastOperation.appId,
+                                    lastOperation.onesignalId,
+                                    lastOperation.subscriptionId,
+                                    lastOperation.type,
+                                    lastOperation.enabled,
+                                    lastOperation.address,
+                                    lastOperation.status,
+                                ),
+                            ),
+                    )
                 else ->
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)
             }
@@ -175,7 +197,12 @@ internal class SubscriptionOperationExecutor(
 
     private suspend fun transferSubscription(startingOperation: TransferSubscriptionOperation): ExecutionResponse {
         try {
-            _subscriptionBackend.transferSubscription(startingOperation.appId, startingOperation.subscriptionId, IdentityConstants.ONESIGNAL_ID, startingOperation.onesignalId)
+            _subscriptionBackend.transferSubscription(
+                startingOperation.appId,
+                startingOperation.subscriptionId,
+                IdentityConstants.ONESIGNAL_ID,
+                startingOperation.onesignalId,
+            )
         } catch (ex: BackendException) {
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
 

@@ -5,7 +5,6 @@ package com.onesignal.notifications
  * in order to receive control when the push permission state has changed on the current device.
  */
 interface IPermissionObserver {
-
     /**
      * Called when the permission state has changed.
      *

@@ -25,7 +25,6 @@ internal open class OSDatabase(
     context: Context?,
     version: Int = dbVersion,
 ) : SQLiteOpenHelper(context, DATABASE_NAME, null, version), IDatabase {
-
     /**
      * Should be used in the event that we don't want to retry getting the a [SQLiteDatabase] instance
      * Replaced all [SQLiteOpenHelper.getReadableDatabase] with [SQLiteOpenHelper.getWritableDatabase]
@@ -90,26 +89,28 @@ internal open class OSDatabase(
         val cursor: Cursor
         synchronized(LOCK) {
             if (limit == null) {
-                cursor = getSQLiteDatabaseWithRetries().query(
-                    table,
-                    columns,
-                    whereClause,
-                    whereArgs,
-                    groupBy,
-                    having,
-                    orderBy,
-                )
+                cursor =
+                    getSQLiteDatabaseWithRetries().query(
+                        table,
+                        columns,
+                        whereClause,
+                        whereArgs,
+                        groupBy,
+                        having,
+                        orderBy,
+                    )
             } else {
-                cursor = getSQLiteDatabaseWithRetries().query(
-                    table,
-                    columns,
-                    whereClause,
-                    whereArgs,
-                    groupBy,
-                    having,
-                    orderBy,
-                    limit,
-                )
+                cursor =
+                    getSQLiteDatabaseWithRetries().query(
+                        table,
+                        columns,
+                        whereClause,
+                        whereArgs,
+                        groupBy,
+                        having,
+                        orderBy,
+                        limit,
+                    )
             }
         }
 
@@ -119,7 +120,11 @@ internal open class OSDatabase(
         }
     }
 
-    override fun insert(table: String, nullColumnHack: String?, values: ContentValues?) {
+    override fun insert(
+        table: String,
+        nullColumnHack: String?,
+        values: ContentValues?,
+    ) {
         synchronized(LOCK) {
             val writableDb = getSQLiteDatabaseWithRetries()
             try {
@@ -149,7 +154,11 @@ internal open class OSDatabase(
     }
 
     @Throws(SQLException::class)
-    override fun insertOrThrow(table: String, nullColumnHack: String?, values: ContentValues?) {
+    override fun insertOrThrow(
+        table: String,
+        nullColumnHack: String?,
+        values: ContentValues?,
+    ) {
         synchronized(LOCK) {
             val writableDb = getSQLiteDatabaseWithRetries()
             try {
@@ -215,7 +224,11 @@ internal open class OSDatabase(
         return result
     }
 
-    override fun delete(table: String, whereClause: String?, whereArgs: Array<String>?) {
+    override fun delete(
+        table: String,
+        whereClause: String?,
+        whereArgs: Array<String>?,
+    ) {
         synchronized(LOCK) {
             val writableDb = getSQLiteDatabaseWithRetries()
             try {
@@ -254,7 +267,11 @@ internal open class OSDatabase(
         }
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+    override fun onUpgrade(
+        db: SQLiteDatabase,
+        oldVersion: Int,
+        newVersion: Int,
+    ) {
         Logging.debug("OneSignal Database onUpgrade from: $oldVersion to: $newVersion")
 
         try {
@@ -267,7 +284,11 @@ internal open class OSDatabase(
     }
 
     @Synchronized
-    private fun internalOnUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+    private fun internalOnUpgrade(
+        db: SQLiteDatabase,
+        oldVersion: Int,
+        newVersion: Int,
+    ) {
         if (oldVersion < 2 && newVersion >= 2) upgradeToV2(db)
         if (oldVersion < 3 && newVersion >= 3) upgradeToV3(db)
         if (oldVersion < 4 && newVersion >= 4) upgradeToV4(db)
@@ -329,7 +350,10 @@ internal open class OSDatabase(
         safeExecSQL(db, SQL_CREATE_IN_APP_MESSAGE_ENTRIES)
     }
 
-    private fun safeExecSQL(db: SQLiteDatabase, sql: String) {
+    private fun safeExecSQL(
+        db: SQLiteDatabase,
+        sql: String,
+    ) {
         try {
             db.execSQL(sql)
         } catch (e: SQLiteException) {
@@ -347,7 +371,11 @@ internal open class OSDatabase(
         _outcomeTableProvider.upgradeOutcomeTableRevision3To4(db)
     }
 
-    override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+    override fun onDowngrade(
+        db: SQLiteDatabase,
+        oldVersion: Int,
+        newVersion: Int,
+    ) {
         Logging.warn("SDK version rolled back! Clearing $DATABASE_NAME as it could be in an unexpected state.")
 
         db.rawQuery("SELECT name FROM sqlite_master WHERE type='table'", null).use {
@@ -398,14 +426,15 @@ internal open class OSDatabase(
                 OneSignalDbContract.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION + INT_TYPE + COMMA_SEP +
                 OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS + TEXT_TYPE +
                 ");"
-        private val SQL_INDEX_ENTRIES = arrayOf(
-            OneSignalDbContract.NotificationTable.INDEX_CREATE_NOTIFICATION_ID,
-            OneSignalDbContract.NotificationTable.INDEX_CREATE_ANDROID_NOTIFICATION_ID,
-            OneSignalDbContract.NotificationTable.INDEX_CREATE_GROUP_ID,
-            OneSignalDbContract.NotificationTable.INDEX_CREATE_COLLAPSE_ID,
-            OneSignalDbContract.NotificationTable.INDEX_CREATE_CREATED_TIME,
-            OneSignalDbContract.NotificationTable.INDEX_CREATE_EXPIRE_TIME,
-        )
+        private val SQL_INDEX_ENTRIES =
+            arrayOf(
+                OneSignalDbContract.NotificationTable.INDEX_CREATE_NOTIFICATION_ID,
+                OneSignalDbContract.NotificationTable.INDEX_CREATE_ANDROID_NOTIFICATION_ID,
+                OneSignalDbContract.NotificationTable.INDEX_CREATE_GROUP_ID,
+                OneSignalDbContract.NotificationTable.INDEX_CREATE_COLLAPSE_ID,
+                OneSignalDbContract.NotificationTable.INDEX_CREATE_CREATED_TIME,
+                OneSignalDbContract.NotificationTable.INDEX_CREATE_EXPIRE_TIME,
+            )
 
         const val DEFAULT_TTL_IF_NOT_IN_PAYLOAD = 259_200
     }

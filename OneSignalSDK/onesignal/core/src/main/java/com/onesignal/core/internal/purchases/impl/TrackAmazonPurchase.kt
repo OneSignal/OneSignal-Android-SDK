@@ -140,6 +140,7 @@ internal class TrackAmazonPurchase(
         var orgPurchasingListener: PurchasingListener? = null
         private var lastRequestId: RequestId? = null
         private var currentMarket: String? = null
+
         private fun marketToCurrencyCode(market: String?): String {
             when (market) {
                 "US" -> return "USD"
@@ -176,7 +177,15 @@ internal class TrackAmazonPurchase(
                             purchasesToReport.add(PurchaseInfo(sku, iso, price))
                         }
 
-                        _operationRepo.enqueue(TrackPurchaseOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, false, amountSpent, purchasesToReport))
+                        _operationRepo.enqueue(
+                            TrackPurchaseOperation(
+                                _configModelStore.model.appId,
+                                _identityModelStore.model.onesignalId,
+                                false,
+                                amountSpent,
+                                purchasesToReport,
+                            ),
+                        )
                     }
                     else -> { }
                 }

@@ -10,7 +10,6 @@ import com.onesignal.inAppMessages.internal.lifecycle.IInAppLifecycleService
 internal class IAMLifecycleService() :
     EventProducer<IInAppLifecycleEventHandler>(),
     IInAppLifecycleService {
-
     override fun messageWillDisplay(message: InAppMessage) {
         fire { it.onMessageWillDisplay(message) }
     }
@@ -19,15 +18,24 @@ internal class IAMLifecycleService() :
         fire { it.onMessageWasDisplayed(message) }
     }
 
-    override fun messageActionOccurredOnPreview(message: InAppMessage, action: InAppMessageClickResult) {
+    override fun messageActionOccurredOnPreview(
+        message: InAppMessage,
+        action: InAppMessageClickResult,
+    ) {
         fire { it.onMessageActionOccurredOnPreview(message, action) }
     }
 
-    override fun messageActionOccurredOnMessage(message: InAppMessage, action: InAppMessageClickResult) {
+    override fun messageActionOccurredOnMessage(
+        message: InAppMessage,
+        action: InAppMessageClickResult,
+    ) {
         fire { it.onMessageActionOccurredOnMessage(message, action) }
     }
 
-    override fun messagePageChanged(message: InAppMessage, page: InAppMessagePage) {
+    override fun messagePageChanged(
+        message: InAppMessage,
+        page: InAppMessagePage,
+    ) {
         fire { it.onMessagePageChanged(message, page) }
     }
 

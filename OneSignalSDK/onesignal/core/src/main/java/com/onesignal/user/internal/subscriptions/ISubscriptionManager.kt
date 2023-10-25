@@ -8,15 +8,28 @@ interface ISubscriptionManager : IEventNotifier<ISubscriptionChangedHandler> {
     var subscriptions: SubscriptionList
 
     val pushSubscriptionModel: SubscriptionModel
+
     fun addEmailSubscription(email: String)
-    fun addOrUpdatePushSubscription(pushToken: String?, pushTokenStatus: SubscriptionStatus)
+
+    fun addOrUpdatePushSubscription(
+        pushToken: String?,
+        pushTokenStatus: SubscriptionStatus,
+    )
+
     fun addSmsSubscription(sms: String)
+
     fun removeEmailSubscription(email: String)
+
     fun removeSmsSubscription(sms: String)
 }
 
 interface ISubscriptionChangedHandler {
     fun onSubscriptionAdded(subscription: ISubscription)
-    fun onSubscriptionChanged(subscription: ISubscription, args: ModelChangedArgs)
+
+    fun onSubscriptionChanged(
+        subscription: ISubscription,
+        args: ModelChangedArgs,
+    )
+
     fun onSubscriptionRemoved(subscription: ISubscription)
 }

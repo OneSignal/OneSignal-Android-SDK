@@ -12,8 +12,9 @@ internal class OutcomeEventParams constructor(
 ) {
     @Throws(JSONException::class)
     fun toJSONObject(): JSONObject {
-        val json = JSONObject()
-            .put(OutcomeConstants.OUTCOME_ID, outcomeId)
+        val json =
+            JSONObject()
+                .put(OutcomeConstants.OUTCOME_ID, outcomeId)
         outcomeSource?.let {
             json.put(OutcomeConstants.OUTCOME_SOURCES, it.toJSONObject())
         }

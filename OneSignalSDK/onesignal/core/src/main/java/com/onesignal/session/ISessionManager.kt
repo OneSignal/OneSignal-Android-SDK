@@ -33,5 +33,8 @@ interface ISessionManager {
      *
      * @return this user manager to allow for chaining of calls.
      */
-    fun addOutcomeWithValue(name: String, value: Float)
+    fun addOutcomeWithValue(
+        name: String,
+        value: Float,
+    )
 }

@@ -13,13 +13,11 @@ class PushSubscriptionState(
      * been successfully assigned.
      */
     val id: String,
-
     /**
      * The token which identifies the device/app that notifications are to be sent. May
      * be an empty string, indicating the push token has not yet been retrieved.
      */
     val token: String,
-
     /**
      *  Whether the user of this subscription is opted-in to received notifications. When true,
      *  the user is able to receive notifications through this subscription. Otherwise, the
@@ -30,10 +28,8 @@ class PushSubscriptionState(
 ) {
     fun toJSONObject(): JSONObject {
         return JSONObject()
-                .put("id", id)
-                .put("token", token)
-                .put("optedIn", optedIn)
+            .put("id", id)
+            .put("token", token)
+            .put("optedIn", optedIn)
     }
 }
-
-
