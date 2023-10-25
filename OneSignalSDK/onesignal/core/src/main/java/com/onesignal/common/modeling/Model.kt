@@ -62,7 +62,7 @@ open class Model(
         }
 
     protected val data: MutableMap<String, Any?> = Collections.synchronizedMap(mutableMapOf())
-    private val _changeNotifier = EventProducer<IModelChangedHandler>()
+    private val changeNotifier = EventProducer<IModelChangedHandler>()
 
     init {
         if (_parentModel != null && _parentProperty == null) {
@@ -644,7 +644,7 @@ open class Model(
     ) {
         // if there are any changed listeners for this specific model, notify them.
         val changeArgs = ModelChangedArgs(this, path, property, oldValue, newValue)
-        _changeNotifier.fire { it.onChanged(changeArgs, tag) }
+        changeNotifier.fire { it.onChanged(changeArgs, tag) }
 
         // if there is a parent model, propagate the change up to the parent for it's own processing.
         if (_parentModel != null) {
@@ -684,10 +684,10 @@ open class Model(
         return jsonObject
     }
 
-    override fun subscribe(handler: IModelChangedHandler) = _changeNotifier.subscribe(handler)
+    override fun subscribe(handler: IModelChangedHandler) = changeNotifier.subscribe(handler)
 
-    override fun unsubscribe(handler: IModelChangedHandler) = _changeNotifier.unsubscribe(handler)
+    override fun unsubscribe(handler: IModelChangedHandler) = changeNotifier.unsubscribe(handler)
 
     override val hasSubscribers: Boolean
-        get() = _changeNotifier.hasSubscribers
+        get() = changeNotifier.hasSubscribers
 }

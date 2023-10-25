@@ -23,30 +23,30 @@ interface IOneSignal {
      * The user manager for accessing user-scoped
      * management.
      */
-    val User: IUserManager
+    val user: IUserManager
 
     /**
      * The session manager for accessing session-scoped management.
      */
-    val Session: ISessionManager
+    val session: ISessionManager
 
     /**
      * The notification manager for accessing device-scoped
      * notification management.
      */
-    val Notifications: INotificationsManager
+    val notifications: INotificationsManager
 
     /**
      * The location manager for accessing device-scoped
      * location management.
      */
-    val Location: ILocationManager
+    val location: ILocationManager
 
     /**
      * The In App Messaging manager for accessing device-scoped
      * IAP management.
      */
-    val InAppMessages: IInAppMessagesManager
+    val inAppMessages: IInAppMessagesManager
 
     /**
      * Access to debug the SDK in the event additional information is required to diagnose any
@@ -54,7 +54,7 @@ interface IOneSignal {
      *
      * WARNING: This should not be used in a production setting.
      */
-    val Debug: IDebugManager
+    val debug: IDebugManager
 
     /**
      * Determines whether a user must consent to privacy prior
@@ -90,7 +90,7 @@ interface IOneSignal {
 
     /**
      * Login to OneSignal under the user identified by the [externalId] provided. The act of
-     * logging a user into the OneSignal SDK will switch the [User] context to that specific user.
+     * logging a user into the OneSignal SDK will switch the [user] context to that specific user.
      *
      * * If the [externalId] exists the user will be retrieved and the context set from that
      *   user information. If operations have already been performed under a guest user, they
@@ -117,7 +117,7 @@ interface IOneSignal {
     fun login(externalId: String) = login(externalId, null)
 
     /**
-     * Logout the user previously logged in via [login]. The [User] property now references
+     * Logout the user previously logged in via [login]. The [user] property now references
      * a new device-scoped user. A device-scoped user has no user identity that can later
      * be retrieved, except through this device as long as the app remains installed and the app
      * data is not cleared.

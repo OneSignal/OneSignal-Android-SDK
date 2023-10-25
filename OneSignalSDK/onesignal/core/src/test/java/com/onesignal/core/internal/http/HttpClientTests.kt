@@ -61,7 +61,7 @@ class HttpClientTests : FunSpec({
 
         // Then
         for (connection in factory.connections) {
-            connection.getRequestProperty("SDK-Version") shouldBe "onesignal/android/${OneSignalUtils.sdkVersion}"
+            connection.getRequestProperty("SDK-Version") shouldBe "onesignal/android/${OneSignalUtils.SDK_VERSION}"
         }
     }
 

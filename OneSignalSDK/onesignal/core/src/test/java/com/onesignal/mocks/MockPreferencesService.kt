@@ -7,44 +7,44 @@ import com.onesignal.core.internal.preferences.IPreferencesService
  * and will return any saved value in memory.
  */
 internal class MockPreferencesService(map: Map<String, Any?>? = null) : IPreferencesService {
-    private val _map: MutableMap<String, Any?> = map?.toMutableMap() ?: mutableMapOf()
+    private val map: MutableMap<String, Any?> = map?.toMutableMap() ?: mutableMapOf()
 
     override fun getString(
         store: String,
         key: String,
         defValue: String?,
-    ): String? = (_map[key] as String?) ?: defValue
+    ): String? = (map[key] as String?) ?: defValue
 
     override fun getBool(
         store: String,
         key: String,
         defValue: Boolean?,
-    ): Boolean? = (_map[key] as Boolean?) ?: defValue
+    ): Boolean? = (map[key] as Boolean?) ?: defValue
 
     override fun getInt(
         store: String,
         key: String,
         defValue: Int?,
-    ): Int? = (_map[key] as Int?) ?: defValue
+    ): Int? = (map[key] as Int?) ?: defValue
 
     override fun getLong(
         store: String,
         key: String,
         defValue: Long?,
-    ): Long? = (_map[key] as Long?) ?: defValue
+    ): Long? = (map[key] as Long?) ?: defValue
 
     override fun getStringSet(
         store: String,
         key: String,
         defValue: Set<String>?,
-    ): Set<String>? = (_map[key] as Set<String>?) ?: defValue
+    ): Set<String>? = (map[key] as Set<String>?) ?: defValue
 
     override fun saveString(
         store: String,
         key: String,
         value: String?,
     ) {
-        _map[key] = value
+        map[key] = value
     }
 
     override fun saveBool(
@@ -52,7 +52,7 @@ internal class MockPreferencesService(map: Map<String, Any?>? = null) : IPrefere
         key: String,
         value: Boolean?,
     ) {
-        _map[key] = value
+        map[key] = value
     }
 
     override fun saveInt(
@@ -60,7 +60,7 @@ internal class MockPreferencesService(map: Map<String, Any?>? = null) : IPrefere
         key: String,
         value: Int?,
     ) {
-        _map[key] = value
+        map[key] = value
     }
 
     override fun saveLong(
@@ -68,7 +68,7 @@ internal class MockPreferencesService(map: Map<String, Any?>? = null) : IPrefere
         key: String,
         value: Long?,
     ) {
-        _map[key] = value
+        map[key] = value
     }
 
     override fun saveStringSet(
@@ -76,6 +76,6 @@ internal class MockPreferencesService(map: Map<String, Any?>? = null) : IPrefere
         key: String,
         value: Set<String>?,
     ) {
-        _map[key] = value
+        map[key] = value
     }
 }

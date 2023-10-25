@@ -9,7 +9,7 @@ object NetworkUtils {
         CONFLICT,
     }
 
-    var MAX_NETWORK_REQUEST_ATTEMPT_COUNT = 3
+    var maxNetworkRequestAttemptCount = 3
 
     fun getResponseStatusType(statusCode: Int): ResponseStatusType {
         return when (statusCode) {

@@ -11,23 +11,23 @@ import java.util.Collections
  */
 open class EventProducer<THandler> : IEventNotifier<THandler> {
     override val hasSubscribers: Boolean
-        get() = _subscribers.any()
+        get() = subscribers.any()
 
-    private val _subscribers: MutableList<THandler> = Collections.synchronizedList(mutableListOf())
+    private val subscribers: MutableList<THandler> = Collections.synchronizedList(mutableListOf())
 
     override fun subscribe(handler: THandler) {
-        _subscribers.add(handler)
+        subscribers.add(handler)
     }
 
     override fun unsubscribe(handler: THandler) {
-        _subscribers.remove(handler)
+        subscribers.remove(handler)
     }
 
     /**
      * Subscribe all from an existing producer to this subscriber.
      */
     fun subscribeAll(from: EventProducer<THandler>) {
-        for (s in from._subscribers) {
+        for (s in from.subscribers) {
             subscribe(s)
         }
     }
@@ -39,7 +39,7 @@ open class EventProducer<THandler> : IEventNotifier<THandler> {
      * @param callback The callback will be invoked for each subscribed handler, allowing you to call the handler.
      */
     fun fire(callback: (THandler) -> Unit) {
-        for (s in _subscribers) {
+        for (s in subscribers) {
             callback(s)
         }
     }
@@ -53,7 +53,7 @@ open class EventProducer<THandler> : IEventNotifier<THandler> {
      */
     fun fireOnMain(callback: (THandler) -> Unit) {
         suspendifyOnMain {
-            for (s in _subscribers) {
+            for (s in subscribers) {
                 callback(s)
             }
         }
@@ -66,7 +66,7 @@ open class EventProducer<THandler> : IEventNotifier<THandler> {
      * @param callback The callback will be invoked for each subscribed handler, allowing you to call the handler.
      */
     suspend fun suspendingFire(callback: suspend (THandler) -> Unit) {
-        for (s in _subscribers) {
+        for (s in subscribers) {
             callback(s)
         }
     }
@@ -79,7 +79,7 @@ open class EventProducer<THandler> : IEventNotifier<THandler> {
      */
     suspend fun suspendingFireOnMain(callback: suspend (THandler) -> Unit) {
         withContext(Dispatchers.Main) {
-            for (s in _subscribers) {
+            for (s in subscribers) {
                 callback(s)
             }
         }

@@ -50,33 +50,33 @@ import com.onesignal.user.internal.subscriptions.SubscriptionType
 import org.json.JSONObject
 
 internal class OneSignalImp : IOneSignal, IServiceProvider {
-    override val sdkVersion: String = OneSignalUtils.sdkVersion
+    override val sdkVersion: String = OneSignalUtils.SDK_VERSION
     override var isInitialized: Boolean = false
 
     override var consentRequired: Boolean
-        get() = _configModel?.consentRequired ?: (_consentRequired == true)
+        get() = configModel?.consentRequired ?: (_consentRequired == true)
         set(value) {
             _consentRequired = value
-            _configModel?.consentRequired = value
+            configModel?.consentRequired = value
         }
 
     override var consentGiven: Boolean
-        get() = _configModel?.consentGiven ?: (_consentGiven == true)
+        get() = configModel?.consentGiven ?: (_consentGiven == true)
         set(value) {
             _consentGiven = value
-            _configModel?.consentGiven = value
+            configModel?.consentGiven = value
         }
 
     override var disableGMSMissingPrompt: Boolean
-        get() = _configModel?.disableGMSMissingPrompt ?: (_disableGMSMissingPrompt == true)
+        get() = configModel?.disableGMSMissingPrompt ?: (_disableGMSMissingPrompt == true)
         set(value) {
             _disableGMSMissingPrompt = value
-            _configModel?.disableGMSMissingPrompt = value
+            configModel?.disableGMSMissingPrompt = value
         }
 
     // we hardcode the DebugManager implementation so it can be used prior to calling `initWithContext`
-    override val Debug: IDebugManager = DebugManager()
-    override val Session: ISessionManager get() =
+    override val debug: IDebugManager = DebugManager()
+    override val session: ISessionManager get() =
         if (isInitialized) {
             _session!!
         } else {
@@ -84,7 +84,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 "Must call 'initWithContext' before use",
             )
         }
-    override val Notifications: INotificationsManager get() =
+    override val notifications: INotificationsManager get() =
         if (isInitialized) {
             _notifications!!
         } else {
@@ -92,7 +92,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 "Must call 'initWithContext' before use",
             )
         }
-    override val Location: ILocationManager get() =
+    override val location: ILocationManager get() =
         if (isInitialized) {
             _location!!
         } else {
@@ -100,39 +100,39 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 "Must call 'initWithContext' before use",
             )
         }
-    override val InAppMessages: IInAppMessagesManager get() =
+    override val inAppMessages: IInAppMessagesManager get() =
         if (isInitialized) {
-            _iam!!
+            iam!!
         } else {
             throw Exception(
                 "Must call 'initWithContext' before use",
             )
         }
-    override val User: IUserManager get() = if (isInitialized) _user!! else throw Exception("Must call 'initWithContext' before use")
+    override val user: IUserManager get() = if (isInitialized) _user!! else throw Exception("Must call 'initWithContext' before use")
 
     // Services required by this class
     private var _user: IUserManager? = null
     private var _session: ISessionManager? = null
-    private var _iam: IInAppMessagesManager? = null
+    private var iam: IInAppMessagesManager? = null
     private var _location: ILocationManager? = null
     private var _notifications: INotificationsManager? = null
-    private var _operationRepo: IOperationRepo? = null
-    private var _identityModelStore: IdentityModelStore? = null
-    private var _propertiesModelStore: PropertiesModelStore? = null
-    private var _subscriptionModelStore: SubscriptionModelStore? = null
-    private var _startupService: StartupService? = null
-    private var _preferencesService: IPreferencesService? = null
+    private var operationRepo: IOperationRepo? = null
+    private var identityModelStore: IdentityModelStore? = null
+    private var propertiesModelStore: PropertiesModelStore? = null
+    private var subscriptionModelStore: SubscriptionModelStore? = null
+    private var startupService: StartupService? = null
+    private var preferencesService: IPreferencesService? = null
 
     // Other State
-    private val _services: ServiceProvider
-    private var _configModel: ConfigModel? = null
-    private var _sessionModel: SessionModel? = null
+    private val services: ServiceProvider
+    private var configModel: ConfigModel? = null
+    private var sessionModel: SessionModel? = null
     private var _consentRequired: Boolean? = null
     private var _consentGiven: Boolean? = null
     private var _disableGMSMissingPrompt: Boolean? = null
-    private val _loginLock: Any = Any()
+    private val loginLock: Any = Any()
 
-    private val _listOfModules =
+    private val listOfModules =
         listOf(
             "com.onesignal.notifications.NotificationsModule",
             "com.onesignal.inAppMessages.InAppMessagesModule",
@@ -147,7 +147,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         modules.add(CoreModule())
         modules.add(SessionModule())
         modules.add(UserModule())
-        for (moduleClassName in _listOfModules) {
+        for (moduleClassName in listOfModules) {
             try {
                 val moduleClass = Class.forName(moduleClassName)
                 val moduleInstance = moduleClass.newInstance() as IModule
@@ -161,7 +161,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             module.register(serviceBuilder)
         }
 
-        _services = serviceBuilder.build()
+        services = serviceBuilder.build()
     }
 
     override fun initWithContext(
@@ -178,20 +178,20 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         // start the application service. This is called explicitly first because we want
         // to make sure it has the context provided on input, for all other startable services
         // to depend on if needed.
-        val applicationService = _services.getService<IApplicationService>()
+        val applicationService = services.getService<IApplicationService>()
         (applicationService as ApplicationService).start(context)
 
         // Give the logging singleton access to the application service to support visual logging.
         Logging.applicationService = applicationService
 
         // get the current config model, if there is one
-        _configModel = _services.getService<ConfigModelStore>().model
-        _sessionModel = _services.getService<SessionModelStore>().model
+        configModel = services.getService<ConfigModelStore>().model
+        sessionModel = services.getService<SessionModelStore>().model
 
         // initWithContext is called by our internal services/receivers/activites but they do not provide
         // an appId (they don't know it).  If the app has never called the external initWithContext
         // prior to our services/receivers/activities we will blow up, as no appId has been established.
-        if (appId == null && !_configModel!!.hasProperty(ConfigModel::appId.name)) {
+        if (appId == null && !configModel!!.hasProperty(ConfigModel::appId.name)) {
             Logging.warn("initWithContext called without providing appId, and no appId has been established!")
             return false
         }
@@ -199,52 +199,52 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         var forceCreateUser = false
         // if the app id was specified as input, update the config model with it
         if (appId != null) {
-            if (!_configModel!!.hasProperty(ConfigModel::appId.name) || _configModel!!.appId != appId) {
+            if (!configModel!!.hasProperty(ConfigModel::appId.name) || configModel!!.appId != appId) {
                 forceCreateUser = true
             }
-            _configModel!!.appId = appId
+            configModel!!.appId = appId
         }
 
         // if requires privacy consent was set prior to init, set it in the model now
         if (_consentRequired != null) {
-            _configModel!!.consentRequired = _consentRequired!!
+            configModel!!.consentRequired = _consentRequired!!
         }
 
         // if privacy consent was set prior to init, set it in the model now
         if (_consentGiven != null) {
-            _configModel!!.consentGiven = _consentGiven!!
+            configModel!!.consentGiven = _consentGiven!!
         }
 
         if (_disableGMSMissingPrompt != null) {
-            _configModel!!.disableGMSMissingPrompt = _disableGMSMissingPrompt!!
+            configModel!!.disableGMSMissingPrompt = _disableGMSMissingPrompt!!
         }
 
         // "Inject" the services required by this main class
-        _location = _services.getService()
-        _user = _services.getService()
-        _session = _services.getService()
-        _iam = _services.getService()
-        _notifications = _services.getService()
-        _operationRepo = _services.getService()
-        _propertiesModelStore = _services.getService()
-        _identityModelStore = _services.getService()
-        _subscriptionModelStore = _services.getService()
-        _preferencesService = _services.getService()
+        _location = services.getService()
+        _user = services.getService()
+        _session = services.getService()
+        iam = services.getService()
+        _notifications = services.getService()
+        operationRepo = services.getService()
+        propertiesModelStore = services.getService()
+        identityModelStore = services.getService()
+        subscriptionModelStore = services.getService()
+        preferencesService = services.getService()
 
         // Instantiate and call the IStartableServices
-        _startupService = _services.getService()
-        _startupService!!.bootstrap()
+        startupService = services.getService()
+        startupService!!.bootstrap()
 
-        if (forceCreateUser || !_identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)) {
-            val legacyPlayerId = _preferencesService!!.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID)
+        if (forceCreateUser || !identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)) {
+            val legacyPlayerId = preferencesService!!.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID)
             if (legacyPlayerId == null) {
                 Logging.debug("initWithContext: creating new device-scoped user")
                 createAndSwitchToNewUser()
-                _operationRepo!!.enqueue(
+                operationRepo!!.enqueue(
                     LoginUserOperation(
-                        _configModel!!.appId,
-                        _identityModelStore!!.model.onesignalId,
-                        _identityModelStore!!.model.externalId,
+                        configModel!!.appId,
+                        identityModelStore!!.model.onesignalId,
+                        identityModelStore!!.model.externalId,
                     ),
                 )
             } else {
@@ -254,7 +254,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 // a specialized `LoginUserFromSubscriptionOperation`, which will drive fetching/refreshing of the local user
                 // based on the subscription ID we do have.
                 val legacyUserSyncString =
-                    _preferencesService!!.getString(
+                    preferencesService!!.getString(
                         PreferenceStores.ONESIGNAL,
                         PreferenceOneSignalKeys.PREFS_LEGACY_USER_SYNCVALUES,
                     )
@@ -270,24 +270,24 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                     pushSubscriptionModel.optedIn = notificationTypes != SubscriptionStatus.NO_PERMISSION.value && notificationTypes != SubscriptionStatus.UNSUBSCRIBE.value
                     pushSubscriptionModel.address = legacyUserSyncJSON.safeString("identifier") ?: ""
                     pushSubscriptionModel.status = SubscriptionStatus.fromInt(notificationTypes) ?: SubscriptionStatus.NO_PERMISSION
-                    _configModel!!.pushSubscriptionId = legacyPlayerId
-                    _subscriptionModelStore!!.add(pushSubscriptionModel, ModelChangeTags.NO_PROPOGATE)
+                    configModel!!.pushSubscriptionId = legacyPlayerId
+                    subscriptionModelStore!!.add(pushSubscriptionModel, ModelChangeTags.NO_PROPOGATE)
                     suppressBackendOperation = true
                 }
 
                 createAndSwitchToNewUser(suppressBackendOperation = suppressBackendOperation)
 
-                _operationRepo!!.enqueue(
-                    LoginUserFromSubscriptionOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId, legacyPlayerId),
+                operationRepo!!.enqueue(
+                    LoginUserFromSubscriptionOperation(configModel!!.appId, identityModelStore!!.model.onesignalId, legacyPlayerId),
                 )
-                _preferencesService!!.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID, null)
+                preferencesService!!.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID, null)
             }
         } else {
-            Logging.debug("initWithContext: using cached user ${_identityModelStore!!.model.onesignalId}")
-            _operationRepo!!.enqueue(RefreshUserOperation(_configModel!!.appId, _identityModelStore!!.model.onesignalId))
+            Logging.debug("initWithContext: using cached user ${identityModelStore!!.model.onesignalId}")
+            operationRepo!!.enqueue(RefreshUserOperation(configModel!!.appId, identityModelStore!!.model.onesignalId))
         }
 
-        _startupService!!.start()
+        startupService!!.start()
 
         isInitialized = true
 
@@ -309,17 +309,17 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         var newIdentityOneSignalId: String = ""
 
         // only allow one login/logout at a time
-        synchronized(_loginLock) {
-            currentIdentityExternalId = _identityModelStore!!.model.externalId
-            currentIdentityOneSignalId = _identityModelStore!!.model.onesignalId
+        synchronized(loginLock) {
+            currentIdentityExternalId = identityModelStore!!.model.externalId
+            currentIdentityOneSignalId = identityModelStore!!.model.onesignalId
 
             if (currentIdentityExternalId == externalId) {
                 // login is for same user that is already logged in, fetch (refresh)
                 // the current user.
-                _operationRepo!!.enqueue(
+                operationRepo!!.enqueue(
                     RefreshUserOperation(
-                        _configModel!!.appId,
-                        _identityModelStore!!.model.onesignalId,
+                        configModel!!.appId,
+                        identityModelStore!!.model.onesignalId,
                     ),
                     true,
                 )
@@ -331,7 +331,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 identityModel.externalId = externalId
             }
 
-            newIdentityOneSignalId = _identityModelStore!!.model.onesignalId
+            newIdentityOneSignalId = identityModelStore!!.model.onesignalId
         }
 
         // on a background thread enqueue the login/fetch of the new user
@@ -343,9 +343,9 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             // provide a callback to the caller when we can absolutely say the user is logged
             // in, so they may take action on their own backend.
             val result =
-                _operationRepo!!.enqueueAndWait(
+                operationRepo!!.enqueueAndWait(
                     LoginUserOperation(
-                        _configModel!!.appId,
+                        configModel!!.appId,
                         newIdentityOneSignalId,
                         externalId,
                         if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
@@ -360,10 +360,10 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 // This is a separate enqueue operation to ensure any outstanding operations that happened
                 // after the createAndSwitchToNewUser have been executed, and the retrieval will be the
                 // most up to date reflection of the user.
-                _operationRepo!!.enqueueAndWait(
+                operationRepo!!.enqueueAndWait(
                     RefreshUserOperation(
-                        _configModel!!.appId,
-                        _identityModelStore!!.model.onesignalId,
+                        configModel!!.appId,
+                        identityModelStore!!.model.onesignalId,
                     ),
                     true,
                 )
@@ -380,17 +380,17 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         }
 
         // only allow one login/logout at a time
-        synchronized(_loginLock) {
-            if (_identityModelStore!!.model.externalId == null) {
+        synchronized(loginLock) {
+            if (identityModelStore!!.model.externalId == null) {
                 return
             }
 
             createAndSwitchToNewUser()
-            _operationRepo!!.enqueue(
+            operationRepo!!.enqueue(
                 LoginUserOperation(
-                    _configModel!!.appId,
-                    _identityModelStore!!.model.onesignalId,
-                    _identityModelStore!!.model.externalId,
+                    configModel!!.appId,
+                    identityModelStore!!.model.onesignalId,
+                    identityModelStore!!.model.externalId,
                 ),
             )
 
@@ -427,7 +427,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         // will be automatically transferred over to this new user being created.  If there is no
         // current push subscription we do a "normal" replace which will drive adding a CreateSubscriptionOperation
         // to the queue.
-        val currentPushSubscription = _subscriptionModelStore!!.list().firstOrNull { it.id == _configModel!!.pushSubscriptionId }
+        val currentPushSubscription = subscriptionModelStore!!.list().firstOrNull { it.id == configModel!!.pushSubscriptionId }
         val newPushSubscription = SubscriptionModel()
 
         newPushSubscription.id = currentPushSubscription?.id ?: IDManager.createLocalId()
@@ -437,7 +437,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         newPushSubscription.status = currentPushSubscription?.status ?: SubscriptionStatus.NO_PERMISSION
 
         // ensure we always know this devices push subscription ID
-        _configModel!!.pushSubscriptionId = newPushSubscription.id
+        configModel!!.pushSubscriptionId = newPushSubscription.id
 
         subscriptions.add(newPushSubscription)
 
@@ -445,25 +445,25 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         // first as a `NO_PROPOGATE` change because we don't want to drive deleting the cleared subscriptions
         // on the backend.  Once cleared we can then setup the new identity/properties model, and add
         // the new user's subscriptions as a `NORMAL` change, which will drive changes to the backend.
-        _subscriptionModelStore!!.clear(ModelChangeTags.NO_PROPOGATE)
-        _identityModelStore!!.replace(identityModel)
-        _propertiesModelStore!!.replace(propertiesModel)
+        subscriptionModelStore!!.clear(ModelChangeTags.NO_PROPOGATE)
+        identityModelStore!!.replace(identityModel)
+        propertiesModelStore!!.replace(propertiesModel)
 
         if (suppressBackendOperation) {
-            _subscriptionModelStore!!.replaceAll(subscriptions, ModelChangeTags.NO_PROPOGATE)
+            subscriptionModelStore!!.replaceAll(subscriptions, ModelChangeTags.NO_PROPOGATE)
         } else if (currentPushSubscription != null) {
-            _operationRepo!!.enqueue(TransferSubscriptionOperation(_configModel!!.appId, currentPushSubscription.id, sdkId))
-            _subscriptionModelStore!!.replaceAll(subscriptions, ModelChangeTags.NO_PROPOGATE)
+            operationRepo!!.enqueue(TransferSubscriptionOperation(configModel!!.appId, currentPushSubscription.id, sdkId))
+            subscriptionModelStore!!.replaceAll(subscriptions, ModelChangeTags.NO_PROPOGATE)
         } else {
-            _subscriptionModelStore!!.replaceAll(subscriptions)
+            subscriptionModelStore!!.replaceAll(subscriptions)
         }
     }
 
-    override fun <T> hasService(c: Class<T>): Boolean = _services.hasService(c)
+    override fun <T> hasService(c: Class<T>): Boolean = services.hasService(c)
 
-    override fun <T> getService(c: Class<T>): T = _services.getService(c)
+    override fun <T> getService(c: Class<T>): T = services.getService(c)
 
-    override fun <T> getServiceOrNull(c: Class<T>): T? = _services.getServiceOrNull(c)
+    override fun <T> getServiceOrNull(c: Class<T>): T? = services.getServiceOrNull(c)
 
-    override fun <T> getAllServices(c: Class<T>): List<T> = _services.getAllServices(c)
+    override fun <T> getAllServices(c: Class<T>): List<T> = services.getAllServices(c)
 }
