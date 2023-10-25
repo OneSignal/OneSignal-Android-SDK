@@ -430,7 +430,7 @@ public class OneSignal {
    private static TrackAmazonPurchase trackAmazonPurchase;
    private static TrackFirebaseAnalytics trackFirebaseAnalytics;
 
-   private static final String VERSION = "040805";
+   private static final String VERSION = "040806";
    public static String getSdkVersionRaw() {
       return VERSION;
    }
@@ -2331,7 +2331,7 @@ public class OneSignal {
 
       // TODO: Once the NotificationOpenedHandler gets a Worker, we should make sure we add a catch
       //    like we have implemented for the OSRemoteNotificationReceivedHandler and NotificationWillShowInForegroundHandlers
-      OSUtils.runOnMainUIThread(new Runnable() {
+      CallbackThreadManager.Companion.runOnPreferred(new Runnable() {
          @Override
          public void run() {
             notificationOpenedHandler.notificationOpened(openedResult);

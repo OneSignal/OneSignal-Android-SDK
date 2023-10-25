@@ -306,8 +306,7 @@ class OneSignalStateSynchronizer {
                }
             }
 
-            // Need to call completion handler on main thread since the request response came from an async PUT
-            OSUtils.runOnMainUIThread(new Runnable() {
+            CallbackThreadManager.Companion.runOnPreferred(new Runnable() {
                @Override
                public void run() {
                   if (completionHandler != null)
