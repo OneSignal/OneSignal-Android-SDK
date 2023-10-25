@@ -5,7 +5,7 @@ import com.onesignal.common.events.IEventNotifier
 import org.json.JSONArray
 import org.json.JSONObject
 import java.math.BigDecimal
-import java.util.*
+import java.util.Collections
 
 /**
  * The base class for a [Model].  A model is effectively a map of data, each key in the map being
