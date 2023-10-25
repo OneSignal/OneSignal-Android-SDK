@@ -62,16 +62,17 @@ internal object OneSignalAnimate {
         interpolator: Interpolator?,
         animCallback: Animation.AnimationListener?,
     ): Animation {
-        val scaleAnimation: Animation = ScaleAnimation(
-            0f,
-            1f,
-            0f,
-            1f,
-            Animation.RELATIVE_TO_SELF,
-            0.5f,
-            Animation.RELATIVE_TO_SELF,
-            0.5f,
-        )
+        val scaleAnimation: Animation =
+            ScaleAnimation(
+                0f,
+                1f,
+                0f,
+                1f,
+                Animation.RELATIVE_TO_SELF,
+                0.5f,
+                Animation.RELATIVE_TO_SELF,
+                0.5f,
+            )
         scaleAnimation.duration = duration.toLong()
         scaleAnimation.interpolator = interpolator
         if (animCallback != null) scaleAnimation.setAnimationListener(animCallback)

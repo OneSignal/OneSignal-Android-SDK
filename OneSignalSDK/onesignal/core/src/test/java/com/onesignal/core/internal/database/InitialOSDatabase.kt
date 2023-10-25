@@ -10,7 +10,6 @@ import com.onesignal.core.internal.database.impl.OneSignalDbContract
  * This class setups up the database in it's initial form to test database upgrade paths.
  */
 internal class InitialOSDatabase(context: Context?) : SQLiteOpenHelper(context, "OneSignal.db", null, 1) {
-
     private val TEXT_TYPE = " TEXT"
     private val INT_TYPE = " INTEGER"
     private val COMMA_SEP = ","
@@ -30,16 +29,21 @@ internal class InitialOSDatabase(context: Context?) : SQLiteOpenHelper(context, 
             OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME.toString() + " TIMESTAMP DEFAULT (strftime('%s', 'now'))" +
             ");"
 
-    private val SQL_INDEX_ENTRIES: String = OneSignalDbContract.NotificationTable.INDEX_CREATE_NOTIFICATION_ID +
-        OneSignalDbContract.NotificationTable.INDEX_CREATE_ANDROID_NOTIFICATION_ID +
-        OneSignalDbContract.NotificationTable.INDEX_CREATE_GROUP_ID +
-        OneSignalDbContract.NotificationTable.INDEX_CREATE_CREATED_TIME
+    private val SQL_INDEX_ENTRIES: String =
+        OneSignalDbContract.NotificationTable.INDEX_CREATE_NOTIFICATION_ID +
+            OneSignalDbContract.NotificationTable.INDEX_CREATE_ANDROID_NOTIFICATION_ID +
+            OneSignalDbContract.NotificationTable.INDEX_CREATE_GROUP_ID +
+            OneSignalDbContract.NotificationTable.INDEX_CREATE_CREATED_TIME
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(SQL_CREATE_ENTRIES)
         db.execSQL(SQL_INDEX_ENTRIES)
     }
 
-    override fun onUpgrade(p0: SQLiteDatabase?, p1: Int, p2: Int) {
+    override fun onUpgrade(
+        p0: SQLiteDatabase?,
+        p1: Int,
+        p2: Int,
+    ) {
     }
 }

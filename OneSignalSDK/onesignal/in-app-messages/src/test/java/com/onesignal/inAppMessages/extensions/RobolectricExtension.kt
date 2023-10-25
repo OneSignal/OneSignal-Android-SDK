@@ -30,9 +30,10 @@ internal class RobolectricExtension : ConstructorExtension, TestCaseExtension {
     }
 
     private fun KClass<*>.getConfig(): Config {
-        val configAnnotations = listOf(this.java).plus(this.java.getParentClass())
-            .mapNotNull { it.kotlin.findAnnotation<Config>() }
-            .asSequence()
+        val configAnnotations =
+            listOf(this.java).plus(this.java.getParentClass())
+                .mapNotNull { it.kotlin.findAnnotation<Config>() }
+                .asSequence()
 
         val configAnnotation = configAnnotations.firstOrNull()
 
@@ -40,12 +41,14 @@ internal class RobolectricExtension : ConstructorExtension, TestCaseExtension {
             return Config.Builder(configAnnotation).build()
         }
 
-        val robolectricTestAnnotations = listOf(this.java).plus(this.java.getParentClass())
-            .mapNotNull { it.kotlin.findAnnotation<RobolectricTest>() }
-            .asSequence()
+        val robolectricTestAnnotations =
+            listOf(this.java).plus(this.java.getParentClass())
+                .mapNotNull { it.kotlin.findAnnotation<RobolectricTest>() }
+                .asSequence()
 
-        val application: KClass<out Application>? = robolectricTestAnnotations
-            .firstOrNull { it.application != KotestDefaultApplication::class }?.application
+        val application: KClass<out Application>? =
+            robolectricTestAnnotations
+                .firstOrNull { it.application != KotestDefaultApplication::class }?.application
         val sdk: Int? = robolectricTestAnnotations.firstOrNull { it.sdk != -1 }?.takeUnless { it.sdk == -1 }?.sdk
 
         return Config.Builder()
@@ -72,9 +75,10 @@ internal class RobolectricExtension : ConstructorExtension, TestCaseExtension {
         execute: suspend (TestCase) -> TestResult,
     ): TestResult {
         // FIXED: Updated code based on https://github.com/kotest/kotest/issues/2717
-        val hasRobolectricAnnotation = testCase.spec::class.annotations.any { annotation ->
-            annotation.annotationClass.qualifiedName == RobolectricTest::class.qualifiedName
-        }
+        val hasRobolectricAnnotation =
+            testCase.spec::class.annotations.any { annotation ->
+                annotation.annotationClass.qualifiedName == RobolectricTest::class.qualifiedName
+            }
 
         if (!hasRobolectricAnnotation) {
             return execute(testCase)

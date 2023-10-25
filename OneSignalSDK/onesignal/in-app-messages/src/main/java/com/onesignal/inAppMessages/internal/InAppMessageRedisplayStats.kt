@@ -64,7 +64,9 @@ internal class InAppMessageRedisplayStats(
             val currentTimeInSeconds = _time.currentTimeMillis / 1000
             // Calculate gap between display times
             val diffInSeconds = currentTimeInSeconds - lastDisplayTime
-            Logging.debug("OSInAppMessage lastDisplayTime: $lastDisplayTime currentTimeInSeconds: $currentTimeInSeconds diffInSeconds: $diffInSeconds displayDelay: $displayDelay")
+            Logging.debug(
+                "OSInAppMessage lastDisplayTime: $lastDisplayTime currentTimeInSeconds: $currentTimeInSeconds diffInSeconds: $diffInSeconds displayDelay: $displayDelay",
+            )
             return diffInSeconds >= displayDelay
         }
 

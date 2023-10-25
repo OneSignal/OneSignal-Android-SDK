@@ -21,10 +21,18 @@ internal interface INotificationDisplayBuilder {
     //    Android 6.0 - No Sound or heads-up
     //    Android 5.0 - Sound, but no heads-up
     fun getGroupAlertBehavior(): Int
+
     fun getTitle(fcmJson: JSONObject): CharSequence
-    fun getNewDismissActionPendingIntent(requestCode: Int, intent: Intent): PendingIntent
+
+    fun getNewDismissActionPendingIntent(
+        requestCode: Int,
+        intent: Intent,
+    ): PendingIntent
+
     fun getNewBaseDismissIntent(notificationId: Int): Intent
+
     fun getBaseOneSignalNotificationBuilder(notificationJob: NotificationGenerationJob): NotificationDisplayBuilder.OneSignalNotificationBuilder
+
     fun removeNotifyOptions(builder: NotificationCompat.Builder?)
 
     // Xiaomi requires the following to show a custom notification icons.

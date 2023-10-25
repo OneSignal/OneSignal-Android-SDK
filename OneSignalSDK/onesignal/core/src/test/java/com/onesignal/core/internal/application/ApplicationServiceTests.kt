@@ -24,20 +24,20 @@ class ApplicationServiceTests : FunSpec({
     }
 
     test("start application service with non-activity shows entry state as closed") {
-        /* Given */
+        // Given
         val context = ApplicationProvider.getApplicationContext<Context>()
         val applicationService = ApplicationService()
 
-        /* When */
+        // When
         applicationService.start(context)
         val entryState = applicationService.entryState
 
-        /* Then */
+        // Then
         entryState shouldBe AppEntryAction.APP_CLOSE
     }
 
     test("start application service with activity shows entry state as closed") {
-        /* Given */
+        // Given
         val activity: Activity
 
         Robolectric.buildActivity(Activity::class.java).use { controller ->
@@ -46,16 +46,16 @@ class ApplicationServiceTests : FunSpec({
         }
         val applicationService = ApplicationService()
 
-        /* When */
+        // When
         applicationService.start(activity)
         val entryState = applicationService.entryState
 
-        /* Then */
+        // Then
         entryState shouldBe AppEntryAction.APP_OPEN
     }
 
     test("current activity is established when activity is started") {
-        /* Given */
+        // Given
         val activity1: Activity
         val activity2: Activity
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -70,20 +70,20 @@ class ApplicationServiceTests : FunSpec({
 
         val applicationService = ApplicationService()
 
-        /* When */
+        // When
         applicationService.start(activity1)
 
         val initialActivity = applicationService.current
         pushActivity(applicationService, activity1, activity2)
         val currentActivity = applicationService.current
 
-        /* Then */
+        // Then
         initialActivity shouldBe activity1
         currentActivity shouldBe activity2
     }
 
     test("current activity is established when activity is stopped") {
-        /* Given */
+        // Given
         val activity1: Activity
         val activity2: Activity
 
@@ -98,20 +98,20 @@ class ApplicationServiceTests : FunSpec({
 
         val applicationService = ApplicationService()
 
-        /* When */
+        // When
         applicationService.start(activity1)
         val initialActivity = applicationService.current
         pushActivity(applicationService, activity1, activity2)
         popActivity(applicationService, activity2, activity1)
         val currentActivity = applicationService.current
 
-        /* Then */
+        // Then
         initialActivity shouldBe activity1
         currentActivity shouldBe activity1
     }
 
     test("unfocus will occur when when all activities are stopped") {
-        /* Given */
+        // Given
         val activity1: Activity
         val activity2: Activity
 
@@ -128,7 +128,7 @@ class ApplicationServiceTests : FunSpec({
         val applicationService = ApplicationService()
         applicationService.addApplicationLifecycleHandler(mockApplicationLifecycleHandler)
 
-        /* When */
+        // When
         applicationService.start(activity1)
 
         pushActivity(applicationService, activity1, activity2)
@@ -137,13 +137,13 @@ class ApplicationServiceTests : FunSpec({
 
         val currentActivity = applicationService.current
 
-        /* Then */
+        // Then
         currentActivity shouldBe null
         verify(exactly = 1) { mockApplicationLifecycleHandler.onUnfocused() }
     }
 
     test("focus will occur when when the first activity is started") {
-        /* Given */
+        // Given
         val activity1: Activity
         val activity2: Activity
 
@@ -160,7 +160,7 @@ class ApplicationServiceTests : FunSpec({
         val applicationService = ApplicationService()
         applicationService.addApplicationLifecycleHandler(mockApplicationLifecycleHandler)
 
-        /* When */
+        // When
         applicationService.start(activity1)
 
         pushActivity(applicationService, activity1, activity2)
@@ -172,25 +172,25 @@ class ApplicationServiceTests : FunSpec({
 
         val currentActivity = applicationService.current
 
-        /* Then */
+        // Then
         currentActivity shouldBe activity2
         verify(exactly = 1) { mockApplicationLifecycleHandler.onUnfocused() }
         verify(exactly = 1) { mockApplicationLifecycleHandler.onFocus() }
     }
 
     test("wait until system condition returns false when there is no activity") {
-        /* Given */
+        // Given
         val applicationService = ApplicationService()
 
-        /* When */
+        // When
         val response = applicationService.waitUntilSystemConditionsAvailable()
 
-        /* Then */
+        // Then
         response shouldBe false
     }
 
     test("wait until system condition returns true when there is no system condition") {
-        /* Given */
+        // Given
         val activity: Activity
 
         Robolectric.buildActivity(Activity::class.java).use { controller ->
@@ -199,16 +199,21 @@ class ApplicationServiceTests : FunSpec({
         }
         val applicationService = ApplicationService()
 
-        /* When */
+        // When
         applicationService.start(activity)
         val response = applicationService.waitUntilSystemConditionsAvailable()
 
-        /* Then */
+        // Then
         response shouldBe true
     }
 }) {
     companion object {
-        fun pushActivity(applicationService: ApplicationService, currActivity: Activity, newActivity: Activity, destoryCurrent: Boolean = false) {
+        fun pushActivity(
+            applicationService: ApplicationService,
+            currActivity: Activity,
+            newActivity: Activity,
+            destoryCurrent: Boolean = false,
+        ) {
             applicationService.onActivityPaused(currActivity)
             applicationService.onActivityCreated(newActivity, null)
             applicationService.onActivityStarted(newActivity)
@@ -220,7 +225,11 @@ class ApplicationServiceTests : FunSpec({
             }
         }
 
-        fun popActivity(applicationService: ApplicationService, currActivity: Activity, oldActivity: Activity) {
+        fun popActivity(
+            applicationService: ApplicationService,
+            currActivity: Activity,
+            oldActivity: Activity,
+        ) {
             applicationService.onActivityPaused(currActivity)
             applicationService.onActivityStarted(oldActivity)
             applicationService.onActivityResumed(oldActivity)

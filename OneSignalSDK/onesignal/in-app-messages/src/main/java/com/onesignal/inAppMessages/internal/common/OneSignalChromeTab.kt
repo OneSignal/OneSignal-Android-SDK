@@ -45,7 +45,11 @@ internal object OneSignalChromeTab {
         }
     }
 
-    internal fun open(url: String, openActivity: Boolean, context: Context): Boolean {
+    internal fun open(
+        url: String,
+        openActivity: Boolean,
+        context: Context,
+    ): Boolean {
         if (!hasChromeTabLibrary()) return false
         val connection: CustomTabsServiceConnection =
             OneSignalCustomTabsServiceConnection(url, openActivity, context)

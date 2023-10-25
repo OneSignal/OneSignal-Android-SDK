@@ -11,8 +11,9 @@ enum class InfluenceChannel(private val nameValue: String) {
 
     companion object {
         @JvmStatic
-        fun fromString(value: String?) = value?.let {
-            values().findLast { it.equalsName(value) }
-        } ?: NOTIFICATION
+        fun fromString(value: String?) =
+            value?.let {
+                values().findLast { it.equalsName(value) }
+            } ?: NOTIFICATION
     }
 }

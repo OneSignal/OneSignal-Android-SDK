@@ -47,6 +47,8 @@ internal interface IInfluenceDataRepository {
      * Cache attributed notification opened
      */
     fun cacheNotificationOpenId(id: String?)
+
     fun saveNotifications(notifications: JSONArray)
+
     fun saveIAMs(iams: JSONArray)
 }

@@ -19,8 +19,9 @@ enum class InfluenceType {
 
     companion object {
         @JvmStatic
-        fun fromString(value: String?) = value?.let {
-            values().findLast { it.name.equals(value, ignoreCase = true) }
-        } ?: UNATTRIBUTED
+        fun fromString(value: String?) =
+            value?.let {
+                values().findLast { it.name.equals(value, ignoreCase = true) }
+            } ?: UNATTRIBUTED
     }
 }

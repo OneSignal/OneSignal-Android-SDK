@@ -96,7 +96,9 @@ object OneSignal {
     @JvmStatic
     var consentRequired: Boolean
         get() = oneSignal.consentRequired
-        set(value) { oneSignal.consentRequired = value }
+        set(value) {
+            oneSignal.consentRequired = value
+        }
 
     /**
      * Indicates whether privacy consent has been granted. This field is only relevant when
@@ -105,7 +107,9 @@ object OneSignal {
     @JvmStatic
     var consentGiven: Boolean
         get() = oneSignal.consentGiven
-        set(value) { oneSignal.consentGiven = value }
+        set(value) {
+            oneSignal.consentGiven = value
+        }
 
     /**
      * Whether to disable the "GMS is missing" prompt to the user.
@@ -113,7 +117,9 @@ object OneSignal {
     @JvmStatic
     var disableGMSMissingPrompt: Boolean
         get() = oneSignal.disableGMSMissingPrompt
-        set(value) { oneSignal.disableGMSMissingPrompt = value }
+        set(value) {
+            oneSignal.disableGMSMissingPrompt = value
+        }
 
     /**
      * Initialize the OneSignal SDK.  This should be called during startup of the application.
@@ -122,7 +128,10 @@ object OneSignal {
      * @param appId The application ID the OneSignal SDK is bound to.
      */
     @JvmStatic
-    fun initWithContext(context: Context, appId: String) {
+    fun initWithContext(
+        context: Context,
+        appId: String,
+    ) {
         oneSignal.initWithContext(context, appId)
     }
 
@@ -169,7 +178,10 @@ object OneSignal {
      * [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
      */
     @JvmStatic
-    fun login(externalId: String, jwtBearerToken: String? = null) = oneSignal.login(externalId, jwtBearerToken)
+    fun login(
+        externalId: String,
+        jwtBearerToken: String? = null,
+    ) = oneSignal.login(externalId, jwtBearerToken)
 
     /**
      * Logout the user previously logged in via [login]. The [User] property now references

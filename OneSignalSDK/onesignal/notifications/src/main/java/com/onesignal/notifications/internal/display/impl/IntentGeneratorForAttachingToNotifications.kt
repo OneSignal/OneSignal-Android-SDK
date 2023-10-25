@@ -14,9 +14,7 @@ internal class IntentGeneratorForAttachingToNotifications(
     private val notificationOpenedClassAndroid23Plus: Class<*> = NotificationOpenedActivity::class.java
     private val notificationOpenedClassAndroid22AndOlder: Class<*> = NotificationOpenedActivityAndroid22AndOlder::class.java
 
-    fun getNewBaseIntent(
-        notificationId: Int,
-    ): Intent {
+    fun getNewBaseIntent(notificationId: Int): Intent {
         val intent =
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                 getNewBaseIntentAndroidAPI23Plus()
@@ -48,10 +46,11 @@ internal class IntentGeneratorForAttachingToNotifications(
     // See NotificationOpenedReceiverAndroid22AndOlder.kt for details
     @Deprecated("Use getNewBaseIntentAndroidAPI23Plus instead for Android 6+")
     private fun getNewBaseIntentAndroidAPI22AndOlder(): Intent {
-        val intent = Intent(
-            context,
-            notificationOpenedClassAndroid22AndOlder,
-        )
+        val intent =
+            Intent(
+                context,
+                notificationOpenedClassAndroid22AndOlder,
+            )
         intent.addFlags(
             Intent.FLAG_ACTIVITY_NEW_TASK or
                 Intent.FLAG_ACTIVITY_MULTIPLE_TASK or

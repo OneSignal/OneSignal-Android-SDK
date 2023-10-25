@@ -12,8 +12,10 @@ import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
 //   to be setup in an app. See the following issue for context on why this this important:
 //    - https://github.com/OneSignal/OneSignal-Android-SDK/issues/1355
 class FCMBroadcastReceiver : BroadcastReceiver() {
-
-    override fun onReceive(context: Context, intent: Intent) {
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
         // Do not process token update messages here.
         // They are also non-ordered broadcasts.
         val bundle = intent.extras
@@ -70,6 +72,7 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
         private const val FCM_RECEIVE_ACTION = "com.google.android.c2dm.intent.RECEIVE"
         private const val FCM_TYPE = "gcm"
         private const val MESSAGE_TYPE_EXTRA_KEY = "message_type"
+
         private fun isFCMMessage(intent: Intent): Boolean {
             if (FCM_RECEIVE_ACTION == intent.action) {
                 val messageType = intent.getStringExtra(MESSAGE_TYPE_EXTRA_KEY)

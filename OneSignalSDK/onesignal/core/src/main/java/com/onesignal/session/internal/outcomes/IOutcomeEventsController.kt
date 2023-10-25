@@ -22,5 +22,8 @@ interface IOutcomeEventsController {
     /**
      * Send an outcome event with value to the backend.
      */
-    suspend fun sendOutcomeEventWithValue(name: String, weight: Float): IOutcomeEvent?
+    suspend fun sendOutcomeEventWithValue(
+        name: String,
+        weight: Float,
+    ): IOutcomeEvent?
 }

@@ -14,7 +14,9 @@ class TransferSubscriptionOperation() : Operation(SubscriptionOperationExecutor.
      */
     var appId: String
         get() = getStringProperty(::appId.name)
-        private set(value) { setStringProperty(::appId.name, value) }
+        private set(value) {
+            setStringProperty(::appId.name, value)
+        }
 
     /**
      * The subscription ID that is to be transferred. This ID *may* be locally generated
@@ -22,7 +24,9 @@ class TransferSubscriptionOperation() : Operation(SubscriptionOperationExecutor.
      */
     var subscriptionId: String
         get() = getStringProperty(::subscriptionId.name)
-        private set(value) { setStringProperty(::subscriptionId.name, value) }
+        private set(value) {
+            setStringProperty(::subscriptionId.name, value)
+        }
 
     /**
      * The user ID this subscription will be transferred to. This ID *may* be locally generated
@@ -30,7 +34,9 @@ class TransferSubscriptionOperation() : Operation(SubscriptionOperationExecutor.
      */
     var onesignalId: String
         get() = getStringProperty(::onesignalId.name)
-        private set(value) { setStringProperty(::onesignalId.name, value) }
+        private set(value) {
+            setStringProperty(::onesignalId.name, value)
+        }
 
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String get() = "$appId.Subscription.$subscriptionId.Transfer"

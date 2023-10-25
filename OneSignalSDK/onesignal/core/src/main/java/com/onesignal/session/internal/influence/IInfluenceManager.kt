@@ -1,7 +1,6 @@
 package com.onesignal.session.internal.influence
 
 interface IInfluenceManager {
-
     /**
      * The influences being tracked.
      */

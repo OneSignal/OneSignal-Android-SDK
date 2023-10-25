@@ -20,8 +20,10 @@ import org.json.JSONObject
 internal class ParamsBackendService(
     private val _http: IHttpClient,
 ) : IParamsBackendService {
-
-    override suspend fun fetchParams(appId: String, subscriptionId: String?): ParamsObject {
+    override suspend fun fetchParams(
+        appId: String,
+        subscriptionId: String?,
+    ): ParamsObject {
         Logging.log(LogLevel.DEBUG, "ParamsBackendService.fetchParams(appId: $appId, subscriptionId: $subscriptionId)")
 
         var paramsUrl = "apps/$appId/android_params.js"
@@ -46,11 +48,12 @@ internal class ParamsBackendService(
         // Process FCM params
         var fcmParams: FCMParamsObject? = null
         responseJson.expandJSONObject("fcm") {
-            fcmParams = FCMParamsObject(
-                apiKey = it.safeString("api_key"),
-                appId = it.safeString("app_id"),
-                projectId = it.safeString("project_id"),
-            )
+            fcmParams =
+                FCMParamsObject(
+                    apiKey = it.safeString("api_key"),
+                    appId = it.safeString("app_id"),
+                    projectId = it.safeString("project_id"),
+                )
         }
 
         return ParamsObject(

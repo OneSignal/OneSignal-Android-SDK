@@ -6,7 +6,6 @@ package com.onesignal.notifications.internal.receivereceipt
  * as the worker will persist across the application lifecycle.
  */
 internal interface IReceiveReceiptWorkManager {
-
     /**
      * Enqueue a worker which will send receipt of receiving a notification.
      *

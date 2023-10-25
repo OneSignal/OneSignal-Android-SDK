@@ -20,7 +20,6 @@ internal class NotificationSummaryManager(
     private val _notificationRestoreProcessor: INotificationRestoreProcessor,
     private val _time: ITime,
 ) : INotificationSummaryManager {
-
     // A notification was just dismissed, check if it was a child to a summary notification and update it.
     override suspend fun updatePossibleDependentSummaryOnDismiss(androidNotificationId: Int) {
         val groupId = _dataController.getGroupId(androidNotificationId)
@@ -31,11 +30,17 @@ internal class NotificationSummaryManager(
     }
 
     // Called from an opened / dismissed / cancel event of a single notification to update it's parent the summary notification.
-    override suspend fun updateSummaryNotificationAfterChildRemoved(group: String, dismissed: Boolean) {
+    override suspend fun updateSummaryNotificationAfterChildRemoved(
+        group: String,
+        dismissed: Boolean,
+    ) {
         internalUpdateSummaryNotificationAfterChildRemoved(group, dismissed)
     }
 
-    private suspend fun internalUpdateSummaryNotificationAfterChildRemoved(group: String, dismissed: Boolean) {
+    private suspend fun internalUpdateSummaryNotificationAfterChildRemoved(
+        group: String,
+        dismissed: Boolean,
+    ) {
         var notifications = _dataController.listNotificationsForGroup(group)
 
         val notificationsInGroup = notifications.count()
@@ -95,13 +100,14 @@ internal class NotificationSummaryManager(
         if (mostRecentId != null) {
             val shouldDismissAll = _configModelStore.model.clearGroupOnSummaryClick
             if (shouldDismissAll) {
-                val groupId = if (group == NotificationHelper.grouplessSummaryKey) {
-                    // If the group is groupless, obtain the hardcoded groupless summary id
-                    NotificationHelper.grouplessSummaryId
-                } else {
-                    // Obtain the group to clear notifications from
-                    _dataController.getAndroidIdForGroup(group, true)
-                }
+                val groupId =
+                    if (group == NotificationHelper.grouplessSummaryKey) {
+                        // If the group is groupless, obtain the hardcoded groupless summary id
+                        NotificationHelper.grouplessSummaryId
+                    } else {
+                        // Obtain the group to clear notifications from
+                        _dataController.getAndroidIdForGroup(group, true)
+                    }
 
                 // Clear the entire notification summary
                 if (groupId != null) {

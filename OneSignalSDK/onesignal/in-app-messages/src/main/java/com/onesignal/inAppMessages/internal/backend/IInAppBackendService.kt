@@ -8,7 +8,6 @@ import com.onesignal.inAppMessages.internal.InAppMessageContent
  * This backend service provides access to the In App Message endpoints
  */
 internal interface IInAppBackendService {
-
     /**
      * List the in app messages for a specific [appId]/[subscriptionId].
      *
@@ -17,7 +16,10 @@ internal interface IInAppBackendService {
      *
      * @return The list of IAMs associated to the subscription, or null if the IAMs could not be retrieved.
      */
-    suspend fun listInAppMessages(appId: String, subscriptionId: String): List<InAppMessage>?
+    suspend fun listInAppMessages(
+        appId: String,
+        subscriptionId: String,
+    ): List<InAppMessage>?
 
     /**
      * Retrieve the data for a specific In App Message.
@@ -27,7 +29,11 @@ internal interface IInAppBackendService {
      * @param variantId The optional ID of the variant that should be retrieved. If not specified,
      * the default variant will be used.
      */
-    suspend fun getIAMData(appId: String, messageId: String, variantId: String?): GetIAMDataResponse
+    suspend fun getIAMData(
+        appId: String,
+        messageId: String,
+        variantId: String?,
+    ): GetIAMDataResponse
 
     /**
      * Retrieve the preview data for a specific In App Message.
@@ -35,7 +41,10 @@ internal interface IInAppBackendService {
      * @param appId The ID of the application that the IAM will be retrieved from.
      * @param previewUUID THe ID of the preview IAM that should be retrieved.
      */
-    suspend fun getIAMPreviewData(appId: String, previewUUID: String): InAppMessageContent?
+    suspend fun getIAMPreviewData(
+        appId: String,
+        previewUUID: String,
+    ): InAppMessageContent?
 
     /**
      * Indicate an IAM was clicked on by the user.
@@ -100,7 +109,6 @@ internal class GetIAMDataResponse(
      * The content, when the response is successful
      */
     val content: InAppMessageContent?,
-
     /**
      * Whether the call should be retried, when [content] is null
      */

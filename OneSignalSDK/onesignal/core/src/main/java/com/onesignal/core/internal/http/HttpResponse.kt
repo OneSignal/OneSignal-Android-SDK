@@ -10,18 +10,15 @@ class HttpResponse(
      * The status code of the response ([HttpURLConnection.HTTP_OK] as an example).
      */
     val statusCode: Int,
-
     /**
      * The optional response payload.
      */
     val payload: String?,
-
     /**
      * When non-null, the throwable that was thrown during processing.
      */
     val throwable: Throwable? = null,
 ) {
-
     /**
      * Whether the response is a successful one.
      */

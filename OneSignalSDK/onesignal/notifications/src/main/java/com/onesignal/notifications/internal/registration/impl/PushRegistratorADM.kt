@@ -11,7 +11,6 @@ import kotlinx.coroutines.withTimeout
 internal class PushRegistratorADM(
     private val _applicationService: IApplicationService,
 ) : IPushRegistrator, IPushRegistratorCallback {
-
     private var _waiter: WaiterWithValue<String?>? = null
 
     override suspend fun registerForPush(): IPushRegistrator.RegisterResult {
@@ -23,10 +22,11 @@ internal class PushRegistratorADM(
         var registrationId = adm.registrationId
         if (registrationId != null) {
             Logging.debug("ADM Already registered with ID:$registrationId")
-            result = IPushRegistrator.RegisterResult(
-                registrationId,
-                SubscriptionStatus.SUBSCRIBED,
-            )
+            result =
+                IPushRegistrator.RegisterResult(
+                    registrationId,
+                    SubscriptionStatus.SUBSCRIBED,
+                )
         } else {
             adm.startRegister()
 
@@ -36,19 +36,20 @@ internal class PushRegistratorADM(
                 registrationId = _waiter?.waitForWake()
             }
 
-            result = if (registrationId != null) {
-                Logging.error("ADM registered with ID:$registrationId")
-                IPushRegistrator.RegisterResult(
-                    registrationId,
-                    SubscriptionStatus.SUBSCRIBED,
-                )
-            } else {
-                Logging.error("com.onesignal.ADMMessageHandler timed out, please check that your have the receiver, service, and your package name matches(NOTE: Case Sensitive) per the OneSignal instructions.")
-                IPushRegistrator.RegisterResult(
-                    null,
-                    SubscriptionStatus.ERROR,
-                )
-            }
+            result =
+                if (registrationId != null) {
+                    Logging.error("ADM registered with ID:$registrationId")
+                    IPushRegistrator.RegisterResult(
+                        registrationId,
+                        SubscriptionStatus.SUBSCRIBED,
+                    )
+                } else {
+                    Logging.error("com.onesignal.ADMMessageHandler timed out, please check that your have the receiver, service, and your package name matches(NOTE: Case Sensitive) per the OneSignal instructions.")
+                    IPushRegistrator.RegisterResult(
+                        null,
+                        SubscriptionStatus.ERROR,
+                    )
+                }
         }
 
         return result!!

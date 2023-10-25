@@ -13,7 +13,10 @@ interface IOperationRepo {
      * @param operation The operation that should be executed.
      * @param flush Whether to force-flush the operation queue.
      */
-    fun enqueue(operation: Operation, flush: Boolean = false)
+    fun enqueue(
+        operation: Operation,
+        flush: Boolean = false,
+    )
 
     /**
      * Enqueue an operation onto the operation repo and "wait" until the operation
@@ -24,5 +27,8 @@ interface IOperationRepo {
      *
      * @return true if the operation executed successfully, false otherwise.
      */
-    suspend fun enqueueAndWait(operation: Operation, flush: Boolean = false): Boolean
+    suspend fun enqueueAndWait(
+        operation: Operation,
+        flush: Boolean = false,
+    ): Boolean
 }

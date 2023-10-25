@@ -40,7 +40,6 @@ internal class FirebaseAnalyticsTracker(
     private val _configModelStore: ConfigModelStore,
     private val _time: ITime,
 ) : IAnalyticsTracker {
-
     private val isEnabled: Boolean
         get() {
             return _configModelStore.model.firebaseAnalytics
@@ -81,7 +80,10 @@ internal class FirebaseAnalyticsTracker(
         }
     }
 
-    override fun trackOpenedEvent(notificationId: String, campaign: String) {
+    override fun trackOpenedEvent(
+        notificationId: String,
+        campaign: String,
+    ) {
         if (!isEnabled) {
             return
         }
@@ -108,7 +110,10 @@ internal class FirebaseAnalyticsTracker(
         }
     }
 
-    override fun trackReceivedEvent(notificationId: String, campaign: String) {
+    override fun trackReceivedEvent(
+        notificationId: String,
+        campaign: String,
+    ) {
         if (!isEnabled) {
             return
         }
@@ -136,12 +141,13 @@ internal class FirebaseAnalyticsTracker(
     private fun getFirebaseAnalyticsInstance(): Any? {
         if (mFirebaseAnalyticsInstance == null) {
             val getInstanceMethod = getInstanceMethod(FirebaseAnalyticsClass)
-            mFirebaseAnalyticsInstance = try {
-                getInstanceMethod!!.invoke(null, _applicationService.appContext)
-            } catch (e: Throwable) {
-                e.printStackTrace()
-                return null
-            }
+            mFirebaseAnalyticsInstance =
+                try {
+                    getInstanceMethod!!.invoke(null, _applicationService.appContext)
+                } catch (e: Throwable) {
+                    e.printStackTrace()
+                    return null
+                }
         }
         return mFirebaseAnalyticsInstance
     }

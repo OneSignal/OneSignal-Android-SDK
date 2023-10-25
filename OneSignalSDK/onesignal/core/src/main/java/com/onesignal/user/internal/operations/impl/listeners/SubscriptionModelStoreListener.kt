@@ -18,19 +18,40 @@ internal class SubscriptionModelStoreListener(
     private val _identityModelStore: IdentityModelStore,
     private val _configModelStore: ConfigModelStore,
 ) : ModelStoreListener<SubscriptionModel>(store, opRepo) {
-
     override fun getAddOperation(model: SubscriptionModel): Operation {
         val enabledAndStatus = getSubscriptionEnabledAndStatus(model)
-        return CreateSubscriptionOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, model.id, model.type, enabledAndStatus.first, model.address, enabledAndStatus.second)
+        return CreateSubscriptionOperation(
+            _configModelStore.model.appId,
+            _identityModelStore.model.onesignalId,
+            model.id,
+            model.type,
+            enabledAndStatus.first,
+            model.address,
+            enabledAndStatus.second,
+        )
     }
 
     override fun getRemoveOperation(model: SubscriptionModel): Operation {
         return DeleteSubscriptionOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, model.id)
     }
 
-    override fun getUpdateOperation(model: SubscriptionModel, path: String, property: String, oldValue: Any?, newValue: Any?): Operation {
+    override fun getUpdateOperation(
+        model: SubscriptionModel,
+        path: String,
+        property: String,
+        oldValue: Any?,
+        newValue: Any?,
+    ): Operation {
         val enabledAndStatus = getSubscriptionEnabledAndStatus(model)
-        return UpdateSubscriptionOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, model.id, model.type, enabledAndStatus.first, model.address, enabledAndStatus.second)
+        return UpdateSubscriptionOperation(
+            _configModelStore.model.appId,
+            _identityModelStore.model.onesignalId,
+            model.id,
+            model.type,
+            enabledAndStatus.first,
+            model.address,
+            enabledAndStatus.second,
+        )
     }
 
     companion object {
@@ -43,11 +64,12 @@ internal class SubscriptionModelStoreListener(
                 status = SubscriptionStatus.SUBSCRIBED
             } else {
                 enabled = false
-                status = if (!model.optedIn) {
-                    SubscriptionStatus.UNSUBSCRIBE
-                } else {
-                    model.status
-                }
+                status =
+                    if (!model.optedIn) {
+                        SubscriptionStatus.UNSUBSCRIBE
+                    } else {
+                        model.status
+                    }
             }
 
             return Pair(enabled, status)

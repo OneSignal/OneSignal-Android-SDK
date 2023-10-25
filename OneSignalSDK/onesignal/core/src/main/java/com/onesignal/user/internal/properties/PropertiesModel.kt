@@ -10,7 +10,9 @@ class PropertiesModel : Model() {
      */
     var onesignalId: String
         get() = getStringProperty(::onesignalId.name)
-        set(value) { setStringProperty(::onesignalId.name, value) }
+        set(value) {
+            setStringProperty(::onesignalId.name, value)
+        }
 
     /**
      * The language for this user (ISO 639-1 format). When `null` the device default will be used.
@@ -19,7 +21,9 @@ class PropertiesModel : Model() {
      */
     var language: String?
         get() = getOptStringProperty(::language.name)
-        set(value) { setOptStringProperty(::language.name, value) }
+        set(value) {
+            setOptStringProperty(::language.name, value)
+        }
 
     /**
      * The country code for this user (ISO 3166-1 Alpha 2 format).  When `null` the default will
@@ -29,7 +33,9 @@ class PropertiesModel : Model() {
      */
     var country: String
         get() = getStringProperty(::country.name) { "US" }
-        set(value) { setStringProperty(::country.name, value) }
+        set(value) {
+            setStringProperty(::country.name, value)
+        }
 
     /**
      * The timezone for this user (TZ database name).
@@ -38,7 +44,9 @@ class PropertiesModel : Model() {
      */
     var timezone: String?
         get() = getOptStringProperty(::timezone.name)
-        set(value) { setOptStringProperty(::timezone.name, value) }
+        set(value) {
+            setOptStringProperty(::timezone.name, value)
+        }
 
     /**
      * The data tags for this user.
@@ -51,44 +59,59 @@ class PropertiesModel : Model() {
      */
     var locationLatitude: Double?
         get() = getOptDoubleProperty(::locationLatitude.name)
-        set(value) { setOptDoubleProperty(::locationLatitude.name, value) }
+        set(value) {
+            setOptDoubleProperty(::locationLatitude.name, value)
+        }
 
     /**
      * The user's last known location longitude reading.
      */
     var locationLongitude: Double?
         get() = getOptDoubleProperty(::locationLongitude.name)
-        set(value) { setOptDoubleProperty(::locationLongitude.name, value) }
+        set(value) {
+            setOptDoubleProperty(::locationLongitude.name, value)
+        }
 
     /**
      * The user's last location accuracy reading.
      */
     var locationAccuracy: Float?
         get() = getOptFloatProperty(::locationAccuracy.name)
-        set(value) { setOptFloatProperty(::locationAccuracy.name, value) }
+        set(value) {
+            setOptFloatProperty(::locationAccuracy.name, value)
+        }
 
     /**
      * The user's last location type reading (0 - COARSE, 1 - FINE).
      */
     var locationType: Int?
         get() = getOptIntProperty(::locationType.name)
-        set(value) { setOptIntProperty(::locationType.name, value) }
+        set(value) {
+            setOptIntProperty(::locationType.name, value)
+        }
 
     /**
      * Whether the user's last location reading was done with the app in the background.
      */
     var locationBackground: Boolean?
         get() = getOptBooleanProperty(::locationBackground.name)
-        set(value) { setOptBooleanProperty(::locationBackground.name, value) }
+        set(value) {
+            setOptBooleanProperty(::locationBackground.name, value)
+        }
 
     /**
      * When the user's last location reading was.
      */
     var locationTimestamp: Long?
         get() = getOptLongProperty(::locationTimestamp.name)
-        set(value) { setOptLongProperty(::locationTimestamp.name, value) }
+        set(value) {
+            setOptLongProperty(::locationTimestamp.name, value)
+        }
 
-    override fun createModelForProperty(property: String, jsonObject: JSONObject): Model? {
+    override fun createModelForProperty(
+        property: String,
+        jsonObject: JSONObject,
+    ): Model? {
         if (property == ::tags.name) {
             val model = MapModel<String>(this, ::tags.name)
             model.initializeFromJson(jsonObject)

@@ -55,7 +55,10 @@ fun suspendifyOnMain(block: suspend () -> Unit) {
  * means the scope will run on a background thread.  This will
  * return immediately!!!
  */
-fun suspendifyOnThread(priority: Int = -1, block: suspend () -> Unit) {
+fun suspendifyOnThread(
+    priority: Int = -1,
+    block: suspend () -> Unit,
+) {
     thread(priority = priority) {
         runBlocking {
             block()
@@ -69,7 +72,11 @@ fun suspendifyOnThread(priority: Int = -1, block: suspend () -> Unit) {
  * means the scope will run on a background thread.  This will
  * return immediately!!!
  */
-fun suspendifyOnThread(name: String, priority: Int = -1, block: suspend () -> Unit) {
+fun suspendifyOnThread(
+    name: String,
+    priority: Int = -1,
+    block: suspend () -> Unit,
+) {
     thread(name = name, priority = priority) {
         runBlocking {
             block()

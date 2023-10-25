@@ -10,42 +10,54 @@ class ConfigModel : Model() {
      */
     var isInitializedWithRemote: Boolean
         get() = getBooleanProperty(::isInitializedWithRemote.name) { false }
-        set(value) { setBooleanProperty(::isInitializedWithRemote.name, value) }
+        set(value) {
+            setBooleanProperty(::isInitializedWithRemote.name, value)
+        }
 
     /**
      * The current OneSignal application ID provided to the SDK.
      */
     var appId: String
         get() = getStringProperty(::appId.name)
-        set(value) { setStringProperty(::appId.name, value) }
+        set(value) {
+            setStringProperty(::appId.name, value)
+        }
 
     /**
      * This device's push subscription ID.
      */
     var pushSubscriptionId: String?
         get() = getOptStringProperty(::pushSubscriptionId.name)
-        set(value) { setOptStringProperty(::pushSubscriptionId.name, value) }
+        set(value) {
+            setOptStringProperty(::pushSubscriptionId.name, value)
+        }
 
     /**
      * The API URL String.
      */
     var apiUrl: String
         get() = getStringProperty(::apiUrl.name) { "https://api.onesignal.com/" }
-        set(value) { setStringProperty(::apiUrl.name, value) }
+        set(value) {
+            setStringProperty(::apiUrl.name, value)
+        }
 
     /**
      * Whether the SDK requires privacy consent to send data to backend.
      */
     var consentRequired: Boolean?
         get() = getOptBooleanProperty(::consentRequired.name)
-        set(value) { setOptBooleanProperty(::consentRequired.name, value) }
+        set(value) {
+            setOptBooleanProperty(::consentRequired.name, value)
+        }
 
     /**
      * Whether the SDK has been given consent to privacy.
      */
     var consentGiven: Boolean?
         get() = getOptBooleanProperty(::consentGiven.name)
-        set(value) { setOptBooleanProperty(::consentGiven.name, value) }
+        set(value) {
+            setOptBooleanProperty(::consentGiven.name, value)
+        }
 
     /**
      * Whether location is shared.
@@ -59,42 +71,54 @@ class ConfigModel : Model() {
      */
     var disableGMSMissingPrompt: Boolean
         get() = getBooleanProperty(::disableGMSMissingPrompt.name) { false }
-        set(value) { setBooleanProperty(::disableGMSMissingPrompt.name, value) }
+        set(value) {
+            setBooleanProperty(::disableGMSMissingPrompt.name, value)
+        }
 
     /**
      * Whether to disable the "GMS is missing" prompt to the user.
      */
     var userRejectedGMSUpdate: Boolean
         get() = getBooleanProperty(::userRejectedGMSUpdate.name) { false }
-        set(value) { setBooleanProperty(::userRejectedGMSUpdate.name, value) }
+        set(value) {
+            setBooleanProperty(::userRejectedGMSUpdate.name, value)
+        }
 
     /**
      * Whether to automatically unsubscribe from OneSignal when notifications have been disabled.
      */
     var unsubscribeWhenNotificationsDisabled: Boolean
         get() = getBooleanProperty(::unsubscribeWhenNotificationsDisabled.name) { false }
-        set(value) { setBooleanProperty(::unsubscribeWhenNotificationsDisabled.name, value) }
+        set(value) {
+            setBooleanProperty(::unsubscribeWhenNotificationsDisabled.name, value)
+        }
 
     /**
      * The timeout in milliseconds for an HTTP connection.
      */
     var httpTimeout: Int
         get() = getIntProperty(::httpTimeout.name) { 120000 }
-        set(value) { setIntProperty(::httpTimeout.name, value) }
+        set(value) {
+            setIntProperty(::httpTimeout.name, value)
+        }
 
     /**
      * The timeout in milliseconds for an HTTP connection GET request.
      */
     var httpGetTimeout: Int
         get() = getIntProperty(::httpGetTimeout.name) { 60000 }
-        set(value) { setIntProperty(::httpGetTimeout.name, value) }
+        set(value) {
+            setIntProperty(::httpGetTimeout.name, value)
+        }
 
     /**
      * Maximum time in milliseconds a user can spend out of focus before a new session is created.
      */
     var sessionFocusTimeout: Long
         get() = getLongProperty(::sessionFocusTimeout.name) { 30000 }
-        set(value) { setLongProperty(::sessionFocusTimeout.name, value) }
+        set(value) {
+            setLongProperty(::sessionFocusTimeout.name, value)
+        }
 
     /**
      * The minimum number of milliseconds required to pass before executing another operation on
@@ -102,7 +126,9 @@ class ConfigModel : Model() {
      */
     var opRepoExecutionInterval: Long
         get() = getLongProperty(::opRepoExecutionInterval.name) { 5000 }
-        set(value) { setLongProperty(::opRepoExecutionInterval.name, value) }
+        set(value) {
+            setLongProperty(::opRepoExecutionInterval.name, value)
+        }
 
     /**
      * The number of milliseconds to delay after the operation repo processing has been woken. This
@@ -111,70 +137,90 @@ class ConfigModel : Model() {
      */
     var opRepoPostWakeDelay: Long
         get() = getLongProperty(::opRepoPostWakeDelay.name) { 200 }
-        set(value) { setLongProperty(::opRepoPostWakeDelay.name, value) }
+        set(value) {
+            setLongProperty(::opRepoPostWakeDelay.name, value)
+        }
 
     /**
      * The minimum number of milliseconds required to pass to allow the fetching of IAM to occur.
      */
     var fetchIAMMinInterval: Long
         get() = getLongProperty(::fetchIAMMinInterval.name) { 30000 }
-        set(value) { setLongProperty(::fetchIAMMinInterval.name, value) }
+        set(value) {
+            setLongProperty(::fetchIAMMinInterval.name, value)
+        }
 
     /**
      * The google project number for GMS devices.
      */
     var googleProjectNumber: String?
         get() = getOptStringProperty(::googleProjectNumber.name)
-        set(value) { setOptStringProperty(::googleProjectNumber.name, value) }
+        set(value) {
+            setOptStringProperty(::googleProjectNumber.name, value)
+        }
 
     /**
      * Whether the current application is an enterprise-level
      */
     var enterprise: Boolean
         get() = getBooleanProperty(::enterprise.name) { false }
-        set(value) { setBooleanProperty(::enterprise.name, value) }
+        set(value) {
+            setBooleanProperty(::enterprise.name, value)
+        }
 
     /**
      * Whether SMS auth hash should be used.
      */
     var useIdentityVerification: Boolean
         get() = getBooleanProperty(::useIdentityVerification.name) { false }
-        set(value) { setBooleanProperty(::useIdentityVerification.name, value) }
+        set(value) {
+            setBooleanProperty(::useIdentityVerification.name, value)
+        }
 
     /**
      * The notification channel information as a [JSONArray]
      */
     var notificationChannels: JSONArray?
         get() = JSONArray(getOptStringProperty(::notificationChannels.name) { null } ?: "[]")
-        set(value) { setOptStringProperty(::notificationChannels.name, value?.toString()) }
+        set(value) {
+            setOptStringProperty(::notificationChannels.name, value?.toString())
+        }
 
     /**
      * Whether firebase analytics should be used
      */
     var firebaseAnalytics: Boolean
         get() = getBooleanProperty(::firebaseAnalytics.name) { false }
-        set(value) { setBooleanProperty(::firebaseAnalytics.name, value) }
+        set(value) {
+            setBooleanProperty(::firebaseAnalytics.name, value)
+        }
 
     /**
      * Whether to honor TTL for notifications
      */
     var restoreTTLFilter: Boolean
         get() = getBooleanProperty(::restoreTTLFilter.name) { true }
-        set(value) { setBooleanProperty(::restoreTTLFilter.name, value) }
+        set(value) {
+            setBooleanProperty(::restoreTTLFilter.name, value)
+        }
 
     /**
      * Whether to track notification receive receipts
      */
     var receiveReceiptEnabled: Boolean
         get() = getBooleanProperty(::receiveReceiptEnabled.name) { false }
-        set(value) { setBooleanProperty(::receiveReceiptEnabled.name, value) }
+        set(value) {
+            setBooleanProperty(::receiveReceiptEnabled.name, value)
+        }
 
     /**
      * Whether to clear group on summary clicks
      */
     var clearGroupOnSummaryClick: Boolean
         get() = getBooleanProperty(::clearGroupOnSummaryClick.name) { true }
-        set(value) { setBooleanProperty(::clearGroupOnSummaryClick.name, value) }
+        set(value) {
+            setBooleanProperty(::clearGroupOnSummaryClick.name, value)
+        }
 
     /**
      * The outcomes parameters
@@ -188,7 +234,10 @@ class ConfigModel : Model() {
     val fcmParams: FCMConfigModel
         get() = getAnyProperty(::fcmParams.name) { FCMConfigModel(this, ::fcmParams.name) } as FCMConfigModel
 
-    override fun createModelForProperty(property: String, jsonObject: JSONObject): Model? {
+    override fun createModelForProperty(
+        property: String,
+        jsonObject: JSONObject,
+    ): Model? {
         if (property == ::influenceParams.name) {
             val model = InfluenceConfigModel(this, ::influenceParams.name)
             model.initializeFromJson(jsonObject)
@@ -214,49 +263,63 @@ class InfluenceConfigModel(parentModel: Model, parentProperty: String) : Model(p
      */
     var indirectNotificationAttributionWindow: Int
         get() = getIntProperty(::indirectNotificationAttributionWindow.name) { DEFAULT_INDIRECT_ATTRIBUTION_WINDOW }
-        set(value) { setIntProperty(::indirectNotificationAttributionWindow.name, value) }
+        set(value) {
+            setIntProperty(::indirectNotificationAttributionWindow.name, value)
+        }
 
     /**
      * The maximum number of push notifications that can influence at one time.
      */
     var notificationLimit: Int
         get() = getIntProperty(::notificationLimit.name) { DEFAULT_NOTIFICATION_LIMIT }
-        set(value) { setIntProperty(::notificationLimit.name, value) }
+        set(value) {
+            setIntProperty(::notificationLimit.name, value)
+        }
 
     /**
      * The number of minutes an IAM can be considered to influence a user.
      */
     var indirectIAMAttributionWindow: Int
         get() = getIntProperty(::indirectIAMAttributionWindow.name) { DEFAULT_INDIRECT_ATTRIBUTION_WINDOW }
-        set(value) { setIntProperty(::indirectIAMAttributionWindow.name, value) }
+        set(value) {
+            setIntProperty(::indirectIAMAttributionWindow.name, value)
+        }
 
     /**
      * The maximum number of IAMs that can influence at one time.
      */
     var iamLimit: Int
         get() = getIntProperty(::iamLimit.name) { DEFAULT_NOTIFICATION_LIMIT }
-        set(value) { setIntProperty(::iamLimit.name, value) }
+        set(value) {
+            setIntProperty(::iamLimit.name, value)
+        }
 
     /**
      * Whether DIRECT influences are enabled.
      */
     var isDirectEnabled: Boolean
         get() = getBooleanProperty(::isDirectEnabled.name) { false }
-        set(value) { setBooleanProperty(::isDirectEnabled.name, value) }
+        set(value) {
+            setBooleanProperty(::isDirectEnabled.name, value)
+        }
 
     /**
      * Whether INDIRECT influences are enabled.
      */
     var isIndirectEnabled: Boolean
         get() = getBooleanProperty(::isIndirectEnabled.name) { false }
-        set(value) { setBooleanProperty(::isIndirectEnabled.name, value) }
+        set(value) {
+            setBooleanProperty(::isIndirectEnabled.name, value)
+        }
 
     /**
      * Whether UNATTRIBUTED influences are enabled.
      */
     var isUnattributedEnabled: Boolean
         get() = getBooleanProperty(::isUnattributedEnabled.name) { false }
-        set(value) { setBooleanProperty(::isUnattributedEnabled.name, value) }
+        set(value) {
+            setBooleanProperty(::isUnattributedEnabled.name, value)
+        }
 
     companion object {
         const val DEFAULT_INDIRECT_ATTRIBUTION_WINDOW = 24 * 60
@@ -273,19 +336,25 @@ class FCMConfigModel(parentModel: Model, parentProperty: String) : Model(parentM
      */
     var projectId: String?
         get() = getOptStringProperty(::projectId.name) { null }
-        set(value) { setOptStringProperty(::projectId.name, value) }
+        set(value) {
+            setOptStringProperty(::projectId.name, value)
+        }
 
     /**
      * The FCM app ID.
      */
     var appId: String?
         get() = getOptStringProperty(::appId.name) { null }
-        set(value) { setOptStringProperty(::appId.name, value) }
+        set(value) {
+            setOptStringProperty(::appId.name, value)
+        }
 
     /**
      * The FCM api key.
      */
     var apiKey: String?
         get() = getOptStringProperty(::apiKey.name) { null }
-        set(value) { setOptStringProperty(::apiKey.name, value) }
+        set(value) {
+            setOptStringProperty(::apiKey.name, value)
+        }
 }

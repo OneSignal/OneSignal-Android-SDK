@@ -13,7 +13,6 @@ package com.onesignal.notifications
  * @see [Android Notification Service Extension | OneSignal Docs](https://documentation.onesignal.com/docs/service-extensions#android-notification-service-extension)
  */
 interface INotificationServiceExtension {
-
     /**
      * Called when a notification has been received by the device. This method
      * gives the implementor the ability to modify or prevent the notification from displaying to the

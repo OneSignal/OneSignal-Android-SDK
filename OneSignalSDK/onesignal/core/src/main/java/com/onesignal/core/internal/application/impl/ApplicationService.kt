@@ -77,20 +77,22 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         val application = context.applicationContext as Application
         application.registerActivityLifecycleCallbacks(this)
 
-        val configuration = object : ComponentCallbacks {
-            override fun onConfigurationChanged(newConfig: Configuration) {
-                // If Activity contains the configChanges orientation flag, re-create the view this way
-                if (current != null && AndroidUtils.hasConfigChangeFlag(
-                        current!!,
-                        ActivityInfo.CONFIG_ORIENTATION,
-                    )
-                ) {
-                    onOrientationChanged(newConfig.orientation, current!!)
+        val configuration =
+            object : ComponentCallbacks {
+                override fun onConfigurationChanged(newConfig: Configuration) {
+                    // If Activity contains the configChanges orientation flag, re-create the view this way
+                    if (current != null &&
+                        AndroidUtils.hasConfigChangeFlag(
+                            current!!,
+                            ActivityInfo.CONFIG_ORIENTATION,
+                        )
+                    ) {
+                        onOrientationChanged(newConfig.orientation, current!!)
+                    }
                 }
-            }
 
-            override fun onLowMemory() {}
-        }
+                override fun onLowMemory() {}
+            }
 
         application.registerComponentCallbacks(configuration)
 
@@ -131,7 +133,10 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         _activityLifecycleNotifier.unsubscribe(handler)
     }
 
-    override fun onActivityCreated(activity: Activity, bundle: Bundle?) {
+    override fun onActivityCreated(
+        activity: Activity,
+        bundle: Bundle?,
+    ) {
         Logging.debug("ApplicationService.onActivityCreated($_activityReferences,$entryState): $activity")
     }
 
@@ -188,7 +193,10 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         _activityLifecycleNotifier.fire { it.onActivityStopped(activity) }
     }
 
-    override fun onActivitySaveInstanceState(p0: Activity, p1: Bundle) {
+    override fun onActivitySaveInstanceState(
+        p0: Activity,
+        p1: Bundle,
+    ) {
         // Intentionally left empty
     }
 
@@ -219,7 +227,10 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
 
                     manager.registerFragmentLifecycleCallbacks(
                         object : FragmentManager.FragmentLifecycleCallbacks() {
-                            override fun onFragmentDetached(fm: FragmentManager, fragmentDetached: Fragment) {
+                            override fun onFragmentDetached(
+                                fm: FragmentManager,
+                                fragmentDetached: Fragment,
+                            ) {
                                 super.onFragmentDetached(fm, fragmentDetached)
                                 if (fragmentDetached is DialogFragment) {
                                     manager.unregisterFragmentLifecycleCallbacks(this)
@@ -234,18 +245,21 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
                 }
             }
         } catch (exception: NoClassDefFoundError) {
-            Logging.info("ApplicationService.waitUntilSystemConditionsAvailable: AppCompatActivity is not used in this app, skipping 'isDialogFragmentShowing' check: $exception")
+            Logging.info(
+                "ApplicationService.waitUntilSystemConditionsAvailable: AppCompatActivity is not used in this app, skipping 'isDialogFragmentShowing' check: $exception",
+            )
         }
 
         val waiter = Waiter()
-        val systemConditionHandler = object : ISystemConditionHandler {
-            override fun systemConditionChanged() {
-                val keyboardUp = DeviceUtils.isKeyboardUp(WeakReference(current))
-                if (!keyboardUp) {
-                    waiter.wake()
+        val systemConditionHandler =
+            object : ISystemConditionHandler {
+                override fun systemConditionChanged() {
+                    val keyboardUp = DeviceUtils.isKeyboardUp(WeakReference(current))
+                    if (!keyboardUp) {
+                        waiter.wake()
+                    }
                 }
             }
-        }
 
         // Add the listener prior to checking the condition to avoid a race condition where
         // we'll never get a callback and will be waiting forever.
@@ -274,20 +288,25 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     // Ensures the root decor view is ready by checking the following;
     //   1. Is fully attach to the root window and insets are available
     //   2. Ensure if any Activities are changed while waiting we use the updated one
-    fun decorViewReady(activity: Activity, runnable: Runnable) {
+    fun decorViewReady(
+        activity: Activity,
+        runnable: Runnable,
+    ) {
         val listenerKey = "decorViewReady:$runnable"
         val self = this
         activity.window.decorView.post {
-            self.addActivityLifecycleHandler(object : ActivityLifecycleHandlerBase() {
-                override fun onActivityAvailable(currentActivity: Activity) {
-                    self.removeActivityLifecycleHandler(this)
-                    if (AndroidUtils.isActivityFullyReady(currentActivity)) {
-                        runnable.run()
-                    } else {
-                        decorViewReady(currentActivity, runnable)
+            self.addActivityLifecycleHandler(
+                object : ActivityLifecycleHandlerBase() {
+                    override fun onActivityAvailable(currentActivity: Activity) {
+                        self.removeActivityLifecycleHandler(this)
+                        if (AndroidUtils.isActivityFullyReady(currentActivity)) {
+                            runnable.run()
+                        } else {
+                            decorViewReady(currentActivity, runnable)
+                        }
                     }
-                }
-            })
+                },
+            )
         }
     }
 
@@ -297,12 +316,19 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
      * This fix was originally implemented for In App Messages not being re-shown when orientation
      * was changed on wrapper SDK apps
      */
-    private fun onOrientationChanged(orientation: Int, activity: Activity) {
+    private fun onOrientationChanged(
+        orientation: Int,
+        activity: Activity,
+    ) {
         // Log device orientation change
         if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            Logging.debug("ApplicationService.onOrientationChanged: Configuration Orientation Change: LANDSCAPE ($orientation) on activity: $activity")
+            Logging.debug(
+                "ApplicationService.onOrientationChanged: Configuration Orientation Change: LANDSCAPE ($orientation) on activity: $activity",
+            )
         } else if (orientation == Configuration.ORIENTATION_PORTRAIT) {
-            Logging.debug("ApplicationService.onOrientationChanged: Configuration Orientation Change: PORTRAIT ($orientation) on activity: $activity")
+            Logging.debug(
+                "ApplicationService.onOrientationChanged: Configuration Orientation Change: PORTRAIT ($orientation) on activity: $activity",
+            )
         }
 
         // Remove view
@@ -331,7 +357,9 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
 
     private fun handleFocus() {
         if (!isInForeground || _nextResumeIsFirstActivity) {
-            Logging.debug("ApplicationService.handleFocus: application is now in focus, nextResumeIsFirstActivity=$_nextResumeIsFirstActivity")
+            Logging.debug(
+                "ApplicationService.handleFocus: application is now in focus, nextResumeIsFirstActivity=$_nextResumeIsFirstActivity",
+            )
             _nextResumeIsFirstActivity = false
 
             // We assume we are called *after* the notification module has determined entry due to notification.

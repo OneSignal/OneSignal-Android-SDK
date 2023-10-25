@@ -22,7 +22,6 @@ internal class OperationRepo(
     private val _configModelStore: ConfigModelStore,
     private val _time: ITime,
 ) : IOperationRepo, IStartableService {
-
     private class OperationQueueItem(
         val operation: Operation,
         val waiter: WaiterWithValue<Boolean>? = null,
@@ -53,14 +52,20 @@ internal class OperationRepo(
         }
     }
 
-    override fun enqueue(operation: Operation, flush: Boolean) {
+    override fun enqueue(
+        operation: Operation,
+        flush: Boolean,
+    ) {
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueue(operation: $operation, flush: $flush)")
 
         operation.id = UUID.randomUUID().toString()
         internalEnqueue(OperationQueueItem(operation), flush, true)
     }
 
-    override suspend fun enqueueAndWait(operation: Operation, flush: Boolean): Boolean {
+    override suspend fun enqueueAndWait(
+        operation: Operation,
+        flush: Boolean,
+    ): Boolean {
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueueAndWait(operation: $operation, force: $flush)")
 
         operation.id = UUID.randomUUID().toString()
@@ -69,7 +74,11 @@ internal class OperationRepo(
         return waiter.waitForWake()
     }
 
-    private fun internalEnqueue(queueItem: OperationQueueItem, flush: Boolean, addToStore: Boolean) {
+    private fun internalEnqueue(
+        queueItem: OperationQueueItem,
+        flush: Boolean,
+        addToStore: Boolean,
+    ) {
         synchronized(_queue) {
             _queue.add(queueItem)
             if (addToStore) {
@@ -142,8 +151,9 @@ internal class OperationRepo(
     private suspend fun executeOperations(ops: List<OperationQueueItem>) {
         try {
             val startingOp = ops.first()
-            val executor = _executorsMap[startingOp.operation.name]
-                ?: throw Exception("Could not find executor for operation ${startingOp.operation.name}")
+            val executor =
+                _executorsMap[startingOp.operation.name]
+                    ?: throw Exception("Could not find executor for operation ${startingOp.operation.name}")
 
             val operations = ops.map { it.operation }
             val response = executor.execute(operations)

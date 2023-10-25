@@ -44,7 +44,12 @@ internal class InAppDisplayer(
     private var lastInstance: WebViewManager? = null
 
     override suspend fun displayMessage(message: InAppMessage): Boolean? {
-        var response = _backend.getIAMData(_configModelStore.model.appId, message.messageId, InAppHelper.variantIdForMessage(message, _languageContext))
+        var response =
+            _backend.getIAMData(
+                _configModelStore.model.appId,
+                message.messageId,
+                InAppHelper.variantIdForMessage(message, _languageContext),
+            )
 
         if (response.content != null) {
             message.displayDuration = response.content!!.displayDuration!!
@@ -83,7 +88,10 @@ internal class InAppDisplayer(
      * @param message the message to show
      * @param content the html to display on the WebView
      */
-    private suspend fun showMessageContent(message: InAppMessage, content: InAppMessageContent) {
+    private suspend fun showMessageContent(
+        message: InAppMessage,
+        content: InAppMessageContent,
+    ) {
         val currentActivity = _applicationService.current
         Logging.debug("InAppDisplayer.showMessageContent: in app message on currentActivity: $currentActivity")
 
@@ -115,12 +123,17 @@ internal class InAppDisplayer(
         }
     }
 
-    private suspend fun initInAppMessage(currentActivity: Activity, message: InAppMessage, content: InAppMessageContent) {
+    private suspend fun initInAppMessage(
+        currentActivity: Activity,
+        message: InAppMessage,
+        content: InAppMessageContent,
+    ) {
         try {
-            val base64Str = Base64.encodeToString(
-                content.contentHtml!!.toByteArray(charset("UTF-8")),
-                Base64.NO_WRAP,
-            )
+            val base64Str =
+                Base64.encodeToString(
+                    content.contentHtml!!.toByteArray(charset("UTF-8")),
+                    Base64.NO_WRAP,
+                )
             val webViewManager = WebViewManager(message, currentActivity, content, _lifecycle, _applicationService, _promptFactory)
             lastInstance = webViewManager
 
