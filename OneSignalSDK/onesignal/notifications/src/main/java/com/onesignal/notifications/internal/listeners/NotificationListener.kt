@@ -39,7 +39,7 @@ internal class NotificationListener(
     private val _analyticsTracker: IAnalyticsTracker,
     private val _time: ITime,
 ) : IStartableService, INotificationLifecycleEventHandler {
-    private val _postedOpenedNotifIds = mutableSetOf<String>()
+    private val postedOpenedNotifIds = mutableSetOf<String>()
 
     override fun start() {
         _notificationLifecycleService.addInternalNotificationLifecycleEventHandler(this)
@@ -75,10 +75,10 @@ internal class NotificationListener(
         val deviceType = _deviceService.deviceType
 
         for (i in 0 until data.length()) {
-            if (_postedOpenedNotifIds.contains(notificationId)) {
+            if (postedOpenedNotifIds.contains(notificationId)) {
                 continue
             }
-            _postedOpenedNotifIds.add(notificationId)
+            postedOpenedNotifIds.add(notificationId)
 
             try {
                 _backend.updateNotificationAsOpened(

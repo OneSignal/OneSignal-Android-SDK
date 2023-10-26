@@ -65,7 +65,7 @@ internal class FirebaseAnalyticsTracker(
         if (lastOpenedTime != null && now - lastOpenedTime!!.get() < 1000 * 30) return
         try {
             val firebaseAnalyticsInstance = getFirebaseAnalyticsInstance()
-            val trackMethod = getTrackMethod(FirebaseAnalyticsClass)
+            val trackMethod = getTrackMethod(firebaseAnalyticsClass)
             val event = EVENT_NOTIFICATION_INFLUENCE_OPEN
 
             // construct the firebase analytics event bundle
@@ -96,7 +96,7 @@ internal class FirebaseAnalyticsTracker(
         try {
             // get the source, medium, campaign params from the openResult
             val firebaseAnalyticsInstance = getFirebaseAnalyticsInstance()
-            val trackMethod = getTrackMethod(FirebaseAnalyticsClass)
+            val trackMethod = getTrackMethod(firebaseAnalyticsClass)
 
             // construct the firebase analytics event bundle
             val bundle = Bundle()
@@ -121,7 +121,7 @@ internal class FirebaseAnalyticsTracker(
         try {
             // get the source, medium, campaign params from the openResult
             val firebaseAnalyticsInstance = getFirebaseAnalyticsInstance()
-            val trackMethod = getTrackMethod(FirebaseAnalyticsClass)
+            val trackMethod = getTrackMethod(firebaseAnalyticsClass)
             // construct the firebase analytics event bundle
             val bundle = Bundle()
             bundle.putString("source", "OneSignal")
@@ -140,7 +140,7 @@ internal class FirebaseAnalyticsTracker(
 
     private fun getFirebaseAnalyticsInstance(): Any? {
         if (mFirebaseAnalyticsInstance == null) {
-            val getInstanceMethod = getInstanceMethod(FirebaseAnalyticsClass)
+            val getInstanceMethod = getInstanceMethod(firebaseAnalyticsClass)
             mFirebaseAnalyticsInstance =
                 try {
                     getInstanceMethod!!.invoke(null, _applicationService.appContext)
@@ -153,14 +153,14 @@ internal class FirebaseAnalyticsTracker(
     }
 
     companion object {
-        private var FirebaseAnalyticsClass: Class<*>? = null
+        private var firebaseAnalyticsClass: Class<*>? = null
         private const val EVENT_NOTIFICATION_OPENED = "os_notification_opened"
         private const val EVENT_NOTIFICATION_INFLUENCE_OPEN = "os_notification_influence_open"
         private const val EVENT_NOTIFICATION_RECEIVED = "os_notification_received"
 
         fun canTrack(): Boolean {
             return try {
-                FirebaseAnalyticsClass =
+                firebaseAnalyticsClass =
                     Class.forName("com.google.firebase.analytics.FirebaseAnalytics")
                 true
             } catch (e: ClassNotFoundException) {

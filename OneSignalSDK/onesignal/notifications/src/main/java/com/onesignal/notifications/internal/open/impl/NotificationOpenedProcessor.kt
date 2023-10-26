@@ -215,7 +215,7 @@ internal class NotificationOpenedProcessor(
                 // Check that no more groupless notifications exist in the group and cancel the group
                 val grouplessCount = NotificationHelper.getGrouplessNotifsCount(context)
                 if (grouplessCount < 1) {
-                    val groupId = NotificationHelper.grouplessSummaryId
+                    val groupId = NotificationHelper.GROUPLESS_SUMMARY_ID
                     val notificationManager =
                         NotificationHelper.getNotificationManager(context)
                     notificationManager.cancel(groupId)
