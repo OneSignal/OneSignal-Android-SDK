@@ -269,8 +269,8 @@ internal class NotificationDisplayBuilder(
             } catch (t: Throwable) {
             }
             if (bitmap != null) return bitmap
-            val image_extensions = Arrays.asList(".png", ".webp", ".jpg", ".gif", ".bmp")
-            for (extension in image_extensions) {
+            val imageExtensions = Arrays.asList(".png", ".webp", ".jpg", ".gif", ".bmp")
+            for (extension in imageExtensions) {
                 try {
                     bitmap =
                         BitmapFactory.decodeStream(currentContext!!.assets.open(bitmapStr + extension))

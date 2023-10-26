@@ -8,17 +8,17 @@ import com.onesignal.notifications.services.ADMMessageHandlerJob
 //             when "proguard-android-optimize.txt" is used.
 class ADMMessageReceiver : com.amazon.device.messaging.ADMMessageReceiver(ADMMessageHandler::class.java) {
     init {
-        var ADMLatestAvailable = false
+        var admLatestAvailable = false
         try {
             Class.forName("com.amazon.device.messaging.ADMMessageHandlerJobBase")
-            ADMLatestAvailable = true
+            admLatestAvailable = true
         } catch (e: ClassNotFoundException) {
             // Handle the exception.
         }
-        if (ADMLatestAvailable) {
+        if (admLatestAvailable) {
             registerJobServiceClass(ADMMessageHandlerJob::class.java, JOB_ID)
         }
-        Logging.debug("ADM latest available: $ADMLatestAvailable")
+        Logging.debug("ADM latest available: $admLatestAvailable")
     }
 
     companion object {

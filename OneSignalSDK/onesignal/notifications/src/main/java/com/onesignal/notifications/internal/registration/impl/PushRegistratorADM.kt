@@ -11,12 +11,12 @@ import kotlinx.coroutines.withTimeout
 internal class PushRegistratorADM(
     private val _applicationService: IApplicationService,
 ) : IPushRegistrator, IPushRegistratorCallback {
-    private var _waiter: WaiterWithValue<String?>? = null
+    private var waiter: WaiterWithValue<String?>? = null
 
     override suspend fun registerForPush(): IPushRegistrator.RegisterResult {
         var result: IPushRegistrator.RegisterResult? = null
 
-        _waiter = WaiterWithValue()
+        waiter = WaiterWithValue()
 
         val adm = ADM(_applicationService.appContext)
         var registrationId = adm.registrationId
@@ -33,7 +33,7 @@ internal class PushRegistratorADM(
             // wait up to 30 seconds for someone to call `fireCallback` with the registration id.
             // if it comes before we will continue immediately.
             withTimeout(30000) {
-                registrationId = _waiter?.waitForWake()
+                registrationId = waiter?.waitForWake()
             }
 
             result =
@@ -56,6 +56,6 @@ internal class PushRegistratorADM(
     }
 
     override suspend fun fireCallback(id: String?) {
-        _waiter?.wake(id)
+        waiter?.wake(id)
     }
 }

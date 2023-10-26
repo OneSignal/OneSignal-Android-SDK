@@ -166,7 +166,8 @@ internal class NotificationRepository(
             _databaseProvider.os.query(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
                 columns = retColumn,
-                whereClause = OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID + " = ?", // Where String
+                // Where String
+                whereClause = OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID + " = ?",
                 whereArgs = whereArgs,
             ) {
                 val exists = it.moveToFirst()
@@ -305,7 +306,7 @@ internal class NotificationRepository(
             var whereStr: String
             var whereArgs: Array<String>? = null
             if (summaryGroup != null) {
-                val isGroupless = summaryGroup == NotificationHelper.grouplessSummaryKey
+                val isGroupless = summaryGroup == NotificationHelper.GROUPLESS_SUMMARY_KEY
                 if (isGroupless) {
                     whereStr =
                         OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID + " IS NULL"
@@ -360,7 +361,8 @@ internal class NotificationRepository(
         withContext(Dispatchers.IO) {
             _databaseProvider.os.query(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
-                columns = arrayOf(OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID), // retColumn
+                // retColumn
+                columns = arrayOf(OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID),
                 whereClause = OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID + " = " + androidId,
             ) {
                 if (it.moveToFirst()) {
@@ -379,7 +381,8 @@ internal class NotificationRepository(
         withContext(Dispatchers.IO) {
             _databaseProvider.os.query(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
-                columns = arrayOf(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID), // retColumn
+                // retColumn
+                columns = arrayOf(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID),
                 whereClause =
                     OneSignalDbContract.NotificationTable.COLUMN_NAME_COLLAPSE_ID + " = ? AND " +
                         OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
@@ -407,8 +410,10 @@ internal class NotificationRepository(
                     OneSignalDbContract.NotificationTable.TABLE_NAME,
                     columns = arrayOf(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID),
                     whereClause = _queryHelper.recentUninteractedWithNotificationsWhere().toString(),
-                    orderBy = BaseColumns._ID, // sort order, old to new
-                    limit = maxNumberOfNotificationsString + notificationsToMakeRoomFor, // limit
+                    // sort order, old to new
+                    orderBy = BaseColumns._ID,
+                    // limit
+                    limit = maxNumberOfNotificationsString + notificationsToMakeRoomFor,
                 ) {
                     var notificationsToClear =
                         it.count - maxNumberOfNotificationsInt + notificationsToMakeRoomFor
@@ -444,7 +449,8 @@ internal class NotificationRepository(
                         OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
                         OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0",
                 whereArgs = whereArgs,
-                orderBy = BaseColumns._ID + " DESC", // sort order, new to old);
+                // sort order, new to old);
+                orderBy = BaseColumns._ID + " DESC",
             ) {
                 if (it.moveToFirst()) {
                     do {
@@ -485,7 +491,7 @@ internal class NotificationRepository(
         getSummaryNotification: Boolean,
     ): Int? {
         var recentId: Int? = null
-        val isGroupless = group == NotificationHelper.grouplessSummaryKey
+        val isGroupless = group == NotificationHelper.GROUPLESS_SUMMARY_KEY
 
         /* Beginning of the query string changes based on being groupless or not
          * since the groupless notifications will have a null group key in the db */
@@ -546,8 +552,10 @@ internal class NotificationRepository(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
                 columns = COLUMNS_FOR_LIST_NOTIFICATIONS,
                 whereClause = dbQuerySelection.toString(),
-                orderBy = BaseColumns._ID + " DESC", // sort order, new to old
-                limit = INotificationLimitManager.Constants.maxNumberOfNotifications.toString(), // limit
+                // sort order, new to old
+                orderBy = BaseColumns._ID + " DESC",
+                // limit
+                limit = INotificationLimitManager.Constants.maxNumberOfNotifications.toString(),
             ) {
                 while (it.moveToNext()) {
                     val title =

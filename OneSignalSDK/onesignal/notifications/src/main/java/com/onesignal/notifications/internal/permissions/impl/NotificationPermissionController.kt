@@ -51,8 +51,8 @@ internal class NotificationPermissionController(
     private val _preferenceService: IPreferencesService,
 ) : IRequestPermissionService.PermissionCallback,
     INotificationPermissionController {
-    private val _waiter = WaiterWithValue<Boolean>()
-    private val _events = EventProducer<INotificationPermissionChangedHandler>()
+    private val waiter = WaiterWithValue<Boolean>()
+    private val events = EventProducer<INotificationPermissionChangedHandler>()
 
     override val canRequestPermission: Boolean
         get() =
@@ -103,19 +103,19 @@ internal class NotificationPermissionController(
 
         // this won't return until onAccept or onReject sends the response on the channel (either
         // through the native prompt or through the fallback)
-        return _waiter.waitForWake()
+        return waiter.waitForWake()
     }
 
-    override fun subscribe(handler: INotificationPermissionChangedHandler) = _events.subscribe(handler)
+    override fun subscribe(handler: INotificationPermissionChangedHandler) = events.subscribe(handler)
 
-    override fun unsubscribe(handler: INotificationPermissionChangedHandler) = _events.subscribe(handler)
+    override fun unsubscribe(handler: INotificationPermissionChangedHandler) = events.subscribe(handler)
 
     override val hasSubscribers: Boolean
-        get() = _events.hasSubscribers
+        get() = events.hasSubscribers
 
     override fun onAccept() {
-        _waiter.wake(true)
-        _events.fire { it.onNotificationPermissionChanged(true) }
+        waiter.wake(true)
+        events.fire { it.onNotificationPermissionChanged(true) }
     }
 
     override fun onReject(fallbackToSettings: Boolean) {
@@ -127,8 +127,8 @@ internal class NotificationPermissionController(
             }
 
         if (!fallbackShown) {
-            _waiter.wake(false)
-            _events.fire { it.onNotificationPermissionChanged(false) }
+            waiter.wake(false)
+            events.fire { it.onNotificationPermissionChanged(false) }
         }
     }
 
@@ -149,8 +149,8 @@ internal class NotificationPermissionController(
                                 super.onFocus()
                                 _applicationService.removeApplicationLifecycleHandler(this)
                                 val hasPermission = AndroidUtils.hasPermission(ANDROID_PERMISSION_STRING, true, _applicationService)
-                                _waiter.wake(hasPermission)
-                                _events.fire { it.onNotificationPermissionChanged(hasPermission) }
+                                waiter.wake(hasPermission)
+                                events.fire { it.onNotificationPermissionChanged(hasPermission) }
                             }
                         },
                     )
@@ -158,8 +158,8 @@ internal class NotificationPermissionController(
                 }
 
                 override fun onDecline() {
-                    _waiter.wake(false)
-                    _events.fire { it.onNotificationPermissionChanged(false) }
+                    waiter.wake(false)
+                    events.fire { it.onNotificationPermissionChanged(false) }
                 }
             },
         )
