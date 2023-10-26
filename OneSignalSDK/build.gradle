@@ -6,7 +6,7 @@ buildscript {
         buildVersions = [
                 compileSdkVersion: 31,
                 targetSdkVersion: 31,
-                minSdkVersion: 16
+                minSdkVersion: 19
         ]
         androidGradlePluginVersion = '7.2.0'
         googleServicesGradlePluginVersion = '4.3.10'
