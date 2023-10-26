@@ -101,9 +101,9 @@ internal class NotificationSummaryManager(
             val shouldDismissAll = _configModelStore.model.clearGroupOnSummaryClick
             if (shouldDismissAll) {
                 val groupId =
-                    if (group == NotificationHelper.grouplessSummaryKey) {
+                    if (group == NotificationHelper.GROUPLESS_SUMMARY_KEY) {
                         // If the group is groupless, obtain the hardcoded groupless summary id
-                        NotificationHelper.grouplessSummaryId
+                        NotificationHelper.GROUPLESS_SUMMARY_ID
                     } else {
                         // Obtain the group to clear notifications from
                         _dataController.getAndroidIdForGroup(group, true)

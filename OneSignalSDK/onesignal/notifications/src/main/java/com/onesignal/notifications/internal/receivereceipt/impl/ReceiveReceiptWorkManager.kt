@@ -72,14 +72,14 @@ internal class ReceiveReceiptWorkManager(
     }
 
     class ReceiveReceiptWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
-        private var _receiveReceiptProcessor: IReceiveReceiptProcessor = OneSignal.getService()
+        private var receiveReceiptProcessor: IReceiveReceiptProcessor = OneSignal.getService()
 
         override suspend fun doWork(): Result {
             val inputData = inputData
             val notificationId = inputData.getString(OS_NOTIFICATION_ID)!!
             val appId = inputData.getString(OS_APP_ID)!!
             val subscriptionId = inputData.getString(OS_SUBSCRIPTION_ID)!!
-            _receiveReceiptProcessor.sendReceiveReceipt(appId, subscriptionId, notificationId)
+            receiveReceiptProcessor.sendReceiveReceipt(appId, subscriptionId, notificationId)
             return Result.success()
         }
     }

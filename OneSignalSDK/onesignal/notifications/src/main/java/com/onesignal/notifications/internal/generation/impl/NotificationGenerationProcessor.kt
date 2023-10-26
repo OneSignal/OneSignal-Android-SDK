@@ -278,7 +278,8 @@ internal class NotificationGenerationProcessor(
                 customJSON.optString("i"),
                 jsonPayload.safeString("grp"),
                 collapseKey,
-                notificationJob.isNotificationToDisplay, // When notification was displayed, count any notifications with duplicated android notification ids as dismissed.
+                // When notification was displayed, count any notifications with duplicated android notification ids as dismissed.
+                notificationJob.isNotificationToDisplay,
                 opened,
                 notificationJob.androidId,
                 if (notificationJob.title != null) notificationJob.title.toString() else null,

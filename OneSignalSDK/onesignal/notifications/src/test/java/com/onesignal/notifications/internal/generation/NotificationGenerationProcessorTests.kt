@@ -49,7 +49,20 @@ class NotificationGenerationProcessorTests : FunSpec({
         coEvery { mockNotificationDisplayer.displayNotification(any()) } returns true
         val mockNotificationRepository = mockk<INotificationRepository>()
         coEvery { mockNotificationRepository.doesNotificationExist(any()) } returns false
-        coEvery { mockNotificationRepository.createNotification(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } just runs
+        coEvery {
+            mockNotificationRepository.createNotification(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+            )
+        } just runs
         val mockNotificationSummaryManager = mockk<INotificationSummaryManager>()
         val mockNotificationLifecycleService = mockk<INotificationLifecycleService>()
         coEvery { mockNotificationLifecycleService.canReceiveNotification(any()) } returns true
