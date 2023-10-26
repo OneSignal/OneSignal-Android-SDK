@@ -17,7 +17,6 @@ buildscript {
         kotestVersion = '5.5.0'
         ktlintPluginVersion = '11.6.1'
         ktlintVersion = '1.0.1'
-        detektVersion = '1.21.0'
         junitVersion = '4.13.2'
     }
 
@@ -34,7 +33,6 @@ buildscript {
         classpath "com.huawei.agconnect:agcp:$huaweiAgconnectVersion"
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         classpath "org.jlleitschuh.gradle:ktlint-gradle:$ktlintPluginVersion"
-        classpath "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:$detektVersion"
     }
 }
 
