@@ -22,8 +22,8 @@ import org.json.JSONObject
 import kotlin.math.min
 
 object NotificationHelper {
-    const val grouplessSummaryKey = "os_group_undefined"
-    const val grouplessSummaryId = -718463522
+    const val GROUPLESS_SUMMARY_KEY = "os_group_undefined"
+    const val GROUPLESS_SUMMARY_ID = -718463522
 
     /**
      * Getter for obtaining all active notifications
@@ -52,7 +52,7 @@ object NotificationHelper {
         var groupCount = 0
         for (statusBarNotification in statusBarNotifications) {
             if (!NotificationCompat.isGroupSummary(statusBarNotification.notification) &&
-                grouplessSummaryKey == statusBarNotification.notification.group
+                GROUPLESS_SUMMARY_KEY == statusBarNotification.notification.group
             ) {
                 groupCount++
             }
@@ -78,7 +78,7 @@ object NotificationHelper {
             val isGroupSummary = isGroupSummary(statusBarNotification)
             val isGroupless = (
                 notification.group == null ||
-                    notification.group == grouplessSummaryKey
+                    notification.group == GROUPLESS_SUMMARY_KEY
             )
             if (!isGroupSummary && isGroupless) {
                 grouplessStatusBarNotifications.add(
@@ -109,7 +109,7 @@ object NotificationHelper {
             // Recreate the notification but with the groupless key instead
             val notif =
                 grouplessNotifBuilder
-                    .setGroup(grouplessSummaryKey)
+                    .setGroup(GROUPLESS_SUMMARY_KEY)
                     .setOnlyAlertOnce(true)
                     .build()
             NotificationManagerCompat.from(context!!).notify(grouplessNotif.id, notif)

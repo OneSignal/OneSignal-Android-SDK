@@ -50,7 +50,7 @@ internal class NotificationsManager(
     override val canRequestPermission: Boolean
         get() = _notificationPermissionController.canRequestPermission
 
-    private val _permissionChangedNotifier = EventProducer<IPermissionObserver>()
+    private val permissionChangedNotifier = EventProducer<IPermissionObserver>()
 
     init {
         _applicationService.addApplicationLifecycleHandler(this)
@@ -100,7 +100,7 @@ internal class NotificationsManager(
 
         if (oldPermissionStatus != isEnabled) {
             // switch over to the main thread for the firing of the event
-            _permissionChangedNotifier.fireOnMain { it.onNotificationPermissionChange(isEnabled) }
+            permissionChangedNotifier.fireOnMain { it.onNotificationPermissionChange(isEnabled) }
         }
     }
 
@@ -132,12 +132,12 @@ internal class NotificationsManager(
 
     override fun addPermissionObserver(observer: IPermissionObserver) {
         Logging.debug("NotificationsManager.addPermissionObserver(observer: $observer)")
-        _permissionChangedNotifier.subscribe(observer)
+        permissionChangedNotifier.subscribe(observer)
     }
 
     override fun removePermissionObserver(observer: IPermissionObserver) {
         Logging.debug("NotificationsManager.removePermissionObserver(observer: $observer)")
-        _permissionChangedNotifier.unsubscribe(observer)
+        permissionChangedNotifier.unsubscribe(observer)
     }
 
     override fun addForegroundLifecycleListener(listener: INotificationLifecycleListener) {

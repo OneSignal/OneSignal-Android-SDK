@@ -261,9 +261,9 @@ internal class SummaryNotificationDisplayer(
         val fcmJson: JSONObject = notificationJob.jsonPayload!!
         val summaryNotification: Notification
         val random = SecureRandom()
-        val group: String = NotificationHelper.grouplessSummaryKey
+        val group: String = NotificationHelper.GROUPLESS_SUMMARY_KEY
         val summaryMessage = "$grouplessNotifCount new messages"
-        val summaryNotificationId: Int = NotificationHelper.grouplessSummaryId
+        val summaryNotificationId: Int = NotificationHelper.GROUPLESS_SUMMARY_ID
         _dataController.createSummaryNotification(summaryNotificationId!!, group)
         val summaryContentIntent: PendingIntent? =
             intentGenerator.getNewActionPendingIntent(
