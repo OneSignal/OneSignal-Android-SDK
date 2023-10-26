@@ -14,7 +14,6 @@ buildscript {
         huaweiHMSLocationVersion = '4.0.0.300'
         kotlinVersion = '1.5.32'
         ktlintVersion = '11.0.0'
-        detektVersion = '1.21.0'
     }
 
     repositories {
@@ -29,9 +28,7 @@ buildscript {
         classpath "com.google.gms:google-services:$googleServicesGradlePluginVersion"
         classpath "com.huawei.agconnect:agcp:$huaweiAgconnectVersion"
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
-
         classpath "org.jlleitschuh.gradle:ktlint-gradle:$ktlintVersion"
-        classpath "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:$detektVersion"
     }
 }
 

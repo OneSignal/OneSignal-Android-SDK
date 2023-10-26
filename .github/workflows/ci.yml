@@ -23,11 +23,6 @@ jobs:
         working-directory: OneSignalSDK
         run: |
           ./gradlew ktlintCheck --console=plain
-      - name: "[Test] Analyzing"
-        working-directory: OneSignalSDK
-        continue-on-error: true
-        run: |
-          ./gradlew detekt --console=plain
       - name: "[Test] SDK Unit Tests"
         working-directory: OneSignalSDK
         run: |
