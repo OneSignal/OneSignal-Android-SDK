@@ -107,6 +107,7 @@ open class Model(
                         Float::class.java, java.lang.Float::class.java -> data[property] = jsonObject.getDouble(property).toFloat()
                         Int::class.java, java.lang.Integer::class.java -> data[property] = jsonObject.getInt(property)
                         Boolean::class.java, java.lang.Boolean::class.java -> data[property] = jsonObject.getBoolean(property)
+                        String::class.java, java.lang.String::class.java -> data[property] = jsonObject.getString(property)
                         else -> data[property] = jsonObject.get(property)
                     }
                 }

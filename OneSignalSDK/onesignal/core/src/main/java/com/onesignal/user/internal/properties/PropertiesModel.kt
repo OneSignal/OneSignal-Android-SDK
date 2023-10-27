@@ -91,7 +91,9 @@ class PropertiesModel : Model() {
     override fun createModelForProperty(property: String, jsonObject: JSONObject): Model? {
         if (property == ::tags.name) {
             val model = MapModel<String>(this, ::tags.name)
-            model.initializeFromJson(jsonObject)
+            for (key in jsonObject.keys()) {
+                model.setStringProperty(key, jsonObject.getString(key))
+            }
             return model
         }
 
