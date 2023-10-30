@@ -1,5 +1,6 @@
 package com.onesignal.common.threading
 
+import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -41,10 +42,15 @@ fun suspendifyBlocking(block: suspend () -> Unit) {
  */
 fun suspendifyOnMain(block: suspend () -> Unit) {
     thread {
-        runBlocking {
-            withContext(Dispatchers.Main) {
-                block()
+        try {
+            runBlocking {
+                withContext(Dispatchers.Main) {
+                    block()
+                }
             }
+        }
+        catch (e: Exception) {
+            Logging.error("Exception on thread with switch to main", e)
         }
     }
 }
@@ -57,8 +63,13 @@ fun suspendifyOnMain(block: suspend () -> Unit) {
  */
 fun suspendifyOnThread(priority: Int = -1, block: suspend () -> Unit) {
     thread(priority = priority) {
-        runBlocking {
-            block()
+        try {
+            runBlocking {
+                block()
+            }
+        }
+        catch (e: Exception) {
+            Logging.error("Exception on thread", e)
         }
     }
 }
@@ -71,8 +82,13 @@ fun suspendifyOnThread(priority: Int = -1, block: suspend () -> Unit) {
  */
 fun suspendifyOnThread(name: String, priority: Int = -1, block: suspend () -> Unit) {
     thread(name = name, priority = priority) {
-        runBlocking {
-            block()
+        try {
+            runBlocking {
+                block()
+            }
+        }
+        catch (e: Exception) {
+            Logging.error("Exception on thread '${name}'", e)
         }
     }
 }
