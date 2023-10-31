@@ -118,7 +118,7 @@ internal class TrackAmazonPurchase(
         if (!canTrack) return
         try {
             val curPurchasingListener =
-                listenerHandlerField!![listenerHandlerObject] as PurchasingListener
+                listenerHandlerField!!.get(listenerHandlerObject) as PurchasingListener?
             if (curPurchasingListener !== osPurchasingListener) {
                 osPurchasingListener!!.orgPurchasingListener = curPurchasingListener
                 setListener()
