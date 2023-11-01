@@ -8,7 +8,6 @@ import android.app.Application.ActivityLifecycleCallbacks
  * [ActivityLifecycleCallbacks], it provides an abstraction more specific to the OneSignal SDK
  */
 interface IApplicationLifecycleHandler {
-
     /**
      * Called when the application is brought into the foreground.
      */
@@ -26,5 +25,6 @@ interface IApplicationLifecycleHandler {
  */
 open class ApplicationLifecycleHandlerBase : IApplicationLifecycleHandler {
     override fun onFocus() {}
+
     override fun onUnfocused() {}
 }

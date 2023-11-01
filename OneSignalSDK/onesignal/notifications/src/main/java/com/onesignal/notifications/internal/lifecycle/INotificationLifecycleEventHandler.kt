@@ -9,5 +9,10 @@ interface INotificationLifecycleEventHandler {
      * Called *after* the notification has been generated and processed by the SDK.
      */
     suspend fun onNotificationReceived(notificationJob: NotificationGenerationJob)
-    suspend fun onNotificationOpened(activity: Activity, data: JSONArray, notificationId: String)
+
+    suspend fun onNotificationOpened(
+        activity: Activity,
+        data: JSONArray,
+        notificationId: String,
+    )
 }

@@ -110,24 +110,25 @@ internal class NotificationsModule : IModule {
 
         builder.register {
             val deviceService = it.getService(IDeviceService::class.java)
-            val service = if (deviceService.isFireOSDeviceType) {
-                PushRegistratorADM(it.getService(IApplicationService::class.java))
-            } else if (deviceService.isAndroidDeviceType) {
-                if (deviceService.hasFCMLibrary) {
-                    PushRegistratorFCM(
-                        it.getService(ConfigModelStore::class.java),
-                        it.getService(
-                            IApplicationService::class.java,
-                        ),
-                        it.getService(GooglePlayServicesUpgradePrompt::class.java),
-                        deviceService,
-                    )
+            val service =
+                if (deviceService.isFireOSDeviceType) {
+                    PushRegistratorADM(it.getService(IApplicationService::class.java))
+                } else if (deviceService.isAndroidDeviceType) {
+                    if (deviceService.hasFCMLibrary) {
+                        PushRegistratorFCM(
+                            it.getService(ConfigModelStore::class.java),
+                            it.getService(
+                                IApplicationService::class.java,
+                            ),
+                            it.getService(GooglePlayServicesUpgradePrompt::class.java),
+                            deviceService,
+                        )
+                    } else {
+                        PushRegistratorNone()
+                    }
                 } else {
-                    PushRegistratorNone()
+                    PushRegistratorHMS(deviceService, it.getService(IApplicationService::class.java))
                 }
-            } else {
-                PushRegistratorHMS(deviceService, it.getService(IApplicationService::class.java))
-            }
             return@register service
         }.provides<IPushRegistrator>()
             .provides<IPushRegistratorCallback>()

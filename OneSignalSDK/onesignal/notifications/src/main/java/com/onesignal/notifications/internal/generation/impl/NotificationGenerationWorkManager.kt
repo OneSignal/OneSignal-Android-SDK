@@ -18,7 +18,6 @@ import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 
 internal class NotificationGenerationWorkManager : INotificationGenerationWorkManager {
-
     override fun beginEnqueueingWork(
         context: Context,
         osNotificationId: String,
@@ -41,17 +40,21 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
         }
 
         // TODO: Need to figure out how to implement the isHighPriority param
-        val inputData = Data.Builder()
-            .putString(OS_ID_DATA_PARAM, id)
-            .putInt(ANDROID_NOTIF_ID_WORKER_DATA_PARAM, androidNotificationId)
-            .putString(JSON_PAYLOAD_WORKER_DATA_PARAM, jsonPayload.toString())
-            .putLong(TIMESTAMP_WORKER_DATA_PARAM, timestamp)
-            .putBoolean(IS_RESTORING_WORKER_DATA_PARAM, isRestoring)
-            .build()
-        val workRequest = OneTimeWorkRequest.Builder(NotificationGenerationWorker::class.java)
-            .setInputData(inputData)
-            .build()
-        Logging.debug("NotificationWorkManager enqueueing notification work with notificationId: $osNotificationId and jsonPayload: $jsonPayload")
+        val inputData =
+            Data.Builder()
+                .putString(OS_ID_DATA_PARAM, id)
+                .putInt(ANDROID_NOTIF_ID_WORKER_DATA_PARAM, androidNotificationId)
+                .putString(JSON_PAYLOAD_WORKER_DATA_PARAM, jsonPayload.toString())
+                .putLong(TIMESTAMP_WORKER_DATA_PARAM, timestamp)
+                .putBoolean(IS_RESTORING_WORKER_DATA_PARAM, isRestoring)
+                .build()
+        val workRequest =
+            OneTimeWorkRequest.Builder(NotificationGenerationWorker::class.java)
+                .setInputData(inputData)
+                .build()
+        Logging.debug(
+            "NotificationWorkManager enqueueing notification work with notificationId: $osNotificationId and jsonPayload: $jsonPayload",
+        )
         WorkManager.getInstance(context)
             .enqueueUniqueWork(osNotificationId, ExistingWorkPolicy.KEEP, workRequest)
 
@@ -75,7 +78,13 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
                 val timestamp = inputData.getLong(TIMESTAMP_WORKER_DATA_PARAM, System.currentTimeMillis() / 1000L)
                 val isRestoring = inputData.getBoolean(IS_RESTORING_WORKER_DATA_PARAM, false)
 
-                notificationProcessor.processNotificationData(applicationContext, androidNotificationId, jsonPayload, isRestoring, timestamp)
+                notificationProcessor.processNotificationData(
+                    applicationContext,
+                    androidNotificationId,
+                    jsonPayload,
+                    isRestoring,
+                    timestamp,
+                )
             } catch (e: JSONException) {
                 Logging.error("Error occurred doing work for job with id: $id", e)
                 return Result.failure()

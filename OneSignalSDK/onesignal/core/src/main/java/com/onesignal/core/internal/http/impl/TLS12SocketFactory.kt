@@ -21,12 +21,20 @@ internal class TLS12SocketFactory(var sslSocketFactory: SSLSocketFactory) : SSLS
     }
 
     @Throws(IOException::class)
-    override fun createSocket(s: Socket, host: String, port: Int, autoClose: Boolean): Socket {
+    override fun createSocket(
+        s: Socket,
+        host: String,
+        port: Int,
+        autoClose: Boolean,
+    ): Socket {
         return enableTLS(sslSocketFactory.createSocket(s, host, port, autoClose))
     }
 
     @Throws(IOException::class)
-    override fun createSocket(host: String, port: Int): Socket {
+    override fun createSocket(
+        host: String,
+        port: Int,
+    ): Socket {
         return enableTLS(sslSocketFactory.createSocket(host, port))
     }
 
@@ -41,7 +49,10 @@ internal class TLS12SocketFactory(var sslSocketFactory: SSLSocketFactory) : SSLS
     }
 
     @Throws(IOException::class)
-    override fun createSocket(host: InetAddress, port: Int): Socket {
+    override fun createSocket(
+        host: InetAddress,
+        port: Int,
+    ): Socket {
         return enableTLS(sslSocketFactory.createSocket(host, port))
     }
 

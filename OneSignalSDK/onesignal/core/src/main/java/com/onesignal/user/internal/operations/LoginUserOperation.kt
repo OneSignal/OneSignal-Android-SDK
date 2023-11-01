@@ -18,7 +18,9 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
      */
     var appId: String
         get() = getStringProperty(::appId.name)
-        private set(value) { setStringProperty(::appId.name, value) }
+        private set(value) {
+            setStringProperty(::appId.name, value)
+        }
 
     /**
      * The local OneSignal ID this user was initially logged in under. The user models with this ID
@@ -26,14 +28,18 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
      */
     var onesignalId: String
         get() = getStringProperty(::onesignalId.name)
-        private set(value) { setStringProperty(::onesignalId.name, value) }
+        private set(value) {
+            setStringProperty(::onesignalId.name, value)
+        }
 
     /**
      * The optional external ID of this newly logged-in user. Must be unique for the [appId].
      */
     var externalId: String?
         get() = getOptStringProperty(::externalId.name)
-        private set(value) { setOptStringProperty(::externalId.name, value) }
+        private set(value) {
+            setOptStringProperty(::externalId.name, value)
+        }
 
     /**
      * The user ID of an existing user the [externalId] will be attempted to be associated to first.
@@ -42,7 +48,9 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
      */
     var existingOnesignalId: String?
         get() = getOptStringProperty(::existingOnesignalId.name)
-        private set(value) { setOptStringProperty(::existingOnesignalId.name, value) }
+        private set(value) {
+            setOptStringProperty(::existingOnesignalId.name, value)
+        }
 
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String = ""

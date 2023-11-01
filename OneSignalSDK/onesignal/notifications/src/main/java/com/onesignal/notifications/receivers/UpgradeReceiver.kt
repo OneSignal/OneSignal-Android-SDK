@@ -34,7 +34,10 @@ import com.onesignal.OneSignal
 import com.onesignal.notifications.internal.restoration.INotificationRestoreWorkManager
 
 class UpgradeReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
         // TODO: Now that we arent restoring like we use to, think we can remove this? Ill do some
         //  testing and look at the issue but maybe someone has a answer or rems what directly
         //  was causing this issue

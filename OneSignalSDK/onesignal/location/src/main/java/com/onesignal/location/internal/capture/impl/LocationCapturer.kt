@@ -20,7 +20,6 @@ internal class LocationCapturer(
     private val _propertiesModelStore: PropertiesModelStore,
     private val _controller: ILocationController,
 ) : ILocationUpdatedHandler, ILocationCapturer {
-
     override var locationCoarse: Boolean = false
 
     init {

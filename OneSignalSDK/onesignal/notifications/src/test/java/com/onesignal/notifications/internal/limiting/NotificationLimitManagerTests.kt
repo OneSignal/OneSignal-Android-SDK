@@ -34,7 +34,7 @@ class NotificationLimitManagerTests : FunSpec({
     }
 
     test("clearOldestOverLimit should make room for one when at limit") {
-        /* Given */
+        // Given
         createNotification(ApplicationProvider.getApplicationContext(), 1)
         createNotification(ApplicationProvider.getApplicationContext(), 2)
 
@@ -42,33 +42,35 @@ class NotificationLimitManagerTests : FunSpec({
         coEvery { mockNotificationRepository.markAsDismissed(any()) } returns true
         val mockNotificationSummaryManager = spyk<INotificationSummaryManager>()
 
-        val notificationLimitManager = NotificationLimitManager(mockNotificationRepository, AndroidMockHelper.applicationService(), mockNotificationSummaryManager)
+        val notificationLimitManager =
+            NotificationLimitManager(mockNotificationRepository, AndroidMockHelper.applicationService(), mockNotificationSummaryManager)
 
-        /* When */
+        // When
         notificationLimitManager.clearOldestOverLimit(1)
 
-        /* Then */
+        // Then
         coVerify(exactly = 1) { mockNotificationRepository.markAsDismissed(1) }
     }
 
     test("clearOldestOverLimit should not dismiss any when under limit") {
-        /* Given */
+        // Given
         createNotification(ApplicationProvider.getApplicationContext(), 1)
 
         val mockNotificationRepository = mockk<INotificationRepository>()
         val mockNotificationSummaryManager = spyk<INotificationSummaryManager>()
 
-        val notificationLimitManager = NotificationLimitManager(mockNotificationRepository, AndroidMockHelper.applicationService(), mockNotificationSummaryManager)
+        val notificationLimitManager =
+            NotificationLimitManager(mockNotificationRepository, AndroidMockHelper.applicationService(), mockNotificationSummaryManager)
 
-        /* When */
+        // When
         notificationLimitManager.clearOldestOverLimit(1)
 
-        /* Then */
+        // Then
         coVerify(exactly = 0) { mockNotificationRepository.markAsDismissed(1) }
     }
 
     test("clearOldestOverLimit should skip dismissing summary notifications") {
-        /* Given */
+        // Given
         createNotification(ApplicationProvider.getApplicationContext(), 1, true)
         createNotification(ApplicationProvider.getApplicationContext(), 2)
 
@@ -76,17 +78,22 @@ class NotificationLimitManagerTests : FunSpec({
         coEvery { mockNotificationRepository.markAsDismissed(any()) } returns true
         val mockNotificationSummaryManager = spyk<INotificationSummaryManager>()
 
-        val notificationLimitManager = NotificationLimitManager(mockNotificationRepository, AndroidMockHelper.applicationService(), mockNotificationSummaryManager)
+        val notificationLimitManager =
+            NotificationLimitManager(mockNotificationRepository, AndroidMockHelper.applicationService(), mockNotificationSummaryManager)
 
-        /* When */
+        // When
         notificationLimitManager.clearOldestOverLimit(1)
 
-        /* Then */
+        // Then
         coVerify(exactly = 1) { mockNotificationRepository.markAsDismissed(2) }
     }
 })
 
-fun createNotification(context: Context, notifId: Int, isSummary: Boolean = false) {
+fun createNotification(
+    context: Context,
+    notifId: Int,
+    isSummary: Boolean = false,
+) {
     val notifBuilder = NotificationCompat.Builder(context, "")
     notifBuilder.setWhen(notifId.toLong()) // Android automatically sets this normally.
     if (isSummary) {

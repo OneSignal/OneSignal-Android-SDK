@@ -11,7 +11,6 @@ import com.onesignal.core.internal.permissions.IRequestPermissionService
 internal class RequestPermissionService(
     private val _application: IApplicationService,
 ) : Activity(), IRequestPermissionService {
-
     var waiting = false
     var fallbackToSettings = false
     var shouldShowRequestPermissionRationaleBeforeRequest = false
@@ -45,26 +44,28 @@ internal class RequestPermissionService(
         // current activity is changed.  We keep trying to add the permission prompt whenever
         // an activity becomes available, until our permission activity is the one that's
         // available.
-        _application.addActivityLifecycleHandler(object : IActivityLifecycleHandler {
-            override fun onActivityAvailable(activity: Activity) {
-                if (activity.javaClass == PermissionsActivity::class.java) {
-                    _application.removeActivityLifecycleHandler(this)
-                } else {
-                    val intent = Intent(activity, PermissionsActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    intent.putExtra(PermissionsActivity.INTENT_EXTRA_PERMISSION_TYPE, permissionRequestType)
-                        .putExtra(PermissionsActivity.INTENT_EXTRA_ANDROID_PERMISSION_STRING, androidPermissionString)
-                        .putExtra(PermissionsActivity.INTENT_EXTRA_CALLBACK_CLASS, callbackClass.name)
-                    activity.startActivity(intent)
-                    activity.overridePendingTransition(
-                        R.anim.onesignal_fade_in,
-                        R.anim.onesignal_fade_out,
-                    )
+        _application.addActivityLifecycleHandler(
+            object : IActivityLifecycleHandler {
+                override fun onActivityAvailable(activity: Activity) {
+                    if (activity.javaClass == PermissionsActivity::class.java) {
+                        _application.removeActivityLifecycleHandler(this)
+                    } else {
+                        val intent = Intent(activity, PermissionsActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                        intent.putExtra(PermissionsActivity.INTENT_EXTRA_PERMISSION_TYPE, permissionRequestType)
+                            .putExtra(PermissionsActivity.INTENT_EXTRA_ANDROID_PERMISSION_STRING, androidPermissionString)
+                            .putExtra(PermissionsActivity.INTENT_EXTRA_CALLBACK_CLASS, callbackClass.name)
+                        activity.startActivity(intent)
+                        activity.overridePendingTransition(
+                            R.anim.onesignal_fade_in,
+                            R.anim.onesignal_fade_out,
+                        )
+                    }
                 }
-            }
 
-            override fun onActivityStopped(activity: Activity) {
-            }
-        })
+                override fun onActivityStopped(activity: Activity) {
+                }
+            },
+        )
     }
 }

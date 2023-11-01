@@ -12,7 +12,6 @@ package com.onesignal.notifications.internal.limiting
  * NotificationManagerService.java in the AOSP source.
  */
 internal interface INotificationLimitManager {
-
     /**
      * Cancel the oldest notifications to make room for new notifications we are about to display
      * If we don't make this room users will NOT be alerted of new notifications for the app.

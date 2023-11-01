@@ -32,7 +32,6 @@ internal class RefreshUserOperationExecutor(
     private val _configModelStore: ConfigModelStore,
     private val _buildUserService: IRebuildUserService,
 ) : IOperationExecutor {
-
     override val operations: List<String>
         get() = listOf(REFRESH_USER)
 
@@ -49,11 +48,12 @@ internal class RefreshUserOperationExecutor(
 
     private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse {
         try {
-            val response = _userBackend.getUser(
-                op.appId,
-                IdentityConstants.ONESIGNAL_ID,
-                op.onesignalId,
-            )
+            val response =
+                _userBackend.getUser(
+                    op.appId,
+                    IdentityConstants.ONESIGNAL_ID,
+                    op.onesignalId,
+                )
 
             if (op.onesignalId != _identityModelStore.model.onesignalId) {
                 return ExecutionResponse(ExecutionResult.SUCCESS)
@@ -93,17 +93,18 @@ internal class RefreshUserOperationExecutor(
                 subscriptionModel.id = subscription.id!!
                 subscriptionModel.address = subscription.token ?: ""
                 subscriptionModel.status = SubscriptionStatus.fromInt(subscription.notificationTypes ?: SubscriptionStatus.SUBSCRIBED.value) ?: SubscriptionStatus.SUBSCRIBED
-                subscriptionModel.type = when (subscription.type!!) {
-                    SubscriptionObjectType.EMAIL -> {
-                        SubscriptionType.EMAIL
+                subscriptionModel.type =
+                    when (subscription.type!!) {
+                        SubscriptionObjectType.EMAIL -> {
+                            SubscriptionType.EMAIL
+                        }
+                        SubscriptionObjectType.SMS -> {
+                            SubscriptionType.SMS
+                        }
+                        else -> {
+                            SubscriptionType.PUSH
+                        }
                     }
-                    SubscriptionObjectType.SMS -> {
-                        SubscriptionType.SMS
-                    }
-                    else -> {
-                        SubscriptionType.PUSH
-                    }
-                }
                 subscriptionModel.optedIn = subscriptionModel.status != SubscriptionStatus.UNSUBSCRIBE
 
                 // We only add a push subscription if it is this device's push subscription.

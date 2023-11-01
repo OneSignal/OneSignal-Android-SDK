@@ -8,7 +8,6 @@ import io.mockk.every
  * Singleton which provides common mock services when running in an Android environment.
  */
 internal object AndroidMockHelper {
-
     fun applicationService(): IApplicationService {
         val mockAppService = MockHelper.applicationService()
 

@@ -5,7 +5,6 @@ package com.onesignal.user.subscriptions
  * to [ISubscription.addObserver] to be notified when the subscription has changed.
  */
 interface IPushSubscriptionObserver {
-
     /**
      * Called when the subscription this change handler was added to, has changed. A
      * subscription can change either because of a change driven by the application, or

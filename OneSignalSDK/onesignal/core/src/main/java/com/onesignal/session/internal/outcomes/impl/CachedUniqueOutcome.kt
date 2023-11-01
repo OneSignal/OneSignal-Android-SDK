@@ -11,7 +11,6 @@ internal class CachedUniqueOutcome(
      * The ID of the influence this outcome is associated to.
      */
     val influenceId: String,
-
     /**
      * The channel this outcome is associated to.
      */

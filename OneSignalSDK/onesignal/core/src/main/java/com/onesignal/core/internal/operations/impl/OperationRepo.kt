@@ -22,15 +22,14 @@ internal class OperationRepo(
     private val _configModelStore: ConfigModelStore,
     private val _time: ITime,
 ) : IOperationRepo, IStartableService {
-
     private class OperationQueueItem(
         val operation: Operation,
         val waiter: WaiterWithValue<Boolean>? = null,
     )
 
-    private val _executorsMap: Map<String, IOperationExecutor>
-    private val _queue = mutableListOf<OperationQueueItem>()
-    private val _waiter = WaiterWithValue<Boolean>()
+    private val executorsMap: Map<String, IOperationExecutor>
+    private val queue = mutableListOf<OperationQueueItem>()
+    private val waiter = WaiterWithValue<Boolean>()
 
     init {
         val executorsMap: MutableMap<String, IOperationExecutor> = mutableMapOf()
@@ -40,7 +39,7 @@ internal class OperationRepo(
                 executorsMap[operation] = executor
             }
         }
-        _executorsMap = executorsMap
+        this.executorsMap = executorsMap
 
         for (operation in _operationModelStore.list()) {
             internalEnqueue(OperationQueueItem(operation), flush = false, addToStore = false)
@@ -53,14 +52,20 @@ internal class OperationRepo(
         }
     }
 
-    override fun enqueue(operation: Operation, flush: Boolean) {
+    override fun enqueue(
+        operation: Operation,
+        flush: Boolean,
+    ) {
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueue(operation: $operation, flush: $flush)")
 
         operation.id = UUID.randomUUID().toString()
         internalEnqueue(OperationQueueItem(operation), flush, true)
     }
 
-    override suspend fun enqueueAndWait(operation: Operation, flush: Boolean): Boolean {
+    override suspend fun enqueueAndWait(
+        operation: Operation,
+        flush: Boolean,
+    ): Boolean {
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueueAndWait(operation: $operation, force: $flush)")
 
         operation.id = UUID.randomUUID().toString()
@@ -69,15 +74,19 @@ internal class OperationRepo(
         return waiter.waitForWake()
     }
 
-    private fun internalEnqueue(queueItem: OperationQueueItem, flush: Boolean, addToStore: Boolean) {
-        synchronized(_queue) {
-            _queue.add(queueItem)
+    private fun internalEnqueue(
+        queueItem: OperationQueueItem,
+        flush: Boolean,
+        addToStore: Boolean,
+    ) {
+        synchronized(queue) {
+            queue.add(queueItem)
             if (addToStore) {
                 _operationModelStore.add(queueItem.operation)
             }
         }
 
-        _waiter.wake(flush)
+        waiter.wake(flush)
     }
 
     /**
@@ -93,11 +102,11 @@ internal class OperationRepo(
             try {
                 var ops: List<OperationQueueItem>? = null
 
-                synchronized(_queue) {
-                    val startingOp = _queue.firstOrNull { it.operation.canStartExecute }
+                synchronized(queue) {
+                    val startingOp = queue.firstOrNull { it.operation.canStartExecute }
 
                     if (startingOp != null) {
-                        _queue.remove(startingOp)
+                        queue.remove(startingOp)
                         ops = getGroupableOperations(startingOp)
                     }
                 }
@@ -105,7 +114,7 @@ internal class OperationRepo(
                 // if the queue is empty at this point, we are no longer in force flush mode. We
                 // check this now so if the execution is unsuccessful with retry, we don't find ourselves
                 // continuously retrying without delaying.
-                if (_queue.isEmpty()) {
+                if (queue.isEmpty()) {
                     force = false
                 }
 
@@ -123,7 +132,7 @@ internal class OperationRepo(
                     if (delay > 0) {
                         withTimeoutOrNull(delay) {
                             // wait to be woken up for the next pass
-                            force = _waiter.waitForWake()
+                            force = waiter.waitForWake()
                         }
 
                         // This secondary delay allows for any subsequent operations (beyond the first one
@@ -142,8 +151,9 @@ internal class OperationRepo(
     private suspend fun executeOperations(ops: List<OperationQueueItem>) {
         try {
             val startingOp = ops.first()
-            val executor = _executorsMap[startingOp.operation.name]
-                ?: throw Exception("Could not find executor for operation ${startingOp.operation.name}")
+            val executor =
+                executorsMap[startingOp.operation.name]
+                    ?: throw Exception("Could not find executor for operation ${startingOp.operation.name}")
 
             val operations = ops.map { it.operation }
             val response = executor.execute(operations)
@@ -154,8 +164,8 @@ internal class OperationRepo(
             // We also run through the ops just executed in case they are re-added to the queue.
             if (response.idTranslations != null) {
                 ops.forEach { it.operation.translateIds(response.idTranslations) }
-                synchronized(_queue) {
-                    _queue.forEach { it.operation.translateIds(response.idTranslations) }
+                synchronized(queue) {
+                    queue.forEach { it.operation.translateIds(response.idTranslations) }
                 }
             }
 
@@ -179,14 +189,14 @@ internal class OperationRepo(
                     // add back all but the starting op to the front of the queue to be re-executed
                     _operationModelStore.remove(startingOp.operation.id)
                     startingOp.waiter?.wake(true)
-                    synchronized(_queue) {
-                        ops.filter { it != startingOp }.reversed().forEach { _queue.add(0, it) }
+                    synchronized(queue) {
+                        ops.filter { it != startingOp }.reversed().forEach { queue.add(0, it) }
                     }
                 }
                 ExecutionResult.FAIL_RETRY -> {
                     // add back all operations to the front of the queue to be re-executed.
-                    synchronized(_queue) {
-                        ops.reversed().forEach { _queue.add(0, it) }
+                    synchronized(queue) {
+                        ops.reversed().forEach { queue.add(0, it) }
                     }
                 }
             }
@@ -194,11 +204,11 @@ internal class OperationRepo(
             // if there are operations provided on the result, we need to enqueue them at the
             // beginning of the queue.
             if (response.operations != null) {
-                synchronized(_queue) {
+                synchronized(queue) {
                     for (op in response.operations.reversed()) {
                         op.id = UUID.randomUUID().toString()
                         val queueItem = OperationQueueItem(op)
-                        _queue.add(0, queueItem)
+                        queue.add(0, queueItem)
                         _operationModelStore.add(0, queueItem.operation)
                     }
                 }
@@ -230,13 +240,13 @@ internal class OperationRepo(
         val startingKey =
             if (startingOp.operation.groupComparisonType == GroupComparisonType.CREATE) startingOp.operation.createComparisonKey else startingOp.operation.modifyComparisonKey
 
-        if (_queue.isNotEmpty()) {
-            for (item in _queue.toList()) {
+        if (queue.isNotEmpty()) {
+            for (item in queue.toList()) {
                 val itemKey =
                     if (startingOp.operation.groupComparisonType == GroupComparisonType.CREATE) item.operation.createComparisonKey else item.operation.modifyComparisonKey
 
                 if (itemKey == startingKey) {
-                    _queue.remove(item)
+                    queue.remove(item)
                     ops.add(item)
                 }
             }

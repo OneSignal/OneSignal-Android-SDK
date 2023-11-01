@@ -5,7 +5,6 @@ package com.onesignal.inAppMessages
  * to the In App Message that has been dismissed.
  */
 interface IInAppMessageDidDismissEvent {
-
     /**
      * The In App Message that has been dismissed.
      */

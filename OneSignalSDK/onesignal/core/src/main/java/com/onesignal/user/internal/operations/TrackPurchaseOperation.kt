@@ -18,7 +18,9 @@ class TrackPurchaseOperation() : Operation(UpdateUserOperationExecutor.TRACK_PUR
      */
     var appId: String
         get() = getStringProperty(::appId.name)
-        private set(value) { setStringProperty(::appId.name, value) }
+        private set(value) {
+            setStringProperty(::appId.name, value)
+        }
 
     /**
      * The OneSignal ID the purchase was captured under. This ID *may* be locally generated
@@ -26,28 +28,36 @@ class TrackPurchaseOperation() : Operation(UpdateUserOperationExecutor.TRACK_PUR
      */
     var onesignalId: String
         get() = getStringProperty(::onesignalId.name)
-        private set(value) { setStringProperty(::onesignalId.name, value) }
+        private set(value) {
+            setStringProperty(::onesignalId.name, value)
+        }
 
     /**
      * Whether to treat new purchases as an existing purchase.
      */
     var treatNewAsExisting: Boolean
         get() = getBooleanProperty(::treatNewAsExisting.name)
-        private set(value) { setBooleanProperty(::treatNewAsExisting.name, value) }
+        private set(value) {
+            setBooleanProperty(::treatNewAsExisting.name, value)
+        }
 
     /**
      * The amount spent by the user.
      */
     var amountSpent: BigDecimal
         get() = getBigDecimalProperty(::amountSpent.name)
-        private set(value) { setBigDecimalProperty(::amountSpent.name, value) }
+        private set(value) {
+            setBigDecimalProperty(::amountSpent.name, value)
+        }
 
     /**
      * The list of purchases that have been made.
      */
     var purchases: List<PurchaseInfo>
         get() = getListProperty(::purchases.name)
-        private set(value) { setListProperty(::purchases.name, value) }
+        private set(value) {
+            setListProperty(::purchases.name, value)
+        }
 
     override val createComparisonKey: String get() = ""
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId"
@@ -68,7 +78,10 @@ class TrackPurchaseOperation() : Operation(UpdateUserOperationExecutor.TRACK_PUR
         }
     }
 
-    override fun createListForProperty(property: String, jsonArray: JSONArray): List<*>? {
+    override fun createListForProperty(
+        property: String,
+        jsonArray: JSONArray,
+    ): List<*>? {
         if (property == ::purchases.name) {
             val listOfPurchases = mutableListOf<PurchaseInfo>()
             for (item in 0 until jsonArray.length()) {
@@ -89,15 +102,21 @@ class TrackPurchaseOperation() : Operation(UpdateUserOperationExecutor.TRACK_PUR
 class PurchaseInfo() : Model() {
     var sku: String
         get() = getStringProperty(::sku.name)
-        private set(value) { setStringProperty(::sku.name, value) }
+        private set(value) {
+            setStringProperty(::sku.name, value)
+        }
 
     var iso: String
         get() = getStringProperty(::iso.name)
-        private set(value) { setStringProperty(::iso.name, value) }
+        private set(value) {
+            setStringProperty(::iso.name, value)
+        }
 
     var amount: BigDecimal
         get() = getBigDecimalProperty(::amount.name)
-        private set(value) { setBigDecimalProperty(::amount.name, value) }
+        private set(value) {
+            setBigDecimalProperty(::amount.name, value)
+        }
 
     constructor(sku: String, iso: String, amount: BigDecimal) : this() {
         this.sku = sku

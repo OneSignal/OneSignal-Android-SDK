@@ -14,7 +14,6 @@ internal class NotificationClickEvent(
     private val _notification: Notification,
     private val _result: NotificationClickResult,
 ) : INotificationClickEvent {
-
     /** The notification that was opened by the user. **/
     override val notification: INotification
         get() = _notification

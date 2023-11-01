@@ -7,6 +7,7 @@ import org.json.JSONObject
 internal class InAppMessageTag(json: JSONObject) {
     var tagsToAdd: JSONObject?
     var tagsToRemove: JSONArray?
+
     fun toJSONObject(): JSONObject {
         val mainObj = JSONObject()
         try {

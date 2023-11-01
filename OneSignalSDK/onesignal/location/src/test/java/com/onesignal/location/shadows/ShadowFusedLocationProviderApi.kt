@@ -44,15 +44,28 @@ import java.lang.reflect.Modifier
 import java.util.concurrent.TimeUnit
 
 class ShadowFusedLocationProviderApi : FusedLocationProviderApi {
+    val pendingResult =
+        object : PendingResult<Status>() {
+            override fun await(): Status = Status.RESULT_SUCCESS
 
-    val pendingResult = object : PendingResult<Status>() {
-        override fun await(): Status = Status.RESULT_SUCCESS
-        override fun await(p0: Long, p1: TimeUnit): Status = Status.RESULT_SUCCESS
-        override fun cancel() { }
-        override fun isCanceled(): Boolean = false
-        override fun setResultCallback(p0: ResultCallback<in Status>) { }
-        override fun setResultCallback(p0: ResultCallback<in Status>, p1: Long, p2: TimeUnit) {}
-    }
+            override fun await(
+                p0: Long,
+                p1: TimeUnit,
+            ): Status = Status.RESULT_SUCCESS
+
+            override fun cancel() { }
+
+            override fun isCanceled(): Boolean = false
+
+            override fun setResultCallback(p0: ResultCallback<in Status>) { }
+
+            override fun setResultCallback(
+                p0: ResultCallback<in Status>,
+                p1: Long,
+                p2: TimeUnit,
+            ) {}
+        }
+
     override fun getLastLocation(p0: GoogleApiClient): Location {
         if (locations != null) {
             val location = locations!![index]
@@ -71,20 +84,64 @@ class ShadowFusedLocationProviderApi : FusedLocationProviderApi {
     }
 
     override fun getLocationAvailability(p0: GoogleApiClient): LocationAvailability = throw Exception()
-    override fun requestLocationUpdates(p0: GoogleApiClient, p1: LocationRequest, p2: LocationListener): PendingResult<Status> = pendingResult
-    override fun requestLocationUpdates(p0: GoogleApiClient, p1: LocationRequest, p2: LocationListener, p3: Looper): PendingResult<Status> = pendingResult
-    override fun requestLocationUpdates(p0: GoogleApiClient, p1: LocationRequest, p2: LocationCallback, p3: Looper): PendingResult<Status> = pendingResult
-    override fun requestLocationUpdates(p0: GoogleApiClient, p1: LocationRequest, p2: PendingIntent): PendingResult<Status> = pendingResult
-    override fun removeLocationUpdates(p0: GoogleApiClient, p1: LocationListener): PendingResult<Status> = pendingResult
-    override fun removeLocationUpdates(p0: GoogleApiClient, p1: PendingIntent): PendingResult<Status> = pendingResult
-    override fun removeLocationUpdates(p0: GoogleApiClient, p1: LocationCallback): PendingResult<Status> = pendingResult
-    override fun setMockMode(p0: GoogleApiClient, p1: Boolean): PendingResult<Status> = pendingResult
-    override fun setMockLocation(p0: GoogleApiClient, p1: Location): PendingResult<Status> = pendingResult
+
+    override fun requestLocationUpdates(
+        p0: GoogleApiClient,
+        p1: LocationRequest,
+        p2: LocationListener,
+    ): PendingResult<Status> = pendingResult
+
+    override fun requestLocationUpdates(
+        p0: GoogleApiClient,
+        p1: LocationRequest,
+        p2: LocationListener,
+        p3: Looper,
+    ): PendingResult<Status> = pendingResult
+
+    override fun requestLocationUpdates(
+        p0: GoogleApiClient,
+        p1: LocationRequest,
+        p2: LocationCallback,
+        p3: Looper,
+    ): PendingResult<Status> = pendingResult
+
+    override fun requestLocationUpdates(
+        p0: GoogleApiClient,
+        p1: LocationRequest,
+        p2: PendingIntent,
+    ): PendingResult<Status> = pendingResult
+
+    override fun removeLocationUpdates(
+        p0: GoogleApiClient,
+        p1: LocationListener,
+    ): PendingResult<Status> = pendingResult
+
+    override fun removeLocationUpdates(
+        p0: GoogleApiClient,
+        p1: PendingIntent,
+    ): PendingResult<Status> = pendingResult
+
+    override fun removeLocationUpdates(
+        p0: GoogleApiClient,
+        p1: LocationCallback,
+    ): PendingResult<Status> = pendingResult
+
+    override fun setMockMode(
+        p0: GoogleApiClient,
+        p1: Boolean,
+    ): PendingResult<Status> = pendingResult
+
+    override fun setMockLocation(
+        p0: GoogleApiClient,
+        p1: Location,
+    ): PendingResult<Status> = pendingResult
+
     override fun flushLocations(p0: GoogleApiClient): PendingResult<Status> = pendingResult
 
     companion object {
         private var locations: List<Location>? = null
         private var index: Int = 0
+
         fun injectToLocationServices(locations: List<Location>) {
             this.index = 0
             this.locations = locations

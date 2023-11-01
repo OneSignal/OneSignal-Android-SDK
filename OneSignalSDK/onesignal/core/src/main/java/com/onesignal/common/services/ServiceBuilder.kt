@@ -1,7 +1,7 @@
 package com.onesignal.common.services
 
 class ServiceBuilder : IServiceBuilder {
-    private val _registrations: MutableList<ServiceRegistration<*>> = mutableListOf()
+    private val registrations: MutableList<ServiceRegistration<*>> = mutableListOf()
 
     /**
      * A reified version of [register] to allow the use of generics when registering
@@ -13,23 +13,23 @@ class ServiceBuilder : IServiceBuilder {
 
     override fun <T> register(c: Class<T>): ServiceRegistration<T> {
         val registration = ServiceRegistrationReflection<T>(c)
-        _registrations.add(registration)
+        registrations.add(registration)
         return registration
     }
 
     override fun <T> register(create: (IServiceProvider) -> T): ServiceRegistration<T> {
         val registration = ServiceRegistrationLambda<T>(create)
-        _registrations.add(registration)
+        registrations.add(registration)
         return registration
     }
 
     override fun <T> register(obj: T): ServiceRegistration<T> {
         val registration = ServiceRegistrationSingleton(obj)
-        _registrations.add(registration)
+        registrations.add(registration)
         return registration
     }
 
     override fun build(): ServiceProvider {
-        return ServiceProvider(_registrations)
+        return ServiceProvider(registrations)
     }
 }

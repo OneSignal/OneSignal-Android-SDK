@@ -7,6 +7,7 @@ internal class LocationPoint {
     var type: Int? = null
     var bg: Boolean? = null
     var timeStamp: Long? = null
+
     override fun toString(): String {
         return "LocationPoint{" +
             "lat=" + lat +

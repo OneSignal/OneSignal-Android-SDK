@@ -12,7 +12,9 @@ import com.onesignal.common.modeling.Model
 abstract class Operation(name: String) : Model() {
     var name: String
         get() = getStringProperty(::name.name)
-        private set(value) { setStringProperty(::name.name, value) }
+        private set(value) {
+            setStringProperty(::name.name, value)
+        }
 
     init {
         this.name = name

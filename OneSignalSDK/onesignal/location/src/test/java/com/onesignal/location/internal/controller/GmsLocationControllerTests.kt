@@ -33,7 +33,7 @@ class GmsLocationControllerTests : FunSpec({
     }
 
     test("start will connect and fire locationChanged with location") {
-        /* Given */
+        // Given
         val location = Location("TEST_PROVIDER")
         location.latitude = 123.45
         location.longitude = 678.91
@@ -46,10 +46,10 @@ class GmsLocationControllerTests : FunSpec({
         val spyLocationUpdateHandler = spyk<ILocationUpdatedHandler>()
         gmsLocationController.subscribe(spyLocationUpdateHandler)
 
-        /* When */
+        // When
         val response = gmsLocationController.start()
 
-        /* Then */
+        // Then
         response shouldBe true
         ShadowGoogleApiClient.connected shouldBe true
         verify(exactly = 1) {
@@ -63,7 +63,7 @@ class GmsLocationControllerTests : FunSpec({
     }
 
     test("start twice will return the initial location") {
-        /* Given */
+        // Given
         val location1 = Location("TEST_PROVIDER")
         location1.latitude = 123.45
         location1.longitude = 678.91
@@ -80,11 +80,11 @@ class GmsLocationControllerTests : FunSpec({
         val spyLocationUpdateHandler = spyk<ILocationUpdatedHandler>()
         gmsLocationController.subscribe(spyLocationUpdateHandler)
 
-        /* When */
+        // When
         val response1 = gmsLocationController.start()
         val response2 = gmsLocationController.start()
 
-        /* Then */
+        // Then
         response1 shouldBe true
         response2 shouldBe true
         ShadowGoogleApiClient.connected shouldBe true
@@ -105,7 +105,7 @@ class GmsLocationControllerTests : FunSpec({
     }
 
     test("getLastLocation will retrieve a new location") {
-        /* Given */
+        // Given
         val location1 = Location("TEST_PROVIDER")
         location1.latitude = 123.45
         location1.longitude = 678.91
@@ -122,11 +122,11 @@ class GmsLocationControllerTests : FunSpec({
         val spyLocationUpdateHandler = spyk<ILocationUpdatedHandler>()
         gmsLocationController.subscribe(spyLocationUpdateHandler)
 
-        /* When */
+        // When
         val response = gmsLocationController.start()
         val lastLocation = gmsLocationController.getLastLocation()
 
-        /* Then */
+        // Then
         response shouldBe true
         lastLocation shouldNotBe null
         lastLocation!!.latitude shouldBe 678.91
@@ -143,7 +143,7 @@ class GmsLocationControllerTests : FunSpec({
     }
 
     test("stop will disconnect") {
-        /* Given */
+        // Given
         val location1 = Location("TEST_PROVIDER")
         location1.latitude = 123.45
         location1.longitude = 678.91
@@ -160,11 +160,11 @@ class GmsLocationControllerTests : FunSpec({
         val spyLocationUpdateHandler = spyk<ILocationUpdatedHandler>()
         gmsLocationController.subscribe(spyLocationUpdateHandler)
 
-        /* When */
+        // When
         val response = gmsLocationController.start()
         gmsLocationController.stop()
 
-        /* Then */
+        // Then
         response shouldBe true
         ShadowGoogleApiClient.connected shouldBe false
         verifySequence {

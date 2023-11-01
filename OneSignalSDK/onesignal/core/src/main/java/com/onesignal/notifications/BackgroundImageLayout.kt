@@ -9,12 +9,10 @@ class BackgroundImageLayout(
      * The asset file, android resource name, or URL to remote image.
      */
     val image: String? = null,
-
     /**
      * The title text color.
      */
     val titleTextColor: String? = null,
-
     /**
      * The body text color.
      */

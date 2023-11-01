@@ -109,7 +109,10 @@ object JSONUtils {
     /**
      * Compare two JSONArrays too determine if they are equal or not
      */
-    fun compareJSONArrays(jsonArray1: JSONArray?, jsonArray2: JSONArray?): Boolean {
+    fun compareJSONArrays(
+        jsonArray1: JSONArray?,
+        jsonArray2: JSONArray?,
+    ): Boolean {
         // If both JSONArrays are null, they are equal
         if (jsonArray1 == null && jsonArray2 == null) return true
 

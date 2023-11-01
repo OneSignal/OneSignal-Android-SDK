@@ -31,23 +31,31 @@ class OutcomeEventsRepositoryTests : FunSpec({
     }
 
     test("delete outcome event should use the timestamp to delete row from database") {
-        /* Given */
+        // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(OutcomeEventsTable.TABLE_NAME)
         val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
 
-        /* When */
+        // When
         outcomeEventsRepository.deleteOldOutcomeEvent(OutcomeEventParams("outcomeId", null, 0f, 0, 1111))
 
-        /* Then */
-        verify(exactly = 1) { mockDatabasePair.second.delete(OutcomeEventsTable.TABLE_NAME, withArg { it.contains(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP) }, withArg { it.contains("1111") }) }
+        // Then
+        verify(exactly = 1) {
+            mockDatabasePair.second.delete(
+                OutcomeEventsTable.TABLE_NAME,
+                withArg {
+                    it.contains(OutcomeEventsTable.COLUMN_NAME_TIMESTAMP)
+                },
+                withArg { it.contains("1111") },
+            )
+        }
     }
 
     test("save outcome event should insert row into database") {
-        /* Given */
+        // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(OutcomeEventsTable.TABLE_NAME)
         val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
 
-        /* When */
+        // When
         outcomeEventsRepository.saveOutcomeEvent(OutcomeEventParams("outcomeId1", null, 0f, 0, 1111))
         outcomeEventsRepository.saveOutcomeEvent(
             OutcomeEventParams(
@@ -86,7 +94,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
             ),
         )
 
-        /* Then */
+        // Then
         verifySequence {
             mockDatabasePair.second.insert(
                 OutcomeEventsTable.TABLE_NAME,
@@ -144,54 +152,55 @@ class OutcomeEventsRepositoryTests : FunSpec({
     }
 
     test("get events should retrieve return empty list when database is empty") {
-        /* Given */
+        // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(OutcomeEventsTable.TABLE_NAME)
         val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
 
-        /* When */
+        // When
         val events = outcomeEventsRepository.getAllEventsToSend()
 
-        /* Then */
+        // Then
         events.count() shouldBe 0
     }
 
     test("get events should retrieve return an item per row in database") {
-        /* Given */
-        val records = listOf(
-            mapOf(
-                OutcomeEventsTable.COLUMN_NAME_NAME to "outcomeId1",
-                OutcomeEventsTable.COLUMN_NAME_WEIGHT to 0.2f,
-                OutcomeEventsTable.COLUMN_NAME_TIMESTAMP to 1111L,
-                OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE to "unattributed",
-                OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE to "unattributed",
-            ),
-            mapOf(
-                OutcomeEventsTable.COLUMN_NAME_NAME to "outcomeId2",
-                OutcomeEventsTable.COLUMN_NAME_WEIGHT to 0.4f,
-                OutcomeEventsTable.COLUMN_NAME_TIMESTAMP to 2222L,
-                OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE to "indirect",
-                OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS to "[\"notificationId1\",\"notificationId2\"]",
-                OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE to "indirect",
-                OutcomeEventsTable.COLUMN_NAME_IAM_IDS to "[\"iamId1\",\"iamId2\"]",
-            ),
-            mapOf(
-                OutcomeEventsTable.COLUMN_NAME_NAME to "outcomeId3",
-                OutcomeEventsTable.COLUMN_NAME_WEIGHT to 0.6f,
-                OutcomeEventsTable.COLUMN_NAME_TIMESTAMP to 3333L,
-                OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE to "direct",
-                OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS to "[\"notificationId3\"]",
-                OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE to "direct",
-                OutcomeEventsTable.COLUMN_NAME_IAM_IDS to "[\"iamId3\"]",
-            ),
-        )
+        // Given
+        val records =
+            listOf(
+                mapOf(
+                    OutcomeEventsTable.COLUMN_NAME_NAME to "outcomeId1",
+                    OutcomeEventsTable.COLUMN_NAME_WEIGHT to 0.2f,
+                    OutcomeEventsTable.COLUMN_NAME_TIMESTAMP to 1111L,
+                    OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE to "unattributed",
+                    OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE to "unattributed",
+                ),
+                mapOf(
+                    OutcomeEventsTable.COLUMN_NAME_NAME to "outcomeId2",
+                    OutcomeEventsTable.COLUMN_NAME_WEIGHT to 0.4f,
+                    OutcomeEventsTable.COLUMN_NAME_TIMESTAMP to 2222L,
+                    OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE to "indirect",
+                    OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS to "[\"notificationId1\",\"notificationId2\"]",
+                    OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE to "indirect",
+                    OutcomeEventsTable.COLUMN_NAME_IAM_IDS to "[\"iamId1\",\"iamId2\"]",
+                ),
+                mapOf(
+                    OutcomeEventsTable.COLUMN_NAME_NAME to "outcomeId3",
+                    OutcomeEventsTable.COLUMN_NAME_WEIGHT to 0.6f,
+                    OutcomeEventsTable.COLUMN_NAME_TIMESTAMP to 3333L,
+                    OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE to "direct",
+                    OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS to "[\"notificationId3\"]",
+                    OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE to "direct",
+                    OutcomeEventsTable.COLUMN_NAME_IAM_IDS to "[\"iamId3\"]",
+                ),
+            )
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(OutcomeEventsTable.TABLE_NAME, records)
 
         val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
 
-        /* When */
+        // When
         val events = outcomeEventsRepository.getAllEventsToSend()
 
-        /* Then */
+        // Then
         events.count() shouldBe 3
         events[0].outcomeId shouldBe "outcomeId1"
         events[0].weight shouldBe 0.2f
@@ -224,23 +233,23 @@ class OutcomeEventsRepositoryTests : FunSpec({
     }
 
     test("save unique outcome should insert no rows when no influences") {
-        /* Given */
+        // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(CachedUniqueOutcomeTable.COLUMN_NAME_NAME)
         val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
 
-        /* When */
+        // When
         outcomeEventsRepository.saveUniqueOutcomeEventParams(OutcomeEventParams("outcomeId1", null, 0f, 0, 1111))
 
-        /* Then */
+        // Then
         verify(exactly = 0) { mockDatabasePair.second.insert(CachedUniqueOutcomeTable.COLUMN_NAME_NAME, null, any()) }
     }
 
     test("save unique outcome should insert 1 row for each unique influence when direct notification and indiract iam") {
-        /* Given */
+        // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(CachedUniqueOutcomeTable.TABLE_NAME)
         val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
 
-        /* When */
+        // When
         outcomeEventsRepository.saveUniqueOutcomeEventParams(
             OutcomeEventParams(
                 "outcomeId1",
@@ -254,7 +263,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
             ),
         )
 
-        /* Then */
+        // Then
         verifyAll {
             mockDatabasePair.second.insert(
                 CachedUniqueOutcomeTable.TABLE_NAME,
@@ -287,11 +296,11 @@ class OutcomeEventsRepositoryTests : FunSpec({
     }
 
     test("save unique outcome should insert 1 row for each unique influence when direct iam and indiract notifications") {
-        /* Given */
+        // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(CachedUniqueOutcomeTable.TABLE_NAME)
         val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
 
-        /* When */
+        // When
         outcomeEventsRepository.saveUniqueOutcomeEventParams(
             OutcomeEventParams(
                 "outcomeId1",
@@ -305,7 +314,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
             ),
         )
 
-        /* Then */
+        // Then
         verifyAll {
             mockDatabasePair.second.insert(
                 CachedUniqueOutcomeTable.TABLE_NAME,
@@ -338,11 +347,11 @@ class OutcomeEventsRepositoryTests : FunSpec({
     }
 
     test("save unique outcome should insert 1 row for each unique influence when direct notification and iam") {
-        /* Given */
+        // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(CachedUniqueOutcomeTable.TABLE_NAME)
         val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
 
-        /* When */
+        // When
         outcomeEventsRepository.saveUniqueOutcomeEventParams(
             OutcomeEventParams(
                 "outcomeId1",
@@ -356,7 +365,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
             ),
         )
 
-        /* Then */
+        // Then
         verifyAll {
             mockDatabasePair.second.insert(
                 CachedUniqueOutcomeTable.TABLE_NAME,
@@ -380,11 +389,11 @@ class OutcomeEventsRepositoryTests : FunSpec({
     }
 
     test("save unique outcome should insert 1 row for each unique influence when indirect notification and iam") {
-        /* Given */
+        // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(CachedUniqueOutcomeTable.TABLE_NAME)
         val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
 
-        /* When */
+        // When
         outcomeEventsRepository.saveUniqueOutcomeEventParams(
             OutcomeEventParams(
                 "outcomeId1",
@@ -398,7 +407,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
             ),
         )
 
-        /* Then */
+        // Then
         verifyAll {
             mockDatabasePair.second.insert(
                 CachedUniqueOutcomeTable.TABLE_NAME,
@@ -440,52 +449,54 @@ class OutcomeEventsRepositoryTests : FunSpec({
     }
 
     test("retrieve non-cached influence should return full list when there are no cached unique influences") {
-        /* Given */
+        // Given
         val records = listOf<Map<String, Any>>()
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(CachedUniqueOutcomeTable.TABLE_NAME, records)
         val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
 
-        /* When */
-        val influences = outcomeEventsRepository.getNotCachedUniqueInfluencesForOutcome(
-            "outcomeId1",
-            listOf(
-                Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray().put("notificationId1")),
-                Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray().put("notificationId2")),
-            ),
-        )
+        // When
+        val influences =
+            outcomeEventsRepository.getNotCachedUniqueInfluencesForOutcome(
+                "outcomeId1",
+                listOf(
+                    Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray().put("notificationId1")),
+                    Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray().put("notificationId2")),
+                ),
+            )
 
-        /* Then */
+        // Then
         influences.count() shouldBe 2
     }
 
     test("retrieve non-cached influence should filter out an influence when there are is a matching influence") {
-        /* Given */
+        // Given
         val records = listOf(mapOf(CachedUniqueOutcomeTable.COLUMN_NAME_NAME to "outcomeId1"))
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(CachedUniqueOutcomeTable.TABLE_NAME, records)
         val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
 
-        /* When */
-        val influences = outcomeEventsRepository.getNotCachedUniqueInfluencesForOutcome(
-            "outcomeId1",
-            listOf(
-                Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray().put("notificationId1")),
-                Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray().put("notificationId2")),
-            ),
-        )
+        // When
+        val influences =
+            outcomeEventsRepository.getNotCachedUniqueInfluencesForOutcome(
+                "outcomeId1",
+                listOf(
+                    Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray().put("notificationId1")),
+                    Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray().put("notificationId2")),
+                ),
+            )
 
-        /* Then */
+        // Then
         influences.count() shouldBe 0
     }
 
     test("clear unique influence should delete out an influence when there are is a matching influence") {
-        /* Given */
+        // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(CachedUniqueOutcomeTable.TABLE_NAME)
         val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
 
-        /* When */
+        // When
         outcomeEventsRepository.cleanCachedUniqueOutcomeEventNotifications()
 
-        /* Then */
+        // Then
         verifyAll {
             mockDatabasePair.second.delete(CachedUniqueOutcomeTable.TABLE_NAME, any(), any())
         }
