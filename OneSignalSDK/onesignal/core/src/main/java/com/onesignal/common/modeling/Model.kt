@@ -123,7 +123,6 @@ open class Model(
      */
     fun initializeFromModel(id: String?, model: Model) {
         synchronized(initializationLock) {
-            data.clear()
             for (item in model.data) {
                 if (item.value is Model) {
                     val childModel = item.value as Model
