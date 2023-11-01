@@ -87,7 +87,10 @@ internal class InAppMessageClickResult(json: JSONObject, promptFactory: IInAppMe
     }
 
     @Throws(JSONException::class)
-    private fun parsePrompts(json: JSONObject, promptFactory: IInAppMessagePromptFactory) {
+    private fun parsePrompts(
+        json: JSONObject,
+        promptFactory: IInAppMessagePromptFactory,
+    ) {
         val promptsJsonArray = json.getJSONArray(PROMPTS)
         for (i in 0 until promptsJsonArray.length()) {
             val promptType = promptsJsonArray.getString(i)
@@ -111,8 +114,9 @@ internal class InAppMessageClickResult(json: JSONObject, promptFactory: IInAppMe
             if (tags != null) {
                 mainObj.put(TAGS, tags!!.toJSONObject())
             }
-            if (urlTarget != null)
-                mainObj.put("url_target", urlTarget.toString());
+            if (urlTarget != null) {
+                mainObj.put("url_target", urlTarget.toString())
+            }
         } catch (e: JSONException) {
             e.printStackTrace()
         }

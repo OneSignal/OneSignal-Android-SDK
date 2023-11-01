@@ -34,7 +34,6 @@ internal class SessionListener(
     private val _identityModelStore: IdentityModelStore,
     private val _outcomeEventsController: IOutcomeEventsController,
 ) : IStartableService, ISessionLifecycleHandler {
-
     override fun start() {
         _sessionService.subscribe(this)
     }
@@ -48,7 +47,9 @@ internal class SessionListener(
 
     override fun onSessionEnded(duration: Long) {
         val durationInSeconds = duration / 1000
-        _operationRepo.enqueue(TrackSessionEndOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, durationInSeconds))
+        _operationRepo.enqueue(
+            TrackSessionEndOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, durationInSeconds),
+        )
 
         suspendifyOnThread {
             _outcomeEventsController.sendSessionEndOutcomeEvent(durationInSeconds)

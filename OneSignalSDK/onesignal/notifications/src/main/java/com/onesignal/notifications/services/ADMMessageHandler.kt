@@ -11,7 +11,6 @@ import com.onesignal.notifications.internal.registration.impl.IPushRegistratorCa
 // WARNING: Do not pass 'this' to any methods as it will cause proguard build errors
 //             when "proguard-android-optimize.txt" is used.
 class ADMMessageHandler : ADMMessageHandlerBase("ADMMessageHandler") {
-
     override fun onMessage(intent: Intent) {
         val context = applicationContext
         val bundle = intent.extras
@@ -34,7 +33,9 @@ class ADMMessageHandler : ADMMessageHandlerBase("ADMMessageHandler") {
         Logging.error("ADM:onRegistrationError: $error")
 
         if ("INVALID_SENDER" == error) {
-            Logging.error("Please double check that you have a matching package name (NOTE: Case Sensitive), api_key.txt, and the apk was signed with the same Keystore and Alias.")
+            Logging.error(
+                "Please double check that you have a matching package name (NOTE: Case Sensitive), api_key.txt, and the apk was signed with the same Keystore and Alias.",
+            )
         }
 
         var registerer = OneSignal.getService<IPushRegistratorCallback>()

@@ -7,11 +7,15 @@ import com.onesignal.debug.internal.logging.Logging
 internal class DebugManager() : IDebugManager {
     override var logLevel: LogLevel
         get() = Logging.logLevel
-        set(value) { Logging.logLevel = value }
+        set(value) {
+            Logging.logLevel = value
+        }
 
     override var alertLevel: LogLevel
         get() = Logging.visualLogLevel
-        set(value) { Logging.visualLogLevel = value }
+        set(value) {
+            Logging.visualLogLevel = value
+        }
 
     init {
         logLevel = LogLevel.WARN

@@ -1,8 +1,10 @@
 package com.onesignal.notifications.internal.data
 
 internal interface INotificationRepository {
-
-    suspend fun createSummaryNotification(androidId: Int, groupId: String)
+    suspend fun createSummaryNotification(
+        androidId: Int,
+        groupId: String,
+    )
 
     /**
      * Create a new notification.
@@ -57,7 +59,10 @@ internal interface INotificationRepository {
      *
      * @return the Android ID, or null if there are no notifications with that group identifier.
      */
-    suspend fun getAndroidIdForGroup(group: String, getSummaryNotification: Boolean): Int?
+    suspend fun getAndroidIdForGroup(
+        group: String,
+        getSummaryNotification: Boolean,
+    ): Int?
 
     /**
      * Retrieve the Android ID for the collapse key provided.
@@ -86,7 +91,12 @@ internal interface INotificationRepository {
      */
     suspend fun listNotificationsForOutstanding(excludeAndroidIds: List<Int>? = null): List<NotificationData>
 
-    suspend fun markAsConsumed(androidId: Int, dismissed: Boolean, summaryGroup: String? = null, clearGroupOnSummaryClick: Boolean = true)
+    suspend fun markAsConsumed(
+        androidId: Int,
+        dismissed: Boolean,
+        summaryGroup: String? = null,
+        clearGroupOnSummaryClick: Boolean = true,
+    )
 
     /**
      * Mark as dismissed the notification with the Android ID provided
@@ -96,10 +106,15 @@ internal interface INotificationRepository {
      * @return true if a notification was marked as dismissed, false otherwise.
      */
     suspend fun markAsDismissed(androidId: Int): Boolean
+
     suspend fun markAsDismissedForGroup(group: String)
+
     suspend fun markAsDismissedForOutstanding()
 
-    suspend fun clearOldestOverLimitFallback(notificationsToMakeRoomFor: Int, maxNumberOfNotificationsInt: Int)
+    suspend fun clearOldestOverLimitFallback(
+        notificationsToMakeRoomFor: Int,
+        maxNumberOfNotificationsInt: Int,
+    )
 
     /**
      * Deletes notifications in the database that have expired.  An expired notification

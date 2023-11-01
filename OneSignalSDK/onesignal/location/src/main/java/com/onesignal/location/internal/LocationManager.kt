@@ -23,7 +23,6 @@ internal class LocationManager(
     private val _locationController: ILocationController,
     private val _locationPermissionController: LocationPermissionController,
 ) : ILocationManager, IStartableService, ILocationPermissionChangedHandler {
-
     private var _isShared: Boolean = false
     override var isShared
         get() = _isShared
@@ -75,7 +74,12 @@ internal class LocationManager(
                 return@withContext false
             }
 
-            val hasFinePermissionGranted = AndroidUtils.hasPermission(LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING, true, _applicationService)
+            val hasFinePermissionGranted =
+                AndroidUtils.hasPermission(
+                    LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING,
+                    true,
+                    _applicationService,
+                )
             var hasCoarsePermissionGranted: Boolean = false
             var hasBackgroundPermissionGranted: Boolean = false
 
@@ -100,14 +104,15 @@ internal class LocationManager(
             } else { // Android 6.0+
                 if (!hasFinePermissionGranted) {
                     var requestPermission: String? = null
-                    var permissionList = AndroidUtils.filterManifestPermissions(
-                        listOf(
-                            LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING,
-                            LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING,
-                            LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING,
-                        ),
-                        _applicationService,
-                    )
+                    var permissionList =
+                        AndroidUtils.filterManifestPermissions(
+                            listOf(
+                                LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING,
+                                LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING,
+                                LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING,
+                            ),
+                            _applicationService,
+                        )
 
                     if (permissionList.contains(LocationConstants.ANDROID_FINE_LOCATION_PERMISSION_STRING)) {
                         // ACCESS_FINE_LOCATION permission defined on Manifest, prompt for permission
@@ -133,11 +138,12 @@ internal class LocationManager(
                     //  3 - If permission wasn't granted then trigger fail flow
                     //
                     // For each case, we call the prompt handlers
-                    result = if (requestPermission != null) {
-                        _locationPermissionController.prompt(true, requestPermission)
-                    } else {
-                        hasCoarsePermissionGranted
-                    }
+                    result =
+                        if (requestPermission != null) {
+                            _locationPermissionController.prompt(true, requestPermission)
+                        } else {
+                            hasCoarsePermissionGranted
+                        }
                 } else if (Build.VERSION.SDK_INT >= 29 && !hasBackgroundPermissionGranted) {
                     result = backgroundLocationPermissionLogic(true)
                 } else {
@@ -156,7 +162,12 @@ internal class LocationManager(
      * If background permission is asked at the same time as fine and coarse then both permission request are ignored
      */
     private suspend fun backgroundLocationPermissionLogic(fallbackToSettings: Boolean): Boolean {
-        val hasManifestPermission = AndroidUtils.hasPermission(LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING, false, _applicationService)
+        val hasManifestPermission =
+            AndroidUtils.hasPermission(
+                LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING,
+                false,
+                _applicationService,
+            )
 
         return if (hasManifestPermission) {
             _locationPermissionController.prompt(fallbackToSettings, LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING)

@@ -20,7 +20,6 @@ internal class InAppRepository(
     private val _time: ITime,
     private val _prefs: IInAppPreferencesController,
 ) : IInAppRepository {
-
     override suspend fun saveInAppMessage(inAppMessage: InAppMessage) {
         val values = ContentValues()
         values.put(
@@ -45,12 +44,13 @@ internal class InAppRepository(
         )
 
         withContext(Dispatchers.IO) {
-            val rowsUpdated: Int = _databaseProvider.os.update(
-                OneSignalDbContract.InAppMessageTable.TABLE_NAME,
-                values,
-                OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID.toString() + " = ?",
-                arrayOf<String>(inAppMessage.messageId),
-            )
+            val rowsUpdated: Int =
+                _databaseProvider.os.update(
+                    OneSignalDbContract.InAppMessageTable.TABLE_NAME,
+                    values,
+                    OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID.toString() + " = ?",
+                    arrayOf<String>(inAppMessage.messageId),
+                )
 
             if (rowsUpdated == 0) {
                 _databaseProvider.os.insert(
@@ -83,13 +83,14 @@ internal class InAppRepository(
 
                             val clickIdsSet: Set<String> =
                                 JSONUtils.newStringSetFromJSONArray(JSONArray(clickIds))
-                            val inAppMessage = InAppMessage(
-                                messageId,
-                                clickIdsSet,
-                                displayed,
-                                InAppMessageRedisplayStats(displayQuantity, lastDisplay, _time),
-                                _time,
-                            )
+                            val inAppMessage =
+                                InAppMessage(
+                                    messageId,
+                                    clickIdsSet,
+                                    displayed,
+                                    InAppMessageRedisplayStats(displayQuantity, lastDisplay, _time),
+                                    _time,
+                                )
                             inAppMessages.add(inAppMessage)
                         } while (it.moveToNext())
                     }
@@ -105,10 +106,11 @@ internal class InAppRepository(
     override suspend fun cleanCachedInAppMessages() {
         withContext(Dispatchers.IO) {
             // 1. Query for all old message ids and old clicked click ids
-            val retColumns = arrayOf<String>(
-                OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID,
-                OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS,
-            )
+            val retColumns =
+                arrayOf<String>(
+                    OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID,
+                    OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS,
+                )
             val whereStr: String =
                 OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY.toString() + " < ?"
             val sixMonthsAgoInSeconds =

@@ -20,8 +20,18 @@ internal class InAppPreferencesController(
      */
     override fun cleanInAppMessageIds(oldMessageIds: Set<String>?) {
         if (oldMessageIds != null && oldMessageIds.isNotEmpty()) {
-            val dismissedMessages: Set<String>? = _prefs.getStringSet(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_DISMISSED_IAMS, null)
-            val impressionedMessages: Set<String>? = _prefs.getStringSet(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_IMPRESSIONED_IAMS, null)
+            val dismissedMessages: Set<String>? =
+                _prefs.getStringSet(
+                    PreferenceStores.ONESIGNAL,
+                    PreferenceOneSignalKeys.PREFS_OS_DISMISSED_IAMS,
+                    null,
+                )
+            val impressionedMessages: Set<String>? =
+                _prefs.getStringSet(
+                    PreferenceStores.ONESIGNAL,
+                    PreferenceOneSignalKeys.PREFS_OS_IMPRESSIONED_IAMS,
+                    null,
+                )
 
             if (dismissedMessages != null && dismissedMessages.isNotEmpty()) {
                 val mutDismissedMessages = dismissedMessages.toMutableSet()
@@ -32,18 +42,31 @@ internal class InAppPreferencesController(
             if (impressionedMessages != null && impressionedMessages.isNotEmpty()) {
                 val mutImpressionedMessages = impressionedMessages.toMutableSet()
                 mutImpressionedMessages.removeAll(oldMessageIds)
-                _prefs.saveStringSet(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_IMPRESSIONED_IAMS, mutImpressionedMessages)
+                _prefs.saveStringSet(
+                    PreferenceStores.ONESIGNAL,
+                    PreferenceOneSignalKeys.PREFS_OS_IMPRESSIONED_IAMS,
+                    mutImpressionedMessages,
+                )
             }
         }
     }
 
     override fun cleanInAppMessageClickedClickIds(oldClickedClickIds: Set<String>?) {
         if (oldClickedClickIds != null && oldClickedClickIds.isNotEmpty()) {
-            val clickedClickIds: Set<String>? = _prefs.getStringSet(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_CLICKED_CLICK_IDS_IAMS, null)
+            val clickedClickIds: Set<String>? =
+                _prefs.getStringSet(
+                    PreferenceStores.ONESIGNAL,
+                    PreferenceOneSignalKeys.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
+                    null,
+                )
             if (clickedClickIds != null && clickedClickIds.isNotEmpty()) {
                 val mutclickedClickIds = clickedClickIds.toMutableSet()
                 mutclickedClickIds.removeAll(oldClickedClickIds)
-                _prefs.saveStringSet(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_CLICKED_CLICK_IDS_IAMS, mutclickedClickIds)
+                _prefs.saveStringSet(
+                    PreferenceStores.ONESIGNAL,
+                    PreferenceOneSignalKeys.PREFS_OS_CLICKED_CLICK_IDS_IAMS,
+                    mutclickedClickIds,
+                )
             }
         }
     }

@@ -30,7 +30,10 @@ class HmsMessageServiceOneSignal : HmsMessageService() {
      * @param token token
      * @param bundle bundle
      */
-    override fun onNewToken(token: String, bundle: Bundle) {
+    override fun onNewToken(
+        token: String,
+        bundle: Bundle,
+    ) {
         Logging.debug("HmsMessageServiceOneSignal onNewToken refresh token:$token")
         OneSignalHmsEventBridge.onNewToken(this, token, bundle)
     }

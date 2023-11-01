@@ -10,7 +10,6 @@ import com.onesignal.user.subscriptions.ISubscription
  * subscriptions.  The full list can be accessed via [SubscriptionList.collection].
  */
 class SubscriptionList(val collection: List<ISubscription>, private val _fallbackPushSub: IPushSubscription) {
-
     /**
      * Retrieve the push subscription for this user on the current device.
      */

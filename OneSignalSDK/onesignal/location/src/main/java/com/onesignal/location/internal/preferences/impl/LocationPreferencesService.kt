@@ -10,7 +10,12 @@ internal class LocationPreferencesService(
     private val _prefs: IPreferencesService,
 ) : ILocationPreferencesService {
     override var lastLocationTime: Long
-        get() = _prefs.getLong(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_LAST_LOCATION_TIME, LocationConstants.TIME_BACKGROUND_SEC * -1000)!!
+        get() =
+            _prefs.getLong(
+                PreferenceStores.ONESIGNAL,
+                PreferenceOneSignalKeys.PREFS_OS_LAST_LOCATION_TIME,
+                LocationConstants.TIME_BACKGROUND_SEC * -1000,
+            )!!
         set(time) {
             _prefs.saveLong(
                 PreferenceStores.ONESIGNAL,

@@ -6,6 +6,7 @@ package com.onesignal.core.internal.permissions
 interface IRequestPermissionService {
     interface PermissionCallback {
         fun onAccept()
+
         fun onReject(fallbackToSettings: Boolean)
     }
 

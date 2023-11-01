@@ -8,7 +8,6 @@ package com.onesignal.core.internal.operations
  * to execute a group of operations in batch.
  */
 interface IOperationExecutor {
-
     /**
      * The list of operations that this executor can handle execution.
      */
@@ -29,13 +28,11 @@ class ExecutionResponse(
      * The result of the execution
      */
     val result: ExecutionResult,
-
     /**
      * The map of id translations that should be applied to any outstanding operations.
      * Within the map the key is the local Id, the value is the remote Id.
      */
     val idTranslations: Map<String, String>? = null,
-
     /**
      * When specified, any operations that should be prepended to the operation repo.
      */

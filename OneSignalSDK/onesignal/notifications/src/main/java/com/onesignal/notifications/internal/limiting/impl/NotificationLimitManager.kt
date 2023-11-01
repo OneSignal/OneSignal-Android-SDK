@@ -15,17 +15,22 @@ internal class NotificationLimitManager(
     private val _applicationService: IApplicationService,
     private val _notificationSummaryManager: INotificationSummaryManager,
 ) : INotificationLimitManager {
-
     override suspend fun clearOldestOverLimit(notificationsToMakeRoomFor: Int) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 clearOldestOverLimitStandard(notificationsToMakeRoomFor)
             } else {
-                _dataController.clearOldestOverLimitFallback(notificationsToMakeRoomFor, INotificationLimitManager.Constants.maxNumberOfNotifications)
+                _dataController.clearOldestOverLimitFallback(
+                    notificationsToMakeRoomFor,
+                    INotificationLimitManager.Constants.maxNumberOfNotifications,
+                )
             }
         } catch (t: Throwable) {
             // try-catch for Android 6.0.X and possibly 8.0.0 bug work around, getActiveNotifications bug
-            _dataController.clearOldestOverLimitFallback(notificationsToMakeRoomFor, INotificationLimitManager.Constants.maxNumberOfNotifications)
+            _dataController.clearOldestOverLimitFallback(
+                notificationsToMakeRoomFor,
+                INotificationLimitManager.Constants.maxNumberOfNotifications,
+            )
         }
     }
 

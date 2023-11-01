@@ -23,7 +23,7 @@ class UserBackendServiceTests : FunSpec({
     }
 
     test("create user with nothing throws an exception") {
-        /* Given */
+        // Given
         val spyHttpClient = mockk<IHttpClient>()
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(403, "FORBIDDEN")
         val userBackendService = UserBackendService(spyHttpClient)
@@ -31,30 +31,33 @@ class UserBackendServiceTests : FunSpec({
         val properties = mapOf<String, String>()
         val subscriptions = listOf<SubscriptionObject>()
 
-        /* When */
-        val exception = shouldThrowUnit<BackendException> {
-            userBackendService.createUser("appId", identities, subscriptions, properties)
-        }
+        // When
+        val exception =
+            shouldThrowUnit<BackendException> {
+                userBackendService.createUser("appId", identities, subscriptions, properties)
+            }
 
-        /* Then */
+        // Then
         exception.statusCode shouldBe 403
         exception.response shouldBe "FORBIDDEN"
     }
 
     test("create user with an alias creates a new user") {
-        /* Given */
+        // Given
         val osId = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\", aliasLabel1: \"aliasValue1\"}, properties:{timezone_id: \"testTimeZone\", language: \"testLanguage\"}}")
+        coEvery {
+            spyHttpClient.post(any(), any())
+        } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\", aliasLabel1: \"aliasValue1\"}, properties:{timezone_id: \"testTimeZone\", language: \"testLanguage\"}}")
         val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf("aliasLabel1" to "aliasValue1")
         val properties = mapOf("timezone_id" to "testTimeZone", "language" to "testLanguage")
         val subscriptions = listOf<SubscriptionObject>()
 
-        /* When */
+        // When
         val response = userBackendService.createUser("appId", identities, subscriptions, properties)
 
-        /* Then */
+        // Then
         response.identities["onesignal_id"] shouldBe osId
         response.identities["aliasLabel1"] shouldBe "aliasValue1"
         response.properties.timezoneId shouldBe "testTimeZone"
@@ -75,20 +78,22 @@ class UserBackendServiceTests : FunSpec({
     }
 
     test("create user with a subscription creates a new user") {
-        /* Given */
+        // Given
         val osId = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\"}, subscriptions:[{id:\"subscriptionId1\", type:\"AndroidPush\"}], properties:{timezone_id: \"testTimeZone\", language: \"testLanguage\"}}")
+        coEvery {
+            spyHttpClient.post(any(), any())
+        } returns HttpResponse(202, "{identity:{onesignal_id: \"$osId\"}, subscriptions:[{id:\"subscriptionId1\", type:\"AndroidPush\"}], properties:{timezone_id: \"testTimeZone\", language: \"testLanguage\"}}")
         val userBackendService = UserBackendService(spyHttpClient)
         val identities = mapOf<String, String>()
         val subscriptions = mutableListOf<SubscriptionObject>()
         val properties = mapOf("timezone_id" to "testTimeZone", "language" to "testLanguage")
         subscriptions.add(SubscriptionObject("SHOULDNOTUSE", SubscriptionObjectType.ANDROID_PUSH))
 
-        /* When */
+        // When
         val response = userBackendService.createUser("appId", identities, subscriptions, properties)
 
-        /* Then */
+        // Then
         response.identities["onesignal_id"] shouldBe osId
         response.properties.timezoneId shouldBe "testTimeZone"
         response.properties.language shouldBe "testLanguage"
@@ -112,7 +117,7 @@ class UserBackendServiceTests : FunSpec({
     }
 
     test("update user tags") {
-        /* Given */
+        // Given
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
@@ -121,10 +126,10 @@ class UserBackendServiceTests : FunSpec({
         val properties = PropertiesObject(tags = mapOf("tagkey1" to "tagValue1"))
         val propertiesDelta = PropertiesDeltasObject()
 
-        /* When */
+        // When
         userBackendService.updateUser("appId", aliasLabel, aliasValue, properties, refreshDeviceMetadata = true, propertiesDelta)
 
-        /* Then */
+        // Then
         coVerify {
             spyHttpClient.patch(
                 "apps/appId/users/by/$aliasLabel/$aliasValue",
@@ -139,7 +144,7 @@ class UserBackendServiceTests : FunSpec({
     }
 
     test("update user language") {
-        /* Given */
+        // Given
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
@@ -148,10 +153,10 @@ class UserBackendServiceTests : FunSpec({
         val properties = PropertiesObject(language = "newLanguage")
         val propertiesDelta = PropertiesDeltasObject()
 
-        /* When */
+        // When
         userBackendService.updateUser("appId", aliasLabel, aliasValue, properties, refreshDeviceMetadata = true, propertiesDelta)
 
-        /* Then */
+        // Then
         coVerify {
             spyHttpClient.patch(
                 "apps/appId/users/by/$aliasLabel/$aliasValue",
@@ -165,7 +170,7 @@ class UserBackendServiceTests : FunSpec({
     }
 
     test("update user timezone") {
-        /* Given */
+        // Given
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
@@ -174,10 +179,10 @@ class UserBackendServiceTests : FunSpec({
         val properties = PropertiesObject(timezoneId = "America/New_York")
         val propertiesDelta = PropertiesDeltasObject()
 
-        /* When */
+        // When
         userBackendService.updateUser("appId", aliasLabel, aliasValue, properties, refreshDeviceMetadata = true, propertiesDelta)
 
-        /* Then */
+        // Then
         coVerify {
             spyHttpClient.patch(
                 "apps/appId/users/by/$aliasLabel/$aliasValue",
@@ -191,7 +196,7 @@ class UserBackendServiceTests : FunSpec({
     }
 
     test("update user country") {
-        /* Given */
+        // Given
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
@@ -200,10 +205,10 @@ class UserBackendServiceTests : FunSpec({
         val properties = PropertiesObject(country = "TV")
         val propertiesDelta = PropertiesDeltasObject()
 
-        /* When */
+        // When
         userBackendService.updateUser("appId", aliasLabel, aliasValue, properties, refreshDeviceMetadata = true, propertiesDelta)
 
-        /* Then */
+        // Then
         coVerify {
             spyHttpClient.patch(
                 "apps/appId/users/by/$aliasLabel/$aliasValue",
@@ -217,7 +222,7 @@ class UserBackendServiceTests : FunSpec({
     }
 
     test("update user location") {
-        /* Given */
+        // Given
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
@@ -226,10 +231,10 @@ class UserBackendServiceTests : FunSpec({
         val properties = PropertiesObject(latitude = 12.34, longitude = 45.67)
         val propertiesDelta = PropertiesDeltasObject()
 
-        /* When */
+        // When
         userBackendService.updateUser("appId", aliasLabel, aliasValue, properties, refreshDeviceMetadata = true, propertiesDelta)
 
-        /* Then */
+        // Then
         coVerify {
             spyHttpClient.patch(
                 "apps/appId/users/by/$aliasLabel/$aliasValue",
@@ -245,7 +250,7 @@ class UserBackendServiceTests : FunSpec({
     }
 
     test("update user with refresh metadata") {
-        /* Given */
+        // Given
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
@@ -254,10 +259,10 @@ class UserBackendServiceTests : FunSpec({
         val properties = PropertiesObject(tags = mapOf("tagkey1" to "tagValue1"))
         val propertiesDelta = PropertiesDeltasObject()
 
-        /* When */
+        // When
         userBackendService.updateUser("appId", aliasLabel, aliasValue, properties, refreshDeviceMetadata = true, propertiesDelta)
 
-        /* Then */
+        // Then
         coVerify {
             spyHttpClient.patch(
                 "apps/appId/users/by/$aliasLabel/$aliasValue",
@@ -269,7 +274,7 @@ class UserBackendServiceTests : FunSpec({
     }
 
     test("update user without refresh metadata") {
-        /* Given */
+        // Given
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
@@ -278,10 +283,10 @@ class UserBackendServiceTests : FunSpec({
         val properties = PropertiesObject(tags = mapOf("tagkey1" to "tagValue1"))
         val propertiesDelta = PropertiesDeltasObject()
 
-        /* When */
+        // When
         userBackendService.updateUser("appId", aliasLabel, aliasValue, properties, refreshDeviceMetadata = false, propertiesDelta)
 
-        /* Then */
+        // Then
         coVerify {
             spyHttpClient.patch(
                 "apps/appId/users/by/$aliasLabel/$aliasValue",
@@ -293,7 +298,7 @@ class UserBackendServiceTests : FunSpec({
     }
 
     test("update user delta session") {
-        /* Given */
+        // Given
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
@@ -302,10 +307,10 @@ class UserBackendServiceTests : FunSpec({
         val properties = PropertiesObject()
         val propertiesDelta = PropertiesDeltasObject(sessionTime = 1111, sessionCount = 1)
 
-        /* When */
+        // When
         userBackendService.updateUser("appId", aliasLabel, aliasValue, properties, refreshDeviceMetadata = true, propertiesDelta)
 
-        /* Then */
+        // Then
         coVerify {
             spyHttpClient.patch(
                 "apps/appId/users/by/$aliasLabel/$aliasValue",
@@ -321,25 +326,27 @@ class UserBackendServiceTests : FunSpec({
     }
 
     test("update user delta purchase") {
-        /* Given */
+        // Given
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
         coEvery { spyHttpClient.patch(any(), any()) } returns HttpResponse(202, "{properties: { }}")
         val userBackendService = UserBackendService(spyHttpClient)
         val properties = PropertiesObject()
-        val propertiesDelta = PropertiesDeltasObject(
-            amountSpent = BigDecimal(1111),
-            purchases = listOf(
-                PurchaseObject("sku1", "iso1", BigDecimal(2222)),
-                PurchaseObject("sku2", "iso2", BigDecimal(4444)),
-            ),
-        )
+        val propertiesDelta =
+            PropertiesDeltasObject(
+                amountSpent = BigDecimal(1111),
+                purchases =
+                    listOf(
+                        PurchaseObject("sku1", "iso1", BigDecimal(2222)),
+                        PurchaseObject("sku2", "iso2", BigDecimal(4444)),
+                    ),
+            )
 
-        /* When */
+        // When
         userBackendService.updateUser("appId", aliasLabel, aliasValue, properties, refreshDeviceMetadata = true, propertiesDelta)
 
-        /* Then */
+        // Then
         coVerify {
             spyHttpClient.patch(
                 "apps/appId/users/by/$aliasLabel/$aliasValue",
@@ -367,7 +374,7 @@ class UserBackendServiceTests : FunSpec({
     }
 
     test("update user but user not found throws exception") {
-        /* Given */
+        // Given
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
@@ -376,18 +383,19 @@ class UserBackendServiceTests : FunSpec({
         val properties = PropertiesObject(tags = mapOf("tagkey1" to "tagValue1"))
         val propertiesDelta = PropertiesDeltasObject()
 
-        /* When */
-        val exception = shouldThrowUnit<BackendException> {
-            userBackendService.updateUser("appId", aliasLabel, aliasValue, properties, refreshDeviceMetadata = true, propertiesDelta)
-        }
+        // When
+        val exception =
+            shouldThrowUnit<BackendException> {
+                userBackendService.updateUser("appId", aliasLabel, aliasValue, properties, refreshDeviceMetadata = true, propertiesDelta)
+            }
 
-        /* Then */
+        // Then
         exception.statusCode shouldBe 404
         exception.response shouldBe "NOT FOUND"
     }
 
     test("update user but other error throws exception") {
-        /* Given */
+        // Given
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
@@ -396,12 +404,13 @@ class UserBackendServiceTests : FunSpec({
         val properties = PropertiesObject(tags = mapOf("tagkey1" to "tagValue1"))
         val propertiesDelta = PropertiesDeltasObject()
 
-        /* When */
-        val exception = shouldThrowUnit<BackendException> {
-            userBackendService.updateUser("appId", aliasLabel, aliasValue, properties, refreshDeviceMetadata = true, propertiesDelta)
-        }
+        // When
+        val exception =
+            shouldThrowUnit<BackendException> {
+                userBackendService.updateUser("appId", aliasLabel, aliasValue, properties, refreshDeviceMetadata = true, propertiesDelta)
+            }
 
-        /* Then */
+        // Then
         exception.statusCode shouldBe 403
         exception.response shouldBe "FORBIDDEN"
     }

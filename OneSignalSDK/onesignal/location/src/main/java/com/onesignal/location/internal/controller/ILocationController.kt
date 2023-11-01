@@ -5,6 +5,7 @@ import com.onesignal.common.events.IEventNotifier
 
 internal interface ILocationController : IEventNotifier<ILocationUpdatedHandler> {
     suspend fun start(): Boolean
+
     suspend fun stop()
 
     fun getLastLocation(): Location?

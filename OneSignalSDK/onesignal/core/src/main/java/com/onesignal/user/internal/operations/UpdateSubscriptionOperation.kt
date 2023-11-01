@@ -16,7 +16,9 @@ class UpdateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.UP
      */
     var appId: String
         get() = getStringProperty(::appId.name)
-        private set(value) { setStringProperty(::appId.name, value) }
+        private set(value) {
+            setStringProperty(::appId.name, value)
+        }
 
     /**
      * The user ID this subscription will be associated with. This ID *may* be locally generated
@@ -24,7 +26,9 @@ class UpdateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.UP
      */
     var onesignalId: String
         get() = getStringProperty(::onesignalId.name)
-        private set(value) { setStringProperty(::onesignalId.name, value) }
+        private set(value) {
+            setStringProperty(::onesignalId.name, value)
+        }
 
     /**
      * The subscription ID that is to be deleted. This ID *may* be locally generated
@@ -32,21 +36,27 @@ class UpdateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.UP
      */
     var subscriptionId: String
         get() = getStringProperty(::subscriptionId.name)
-        private set(value) { setStringProperty(::subscriptionId.name, value) }
+        private set(value) {
+            setStringProperty(::subscriptionId.name, value)
+        }
 
     /**
      * The type of subscription.
      */
     var type: SubscriptionType
         get() = getEnumProperty(::type.name)
-        private set(value) { setEnumProperty(::type.name, value) }
+        private set(value) {
+            setEnumProperty(::type.name, value)
+        }
 
     /**
      * Whether this subscription is currently enabled.
      */
     var enabled: Boolean
         get() = getBooleanProperty(::enabled.name)
-        private set(value) { setBooleanProperty(::enabled.name, value) }
+        private set(value) {
+            setBooleanProperty(::enabled.name, value)
+        }
 
     /**
      * The address-specific information for this subscription. Its contents depends on the type
@@ -58,14 +68,18 @@ class UpdateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.UP
      */
     var address: String
         get() = getStringProperty(::address.name)
-        private set(value) { setStringProperty(::address.name, value) }
+        private set(value) {
+            setStringProperty(::address.name, value)
+        }
 
     /**
      * The status of this subscription.
      */
     var status: SubscriptionStatus
         get() = getEnumProperty(::status.name)
-        private set(value) { setEnumProperty(::status.name, value) }
+        private set(value) {
+            setEnumProperty(::status.name, value)
+        }
 
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Subscription.$subscriptionId"

@@ -1,3 +1,5 @@
+// Namespaced in com.onesignal to prevent class name conflicts if app developer includes the full RootTools library.
+
 /**
  * This file is part of the RootTools Project: http://code.google.com/p/roottools/
  *
@@ -19,7 +21,7 @@
  * See each License for the specific language governing permissions and
  * limitations under that License.
  */
-// Namespaced in com.onesignal to prevent class name conflicts if app developer includes the full RootTools library.
+
 package com.onesignal.common
 
 import java.io.File
@@ -29,16 +31,17 @@ object RootToolsInternalMethods {
     // issues #857
     val isRooted: Boolean
         get() {
-            val places = arrayOf(
-                "/sbin/",
-                "/system/bin/",
-                "/system/xbin/",
-                "/data/local/xbin/",
-                "/data/local/bin/",
-                "/system/sd/xbin/",
-                "/system/bin/failsafe/",
-                "/data/local/",
-            )
+            val places =
+                arrayOf(
+                    "/sbin/",
+                    "/system/bin/",
+                    "/system/xbin/",
+                    "/data/local/xbin/",
+                    "/data/local/bin/",
+                    "/system/sd/xbin/",
+                    "/system/bin/failsafe/",
+                    "/data/local/",
+                )
             try {
                 for (where in places) {
                     if (File(where + "su").exists()) return true

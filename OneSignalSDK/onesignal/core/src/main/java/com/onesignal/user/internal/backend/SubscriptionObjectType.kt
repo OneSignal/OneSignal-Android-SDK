@@ -27,6 +27,6 @@ enum class SubscriptionObjectType(val value: String) {
             }
         }
 
-        fun fromString(type: String): SubscriptionObjectType? = values().firstOrNull() { it.value.equals(type, true) }
+        fun fromString(type: String): SubscriptionObjectType? = values().firstOrNull { it.value.equals(type, true) }
     }
 }

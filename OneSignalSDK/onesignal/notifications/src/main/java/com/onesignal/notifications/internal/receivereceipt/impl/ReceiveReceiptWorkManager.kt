@@ -24,7 +24,6 @@ internal class ReceiveReceiptWorkManager(
     private val _configModelStore: ConfigModelStore,
     private val _subscriptionManager: ISubscriptionManager,
 ) : IReceiveReceiptWorkManager {
-
     private val minDelay = 0
     private val maxDelay = 25
 
@@ -42,18 +41,22 @@ internal class ReceiveReceiptWorkManager(
         }
 
         val delay: Int = AndroidUtils.getRandomDelay(minDelay, maxDelay)
-        val inputData = Data.Builder()
-            .putString(OS_NOTIFICATION_ID, notificationId)
-            .putString(OS_APP_ID, appId)
-            .putString(OS_SUBSCRIPTION_ID, subscriptionId)
-            .build()
+        val inputData =
+            Data.Builder()
+                .putString(OS_NOTIFICATION_ID, notificationId)
+                .putString(OS_APP_ID, appId)
+                .putString(OS_SUBSCRIPTION_ID, subscriptionId)
+                .build()
         val constraints = buildConstraints()
-        val workRequest = OneTimeWorkRequest.Builder(ReceiveReceiptWorker::class.java)
-            .setConstraints(constraints)
-            .setInitialDelay(delay.toLong(), TimeUnit.SECONDS)
-            .setInputData(inputData)
-            .build()
-        Logging.debug("OSReceiveReceiptController enqueueing send receive receipt work with notificationId: $notificationId and delay: $delay seconds")
+        val workRequest =
+            OneTimeWorkRequest.Builder(ReceiveReceiptWorker::class.java)
+                .setConstraints(constraints)
+                .setInitialDelay(delay.toLong(), TimeUnit.SECONDS)
+                .setInputData(inputData)
+                .build()
+        Logging.debug(
+            "OSReceiveReceiptController enqueueing send receive receipt work with notificationId: $notificationId and delay: $delay seconds",
+        )
         WorkManager.getInstance(_applicationService.appContext)
             .enqueueUniqueWork(
                 notificationId + "_receive_receipt",
@@ -69,14 +72,14 @@ internal class ReceiveReceiptWorkManager(
     }
 
     class ReceiveReceiptWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
-        private var _receiveReceiptProcessor: IReceiveReceiptProcessor = OneSignal.getService()
+        private var receiveReceiptProcessor: IReceiveReceiptProcessor = OneSignal.getService()
 
         override suspend fun doWork(): Result {
             val inputData = inputData
             val notificationId = inputData.getString(OS_NOTIFICATION_ID)!!
             val appId = inputData.getString(OS_APP_ID)!!
             val subscriptionId = inputData.getString(OS_SUBSCRIPTION_ID)!!
-            _receiveReceiptProcessor.sendReceiveReceipt(appId, subscriptionId, notificationId)
+            receiveReceiptProcessor.sendReceiveReceipt(appId, subscriptionId, notificationId)
             return Result.success()
         }
     }

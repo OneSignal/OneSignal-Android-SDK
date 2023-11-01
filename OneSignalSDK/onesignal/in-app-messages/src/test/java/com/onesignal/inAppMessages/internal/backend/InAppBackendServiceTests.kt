@@ -31,34 +31,36 @@ class InAppBackendServiceTests : FunSpec({
     }
 
     test("listInAppMessages with no messages returns zero-lengthed array") {
-        /* Given */
+        // Given
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
         coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(200, "{ in_app_messages: [] }")
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
-        /* When */
+        // When
         val response = inAppBackendService.listInAppMessages("appId", "subscriptionId")
 
-        /* Then */
+        // Then
         response shouldNotBe null
         response!!.count() shouldBe 0
         coVerify(exactly = 1) { mockHttpClient.get("apps/appId/subscriptions/subscriptionId/iams", any()) }
     }
 
     test("listInAppMessages with 1 message returns one-lengthed array") {
-        /* Given */
+        // Given
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
-        coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(200, "{ in_app_messages: [{id: \"messageId1\", variants:{all: {en: \"content1\"}}, triggers:[[{id: \"triggerId1\", kind: \"custom\", property: \"property1\", operator: \"equal\", value: \"value1\"}]], end_time: \"2008-09-03T20:56:35.450686Z\", redisplay: { limit: 11111, delay: 22222}}] }")
+        coEvery {
+            mockHttpClient.get(any(), any())
+        } returns HttpResponse(200, "{ in_app_messages: [{id: \"messageId1\", variants:{all: {en: \"content1\"}}, triggers:[[{id: \"triggerId1\", kind: \"custom\", property: \"property1\", operator: \"equal\", value: \"value1\"}]], end_time: \"2008-09-03T20:56:35.450686Z\", redisplay: { limit: 11111, delay: 22222}}] }")
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
-        /* When */
+        // When
         val response = inAppBackendService.listInAppMessages("appId", "subscriptionId")
 
-        /* Then */
+        // Then
         response shouldNotBe null
         response!!.count() shouldBe 1
         response[0].messageId shouldBe "messageId1"
@@ -81,33 +83,35 @@ class InAppBackendServiceTests : FunSpec({
     }
 
     test("listInAppMessages returns null when non-success response") {
-        /* Given */
+        // Given
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
         coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(404, null)
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
-        /* When */
+        // When
         val response = inAppBackendService.listInAppMessages("appId", "subscriptionId")
 
-        /* Then */
+        // Then
         response shouldBe null
         coVerify(exactly = 1) { mockHttpClient.get("apps/appId/subscriptions/subscriptionId/iams", any()) }
     }
 
     test("getIAMData successfully hydrates successful response") {
-        /* Given */
+        // Given
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
-        coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(200, "{html: \"html1\", display_duration: 123, styles: {remove_height_margin: true, remove_width_margin: true}}")
+        coEvery {
+            mockHttpClient.get(any(), any())
+        } returns HttpResponse(200, "{html: \"html1\", display_duration: 123, styles: {remove_height_margin: true, remove_width_margin: true}}")
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
-        /* When */
+        // When
         val response = inAppBackendService.getIAMData("appId", "messageId", "variantId")
 
-        /* Then */
+        // Then
         response shouldNotBe null
         response.shouldRetry shouldBe false
         response.content shouldNotBe null
@@ -121,17 +125,17 @@ class InAppBackendServiceTests : FunSpec({
     }
 
     test("getIAMData successfully hydrates successful response with no content") {
-        /* Given */
+        // Given
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
         coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(200, "{}")
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
-        /* When */
+        // When
         val response = inAppBackendService.getIAMData("appId", "messageId", "variantId")
 
-        /* Then */
+        // Then
         response shouldNotBe null
         response.shouldRetry shouldBe false
         response.content shouldBe null
@@ -140,17 +144,17 @@ class InAppBackendServiceTests : FunSpec({
     }
 
     test("getIAMData successfully hydrates successful response with no style") {
-        /* Given */
+        // Given
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
         coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(200, "{html: \"html1\", display_duration: 123 }")
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
-        /* When */
+        // When
         val response = inAppBackendService.getIAMData("appId", "messageId", "variantId")
 
-        /* Then */
+        // Then
         response shouldNotBe null
         response.shouldRetry shouldBe false
         response.content shouldNotBe null
@@ -164,17 +168,17 @@ class InAppBackendServiceTests : FunSpec({
     }
 
     test("getIAMData indicates retry when retryable response provided") {
-        /* Given */
+        // Given
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
         coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(500, null)
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
-        /* When */
+        // When
         val response = inAppBackendService.getIAMData("appId", "messageId", "variantId")
 
-        /* Then */
+        // Then
         response shouldNotBe null
         response.shouldRetry shouldBe true
         response.content shouldBe null
@@ -183,17 +187,17 @@ class InAppBackendServiceTests : FunSpec({
     }
 
     test("getIAMData indicates no retry when non-retryable response provided") {
-        /* Given */
+        // Given
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
         coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(404, null)
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
-        /* When */
+        // When
         val response = inAppBackendService.getIAMData("appId", "messageId", "variantId")
 
-        /* Then */
+        // Then
         response shouldNotBe null
         response.shouldRetry shouldBe false
         response.content shouldBe null
@@ -202,20 +206,20 @@ class InAppBackendServiceTests : FunSpec({
     }
 
     test("getIAMData indicates no retry when retryable response provided more than 3 times") {
-        /* Given */
+        // Given
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
         coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(500, null)
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
-        /* When */
+        // When
         val response1 = inAppBackendService.getIAMData("appId", "messageId", "variantId")
         val response2 = inAppBackendService.getIAMData("appId", "messageId", "variantId")
         val response3 = inAppBackendService.getIAMData("appId", "messageId", "variantId")
         val response4 = inAppBackendService.getIAMData("appId", "messageId", "variantId")
 
-        /* Then */
+        // Then
         response1 shouldNotBe null
         response1.shouldRetry shouldBe true
         response1.content shouldBe null
@@ -233,17 +237,19 @@ class InAppBackendServiceTests : FunSpec({
     }
 
     test("getIAMPreviewData successfully hydrates successful response") {
-        /* Given */
+        // Given
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
-        coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(200, "{html: \"html1\", display_duration: 123, styles: {remove_height_margin: true, remove_width_margin: true}}")
+        coEvery {
+            mockHttpClient.get(any(), any())
+        } returns HttpResponse(200, "{html: \"html1\", display_duration: 123, styles: {remove_height_margin: true, remove_width_margin: true}}")
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
-        /* When */
+        // When
         val response = inAppBackendService.getIAMPreviewData("appId", "previewUUID")
 
-        /* Then */
+        // Then
         response shouldNotBe null
         response!!.contentHtml shouldStartWith "html1"
         response!!.displayDuration shouldBe 123
@@ -255,34 +261,34 @@ class InAppBackendServiceTests : FunSpec({
     }
 
     test("getIAMPreviewData returns no data when response is unsuccessful") {
-        /* Given */
+        // Given
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
         coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(404, null)
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
-        /* When */
+        // When
         val response = inAppBackendService.getIAMPreviewData("appId", "previewUUID")
 
-        /* Then */
+        // Then
         response shouldBe null
 
         coVerify(exactly = 1) { mockHttpClient.get("in_app_messages/device_preview?preview_id=previewUUID&app_id=appId", any()) }
     }
 
     test("sendIAMClick is successful when there is a successful response") {
-        /* Given */
+        // Given
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
         coEvery { mockHttpClient.post(any(), any()) } returns HttpResponse(200, "{}")
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
-        /* When */
+        // When
         inAppBackendService.sendIAMClick("appId", "subscriptionId", "variantId", "messageId", "clickId", isFirstClick = true)
 
-        /* Then */
+        // Then
         coVerify(exactly = 1) {
             mockHttpClient.post(
                 "in_app_messages/messageId/click",
@@ -299,26 +305,27 @@ class InAppBackendServiceTests : FunSpec({
     }
 
     test("sendIAMClick throws exception when there is an unsuccessful response") {
-        /* Given */
+        // Given
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
         coEvery { mockHttpClient.post(any(), any()) } returns HttpResponse(409, "{}")
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
-        /* When */
-        val exception = shouldThrowUnit<BackendException> {
-            inAppBackendService.sendIAMClick(
-                "appId",
-                "subscriptionId",
-                "variantId",
-                "messageId",
-                "clickId",
-                isFirstClick = true,
-            )
-        }
+        // When
+        val exception =
+            shouldThrowUnit<BackendException> {
+                inAppBackendService.sendIAMClick(
+                    "appId",
+                    "subscriptionId",
+                    "variantId",
+                    "messageId",
+                    "clickId",
+                    isFirstClick = true,
+                )
+            }
 
-        /* Then */
+        // Then
         exception.statusCode shouldBe 409
         exception.response shouldBe "{}"
         coVerify(exactly = 1) {
@@ -337,17 +344,17 @@ class InAppBackendServiceTests : FunSpec({
     }
 
     test("sendIAMImpression is successful when there is a successful response") {
-        /* Given */
+        // Given
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
         coEvery { mockHttpClient.post(any(), any()) } returns HttpResponse(200, "{}")
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
-        /* When */
+        // When
         inAppBackendService.sendIAMImpression("appId", "subscriptionId", "variantId", "messageId")
 
-        /* Then */
+        // Then
         coVerify(exactly = 1) {
             mockHttpClient.post(
                 "in_app_messages/messageId/impression",
@@ -363,19 +370,20 @@ class InAppBackendServiceTests : FunSpec({
     }
 
     test("sendIAMImpression throws exception when there is an unsuccessful response") {
-        /* Given */
+        // Given
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
         coEvery { mockHttpClient.post(any(), any()) } returns HttpResponse(409, "{}")
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
-        /* When */
-        val exception = shouldThrowUnit<BackendException> {
-            inAppBackendService.sendIAMImpression("appId", "subscriptionId", "variantId", "messageId")
-        }
+        // When
+        val exception =
+            shouldThrowUnit<BackendException> {
+                inAppBackendService.sendIAMImpression("appId", "subscriptionId", "variantId", "messageId")
+            }
 
-        /* Then */
+        // Then
         exception.statusCode shouldBe 409
         exception.response shouldBe "{}"
         coVerify(exactly = 1) {
@@ -393,17 +401,17 @@ class InAppBackendServiceTests : FunSpec({
     }
 
     test("sendIAMPageImpression is successful when there is a successful response") {
-        /* Given */
+        // Given
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
         coEvery { mockHttpClient.post(any(), any()) } returns HttpResponse(200, "{}")
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
-        /* When */
+        // When
         inAppBackendService.sendIAMPageImpression("appId", "subscriptionId", "variantId", "messageId", "pageId")
 
-        /* Then */
+        // Then
         coVerify(exactly = 1) {
             mockHttpClient.post(
                 "in_app_messages/messageId/pageImpression",
@@ -419,19 +427,20 @@ class InAppBackendServiceTests : FunSpec({
     }
 
     test("sendIAMPageImpression throws exception when there is an unsuccessful response") {
-        /* Given */
+        // Given
         val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
         val mockHttpClient = mockk<IHttpClient>()
         coEvery { mockHttpClient.post(any(), any()) } returns HttpResponse(409, "{}")
 
         val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
-        /* When */
-        val exception = shouldThrowUnit<BackendException> {
-            inAppBackendService.sendIAMPageImpression("appId", "subscriptionId", "variantId", "messageId", "pageId")
-        }
+        // When
+        val exception =
+            shouldThrowUnit<BackendException> {
+                inAppBackendService.sendIAMPageImpression("appId", "subscriptionId", "variantId", "messageId", "pageId")
+            }
 
-        /* Then */
+        // Then
         exception.statusCode shouldBe 409
         exception.response shouldBe "{}"
         coVerify(exactly = 1) {
