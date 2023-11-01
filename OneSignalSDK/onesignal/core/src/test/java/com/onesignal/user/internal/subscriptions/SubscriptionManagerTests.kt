@@ -22,7 +22,7 @@ import org.junit.runner.RunWith
 class SubscriptionManagerTests : FunSpec({
 
     test("initializes subscriptions from model store") {
-        /* Given */
+        // Given
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
         val pushSubscription = SubscriptionModel()
         pushSubscription.id = "subscription1"
@@ -51,10 +51,10 @@ class SubscriptionManagerTests : FunSpec({
 
         val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
 
-        /* When */
+        // When
         val subscriptions = subscriptionManager.subscriptions
 
-        /* Then */
+        // Then
         subscriptions.collection.count() shouldBe 3
         subscriptions.push shouldNotBe null
         subscriptions.push!!.id shouldBe pushSubscription.id
@@ -69,7 +69,7 @@ class SubscriptionManagerTests : FunSpec({
     }
 
     test("add email subscription adds to model store") {
-        /* Given */
+        // Given
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
 
         val listOfSubscriptions = listOf<SubscriptionModel>()
@@ -79,10 +79,10 @@ class SubscriptionManagerTests : FunSpec({
 
         val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
 
-        /* When */
+        // When
         subscriptionManager.addEmailSubscription("name@company.com")
 
-        /* Then */
+        // Then
         verify {
             mockSubscriptionModelStore.add(
                 withArg {
@@ -96,7 +96,7 @@ class SubscriptionManagerTests : FunSpec({
     }
 
     test("add sms subscription adds to model store") {
-        /* Given */
+        // Given
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
 
         val listOfSubscriptions = listOf<SubscriptionModel>()
@@ -106,10 +106,10 @@ class SubscriptionManagerTests : FunSpec({
 
         val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
 
-        /* When */
+        // When
         subscriptionManager.addSmsSubscription("+15558675309")
 
-        /* Then */
+        // Then
         verify {
             mockSubscriptionModelStore.add(
                 withArg {
@@ -123,7 +123,7 @@ class SubscriptionManagerTests : FunSpec({
     }
 
     test("add push subscription adds to model store") {
-        /* Given */
+        // Given
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
 
         val listOfSubscriptions = listOf<SubscriptionModel>()
@@ -133,10 +133,10 @@ class SubscriptionManagerTests : FunSpec({
 
         val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
 
-        /* When */
+        // When
         subscriptionManager.addOrUpdatePushSubscription("pushToken", SubscriptionStatus.SUBSCRIBED)
 
-        /* Then */
+        // Then
         verify {
             mockSubscriptionModelStore.add(
                 withArg {
@@ -150,7 +150,7 @@ class SubscriptionManagerTests : FunSpec({
     }
 
     test("update push subscription updates model store") {
-        /* Given */
+        // Given
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
 
         val pushSubscription = SubscriptionModel()
@@ -169,16 +169,16 @@ class SubscriptionManagerTests : FunSpec({
 
         val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
 
-        /* When */
+        // When
         subscriptionManager.addOrUpdatePushSubscription("pushToken2", SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER)
 
-        /* Then */
+        // Then
         pushSubscription.address shouldBe "pushToken2"
         pushSubscription.status shouldBe SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER
     }
 
     test("remove email subscription removes from model store") {
-        /* Given */
+        // Given
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
 
         val emailSubscription = SubscriptionModel()
@@ -197,15 +197,15 @@ class SubscriptionManagerTests : FunSpec({
 
         val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
 
-        /* When */
+        // When
         subscriptionManager.removeEmailSubscription("name@company.com")
 
-        /* Then */
+        // Then
         verify(exactly = 1) { mockSubscriptionModelStore.remove("subscription1") }
     }
 
     test("remove sms subscription removes from model store") {
-        /* Given */
+        // Given
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
 
         val emailSubscription = SubscriptionModel()
@@ -224,15 +224,15 @@ class SubscriptionManagerTests : FunSpec({
 
         val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
 
-        /* When */
+        // When
         subscriptionManager.removeSmsSubscription("+18458675309")
 
-        /* Then */
+        // Then
         verify(exactly = 1) { mockSubscriptionModelStore.remove("subscription1") }
     }
 
     test("subscription added when model added") {
-        /* Given */
+        // Given
         val smsSubscription = SubscriptionModel()
         smsSubscription.id = "subscription1"
         smsSubscription.type = SubscriptionType.SMS
@@ -251,11 +251,11 @@ class SubscriptionManagerTests : FunSpec({
         val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
         subscriptionManager.subscribe(spySubscriptionChangedHandler)
 
-        /* When */
+        // When
         subscriptionManager.onModelAdded(smsSubscription, ModelChangeTags.NORMAL)
         val subscriptions = subscriptionManager.subscriptions
 
-        /* Then */
+        // Then
         subscriptions.smss.count() shouldBe 1
         subscriptions.smss[0].id shouldBe smsSubscription.id
         subscriptions.smss[0].number shouldBe smsSubscription.address
@@ -271,7 +271,7 @@ class SubscriptionManagerTests : FunSpec({
     }
 
     test("subscription modified when model updated") {
-        /* Given */
+        // Given
         val emailSubscription = SubscriptionModel()
         emailSubscription.id = "subscription1"
         emailSubscription.type = SubscriptionType.SMS
@@ -290,12 +290,21 @@ class SubscriptionManagerTests : FunSpec({
         val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
         subscriptionManager.subscribe(spySubscriptionChangedHandler)
 
-        /* When */
+        // When
         emailSubscription.address = "+15551234567"
-        subscriptionManager.onModelUpdated(ModelChangedArgs(emailSubscription, SubscriptionModel::address.name, SubscriptionModel::address.name, "+15558675309", "+15551234567"), ModelChangeTags.NORMAL)
+        subscriptionManager.onModelUpdated(
+            ModelChangedArgs(
+                emailSubscription,
+                SubscriptionModel::address.name,
+                SubscriptionModel::address.name,
+                "+15558675309",
+                "+15551234567",
+            ),
+            ModelChangeTags.NORMAL,
+        )
         val subscriptions = subscriptionManager.subscriptions
 
-        /* Then */
+        // Then
         subscriptions.smss.count() shouldBe 1
         subscriptions.smss[0].id shouldBe emailSubscription.id
         subscriptions.smss[0].number shouldBe "+15551234567"
@@ -303,7 +312,7 @@ class SubscriptionManagerTests : FunSpec({
     }
 
     test("subscription removed when model removed") {
-        /* Given */
+        // Given
         val smsSubscription = SubscriptionModel()
         smsSubscription.id = "subscription1"
         smsSubscription.type = SubscriptionType.SMS
@@ -322,11 +331,11 @@ class SubscriptionManagerTests : FunSpec({
         val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
         subscriptionManager.subscribe(spySubscriptionChangedHandler)
 
-        /* When */
+        // When
         subscriptionManager.onModelRemoved(smsSubscription, ModelChangeTags.NORMAL)
         val subscriptions = subscriptionManager.subscriptions
 
-        /* Then */
+        // Then
         subscriptions.smss.count() shouldBe 0
         verify(exactly = 1) {
             spySubscriptionChangedHandler.onSubscriptionRemoved(

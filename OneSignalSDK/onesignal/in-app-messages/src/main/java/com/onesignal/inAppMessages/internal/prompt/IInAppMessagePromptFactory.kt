@@ -7,7 +7,6 @@ import com.onesignal.inAppMessages.internal.prompt.impl.InAppMessagePrompt
  * the callers needs.
  */
 internal interface IInAppMessagePromptFactory {
-
     /**
      * Create a new prompt instance depending on the prompt type required.
      *

@@ -13,8 +13,12 @@ import org.json.JSONObject
 internal class UserBackendService(
     private val _httpClient: IHttpClient,
 ) : IUserBackendService {
-
-    override suspend fun createUser(appId: String, identities: Map<String, String>, subscriptions: List<SubscriptionObject>, properties: Map<String, String>): CreateUserResponse {
+    override suspend fun createUser(
+        appId: String,
+        identities: Map<String, String>,
+        subscriptions: List<SubscriptionObject>,
+        properties: Map<String, String>,
+    ): CreateUserResponse {
         val requestJSON = JSONObject()
 
         if (identities.isNotEmpty()) {
@@ -39,9 +43,17 @@ internal class UserBackendService(
         return JSONConverter.convertToCreateUserResponse(JSONObject(response.payload!!))
     }
 
-    override suspend fun updateUser(appId: String, aliasLabel: String, aliasValue: String, properties: PropertiesObject, refreshDeviceMetadata: Boolean, propertyiesDelta: PropertiesDeltasObject) {
-        val jsonObject = JSONObject()
-            .put("refresh_device_metadata", refreshDeviceMetadata)
+    override suspend fun updateUser(
+        appId: String,
+        aliasLabel: String,
+        aliasValue: String,
+        properties: PropertiesObject,
+        refreshDeviceMetadata: Boolean,
+        propertyiesDelta: PropertiesDeltasObject,
+    ) {
+        val jsonObject =
+            JSONObject()
+                .put("refresh_device_metadata", refreshDeviceMetadata)
 
         if (properties.hasAtLeastOnePropertySet) {
             jsonObject.put("properties", JSONConverter.convertToJSON(properties))
@@ -58,7 +70,11 @@ internal class UserBackendService(
         }
     }
 
-    override suspend fun getUser(appId: String, aliasLabel: String, aliasValue: String): CreateUserResponse {
+    override suspend fun getUser(
+        appId: String,
+        aliasLabel: String,
+        aliasValue: String,
+    ): CreateUserResponse {
         val response = _httpClient.get("apps/$appId/users/by/$aliasLabel/$aliasValue")
 
         if (!response.isSuccess) {

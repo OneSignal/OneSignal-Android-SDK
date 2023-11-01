@@ -19,13 +19,15 @@ internal class OutcomeSource(
         return json
     }
 
-    fun setDirectBody(directBody: OutcomeSourceBody?) = this.apply {
-        this.directBody = directBody
-    }
+    fun setDirectBody(directBody: OutcomeSourceBody?) =
+        this.apply {
+            this.directBody = directBody
+        }
 
-    fun setIndirectBody(indirectBody: OutcomeSourceBody?) = this.apply {
-        this.indirectBody = indirectBody
-    }
+    fun setIndirectBody(indirectBody: OutcomeSourceBody?) =
+        this.apply {
+            this.indirectBody = indirectBody
+        }
 
     override fun toString(): String {
         return "OutcomeSource{" +

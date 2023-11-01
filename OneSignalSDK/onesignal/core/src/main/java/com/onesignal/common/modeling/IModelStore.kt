@@ -9,7 +9,6 @@ import org.json.JSONObject
  */
 interface IModelStore<TModel> :
     IEventNotifier<IModelStoreChangeHandler<TModel>> where TModel : Model {
-
     /**
      * Create a new instance of the model and add it to the store. The new instance is *not* added
      * to the model store, because it may not yet have an [Model.id] which is required.
@@ -34,7 +33,10 @@ interface IModelStore<TModel> :
      * @param model The model being added to the model store.
      * @param tag The tag which identifies how/why the model is being added.
      */
-    fun add(model: TModel, tag: String = ModelChangeTags.NORMAL)
+    fun add(
+        model: TModel,
+        tag: String = ModelChangeTags.NORMAL,
+    )
 
     /**
      * Add a new model to this model store.  Once added, any changes to the
@@ -46,7 +48,11 @@ interface IModelStore<TModel> :
      * @param model The model being added to the model store.
      * @param tag The tag which identifies how/why the model is being added.
      */
-    fun add(index: Int, model: TModel, tag: String = ModelChangeTags.NORMAL)
+    fun add(
+        index: Int,
+        model: TModel,
+        tag: String = ModelChangeTags.NORMAL,
+    )
 
     /**
      * Retrieve the model associated to the id provided.
@@ -63,7 +69,10 @@ interface IModelStore<TModel> :
      * @param id The unique identifier to the model to remove.
      * @param tag The tag which identifies how/why the model is being removed.
      */
-    fun remove(id: String, tag: String = ModelChangeTags.NORMAL)
+    fun remove(
+        id: String,
+        tag: String = ModelChangeTags.NORMAL,
+    )
 
     /**
      * Remove all models from the store.
@@ -78,7 +87,10 @@ interface IModelStore<TModel> :
      * @param models The models to track in the model store.
      * @param tag The tag which identifies how/why the model store is being replaced.
      */
-    fun replaceAll(models: List<TModel>, tag: String = ModelChangeTags.NORMAL)
+    fun replaceAll(
+        models: List<TModel>,
+        tag: String = ModelChangeTags.NORMAL,
+    )
 }
 
 object ModelChangeTags {

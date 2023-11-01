@@ -44,11 +44,11 @@ class OSDatabaseTests : FunSpec({
     }
 
     test("upgrade database from v1 To v3") {
-        /* Given */
+        // Given
         val outcomeTableProvider = mockk<OutcomeTableProvider>()
         val db = OSDatabase(outcomeTableProvider, ApplicationProvider.getApplicationContext(), 3)
 
-        /* When */
+        // When
         var createdTime: Long = 0
         var expireTime: Long = 0
         db.query(OneSignalDbContract.NotificationTable.TABLE_NAME) {
@@ -57,7 +57,7 @@ class OSDatabaseTests : FunSpec({
             expireTime = it.getLong(OneSignalDbContract.NotificationTable.COLUMN_NAME_EXPIRE_TIME)
         }
 
-        /* Then */
+        // Then
         expireTime shouldBe createdTime + (72L * (60 * 60))
     }
 })

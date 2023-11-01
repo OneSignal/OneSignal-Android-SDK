@@ -72,36 +72,37 @@ internal class NotificationChannelManager(
         //   a cold start sync.
         val objChannelPayload = payload.opt("chnl")
         var channelPayload: JSONObject? = null
-        channelPayload = if (objChannelPayload is String) {
-            JSONObject(
-                objChannelPayload,
-            )
-        } else {
-            objChannelPayload as JSONObject
-        }
-        var channel_id = channelPayload!!.optString("id", DEFAULT_CHANNEL_ID)
+        channelPayload =
+            if (objChannelPayload is String) {
+                JSONObject(
+                    objChannelPayload,
+                )
+            } else {
+                objChannelPayload as JSONObject
+            }
+        var channelId = channelPayload!!.optString("id", DEFAULT_CHANNEL_ID)
         // Ensure we don't try to use the system reserved id
-        if (channel_id == NotificationChannel.DEFAULT_CHANNEL_ID) channel_id = DEFAULT_CHANNEL_ID
+        if (channelId == NotificationChannel.DEFAULT_CHANNEL_ID) channelId = DEFAULT_CHANNEL_ID
         var payloadWithText = channelPayload
         if (channelPayload.has("langs")) {
             val langList = channelPayload.getJSONObject("langs")
             val language = _languageContext.language
             if (langList.has(language)) payloadWithText = langList.optJSONObject(language)
         }
-        val channel_name = payloadWithText!!.optString("nm", "Miscellaneous")
+        val channelName = payloadWithText!!.optString("nm", "Miscellaneous")
         val importance = priorityToImportance(payload.optInt("pri", 6))
-        val channel = NotificationChannel(channel_id, channel_name, importance)
+        val channel = NotificationChannel(channelId, channelName, importance)
         channel.description = payloadWithText.optString("dscr", null)
         if (channelPayload.has("grp_id")) {
-            val group_id = channelPayload.optString("grp_id")
-            val group_name: CharSequence = payloadWithText.optString("grp_nm")
+            val groupId = channelPayload.optString("grp_id")
+            val groupName: CharSequence = payloadWithText.optString("grp_nm")
             notificationManager.createNotificationChannelGroup(
                 NotificationChannelGroup(
-                    group_id,
-                    group_name,
+                    groupId,
+                    groupName,
                 ),
             )
-            channel.group = group_id
+            channel.group = groupId
         }
         if (payload.has("ledc")) {
             var ledc = payload.optString("ledc")
@@ -133,7 +134,9 @@ internal class NotificationChannelManager(
                     uri,
                     null,
                 )
-            } else if ("null" == sound || "nil" == sound) channel.setSound(null, null)
+            } else if ("null" == sound || "nil" == sound) {
+                channel.setSound(null, null)
+            }
             // null = None for a sound.
         }
         // Setting sound to null makes it 'None' in the Settings.
@@ -153,16 +156,17 @@ internal class NotificationChannelManager(
             //    https://github.com/OneSignal/OneSignal-Android-SDK/issues/895
             e.printStackTrace()
         }
-        return channel_id
+        return channelId
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     private fun createDefaultChannel(notificationManager: NotificationManager): String {
-        val channel = NotificationChannel(
-            DEFAULT_CHANNEL_ID,
-            "Miscellaneous",
-            NotificationManager.IMPORTANCE_DEFAULT,
-        )
+        val channel =
+            NotificationChannel(
+                DEFAULT_CHANNEL_ID,
+                "Miscellaneous",
+                NotificationManager.IMPORTANCE_DEFAULT,
+            )
         channel.enableLights(true)
         channel.enableVibration(true)
         notificationManager.createNotificationChannel(channel)
@@ -171,11 +175,12 @@ internal class NotificationChannelManager(
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     private fun createRestoreChannel(notificationManager: NotificationManager): String {
-        val channel = NotificationChannel(
-            RESTORE_CHANNEL_ID,
-            "Restored",
-            NotificationManager.IMPORTANCE_LOW,
-        )
+        val channel =
+            NotificationChannel(
+                RESTORE_CHANNEL_ID,
+                "Restored",
+                NotificationManager.IMPORTANCE_LOW,
+            )
         notificationManager.createNotificationChannel(channel)
         return RESTORE_CHANNEL_ID
     }

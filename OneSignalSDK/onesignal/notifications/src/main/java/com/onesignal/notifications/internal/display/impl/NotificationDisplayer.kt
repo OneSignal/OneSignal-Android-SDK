@@ -39,7 +39,6 @@ internal class NotificationDisplayer(
     private val _notificationLimitManager: INotificationLimitManager,
     private val _summaryNotificationDisplayer: ISummaryNotificationDisplayer,
     private val _notificationDisplayBuilder: INotificationDisplayBuilder,
-
 ) : INotificationDisplayer {
     private val contextResources: Resources?
         get() = _applicationService.appContext.resources
@@ -65,7 +64,11 @@ internal class NotificationDisplayer(
     val isRunningOnMainThreadCheck: Unit
         get() {
             // Runtime check against showing the notification from the main thread
-            if (AndroidUtils.isRunningOnMainThread()) throw MainThreadException("Process for showing a notification should never been done on Main Thread!")
+            if (AndroidUtils.isRunningOnMainThread()) {
+                throw MainThreadException(
+                    "Process for showing a notification should never been done on Main Thread!",
+                )
+            }
         }
 
     // Put the message into a notification and post it.
@@ -78,12 +81,12 @@ internal class NotificationDisplayer(
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             /* Android 7.0 auto groups 4 or more notifications so we find these groupless active
-          * notifications and add a generic group to them */
+             * notifications and add a generic group to them */
             grouplessNotifs = NotificationHelper.getActiveGrouplessNotifications(currentContext)
 
             // If the null this makes the 4th notification and we want to check that 3 or more active groupless exist
             if (group == null && grouplessNotifs.size >= 3) {
-                group = NotificationHelper.grouplessSummaryKey
+                group = NotificationHelper.GROUPLESS_SUMMARY_KEY
                 NotificationHelper.assignGrouplessNotifications(
                     currentContext,
                     grouplessNotifs,
@@ -130,7 +133,7 @@ internal class NotificationDisplayer(
             notification = _summaryNotificationDisplayer.createSingleNotificationBeforeSummaryBuilder(notificationJob, notifBuilder)
 
             // Create PendingIntents for notifications in a groupless or defined summary
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && group == NotificationHelper.grouplessSummaryKey) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && group == NotificationHelper.GROUPLESS_SUMMARY_KEY) {
                 _summaryNotificationDisplayer.createGrouplessSummaryNotification(
                     notificationJob,
                     intentGenerator,
@@ -138,15 +141,20 @@ internal class NotificationDisplayer(
                     _notificationDisplayBuilder.getGroupAlertBehavior(),
                 )
             } else {
-                _summaryNotificationDisplayer.createSummaryNotification(notificationJob, oneSignalNotificationBuilder, _notificationDisplayBuilder.getGroupAlertBehavior())
+                _summaryNotificationDisplayer.createSummaryNotification(
+                    notificationJob,
+                    oneSignalNotificationBuilder,
+                    _notificationDisplayBuilder.getGroupAlertBehavior(),
+                )
             }
         } else {
-            notification = createGenericPendingIntentsForNotif(
-                notifBuilder,
-                intentGenerator,
-                fcmJson,
-                notificationId,
-            )
+            notification =
+                createGenericPendingIntentsForNotif(
+                    notifBuilder,
+                    intentGenerator,
+                    fcmJson,
+                    notificationId,
+                )
         }
 
         // NotificationManagerCompat does not auto omit the individual notification on the device when using
@@ -174,16 +182,18 @@ internal class NotificationDisplayer(
         notificationId: Int,
     ): Notification {
         val random: Random = SecureRandom()
-        val contentIntent: PendingIntent? = intentGenerator.getNewActionPendingIntent(
-            random.nextInt(),
-            intentGenerator.getNewBaseIntent(notificationId)
-                .putExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString()),
-        )
+        val contentIntent: PendingIntent? =
+            intentGenerator.getNewActionPendingIntent(
+                random.nextInt(),
+                intentGenerator.getNewBaseIntent(notificationId)
+                    .putExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA, gcmBundle.toString()),
+            )
         notifBuilder!!.setContentIntent(contentIntent)
-        val deleteIntent = _notificationDisplayBuilder.getNewDismissActionPendingIntent(
-            random.nextInt(),
-            _notificationDisplayBuilder.getNewBaseDismissIntent(notificationId),
-        )
+        val deleteIntent =
+            _notificationDisplayBuilder.getNewDismissActionPendingIntent(
+                random.nextInt(),
+                _notificationDisplayBuilder.getNewBaseDismissIntent(notificationId),
+            )
         notifBuilder.setDeleteIntent(deleteIntent)
         return notifBuilder.build()
     }
@@ -224,7 +234,10 @@ internal class NotificationDisplayer(
     // Keep 'throws Throwable' as 'onesignal_bgimage_notif_layout' may not be available
     //    This maybe the case if a jar is used instead of an aar.
     @Throws(Throwable::class)
-    private fun addBackgroundImage(fcmJson: JSONObject, notifBuilder: NotificationCompat.Builder?) {
+    private fun addBackgroundImage(
+        fcmJson: JSONObject,
+        notifBuilder: NotificationCompat.Builder?,
+    ) {
         // Not adding Background Images to API Versions < 16 or >= 31
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN ||
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
@@ -232,18 +245,18 @@ internal class NotificationDisplayer(
             Logging.verbose("Cannot use background images in notifications for device on version: " + Build.VERSION.SDK_INT)
             return
         }
-        var bg_image: Bitmap? = null
+        var bgImage: Bitmap? = null
         var jsonBgImage: JSONObject? = null
         val jsonStrBgImage = fcmJson.optString("bg_img", null)
         if (jsonStrBgImage != null) {
             jsonBgImage = JSONObject(jsonStrBgImage)
-            bg_image = getBitmap(jsonBgImage.optString("img", null))
+            bgImage = getBitmap(jsonBgImage.optString("img", null))
         }
-        if (bg_image == null) {
-            bg_image =
+        if (bgImage == null) {
+            bgImage =
                 getBitmapFromAssetsOrResourceName("onesignal_bgimage_default_image")
         }
-        if (bg_image != null) {
+        if (bgImage != null) {
             val customView =
                 RemoteViews(currentContext!!.packageName, R.layout.onesignal_bgimage_notif_layout)
             customView.setTextViewText(R.id.os_bgimage_notif_title, _notificationDisplayBuilder.getTitle(fcmJson))
@@ -267,11 +280,12 @@ internal class NotificationDisplayer(
                 alignSetting =
                     jsonBgImage.getString("img_align")
             } else {
-                val iAlignSetting = contextResources!!.getIdentifier(
-                    "onesignal_bgimage_notif_image_align",
-                    "string",
-                    packageName,
-                )
+                val iAlignSetting =
+                    contextResources!!.getIdentifier(
+                        "onesignal_bgimage_notif_image_align",
+                        "string",
+                        packageName,
+                    )
                 if (iAlignSetting != 0) alignSetting = contextResources!!.getString(iAlignSetting)
             }
             if ("right" == alignSetting) {
@@ -285,14 +299,14 @@ internal class NotificationDisplayer(
                     0,
                     0,
                 )
-                customView.setImageViewBitmap(R.id.os_bgimage_notif_bgimage_right_aligned, bg_image)
+                customView.setImageViewBitmap(R.id.os_bgimage_notif_bgimage_right_aligned, bgImage)
                 customView.setViewVisibility(
                     R.id.os_bgimage_notif_bgimage_right_aligned,
                     View.VISIBLE,
                 ) // visible
                 customView.setViewVisibility(R.id.os_bgimage_notif_bgimage, View.GONE) // gone
             } else {
-                customView.setImageViewBitmap(R.id.os_bgimage_notif_bgimage, bg_image)
+                customView.setImageViewBitmap(R.id.os_bgimage_notif_bgimage, bgImage)
             }
             notifBuilder!!.setContent(customView)
 
@@ -327,7 +341,10 @@ internal class NotificationDisplayer(
         }
     }
 
-    private fun safeGetColorFromHex(fcmJson: JSONObject?, colorKey: String): Int? {
+    private fun safeGetColorFromHex(
+        fcmJson: JSONObject?,
+        colorKey: String,
+    ): Int? {
         try {
             if (fcmJson != null && fcmJson.has(colorKey)) {
                 return BigInteger(fcmJson.optString(colorKey), 16).toInt()
@@ -345,8 +362,8 @@ internal class NotificationDisplayer(
             } catch (t: Throwable) {
             }
             if (bitmap != null) return bitmap
-            val image_extensions = Arrays.asList(".png", ".webp", ".jpg", ".gif", ".bmp")
-            for (extension in image_extensions) {
+            val imageExtensions = Arrays.asList(".png", ".webp", ".jpg", ".gif", ".bmp")
+            for (extension in imageExtensions) {
                 try {
                     bitmap =
                         BitmapFactory.decodeStream(currentContext!!.assets.open(bitmapStr + extension))

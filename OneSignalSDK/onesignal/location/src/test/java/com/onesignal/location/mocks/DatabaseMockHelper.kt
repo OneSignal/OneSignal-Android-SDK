@@ -11,7 +11,10 @@ import io.mockk.spyk
  * Singleton which provides common mock services.
  */
 internal object DatabaseMockHelper {
-    fun databaseProvider(tableName: String, records: List<Map<String, Any>>? = null): Pair<IDatabaseProvider, IDatabase> {
+    fun databaseProvider(
+        tableName: String,
+        records: List<Map<String, Any>>? = null,
+    ): Pair<IDatabaseProvider, IDatabase> {
         val mockOneSignalDatabase = spyk<IDatabase>()
 
         if (records != null) {
@@ -33,8 +36,14 @@ internal object DatabaseMockHelper {
         val mockCursor = mockk<ICursor>()
         var index = 0
         every { mockCursor.count } returns records.count()
-        every { mockCursor.moveToFirst() } answers { index = 0; true }
-        every { mockCursor.moveToNext() } answers { index++; index < records.count() }
+        every { mockCursor.moveToFirst() } answers {
+            index = 0
+            true
+        }
+        every { mockCursor.moveToNext() } answers {
+            index++
+            index < records.count()
+        }
         every { mockCursor.getString(any()) } answers { records[index][firstArg()] as String }
         every { mockCursor.getFloat(any()) } answers { records[index][firstArg()] as Float }
         every { mockCursor.getLong(any()) } answers { records[index][firstArg()] as Long }

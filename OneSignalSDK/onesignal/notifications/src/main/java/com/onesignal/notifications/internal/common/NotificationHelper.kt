@@ -14,7 +14,6 @@ import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.INotification
-import com.onesignal.notifications.INotificationClickResult
 import com.onesignal.notifications.internal.NotificationClickEvent
 import com.onesignal.notifications.internal.NotificationClickResult
 import org.json.JSONArray
@@ -23,8 +22,8 @@ import org.json.JSONObject
 import kotlin.math.min
 
 object NotificationHelper {
-    const val grouplessSummaryKey = "os_group_undefined"
-    const val grouplessSummaryId = -718463522
+    const val GROUPLESS_SUMMARY_KEY = "os_group_undefined"
+    const val GROUPLESS_SUMMARY_ID = -718463522
 
     /**
      * Getter for obtaining all active notifications
@@ -53,7 +52,7 @@ object NotificationHelper {
         var groupCount = 0
         for (statusBarNotification in statusBarNotifications) {
             if (!NotificationCompat.isGroupSummary(statusBarNotification.notification) &&
-                grouplessSummaryKey == statusBarNotification.notification.group
+                GROUPLESS_SUMMARY_KEY == statusBarNotification.notification.group
             ) {
                 groupCount++
             }
@@ -79,8 +78,8 @@ object NotificationHelper {
             val isGroupSummary = isGroupSummary(statusBarNotification)
             val isGroupless = (
                 notification.group == null ||
-                    notification.group == grouplessSummaryKey
-                )
+                    notification.group == GROUPLESS_SUMMARY_KEY
+            )
             if (!isGroupSummary && isGroupless) {
                 grouplessStatusBarNotifications.add(
                     statusBarNotification,
@@ -108,10 +107,11 @@ object NotificationHelper {
                 Notification.Builder.recoverBuilder(context, grouplessNotif.notification)
 
             // Recreate the notification but with the groupless key instead
-            val notif = grouplessNotifBuilder
-                .setGroup(grouplessSummaryKey)
-                .setOnlyAlertOnce(true)
-                .build()
+            val notif =
+                grouplessNotifBuilder
+                    .setGroup(GROUPLESS_SUMMARY_KEY)
+                    .setOnlyAlertOnce(true)
+                    .build()
             NotificationManagerCompat.from(context!!).notify(grouplessNotif.id, notif)
         }
     }
@@ -124,7 +124,10 @@ object NotificationHelper {
      * @param context The app context to check notification enablement against.
      * @param channelId The optional channel ID to check enablement for.
      */
-    fun areNotificationsEnabled(context: Context, channelId: String? = null): Boolean {
+    fun areNotificationsEnabled(
+        context: Context,
+        channelId: String? = null,
+    ): Boolean {
         try {
             val notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled()
             if (!notificationsEnabled) {
@@ -182,7 +185,10 @@ object NotificationHelper {
         return null
     }
 
-    fun getSoundUri(context: Context, sound: String?): Uri? {
+    fun getSoundUri(
+        context: Context,
+        sound: String?,
+    ): Uri? {
         val resources = context.resources
         val packageName = context.packageName
         var soundId: Int
@@ -203,11 +209,15 @@ object NotificationHelper {
         return ""
     }
 
-    internal fun generateNotificationOpenedResult(jsonArray: JSONArray, time: ITime): NotificationClickEvent {
+    internal fun generateNotificationOpenedResult(
+        jsonArray: JSONArray,
+        time: ITime,
+    ): NotificationClickEvent {
         val jsonArraySize = jsonArray.length()
         var firstMessage = true
-        val androidNotificationId = jsonArray.optJSONObject(0)
-            .optInt(NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID)
+        val androidNotificationId =
+            jsonArray.optJSONObject(0)
+                .optInt(NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID)
         val groupedNotifications: MutableList<com.onesignal.notifications.internal.Notification> = ArrayList()
         var actionSelected: String? = null
         var payload: JSONObject? = null
@@ -234,12 +244,13 @@ object NotificationHelper {
             }
         }
 
-        val notification = com.onesignal.notifications.internal.Notification(
-            groupedNotifications,
-            payload!!,
-            androidNotificationId,
-            time,
-        )
+        val notification =
+            com.onesignal.notifications.internal.Notification(
+                groupedNotifications,
+                payload!!,
+                androidNotificationId,
+                time,
+            )
 
         val notificationResult = NotificationClickResult(actionSelected, notification.launchURL)
 

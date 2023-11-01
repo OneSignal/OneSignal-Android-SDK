@@ -20,7 +20,6 @@ import com.onesignal.core.internal.config.ConfigModelStore
  * in the system.
  */
 interface IStartableService {
-
     /**
      * Called when the service is to be started.  The appId and appContext have already been
      * established.

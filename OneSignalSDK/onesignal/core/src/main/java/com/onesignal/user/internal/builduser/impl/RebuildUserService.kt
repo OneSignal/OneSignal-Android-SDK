@@ -19,8 +19,10 @@ class RebuildUserService(
     private val _subscriptionsModelStore: SubscriptionModelStore,
     private val _configModelStore: ConfigModelStore,
 ) : IRebuildUserService {
-
-    override fun getRebuildOperationsIfCurrentUser(appId: String, onesignalId: String): List<Operation>? {
+    override fun getRebuildOperationsIfCurrentUser(
+        appId: String,
+        onesignalId: String,
+    ): List<Operation>? {
         // make a copy of the current models
         val identityModel = IdentityModel()
         identityModel.initializeFromModel(null, _identityModelStore.model)
@@ -46,7 +48,17 @@ class RebuildUserService(
         operations.add(LoginUserOperation(appId, onesignalId, identityModel.externalId))
         val pushSubscription = subscriptionModels.firstOrNull { it.id == _configModelStore.model.pushSubscriptionId }
         if (pushSubscription != null) {
-            operations.add(CreateSubscriptionOperation(appId, onesignalId, pushSubscription.id, pushSubscription.type, pushSubscription.optedIn, pushSubscription.address, pushSubscription.status))
+            operations.add(
+                CreateSubscriptionOperation(
+                    appId,
+                    onesignalId,
+                    pushSubscription.id,
+                    pushSubscription.type,
+                    pushSubscription.optedIn,
+                    pushSubscription.address,
+                    pushSubscription.status,
+                ),
+            )
         }
         operations.add(RefreshUserOperation(appId, onesignalId))
         return operations

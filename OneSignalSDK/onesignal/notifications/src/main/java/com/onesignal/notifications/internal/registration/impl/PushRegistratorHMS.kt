@@ -20,29 +20,29 @@ internal class PushRegistratorHMS(
     private val _applicationService: IApplicationService,
 ) : IPushRegistrator,
     IPushRegistratorCallback {
-
     companion object {
         private const val HMS_CLIENT_APP_ID = "client/app_id"
     }
 
-    private var _waiter: WaiterWithValue<String?>? = null
+    private var waiter: WaiterWithValue<String?>? = null
 
     override suspend fun registerForPush(): IPushRegistrator.RegisterResult {
         var result: IPushRegistrator.RegisterResult? = null
 
-        result = try {
-            getHMSTokenTask(_applicationService.appContext)
-        } catch (e: ApiException) {
-            Logging.error("HMS ApiException getting Huawei push token!", e)
-            val pushStatus: SubscriptionStatus =
-                if (e.statusCode == CommonCode.ErrorCode.ARGUMENTS_INVALID) {
-                    SubscriptionStatus.HMS_ARGUMENTS_INVALID
-                } else {
-                    SubscriptionStatus.HMS_API_EXCEPTION_OTHER
-                }
+        result =
+            try {
+                getHMSTokenTask(_applicationService.appContext)
+            } catch (e: ApiException) {
+                Logging.error("HMS ApiException getting Huawei push token!", e)
+                val pushStatus: SubscriptionStatus =
+                    if (e.statusCode == CommonCode.ErrorCode.ARGUMENTS_INVALID) {
+                        SubscriptionStatus.HMS_ARGUMENTS_INVALID
+                    } else {
+                        SubscriptionStatus.HMS_API_EXCEPTION_OTHER
+                    }
 
-            IPushRegistrator.RegisterResult(null, pushStatus)
-        }
+                IPushRegistrator.RegisterResult(null, pushStatus)
+            }
 
         return result!!
     }
@@ -59,7 +59,7 @@ internal class PushRegistratorHMS(
             )
         }
 
-        _waiter = WaiterWithValue()
+        waiter = WaiterWithValue()
         val appId = AGConnectServicesConfig.fromContext(context).getString(HMS_CLIENT_APP_ID)
         val hmsInstanceId = HmsInstanceId.getInstance(context)
         var pushToken = hmsInstanceId.getToken(appId, HmsMessaging.DEFAULT_TOKEN_SCOPE)
@@ -75,7 +75,7 @@ internal class PushRegistratorHMS(
             // wait up to 30 seconds for someone to call `fireCallback` with the registration id.
             // if it comes before we will continue immediately.
             withTimeout(30000) {
-                pushToken = _waiter?.waitForWake()
+                pushToken = waiter?.waitForWake()
             }
 
             return if (pushToken != null) {
@@ -95,6 +95,6 @@ internal class PushRegistratorHMS(
     }
 
     override suspend fun fireCallback(id: String?) {
-        _waiter?.wake(id)
+        waiter?.wake(id)
     }
 }

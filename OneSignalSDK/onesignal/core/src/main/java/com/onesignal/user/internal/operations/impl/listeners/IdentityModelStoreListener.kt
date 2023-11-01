@@ -14,13 +14,18 @@ internal class IdentityModelStoreListener(
     opRepo: IOperationRepo,
     private val _configModelStore: ConfigModelStore,
 ) : SingletonModelStoreListener<IdentityModel>(store, opRepo) {
-
     override fun getReplaceOperation(model: IdentityModel): Operation? {
         // when the identity model is replaced, nothing to do on the backend. Already handled via login process.
         return null
     }
 
-    override fun getUpdateOperation(model: IdentityModel, path: String, property: String, oldValue: Any?, newValue: Any?): Operation {
+    override fun getUpdateOperation(
+        model: IdentityModel,
+        path: String,
+        property: String,
+        oldValue: Any?,
+        newValue: Any?,
+    ): Operation {
         return if (newValue != null && newValue is String) {
             SetAliasOperation(_configModelStore.model.appId, model.onesignalId, property, newValue)
         } else {

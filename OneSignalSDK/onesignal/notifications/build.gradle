@@ -115,6 +115,9 @@ dependencies {
 
 ktlint {
     version = "$ktlintVersion"
+    additionalEditorconfig = [
+        "max_line_length": "500",
+    ]
 }
 
 apply from: '../maven-push.gradle'

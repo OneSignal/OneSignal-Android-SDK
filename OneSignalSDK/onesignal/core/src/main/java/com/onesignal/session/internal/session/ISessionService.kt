@@ -9,7 +9,6 @@ import com.onesignal.common.events.IEventNotifier
  * @See [ISessionLifecycleHandler]
  */
 interface ISessionService : IEventNotifier<ISessionLifecycleHandler> {
-
     /**
      * When the current session was started, in Unix time milliseconds.
      */

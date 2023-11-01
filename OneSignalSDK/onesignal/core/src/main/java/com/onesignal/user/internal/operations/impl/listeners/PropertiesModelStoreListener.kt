@@ -15,13 +15,18 @@ internal class PropertiesModelStoreListener(
     opRepo: IOperationRepo,
     private val _configModelStore: ConfigModelStore,
 ) : SingletonModelStoreListener<PropertiesModel>(store, opRepo) {
-
     override fun getReplaceOperation(model: PropertiesModel): Operation? {
         // when the property model is replaced, nothing to do on the backend. Already handled via login process.
         return null
     }
 
-    override fun getUpdateOperation(model: PropertiesModel, path: String, property: String, oldValue: Any?, newValue: Any?): Operation? {
+    override fun getUpdateOperation(
+        model: PropertiesModel,
+        path: String,
+        property: String,
+        oldValue: Any?,
+        newValue: Any?,
+    ): Operation? {
         // for any of the property changes, we do not need to fire an operation.
         if (path.startsWith(PropertiesModel::locationTimestamp.name) ||
             path.startsWith(PropertiesModel::locationBackground.name) ||
