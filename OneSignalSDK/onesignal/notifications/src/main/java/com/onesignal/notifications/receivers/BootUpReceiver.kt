@@ -34,6 +34,10 @@ import com.onesignal.notifications.internal.restoration.INotificationRestoreWork
 
 class BootUpReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        // Return early if the action does not match expected action
+        if (intent.action != Intent.ACTION_BOOT_COMPLETED){
+            return
+        }
         if (!OneSignal.initWithContext(context)) {
             return
         }
