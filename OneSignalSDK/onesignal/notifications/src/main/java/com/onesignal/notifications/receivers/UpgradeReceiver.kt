@@ -41,6 +41,10 @@ class UpgradeReceiver : BroadcastReceiver() {
         // TODO: Now that we arent restoring like we use to, think we can remove this? Ill do some
         //  testing and look at the issue but maybe someone has a answer or rems what directly
         //  was causing this issue
+        // Return early if the action does not match expected action
+        if (intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) {
+            return
+        }
         // Return early if using Android 7.0 due to upgrade restore crash (#263)
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.N) {
             return

@@ -37,6 +37,10 @@ class BootUpReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
+        // Return early if the action does not match expected action
+        if (intent.action != Intent.ACTION_BOOT_COMPLETED) {
+            return
+        }
         if (!OneSignal.initWithContext(context)) {
             return
         }
