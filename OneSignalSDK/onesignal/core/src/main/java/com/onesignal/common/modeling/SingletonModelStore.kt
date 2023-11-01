@@ -21,15 +21,17 @@ open class SingletonModelStore<TModel>(
 
     override val model: TModel
         get() {
-            val model = store.get(_singletonId)
-            if (model != null) {
-                return model
-            }
+            synchronized(this) {
+                val model = store.get(_singletonId)
+                if (model != null) {
+                    return model
+                }
 
-            val createdModel = store.create() ?: throw Exception("Unable to initialize model from store $store")
-            createdModel.id = _singletonId
-            store.add(createdModel)
-            return createdModel
+                val createdModel = store.create() ?: throw Exception("Unable to initialize model from store $store")
+                createdModel.id = _singletonId
+                store.add(createdModel)
+                return createdModel
+            }
         }
 
     override fun replace(model: TModel, tag: String) {
