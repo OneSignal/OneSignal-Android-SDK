@@ -10,5 +10,8 @@ internal interface INotificationOpenedProcessor {
      * @param context Either the open activity or the dismiss receiver context.
      * @param intent The user intent that drove the open/dismiss.
      */
-    suspend fun processFromContext(context: Context, intent: Intent)
+    suspend fun processFromContext(
+        context: Context,
+        intent: Intent,
+    )
 }

@@ -27,27 +27,28 @@ class UpdateUserOperationExecutorTests : FunSpec({
     val remoteOneSignalId = "remote-onesignalId"
 
     test("update user single operation is successful") {
-        /* Given */
+        // Given
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } just runs
 
-        /* Given */
+        // Given
         val mockIdentityModelStore = MockHelper.identityModelStore()
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
         val mockBuildUserService = mockk<IRebuildUserService>()
 
-        val loginUserOperationExecutor = UpdateUserOperationExecutor(
-            mockUserBackendService,
-            mockIdentityModelStore,
-            mockPropertiesModelStore,
-            mockBuildUserService,
-        )
+        val loginUserOperationExecutor =
+            UpdateUserOperationExecutor(
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockBuildUserService,
+            )
         val operations = listOf<Operation>(SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1"))
 
-        /* When */
+        // When
         val response = loginUserOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.SUCCESS
         coVerify(exactly = 1) {
             mockUserBackendService.updateUser(
@@ -64,43 +65,45 @@ class UpdateUserOperationExecutorTests : FunSpec({
     }
 
     test("update user multiple property operations are successful") {
-        /* Given */
+        // Given
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } just runs
 
-        /* Given */
+        // Given
         val mockIdentityModelStore = MockHelper.identityModelStore()
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
         val mockBuildUserService = mockk<IRebuildUserService>()
 
-        val loginUserOperationExecutor = UpdateUserOperationExecutor(
-            mockUserBackendService,
-            mockIdentityModelStore,
-            mockPropertiesModelStore,
-            mockBuildUserService,
-        )
-        val operations = listOf<Operation>(
-            SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1-1"),
-            SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1-2"),
-            SetTagOperation(appId, remoteOneSignalId, "tagKey2", "tagValue2"),
-            SetTagOperation(appId, remoteOneSignalId, "tagKey3", "tagValue3"),
-            DeleteTagOperation(appId, remoteOneSignalId, "tagKey3"),
-            SetPropertyOperation(appId, localOneSignalId, PropertiesModel::language.name, "lang1"),
-            SetPropertyOperation(appId, localOneSignalId, PropertiesModel::language.name, "lang2"),
-            SetPropertyOperation(appId, localOneSignalId, PropertiesModel::timezone.name, "timezone"),
-            SetPropertyOperation(appId, localOneSignalId, PropertiesModel::country.name, "country"),
-            SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationLatitude.name, 123.45),
-            SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationLongitude.name, 678.90),
-            SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationType.name, 1),
-            SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationAccuracy.name, 0.15),
-            SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationBackground.name, true),
-            SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationTimestamp.name, 1111L),
-        )
+        val loginUserOperationExecutor =
+            UpdateUserOperationExecutor(
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockBuildUserService,
+            )
+        val operations =
+            listOf<Operation>(
+                SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1-1"),
+                SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1-2"),
+                SetTagOperation(appId, remoteOneSignalId, "tagKey2", "tagValue2"),
+                SetTagOperation(appId, remoteOneSignalId, "tagKey3", "tagValue3"),
+                DeleteTagOperation(appId, remoteOneSignalId, "tagKey3"),
+                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::language.name, "lang1"),
+                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::language.name, "lang2"),
+                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::timezone.name, "timezone"),
+                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::country.name, "country"),
+                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationLatitude.name, 123.45),
+                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationLongitude.name, 678.90),
+                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationType.name, 1),
+                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationAccuracy.name, 0.15),
+                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationBackground.name, true),
+                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationTimestamp.name, 1111L),
+            )
 
-        /* When */
+        // When
         val response = loginUserOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.SUCCESS
         coVerify(exactly = 1) {
             mockUserBackendService.updateUser(
@@ -122,29 +125,31 @@ class UpdateUserOperationExecutorTests : FunSpec({
     }
 
     test("update user single property delta operations is successful") {
-        /* Given */
+        // Given
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } just runs
 
-        /* Given */
+        // Given
         val mockIdentityModelStore = MockHelper.identityModelStore()
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
         val mockBuildUserService = mockk<IRebuildUserService>()
 
-        val loginUserOperationExecutor = UpdateUserOperationExecutor(
-            mockUserBackendService,
-            mockIdentityModelStore,
-            mockPropertiesModelStore,
-            mockBuildUserService,
-        )
-        val operations = listOf<Operation>(
-            TrackSessionEndOperation(appId, remoteOneSignalId, 1111),
-        )
+        val loginUserOperationExecutor =
+            UpdateUserOperationExecutor(
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockBuildUserService,
+            )
+        val operations =
+            listOf<Operation>(
+                TrackSessionEndOperation(appId, remoteOneSignalId, 1111),
+            )
 
-        /* When */
+        // When
         val response = loginUserOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.SUCCESS
         coVerify(exactly = 1) {
             mockUserBackendService.updateUser(
@@ -163,40 +168,42 @@ class UpdateUserOperationExecutorTests : FunSpec({
     }
 
     test("update user multiple property delta operations are successful") {
-        /* Given */
+        // Given
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } just runs
 
-        /* Given */
+        // Given
         val mockIdentityModelStore = MockHelper.identityModelStore()
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
         val mockBuildUserService = mockk<IRebuildUserService>()
 
-        val loginUserOperationExecutor = UpdateUserOperationExecutor(
-            mockUserBackendService,
-            mockIdentityModelStore,
-            mockPropertiesModelStore,
-            mockBuildUserService,
-        )
-        val operations = listOf<Operation>(
-            TrackSessionEndOperation(appId, remoteOneSignalId, 1111),
-            TrackPurchaseOperation(
-                appId,
-                remoteOneSignalId,
-                false,
-                BigDecimal(2222),
-                listOf(
-                    PurchaseInfo("sku1", "iso1", BigDecimal(1000)),
-                    PurchaseInfo("sku2", "iso2", BigDecimal(1222)),
+        val loginUserOperationExecutor =
+            UpdateUserOperationExecutor(
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockBuildUserService,
+            )
+        val operations =
+            listOf<Operation>(
+                TrackSessionEndOperation(appId, remoteOneSignalId, 1111),
+                TrackPurchaseOperation(
+                    appId,
+                    remoteOneSignalId,
+                    false,
+                    BigDecimal(2222),
+                    listOf(
+                        PurchaseInfo("sku1", "iso1", BigDecimal(1000)),
+                        PurchaseInfo("sku2", "iso2", BigDecimal(1222)),
+                    ),
                 ),
-            ),
-            TrackSessionEndOperation(appId, remoteOneSignalId, 3333),
-        )
+                TrackSessionEndOperation(appId, remoteOneSignalId, 3333),
+            )
 
-        /* When */
+        // When
         val response = loginUserOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.SUCCESS
         coVerify(exactly = 1) {
             mockUserBackendService.updateUser(
@@ -224,31 +231,33 @@ class UpdateUserOperationExecutorTests : FunSpec({
     }
 
     test("update user with both property and property delta operations are successful") {
-        /* Given */
+        // Given
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } just runs
 
-        /* Given */
+        // Given
         val mockIdentityModelStore = MockHelper.identityModelStore()
         val mockPropertiesModelStore = MockHelper.propertiesModelStore()
         val mockBuildUserService = mockk<IRebuildUserService>()
 
-        val loginUserOperationExecutor = UpdateUserOperationExecutor(
-            mockUserBackendService,
-            mockIdentityModelStore,
-            mockPropertiesModelStore,
-            mockBuildUserService,
-        )
-        val operations = listOf<Operation>(
-            TrackSessionEndOperation(appId, remoteOneSignalId, 1111),
-            SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1"),
-            TrackSessionEndOperation(appId, remoteOneSignalId, 3333),
-        )
+        val loginUserOperationExecutor =
+            UpdateUserOperationExecutor(
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockBuildUserService,
+            )
+        val operations =
+            listOf<Operation>(
+                TrackSessionEndOperation(appId, remoteOneSignalId, 1111),
+                SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1"),
+                TrackSessionEndOperation(appId, remoteOneSignalId, 3333),
+            )
 
-        /* When */
+        // When
         val response = loginUserOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.SUCCESS
         coVerify(exactly = 1) {
             mockUserBackendService.updateUser(

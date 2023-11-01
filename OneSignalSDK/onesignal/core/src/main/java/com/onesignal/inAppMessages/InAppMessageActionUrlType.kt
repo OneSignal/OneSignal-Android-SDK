@@ -7,7 +7,6 @@ package com.onesignal.inAppMessages
 enum class InAppMessageActionUrlType(
     private val text: String,
 ) {
-
     /**
      * Opens in an in-app webview
      */

@@ -40,17 +40,35 @@ import org.json.JSONObject
  */
 interface INotificationLifecycleService {
     fun addInternalNotificationLifecycleEventHandler(handler: INotificationLifecycleEventHandler)
+
     fun removeInternalNotificationLifecycleEventHandler(handler: INotificationLifecycleEventHandler)
+
     fun setInternalNotificationLifecycleCallback(callback: INotificationLifecycleCallback?)
+
     fun addExternalForegroundLifecycleListener(listener: INotificationLifecycleListener)
+
     fun removeExternalForegroundLifecycleListener(listener: INotificationLifecycleListener)
+
     fun addExternalClickListener(listener: INotificationClickListener)
+
     fun removeExternalClickListener(listener: INotificationClickListener)
 
     suspend fun canReceiveNotification(jsonPayload: JSONObject): Boolean
+
     fun externalRemoteNotificationReceived(notificationReceivedEvent: INotificationReceivedEvent)
+
     fun externalNotificationWillShowInForeground(willDisplayEvent: INotificationWillDisplayEvent)
+
     suspend fun notificationReceived(notificationJob: NotificationGenerationJob)
-    suspend fun canOpenNotification(activity: Activity, data: JSONObject): Boolean
-    suspend fun notificationOpened(activity: Activity, data: JSONArray, notificationId: String)
+
+    suspend fun canOpenNotification(
+        activity: Activity,
+        data: JSONObject,
+    ): Boolean
+
+    suspend fun notificationOpened(
+        activity: Activity,
+        data: JSONArray,
+        notificationId: String,
+    )
 }

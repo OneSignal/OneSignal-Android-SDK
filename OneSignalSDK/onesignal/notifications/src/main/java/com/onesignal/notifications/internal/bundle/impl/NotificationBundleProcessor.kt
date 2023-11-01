@@ -16,7 +16,6 @@ internal class NotificationBundleProcessor(
     private val _workManager: INotificationGenerationWorkManager,
     private val _time: ITime,
 ) : INotificationBundleProcessor {
-
     // Format our short keys into more readable ones.
     private fun maximizeButtonsFromBundle(fcmBundle: Bundle) {
         if (!fcmBundle.containsKey("o")) return
@@ -68,7 +67,10 @@ internal class NotificationBundleProcessor(
     /**
      * Process bundle passed from FCM / HMS / ADM broadcast receiver
      */
-    override fun processBundleFromReceiver(context: Context, bundle: Bundle): INotificationBundleProcessor.ProcessedBundleResult? {
+    override fun processBundleFromReceiver(
+        context: Context,
+        bundle: Bundle,
+    ): INotificationBundleProcessor.ProcessedBundleResult? {
         val bundleResult = INotificationBundleProcessor.ProcessedBundleResult()
 
         // Not a OneSignal FCM message
@@ -93,15 +95,16 @@ internal class NotificationBundleProcessor(
                 )
         }
 
-        val processed = _workManager.beginEnqueueingWork(
-            context,
-            osNotificationId!!,
-            androidNotificationId,
-            jsonPayload,
-            timestamp,
-            isRestoring,
-            isHighPriority,
-        )
+        val processed =
+            _workManager.beginEnqueueingWork(
+                context,
+                osNotificationId!!,
+                androidNotificationId,
+                jsonPayload,
+                timestamp,
+                isRestoring,
+                isHighPriority,
+            )
 
         bundleResult.isWorkManagerProcessing = processed
 

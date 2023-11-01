@@ -28,23 +28,23 @@ import java.io.Closeable
 internal class HmsLocationController(
     private val _applicationService: IApplicationService,
 ) : ILocationController {
-    private val _locationHandlerThread = LocationHandlerThread()
-    private val _startStopMutex = Mutex()
-    private val _event = EventProducer<ILocationUpdatedHandler>()
+    private val locationHandlerThread = LocationHandlerThread()
+    private val startStopMutex = Mutex()
+    private val event = EventProducer<ILocationUpdatedHandler>()
 
     // exist after start and before stop. updates are protected by the startStopMutex
     private var hmsFusedLocationClient: FusedLocationProviderClient? = null
     private var locationUpdateListener: LocationUpdateListener? = null
 
     // contains the last location received from location services
-    private var _lastLocation: Location? = null
+    private var lastLocation: Location? = null
 
     override suspend fun start(): Boolean {
         var self = this
         var wasSuccessful = false
 
         withContext(Dispatchers.IO) {
-            _startStopMutex.withLock {
+            startStopMutex.withLock {
                 if (hmsFusedLocationClient == null) {
                     try {
                         hmsFusedLocationClient =
@@ -56,8 +56,8 @@ internal class HmsLocationController(
                     }
                 }
 
-                if (_lastLocation != null) {
-                    _event.fire { it.onLocationChanged(_lastLocation!!) }
+                if (lastLocation != null) {
+                    event.fire { it.onLocationChanged(lastLocation!!) }
                 } else {
                     var waiter = WaiterWithValue<Boolean>()
                     hmsFusedLocationClient!!.lastLocation
@@ -70,7 +70,7 @@ internal class HmsLocationController(
                                     return@OnSuccessListener
                                 }
 
-                                _lastLocation = location
+                                lastLocation = location
                                 waiter.wake(true)
                             },
                         )
@@ -81,12 +81,13 @@ internal class HmsLocationController(
                     wasSuccessful = waiter.waitForWake()
 
                     if (wasSuccessful) {
-                        _event.fire { it.onLocationChanged(_lastLocation!!) }
-                        locationUpdateListener = LocationUpdateListener(
-                            self,
-                            _applicationService,
-                            hmsFusedLocationClient!!,
-                        )
+                        event.fire { it.onLocationChanged(lastLocation!!) }
+                        locationUpdateListener =
+                            LocationUpdateListener(
+                                self,
+                                _applicationService,
+                                hmsFusedLocationClient!!,
+                            )
                     }
                 }
             }
@@ -96,7 +97,7 @@ internal class HmsLocationController(
     }
 
     override suspend fun stop() {
-        _startStopMutex.withLock {
+        startStopMutex.withLock {
             if (locationUpdateListener != null) {
                 locationUpdateListener!!.close()
                 locationUpdateListener = null
@@ -106,7 +107,7 @@ internal class HmsLocationController(
                 hmsFusedLocationClient = null
             }
 
-            _lastLocation = null
+            lastLocation = null
         }
     }
 
@@ -141,17 +142,18 @@ internal class HmsLocationController(
         return retVal
     }
 
-    override fun subscribe(handler: ILocationUpdatedHandler) = _event.subscribe(handler)
-    override fun unsubscribe(handler: ILocationUpdatedHandler) = _event.unsubscribe(handler)
+    override fun subscribe(handler: ILocationUpdatedHandler) = event.subscribe(handler)
+
+    override fun unsubscribe(handler: ILocationUpdatedHandler) = event.unsubscribe(handler)
+
     override val hasSubscribers: Boolean
-        get() = _event.hasSubscribers
+        get() = event.hasSubscribers
 
     internal class LocationUpdateListener(
         private val _parent: HmsLocationController,
         private val _applicationService: IApplicationService,
         private val huaweiFusedLocationProviderClient: FusedLocationProviderClient,
     ) : LocationCallback(), IApplicationLifecycleHandler, Closeable {
-
         private var hasExistingRequest = false
 
         init {
@@ -179,7 +181,7 @@ internal class HmsLocationController(
 
         override fun onLocationResult(locationResult: LocationResult) {
             Logging.debug("HMSLocationController onLocationResult: $locationResult")
-            _parent._lastLocation = locationResult.lastLocation
+            _parent.lastLocation = locationResult.lastLocation
         }
 
         private fun refreshRequest() {
@@ -192,16 +194,17 @@ internal class HmsLocationController(
                 updateInterval =
                     LocationConstants.FOREGROUND_UPDATE_TIME_MS
             }
-            val locationRequest = LocationRequest.create()
-                .setFastestInterval(updateInterval)
-                .setInterval(updateInterval)
-                .setMaxWaitTime((updateInterval * 1.5).toLong())
-                .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY)
+            val locationRequest =
+                LocationRequest.create()
+                    .setFastestInterval(updateInterval)
+                    .setInterval(updateInterval)
+                    .setMaxWaitTime((updateInterval * 1.5).toLong())
+                    .setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY)
             Logging.debug("HMSLocationController Huawei LocationServices requestLocationUpdates!")
             huaweiFusedLocationProviderClient.requestLocationUpdates(
                 locationRequest,
                 this,
-                _parent._locationHandlerThread.looper,
+                _parent.locationHandlerThread.looper,
             )
             hasExistingRequest = true
         }
@@ -209,11 +212,11 @@ internal class HmsLocationController(
 
     class LocationHandlerThread internal constructor() :
         HandlerThread("OSH_LocationHandlerThread") {
-        var mHandler: Handler
+            var mHandler: Handler
 
-        init {
-            start()
-            mHandler = Handler(looper)
+            init {
+                start()
+                mHandler = Handler(looper)
+            }
         }
-    }
 }

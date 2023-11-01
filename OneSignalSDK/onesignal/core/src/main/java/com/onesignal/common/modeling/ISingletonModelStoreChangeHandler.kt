@@ -5,14 +5,16 @@ package com.onesignal.common.modeling
  * to model change events for a specific model store.
  */
 interface ISingletonModelStoreChangeHandler<TModel> where TModel : Model {
-
     /**
      * Called when the model has been replaced.
      *
      * @param model The model
      * @param tag The tag which identifies how/why the model was replaced.
      */
-    fun onModelReplaced(model: TModel, tag: String)
+    fun onModelReplaced(
+        model: TModel,
+        tag: String,
+    )
 
     /**
      * Called when a property within the model has been updated. This callback wraps [IModelChangedHandler.onChanged]
@@ -22,5 +24,8 @@ interface ISingletonModelStoreChangeHandler<TModel> where TModel : Model {
      * @param args The model changed arguments.
      * @param tag The tag which identifies how/why the model was updated.
      */
-    fun onModelUpdated(args: ModelChangedArgs, tag: String)
+    fun onModelUpdated(
+        args: ModelChangedArgs,
+        tag: String,
+    )
 }

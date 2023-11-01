@@ -22,7 +22,9 @@ internal class PushTokenManager(
                 pushTokenStatus = SubscriptionStatus.MISSING_ANDROID_SUPPORT_LIBRARY
             }
             IDeviceService.AndroidSupportLibraryStatus.OUTDATED -> {
-                Logging.fatal("The included Android Support Library is too old or incomplete. Please update to the 26.0.0 revision or newer.")
+                Logging.fatal(
+                    "The included Android Support Library is too old or incomplete. Please update to the 26.0.0 revision or newer.",
+                )
                 pushTokenStatus = SubscriptionStatus.OUTDATED_ANDROID_SUPPORT_LIBRARY
             }
             else -> {
@@ -39,7 +41,7 @@ internal class PushTokenManager(
                         (
                             pushTokenStatus == SubscriptionStatus.NO_PERMISSION ||
                                 pushStatusRuntimeError(pushTokenStatus)
-                            )
+                        )
                     ) {
                         pushTokenStatus = registerResult.status
                     }

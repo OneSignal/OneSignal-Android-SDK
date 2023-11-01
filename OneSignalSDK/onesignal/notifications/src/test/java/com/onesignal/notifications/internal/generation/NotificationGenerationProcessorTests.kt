@@ -40,7 +40,7 @@ class NotificationGenerationProcessorTests : FunSpec({
     }
 
     test("processNotificationData should set title correctly") {
-        /* Given */
+        // Given
         val context = ApplicationProvider.getApplicationContext<Context>()
         val mockTime = MockHelper.time(1111)
         val mockApplicationService = AndroidMockHelper.applicationService()
@@ -49,7 +49,20 @@ class NotificationGenerationProcessorTests : FunSpec({
         coEvery { mockNotificationDisplayer.displayNotification(any()) } returns true
         val mockNotificationRepository = mockk<INotificationRepository>()
         coEvery { mockNotificationRepository.doesNotificationExist(any()) } returns false
-        coEvery { mockNotificationRepository.createNotification(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } just runs
+        coEvery {
+            mockNotificationRepository.createNotification(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+            )
+        } just runs
         val mockNotificationSummaryManager = mockk<INotificationSummaryManager>()
         val mockNotificationLifecycleService = mockk<INotificationLifecycleService>()
         coEvery { mockNotificationLifecycleService.canReceiveNotification(any()) } returns true
@@ -57,29 +70,31 @@ class NotificationGenerationProcessorTests : FunSpec({
         coEvery { mockNotificationLifecycleService.externalRemoteNotificationReceived(any()) } just runs
         coEvery { mockNotificationLifecycleService.externalNotificationWillShowInForeground(any()) } just runs
 
-        val notificationGenerationProcessor = NotificationGenerationProcessor(
-            mockApplicationService,
-            mockNotificationDisplayer,
-            MockHelper.configModelStore(),
-            mockNotificationRepository,
-            mockNotificationSummaryManager,
-            mockNotificationLifecycleService,
-            mockTime,
-        )
-
-        val payload = JSONObject()
-            .put("alert", "test message")
-            .put("title", "test title")
-            .put(
-                "custom",
-                JSONObject()
-                    .put("i", "UUID1"),
+        val notificationGenerationProcessor =
+            NotificationGenerationProcessor(
+                mockApplicationService,
+                mockNotificationDisplayer,
+                MockHelper.configModelStore(),
+                mockNotificationRepository,
+                mockNotificationSummaryManager,
+                mockNotificationLifecycleService,
+                mockTime,
             )
 
-        /* When */
+        val payload =
+            JSONObject()
+                .put("alert", "test message")
+                .put("title", "test title")
+                .put(
+                    "custom",
+                    JSONObject()
+                        .put("i", "UUID1"),
+                )
+
+        // When
         notificationGenerationProcessor.processNotificationData(context, 1, payload, false, 1111)
 
-        /* Then */
+        // Then
         coVerify(exactly = 1) {
             mockNotificationDisplayer.displayNotification(
                 withArg {
@@ -98,7 +113,7 @@ class NotificationGenerationProcessorTests : FunSpec({
     }
 
     test("processNotificationData should restore notification correctly") {
-        /* Given */
+        // Given
         val context = ApplicationProvider.getApplicationContext<Context>()
         val mockTime = MockHelper.time(1111)
         val mockApplicationService = AndroidMockHelper.applicationService()
@@ -114,29 +129,31 @@ class NotificationGenerationProcessorTests : FunSpec({
         coEvery { mockNotificationLifecycleService.externalRemoteNotificationReceived(any()) } just runs
         coEvery { mockNotificationLifecycleService.externalNotificationWillShowInForeground(any()) } just runs
 
-        val notificationGenerationProcessor = NotificationGenerationProcessor(
-            mockApplicationService,
-            mockNotificationDisplayer,
-            MockHelper.configModelStore(),
-            mockNotificationRepository,
-            mockNotificationSummaryManager,
-            mockNotificationLifecycleService,
-            mockTime,
-        )
-
-        val payload = JSONObject()
-            .put("alert", "test message")
-            .put("title", "test title")
-            .put(
-                "custom",
-                JSONObject()
-                    .put("i", "UUID1"),
+        val notificationGenerationProcessor =
+            NotificationGenerationProcessor(
+                mockApplicationService,
+                mockNotificationDisplayer,
+                MockHelper.configModelStore(),
+                mockNotificationRepository,
+                mockNotificationSummaryManager,
+                mockNotificationLifecycleService,
+                mockTime,
             )
 
-        /* When */
+        val payload =
+            JSONObject()
+                .put("alert", "test message")
+                .put("title", "test title")
+                .put(
+                    "custom",
+                    JSONObject()
+                        .put("i", "UUID1"),
+                )
+
+        // When
         notificationGenerationProcessor.processNotificationData(context, 1, payload, true, 1111)
 
-        /* Then */
+        // Then
         coVerify(exactly = 1) {
             mockNotificationDisplayer.displayNotification(
                 withArg {
@@ -152,7 +169,7 @@ class NotificationGenerationProcessorTests : FunSpec({
     }
 
     test("processNotificationData should not display notification when external callback indicates not to") {
-        /* Given */
+        // Given
         val context = ApplicationProvider.getApplicationContext<Context>()
         val mockTime = MockHelper.time(1111)
         val mockApplicationService = AndroidMockHelper.applicationService()
@@ -170,33 +187,35 @@ class NotificationGenerationProcessorTests : FunSpec({
             receivedEvent.preventDefault()
         }
 
-        val notificationGenerationProcessor = NotificationGenerationProcessor(
-            mockApplicationService,
-            mockNotificationDisplayer,
-            MockHelper.configModelStore(),
-            mockNotificationRepository,
-            mockNotificationSummaryManager,
-            mockNotificationLifecycleService,
-            mockTime,
-        )
-
-        val payload = JSONObject()
-            .put("alert", "test message")
-            .put("title", "test title")
-            .put(
-                "custom",
-                JSONObject()
-                    .put("i", "UUID1"),
+        val notificationGenerationProcessor =
+            NotificationGenerationProcessor(
+                mockApplicationService,
+                mockNotificationDisplayer,
+                MockHelper.configModelStore(),
+                mockNotificationRepository,
+                mockNotificationSummaryManager,
+                mockNotificationLifecycleService,
+                mockTime,
             )
 
-        /* When */
+        val payload =
+            JSONObject()
+                .put("alert", "test message")
+                .put("title", "test title")
+                .put(
+                    "custom",
+                    JSONObject()
+                        .put("i", "UUID1"),
+                )
+
+        // When
         notificationGenerationProcessor.processNotificationData(context, 1, payload, false, 1111)
 
-        /* Then */
+        // Then
     }
 
     test("processNotificationData should display notification when external callback takes longer than 30 seconds") {
-        /* Given */
+        // Given
         val context = ApplicationProvider.getApplicationContext<Context>()
         val mockTime = MockHelper.time(1111)
         val mockApplicationService = AndroidMockHelper.applicationService()
@@ -214,29 +233,31 @@ class NotificationGenerationProcessorTests : FunSpec({
             delay(40000)
         }
 
-        val notificationGenerationProcessor = NotificationGenerationProcessor(
-            mockApplicationService,
-            mockNotificationDisplayer,
-            MockHelper.configModelStore(),
-            mockNotificationRepository,
-            mockNotificationSummaryManager,
-            mockNotificationLifecycleService,
-            mockTime,
-        )
-
-        val payload = JSONObject()
-            .put("alert", "test message")
-            .put("title", "test title")
-            .put(
-                "custom",
-                JSONObject()
-                    .put("i", "UUID1"),
+        val notificationGenerationProcessor =
+            NotificationGenerationProcessor(
+                mockApplicationService,
+                mockNotificationDisplayer,
+                MockHelper.configModelStore(),
+                mockNotificationRepository,
+                mockNotificationSummaryManager,
+                mockNotificationLifecycleService,
+                mockTime,
             )
 
-        /* When */
+        val payload =
+            JSONObject()
+                .put("alert", "test message")
+                .put("title", "test title")
+                .put(
+                    "custom",
+                    JSONObject()
+                        .put("i", "UUID1"),
+                )
+
+        // When
         notificationGenerationProcessor.processNotificationData(context, 1, payload, true, 1111)
 
-        /* Then */
+        // Then
         coVerify(exactly = 1) {
             mockNotificationDisplayer.displayNotification(
                 withArg {
@@ -252,7 +273,7 @@ class NotificationGenerationProcessorTests : FunSpec({
     }
 
     test("processNotificationData should not display notification when foreground callback indicates not to") {
-        /* Given */
+        // Given
         val context = ApplicationProvider.getApplicationContext<Context>()
         val mockTime = MockHelper.time(1111)
         val mockApplicationService = AndroidMockHelper.applicationService()
@@ -271,33 +292,35 @@ class NotificationGenerationProcessorTests : FunSpec({
             receivedEvent.preventDefault()
         }
 
-        val notificationGenerationProcessor = NotificationGenerationProcessor(
-            mockApplicationService,
-            mockNotificationDisplayer,
-            MockHelper.configModelStore(),
-            mockNotificationRepository,
-            mockNotificationSummaryManager,
-            mockNotificationLifecycleService,
-            mockTime,
-        )
-
-        val payload = JSONObject()
-            .put("alert", "test message")
-            .put("title", "test title")
-            .put(
-                "custom",
-                JSONObject()
-                    .put("i", "UUID1"),
+        val notificationGenerationProcessor =
+            NotificationGenerationProcessor(
+                mockApplicationService,
+                mockNotificationDisplayer,
+                MockHelper.configModelStore(),
+                mockNotificationRepository,
+                mockNotificationSummaryManager,
+                mockNotificationLifecycleService,
+                mockTime,
             )
 
-        /* When */
+        val payload =
+            JSONObject()
+                .put("alert", "test message")
+                .put("title", "test title")
+                .put(
+                    "custom",
+                    JSONObject()
+                        .put("i", "UUID1"),
+                )
+
+        // When
         notificationGenerationProcessor.processNotificationData(context, 1, payload, false, 1111)
 
-        /* Then */
+        // Then
     }
 
     test("processNotificationData should display notification when foreground callback takes longer than 30 seconds") {
-        /* Given */
+        // Given
         val context = ApplicationProvider.getApplicationContext<Context>()
         val mockTime = MockHelper.time(1111)
         val mockApplicationService = AndroidMockHelper.applicationService()
@@ -315,29 +338,31 @@ class NotificationGenerationProcessorTests : FunSpec({
             delay(40000)
         }
 
-        val notificationGenerationProcessor = NotificationGenerationProcessor(
-            mockApplicationService,
-            mockNotificationDisplayer,
-            MockHelper.configModelStore(),
-            mockNotificationRepository,
-            mockNotificationSummaryManager,
-            mockNotificationLifecycleService,
-            mockTime,
-        )
-
-        val payload = JSONObject()
-            .put("alert", "test message")
-            .put("title", "test title")
-            .put(
-                "custom",
-                JSONObject()
-                    .put("i", "UUID1"),
+        val notificationGenerationProcessor =
+            NotificationGenerationProcessor(
+                mockApplicationService,
+                mockNotificationDisplayer,
+                MockHelper.configModelStore(),
+                mockNotificationRepository,
+                mockNotificationSummaryManager,
+                mockNotificationLifecycleService,
+                mockTime,
             )
 
-        /* When */
+        val payload =
+            JSONObject()
+                .put("alert", "test message")
+                .put("title", "test title")
+                .put(
+                    "custom",
+                    JSONObject()
+                        .put("i", "UUID1"),
+                )
+
+        // When
         notificationGenerationProcessor.processNotificationData(context, 1, payload, true, 1111)
 
-        /* Then */
+        // Then
         coVerify(exactly = 1) {
             mockNotificationDisplayer.displayNotification(
                 withArg {

@@ -13,7 +13,9 @@ class LoginUserFromSubscriptionOperation() : Operation(LoginUserFromSubscription
      */
     var appId: String
         get() = getStringProperty(::appId.name)
-        private set(value) { setStringProperty(::appId.name, value) }
+        private set(value) {
+            setStringProperty(::appId.name, value)
+        }
 
     /**
      * The local OneSignal ID this user was initially logged in under. The user models with this ID
@@ -21,14 +23,18 @@ class LoginUserFromSubscriptionOperation() : Operation(LoginUserFromSubscription
      */
     var onesignalId: String
         get() = getStringProperty(::onesignalId.name)
-        private set(value) { setStringProperty(::onesignalId.name, value) }
+        private set(value) {
+            setStringProperty(::onesignalId.name, value)
+        }
 
     /**
      * The optional external ID of this newly logged-in user. Must be unique for the [appId].
      */
     var subscriptionId: String
         get() = getStringProperty(::subscriptionId.name)
-        private set(value) { setStringProperty(::subscriptionId.name, value) }
+        private set(value) {
+            setStringProperty(::subscriptionId.name, value)
+        }
 
     override val createComparisonKey: String get() = "$appId.Subscription.$subscriptionId.Login"
     override val modifyComparisonKey: String get() = "$appId.Subscription.$subscriptionId.Login"

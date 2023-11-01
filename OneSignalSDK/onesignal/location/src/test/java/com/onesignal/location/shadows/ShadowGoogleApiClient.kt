@@ -56,7 +56,9 @@ class ShadowGoogleApiClientBuilder {
 
 class ShadowGoogleApiClient : GoogleApiClient() {
     override fun hasConnectedApi(p0: Api<*>): Boolean = connected
+
     override fun getConnectionResult(p0: Api<*>): ConnectionResult = ConnectionResult(0)
+
     override fun connect() {
         connected = true
     }
@@ -64,24 +66,51 @@ class ShadowGoogleApiClient : GoogleApiClient() {
     override fun <C : Api.Client?> getClient(p0: Api.AnyClientKey<C>): C {
         return object : Api.Client {
             override fun connect(p0: BaseGmsClient.ConnectionProgressReportCallbacks) { }
+
             override fun disconnect(p0: String) {}
+
             override fun disconnect() { }
+
             override fun isConnected(): Boolean = true
+
             override fun isConnecting(): Boolean = false
-            override fun getRemoteService(p0: IAccountAccessor?, p1: MutableSet<Scope>?) {}
+
+            override fun getRemoteService(
+                p0: IAccountAccessor?,
+                p1: MutableSet<Scope>?,
+            ) {}
+
             override fun requiresSignIn(): Boolean = false
+
             override fun onUserSignOut(p0: BaseGmsClient.SignOutCallbacks) { }
+
             override fun requiresAccount(): Boolean = false
+
             override fun requiresGooglePlayServices(): Boolean = false
+
             override fun providesSignIn(): Boolean = false
+
             override fun getSignInIntent(): Intent = Intent()
-            override fun dump(p0: String, p1: FileDescriptor?, p2: PrintWriter, p3: Array<out String>?) { }
+
+            override fun dump(
+                p0: String,
+                p1: FileDescriptor?,
+                p2: PrintWriter,
+                p3: Array<out String>?,
+            ) { }
+
             override fun getServiceBrokerBinder(): IBinder? = null
+
             override fun getRequiredFeatures(): Array<Feature> = listOf<Feature>().toArray() as Array<Feature>
+
             override fun getEndpointPackageName(): String = ""
+
             override fun getMinApkVersion(): Int = 0
+
             override fun getAvailableFeatures(): Array<Feature> = listOf<Feature>().toArray() as Array<Feature>
+
             override fun getScopesForConnectionlessNonSignIn(): MutableSet<Scope> = mutableSetOf()
+
             override fun getLastDisconnectMessage(): String? = null
         } as C
     }
@@ -90,38 +119,71 @@ class ShadowGoogleApiClient : GoogleApiClient() {
         connected = true
         return ConnectionResult(0)
     }
-    override fun blockingConnect(p0: Long, p1: TimeUnit): ConnectionResult {
+
+    override fun blockingConnect(
+        p0: Long,
+        p1: TimeUnit,
+    ): ConnectionResult {
         connected = true
         return ConnectionResult(0)
     }
+
     override fun disconnect() {
         connected = false
     }
+
     override fun reconnect() {
         connected = true
     }
+
     override fun clearDefaultAccountAndReconnect(): PendingResult<Status> {
         return object : PendingResult<Status>() {
             override fun await(): Status = Status.RESULT_SUCCESS
-            override fun await(p0: Long, p1: TimeUnit): Status = Status.RESULT_SUCCESS
+
+            override fun await(
+                p0: Long,
+                p1: TimeUnit,
+            ): Status = Status.RESULT_SUCCESS
+
             override fun cancel() { }
+
             override fun isCanceled(): Boolean = false
+
             override fun setResultCallback(p0: ResultCallback<in Status>) { }
-            override fun setResultCallback(p0: ResultCallback<in Status>, p1: Long, p2: TimeUnit) {
+
+            override fun setResultCallback(
+                p0: ResultCallback<in Status>,
+                p1: Long,
+                p2: TimeUnit,
+            ) {
             }
         }
     }
 
     override fun stopAutoManage(p0: FragmentActivity) { }
+
     override fun isConnected(): Boolean = connected
+
     override fun isConnecting(): Boolean = false
+
     override fun registerConnectionCallbacks(p0: ConnectionCallbacks) { }
+
     override fun isConnectionCallbacksRegistered(p0: ConnectionCallbacks): Boolean = true
+
     override fun unregisterConnectionCallbacks(p0: ConnectionCallbacks) { }
+
     override fun registerConnectionFailedListener(p0: OnConnectionFailedListener) { }
+
     override fun isConnectionFailedListenerRegistered(p0: OnConnectionFailedListener): Boolean = false
+
     override fun unregisterConnectionFailedListener(p0: OnConnectionFailedListener) { }
-    override fun dump(p0: String, p1: FileDescriptor, p2: PrintWriter, p3: Array<out String>) { }
+
+    override fun dump(
+        p0: String,
+        p1: FileDescriptor,
+        p2: PrintWriter,
+        p3: Array<out String>,
+    ) { }
 
     companion object {
         var connected: Boolean = false

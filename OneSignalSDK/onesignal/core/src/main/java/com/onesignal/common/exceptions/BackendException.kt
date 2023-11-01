@@ -8,7 +8,6 @@ class BackendException(
      * The status code of the response.
      */
     val statusCode: Int,
-
     /**
      * The response, if one exists.
      */

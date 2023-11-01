@@ -39,7 +39,10 @@ import android.util.Log
 // Designed as a compat for use of Android Support v4 revision 23.+ methods when an older revision of the library is included with the app developer's project.
 class AndroidSupportV4Compat {
     object ContextCompat {
-        fun checkSelfPermission(context: Context, permission: String): Int {
+        fun checkSelfPermission(
+            context: Context,
+            permission: String,
+        ): Int {
             // Catch for rare "Unknown exception code: 1 msg null" exception
             // See https://github.com/one-signal/OneSignal-Android-SDK/issues/48 for more details.
             return try {
@@ -50,7 +53,10 @@ class AndroidSupportV4Compat {
             }
         }
 
-        fun getColor(context: Context, id: Int): Int {
+        fun getColor(
+            context: Context,
+            id: Int,
+        ): Int {
             return if (Build.VERSION.SDK_INT > 22) {
                 context.getColor(id)
             } else {
@@ -66,7 +72,11 @@ class AndroidSupportV4Compat {
     }
 
     internal object ActivityCompat {
-        fun requestPermissions(activity: Activity, permissions: Array<String?>, requestCode: Int) {
+        fun requestPermissions(
+            activity: Activity,
+            permissions: Array<String?>,
+            requestCode: Int,
+        ) {
             // OneSignal SDK code already checks that device is Android M, omit else code from the support library.
             ActivityCompatApi23.requestPermissions(activity, permissions, requestCode)
         }
@@ -81,7 +91,11 @@ class AndroidSupportV4Compat {
 
     @TargetApi(23)
     internal object ActivityCompatApi23 {
-        fun requestPermissions(activity: Activity, permissions: Array<String?>?, requestCode: Int) {
+        fun requestPermissions(
+            activity: Activity,
+            permissions: Array<String?>?,
+            requestCode: Int,
+        ) {
             if (activity is RequestPermissionsRequestCodeValidator) {
                 (activity as RequestPermissionsRequestCodeValidator).validateRequestPermissionsRequestCode(
                     requestCode,

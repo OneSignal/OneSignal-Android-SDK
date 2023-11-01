@@ -24,7 +24,7 @@ class LocationCapturerTests : FunSpec({
     }
 
     test("captureLastLocation will capture current location with fine") {
-        /* Given */
+        // Given
         val mockLocation = mockk<Location>()
         every { mockLocation.accuracy } returns 1111F
         every { mockLocation.time } returns 2222
@@ -43,18 +43,19 @@ class LocationCapturerTests : FunSpec({
         val mockApplicationService = MockHelper.applicationService()
         every { mockApplicationService.isInForeground } returns true
 
-        val locationCapturer = LocationCapturer(
-            mockApplicationService,
-            MockHelper.time(1111),
-            mockLocationPreferencesService,
-            mockPropertiesModelStore,
-            mockLocationController,
-        )
+        val locationCapturer =
+            LocationCapturer(
+                mockApplicationService,
+                MockHelper.time(1111),
+                mockLocationPreferencesService,
+                mockPropertiesModelStore,
+                mockLocationController,
+            )
 
-        /* When */
+        // When
         locationCapturer.captureLastLocation()
 
-        /* Then */
+        // Then
         mockPropertiesModelStore.model.locationAccuracy shouldBe 1111F
         mockPropertiesModelStore.model.locationBackground shouldBe false
         mockPropertiesModelStore.model.locationType shouldBe 1
@@ -66,7 +67,7 @@ class LocationCapturerTests : FunSpec({
     }
 
     test("captureLastLocation will capture current location with coarse") {
-        /* Given */
+        // Given
         val mockLocation = mockk<Location>()
         every { mockLocation.accuracy } returns 1111F
         every { mockLocation.time } returns 2222
@@ -85,19 +86,20 @@ class LocationCapturerTests : FunSpec({
         val mockApplicationService = MockHelper.applicationService()
         every { mockApplicationService.isInForeground } returns true
 
-        val locationCapturer = LocationCapturer(
-            mockApplicationService,
-            MockHelper.time(1111),
-            mockLocationPreferencesService,
-            mockPropertiesModelStore,
-            mockLocationController,
-        )
+        val locationCapturer =
+            LocationCapturer(
+                mockApplicationService,
+                MockHelper.time(1111),
+                mockLocationPreferencesService,
+                mockPropertiesModelStore,
+                mockLocationController,
+            )
 
-        /* When */
+        // When
         locationCapturer.locationCoarse = true
         locationCapturer.captureLastLocation()
 
-        /* Then */
+        // Then
         mockPropertiesModelStore.model.locationAccuracy shouldBe 1111F
         mockPropertiesModelStore.model.locationBackground shouldBe false
         mockPropertiesModelStore.model.locationType shouldBe 0
@@ -109,7 +111,7 @@ class LocationCapturerTests : FunSpec({
     }
 
     test("captureLastLocation will not capture current location when not available") {
-        /* Given */
+        // Given
         val lastLocationTimeSlot = slot<Long>()
         val mockLocationPreferencesService = mockk<ILocationPreferencesService>()
         every { mockLocationPreferencesService.lastLocationTime = capture(lastLocationTimeSlot) } answers { }
@@ -121,18 +123,19 @@ class LocationCapturerTests : FunSpec({
 
         val mockApplicationService = MockHelper.applicationService()
 
-        val locationCapturer = LocationCapturer(
-            mockApplicationService,
-            MockHelper.time(1111),
-            mockLocationPreferencesService,
-            mockPropertiesModelStore,
-            mockLocationController,
-        )
+        val locationCapturer =
+            LocationCapturer(
+                mockApplicationService,
+                MockHelper.time(1111),
+                mockLocationPreferencesService,
+                mockPropertiesModelStore,
+                mockLocationController,
+            )
 
-        /* When */
+        // When
         locationCapturer.captureLastLocation()
 
-        /* Then */
+        // Then
         mockPropertiesModelStore.model.locationAccuracy shouldBe null
         mockPropertiesModelStore.model.locationBackground shouldBe null
         mockPropertiesModelStore.model.locationType shouldBe null

@@ -14,7 +14,9 @@ class TrackSessionStartOperation() : Operation(UpdateUserOperationExecutor.TRACK
      */
     var appId: String
         get() = getStringProperty(::appId.name)
-        private set(value) { setStringProperty(::appId.name, value) }
+        private set(value) {
+            setStringProperty(::appId.name, value)
+        }
 
     /**
      * The OneSignal ID driving the session. This ID *may* be locally generated
@@ -22,7 +24,9 @@ class TrackSessionStartOperation() : Operation(UpdateUserOperationExecutor.TRACK
      */
     var onesignalId: String
         get() = getStringProperty(::onesignalId.name)
-        private set(value) { setStringProperty(::onesignalId.name, value) }
+        private set(value) {
+            setStringProperty(::onesignalId.name, value)
+        }
 
     override val createComparisonKey: String get() = ""
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId"

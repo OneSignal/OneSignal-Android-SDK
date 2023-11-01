@@ -40,7 +40,10 @@ interface IUserManager {
      * @param id The alias id that should be set against the current user. This must be a unique value
      * within the alias label across your entire user base so it can uniquely identify this user.
      */
-    fun addAlias(label: String, id: String)
+    fun addAlias(
+        label: String,
+        id: String,
+    )
 
     /**
      * Add/set aliases for the current user. If any alias already exists it will be overwritten.
@@ -102,7 +105,10 @@ interface IUserManager {
      * @param key The key of the data tag.
      * @param value THe new value of the data tag.
      */
-    fun addTag(key: String, value: String)
+    fun addTag(
+        key: String,
+        value: String,
+    )
 
     /**
      * Add multiple tags for the current user.  Tags are key:value pairs used as building blocks

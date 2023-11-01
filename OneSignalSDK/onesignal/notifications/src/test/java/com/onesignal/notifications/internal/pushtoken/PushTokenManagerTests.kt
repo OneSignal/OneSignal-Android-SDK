@@ -24,19 +24,19 @@ class PushTokenManagerTests : FunSpec({
     }
 
     test("retrievePushToken should fail with missing library when android support libraries are missing") {
-        /* Given */
+        // Given
         val mockPushRegistrator = mockk<IPushRegistrator>()
         val mockDeviceService = MockHelper.deviceService()
         every { mockDeviceService.androidSupportLibraryStatus } returns IDeviceService.AndroidSupportLibraryStatus.MISSING
 
         val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
 
-        /* When */
+        // When
         val response = pushTokenManager.retrievePushToken()
         val pushToken = pushTokenManager.pushToken
         val pushTokenStatus = pushTokenManager.pushTokenStatus
 
-        /* Then */
+        // Then
         response.token shouldBe null
         response.status shouldBe SubscriptionStatus.MISSING_ANDROID_SUPPORT_LIBRARY
         pushToken shouldBe null
@@ -44,19 +44,19 @@ class PushTokenManagerTests : FunSpec({
     }
 
     test("retrievePushToken should fail with outdated library when android support libraries are missing") {
-        /* Given */
+        // Given
         val mockPushRegistrator = mockk<IPushRegistrator>()
         val mockDeviceService = MockHelper.deviceService()
         every { mockDeviceService.androidSupportLibraryStatus } returns IDeviceService.AndroidSupportLibraryStatus.OUTDATED
 
         val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
 
-        /* When */
+        // When
         val response = pushTokenManager.retrievePushToken()
         val pushToken = pushTokenManager.pushToken
         val pushTokenStatus = pushTokenManager.pushTokenStatus
 
-        /* Then */
+        // Then
         response.token shouldBe null
         response.status shouldBe SubscriptionStatus.OUTDATED_ANDROID_SUPPORT_LIBRARY
         pushToken shouldBe null
@@ -64,7 +64,7 @@ class PushTokenManagerTests : FunSpec({
     }
 
     test("retrievePushToken should succeed when registration is successful") {
-        /* Given */
+        // Given
         val mockPushRegistrator = mockk<IPushRegistrator>()
         coEvery { mockPushRegistrator.registerForPush() } returns IPushRegistrator.RegisterResult("pushToken", SubscriptionStatus.SUBSCRIBED)
         val mockDeviceService = MockHelper.deviceService()
@@ -72,12 +72,12 @@ class PushTokenManagerTests : FunSpec({
 
         val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
 
-        /* When */
+        // When
         val response = pushTokenManager.retrievePushToken()
         val pushToken = pushTokenManager.pushToken
         val pushTokenStatus = pushTokenManager.pushTokenStatus
 
-        /* Then */
+        // Then
         coVerify(exactly = 1) { mockPushRegistrator.registerForPush() }
         response.token shouldBe "pushToken"
         response.status shouldBe SubscriptionStatus.SUBSCRIBED
@@ -86,20 +86,22 @@ class PushTokenManagerTests : FunSpec({
     }
 
     test("retrievePushToken should fail with failure status from push registrator with config-type error") {
-        /* Given */
+        // Given
         val mockPushRegistrator = mockk<IPushRegistrator>()
-        coEvery { mockPushRegistrator.registerForPush() } returns IPushRegistrator.RegisterResult(null, SubscriptionStatus.MISSING_FIREBASE_FCM_LIBRARY)
+        coEvery {
+            mockPushRegistrator.registerForPush()
+        } returns IPushRegistrator.RegisterResult(null, SubscriptionStatus.MISSING_FIREBASE_FCM_LIBRARY)
         val mockDeviceService = MockHelper.deviceService()
         every { mockDeviceService.androidSupportLibraryStatus } returns IDeviceService.AndroidSupportLibraryStatus.OK
 
         val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
 
-        /* When */
+        // When
         val response = pushTokenManager.retrievePushToken()
         val pushToken = pushTokenManager.pushToken
         val pushTokenStatus = pushTokenManager.pushTokenStatus
 
-        /* Then */
+        // Then
         coVerify(exactly = 1) { mockPushRegistrator.registerForPush() }
         response.token shouldBe null
         response.status shouldBe SubscriptionStatus.MISSING_FIREBASE_FCM_LIBRARY
@@ -108,20 +110,22 @@ class PushTokenManagerTests : FunSpec({
     }
 
     test("retrievePushToken should fail with failure status from push registrator with runtime-type error") {
-        /* Given */
+        // Given
         val mockPushRegistrator = mockk<IPushRegistrator>()
-        coEvery { mockPushRegistrator.registerForPush() } returns IPushRegistrator.RegisterResult(null, SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION)
+        coEvery {
+            mockPushRegistrator.registerForPush()
+        } returns IPushRegistrator.RegisterResult(null, SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION)
         val mockDeviceService = MockHelper.deviceService()
         every { mockDeviceService.androidSupportLibraryStatus } returns IDeviceService.AndroidSupportLibraryStatus.OK
 
         val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
 
-        /* When */
+        // When
         val response = pushTokenManager.retrievePushToken()
         val pushToken = pushTokenManager.pushToken
         val pushTokenStatus = pushTokenManager.pushTokenStatus
 
-        /* Then */
+        // Then
         coVerify(exactly = 1) { mockPushRegistrator.registerForPush() }
         response.token shouldBe null
         response.status shouldBe SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION
@@ -130,7 +134,7 @@ class PushTokenManagerTests : FunSpec({
     }
 
     test("retrievePushToken should fail with failure status of config-type error even if subsequent runtime-type error") {
-        /* Given */
+        // Given
         val mockPushRegistrator = mockk<IPushRegistrator>()
         coEvery { mockPushRegistrator.registerForPush() } returns
             IPushRegistrator.RegisterResult(null, SubscriptionStatus.MISSING_FIREBASE_FCM_LIBRARY) andThen
@@ -141,7 +145,7 @@ class PushTokenManagerTests : FunSpec({
 
         val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
 
-        /* When */
+        // When
         val response1 = pushTokenManager.retrievePushToken()
         val pushToken1 = pushTokenManager.pushToken
         val pushTokenStatus1 = pushTokenManager.pushTokenStatus
@@ -149,7 +153,7 @@ class PushTokenManagerTests : FunSpec({
         val pushToken2 = pushTokenManager.pushToken
         val pushTokenStatus2 = pushTokenManager.pushTokenStatus
 
-        /* Then */
+        // Then
         coVerify(exactly = 2) { mockPushRegistrator.registerForPush() }
         response1.token shouldBe null
         response1.status shouldBe SubscriptionStatus.MISSING_FIREBASE_FCM_LIBRARY
@@ -162,7 +166,7 @@ class PushTokenManagerTests : FunSpec({
     }
 
     test("retrievePushToken should fail with failure status of config-type error even if previous runtime-type error") {
-        /* Given */
+        // Given
         val mockPushRegistrator = mockk<IPushRegistrator>()
         coEvery { mockPushRegistrator.registerForPush() } returns
             IPushRegistrator.RegisterResult(null, SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION) andThen
@@ -173,7 +177,7 @@ class PushTokenManagerTests : FunSpec({
 
         val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
 
-        /* When */
+        // When
         val response1 = pushTokenManager.retrievePushToken()
         val pushToken1 = pushTokenManager.pushToken
         val pushTokenStatus1 = pushTokenManager.pushTokenStatus
@@ -181,7 +185,7 @@ class PushTokenManagerTests : FunSpec({
         val pushToken2 = pushTokenManager.pushToken
         val pushTokenStatus2 = pushTokenManager.pushTokenStatus
 
-        /* Then */
+        // Then
         coVerify(exactly = 2) { mockPushRegistrator.registerForPush() }
         response1.token shouldBe null
         response1.status shouldBe SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION

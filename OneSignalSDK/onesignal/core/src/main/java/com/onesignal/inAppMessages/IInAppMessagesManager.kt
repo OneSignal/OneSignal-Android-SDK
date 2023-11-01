@@ -7,7 +7,6 @@ package com.onesignal.inAppMessages
  * blanket disable IAMs, set [paused] to `true` on startup.
  */
 interface IInAppMessagesManager {
-
     /**
      * Whether the In-app messaging is currently paused.  When set to `true` no IAM
      * will be presented to the user regardless of whether they qualify for them. When
@@ -27,7 +26,10 @@ interface IInAppMessagesManager {
      * @param key The key of the trigger that is to be set.
      * @param value The value of the trigger.
      */
-    fun addTrigger(key: String, value: String)
+    fun addTrigger(
+        key: String,
+        value: String,
+    )
 
     /**
      * Add multiple triggers for the current user.  Triggers are currently explicitly used to determine
