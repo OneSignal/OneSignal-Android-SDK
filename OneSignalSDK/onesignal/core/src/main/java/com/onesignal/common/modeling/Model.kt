@@ -122,20 +122,25 @@ open class Model(
      * @param model The model to initialize this model from.
      */
     fun initializeFromModel(id: String?, model: Model) {
-        synchronized(initializationLock) {
-            for (item in model.data) {
-                if (item.value is Model) {
-                    val childModel = item.value as Model
-                    childModel._parentModel = this
-                    data[item.key] = childModel
-                } else {
-                    data[item.key] = item.value
-                }
-            }
+        val newData = Collections.synchronizedMap(mutableMapOf<String, Any?>())
 
-            if (id != null) {
-                data[::id.name] = id
+        for (item in model.data) {
+            if (item.value is Model) {
+                val childModel = item.value as Model
+                childModel._parentModel = this
+                newData[item.key] = childModel
+            } else {
+                newData[item.key] = item.value
             }
+        }
+
+        if (id != null) {
+            newData[::id.name] = id
+        }
+
+        synchronized(initializationLock) {
+            data.clear()
+            data.putAll(newData)
         }
     }
 
