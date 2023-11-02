@@ -95,8 +95,8 @@ dependencies {
 
     api('androidx.work:work-runtime') {
         version {
-            require '[2.1.0, 2.7.99]'
-            prefer '2.7.1'
+            require '[2.1.0, 2.8.99]'
+            prefer '2.8.1'
         }
     }
 
