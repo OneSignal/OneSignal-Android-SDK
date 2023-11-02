@@ -26,7 +26,6 @@
  */
 package com.onesignal.notifications.receivers
 
-import android.app.Notification.Action
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
