@@ -218,4 +218,8 @@ internal open class UserManager(
             _propertiesModel.tags.remove(it)
         }
     }
+
+    override fun getTags(): Map<String, String> {
+        return _propertiesModel.tags.toMap()
+    }
 }
