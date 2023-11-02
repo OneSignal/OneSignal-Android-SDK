@@ -39,8 +39,7 @@ internal class NotificationListener(
     private val _analyticsTracker: IAnalyticsTracker,
     private val _time: ITime,
 ) : IStartableService, INotificationLifecycleEventHandler {
-
-    private val _postedOpenedNotifIds = mutableSetOf<String>()
+    private val postedOpenedNotifIds = mutableSetOf<String>()
 
     override fun start() {
         _notificationLifecycleService.addInternalNotificationLifecycleEventHandler(this)
@@ -56,7 +55,10 @@ internal class NotificationListener(
             jsonObject.put(NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID, notificationJob.androidId)
             val openResult = NotificationHelper.generateNotificationOpenedResult(JSONUtils.wrapInJsonArray(jsonObject), _time)
 
-            _analyticsTracker.trackReceivedEvent(openResult.notification.notificationId!!, NotificationHelper.getCampaignNameFromNotification(openResult.notification))
+            _analyticsTracker.trackReceivedEvent(
+                openResult.notification.notificationId!!,
+                NotificationHelper.getCampaignNameFromNotification(openResult.notification),
+            )
         } catch (e: JSONException) {
             e.printStackTrace()
         }
@@ -73,10 +75,10 @@ internal class NotificationListener(
         val deviceType = _deviceService.deviceType
 
         for (i in 0 until data.length()) {
-            if (_postedOpenedNotifIds.contains(notificationId)) {
+            if (postedOpenedNotifIds.contains(notificationId)) {
                 continue
             }
-            _postedOpenedNotifIds.add(notificationId)
+            postedOpenedNotifIds.add(notificationId)
 
             try {
                 _backend.updateNotificationAsOpened(
@@ -91,7 +93,10 @@ internal class NotificationListener(
         }
 
         val openResult = NotificationHelper.generateNotificationOpenedResult(data, _time)
-        _analyticsTracker.trackOpenedEvent(openResult.notification.notificationId!!, NotificationHelper.getCampaignNameFromNotification(openResult.notification))
+        _analyticsTracker.trackOpenedEvent(
+            openResult.notification.notificationId!!,
+            NotificationHelper.getCampaignNameFromNotification(openResult.notification),
+        )
 
         if (shouldInitDirectSessionFromNotificationOpen(activity)) {
             // We want to set the app entry state to NOTIFICATION_CLICK when coming from background

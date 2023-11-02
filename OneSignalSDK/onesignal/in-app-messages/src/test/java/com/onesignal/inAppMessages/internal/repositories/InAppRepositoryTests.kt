@@ -24,46 +24,47 @@ class InAppRepositoryTests : FunSpec({
     }
 
     test("listInAppMessages returns empty list when database is empty") {
-        /* Given */
+        // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(OneSignalDbContract.InAppMessageTable.TABLE_NAME)
         val mockInAppPreferencesController = mockk<IInAppPreferencesController>()
 
         val inAppRepository = InAppRepository(mockDatabasePair.first, MockHelper.time(1111), mockInAppPreferencesController)
 
-        /* When */
+        // When
         val response = inAppRepository.listInAppMessages()
 
-        /* Then */
+        // Then
         response.count() shouldBe 0
     }
 
     test("listInAppMessages returns list of in app messages in database") {
-        /* Given */
-        val records = listOf(
-            mapOf<String, Any>(
-                OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID to "messageId1",
-                OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS to "[clickId1, clickId2]",
-                OneSignalDbContract.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY to 1,
-                OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY to 1000L,
-                OneSignalDbContract.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION to 1,
-            ),
-            mapOf<String, Any>(
-                OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID to "messageId2",
-                OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS to "[clickId3, clickId4]",
-                OneSignalDbContract.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY to 2,
-                OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY to 1100L,
-                OneSignalDbContract.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION to 0,
-            ),
-        )
+        // Given
+        val records =
+            listOf(
+                mapOf<String, Any>(
+                    OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID to "messageId1",
+                    OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS to "[clickId1, clickId2]",
+                    OneSignalDbContract.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY to 1,
+                    OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY to 1000L,
+                    OneSignalDbContract.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION to 1,
+                ),
+                mapOf<String, Any>(
+                    OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID to "messageId2",
+                    OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS to "[clickId3, clickId4]",
+                    OneSignalDbContract.InAppMessageTable.COLUMN_NAME_DISPLAY_QUANTITY to 2,
+                    OneSignalDbContract.InAppMessageTable.COLUMN_NAME_LAST_DISPLAY to 1100L,
+                    OneSignalDbContract.InAppMessageTable.COLUMN_DISPLAYED_IN_SESSION to 0,
+                ),
+            )
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(OneSignalDbContract.InAppMessageTable.TABLE_NAME, records)
         val mockInAppPreferencesController = mockk<IInAppPreferencesController>()
 
         val inAppRepository = InAppRepository(mockDatabasePair.first, MockHelper.time(1111), mockInAppPreferencesController)
 
-        /* When */
+        // When
         val response = inAppRepository.listInAppMessages()
 
-        /* Then */
+        // Then
         response.count() shouldBe 2
         response[0].messageId shouldBe "messageId1"
         response[0].clickedClickIds shouldBe setOf("clickId1", "clickId2")
@@ -78,17 +79,17 @@ class InAppRepositoryTests : FunSpec({
     }
 
     test("cleanCachedInAppMessages is a no-op when no older messages") {
-        /* Given */
+        // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(OneSignalDbContract.InAppMessageTable.TABLE_NAME)
         val mockInAppPreferencesController = mockk<IInAppPreferencesController>()
         every { mockInAppPreferencesController.cleanInAppMessageIds(any()) } just runs
         every { mockInAppPreferencesController.cleanInAppMessageClickedClickIds(any()) } just runs
         val inAppRepository = InAppRepository(mockDatabasePair.first, MockHelper.time(1111), mockInAppPreferencesController)
 
-        /* When */
+        // When
         inAppRepository.cleanCachedInAppMessages()
 
-        /* Then */
+        // Then
         verify {
             mockInAppPreferencesController.cleanInAppMessageIds(
                 withArg {
@@ -107,27 +108,28 @@ class InAppRepositoryTests : FunSpec({
     }
 
     test("cleanCachedInAppMessages cleans all old messages and clicks") {
-        /* Given */
-        val records = listOf(
-            mapOf<String, Any>(
-                OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID to "messageId1",
-                OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS to "[clickId1, clickId2]",
-            ),
-            mapOf<String, Any>(
-                OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID to "messageId2",
-                OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS to "[clickId3, clickId4]",
-            ),
-        )
+        // Given
+        val records =
+            listOf(
+                mapOf<String, Any>(
+                    OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID to "messageId1",
+                    OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS to "[clickId1, clickId2]",
+                ),
+                mapOf<String, Any>(
+                    OneSignalDbContract.InAppMessageTable.COLUMN_NAME_MESSAGE_ID to "messageId2",
+                    OneSignalDbContract.InAppMessageTable.COLUMN_CLICK_IDS to "[clickId3, clickId4]",
+                ),
+            )
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(OneSignalDbContract.InAppMessageTable.TABLE_NAME, records)
         val mockInAppPreferencesController = mockk<IInAppPreferencesController>()
         every { mockInAppPreferencesController.cleanInAppMessageIds(any()) } just runs
         every { mockInAppPreferencesController.cleanInAppMessageClickedClickIds(any()) } just runs
         val inAppRepository = InAppRepository(mockDatabasePair.first, MockHelper.time(1111), mockInAppPreferencesController)
 
-        /* When */
+        // When
         inAppRepository.cleanCachedInAppMessages()
 
-        /* Then */
+        // Then
         verify {
             mockInAppPreferencesController.cleanInAppMessageIds(
                 withArg {

@@ -11,8 +11,8 @@ import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
-import com.onesignal.user.subscriptions.IPushSubscription
 import com.onesignal.user.internal.subscriptions.SubscriptionList
+import com.onesignal.user.subscriptions.IPushSubscription
 
 internal open class UserManager(
     private val _subscriptionManager: ISubscriptionManager,
@@ -20,7 +20,6 @@ internal open class UserManager(
     private val _propertiesModelStore: PropertiesModelStore,
     private val _languageContext: ILanguageContext,
 ) : IUserManager {
-
     val externalId: String?
         get() = _identityModel.externalId
 
@@ -46,7 +45,10 @@ internal open class UserManager(
         _languageContext.language = value
     }
 
-    override fun addAlias(label: String, id: String) {
+    override fun addAlias(
+        label: String,
+        id: String,
+    ) {
         Logging.log(LogLevel.DEBUG, "setAlias(label: $label, id: $id)")
 
         if (label.isEmpty()) {
@@ -162,7 +164,10 @@ internal open class UserManager(
         _subscriptionManager.removeSmsSubscription(sms)
     }
 
-    override fun addTag(key: String, value: String) {
+    override fun addTag(
+        key: String,
+        value: String,
+    ) {
         Logging.log(LogLevel.DEBUG, "setTag(key: $key, value: $value)")
 
         if (key.isEmpty()) {

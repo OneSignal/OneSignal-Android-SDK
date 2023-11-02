@@ -20,37 +20,109 @@ internal class PreferencesService(
     private val _applicationService: IApplicationService,
     private val _time: ITime,
 ) : IPreferencesService, IStartableService {
-    private val _prefsToApply: Map<String, MutableMap<String, Any?>> = mapOf(
-        PreferenceStores.ONESIGNAL to mutableMapOf(),
-        PreferenceStores.PLAYER_PURCHASES to mutableMapOf(),
-    )
-    private var _queueJob: Deferred<Unit>? = null
+    private val prefsToApply: Map<String, MutableMap<String, Any?>> =
+        mapOf(
+            PreferenceStores.ONESIGNAL to mutableMapOf(),
+            PreferenceStores.PLAYER_PURCHASES to mutableMapOf(),
+        )
+    private var queueJob: Deferred<Unit>? = null
 
-    private val _waiter = Waiter()
+    private val waiter = Waiter()
 
     override fun start() {
         // fire up an async job that will run "forever" so we don't hold up the other startable services.
-        _queueJob = doWorkAsync()
+        queueJob = doWorkAsync()
     }
 
-    override fun getString(store: String, key: String, defValue: String?): String? = get(store, key, String::class.java, defValue) as String?
-    override fun getBool(store: String, key: String, defValue: Boolean?): Boolean? = get(store, key, Boolean::class.java, defValue) as Boolean?
-    override fun getInt(store: String, key: String, defValue: Int?): Int? = get(store, key, Int::class.java, defValue) as Int?
-    override fun getLong(store: String, key: String, defValue: Long?): Long? = get(store, key, Long::class.java, defValue) as Long?
-    override fun getStringSet(store: String, key: String, defValue: Set<String>?): Set<String>? = get(store, key, Set::class.java, defValue) as Set<String>?
+    override fun getString(
+        store: String,
+        key: String,
+        defValue: String?,
+    ): String? =
+        get(
+            store,
+            key,
+            String::class.java,
+            defValue,
+        ) as String?
 
-    override fun saveString(store: String, key: String, value: String?) = save(store, key, value)
-    override fun saveBool(store: String, key: String, value: Boolean?) = save(store, key, value)
-    override fun saveInt(store: String, key: String, value: Int?) = save(store, key, value)
-    override fun saveLong(store: String, key: String, value: Long?) = save(store, key, value)
-    override fun saveStringSet(store: String, key: String, value: Set<String>?) = save(store, key, value)
+    override fun getBool(
+        store: String,
+        key: String,
+        defValue: Boolean?,
+    ): Boolean? =
+        get(
+            store,
+            key,
+            Boolean::class.java,
+            defValue,
+        ) as Boolean?
 
-    private fun get(store: String, key: String, type: Class<*>, defValue: Any?): Any? {
-        if (!_prefsToApply.containsKey(store)) {
+    override fun getInt(
+        store: String,
+        key: String,
+        defValue: Int?,
+    ): Int? = get(store, key, Int::class.java, defValue) as Int?
+
+    override fun getLong(
+        store: String,
+        key: String,
+        defValue: Long?,
+    ): Long? = get(store, key, Long::class.java, defValue) as Long?
+
+    override fun getStringSet(
+        store: String,
+        key: String,
+        defValue: Set<String>?,
+    ): Set<String>? =
+        get(
+            store,
+            key,
+            Set::class.java,
+            defValue,
+        ) as Set<String>?
+
+    override fun saveString(
+        store: String,
+        key: String,
+        value: String?,
+    ) = save(store, key, value)
+
+    override fun saveBool(
+        store: String,
+        key: String,
+        value: Boolean?,
+    ) = save(store, key, value)
+
+    override fun saveInt(
+        store: String,
+        key: String,
+        value: Int?,
+    ) = save(store, key, value)
+
+    override fun saveLong(
+        store: String,
+        key: String,
+        value: Long?,
+    ) = save(store, key, value)
+
+    override fun saveStringSet(
+        store: String,
+        key: String,
+        value: Set<String>?,
+    ) = save(store, key, value)
+
+    private fun get(
+        store: String,
+        key: String,
+        type: Class<*>,
+        defValue: Any?,
+    ): Any? {
+        if (!prefsToApply.containsKey(store)) {
             throw Exception("Store not found: $store")
         }
 
-        val storeMap = _prefsToApply[store]!!
+        val storeMap = prefsToApply[store]!!
 
         synchronized(storeMap) {
             val cachedValue = storeMap[key]
@@ -85,72 +157,77 @@ internal class PreferencesService(
         }
     }
 
-    private fun save(store: String, key: String, value: Any?) {
-        if (!_prefsToApply.containsKey(store)) {
+    private fun save(
+        store: String,
+        key: String,
+        value: Any?,
+    ) {
+        if (!prefsToApply.containsKey(store)) {
             throw Exception("Store not found: $store")
         }
 
-        val storeMap = _prefsToApply[store]!!
+        val storeMap = prefsToApply[store]!!
         synchronized(storeMap) {
             storeMap[key] = value
         }
 
-        _waiter.wake()
+        waiter.wake()
     }
 
-    private fun doWorkAsync() = GlobalScope.async(Dispatchers.IO) {
-        var lastSyncTime = _time.currentTimeMillis
+    private fun doWorkAsync() =
+        GlobalScope.async(Dispatchers.IO) {
+            var lastSyncTime = _time.currentTimeMillis
 
-        while (true) {
-            try {
-                // go through all outstanding items to process
-                for (storeKey in _prefsToApply.keys) {
-                    val storeMap = _prefsToApply[storeKey]!!
-                    val prefsToWrite = getSharedPrefsByName(storeKey)
+            while (true) {
+                try {
+                    // go through all outstanding items to process
+                    for (storeKey in prefsToApply.keys) {
+                        val storeMap = prefsToApply[storeKey]!!
+                        val prefsToWrite = getSharedPrefsByName(storeKey)
 
-                    if (prefsToWrite == null) {
-                        // the assumption here is there is no context yet, but will be. So ensure
-                        // we wake up to try again and persist the preference.
-                        _waiter.wake()
-                        continue
-                    }
-
-                    val editor = prefsToWrite.edit()
-
-                    synchronized(storeMap) {
-                        for (key in storeMap.keys) {
-                            when (val value = storeMap[key]) {
-                                is String -> editor.putString(key, value as String?)
-                                is Boolean -> editor.putBoolean(key, (value as Boolean?)!!)
-                                is Int -> editor.putInt(key, (value as Int?)!!)
-                                is Long -> editor.putLong(key, (value as Long?)!!)
-                                is Set<*> -> editor.putStringSet(key, value as Set<String?>?)
-                                null -> editor.remove(key)
-                            }
+                        if (prefsToWrite == null) {
+                            // the assumption here is there is no context yet, but will be. So ensure
+                            // we wake up to try again and persist the preference.
+                            waiter.wake()
+                            continue
                         }
-                        storeMap.clear()
+
+                        val editor = prefsToWrite.edit()
+
+                        synchronized(storeMap) {
+                            for (key in storeMap.keys) {
+                                when (val value = storeMap[key]) {
+                                    is String -> editor.putString(key, value as String?)
+                                    is Boolean -> editor.putBoolean(key, (value as Boolean?)!!)
+                                    is Int -> editor.putInt(key, (value as Int?)!!)
+                                    is Long -> editor.putLong(key, (value as Long?)!!)
+                                    is Set<*> -> editor.putStringSet(key, value as Set<String?>?)
+                                    null -> editor.remove(key)
+                                }
+                            }
+                            storeMap.clear()
+                        }
+                        editor.apply()
                     }
-                    editor.apply()
+
+                    // potentially delay to prevent this from constant IO if a bunch of
+                    // preferences are set sequentially.
+                    val newTime = _time.currentTimeMillis
+
+                    val delay = lastSyncTime - newTime + WRITE_CALL_DELAY_TO_BUFFER_MS
+                    lastSyncTime = newTime
+
+                    if (delay > 0) {
+                        delay(delay)
+                    }
+
+                    // wait to be woken up for the next pass
+                    waiter.waitForWake()
+                } catch (e: Throwable) {
+                    Logging.log(LogLevel.ERROR, "Error with Preference work loop", e)
                 }
-
-                // potentially delay to prevent this from constant IO if a bunch of
-                // preferences are set sequentially.
-                val newTime = _time.currentTimeMillis
-
-                val delay = lastSyncTime - newTime + WRITE_CALL_DELAY_TO_BUFFER_MS
-                lastSyncTime = newTime
-
-                if (delay > 0) {
-                    delay(delay)
-                }
-
-                // wait to be woken up for the next pass
-                _waiter.waitForWake()
-            } catch (e: Throwable) {
-                Logging.log(LogLevel.ERROR, "Error with Preference work loop", e)
             }
         }
-    }
 
     @Synchronized
     private fun getSharedPrefsByName(store: String): SharedPreferences? {

@@ -32,7 +32,10 @@ import com.onesignal.common.threading.suspendifyBlocking
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
 
 class NotificationDismissReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
         if (!OneSignal.initWithContext(context.applicationContext)) {
             return
         }

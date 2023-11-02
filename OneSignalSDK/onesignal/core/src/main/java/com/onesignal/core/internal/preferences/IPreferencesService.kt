@@ -16,7 +16,11 @@ interface IPreferencesService {
      *
      * @return the value in the preference store, or [defValue] if not previously saved.
      */
-    fun getString(store: String, key: String, defValue: String? = null): String?
+    fun getString(
+        store: String,
+        key: String,
+        defValue: String? = null,
+    ): String?
 
     /**
      * Retrieve a [Boolean] value identified by the [store] and [key] provided.
@@ -27,7 +31,11 @@ interface IPreferencesService {
      *
      * @return the value in the preference store, or [defValue] if not previously saved.
      */
-    fun getBool(store: String, key: String, defValue: Boolean? = null): Boolean?
+    fun getBool(
+        store: String,
+        key: String,
+        defValue: Boolean? = null,
+    ): Boolean?
 
     /**
      * Retrieve a [Int] value identified by the [store] and [key] provided.
@@ -38,7 +46,11 @@ interface IPreferencesService {
      *
      * @return the value in the preference store, or [defValue] if not previously saved.
      */
-    fun getInt(store: String, key: String, defValue: Int? = null): Int?
+    fun getInt(
+        store: String,
+        key: String,
+        defValue: Int? = null,
+    ): Int?
 
     /**
      * Retrieve a [Long] value identified by the [store] and [key] provided.
@@ -49,7 +61,11 @@ interface IPreferencesService {
      *
      * @return the value in the preference store, or [defValue] if not previously saved.
      */
-    fun getLong(store: String, key: String, defValue: Long? = null): Long?
+    fun getLong(
+        store: String,
+        key: String,
+        defValue: Long? = null,
+    ): Long?
 
     /**
      * Retrieve a [Set] of [String] value identified by the [store] and [key] provided.
@@ -60,7 +76,11 @@ interface IPreferencesService {
      *
      * @return the value in the preference store, or [defValue] if not previously saved.
      */
-    fun getStringSet(store: String, key: String, defValue: Set<String>? = null): Set<String>?
+    fun getStringSet(
+        store: String,
+        key: String,
+        defValue: Set<String>? = null,
+    ): Set<String>?
 
     /**
      * Save a [String] value identified by the [store] and [key] provided.
@@ -69,7 +89,11 @@ interface IPreferencesService {
      * @param key The key to retrieve.
      * @param value The value to save.
      */
-    fun saveString(store: String, key: String, value: String?)
+    fun saveString(
+        store: String,
+        key: String,
+        value: String?,
+    )
 
     /**
      * Save a [Boolean] value identified by the [store] and [key] provided.
@@ -78,7 +102,11 @@ interface IPreferencesService {
      * @param key The key to retrieve.
      * @param value The value to save.
      */
-    fun saveBool(store: String, key: String, value: Boolean?)
+    fun saveBool(
+        store: String,
+        key: String,
+        value: Boolean?,
+    )
 
     /**
      * Save a [Int] value identified by the [store] and [key] provided.
@@ -87,7 +115,11 @@ interface IPreferencesService {
      * @param key The key to retrieve.
      * @param value The value to save.
      */
-    fun saveInt(store: String, key: String, value: Int?)
+    fun saveInt(
+        store: String,
+        key: String,
+        value: Int?,
+    )
 
     /**
      * Save a [Long] value identified by the [store] and [key] provided.
@@ -96,7 +128,11 @@ interface IPreferencesService {
      * @param key The key to retrieve.
      * @param value The value to save.
      */
-    fun saveLong(store: String, key: String, value: Long?)
+    fun saveLong(
+        store: String,
+        key: String,
+        value: Long?,
+    )
 
     /**
      * Save a [Set] of [String] value identified by the [store] and [key] provided.
@@ -105,7 +141,11 @@ interface IPreferencesService {
      * @param key The key to retrieve.
      * @param value The value to save.
      */
-    fun saveStringSet(store: String, key: String, value: Set<String>?)
+    fun saveStringSet(
+        store: String,
+        key: String,
+        value: Set<String>?,
+    )
 }
 
 object PreferenceStores {
@@ -122,6 +162,7 @@ object PreferenceStores {
 
 object PreferencePlayerPurchasesKeys {
     // Player Purchase Keys
+
     /**
      * (String) The purchase tokens that have been tracked.
      */
@@ -135,6 +176,7 @@ object PreferencePlayerPurchasesKeys {
 
 object PreferenceOneSignalKeys {
     // Legacy
+
     /**
      * (String) The legacy player ID from SDKs prior to 5.
      */
@@ -146,12 +188,14 @@ object PreferenceOneSignalKeys {
     const val PREFS_LEGACY_USER_SYNCVALUES = "ONESIGNAL_USERSTATE_SYNCVALYES_CURRENT_STATE"
 
     // Location
+
     /**
      * (Long) The last time the device location was captured, in Unix time milliseconds.
      */
     const val PREFS_OS_LAST_LOCATION_TIME = "OS_LAST_LOCATION_TIME"
 
     // Permissions
+
     /**
      * (Boolean) A prefix key for the permission state. When true, the user has rejected this
      * permission too many times and will not be prompted again.
@@ -159,6 +203,7 @@ object PreferenceOneSignalKeys {
     const val PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX = "USER_RESOLVED_PERMISSION_"
 
     // HTTP
+
     /**
      * (String) A prefix key for retrieving the ETAG for a given HTTP GET cache key. The cache
      * key should be appended to this prefix.
@@ -172,12 +217,14 @@ object PreferenceOneSignalKeys {
     const val PREFS_OS_HTTP_CACHE_PREFIX = "PREFS_OS_HTTP_CACHE_PREFIX_"
 
     // Outcomes
+
     /**
      * (String Set) The set of unattributed outcome events that have occurred to ensure uniqueness when requested.
      */
     const val PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT = "PREFS_OS_UNATTRIBUTED_UNIQUE_OUTCOME_EVENTS_SENT"
 
     // In-App Messaging
+
     /**
      * (String) The serialized IAMs TODO: This isn't currently used, determine if actually needed for cold start IAM fetch delay
      */
@@ -209,6 +256,7 @@ object PreferenceOneSignalKeys {
     const val PREFS_OS_IAM_LAST_DISMISSED_TIME = "PREFS_OS_IAM_LAST_DISMISSED_TIME"
 
     // Models
+
     /**
      * (String) A prefix key for retrieving a specific model store contents.  The name of the model
      * store should be appended to this prefix.

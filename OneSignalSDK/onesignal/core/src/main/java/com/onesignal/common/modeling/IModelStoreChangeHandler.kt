@@ -11,7 +11,10 @@ interface IModelStoreChangeHandler<TModel> where TModel : Model {
      * @param model The model that has been added.
      * @param tag The tag which identifies how/why the model was added.
      */
-    fun onModelAdded(model: TModel, tag: String)
+    fun onModelAdded(
+        model: TModel,
+        tag: String,
+    )
 
     /**
      * Called when a model has been updated.  This callback wraps [IModelChangedHandler.onChanged]
@@ -21,7 +24,10 @@ interface IModelStoreChangeHandler<TModel> where TModel : Model {
      * @param args The model changed arguments.
      * @param tag The tag which identifies how/why the model was updated.
      */
-    fun onModelUpdated(args: ModelChangedArgs, tag: String)
+    fun onModelUpdated(
+        args: ModelChangedArgs,
+        tag: String,
+    )
 
     /**
      * Called when a model has been removed from the model store.
@@ -29,5 +35,8 @@ interface IModelStoreChangeHandler<TModel> where TModel : Model {
      * @param model The model that has been removed.
      * @param tag The tag which identifies how/why the model was removed.
      */
-    fun onModelRemoved(model: TModel, tag: String)
+    fun onModelRemoved(
+        model: TModel,
+        tag: String,
+    )
 }

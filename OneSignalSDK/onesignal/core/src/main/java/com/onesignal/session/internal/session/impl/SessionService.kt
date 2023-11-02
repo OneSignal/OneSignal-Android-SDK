@@ -33,57 +33,56 @@ internal class SessionService(
     private val _sessionModelStore: SessionModelStore,
     private val _time: ITime,
 ) : ISessionService, IStartableService, IBackgroundService, IApplicationLifecycleHandler {
-
     override val startTime: Long
-        get() = _session!!.startTime
+        get() = session!!.startTime
 
     /**
      * Run in the background when the session would time out, only if a session is currently active.
      */
     override val scheduleBackgroundRunIn: Long?
-        get() = if (_session!!.isValid) _config!!.sessionFocusTimeout else null
+        get() = if (session!!.isValid) config!!.sessionFocusTimeout else null
 
-    private val _sessionLifeCycleNotifier: EventProducer<ISessionLifecycleHandler> = EventProducer()
-    private var _session: SessionModel? = null
-    private var _config: ConfigModel? = null
+    private val sessionLifeCycleNotifier: EventProducer<ISessionLifecycleHandler> = EventProducer()
+    private var session: SessionModel? = null
+    private var config: ConfigModel? = null
 
     override fun start() {
-        _session = _sessionModelStore.model
-        _config = _configModelStore.model
+        session = _sessionModelStore.model
+        config = _configModelStore.model
         _applicationService.addApplicationLifecycleHandler(this)
     }
 
     override suspend fun backgroundRun() {
         Logging.log(LogLevel.DEBUG, "SessionService.backgroundRun()")
 
-        if (!_session!!.isValid) {
+        if (!session!!.isValid) {
             return
         }
 
         // end the session
-        Logging.debug("SessionService: Session ended. activeDuration: ${_session!!.activeDuration}")
-        _session!!.isValid = false
-        _sessionLifeCycleNotifier.fire { it.onSessionEnded(_session!!.activeDuration) }
+        Logging.debug("SessionService: Session ended. activeDuration: ${session!!.activeDuration}")
+        session!!.isValid = false
+        sessionLifeCycleNotifier.fire { it.onSessionEnded(session!!.activeDuration) }
     }
 
     override fun onFocus() {
         Logging.log(LogLevel.DEBUG, "SessionService.onFocus()")
 
-        if (!_session!!.isValid) {
+        if (!session!!.isValid) {
             // As the old session was made inactive, we need to create a new session
-            _session!!.sessionId = UUID.randomUUID().toString()
-            _session!!.startTime = _time.currentTimeMillis
-            _session!!.focusTime = _session!!.startTime
-            _session!!.activeDuration = 0L
-            _session!!.isValid = true
+            session!!.sessionId = UUID.randomUUID().toString()
+            session!!.startTime = _time.currentTimeMillis
+            session!!.focusTime = session!!.startTime
+            session!!.activeDuration = 0L
+            session!!.isValid = true
 
-            Logging.debug("SessionService: New session started at ${_session!!.startTime}")
-            _sessionLifeCycleNotifier.fire { it.onSessionStarted() }
+            Logging.debug("SessionService: New session started at ${session!!.startTime}")
+            sessionLifeCycleNotifier.fire { it.onSessionStarted() }
         } else {
             // existing session: just remember the focus time so we can calculate the active time
             // when onUnfocused is called.
-            _session!!.focusTime = _time.currentTimeMillis
-            _sessionLifeCycleNotifier.fire { it.onSessionActive() }
+            session!!.focusTime = _time.currentTimeMillis
+            sessionLifeCycleNotifier.fire { it.onSessionActive() }
         }
     }
 
@@ -91,12 +90,14 @@ internal class SessionService(
         Logging.log(LogLevel.DEBUG, "SessionService.onUnfocused()")
 
         // capture the amount of time the app was focused
-        val dt = _time.currentTimeMillis - _session!!.focusTime
-        _session!!.activeDuration += dt
+        val dt = _time.currentTimeMillis - session!!.focusTime
+        session!!.activeDuration += dt
     }
 
-    override fun subscribe(handler: ISessionLifecycleHandler) = _sessionLifeCycleNotifier.subscribe(handler)
-    override fun unsubscribe(handler: ISessionLifecycleHandler) = _sessionLifeCycleNotifier.unsubscribe(handler)
+    override fun subscribe(handler: ISessionLifecycleHandler) = sessionLifeCycleNotifier.subscribe(handler)
+
+    override fun unsubscribe(handler: ISessionLifecycleHandler) = sessionLifeCycleNotifier.unsubscribe(handler)
+
     override val hasSubscribers: Boolean
-        get() = _sessionLifeCycleNotifier.hasSubscribers
+        get() = sessionLifeCycleNotifier.hasSubscribers
 }

@@ -10,9 +10,15 @@ import org.json.JSONObject
 internal class IdentityBackendService(
     private val _httpClient: IHttpClient,
 ) : IIdentityBackendService {
-    override suspend fun setAlias(appId: String, aliasLabel: String, aliasValue: String, identities: Map<String, String>): Map<String, String> {
-        val requestJSONObject = JSONObject()
-            .put("identity", JSONObject().putMap(identities))
+    override suspend fun setAlias(
+        appId: String,
+        aliasLabel: String,
+        aliasValue: String,
+        identities: Map<String, String>,
+    ): Map<String, String> {
+        val requestJSONObject =
+            JSONObject()
+                .put("identity", JSONObject().putMap(identities))
 
         val response = _httpClient.patch("apps/$appId/users/by/$aliasLabel/$aliasValue/identity", requestJSONObject)
 
@@ -25,7 +31,12 @@ internal class IdentityBackendService(
         return responseJSON.getJSONObject("identity").toMap().mapValues { it.value.toString() }
     }
 
-    override suspend fun deleteAlias(appId: String, aliasLabel: String, aliasValue: String, aliasLabelToDelete: String) {
+    override suspend fun deleteAlias(
+        appId: String,
+        aliasLabel: String,
+        aliasValue: String,
+        aliasLabelToDelete: String,
+    ) {
         val response = _httpClient.delete("apps/$appId/users/by/$aliasLabel/$aliasValue/identity/$aliasLabelToDelete")
 
         if (!response.isSuccess) {

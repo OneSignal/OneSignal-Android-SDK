@@ -113,13 +113,19 @@ fun JSONObject.toMap(): Map<String, Any> {
  * @param into The lambda method that will be executed to explore the [JSONObject] value, if the
  * attribute exists.
  */
-fun JSONObject.expandJSONObject(name: String, into: (childObject: JSONObject) -> Unit) {
+fun JSONObject.expandJSONObject(
+    name: String,
+    into: (childObject: JSONObject) -> Unit,
+) {
     if (this.has(name)) {
         into(this.getJSONObject(name))
     }
 }
 
-fun <T> JSONObject.expandJSONArray(name: String, into: (childObject: JSONObject) -> T?): List<T> {
+fun <T> JSONObject.expandJSONArray(
+    name: String,
+    into: (childObject: JSONObject) -> T?,
+): List<T> {
     val listToRet = mutableListOf<T>()
     if (this.has(name)) {
         val jsonArray = this.getJSONArray(name)
@@ -158,7 +164,10 @@ fun JSONObject.putMap(map: Map<String, Any?>): JSONObject {
  *
  * @return The [JSONObject] itself, to allow for chaining.
  */
-fun JSONObject.putMap(name: String, map: Map<String, Any?>?): JSONObject {
+fun JSONObject.putMap(
+    name: String,
+    map: Map<String, Any?>?,
+): JSONObject {
     if (map != null) {
         this.putJSONObject(name) {
             it.putMap(map)
@@ -177,7 +186,10 @@ fun JSONObject.putMap(name: String, map: Map<String, Any?>?): JSONObject {
  *
  * @return The [JSONObject] itself, to allow for chaining.
  */
-fun JSONObject.putJSONObject(name: String, expand: (item: JSONObject) -> Unit): JSONObject {
+fun JSONObject.putJSONObject(
+    name: String,
+    expand: (item: JSONObject) -> Unit,
+): JSONObject {
     val childJSONObject = JSONObject()
     expand(childJSONObject)
 
@@ -194,7 +206,11 @@ fun JSONObject.putJSONObject(name: String, expand: (item: JSONObject) -> Unit): 
  * @param list: The list of items that will be converted into the [JSONArray].
  * @param create: The lambda that will be called for each item in [list], expecting a [JSONObject] to be added to the array.
  */
-fun <T> JSONObject.putJSONArray(name: String, list: List<T>?, create: (item: T) -> JSONObject?): JSONObject {
+fun <T> JSONObject.putJSONArray(
+    name: String,
+    list: List<T>?,
+    create: (item: T) -> JSONObject?,
+): JSONObject {
     if (list != null) {
         val jsonArray = JSONArray()
         list.forEach {
@@ -218,7 +234,10 @@ fun <T> JSONObject.putJSONArray(name: String, list: List<T>?, create: (item: T) 
  *
  * @return The [JSONObject] itself, to allow for chaining.
  */
-fun JSONObject.putSafe(name: String, value: Any?): JSONObject {
+fun JSONObject.putSafe(
+    name: String,
+    value: Any?,
+): JSONObject {
     if (value != null) {
         this.put(name, value)
     }

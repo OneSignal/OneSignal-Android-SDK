@@ -23,7 +23,6 @@ internal class PushRegistratorFCM(
     upgradePrompt: GooglePlayServicesUpgradePrompt,
     deviceService: IDeviceService,
 ) : PushRegistratorAbstractGoogle(deviceService, _configModelStore, upgradePrompt) {
-
     companion object {
         private const val FCM_APP_NAME = "ONESIGNAL_SDK_FCM_APP_NAME"
 
@@ -75,72 +74,76 @@ internal class PushRegistratorFCM(
     //   - This version of Firebase has completely removed FirebaseInstanceId
     @Deprecated("")
     @Throws(IOException::class)
-    private suspend fun getTokenWithClassFirebaseInstanceId(senderId: String): String = coroutineScope {
-        var token: String = ""
-        // The following code is equivalent to:
-        //   FirebaseInstanceId instanceId = FirebaseInstanceId.getInstance(firebaseApp);
-        //   return instanceId.getToken(senderId, FirebaseMessaging.INSTANCE_ID_SCOPE);
-        val exception: Exception = try {
-            val firebaseInstanceIdClass = Class.forName("com.google.firebase.iid.FirebaseInstanceId")
-            val getInstanceMethod = firebaseInstanceIdClass.getMethod("getInstance", FirebaseApp::class.java)
-            val instanceId = getInstanceMethod.invoke(null, firebaseApp)
-            val getTokenMethod = instanceId.javaClass.getMethod("getToken", String::class.java, String::class.java)
+    private suspend fun getTokenWithClassFirebaseInstanceId(senderId: String): String =
+        coroutineScope {
+            var token: String = ""
+            // The following code is equivalent to:
+            //   FirebaseInstanceId instanceId = FirebaseInstanceId.getInstance(firebaseApp);
+            //   return instanceId.getToken(senderId, FirebaseMessaging.INSTANCE_ID_SCOPE);
+            val exception: Exception =
+                try {
+                    val firebaseInstanceIdClass = Class.forName("com.google.firebase.iid.FirebaseInstanceId")
+                    val getInstanceMethod = firebaseInstanceIdClass.getMethod("getInstance", FirebaseApp::class.java)
+                    val instanceId = getInstanceMethod.invoke(null, firebaseApp)
+                    val getTokenMethod = instanceId.javaClass.getMethod("getToken", String::class.java, String::class.java)
 
-            launch(Dispatchers.Default) {
-                val tkn = getTokenMethod.invoke(instanceId, senderId, "FCM")
-                token = tkn as String
-            }
+                    launch(Dispatchers.Default) {
+                        val tkn = getTokenMethod.invoke(instanceId, senderId, "FCM")
+                        token = tkn as String
+                    }
 
-            return@coroutineScope token
-        } catch (e: ClassNotFoundException) {
-            e
-        } catch (e: NoSuchMethodException) {
-            e
-        } catch (e: IllegalAccessException) {
-            e
-        } catch (e: InvocationTargetException) {
-            e
+                    return@coroutineScope token
+                } catch (e: ClassNotFoundException) {
+                    e
+                } catch (e: NoSuchMethodException) {
+                    e
+                } catch (e: IllegalAccessException) {
+                    e
+                } catch (e: InvocationTargetException) {
+                    e
+                }
+
+            throw Error(
+                "Reflection error on FirebaseInstanceId.getInstance(firebaseApp).getToken(senderId, FirebaseMessaging.INSTANCE_ID_SCOPE)",
+                exception,
+            )
         }
-
-        throw Error(
-            "Reflection error on FirebaseInstanceId.getInstance(firebaseApp).getToken(senderId, FirebaseMessaging.INSTANCE_ID_SCOPE)",
-            exception,
-        )
-    }
 
     // We use firebaseApp.get(FirebaseMessaging.class) instead of FirebaseMessaging.getInstance()
     //   as the latter uses the default Firebase app. We need to use a custom Firebase app as
     //   the senderId is provided at runtime.
     @Throws(ExecutionException::class, InterruptedException::class)
-    private suspend fun getTokenWithClassFirebaseMessaging(): String = coroutineScope {
-        var token: String = ""
+    private suspend fun getTokenWithClassFirebaseMessaging(): String =
+        coroutineScope {
+            var token: String = ""
 
-        withContext(Dispatchers.Default) {
-            // FirebaseMessaging.getToken API was introduced in firebase-messaging:21.0.0
-            // We use firebaseApp.get(FirebaseMessaging.class) instead of FirebaseMessaging.getInstance()
-            //   as the latter uses the default Firebase app. We need to use a custom Firebase app as
-            //   the senderId is provided at runtime.
-            val fcmInstance = firebaseApp!!.get(FirebaseMessaging::class.java)
-            // FirebaseMessaging.getToken API was introduced in firebase-messaging:21.0.0
-            val tokenTask = fcmInstance.token
-            try {
-                token = Tasks.await(tokenTask)
-            } catch (e: ExecutionException) {
-                throw tokenTask.exception
+            withContext(Dispatchers.Default) {
+                // FirebaseMessaging.getToken API was introduced in firebase-messaging:21.0.0
+                // We use firebaseApp.get(FirebaseMessaging.class) instead of FirebaseMessaging.getInstance()
+                //   as the latter uses the default Firebase app. We need to use a custom Firebase app as
+                //   the senderId is provided at runtime.
+                val fcmInstance = firebaseApp!!.get(FirebaseMessaging::class.java)
+                // FirebaseMessaging.getToken API was introduced in firebase-messaging:21.0.0
+                val tokenTask = fcmInstance.token
+                try {
+                    token = Tasks.await(tokenTask)
+                } catch (e: ExecutionException) {
+                    throw tokenTask.exception
+                }
             }
-        }
 
-        return@coroutineScope token
-    }
+            return@coroutineScope token
+        }
 
     private fun initFirebaseApp(senderId: String) {
         if (firebaseApp != null) return
-        val firebaseOptions = FirebaseOptions.Builder()
-            .setGcmSenderId(senderId)
-            .setApplicationId(appId)
-            .setApiKey(apiKey)
-            .setProjectId(projectId)
-            .build()
+        val firebaseOptions =
+            FirebaseOptions.Builder()
+                .setGcmSenderId(senderId)
+                .setApplicationId(appId)
+                .setApiKey(apiKey)
+                .setProjectId(projectId)
+                .build()
         firebaseApp = FirebaseApp.initializeApp(_applicationService.appContext, firebaseOptions, FCM_APP_NAME)
     }
 }

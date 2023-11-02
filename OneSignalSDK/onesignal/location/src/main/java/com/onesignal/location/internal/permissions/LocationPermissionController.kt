@@ -52,16 +52,19 @@ internal class LocationPermissionController(
         private const val PERMISSION_TYPE = "LOCATION"
     }
 
-    private val _waiter = WaiterWithValue<Boolean>()
-    private val _events = EventProducer<ILocationPermissionChangedHandler>()
-    private var _currPermission: String = ""
+    private val waiter = WaiterWithValue<Boolean>()
+    private val events = EventProducer<ILocationPermissionChangedHandler>()
+    private var currPermission: String = ""
 
     override fun start() {
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)
     }
 
-    suspend fun prompt(fallbackToSettings: Boolean, androidPermissionString: String): Boolean {
-        _currPermission = androidPermissionString
+    suspend fun prompt(
+        fallbackToSettings: Boolean,
+        androidPermissionString: String,
+    ): Boolean {
+        currPermission = androidPermissionString
         _requestPermission.startPrompt(
             fallbackToSettings,
             PERMISSION_TYPE,
@@ -71,12 +74,12 @@ internal class LocationPermissionController(
 
         // this won't return until onAccept or onReject sends the response on the channel (either
         // through the native prompt or through the fallback)
-        return _waiter.waitForWake()
+        return waiter.waitForWake()
     }
 
     override fun onAccept() {
-        _waiter.wake(true)
-        _events.fire { it.onLocationPermissionChanged(true) }
+        waiter.wake(true)
+        events.fire { it.onLocationPermissionChanged(true) }
     }
 
     override fun onReject(fallbackToSettings: Boolean) {
@@ -88,8 +91,8 @@ internal class LocationPermissionController(
             }
 
         if (!fallbackShown) {
-            _waiter.wake(false)
-            _events.fire { it.onLocationPermissionChanged(false) }
+            waiter.wake(false)
+            events.fire { it.onLocationPermissionChanged(false) }
         }
     }
 
@@ -102,28 +105,33 @@ internal class LocationPermissionController(
             object : AlertDialogPrepromptForAndroidSettings.Callback {
                 override fun onAccept() {
                     // wait for focus to be regained, and check the current permission status.
-                    _applicationService.addApplicationLifecycleHandler(object : ApplicationLifecycleHandlerBase() {
-                        override fun onFocus() {
-                            super.onFocus()
-                            _applicationService.removeApplicationLifecycleHandler(this)
-                            val hasPermission = AndroidUtils.hasPermission(_currPermission, true, _applicationService)
-                            _waiter.wake(hasPermission)
-                            _events.fire { it.onLocationPermissionChanged(hasPermission) }
-                        }
-                    })
+                    _applicationService.addApplicationLifecycleHandler(
+                        object : ApplicationLifecycleHandlerBase() {
+                            override fun onFocus() {
+                                super.onFocus()
+                                _applicationService.removeApplicationLifecycleHandler(this)
+                                val hasPermission = AndroidUtils.hasPermission(currPermission, true, _applicationService)
+                                waiter.wake(hasPermission)
+                                events.fire { it.onLocationPermissionChanged(hasPermission) }
+                            }
+                        },
+                    )
                     NavigateToAndroidSettingsForLocation.show(activity)
                 }
+
                 override fun onDecline() {
-                    _waiter.wake(false)
-                    _events.fire { it.onLocationPermissionChanged(false) }
+                    waiter.wake(false)
+                    events.fire { it.onLocationPermissionChanged(false) }
                 }
             },
         )
         return true
     }
 
-    override fun subscribe(handler: ILocationPermissionChangedHandler) = _events.subscribe(handler)
-    override fun unsubscribe(handler: ILocationPermissionChangedHandler) = _events.subscribe(handler)
+    override fun subscribe(handler: ILocationPermissionChangedHandler) = events.subscribe(handler)
+
+    override fun unsubscribe(handler: ILocationPermissionChangedHandler) = events.subscribe(handler)
+
     override val hasSubscribers: Boolean
-        get() = _events.hasSubscribers
+        get() = events.hasSubscribers
 }

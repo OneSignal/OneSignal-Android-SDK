@@ -27,13 +27,14 @@ internal class LocationModule : IModule {
 
         builder.register {
             val deviceService = it.getService(IDeviceService::class.java)
-            val service = if (deviceService.isAndroidDeviceType && LocationUtils.hasGMSLocationLibrary()) {
-                GmsLocationController(it.getService(IApplicationService::class.java))
-            } else if (deviceService.isHuaweiDeviceType && LocationUtils.hasHMSLocationLibrary()) {
-                HmsLocationController(it.getService(IApplicationService::class.java))
-            } else {
-                NullLocationController()
-            }
+            val service =
+                if (deviceService.isAndroidDeviceType && LocationUtils.hasGMSLocationLibrary()) {
+                    GmsLocationController(it.getService(IApplicationService::class.java))
+                } else if (deviceService.isHuaweiDeviceType && LocationUtils.hasHMSLocationLibrary()) {
+                    HmsLocationController(it.getService(IApplicationService::class.java))
+                } else {
+                    NullLocationController()
+                }
             return@register service
         }.provides<ILocationController>()
 

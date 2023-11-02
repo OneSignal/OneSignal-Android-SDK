@@ -12,12 +12,13 @@ class NotificationGenerationJob(
 ) {
     val notification: Notification = inNotification.setAndroidNotificationId()
 
-    private fun Notification.setAndroidNotificationId() = this.also {
-        // If there is no android ID on the notification coming in, generate a new one.
-        if (it != null && !it.hasNotificationId()) {
-            it.androidNotificationId = SecureRandom().nextInt()
+    private fun Notification.setAndroidNotificationId() =
+        this.also {
+            // If there is no android ID on the notification coming in, generate a new one.
+            if (it != null && !it.hasNotificationId()) {
+                it.androidNotificationId = SecureRandom().nextInt()
+            }
         }
-    }
 
     var isRestoring = false
     var isNotificationToDisplay = false

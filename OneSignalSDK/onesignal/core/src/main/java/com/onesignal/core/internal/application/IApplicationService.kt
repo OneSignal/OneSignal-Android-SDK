@@ -8,7 +8,6 @@ import android.content.Context
  * information and subscribe to application events.
  */
 interface IApplicationService {
-
     /**
      * The application context
      */

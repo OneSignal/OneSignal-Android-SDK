@@ -7,7 +7,10 @@ import com.onesignal.session.internal.influence.InfluenceType
 import org.json.JSONArray
 import org.json.JSONException
 
-internal class InAppMessageTracker(dataRepository: InfluenceDataRepository, timeProvider: ITime) : ChannelTracker(dataRepository, timeProvider) {
+internal class InAppMessageTracker(dataRepository: InfluenceDataRepository, timeProvider: ITime) : ChannelTracker(
+    dataRepository,
+    timeProvider,
+) {
     override val idTag: String
         get() = InfluenceConstants.IAM_ID_TAG
 
@@ -16,12 +19,13 @@ internal class InAppMessageTracker(dataRepository: InfluenceDataRepository, time
 
     override fun getLastChannelObjectsReceivedByNewId(id: String?): JSONArray {
         var lastChannelObjectReceived: JSONArray
-        lastChannelObjectReceived = try {
-            lastChannelObjects
-        } catch (exception: JSONException) {
-            Logging.error("Generating IAM tracker getLastChannelObjects JSONObject ", exception)
-            return JSONArray()
-        }
+        lastChannelObjectReceived =
+            try {
+                lastChannelObjects
+            } catch (exception: JSONException) {
+                Logging.error("Generating IAM tracker getLastChannelObjects JSONObject ", exception)
+                return JSONArray()
+            }
         // For IAM we handle redisplay, we need to remove duplicates for new influence Id
         // If min sdk is greater than KITKAT we can refactor this logic to removeObject from JSONArray
         try {
@@ -54,9 +58,10 @@ internal class InAppMessageTracker(dataRepository: InfluenceDataRepository, time
     }
 
     override fun initInfluencedTypeFromCache() {
-        influenceType = dataRepository.iamCachedInfluenceType.also {
-            if (it.isIndirect()) indirectIds = lastReceivedIds
-        }
+        influenceType =
+            dataRepository.iamCachedInfluenceType.also {
+                if (it.isIndirect()) indirectIds = lastReceivedIds
+            }
         Logging.debug("InAppMessageTracker.initInfluencedTypeFromCache: $this")
     }
 
@@ -65,6 +70,8 @@ internal class InAppMessageTracker(dataRepository: InfluenceDataRepository, time
         // DIRECT is downgrade to INDIRECT to avoid inconsistency state
         // where the app might be close before dismissing current displayed IAM
         val influenceTypeToCache = influenceType ?: InfluenceType.UNATTRIBUTED
-        dataRepository.cacheIAMInfluenceType(if (influenceTypeToCache === InfluenceType.DIRECT) InfluenceType.INDIRECT else influenceTypeToCache)
+        dataRepository.cacheIAMInfluenceType(
+            if (influenceTypeToCache === InfluenceType.DIRECT) InfluenceType.INDIRECT else influenceTypeToCache,
+        )
     }
 }

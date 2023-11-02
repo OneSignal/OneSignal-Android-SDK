@@ -24,7 +24,10 @@ import org.json.JSONArray
 import org.json.JSONException
 
 interface INotificationActivityOpener {
-    suspend fun openDestinationActivity(activity: Activity, pushPayloads: JSONArray)
+    suspend fun openDestinationActivity(
+        activity: Activity,
+        pushPayloads: JSONArray,
+    )
 }
 
 /**
@@ -42,13 +45,12 @@ internal class NotificationsManager(
     INotificationActivityOpener,
     INotificationPermissionChangedHandler,
     IApplicationLifecycleHandler {
-
     override var permission: Boolean = NotificationHelper.areNotificationsEnabled(_applicationService.appContext)
 
     override val canRequestPermission: Boolean
         get() = _notificationPermissionController.canRequestPermission
 
-    private val _permissionChangedNotifier = EventProducer<IPermissionObserver>()
+    private val permissionChangedNotifier = EventProducer<IPermissionObserver>()
 
     init {
         _applicationService.addApplicationLifecycleHandler(this)
@@ -98,7 +100,7 @@ internal class NotificationsManager(
 
         if (oldPermissionStatus != isEnabled) {
             // switch over to the main thread for the firing of the event
-            _permissionChangedNotifier.fireOnMain { it.onNotificationPermissionChange(isEnabled) }
+            permissionChangedNotifier.fireOnMain { it.onNotificationPermissionChange(isEnabled) }
         }
     }
 
@@ -130,12 +132,12 @@ internal class NotificationsManager(
 
     override fun addPermissionObserver(observer: IPermissionObserver) {
         Logging.debug("NotificationsManager.addPermissionObserver(observer: $observer)")
-        _permissionChangedNotifier.subscribe(observer)
+        permissionChangedNotifier.subscribe(observer)
     }
 
     override fun removePermissionObserver(observer: IPermissionObserver) {
         Logging.debug("NotificationsManager.removePermissionObserver(observer: $observer)")
-        _permissionChangedNotifier.unsubscribe(observer)
+        permissionChangedNotifier.unsubscribe(observer)
     }
 
     override fun addForegroundLifecycleListener(listener: INotificationLifecycleListener) {
@@ -158,7 +160,10 @@ internal class NotificationsManager(
         _notificationLifecycleService.removeExternalClickListener(listener)
     }
 
-    override suspend fun openDestinationActivity(activity: Activity, pushPayloads: JSONArray) {
+    override suspend fun openDestinationActivity(
+        activity: Activity,
+        pushPayloads: JSONArray,
+    ) {
         try {
             // Always use the top most notification if user tapped on the summary notification
             val firstPayloadItem = pushPayloads.getJSONObject(0)

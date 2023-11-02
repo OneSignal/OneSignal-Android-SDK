@@ -21,5 +21,6 @@ internal interface IInAppPreferencesController {
      * @see InAppPreferencesController.cleanCachedInAppMessages
      */
     fun cleanInAppMessageIds(oldMessageIds: Set<String>?)
+
     fun cleanInAppMessageClickedClickIds(oldClickedClickIds: Set<String>?)
 }

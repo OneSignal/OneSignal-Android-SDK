@@ -14,7 +14,10 @@ interface IParamsBackendService {
      *
      * @return The configuration parameters.
      */
-    suspend fun fetchParams(appId: String, subscriptionId: String?): ParamsObject
+    suspend fun fetchParams(
+        appId: String,
+        subscriptionId: String?,
+    ): ParamsObject
 }
 
 class ParamsObject(

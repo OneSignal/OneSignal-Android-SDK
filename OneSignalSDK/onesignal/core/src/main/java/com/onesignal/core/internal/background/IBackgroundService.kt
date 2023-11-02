@@ -9,7 +9,6 @@ import androidx.annotation.WorkerThread
  * service's [scheduleBackgroundRunIn] will be analyzed to determine when [backgroundRun] should be called.
  */
 interface IBackgroundService {
-
     /**
      * When this background service should be run, in milliseconds. If null, this service does not
      * need to be run in the background.

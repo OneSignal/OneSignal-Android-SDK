@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
 class UserManagerTests : FunSpec({
 
     test("language is backed by the language context") {
-        /* Given */
+        // Given
         val mockSubscriptionManager = mockk<ISubscriptionManager>()
         val languageContext = mockk<ILanguageContext>()
 
@@ -27,42 +27,47 @@ class UserManagerTests : FunSpec({
         every { languageContext.language } returns "custom-language"
         every { languageContext.language = capture(languageSlot) } answers { }
 
-        val userManager = UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), languageContext)
+        val userManager =
+            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), languageContext)
 
-        /* When */
+        // When
         userManager.setLanguage("new-language")
 
-        /* Then */
+        // Then
         languageSlot.captured shouldBe "new-language"
     }
 
     test("externalId is backed by the identity model") {
-        /* Given */
+        // Given
         val mockSubscriptionManager = mockk<ISubscriptionManager>()
-        val identityModelStore = MockHelper.identityModelStore {
-            it.externalId = "my-external-id"
-        }
+        val identityModelStore =
+            MockHelper.identityModelStore {
+                it.externalId = "my-external-id"
+            }
 
-        val userManager = UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.languageContext())
+        val userManager =
+            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.languageContext())
 
-        /* When */
+        // When
         val externalId = userManager.externalId
 
-        /* Then */
+        // Then
         externalId shouldBe "my-external-id"
     }
 
     test("aliases are backed by the identity model") {
-        /* Given */
+        // Given
         val mockSubscriptionManager = mockk<ISubscriptionManager>()
-        val identityModelStore = MockHelper.identityModelStore {
-            it["my-alias-key1"] = "my-alias-value1"
-            it["my-alias-key2"] = "my-alias-value2"
-        }
+        val identityModelStore =
+            MockHelper.identityModelStore {
+                it["my-alias-key1"] = "my-alias-value1"
+                it["my-alias-key2"] = "my-alias-value2"
+            }
 
-        val userManager = UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.languageContext())
+        val userManager =
+            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.languageContext())
 
-        /* When */
+        // When
         val alias1 = userManager.aliases["my-alias-key1"]
         val alias2 = userManager.aliases["my-alias-key2"]
 
@@ -77,7 +82,7 @@ class UserManagerTests : FunSpec({
         // remove
         userManager.removeAlias("my-alias-key1")
 
-        /* Then */
+        // Then
         alias1 shouldBe "my-alias-value1"
         alias2 shouldBe "my-alias-value2"
         identityModelStore.model["my-alias-key3"] shouldBe "my-alias-value3"
@@ -88,18 +93,20 @@ class UserManagerTests : FunSpec({
     }
 
     test("tags are backed by the properties model") {
-        /* Given */
+        // Given
         val mockSubscriptionManager = mockk<ISubscriptionManager>()
-        val propertiesModelStore = MockHelper.propertiesModelStore() {
-            it.tags["my-tag-key1"] = "my-tag-value1"
-            it.tags["my-tag-key2"] = "my-tag-value2"
-            it.tags["my-tag-key3"] = "my-tag-value3"
-            it.tags["my-tag-key4"] = "my-tag-value4"
-        }
+        val propertiesModelStore =
+            MockHelper.propertiesModelStore {
+                it.tags["my-tag-key1"] = "my-tag-value1"
+                it.tags["my-tag-key2"] = "my-tag-value2"
+                it.tags["my-tag-key3"] = "my-tag-value3"
+                it.tags["my-tag-key4"] = "my-tag-value4"
+            }
 
-        val userManager = UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext())
+        val userManager =
+            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext())
 
-        /* When */
+        // When
         val tag1 = userManager.tags["my-tag-key1"]
         val tag2 = userManager.tags["my-tag-key2"]
 
@@ -115,7 +122,7 @@ class UserManagerTests : FunSpec({
         userManager.removeTag("my-tag-key1")
         userManager.removeTags(listOf("my-tag-key2", "my-tag-key3"))
 
-        /* Then */
+        // Then
         tag1 shouldBe "my-tag-value1"
         tag2 shouldBe "my-tag-value2"
         propertiesModelStore.model.tags["my-tag-key4"] shouldBe "my-tag-value4"
@@ -129,7 +136,7 @@ class UserManagerTests : FunSpec({
     }
 
     test("subscriptions are backed by the subscriptions manager") {
-        /* Given */
+        // Given
         val subscriptionList = SubscriptionList(listOf(), UninitializedPushSubscription())
         val mockSubscriptionManager = mockk<ISubscriptionManager>()
         every { mockSubscriptionManager.subscriptions } returns subscriptionList
@@ -138,9 +145,15 @@ class UserManagerTests : FunSpec({
         every { mockSubscriptionManager.addSmsSubscription(any()) } just runs
         every { mockSubscriptionManager.removeSmsSubscription(any()) } just runs
 
-        val userManager = UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), MockHelper.languageContext())
+        val userManager =
+            UserManager(
+                mockSubscriptionManager,
+                MockHelper.identityModelStore(),
+                MockHelper.propertiesModelStore(),
+                MockHelper.languageContext(),
+            )
 
-        /* When */
+        // When
         val subscriptions = userManager.subscriptions
         userManager.addEmail("email@co.com")
         userManager.removeEmail("email@co.com")
@@ -148,7 +161,7 @@ class UserManagerTests : FunSpec({
         userManager.addSms("+15558675309")
         userManager.removeSms("+15558675309")
 
-        /* Then */
+        // Then
         subscriptions shouldBe subscriptionList
         verify(exactly = 1) { mockSubscriptionManager.addEmailSubscription("email@co.com") }
         verify(exactly = 1) { mockSubscriptionManager.removeEmailSubscription("email@co.com") }
