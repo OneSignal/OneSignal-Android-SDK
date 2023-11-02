@@ -23,9 +23,6 @@ internal open class UserManager(
     val externalId: String?
         get() = _identityModel.externalId
 
-    val tags: Map<String, String>
-        get() = _propertiesModel.tags
-
     val aliases: Map<String, String>
         get() = _identityModel.filter { it.key != IdentityModel::id.name }.toMap()
 
