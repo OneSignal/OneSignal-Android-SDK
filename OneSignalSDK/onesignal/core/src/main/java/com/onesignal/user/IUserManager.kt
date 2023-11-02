@@ -133,4 +133,9 @@ interface IUserManager {
      * @param keys The collection of keys, all of which will be removed from the current user.
      */
     fun removeTags(keys: Collection<String>)
+
+    /**
+     * Return a copy of all local tags from the current user.
+     */
+    fun getTags() : Map<String, String>
 }
