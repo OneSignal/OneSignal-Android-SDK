@@ -38,18 +38,20 @@ class Influence {
     val directId: String?
         get() = ids?.let { if (it.length() > 0) it.getString(0) else null }
 
-    fun copy() = Influence(
-        influenceChannel = this@Influence.influenceChannel,
-        influenceType = this@Influence.influenceType,
-        ids = this@Influence.ids,
-    )
+    fun copy() =
+        Influence(
+            influenceChannel = this@Influence.influenceChannel,
+            influenceType = this@Influence.influenceType,
+            ids = this@Influence.ids,
+        )
 
     @Throws(JSONException::class)
-    fun toJSONString() = JSONObject()
-        .put(INFLUENCE_CHANNEL, influenceChannel.toString())
-        .put(INFLUENCE_TYPE, influenceType.toString())
-        .put(INFLUENCE_IDS, if (ids != null) ids.toString() else "")
-        .toString()
+    fun toJSONString() =
+        JSONObject()
+            .put(INFLUENCE_CHANNEL, influenceChannel.toString())
+            .put(INFLUENCE_TYPE, influenceType.toString())
+            .put(INFLUENCE_IDS, if (ids != null) ids.toString() else "")
+            .toString()
 
     override fun toString(): String {
         return "SessionInfluence{" +

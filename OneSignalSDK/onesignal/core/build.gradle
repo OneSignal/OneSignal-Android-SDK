@@ -2,7 +2,6 @@ plugins {
     id 'com.android.library'
     id 'kotlin-android'
     id 'org.jlleitschuh.gradle.ktlint'
-    id 'io.gitlab.arturbosch.detekt'
 }
 
 android {
@@ -94,6 +93,9 @@ dependencies {
 
 ktlint {
     version = "$ktlintVersion"
+    additionalEditorconfig = [
+        "max_line_length": "500",
+    ]
 }
 
 apply from: '../maven-push.gradle'

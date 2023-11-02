@@ -21,7 +21,6 @@ internal abstract class SingletonModelStoreListener<TModel>(
     private val store: ISingletonModelStore<TModel>,
     private val opRepo: IOperationRepo,
 ) : ISingletonModelStoreChangeHandler<TModel>, IBootstrapService, Closeable where TModel : Model {
-
     override fun bootstrap() {
         store.subscribe(this)
     }
@@ -30,7 +29,10 @@ internal abstract class SingletonModelStoreListener<TModel>(
         store.unsubscribe(this)
     }
 
-    override fun onModelReplaced(model: TModel, tag: String) {
+    override fun onModelReplaced(
+        model: TModel,
+        tag: String,
+    ) {
         if (tag != ModelChangeTags.NORMAL) {
             return
         }
@@ -41,7 +43,10 @@ internal abstract class SingletonModelStoreListener<TModel>(
         }
     }
 
-    override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
+    override fun onModelUpdated(
+        args: ModelChangedArgs,
+        tag: String,
+    ) {
         if (tag != ModelChangeTags.NORMAL) {
             return
         }
@@ -64,5 +69,11 @@ internal abstract class SingletonModelStoreListener<TModel>(
      *
      * @return The operation to enqueue when the model has been updated, or null if no operation should be enqueued.
      */
-    abstract fun getUpdateOperation(model: TModel, path: String, property: String, oldValue: Any?, newValue: Any?): Operation?
+    abstract fun getUpdateOperation(
+        model: TModel,
+        path: String,
+        property: String,
+        oldValue: Any?,
+        newValue: Any?,
+    ): Operation?
 }

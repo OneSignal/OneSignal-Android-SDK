@@ -5,14 +5,16 @@ package com.onesignal.common.modeling
  * be notified when the [Model] has changed.
  */
 interface IModelChangedHandler {
-
     /**
      * Called when the subscribed model has been changed.
      *
      * @param args Information related to what has changed.
      * @param tag The tag which identifies how/why the model was changed.
      */
-    fun onChanged(args: ModelChangedArgs, tag: String)
+    fun onChanged(
+        args: ModelChangedArgs,
+        tag: String,
+    )
 }
 
 /**
@@ -23,7 +25,6 @@ class ModelChangedArgs(
      * The full model in its current state.
      */
     val model: Model,
-
     /**
      * The path to the property, from the root [Model], that has changed.  When the root model has
      * changed, [path] and [property] will be identical.  When it's a nested property that
@@ -35,17 +36,14 @@ class ModelChangedArgs(
      *
      */
     val path: String,
-
     /**
      * The property that was changed.
      */
     val property: String,
-
     /**
      * The old value of the property, prior to it being changed.
      */
     val oldValue: Any?,
-
     /**
      * The new value of the property, after it has been changed.
      */

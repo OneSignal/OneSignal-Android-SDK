@@ -7,11 +7,17 @@ internal class DatabaseCursor(
     private val _cursor: Cursor,
 ) : ICursor {
     override val count: Int get() = _cursor.count
+
     override fun moveToFirst(): Boolean = _cursor.moveToFirst()
+
     override fun moveToNext(): Boolean = _cursor.moveToNext()
+
     override fun getString(column: String): String = _cursor.getString(_cursor.getColumnIndex(column))
+
     override fun getFloat(column: String): Float = _cursor.getFloat(_cursor.getColumnIndex(column))
+
     override fun getLong(column: String): Long = _cursor.getLong(_cursor.getColumnIndex(column))
+
     override fun getInt(column: String): Int = _cursor.getInt(_cursor.getColumnIndex(column))
 
     override fun getOptString(column: String): String? {

@@ -61,7 +61,9 @@ internal abstract class PushRegistratorAbstractGoogle(
         }
 
         return if (!isValidProjectNumber(_configModelStore.model.googleProjectNumber)) {
-            Logging.error("Missing Google Project number!\nPlease enter a Google Project number / Sender ID on under App Settings > Android > Configuration on the OneSignal dashboard.")
+            Logging.error(
+                "Missing Google Project number!\nPlease enter a Google Project number / Sender ID on under App Settings > Android > Configuration on the OneSignal dashboard.",
+            )
             IPushRegistrator.RegisterResult(
                 null,
                 SubscriptionStatus.INVALID_FCM_SENDER_ID,
@@ -117,7 +119,10 @@ internal abstract class PushRegistratorAbstractGoogle(
         )
     }
 
-    private suspend fun attemptRegistration(senderId: String, currentRetry: Int): IPushRegistrator.RegisterResult? {
+    private suspend fun attemptRegistration(
+        senderId: String,
+        currentRetry: Int,
+    ): IPushRegistrator.RegisterResult? {
         try {
             val registrationId = getToken(senderId)
             Logging.info("Device registered, push token = $registrationId")
@@ -175,12 +180,13 @@ internal abstract class PushRegistratorAbstractGoogle(
     }
 
     private fun isValidProjectNumber(senderId: String?): Boolean {
-        val isProjectNumberValidFormat: Boolean = try {
-            senderId!!.toFloat()
-            true
-        } catch (t: Throwable) {
-            false
-        }
+        val isProjectNumberValidFormat: Boolean =
+            try {
+                senderId!!.toFloat()
+                true
+            } catch (t: Throwable) {
+                false
+            }
 
         if (!isProjectNumberValidFormat) {
             return false

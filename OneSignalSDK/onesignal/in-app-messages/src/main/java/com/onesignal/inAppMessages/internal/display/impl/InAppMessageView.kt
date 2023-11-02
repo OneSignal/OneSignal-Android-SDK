@@ -54,7 +54,9 @@ internal class InAppMessageView(
 
     internal interface InAppMessageViewListener {
         fun onMessageWasDisplayed()
+
         fun onMessageWillDismiss()
+
         fun onMessageWasDismissed()
     }
 
@@ -159,10 +161,11 @@ internal class InAppMessageView(
         /* IMPORTANT
          * The only place where currentActivity should be assigned to InAppMessageView */
         this.currentActivity = currentActivity
-        val webViewLayoutParams = RelativeLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            pageHeight,
-        )
+        val webViewLayoutParams =
+            RelativeLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                pageHeight,
+            )
         webViewLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT)
         val relativeLayoutParams = if (hasBackground) createParentRelativeLayoutParams() else null
         showDraggableView(
@@ -188,9 +191,10 @@ internal class InAppMessageView(
                 relativeLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
                 relativeLayoutParams.addRule(RelativeLayout.CENTER_HORIZONTAL)
             }
-            WebViewManager.Position.CENTER_MODAL, WebViewManager.Position.FULL_SCREEN -> relativeLayoutParams.addRule(
-                RelativeLayout.CENTER_IN_PARENT,
-            )
+            WebViewManager.Position.CENTER_MODAL, WebViewManager.Position.FULL_SCREEN ->
+                relativeLayoutParams.addRule(
+                    RelativeLayout.CENTER_IN_PARENT,
+                )
         }
         return relativeLayoutParams
     }
@@ -265,23 +269,25 @@ internal class InAppMessageView(
      * @param parentRelativeLayout root layout to attach to the pop up window
      */
     private fun createPopupWindow(parentRelativeLayout: RelativeLayout) {
-        popupWindow = PopupWindow(
-            parentRelativeLayout,
-            if (hasBackground) WindowManager.LayoutParams.MATCH_PARENT else pageWidth,
-            if (hasBackground) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT,
-            true,
-        )
+        popupWindow =
+            PopupWindow(
+                parentRelativeLayout,
+                if (hasBackground) WindowManager.LayoutParams.MATCH_PARENT else pageWidth,
+                if (hasBackground) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT,
+                true,
+            )
         popupWindow!!.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         popupWindow!!.isTouchable = true
         // NOTE: This is required for getting fullscreen under notches working in portrait mode
         popupWindow!!.isClippingEnabled = false
         var gravity = 0
         if (!hasBackground) {
-            gravity = when (displayPosition) {
-                WebViewManager.Position.TOP_BANNER -> Gravity.CENTER_HORIZONTAL or Gravity.TOP
-                WebViewManager.Position.BOTTOM_BANNER -> Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM
-                WebViewManager.Position.CENTER_MODAL, WebViewManager.Position.FULL_SCREEN -> Gravity.CENTER_HORIZONTAL
-            }
+            gravity =
+                when (displayPosition) {
+                    WebViewManager.Position.TOP_BANNER -> Gravity.CENTER_HORIZONTAL or Gravity.TOP
+                    WebViewManager.Position.BOTTOM_BANNER -> Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM
+                    WebViewManager.Position.CENTER_MODAL, WebViewManager.Position.FULL_SCREEN -> Gravity.CENTER_HORIZONTAL
+                }
         }
 
         // Using panel for fullbleed IAMs and dialog for non-fullbleed. The attached dialog type
@@ -320,25 +326,27 @@ internal class InAppMessageView(
             )
         }
         draggableRelativeLayout!!.setParams(draggableParams)
-        draggableRelativeLayout!!.setListener(object : DraggableRelativeLayout.DraggableListener {
-            override fun onDismiss() {
-                if (messageController != null) {
-                    messageController!!.onMessageWillDismiss()
+        draggableRelativeLayout!!.setListener(
+            object : DraggableRelativeLayout.DraggableListener {
+                override fun onDismiss() {
+                    if (messageController != null) {
+                        messageController!!.onMessageWillDismiss()
+                    }
+
+                    suspendifyOnThread {
+                        finishAfterDelay()
+                    }
                 }
 
-                suspendifyOnThread {
-                    finishAfterDelay()
+                override fun onDragStart() {
+                    isDragging = true
                 }
-            }
 
-            override fun onDragStart() {
-                isDragging = true
-            }
-
-            override fun onDragEnd() {
-                isDragging = false
-            }
-        })
+                override fun onDragEnd() {
+                    isDragging = false
+                }
+            },
+        )
         if (webView!!.parent != null) (webView!!.parent as ViewGroup).removeAllViews()
         val cardView = createCardView(context)
         cardView.tag = IN_APP_MESSAGE_CARD_VIEW_TAG
@@ -362,10 +370,11 @@ internal class InAppMessageView(
         val cardView = CardView(context)
         val height =
             if (displayPosition == WebViewManager.Position.FULL_SCREEN) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT
-        val cardViewLayoutParams = RelativeLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            height,
-        )
+        val cardViewLayoutParams =
+            RelativeLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                height,
+            )
         cardViewLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT)
         cardView.layoutParams = cardViewLayoutParams
 
@@ -495,33 +504,38 @@ internal class InAppMessageView(
         messageView: View,
         backgroundView: View,
     ) {
-        val messageViewCardView = messageView!!.findViewWithTag<CardView>(
-            IN_APP_MESSAGE_CARD_VIEW_TAG,
-        )
+        val messageViewCardView =
+            messageView!!.findViewWithTag<CardView>(
+                IN_APP_MESSAGE_CARD_VIEW_TAG,
+            )
         val cardViewAnimCallback = createAnimationListener(messageViewCardView)
         when (displayLocation) {
-            WebViewManager.Position.TOP_BANNER -> animateTop(
-                messageViewCardView,
-                webView!!.height,
-                cardViewAnimCallback,
-            )
-            WebViewManager.Position.BOTTOM_BANNER -> animateBottom(
-                messageViewCardView,
-                webView!!.height,
-                cardViewAnimCallback,
-            )
-            WebViewManager.Position.CENTER_MODAL, WebViewManager.Position.FULL_SCREEN -> animateCenter(
-                messageView,
-                backgroundView,
-                cardViewAnimCallback,
-                null,
-            )
+            WebViewManager.Position.TOP_BANNER ->
+                animateTop(
+                    messageViewCardView,
+                    webView!!.height,
+                    cardViewAnimCallback,
+                )
+            WebViewManager.Position.BOTTOM_BANNER ->
+                animateBottom(
+                    messageViewCardView,
+                    webView!!.height,
+                    cardViewAnimCallback,
+                )
+            WebViewManager.Position.CENTER_MODAL, WebViewManager.Position.FULL_SCREEN ->
+                animateCenter(
+                    messageView,
+                    backgroundView,
+                    cardViewAnimCallback,
+                    null,
+                )
         }
     }
 
     private fun createAnimationListener(messageViewCardView: CardView): Animation.AnimationListener {
         return object : Animation.AnimationListener {
             override fun onAnimationStart(animation: Animation) {}
+
             override fun onAnimationEnd(animation: Animation) {
                 // For Android 6 API 23 devices, waits until end of animation to set elevation of CardView class
                 if (Build.VERSION.SDK_INT == Build.VERSION_CODES.M) {
@@ -546,7 +560,7 @@ internal class InAppMessageView(
             messageView,
             (
                 -height - marginPxSizeTop
-                ).toFloat(),
+            ).toFloat(),
             0f,
             IN_APP_BANNER_ANIMATION_DURATION_MS,
             OneSignalBounceInterpolator(0.1, 8.0),
@@ -565,7 +579,7 @@ internal class InAppMessageView(
             messageView,
             (
                 height + marginPxSizeBottom
-                ).toFloat(),
+            ).toFloat(),
             0f,
             IN_APP_BANNER_ANIMATION_DURATION_MS,
             OneSignalBounceInterpolator(0.1, 8.0),
@@ -581,33 +595,36 @@ internal class InAppMessageView(
         backgroundAnimCallback: Animator.AnimatorListener?,
     ) {
         // Animate the message view by scale since it settles at the center of the screen
-        val messageAnimation = OneSignalAnimate.animateViewSmallToLarge(
-            messageView,
-            IN_APP_CENTER_ANIMATION_DURATION_MS,
-            OneSignalBounceInterpolator(0.1, 8.0),
-            cardViewAnimCallback,
-        )
+        val messageAnimation =
+            OneSignalAnimate.animateViewSmallToLarge(
+                messageView,
+                IN_APP_CENTER_ANIMATION_DURATION_MS,
+                OneSignalBounceInterpolator(0.1, 8.0),
+                cardViewAnimCallback,
+            )
 
         // Animate background behind the message so it doesn't just show the dark transparency
-        val backgroundAnimation = animateBackgroundColor(
-            backgroundView,
-            IN_APP_BACKGROUND_ANIMATION_DURATION_MS,
-            ACTIVITY_BACKGROUND_COLOR_EMPTY,
-            ACTIVITY_BACKGROUND_COLOR_FULL,
-            backgroundAnimCallback,
-        )
+        val backgroundAnimation =
+            animateBackgroundColor(
+                backgroundView,
+                IN_APP_BACKGROUND_ANIMATION_DURATION_MS,
+                ACTIVITY_BACKGROUND_COLOR_EMPTY,
+                ACTIVITY_BACKGROUND_COLOR_FULL,
+                backgroundAnimCallback,
+            )
         messageAnimation.start()
         backgroundAnimation.start()
     }
 
     private suspend fun animateAndDismissLayout(backgroundView: View) {
         val waiter = Waiter()
-        val animCallback: Animator.AnimatorListener = object : AnimatorListenerAdapter() {
-            override fun onAnimationEnd(animation: Animator) {
-                cleanupViewsAfterDismiss()
-                waiter.wake()
+        val animCallback: Animator.AnimatorListener =
+            object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    cleanupViewsAfterDismiss()
+                    waiter.wake()
+                }
             }
-        }
 
         // Animate background behind the message so it hides before being removed from the view
         animateBackgroundColor(

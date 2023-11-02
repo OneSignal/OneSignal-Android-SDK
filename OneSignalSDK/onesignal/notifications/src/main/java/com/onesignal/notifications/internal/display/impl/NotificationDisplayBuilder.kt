@@ -31,7 +31,6 @@ import java.util.Arrays
 internal class NotificationDisplayBuilder(
     private val _applicationService: IApplicationService,
     private val _notificationChannelManager: INotificationChannelManager,
-
 ) : INotificationDisplayBuilder {
     private val notificationDismissedClass: Class<*> = NotificationDismissReceiver::class.java
 
@@ -62,7 +61,10 @@ internal class NotificationDisplayBuilder(
             )
     }
 
-    override fun getNewDismissActionPendingIntent(requestCode: Int, intent: Intent): PendingIntent {
+    override fun getNewDismissActionPendingIntent(
+        requestCode: Int,
+        intent: Intent,
+    ): PendingIntent {
         return PendingIntent.getBroadcast(
             currentContext,
             requestCode,
@@ -81,14 +83,15 @@ internal class NotificationDisplayBuilder(
         val fcmJson: JSONObject = notificationJob.jsonPayload!!
         val oneSignalNotificationBuilder = OneSignalNotificationBuilder()
         val notificationBuilder: NotificationCompat.Builder
-        notificationBuilder = try {
-            val channelId: String =
-                _notificationChannelManager.createNotificationChannel(notificationJob)
-            // Will throw if app is using 26.0.0-beta1 or older of the support library.
-            NotificationCompat.Builder(currentContext!!, channelId)
-        } catch (t: Throwable) {
-            NotificationCompat.Builder(currentContext!!)
-        }
+        notificationBuilder =
+            try {
+                val channelId: String =
+                    _notificationChannelManager.createNotificationChannel(notificationJob)
+                // Will throw if app is using 26.0.0-beta1 or older of the support library.
+                NotificationCompat.Builder(currentContext!!, channelId)
+            } catch (t: Throwable) {
+                NotificationCompat.Builder(currentContext!!)
+            }
         val message = fcmJson.optString("alert", null)
         notificationBuilder
             .setAutoCancel(true)
@@ -138,7 +141,10 @@ internal class NotificationDisplayBuilder(
     }
 
     // Sets visibility options including; Priority, LED, Sounds, and Vibration.
-    private fun setAlertnessOptions(fcmJson: JSONObject, notifBuilder: NotificationCompat.Builder) {
+    private fun setAlertnessOptions(
+        fcmJson: JSONObject,
+        notifBuilder: NotificationCompat.Builder,
+    ) {
         val payloadPriority = fcmJson.optInt("pri", 6)
         val androidPriority = convertOSToAndroidPriority(payloadPriority)
         notifBuilder.priority = androidPriority
@@ -263,8 +269,8 @@ internal class NotificationDisplayBuilder(
             } catch (t: Throwable) {
             }
             if (bitmap != null) return bitmap
-            val image_extensions = Arrays.asList(".png", ".webp", ".jpg", ".gif", ".bmp")
-            for (extension in image_extensions) {
+            val imageExtensions = Arrays.asList(".png", ".webp", ".jpg", ".gif", ".bmp")
+            for (extension in imageExtensions) {
                 try {
                     bitmap =
                         BitmapFactory.decodeStream(currentContext!!.assets.open(bitmapStr + extension))
@@ -361,7 +367,11 @@ internal class NotificationDisplayBuilder(
 
         // Get accent color from Manifest
         try {
-            val defaultColor: String? = AndroidUtils.getManifestMeta(_applicationService.appContext, "com.onesignal.NotificationAccentColor.DEFAULT")
+            val defaultColor: String? =
+                AndroidUtils.getManifestMeta(
+                    _applicationService.appContext,
+                    "com.onesignal.NotificationAccentColor.DEFAULT",
+                )
             if (defaultColor != null) {
                 return BigInteger(defaultColor, 16)
             }

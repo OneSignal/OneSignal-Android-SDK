@@ -54,8 +54,10 @@ internal class NotificationOpenedProcessor(
     private val _configModelStore: ConfigModelStore,
     private val _lifecycleService: INotificationLifecycleService,
 ) : INotificationOpenedProcessor {
-
-    override suspend fun processFromContext(context: Context, intent: Intent) {
+    override suspend fun processFromContext(
+        context: Context,
+        intent: Intent,
+    ) {
         if (!isOneSignalIntent(intent)) {
             return
         }
@@ -67,13 +69,17 @@ internal class NotificationOpenedProcessor(
     // Was Bundle created from our SDK? Prevents external Intents
     // TODO: Could most likely be simplified checking if BUNDLE_KEY_ONESIGNAL_DATA is present
     private fun isOneSignalIntent(intent: Intent): Boolean {
-        return intent.hasExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA) || intent.hasExtra("summary") || intent.hasExtra(
-            NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID,
-        )
+        return intent.hasExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA) || intent.hasExtra("summary") ||
+            intent.hasExtra(
+                NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID,
+            )
     }
 
     @SuppressLint("MissingPermission")
-    private fun handleDismissFromActionButtonPress(context: Context?, intent: Intent) {
+    private fun handleDismissFromActionButtonPress(
+        context: Context?,
+        intent: Intent,
+    ) {
         // Pressed an action button, need to clear the notification and close the notification area manually.
         if (intent.getBooleanExtra("action_button", false)) {
             NotificationManagerCompat.from(context!!).cancel(
@@ -91,7 +97,10 @@ internal class NotificationOpenedProcessor(
         }
     }
 
-    private suspend fun processIntent(context: Context, intent: Intent) {
+    private suspend fun processIntent(
+        context: Context,
+        intent: Intent,
+    ) {
         val summaryGroup = intent.getStringExtra("summary")
         val dismissed = intent.getBooleanExtra("dismissed", false)
         var intentExtras: NotificationIntentExtras? = null
@@ -119,7 +128,11 @@ internal class NotificationOpenedProcessor(
             if (context !is Activity) {
                 Logging.error("NotificationOpenedProcessor processIntent from an non Activity context: $context")
             } else {
-                _lifecycleService.notificationOpened(context, intentExtras!!.dataArray, NotificationFormatHelper.getOSNotificationIdFromJson(intentExtras.jsonData)!!)
+                _lifecycleService.notificationOpened(
+                    context,
+                    intentExtras!!.dataArray,
+                    NotificationFormatHelper.getOSNotificationIdFromJson(intentExtras.jsonData)!!,
+                )
             }
         }
     }
@@ -145,9 +158,10 @@ internal class NotificationOpenedProcessor(
                 intent.getIntExtra(NotificationConstants.BUNDLE_KEY_ANDROID_NOTIFICATION_ID, 0),
             )
             intent.putExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA, jsonData.toString())
-            dataArray = JSONUtils.wrapInJsonArray(
-                JSONObject(intent.getStringExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA)),
-            )
+            dataArray =
+                JSONUtils.wrapInJsonArray(
+                    JSONObject(intent.getStringExtra(NotificationConstants.BUNDLE_KEY_ONESIGNAL_DATA)),
+                )
         } catch (e: JSONException) {
             e.printStackTrace()
         }
@@ -160,7 +174,10 @@ internal class NotificationOpenedProcessor(
         return NotificationIntentExtras(dataArray!!, jsonData!!)
     }
 
-    private suspend fun addChildNotifications(dataArray: JSONArray, summaryGroup: String) {
+    private suspend fun addChildNotifications(
+        dataArray: JSONArray,
+        summaryGroup: String,
+    ) {
         val childNotifications = _dataController.listNotificationsForGroup(summaryGroup)
         for (childNotification in childNotifications)
             dataArray.put(JSONObject(childNotification.fullData))
@@ -185,7 +202,10 @@ internal class NotificationOpenedProcessor(
     /**
      * Handles clearing the status bar notifications when opened
      */
-    private suspend fun clearStatusBarNotifications(context: Context, summaryGroup: String?) {
+    private suspend fun clearStatusBarNotifications(
+        context: Context,
+        summaryGroup: String?,
+    ) {
         // Handling for clearing the notification when opened
         if (summaryGroup != null) {
             _summaryManager.clearNotificationOnSummaryClick(summaryGroup)
@@ -195,7 +215,7 @@ internal class NotificationOpenedProcessor(
                 // Check that no more groupless notifications exist in the group and cancel the group
                 val grouplessCount = NotificationHelper.getGrouplessNotifsCount(context)
                 if (grouplessCount < 1) {
-                    val groupId = NotificationHelper.grouplessSummaryId
+                    val groupId = NotificationHelper.GROUPLESS_SUMMARY_ID
                     val notificationManager =
                         NotificationHelper.getNotificationManager(context)
                     notificationManager.cancel(groupId)

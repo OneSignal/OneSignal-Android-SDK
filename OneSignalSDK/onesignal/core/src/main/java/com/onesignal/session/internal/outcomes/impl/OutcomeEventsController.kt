@@ -54,6 +54,7 @@ internal class OutcomeEventsController(
     }
 
     override fun onSessionActive() { }
+
     override fun onSessionEnded(duration: Long) { }
 
     /**
@@ -103,7 +104,10 @@ Outcome event was cached and will be reattempted on app cold start""",
         return sendAndCreateOutcomeEvent(name, 0f, 0, influences)
     }
 
-    override suspend fun sendOutcomeEventWithValue(name: String, weight: Float): OutcomeEvent? {
+    override suspend fun sendOutcomeEventWithValue(
+        name: String,
+        weight: Float,
+    ): OutcomeEvent? {
         val influences: List<Influence> = _influenceManager.influences
         return sendAndCreateOutcomeEvent(name, weight, 0, influences)
     }
@@ -137,9 +141,9 @@ Outcome event was cached and will be reattempted on app cold start""",
             if (uniqueInfluences == null) {
                 Logging.debug(
                     """
-                        Measure endpoint will not send because unique outcome already sent for: 
-                        SessionInfluences: $influences
-                        Outcome name: $name
+                    Measure endpoint will not send because unique outcome already sent for: 
+                    SessionInfluences: $influences
+                    Outcome name: $name
                     """.trimIndent(),
                 )
 
@@ -152,9 +156,9 @@ Outcome event was cached and will be reattempted on app cold start""",
             if (unattributedUniqueOutcomeEventsSentOnSession.contains(name)) {
                 Logging.debug(
                     """
-                        Measure endpoint will not send because unique outcome already sent for: 
-                        Session: ${InfluenceType.UNATTRIBUTED}
-                        Outcome name: $name
+                    Measure endpoint will not send because unique outcome already sent for: 
+                    Session: ${InfluenceType.UNATTRIBUTED}
+                    Outcome name: $name
                     """.trimIndent(),
                 )
 
@@ -169,7 +173,8 @@ Outcome event was cached and will be reattempted on app cold start""",
     private suspend fun sendAndCreateOutcomeEvent(
         name: String,
         weight: Float,
-        sessionTime: Long, // Note: this is optional
+        // Note: this is optional
+        sessionTime: Long,
         influences: List<Influence>,
     ): OutcomeEvent? {
         val timestampSeconds: Long = _time.currentTimeMillis / 1000
@@ -178,17 +183,23 @@ Outcome event was cached and will be reattempted on app cold start""",
         var unattributed = false
         for (influence in influences) {
             when (influence.influenceType) {
-                InfluenceType.DIRECT -> directSourceBody = setSourceChannelIds(
-                    influence,
-                    directSourceBody ?: OutcomeSourceBody(),
-                )
-                InfluenceType.INDIRECT -> indirectSourceBody = setSourceChannelIds(
-                    influence,
-                    indirectSourceBody ?: OutcomeSourceBody(),
-                )
+                InfluenceType.DIRECT ->
+                    directSourceBody =
+                        setSourceChannelIds(
+                            influence,
+                            directSourceBody ?: OutcomeSourceBody(),
+                        )
+                InfluenceType.INDIRECT ->
+                    indirectSourceBody =
+                        setSourceChannelIds(
+                            influence,
+                            indirectSourceBody ?: OutcomeSourceBody(),
+                        )
                 InfluenceType.UNATTRIBUTED -> unattributed = true
                 InfluenceType.DISABLED -> {
-                    Logging.verbose("OutcomeEventsController.sendAndCreateOutcomeEvent: Outcomes disabled for channel: " + influence.influenceChannel)
+                    Logging.verbose(
+                        "OutcomeEventsController.sendAndCreateOutcomeEvent: Outcomes disabled for channel: " + influence.influenceChannel,
+                    )
                 }
             }
         }
@@ -238,7 +249,9 @@ Outcome event was cached and will be reattempted on app cold start""",
         val availableInfluences: MutableList<Influence> = influences.toMutableList()
         for (influence in influences) {
             if (influence.influenceType.isDisabled()) {
-                Logging.debug("OutcomeEventsController.removeDisabledInfluences: Outcomes disabled for channel: " + influence.influenceChannel.toString())
+                Logging.debug(
+                    "OutcomeEventsController.removeDisabledInfluences: Outcomes disabled for channel: " + influence.influenceChannel.toString(),
+                )
                 availableInfluences.remove(influence)
             }
         }
@@ -274,7 +287,10 @@ Outcome event was cached and will be reattempted on app cold start""",
     /**
      * Get the unique notifications that have not been cached/sent before with the current unique outcome name
      */
-    private suspend fun getUniqueIds(name: String, influences: List<Influence>): List<Influence>? {
+    private suspend fun getUniqueIds(
+        name: String,
+        influences: List<Influence>,
+    ): List<Influence>? {
         val uniqueInfluences: List<Influence> =
             _outcomeEventsCache.getNotCachedUniqueInfluencesForOutcome(name, influences)
         return uniqueInfluences.ifEmpty { null }
@@ -292,12 +308,13 @@ Outcome event was cached and will be reattempted on app cold start""",
         }
 
         val event = OutcomeEvent.fromOutcomeEventParamstoOutcomeEvent(eventParams)
-        val direct = when (event.session) {
-            InfluenceType.DIRECT -> true
-            InfluenceType.INDIRECT -> false
-            InfluenceType.UNATTRIBUTED -> null
-            else -> null
-        }
+        val direct =
+            when (event.session) {
+                InfluenceType.DIRECT -> true
+                InfluenceType.INDIRECT -> false
+                InfluenceType.UNATTRIBUTED -> null
+                else -> null
+            }
 
         _outcomeEventsBackend.sendOutcomeEvent(appId, _identityModelStore.model.onesignalId, subscriptionId, deviceType, direct, event)
     }

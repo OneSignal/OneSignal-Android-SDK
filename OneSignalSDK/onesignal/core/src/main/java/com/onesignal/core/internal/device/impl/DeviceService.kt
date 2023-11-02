@@ -134,7 +134,11 @@ internal class DeviceService(private val _applicationService: IApplicationServic
         return try {
             val clazz = Class.forName("com.huawei.hms.api.HuaweiApiAvailability")
             val newInstanceMethod = clazz.getMethod("getInstance")
-            val isHuaweiMobileServicesAvailableMethod = clazz.getMethod("isHuaweiMobileServicesAvailable", android.content.Context::class.java)
+            val isHuaweiMobileServicesAvailableMethod =
+                clazz.getMethod(
+                    "isHuaweiMobileServicesAvailable",
+                    android.content.Context::class.java,
+                )
             val availabilityInstance = newInstanceMethod.invoke(null)
 
             val result = isHuaweiMobileServicesAvailableMethod.invoke(availabilityInstance, _applicationService.appContext) as Int

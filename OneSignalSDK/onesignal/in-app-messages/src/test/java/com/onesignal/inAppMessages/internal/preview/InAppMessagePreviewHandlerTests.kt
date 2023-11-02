@@ -36,7 +36,7 @@ class InAppMessagePreviewHandlerTests : FunSpec({
     }
 
     test("canReceiveNotification displays IAM and returns false when notification has a IAM preview id and in foreground") {
-        /* Given */
+        // Given
         val mockInAppDisplayer = mockk<IInAppDisplayer>()
         coEvery { mockInAppDisplayer.displayPreviewMessage(any()) } returns true
 
@@ -48,37 +48,39 @@ class InAppMessagePreviewHandlerTests : FunSpec({
 
         val stateService = InAppStateService()
 
-        val inAppMessagePreviewHandler = InAppMessagePreviewHandler(
-            mockInAppDisplayer,
-            mockApplicationService,
-            mockNotificationDisplayer,
-            mockNotificationActivityOpener,
-            mockNotificationLifecycleService,
-            stateService,
-            MockHelper.time(1111),
-        )
-
-        val jsonObject = JSONObject()
-            .put(
-                "custom",
-                JSONObject()
-                    .put(
-                        "a",
-                        JSONObject()
-                            .put("os_in_app_message_preview_id", "previewUUID"),
-                    ),
+        val inAppMessagePreviewHandler =
+            InAppMessagePreviewHandler(
+                mockInAppDisplayer,
+                mockApplicationService,
+                mockNotificationDisplayer,
+                mockNotificationActivityOpener,
+                mockNotificationLifecycleService,
+                stateService,
+                MockHelper.time(1111),
             )
 
-        /* When */
+        val jsonObject =
+            JSONObject()
+                .put(
+                    "custom",
+                    JSONObject()
+                        .put(
+                            "a",
+                            JSONObject()
+                                .put("os_in_app_message_preview_id", "previewUUID"),
+                        ),
+                )
+
+        // When
         val response = inAppMessagePreviewHandler.canReceiveNotification(jsonObject)
 
-        /* Then */
+        // Then
         response shouldBe false
         coVerify(exactly = 1) { mockInAppDisplayer.displayPreviewMessage("previewUUID") }
     }
 
     test("canReceiveNotification displays notification and returns false when notification has a IAM preview id and in background") {
-        /* Given */
+        // Given
         val mockInAppDisplayer = mockk<IInAppDisplayer>()
         val mockNotificationDisplayer = mockk<INotificationDisplayer>()
         coEvery { mockNotificationDisplayer.displayNotification(any()) } returns true
@@ -89,37 +91,39 @@ class InAppMessagePreviewHandlerTests : FunSpec({
 
         val stateService = InAppStateService()
 
-        val inAppMessagePreviewHandler = InAppMessagePreviewHandler(
-            mockInAppDisplayer,
-            mockApplicationService,
-            mockNotificationDisplayer,
-            mockNotificationActivityOpener,
-            mockNotificationLifecycleService,
-            stateService,
-            MockHelper.time(1111),
-        )
-
-        val jsonObject = JSONObject()
-            .put(
-                "custom",
-                JSONObject()
-                    .put(
-                        "a",
-                        JSONObject()
-                            .put("os_in_app_message_preview_id", "previewUUID"),
-                    ),
+        val inAppMessagePreviewHandler =
+            InAppMessagePreviewHandler(
+                mockInAppDisplayer,
+                mockApplicationService,
+                mockNotificationDisplayer,
+                mockNotificationActivityOpener,
+                mockNotificationLifecycleService,
+                stateService,
+                MockHelper.time(1111),
             )
 
-        /* When */
+        val jsonObject =
+            JSONObject()
+                .put(
+                    "custom",
+                    JSONObject()
+                        .put(
+                            "a",
+                            JSONObject()
+                                .put("os_in_app_message_preview_id", "previewUUID"),
+                        ),
+                )
+
+        // When
         val response = inAppMessagePreviewHandler.canReceiveNotification(jsonObject)
 
-        /* Then */
+        // Then
         response shouldBe false
         coVerify(exactly = 1) { mockNotificationDisplayer.displayNotification(any()) }
     }
 
     test("canReceiveNotification returns true when notification does not have an IAM preview id") {
-        /* Given */
+        // Given
         val mockInAppDisplayer = mockk<IInAppDisplayer>()
         val mockNotificationDisplayer = mockk<INotificationDisplayer>()
         val mockNotificationActivityOpener = mockk<INotificationActivityOpener>()
@@ -128,35 +132,37 @@ class InAppMessagePreviewHandlerTests : FunSpec({
 
         val stateService = InAppStateService()
 
-        val inAppMessagePreviewHandler = InAppMessagePreviewHandler(
-            mockInAppDisplayer,
-            mockApplicationService,
-            mockNotificationDisplayer,
-            mockNotificationActivityOpener,
-            mockNotificationLifecycleService,
-            stateService,
-            MockHelper.time(1111),
-        )
-
-        val jsonObject = JSONObject()
-            .put(
-                "custom",
-                JSONObject()
-                    .put(
-                        "a",
-                        JSONObject(),
-                    ),
+        val inAppMessagePreviewHandler =
+            InAppMessagePreviewHandler(
+                mockInAppDisplayer,
+                mockApplicationService,
+                mockNotificationDisplayer,
+                mockNotificationActivityOpener,
+                mockNotificationLifecycleService,
+                stateService,
+                MockHelper.time(1111),
             )
 
-        /* When */
+        val jsonObject =
+            JSONObject()
+                .put(
+                    "custom",
+                    JSONObject()
+                        .put(
+                            "a",
+                            JSONObject(),
+                        ),
+                )
+
+        // When
         val response = inAppMessagePreviewHandler.canReceiveNotification(jsonObject)
 
-        /* Then */
+        // Then
         response shouldBe true
     }
 
     test("canOpenNotification displays IAM and returns false when notification has a IAM preview id") {
-        /* Given */
+        // Given
         val mockInAppDisplayer = mockk<IInAppDisplayer>()
         coEvery { mockInAppDisplayer.displayPreviewMessage(any()) } returns true
         val mockNotificationDisplayer = mockk<INotificationDisplayer>()
@@ -167,26 +173,28 @@ class InAppMessagePreviewHandlerTests : FunSpec({
 
         val stateService = InAppStateService()
 
-        val inAppMessagePreviewHandler = InAppMessagePreviewHandler(
-            mockInAppDisplayer,
-            mockApplicationService,
-            mockNotificationDisplayer,
-            mockNotificationActivityOpener,
-            mockNotificationLifecycleService,
-            stateService,
-            MockHelper.time(1111),
-        )
-
-        val jsonObject = JSONObject()
-            .put(
-                "custom",
-                JSONObject()
-                    .put(
-                        "a",
-                        JSONObject()
-                            .put("os_in_app_message_preview_id", "previewUUID"),
-                    ),
+        val inAppMessagePreviewHandler =
+            InAppMessagePreviewHandler(
+                mockInAppDisplayer,
+                mockApplicationService,
+                mockNotificationDisplayer,
+                mockNotificationActivityOpener,
+                mockNotificationLifecycleService,
+                stateService,
+                MockHelper.time(1111),
             )
+
+        val jsonObject =
+            JSONObject()
+                .put(
+                    "custom",
+                    JSONObject()
+                        .put(
+                            "a",
+                            JSONObject()
+                                .put("os_in_app_message_preview_id", "previewUUID"),
+                        ),
+                )
 
         val activity: Activity
         Robolectric.buildActivity(Activity::class.java).use { controller ->
@@ -194,10 +202,10 @@ class InAppMessagePreviewHandlerTests : FunSpec({
             activity = controller.get()
         }
 
-        /* When */
+        // When
         val response = inAppMessagePreviewHandler.canOpenNotification(activity, jsonObject)
 
-        /* Then */
+        // Then
         response shouldBe false
         coVerify(exactly = 1) {
             mockNotificationActivityOpener.openDestinationActivity(
@@ -212,7 +220,7 @@ class InAppMessagePreviewHandlerTests : FunSpec({
     }
 
     test("canOpenNotification returns true when notification has no IAM preview id") {
-        /* Given */
+        // Given
         val mockInAppDisplayer = mockk<IInAppDisplayer>()
         val mockNotificationDisplayer = mockk<INotificationDisplayer>()
         val mockNotificationActivityOpener = mockk<INotificationActivityOpener>()
@@ -221,25 +229,27 @@ class InAppMessagePreviewHandlerTests : FunSpec({
 
         val stateService = InAppStateService()
 
-        val inAppMessagePreviewHandler = InAppMessagePreviewHandler(
-            mockInAppDisplayer,
-            mockApplicationService,
-            mockNotificationDisplayer,
-            mockNotificationActivityOpener,
-            mockNotificationLifecycleService,
-            stateService,
-            MockHelper.time(1111),
-        )
-
-        val jsonObject = JSONObject()
-            .put(
-                "custom",
-                JSONObject()
-                    .put(
-                        "a",
-                        JSONObject(),
-                    ),
+        val inAppMessagePreviewHandler =
+            InAppMessagePreviewHandler(
+                mockInAppDisplayer,
+                mockApplicationService,
+                mockNotificationDisplayer,
+                mockNotificationActivityOpener,
+                mockNotificationLifecycleService,
+                stateService,
+                MockHelper.time(1111),
             )
+
+        val jsonObject =
+            JSONObject()
+                .put(
+                    "custom",
+                    JSONObject()
+                        .put(
+                            "a",
+                            JSONObject(),
+                        ),
+                )
 
         val activity: Activity
         Robolectric.buildActivity(Activity::class.java).use { controller ->
@@ -247,10 +257,10 @@ class InAppMessagePreviewHandlerTests : FunSpec({
             activity = controller.get()
         }
 
-        /* When */
+        // When
         val response = inAppMessagePreviewHandler.canOpenNotification(activity, jsonObject)
 
-        /* Then */
+        // Then
         response shouldBe true
     }
 })

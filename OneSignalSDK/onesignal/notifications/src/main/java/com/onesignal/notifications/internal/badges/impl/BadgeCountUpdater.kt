@@ -21,13 +21,15 @@ internal class BadgeCountUpdater(
 ) : IBadgeCountUpdater {
     // Cache for manifest setting.
     private var badgesEnabled = -1
+
     private fun areBadgeSettingsEnabled(): Boolean {
         if (badgesEnabled != -1) return badgesEnabled == 1
         try {
-            val ai = _applicationService.appContext.packageManager.getApplicationInfo(
-                _applicationService.appContext.packageName,
-                PackageManager.GET_META_DATA,
-            )
+            val ai =
+                _applicationService.appContext.packageManager.getApplicationInfo(
+                    _applicationService.appContext.packageName,
+                    PackageManager.GET_META_DATA,
+                )
             val bundle = ai.metaData
             if (bundle != null) {
                 val defaultStr = bundle.getString("com.onesignal.BadgeCount")

@@ -15,7 +15,9 @@ class SetAliasOperation() : Operation(IdentityOperationExecutor.SET_ALIAS) {
      */
     var appId: String
         get() = getStringProperty(::appId.name)
-        private set(value) { setStringProperty(::appId.name, value) }
+        private set(value) {
+            setStringProperty(::appId.name, value)
+        }
 
     /**
      * The user ID this subscription will be associated with. This ID *may* be locally generated
@@ -23,21 +25,27 @@ class SetAliasOperation() : Operation(IdentityOperationExecutor.SET_ALIAS) {
      */
     var onesignalId: String
         get() = getStringProperty(::onesignalId.name)
-        private set(value) { setStringProperty(::onesignalId.name, value) }
+        private set(value) {
+            setStringProperty(::onesignalId.name, value)
+        }
 
     /**
      * The alias label.
      */
     var label: String
         get() = getStringProperty(::label.name)
-        private set(value) { setStringProperty(::label.name, value) }
+        private set(value) {
+            setStringProperty(::label.name, value)
+        }
 
     /**
      * The alias value.
      */
     var value: String
         get() = getStringProperty(::value.name)
-        private set(value) { setStringProperty(::value.name, value) }
+        private set(value) {
+            setStringProperty(::value.name, value)
+        }
 
     override val createComparisonKey: String get() = ""
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Identity.$label"

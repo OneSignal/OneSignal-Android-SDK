@@ -48,11 +48,13 @@ enum class SubscriptionStatus(val value: Int) {
     FIREBASE_FCM_ERROR_MISC_EXCEPTION(-12),
 
     // -13 to -24 reserved for other platforms
+
     /** The subscription is not enabled due the an HMS timeout, this can be retried */
     HMS_TOKEN_TIMEOUT(-25),
 
     // Most likely missing "client/app_id".
     // Check that there is "apply plugin: 'com.huawei.agconnect'" in your app/build.gradle
+
     /** The subscription is not enabled due to the HMS arguments being invalid */
     HMS_ARGUMENTS_INVALID(-26),
 

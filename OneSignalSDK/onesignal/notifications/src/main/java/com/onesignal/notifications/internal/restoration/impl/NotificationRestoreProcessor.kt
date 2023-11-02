@@ -34,7 +34,10 @@ internal class NotificationRestoreProcessor(
         }
     }
 
-    override suspend fun processNotification(notification: INotificationRepository.NotificationData, delay: Int) {
+    override suspend fun processNotification(
+        notification: INotificationRepository.NotificationData,
+        delay: Int,
+    ) {
         _workManager.beginEnqueueingWork(
             _applicationService.appContext,
             notification.id,

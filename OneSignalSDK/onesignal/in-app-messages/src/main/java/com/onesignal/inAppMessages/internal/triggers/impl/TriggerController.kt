@@ -16,7 +16,6 @@ internal class TriggerController(
     triggerModelStore: TriggerModelStore,
     private var _dynamicTriggerController: DynamicTriggerController,
 ) : ITriggerController, IModelStoreChangeHandler<TriggerModel> {
-
     val triggers: ConcurrentHashMap<String?, Any?> = ConcurrentHashMap()
 
     init {
@@ -60,11 +59,12 @@ internal class TriggerController(
         }
 
         val operatorType = trigger.operatorType
-        val deviceValue = triggers[trigger.property]
-            ?: // If we don't have a local value for this trigger, can only be true in two cases;
-            // 1. If operator is Not Exists
-            // 2. Checking to make sure the key doesn't equal a specific value, other than null of course.
-            return if (operatorType == Trigger.OSTriggerOperator.NOT_EXISTS) true else operatorType == Trigger.OSTriggerOperator.NOT_EQUAL_TO && trigger.value != null
+        val deviceValue =
+            triggers[trigger.property]
+                ?: // If we don't have a local value for this trigger, can only be true in two cases;
+                // 1. If operator is Not Exists
+                // 2. Checking to make sure the key doesn't equal a specific value, other than null of course.
+                return if (operatorType == Trigger.OSTriggerOperator.NOT_EXISTS) true else operatorType == Trigger.OSTriggerOperator.NOT_EQUAL_TO && trigger.value != null
 
         // We have local value at this point, we can evaluate existence checks
         if (operatorType == Trigger.OSTriggerOperator.EXISTS) {
@@ -144,11 +144,12 @@ internal class TriggerController(
         deviceValue: String,
         operator: Trigger.OSTriggerOperator,
     ): Boolean {
-        val deviceDoubleValue: Double = try {
-            deviceValue.toDouble()
-        } catch (e: NumberFormatException) {
-            return false
-        }
+        val deviceDoubleValue: Double =
+            try {
+                deviceValue.toDouble()
+            } catch (e: NumberFormatException) {
+                return false
+            }
         return triggerMatchesNumericValue(triggerValue.toDouble(), deviceDoubleValue, operator)
     }
 
@@ -173,7 +174,10 @@ internal class TriggerController(
         }
     }
 
-    override fun isTriggerOnMessage(message: InAppMessage, triggersKeys: Collection<String>): Boolean {
+    override fun isTriggerOnMessage(
+        message: InAppMessage,
+        triggersKeys: Collection<String>,
+    ): Boolean {
         if (message.triggers == null) {
             return false
         }
@@ -206,22 +210,34 @@ internal class TriggerController(
         return true
     }
 
-    override fun onModelAdded(model: TriggerModel, tag: String) {
+    override fun onModelAdded(
+        model: TriggerModel,
+        tag: String,
+    ) {
         addTriggers(model.key, model.value)
         _dynamicTriggerController.events.fire { it.onTriggerChanged(model.key) }
     }
 
-    override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
+    override fun onModelUpdated(
+        args: ModelChangedArgs,
+        tag: String,
+    ) {
         val model = args.model as TriggerModel
         addTriggers(model.key, model.value)
         _dynamicTriggerController.events.fire { it.onTriggerChanged(model.key) }
     }
 
-    override fun onModelRemoved(model: TriggerModel, tag: String) {
+    override fun onModelRemoved(
+        model: TriggerModel,
+        tag: String,
+    ) {
         removeTriggersForKeys(model.key)
     }
 
-    private fun addTriggers(key: String, value: Any) {
+    private fun addTriggers(
+        key: String,
+        value: Any,
+    ) {
         synchronized(triggers) {
             triggers[key] = value
         }
@@ -232,7 +248,9 @@ internal class TriggerController(
     }
 
     override fun subscribe(handler: ITriggerHandler) = _dynamicTriggerController.subscribe(handler)
+
     override fun unsubscribe(handler: ITriggerHandler) = _dynamicTriggerController.unsubscribe(handler)
+
     override val hasSubscribers: Boolean
         get() = _dynamicTriggerController.hasSubscribers
 }

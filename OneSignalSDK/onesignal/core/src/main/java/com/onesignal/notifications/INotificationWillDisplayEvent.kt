@@ -25,7 +25,6 @@ package com.onesignal.notifications
  * ```
  */
 interface INotificationWillDisplayEvent {
-
     /**
      * The notification that has been received.  It is an [IDisplayableNotification] to
      * allow the user to call [IDisplayableNotification.display] in the event they also

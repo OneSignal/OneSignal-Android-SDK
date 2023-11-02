@@ -56,18 +56,26 @@ class ShadowRoboNotificationManager : ShadowNotificationManager() {
         cancelledNotifications.add(id)
     }
 
-    public override fun cancel(tag: String, id: Int) {
+    public override fun cancel(
+        tag: String,
+        id: Int,
+    ) {
         notifications.remove(id)
         cancelledNotifications.add(id)
     }
 
-    public override fun notify(tag: String, id: Int, notification: Notification) {
+    public override fun notify(
+        tag: String,
+        id: Int,
+        notification: Notification,
+    ) {
         lastNotif = notification
         lastNotifId = id
-        notifications[id] = PostedNotification(
-            id,
-            notification,
-        )
+        notifications[id] =
+            PostedNotification(
+                id,
+                notification,
+            )
         super.notify(tag, id, notification)
     }
 
@@ -98,6 +106,7 @@ class ShadowRoboNotificationManager : ShadowNotificationManager() {
         }
 
         private lateinit var mInstance: ShadowRoboNotificationManager
+
         fun getNotificationsInGroup(group: String): List<Notification> {
             val notifications: MutableList<Notification> = ArrayList()
             for (notification in mInstance.allNotifications) {

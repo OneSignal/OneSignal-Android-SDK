@@ -14,13 +14,16 @@ import org.json.JSONObject
 internal class NotificationOpenedProcessorHMS(
     private val _lifecycleService: INotificationLifecycleService,
 ) : INotificationOpenedProcessorHMS {
-
-    override suspend fun handleHMSNotificationOpenIntent(activity: Activity, intent: Intent?) {
+    override suspend fun handleHMSNotificationOpenIntent(
+        activity: Activity,
+        intent: Intent?,
+    ) {
         if (intent == null) return
-        val jsonData = covertHMSOpenIntentToJson(
-            intent,
-        )
-            ?: return
+        val jsonData =
+            covertHMSOpenIntentToJson(
+                intent,
+            )
+                ?: return
         handleProcessJsonOpenData(activity, jsonData)
     }
 
@@ -52,11 +55,18 @@ internal class NotificationOpenedProcessorHMS(
         }
     }
 
-    private suspend fun handleProcessJsonOpenData(activity: Activity, jsonData: JSONObject) {
+    private suspend fun handleProcessJsonOpenData(
+        activity: Activity,
+        jsonData: JSONObject,
+    ) {
         if (!_lifecycleService.canOpenNotification(activity, jsonData)) {
             return
         }
 
-        _lifecycleService.notificationOpened(activity, JSONUtils.wrapInJsonArray(jsonData), NotificationFormatHelper.getOSNotificationIdFromJson(jsonData)!!)
+        _lifecycleService.notificationOpened(
+            activity,
+            JSONUtils.wrapInJsonArray(jsonData),
+            NotificationFormatHelper.getOSNotificationIdFromJson(jsonData)!!,
+        )
     }
 }

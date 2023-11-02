@@ -8,7 +8,6 @@ import android.content.ContentValues
  * caller to offload data operations to a non-main thread.
  */
 interface IDatabase {
-
     /**
      * Query for the underlying data.
      *
@@ -47,7 +46,11 @@ interface IDatabase {
      *
      * @see [https://developer.android.com/reference/android/database/sqlite/SQLiteDatabase.html#insert(java.lang.String,%20java.lang.String,%20android.content.ContentValues)]
      */
-    fun insert(table: String, nullColumnHack: String?, values: ContentValues?)
+    fun insert(
+        table: String,
+        nullColumnHack: String?,
+        values: ContentValues?,
+    )
 
     /**
      * Insert a new record into the database as specified. If the insert fails, it will throw an exception.
@@ -58,7 +61,11 @@ interface IDatabase {
      *
      * @see [https://developer.android.com/reference/android/database/sqlite/SQLiteDatabase.html#insert(java.lang.String,%20java.lang.String,%20android.content.ContentValues)]
      */
-    fun insertOrThrow(table: String, nullColumnHack: String?, values: ContentValues?)
+    fun insertOrThrow(
+        table: String,
+        nullColumnHack: String?,
+        values: ContentValues?,
+    )
 
     /**
      * Update one or more records into the database as specified.
@@ -73,7 +80,12 @@ interface IDatabase {
      *
      * @return The number of records that were updated.
      */
-    fun update(table: String, values: ContentValues, whereClause: String?, whereArgs: Array<String>?): Int
+    fun update(
+        table: String,
+        values: ContentValues,
+        whereClause: String?,
+        whereArgs: Array<String>?,
+    ): Int
 
     /**
      * Delete one or more records from the database as specified.
@@ -85,5 +97,9 @@ interface IDatabase {
      * @param whereArgs The row selection criteria arguments.  Provide `null` when there were
      * no parameters provided in [whereClause].
      */
-    fun delete(table: String, whereClause: String?, whereArgs: Array<String>?)
+    fun delete(
+        table: String,
+        whereClause: String?,
+        whereArgs: Array<String>?,
+    )
 }

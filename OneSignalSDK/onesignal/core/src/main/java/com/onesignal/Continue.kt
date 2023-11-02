@@ -11,18 +11,16 @@ import kotlin.coroutines.CoroutineContext
  * The result provided by [Continue.with] when the Java user wants to inspect the results
  * of a Kotlin coroutine completing.
  */
-class ContinueResult<R> (
+class ContinueResult<R>(
     /**
      * Whether the coroutine call was successful (`true`) or not (`false`)
      */
     val isSuccess: Boolean,
-
     /**
      * The data that is returned by the coroutine when complete.  This will be `null` if [isSuccess]
      * is `false`.
      */
     val data: R?,
-
     /**
      * The throwable that was thrown by the coroutine.  This will be `null` if [isSuccess] is `true`.
      */
@@ -47,7 +45,6 @@ class ContinueResult<R> (
  * ```
  */
 object Continue {
-
     /**
      * Allows java code to provide a lambda as a continuation to a Kotlin coroutine.
      *
@@ -62,7 +59,10 @@ object Continue {
     @RequiresApi(Build.VERSION_CODES.N)
     @JvmOverloads
     @JvmStatic
-    fun <R> with(onFinished: Consumer<ContinueResult<R>>, context: CoroutineContext = Dispatchers.Main): Continuation<R> {
+    fun <R> with(
+        onFinished: Consumer<ContinueResult<R>>,
+        context: CoroutineContext = Dispatchers.Main,
+    ): Continuation<R> {
         return object : Continuation<R> {
             override val context: CoroutineContext
                 get() = context

@@ -12,11 +12,12 @@ internal class OutcomeTableProvider {
      * On the outcome table this adds the new weight column and drops params column.
      */
     fun upgradeOutcomeTableRevision1To2(db: SQLiteDatabase) {
-        val commonColumns: String = OutcomeEventsTable.ID.toString() + "," +
-            OutcomeEventsTable.COLUMN_NAME_SESSION + "," +
-            OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + "," +
-            OutcomeEventsTable.COLUMN_NAME_NAME + "," +
-            OutcomeEventsTable.COLUMN_NAME_TIMESTAMP
+        val commonColumns: String =
+            OutcomeEventsTable.ID.toString() + "," +
+                OutcomeEventsTable.COLUMN_NAME_SESSION + "," +
+                OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + "," +
+                OutcomeEventsTable.COLUMN_NAME_NAME + "," +
+                OutcomeEventsTable.COLUMN_NAME_TIMESTAMP
         try {
             // Since SQLite does not support dropping a column we need to:
             //   1. Create a temptable
@@ -48,11 +49,12 @@ internal class OutcomeTableProvider {
      * @param db
      */
     fun upgradeOutcomeTableRevision2To3(db: SQLiteDatabase) {
-        val commonColumns: String = OutcomeEventsTable.ID + "," +
-            OutcomeEventsTable.COLUMN_NAME_NAME + "," +
-            OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + "," +
-            OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + "," +
-            OutcomeEventsTable.COLUMN_NAME_WEIGHT
+        val commonColumns: String =
+            OutcomeEventsTable.ID + "," +
+                OutcomeEventsTable.COLUMN_NAME_NAME + "," +
+                OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + "," +
+                OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS + "," +
+                OutcomeEventsTable.COLUMN_NAME_WEIGHT
         val commonColumnsWithSessionColumn = commonColumns + "," + OutcomeEventsTable.COLUMN_NAME_SESSION
         val commonColumnsWithNewSessionColumn = commonColumns + "," + OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE
         val auxOutcomeTableName: String = OutcomeEventsTable.TABLE_NAME + "_aux"
@@ -86,7 +88,9 @@ internal class OutcomeTableProvider {
     fun upgradeOutcomeTableRevision3To4(db: SQLiteDatabase) {
         try {
             db.execSQL("BEGIN TRANSACTION;")
-            db.execSQL("ALTER TABLE " + OutcomeEventsTable.TABLE_NAME + " ADD COLUMN " + OutcomeEventsTable.COLUMN_NAME_SESSION_TIME + " INTEGER DEFAULT 1;")
+            db.execSQL(
+                "ALTER TABLE " + OutcomeEventsTable.TABLE_NAME + " ADD COLUMN " + OutcomeEventsTable.COLUMN_NAME_SESSION_TIME + " INTEGER DEFAULT 1;",
+            )
             // We intentionally choose to default session_time to 1 to address a bug on cached outcomes from v5.0.0-beta's
             // os__session_duration requests expect a session_time and these will keep failing and caching, so let's just send them with a time of 1 for migrations
         } catch (e: SQLiteException) {
@@ -103,8 +107,9 @@ internal class OutcomeTableProvider {
      * @param db
      */
     fun upgradeCacheOutcomeTableRevision1To2(db: SQLiteDatabase) {
-        val commonColumns: String = CachedUniqueOutcomeTable.ID + "," +
-            CachedUniqueOutcomeTable.COLUMN_NAME_NAME
+        val commonColumns: String =
+            CachedUniqueOutcomeTable.ID + "," +
+                CachedUniqueOutcomeTable.COLUMN_NAME_NAME
         val commonColumnsWithNotificationIdColumn = commonColumns + "," + CachedUniqueOutcomeTable.COLUMN_NAME_NOTIFICATION_ID
         val commonColumnsWithNewInfluenceIdColumn = commonColumns + "," + CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID
         val oldCacheUniqueOutcomeTable: String = CachedUniqueOutcomeTable.TABLE_NAME_V1

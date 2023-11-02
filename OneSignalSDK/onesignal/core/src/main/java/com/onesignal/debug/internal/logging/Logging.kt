@@ -24,42 +24,67 @@ object Logging {
     }
 
     @JvmStatic
-    fun verbose(message: String, throwable: Throwable? = null) {
+    fun verbose(
+        message: String,
+        throwable: Throwable? = null,
+    ) {
         log(LogLevel.VERBOSE, message, throwable)
     }
 
     @JvmStatic
-    fun debug(message: String, throwable: Throwable? = null) {
+    fun debug(
+        message: String,
+        throwable: Throwable? = null,
+    ) {
         log(LogLevel.DEBUG, message, throwable)
     }
 
     @JvmStatic
-    fun info(message: String, throwable: Throwable? = null) {
+    fun info(
+        message: String,
+        throwable: Throwable? = null,
+    ) {
         log(LogLevel.INFO, message, throwable)
     }
 
     @JvmStatic
-    fun warn(message: String, throwable: Throwable? = null) {
+    fun warn(
+        message: String,
+        throwable: Throwable? = null,
+    ) {
         log(LogLevel.WARN, message, throwable)
     }
 
     @JvmStatic
-    fun error(message: String, throwable: Throwable? = null) {
+    fun error(
+        message: String,
+        throwable: Throwable? = null,
+    ) {
         log(LogLevel.ERROR, message, throwable)
     }
 
     @JvmStatic
-    fun fatal(message: String, throwable: Throwable? = null) {
+    fun fatal(
+        message: String,
+        throwable: Throwable? = null,
+    ) {
         log(LogLevel.FATAL, message, throwable)
     }
 
     @JvmStatic
-    fun log(level: LogLevel, message: String) {
+    fun log(
+        level: LogLevel,
+        message: String,
+    ) {
         log(level, message, null)
     }
 
     @JvmStatic
-    fun log(level: LogLevel, message: String, throwable: Throwable?) {
+    fun log(
+        level: LogLevel,
+        message: String,
+        throwable: Throwable?,
+    ) {
         val fullMessage = "[${Thread.currentThread().name}] $message"
         if (level.compareTo(logLevel) < 1) {
             when (level) {

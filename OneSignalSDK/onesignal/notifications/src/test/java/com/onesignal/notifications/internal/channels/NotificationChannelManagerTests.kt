@@ -36,15 +36,15 @@ class NotificationChannelManagerTests : FunSpec({
     }
 
     test("createNotificationChannel should return default channel with empty payload") {
-        /* Given */
+        // Given
         val mockTime = MockHelper.time(1111)
 
         val notificationChannelManager = NotificationChannelManager(AndroidMockHelper.applicationService(), MockHelper.languageContext())
 
-        /* When */
+        // When
         val response = notificationChannelManager.createNotificationChannel(NotificationGenerationJob(JSONObject(), mockTime))
 
-        /* Then */
+        // Then
         response shouldBe "fcm_fallback_notification_channel"
 
         val lastChannel = ShadowRoboNotificationManager.lastChannel
@@ -56,21 +56,22 @@ class NotificationChannelManagerTests : FunSpec({
     }
 
     test("createNotificationChannel should create basic channel") {
-        /* Given */
+        // Given
         val mockTime = MockHelper.time(1111)
 
         val notificationChannelManager = NotificationChannelManager(AndroidMockHelper.applicationService(), MockHelper.languageContext())
-        val payload = JSONObject()
-            .put(
-                "chnl",
-                JSONObject()
-                    .put("id", "test_id"),
-            )
+        val payload =
+            JSONObject()
+                .put(
+                    "chnl",
+                    JSONObject()
+                        .put("id", "test_id"),
+                )
 
-        /* When */
+        // When
         val response = notificationChannelManager.createNotificationChannel(NotificationGenerationJob(payload, mockTime))
 
-        /* Then */
+        // Then
         response shouldBe "test_id"
 
         val lastChannel = ShadowRoboNotificationManager.lastChannel
@@ -82,34 +83,35 @@ class NotificationChannelManagerTests : FunSpec({
     }
 
     test("createNotificationChannel with all options") {
-        /* Given */
+        // Given
         val mockTime = MockHelper.time(1111)
 
         val notificationChannelManager = NotificationChannelManager(AndroidMockHelper.applicationService(), MockHelper.languageContext())
-        val payload = JSONObject()
-            .put("pri", 10)
-            .put("led", 0)
-            .put("ledc", "FFFF0000")
-            .put("vib", 0)
-            .put("vib_pt", JSONArray("[1,2,3,4]"))
-            .put("sound", "notification")
-            .put("vis", Notification.VISIBILITY_SECRET)
-            .put("bdg", 1)
-            .put("bdnd", 1)
-            .put(
-                "chnl",
-                JSONObject()
-                    .put("id", "test_id")
-                    .put("nm", "Test Name")
-                    .put("dscr", "Some description")
-                    .put("grp_id", "grp_id")
-                    .put("grp_nm", "Group Name"),
-            )
+        val payload =
+            JSONObject()
+                .put("pri", 10)
+                .put("led", 0)
+                .put("ledc", "FFFF0000")
+                .put("vib", 0)
+                .put("vib_pt", JSONArray("[1,2,3,4]"))
+                .put("sound", "notification")
+                .put("vis", Notification.VISIBILITY_SECRET)
+                .put("bdg", 1)
+                .put("bdnd", 1)
+                .put(
+                    "chnl",
+                    JSONObject()
+                        .put("id", "test_id")
+                        .put("nm", "Test Name")
+                        .put("dscr", "Some description")
+                        .put("grp_id", "grp_id")
+                        .put("grp_nm", "Group Name"),
+                )
 
-        /* When */
+        // When
         val response = notificationChannelManager.createNotificationChannel(NotificationGenerationJob(payload, mockTime))
 
-        /* Then */
+        // Then
         response shouldBe "test_id"
 
         val lastChannel = ShadowRoboNotificationManager.lastChannel
@@ -141,42 +143,44 @@ class NotificationChannelManagerTests : FunSpec({
     }
 
     test("createNotificationChannel use other channel when available") {
-        /* Given */
+        // Given
         val mockTime = MockHelper.time(1111)
 
         val notificationChannelManager = NotificationChannelManager(AndroidMockHelper.applicationService(), MockHelper.languageContext())
-        val payload = JSONObject()
-            .put("oth_chnl", "existing_id")
-            .put("chnl", JSONObject().put("id", "test_id"))
+        val payload =
+            JSONObject()
+                .put("oth_chnl", "existing_id")
+                .put("chnl", JSONObject().put("id", "test_id"))
 
-        /* When */
+        // When
         val response1 = notificationChannelManager.createNotificationChannel(NotificationGenerationJob(payload, mockTime))
         createChannel("existing_id", ApplicationProvider.getApplicationContext())
         val response2 = notificationChannelManager.createNotificationChannel(NotificationGenerationJob(payload, mockTime))
 
-        /* Then */
+        // Then
         response1 shouldBe "test_id"
         response2 shouldBe "existing_id"
     }
 
     test("createNotificationChannel with invalid color should revert to FFFFFFFF") {
-        /* Given */
+        // Given
         val mockTime = MockHelper.time(1111)
 
         val notificationChannelManager = NotificationChannelManager(AndroidMockHelper.applicationService(), MockHelper.languageContext())
-        val payload = JSONObject()
-            .put("ledc", "FFFFFFFFY")
-            .put(
-                "chnl",
-                JSONObject()
-                    .put("id", "test_id")
-                    .put("nm", "Test Name"),
-            )
+        val payload =
+            JSONObject()
+                .put("ledc", "FFFFFFFFY")
+                .put(
+                    "chnl",
+                    JSONObject()
+                        .put("id", "test_id")
+                        .put("nm", "Test Name"),
+                )
 
-        /* When */
+        // When
         val response = notificationChannelManager.createNotificationChannel(NotificationGenerationJob(payload, mockTime))
 
-        /* Then */
+        // Then
         val lastChannel = ShadowRoboNotificationManager.lastChannel
         response shouldBe "test_id"
         lastChannel shouldNotBe null
@@ -184,92 +188,95 @@ class NotificationChannelManagerTests : FunSpec({
     }
 
     test("processChannelList with no channel list should keep existing channels") {
-        /* Given */
+        // Given
         val notificationChannelManager = NotificationChannelManager(AndroidMockHelper.applicationService(), MockHelper.languageContext())
 
         createChannel("local_existing_id", ApplicationProvider.getApplicationContext())
         createChannel("OS_existing_id", ApplicationProvider.getApplicationContext())
 
-        /* When */
+        // When
         notificationChannelManager.processChannelList(null)
 
-        /* Then */
+        // Then
         getChannel("local_existing_id", ApplicationProvider.getApplicationContext()) shouldNotBe null
         getChannel("OS_existing_id", ApplicationProvider.getApplicationContext()) shouldNotBe null
     }
 
     test("processChannelList with existing local channel should not delete local channel") {
-        /* Given */
+        // Given
         val notificationChannelManager = NotificationChannelManager(AndroidMockHelper.applicationService(), MockHelper.languageContext())
 
         createChannel("local_existing_id", ApplicationProvider.getApplicationContext())
 
-        val payload = JSONArray()
-            .put(
-                JSONObject()
-                    .put("chnl", JSONObject().put("id", "OS_id1")),
-            )
+        val payload =
+            JSONArray()
+                .put(
+                    JSONObject()
+                        .put("chnl", JSONObject().put("id", "OS_id1")),
+                )
 
-        /* When */
+        // When
         notificationChannelManager.processChannelList(payload)
 
-        /* Then */
+        // Then
         getChannel("local_existing_id", ApplicationProvider.getApplicationContext()) shouldNotBe null
         getChannel("OS_id1", ApplicationProvider.getApplicationContext()) shouldNotBe null
     }
 
     test("processChannelList with existing OS channel should delete old OS channel when it is not in channel list") {
-        /* Given */
+        // Given
         val notificationChannelManager = NotificationChannelManager(AndroidMockHelper.applicationService(), MockHelper.languageContext())
 
         createChannel("local_existing_id", ApplicationProvider.getApplicationContext())
         createChannel("OS_existing_id", ApplicationProvider.getApplicationContext())
 
-        val payload = JSONArray()
-            .put(
-                JSONObject()
-                    .put("chnl", JSONObject().put("id", "OS_id1")),
-            )
+        val payload =
+            JSONArray()
+                .put(
+                    JSONObject()
+                        .put("chnl", JSONObject().put("id", "OS_id1")),
+                )
 
-        /* When */
+        // When
         notificationChannelManager.processChannelList(payload)
 
-        /* Then */
+        // Then
         getChannel("local_existing_id", ApplicationProvider.getApplicationContext()) shouldNotBe null
         getChannel("OS_existing_id", ApplicationProvider.getApplicationContext()) shouldBe null
         getChannel("OS_id1", ApplicationProvider.getApplicationContext()) shouldNotBe null
     }
 
     test("processChannelList multilanguage") {
-        /* Given */
+        // Given
         val notificationChannelManager = NotificationChannelManager(AndroidMockHelper.applicationService(), MockHelper.languageContext())
 
-        val payload = JSONArray()
-            .put(
-                JSONObject()
-                    .put(
-                        "chnl",
-                        JSONObject()
-                            .put("id", "OS_id1")
-                            .put("grp_id", "grp_id1")
-                            .put(
-                                "langs",
-                                JSONObject()
-                                    .put(
-                                        "en",
-                                        JSONObject()
-                                            .put("nm", "en_nm")
-                                            .put("dscr", "en_dscr")
-                                            .put("grp_nm", "en_grp_nm"),
-                                    ),
-                            ),
-                    ),
-            )
+        val payload =
+            JSONArray()
+                .put(
+                    JSONObject()
+                        .put(
+                            "chnl",
+                            JSONObject()
+                                .put("id", "OS_id1")
+                                .put("grp_id", "grp_id1")
+                                .put(
+                                    "langs",
+                                    JSONObject()
+                                        .put(
+                                            "en",
+                                            JSONObject()
+                                                .put("nm", "en_nm")
+                                                .put("dscr", "en_dscr")
+                                                .put("grp_nm", "en_grp_nm"),
+                                        ),
+                                ),
+                        ),
+                )
 
-        /* When */
+        // When
         notificationChannelManager.processChannelList(payload)
 
-        /* Then */
+        // Then
         val lastGroup = ShadowRoboNotificationManager.lastChannelGroup
         val channel = getChannel("OS_id1", ApplicationProvider.getApplicationContext())
         channel shouldNotBe null
@@ -280,13 +287,19 @@ class NotificationChannelManagerTests : FunSpec({
     }
 })
 
-fun createChannel(id: String, context: Context) {
+fun createChannel(
+    id: String,
+    context: Context,
+) {
     val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     val channel = NotificationChannel(id, "name", NotificationManager.IMPORTANCE_DEFAULT)
     notificationManager.createNotificationChannel(channel)
 }
 
-private fun getChannel(id: String, context: Context): NotificationChannel? {
+private fun getChannel(
+    id: String,
+    context: Context,
+): NotificationChannel? {
     val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     return notificationManager.getNotificationChannel(id)
 }
