@@ -107,8 +107,8 @@ class UserManagerTests : FunSpec({
             UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext())
 
         // When
-        val tag1 = userManager.tags["my-tag-key1"]
-        val tag2 = userManager.tags["my-tag-key2"]
+        val tag1 = propertiesModelStore.model.tags["my-tag-key1"]
+        val tag2 = propertiesModelStore.model.tags["my-tag-key2"]
 
         // add
         userManager.addTag("my-tag-key5", "my-tag-value5")
@@ -133,6 +133,25 @@ class UserManagerTests : FunSpec({
         propertiesModelStore.model.tags["my-tag-key1"] shouldBe null
         propertiesModelStore.model.tags["my-tag-key2"] shouldBe null
         propertiesModelStore.model.tags["my-tag-key3"] shouldBe null
+    }
+
+    test("getTags returns a copy of tags") {
+        // Given
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        val propertiesModelStore =
+                MockHelper.propertiesModelStore {
+                    it.tags["my-tag-key1"] = "my-tag-value1"
+                }
+
+        val userManager =
+                UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext())
+
+        // When
+        val allTags = userManager.getTags()
+
+        // Then
+        allTags.size shouldBe propertiesModelStore.model.tags.size
+        allTags["my-tag-key1"] shouldBe propertiesModelStore.model.tags["my-tag-key1"]
     }
 
     test("subscriptions are backed by the subscriptions manager") {
