@@ -51,13 +51,15 @@ open class Model(
      * specified, must also specify [_parentModel]
      */
     private val _parentProperty: String? = null,
-    private val initializationLock: Any = Any(),
+    private val modelSynchronizationLock: Any = Any(),
 ) : IEventNotifier<IModelChangedHandler> {
     /**
      * A unique identifier for this model.
      */
     var id: String
-        get() = getStringProperty(::id.name)
+        get() = synchronized(modelSynchronizationLock) {
+            getStringProperty(::id.name)
+        }
         set(value) {
             setStringProperty(::id.name, value)
         }
@@ -124,7 +126,7 @@ open class Model(
         id: String?,
         model: Model,
     ) {
-        val newData = Collections.synchronizedMap(mutableMapOf<String, Any?>())
+        val newData = mutableMapOf<String, Any?>()
 
         for (item in model.data) {
             if (item.value is Model) {
@@ -140,7 +142,7 @@ open class Model(
             newData[::id.name] = id
         }
 
-        synchronized(initializationLock) {
+        synchronized(modelSynchronizationLock) {
             data.clear()
             data.putAll(newData)
         }
@@ -667,7 +669,7 @@ open class Model(
      * @return The resulting [JSONObject].
      */
     fun toJSON(): JSONObject {
-        synchronized(initializationLock) {
+        synchronized(modelSynchronizationLock) {
             val jsonObject = JSONObject()
             for (kvp in data) {
                 when (val value = kvp.value) {
@@ -699,5 +701,7 @@ open class Model(
     override fun unsubscribe(handler: IModelChangedHandler) = changeNotifier.unsubscribe(handler)
 
     override val hasSubscribers: Boolean
-        get() = changeNotifier.hasSubscribers
+        get() = synchronized(modelSynchronizationLock) {
+            changeNotifier.hasSubscribers
+        }
 }
