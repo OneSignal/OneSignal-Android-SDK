@@ -11,23 +11,24 @@ import org.junit.runner.RunWith
 class PropertiesModelTests : FunSpec({
 
     test("successfully initializes varying tag names") {
-        /* Given */
-        val varyingTags = JSONObject()
-            .putJSONObject(PropertiesModel::tags.name) {
-                it.put("value", "data1")
-                    .put("isEmpty", "data2")
-                    .put("object", "data3")
-                    .put("1", "data4")
-                    .put("false", "data5")
-                    .put("15.7", "data6")
-            }
+        // Given
+        val varyingTags =
+            JSONObject()
+                .putJSONObject(PropertiesModel::tags.name) {
+                    it.put("value", "data1")
+                        .put("isEmpty", "data2")
+                        .put("object", "data3")
+                        .put("1", "data4")
+                        .put("false", "data5")
+                        .put("15.7", "data6")
+                }
         val propertiesModel = PropertiesModel()
 
-        /* When */
+        // When
         propertiesModel.initializeFromJson(varyingTags)
         val tagsModel = propertiesModel.tags
 
-        /* Then */
+        // Then
         tagsModel["value"] shouldBe "data1"
         tagsModel["isEmpty"] shouldBe "data2"
         tagsModel["object"] shouldBe "data3"
