@@ -132,21 +132,27 @@ internal class InfluenceManager(
             val lastIds = channelTracker.lastReceivedIds
             Logging.debug("InfluenceManager.restartSessionIfNeeded: lastIds: $lastIds")
             val influence = channelTracker.currentSessionInfluence
-            var updated: Boolean = if (lastIds.length() > 0) {
-                setSessionTracker(
-                    channelTracker,
-                    InfluenceType.INDIRECT,
-                    null,
-                    lastIds,
-                )
-            } else {
-                setSessionTracker(channelTracker, InfluenceType.UNATTRIBUTED, null, null)
-            }
+            var updated: Boolean =
+                if (lastIds.length() > 0) {
+                    setSessionTracker(
+                        channelTracker,
+                        InfluenceType.INDIRECT,
+                        null,
+                        lastIds,
+                    )
+                } else {
+                    setSessionTracker(channelTracker, InfluenceType.UNATTRIBUTED, null, null)
+                }
             if (updated) updatedInfluences.add(influence)
         }
     }
 
-    private fun setSessionTracker(channelTracker: IChannelTracker, influenceType: InfluenceType, directNotificationId: String?, indirectNotificationIds: JSONArray?): Boolean {
+    private fun setSessionTracker(
+        channelTracker: IChannelTracker,
+        influenceType: InfluenceType,
+        directNotificationId: String?,
+        indirectNotificationIds: JSONArray?,
+    ): Boolean {
         if (!willChangeSessionTracker(channelTracker, influenceType, directNotificationId, indirectNotificationIds)) {
             return false
         }
@@ -169,7 +175,12 @@ internal class InfluenceManager(
         return true
     }
 
-    private fun willChangeSessionTracker(channelTracker: IChannelTracker, influenceType: InfluenceType, directNotificationId: String?, indirectNotificationIds: JSONArray?): Boolean {
+    private fun willChangeSessionTracker(
+        channelTracker: IChannelTracker,
+        influenceType: InfluenceType,
+        directNotificationId: String?,
+        indirectNotificationIds: JSONArray?,
+    ): Boolean {
         if (influenceType != channelTracker.influenceType) {
             return true
         }
@@ -189,7 +200,10 @@ internal class InfluenceManager(
         // Allow updating an indirect session to a new indirect when a new notification is received
     }
 
-    private fun attemptSessionUpgrade(entryAction: AppEntryAction, directId: String? = null) {
+    private fun attemptSessionUpgrade(
+        entryAction: AppEntryAction,
+        directId: String? = null,
+    ) {
         Logging.debug("InfluenceManager.attemptSessionUpgrade(entryAction: $entryAction, directId: $directId)")
         val channelTrackerByAction = getChannelByEntryAction(entryAction)
         val channelTrackersToReset = getChannelsToResetByEntryAction(entryAction)
@@ -204,7 +218,9 @@ internal class InfluenceManager(
         }
 
         if (updated) {
-            Logging.debug("InfluenceManager.attemptSessionUpgrade: channel updated, search for ending direct influences on channels: $channelTrackersToReset")
+            Logging.debug(
+                "InfluenceManager.attemptSessionUpgrade: channel updated, search for ending direct influences on channels: $channelTrackersToReset",
+            )
             influencesToEnd.add(lastInfluence!!)
             // Only one session influence channel can be DIRECT at the same time
             // Reset other DIRECT channels, they will init an INDIRECT influence

@@ -23,16 +23,21 @@ class NotificationBackendServiceTests : FunSpec({
     }
 
     test("updateNotificationAsReceived succeeds when response is successful") {
-        /* Given */
+        // Given
         val spyHttpClient = mockk<IHttpClient>()
         coEvery { spyHttpClient.put(any(), any()) } returns HttpResponse(202, null)
 
         val notificationBackendService = NotificationBackendService(spyHttpClient)
 
-        /* When */
-        notificationBackendService.updateNotificationAsReceived("appId", "notificationId", "subscriptionId", IDeviceService.DeviceType.Android)
+        // When
+        notificationBackendService.updateNotificationAsReceived(
+            "appId",
+            "notificationId",
+            "subscriptionId",
+            IDeviceService.DeviceType.Android,
+        )
 
-        /* Then */
+        // Then
         coVerify {
             spyHttpClient.put(
                 "notifications/notificationId/report_received",
@@ -46,37 +51,43 @@ class NotificationBackendServiceTests : FunSpec({
     }
 
     test("updateNotificationAsReceived throws exception when response is unsuccessful") {
-        /* Given */
+        // Given
         val spyHttpClient = mockk<IHttpClient>()
         coEvery { spyHttpClient.put(any(), any()) } returns HttpResponse(404, null)
 
         val notificationBackendService = NotificationBackendService(spyHttpClient)
 
-        /* When */
-        val exception = shouldThrowUnit<BackendException> {
-            notificationBackendService.updateNotificationAsReceived(
-                "appId",
-                "notificationId",
-                "subscriptionId",
-                IDeviceService.DeviceType.Android,
-            )
-        }
+        // When
+        val exception =
+            shouldThrowUnit<BackendException> {
+                notificationBackendService.updateNotificationAsReceived(
+                    "appId",
+                    "notificationId",
+                    "subscriptionId",
+                    IDeviceService.DeviceType.Android,
+                )
+            }
 
-        /* Then */
+        // Then
         exception.statusCode shouldBe 404
     }
 
     test("updateNotificationAsOpened succeeds when response is successful") {
-        /* Given */
+        // Given
         val spyHttpClient = mockk<IHttpClient>()
         coEvery { spyHttpClient.put(any(), any()) } returns HttpResponse(202, null)
 
         val notificationBackendService = NotificationBackendService(spyHttpClient)
 
-        /* When */
-        notificationBackendService.updateNotificationAsOpened("appId", "notificationId", "subscriptionId", IDeviceService.DeviceType.Android)
+        // When
+        notificationBackendService.updateNotificationAsOpened(
+            "appId",
+            "notificationId",
+            "subscriptionId",
+            IDeviceService.DeviceType.Android,
+        )
 
-        /* Then */
+        // Then
         coVerify {
             spyHttpClient.put(
                 "notifications/notificationId",
@@ -91,23 +102,24 @@ class NotificationBackendServiceTests : FunSpec({
     }
 
     test("updateNotificationAsOpened throws exception when response is unsuccessful") {
-        /* Given */
+        // Given
         val spyHttpClient = mockk<IHttpClient>()
         coEvery { spyHttpClient.put(any(), any()) } returns HttpResponse(404, null)
 
         val notificationBackendService = NotificationBackendService(spyHttpClient)
 
-        /* When */
-        val exception = shouldThrowUnit<BackendException> {
-            notificationBackendService.updateNotificationAsOpened(
-                "appId",
-                "notificationId",
-                "subscriptionId",
-                IDeviceService.DeviceType.Android,
-            )
-        }
+        // When
+        val exception =
+            shouldThrowUnit<BackendException> {
+                notificationBackendService.updateNotificationAsOpened(
+                    "appId",
+                    "notificationId",
+                    "subscriptionId",
+                    IDeviceService.DeviceType.Android,
+                )
+            }
 
-        /* Then */
+        // Then
         exception.statusCode shouldBe 404
     }
 })

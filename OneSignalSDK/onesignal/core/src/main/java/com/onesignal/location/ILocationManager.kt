@@ -4,7 +4,6 @@ package com.onesignal.location
  * The entry point to the location SDK for OneSignal.
  */
 interface ILocationManager {
-
     /**
      * Whether location is currently shared with OneSignal.
      */

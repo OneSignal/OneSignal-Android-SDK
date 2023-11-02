@@ -17,7 +17,6 @@ import java.util.Locale
 internal class OutcomeEventsRepository(
     private val _databaseProvider: IDatabaseProvider,
 ) : IOutcomeEventsRepository {
-
     /**
      * Delete event from the DB
      */
@@ -135,21 +134,22 @@ internal class OutcomeEventsRepository(
                         try {
                             val directSourceBody = OutcomeSourceBody()
                             val indirectSourceBody = OutcomeSourceBody()
-                            val source: OutcomeSource = getNotificationInfluenceSource(
-                                notificationInfluenceType,
-                                directSourceBody,
-                                indirectSourceBody,
-                                notificationIds,
-                            )
-                                .also {
-                                    getIAMInfluenceSource(
-                                        iamInfluenceType,
-                                        directSourceBody,
-                                        indirectSourceBody,
-                                        iamIds,
-                                        it,
-                                    )
-                                } ?: OutcomeSource(null, null)
+                            val source: OutcomeSource =
+                                getNotificationInfluenceSource(
+                                    notificationInfluenceType,
+                                    directSourceBody,
+                                    indirectSourceBody,
+                                    notificationIds,
+                                )
+                                    .also {
+                                        getIAMInfluenceSource(
+                                            iamInfluenceType,
+                                            directSourceBody,
+                                            indirectSourceBody,
+                                            iamIds,
+                                            it,
+                                        )
+                                    } ?: OutcomeSource(null, null)
                             OutcomeEventParams(name, source, weight, sessionTime, timestamp).also {
                                 events.add(it)
                             }
@@ -211,7 +211,11 @@ internal class OutcomeEventsRepository(
         }
     }
 
-    private fun addIdToListFromChannel(cachedUniqueOutcomes: MutableList<CachedUniqueOutcome>, channelIds: JSONArray?, channel: InfluenceChannel) {
+    private fun addIdToListFromChannel(
+        cachedUniqueOutcomes: MutableList<CachedUniqueOutcome>,
+        channelIds: JSONArray?,
+        channel: InfluenceChannel,
+    ) {
         channelIds?.let {
             for (i in 0 until it.length()) {
                 try {
@@ -224,7 +228,10 @@ internal class OutcomeEventsRepository(
         }
     }
 
-    private fun addIdsToListFromSource(cachedUniqueOutcomes: MutableList<CachedUniqueOutcome>, sourceBody: OutcomeSourceBody?) {
+    private fun addIdsToListFromSource(
+        cachedUniqueOutcomes: MutableList<CachedUniqueOutcome>,
+        sourceBody: OutcomeSourceBody?,
+    ) {
         sourceBody?.let {
             val iamIds = it.inAppMessagesIds
             val notificationIds = it.notificationIds
@@ -268,7 +275,10 @@ internal class OutcomeEventsRepository(
     /**
      * Create a JSONArray of not cached notification ids from the unique outcome notifications SQL table
      */
-    override suspend fun getNotCachedUniqueInfluencesForOutcome(name: String, influences: List<Influence>): List<Influence> {
+    override suspend fun getNotCachedUniqueInfluencesForOutcome(
+        name: String,
+        influences: List<Influence>,
+    ): List<Influence> {
         val uniqueInfluences: MutableList<Influence> = ArrayList()
 
         withContext(Dispatchers.IO) {
@@ -281,9 +291,10 @@ internal class OutcomeEventsRepository(
                         val channelInfluenceId = influenceIds.getString(i)
                         val channel = influence.influenceChannel
                         val columns = arrayOf<String>()
-                        val where = CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID + " = ? AND " +
-                            CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE + " = ? AND " +
-                            CachedUniqueOutcomeTable.COLUMN_NAME_NAME + " = ?"
+                        val where =
+                            CachedUniqueOutcomeTable.COLUMN_CHANNEL_INFLUENCE_ID + " = ? AND " +
+                                CachedUniqueOutcomeTable.COLUMN_CHANNEL_TYPE + " = ? AND " +
+                                CachedUniqueOutcomeTable.COLUMN_NAME_NAME + " = ?"
                         val args = arrayOf(channelInfluenceId, channel.toString(), name)
                         _databaseProvider.os.query(
                             CachedUniqueOutcomeTable.TABLE_NAME,
@@ -321,12 +332,14 @@ internal class OutcomeEventsRepository(
         val notificationIdColumnName = OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID
 
         withContext(Dispatchers.IO) {
-            val whereStr = "NOT EXISTS(" +
-                "SELECT NULL FROM " + notificationTableName + " n " +
-                "WHERE" + " n." + notificationIdColumnName + " = " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_INFLUENCE_ID +
-                " AND " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_TYPE + " = \"" + InfluenceChannel.NOTIFICATION.toString()
-                    .lowercase(Locale.ROOT) +
-                "\")"
+            val whereStr =
+                "NOT EXISTS(" +
+                    "SELECT NULL FROM " + notificationTableName + " n " +
+                    "WHERE" + " n." + notificationIdColumnName + " = " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_INFLUENCE_ID +
+                    " AND " + OutcomesDbContract.CACHE_UNIQUE_OUTCOME_COLUMN_CHANNEL_TYPE + " = \"" +
+                    InfluenceChannel.NOTIFICATION.toString()
+                        .lowercase(Locale.ROOT) +
+                    "\")"
             _databaseProvider.os.delete(
                 OutcomesDbContract.CACHE_UNIQUE_OUTCOME_TABLE,
                 whereStr,

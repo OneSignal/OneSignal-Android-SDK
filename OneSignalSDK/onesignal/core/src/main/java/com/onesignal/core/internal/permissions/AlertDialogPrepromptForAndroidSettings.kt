@@ -35,9 +35,9 @@ import com.onesignal.core.R
  * A singleton helper which will display the fallback-to-settings alert dialog.
  */
 object AlertDialogPrepromptForAndroidSettings {
-
     interface Callback {
         fun onAccept()
+
         fun onDecline()
     }
 

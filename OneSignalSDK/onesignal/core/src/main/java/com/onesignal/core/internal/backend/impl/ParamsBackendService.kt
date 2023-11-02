@@ -20,8 +20,10 @@ import org.json.JSONObject
 internal class ParamsBackendService(
     private val _http: IHttpClient,
 ) : IParamsBackendService {
-
-    override suspend fun fetchParams(appId: String, subscriptionId: String?): ParamsObject {
+    override suspend fun fetchParams(
+        appId: String,
+        subscriptionId: String?,
+    ): ParamsObject {
         Logging.log(LogLevel.DEBUG, "ParamsBackendService.fetchParams(appId: $appId, subscriptionId: $subscriptionId)")
 
         var paramsUrl = "apps/$appId/android_params.js"
@@ -46,17 +48,19 @@ internal class ParamsBackendService(
         // Process FCM params
         var fcmParams: FCMParamsObject? = null
         responseJson.expandJSONObject("fcm") {
-            fcmParams = FCMParamsObject(
-                apiKey = it.safeString("api_key"),
-                appId = it.safeString("app_id"),
-                projectId = it.safeString("project_id"),
-            )
+            fcmParams =
+                FCMParamsObject(
+                    apiKey = it.safeString("api_key"),
+                    appId = it.safeString("app_id"),
+                    projectId = it.safeString("project_id"),
+                )
         }
 
         return ParamsObject(
             googleProjectNumber = responseJson.safeString("android_sender_id"),
             enterprise = responseJson.safeBool("enterp"),
-            useIdentityVerification = responseJson.safeBool("require_ident_auth"), // TODO: New
+            // TODO: New
+            useIdentityVerification = responseJson.safeBool("require_ident_auth"),
             notificationChannels = responseJson.optJSONArray("chnl_lst"),
             firebaseAnalytics = responseJson.safeBool("fba"),
             restoreTTLFilter = responseJson.safeBool("restore_ttl_filter"),
@@ -66,7 +70,8 @@ internal class ParamsBackendService(
             unsubscribeWhenNotificationsDisabled = responseJson.safeBool("unsubscribe_on_notifications_disabled"),
             locationShared = responseJson.safeBool("location_shared"),
             requiresUserPrivacyConsent = responseJson.safeBool("requires_user_privacy_consent"),
-            opRepoExecutionInterval = responseJson.safeLong("oprepo_execution_interval"), // TODO: New
+            // TODO: New
+            opRepoExecutionInterval = responseJson.safeLong("oprepo_execution_interval"),
             influenceParams = influenceParams ?: InfluenceParamsObject(),
             fcmParams = fcmParams ?: FCMParamsObject(),
         )

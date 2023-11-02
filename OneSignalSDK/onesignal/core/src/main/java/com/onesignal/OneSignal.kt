@@ -43,7 +43,7 @@ object OneSignal {
      */
     @JvmStatic
     val User: IUserManager
-        get() = oneSignal.User
+        get() = oneSignal.user
 
     /**
      * The session manager for accessing session-scoped management.  Initialized only after [initWithContext]
@@ -51,7 +51,7 @@ object OneSignal {
      */
     @JvmStatic
     val Session: ISessionManager
-        get() = oneSignal.Session
+        get() = oneSignal.session
 
     /**
      * The notification manager for accessing device-scoped notification management. Initialized
@@ -59,7 +59,7 @@ object OneSignal {
      */
     @JvmStatic
     val Notifications: INotificationsManager
-        get() = oneSignal.Notifications
+        get() = oneSignal.notifications
 
     /**
      * The location manager for accessing device-scoped location management. Initialized
@@ -67,7 +67,7 @@ object OneSignal {
      */
     @JvmStatic
     val Location: ILocationManager
-        get() = oneSignal.Location
+        get() = oneSignal.location
 
     /**
      * The In App Messaging manager for accessing device-scoped IAP management. Initialized
@@ -75,7 +75,7 @@ object OneSignal {
      */
     @JvmStatic
     val InAppMessages: IInAppMessagesManager
-        get() = oneSignal.InAppMessages
+        get() = oneSignal.inAppMessages
 
     /**
      * Access to debug the SDK in the additional information is required to diagnose any
@@ -85,7 +85,7 @@ object OneSignal {
      */
     @JvmStatic
     val Debug: IDebugManager
-        get() = oneSignal.Debug
+        get() = oneSignal.debug
 
     /**
      * Determines whether a user must consent to privacy prior
@@ -96,7 +96,9 @@ object OneSignal {
     @JvmStatic
     var consentRequired: Boolean
         get() = oneSignal.consentRequired
-        set(value) { oneSignal.consentRequired = value }
+        set(value) {
+            oneSignal.consentRequired = value
+        }
 
     /**
      * Indicates whether privacy consent has been granted. This field is only relevant when
@@ -105,7 +107,9 @@ object OneSignal {
     @JvmStatic
     var consentGiven: Boolean
         get() = oneSignal.consentGiven
-        set(value) { oneSignal.consentGiven = value }
+        set(value) {
+            oneSignal.consentGiven = value
+        }
 
     /**
      * Whether to disable the "GMS is missing" prompt to the user.
@@ -113,7 +117,9 @@ object OneSignal {
     @JvmStatic
     var disableGMSMissingPrompt: Boolean
         get() = oneSignal.disableGMSMissingPrompt
-        set(value) { oneSignal.disableGMSMissingPrompt = value }
+        set(value) {
+            oneSignal.disableGMSMissingPrompt = value
+        }
 
     /**
      * Initialize the OneSignal SDK.  This should be called during startup of the application.
@@ -122,7 +128,10 @@ object OneSignal {
      * @param appId The application ID the OneSignal SDK is bound to.
      */
     @JvmStatic
-    fun initWithContext(context: Context, appId: String) {
+    fun initWithContext(
+        context: Context,
+        appId: String,
+    ) {
         oneSignal.initWithContext(context, appId)
     }
 
@@ -169,7 +178,10 @@ object OneSignal {
      * [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
      */
     @JvmStatic
-    fun login(externalId: String, jwtBearerToken: String? = null) = oneSignal.login(externalId, jwtBearerToken)
+    fun login(
+        externalId: String,
+        jwtBearerToken: String? = null,
+    ) = oneSignal.login(externalId, jwtBearerToken)
 
     /**
      * Logout the user previously logged in via [login]. The [User] property now references

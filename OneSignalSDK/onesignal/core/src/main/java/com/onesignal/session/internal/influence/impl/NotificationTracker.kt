@@ -7,7 +7,10 @@ import com.onesignal.session.internal.influence.InfluenceType
 import org.json.JSONArray
 import org.json.JSONException
 
-internal class NotificationTracker(dataRepository: InfluenceDataRepository, timeProvider: ITime) : ChannelTracker(dataRepository, timeProvider) {
+internal class NotificationTracker(dataRepository: InfluenceDataRepository, timeProvider: ITime) : ChannelTracker(
+    dataRepository,
+    timeProvider,
+) {
     override fun getLastChannelObjectsReceivedByNewId(id: String?): JSONArray {
         return try {
             lastChannelObjects
@@ -37,13 +40,14 @@ internal class NotificationTracker(dataRepository: InfluenceDataRepository, time
     }
 
     override fun initInfluencedTypeFromCache() {
-        influenceType = dataRepository.notificationCachedInfluenceType.also {
-            if (it.isIndirect()) {
-                indirectIds = lastReceivedIds
-            } else if (it.isDirect()) {
-                directId = dataRepository.cachedNotificationOpenId
+        influenceType =
+            dataRepository.notificationCachedInfluenceType.also {
+                if (it.isIndirect()) {
+                    indirectIds = lastReceivedIds
+                } else if (it.isDirect()) {
+                    directId = dataRepository.cachedNotificationOpenId
+                }
             }
-        }
         Logging.debug("NotificationTracker.initInfluencedTypeFromCache: $this")
     }
 

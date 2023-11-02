@@ -6,7 +6,11 @@ import com.onesignal.inAppMessages.IInAppMessagesManager
 
 internal class DummyInAppMessagesManager : IInAppMessagesManager {
     override var paused: Boolean = true
-    override fun addTrigger(key: String, value: String) {
+
+    override fun addTrigger(
+        key: String,
+        value: String,
+    ) {
     }
 
     override fun addTriggers(triggers: Map<String, String>) {

@@ -46,17 +46,22 @@ internal class WebViewManager(
     private val _applicationService: IApplicationService,
     private val _promptFactory: IInAppMessagePromptFactory,
 ) : IActivityLifecycleHandler {
-
     private val messageViewMutex: Mutex = Mutex()
 
     internal enum class Position {
-        TOP_BANNER, BOTTOM_BANNER, CENTER_MODAL, FULL_SCREEN;
+        TOP_BANNER,
+        BOTTOM_BANNER,
+        CENTER_MODAL,
+        FULL_SCREEN,
+        ;
 
         val isBanner: Boolean
             get() {
                 when (this) {
                     TOP_BANNER, BOTTOM_BANNER -> return true
-                    else -> { return false }
+                    else -> {
+                        return false
+                    }
                 }
                 return false
             }
@@ -165,7 +170,10 @@ internal class WebViewManager(
         }
     }
 
-    private fun pageRectToViewHeight(activity: Activity, jsonObject: JSONObject): Int {
+    private fun pageRectToViewHeight(
+        activity: Activity,
+        jsonObject: JSONObject,
+    ): Int {
         return try {
             val pageHeight = jsonObject.getJSONObject("rect").getInt("height")
             var pxHeight = ViewUtils.dpToPx(pageHeight)
@@ -185,17 +193,19 @@ internal class WebViewManager(
     private suspend fun updateSafeAreaInsets() {
         withContext(Dispatchers.Main) {
             val insets = ViewUtils.getCutoutAndStatusBarInsets(activity)
-            val safeAreaInsetsObject = String.format(
-                SAFE_AREA_JS_OBJECT,
-                insets[0],
-                insets[1],
-                insets[2],
-                insets[3],
-            )
-            val safeAreaInsetsFunction = String.format(
-                SET_SAFE_AREA_INSETS_JS_FUNCTION,
-                safeAreaInsetsObject,
-            )
+            val safeAreaInsetsObject =
+                String.format(
+                    SAFE_AREA_JS_OBJECT,
+                    insets[0],
+                    insets[1],
+                    insets[2],
+                    insets[3],
+                )
+            val safeAreaInsetsFunction =
+                String.format(
+                    SET_SAFE_AREA_INSETS_JS_FUNCTION,
+                    safeAreaInsetsObject,
+                )
             webView!!.evaluateJavascript(safeAreaInsetsFunction, null)
         }
     }
@@ -261,9 +271,9 @@ internal class WebViewManager(
     override fun onActivityStopped(activity: Activity) {
         Logging.debug(
             """
-     In app message activity stopped, cleaning views, currentActivityName: $currentActivityName
-     activity: ${this.activity}
-     messageView: $messageView
+            In app message activity stopped, cleaning views, currentActivityName: $currentActivityName
+            activity: ${this.activity}
+            messageView: $messageView
             """.trimIndent(),
         )
         if (messageView != null && activity.localClassName == currentActivityName) {
@@ -352,20 +362,22 @@ internal class WebViewManager(
         val newView = InAppMessageView(webView!!, messageContent, dragToDismissDisabled)
         setMessageView(newView)
         val self = this
-        messageView!!.setMessageController(object : InAppMessageView.InAppMessageViewListener {
-            override fun onMessageWasDisplayed() {
-                _lifecycle.messageWasDisplayed(message)
-            }
+        messageView!!.setMessageController(
+            object : InAppMessageView.InAppMessageViewListener {
+                override fun onMessageWasDisplayed() {
+                    _lifecycle.messageWasDisplayed(message)
+                }
 
-            override fun onMessageWillDismiss() {
-                _lifecycle.messageWillDismiss(message)
-            }
+                override fun onMessageWillDismiss() {
+                    _lifecycle.messageWillDismiss(message)
+                }
 
-            override fun onMessageWasDismissed() {
-                _lifecycle.messageWasDismissed(message)
-                _applicationService.removeActivityLifecycleHandler(self)
-            }
-        })
+                override fun onMessageWasDismissed() {
+                    _lifecycle.messageWasDismissed(message)
+                    _applicationService.removeActivityLifecycleHandler(self)
+                }
+            },
+        )
 
         // Fires event if available, which will call messageView.showInAppMessageView() for us.
         _applicationService.addActivityLifecycleHandler(self)
@@ -408,17 +420,21 @@ internal class WebViewManager(
         setMessageView(null)
     }
 
-    fun setContentSafeAreaInsets(content: InAppMessageContent, activity: Activity) {
+    fun setContentSafeAreaInsets(
+        content: InAppMessageContent,
+        activity: Activity,
+    ) {
         var html = content.contentHtml
         var safeAreaInsetsScript = SET_SAFE_AREA_INSETS_SCRIPT
         val insets = ViewUtils.getCutoutAndStatusBarInsets(activity)
-        val safeAreaJSObject = String.format(
-            SAFE_AREA_JS_OBJECT,
-            insets[0],
-            insets[1],
-            insets[2],
-            insets[3],
-        )
+        val safeAreaJSObject =
+            String.format(
+                SAFE_AREA_JS_OBJECT,
+                insets[0],
+                insets[1],
+                insets[2],
+                insets[3],
+            )
         safeAreaInsetsScript = String.format(safeAreaInsetsScript, safeAreaJSObject)
         html += safeAreaInsetsScript
         content.contentHtml = html
@@ -437,16 +453,18 @@ internal class WebViewManager(
         const val JS_OBJ_NAME = "OSAndroid"
         const val GET_PAGE_META_DATA_JS_FUNCTION = "getPageMetaData()"
         const val SET_SAFE_AREA_INSETS_JS_FUNCTION = "setSafeAreaInsets(%s)"
-        const val SAFE_AREA_JS_OBJECT = "{\n" +
-            "   top: %d,\n" +
-            "   bottom: %d,\n" +
-            "   right: %d,\n" +
-            "   left: %d,\n" +
-            "}"
-        const val SET_SAFE_AREA_INSETS_SCRIPT = "\n\n" +
-            "<script>\n" +
-            "    setSafeAreaInsets(%s);\n" +
-            "</script>"
+        const val SAFE_AREA_JS_OBJECT =
+            "{\n" +
+                "   top: %d,\n" +
+                "   bottom: %d,\n" +
+                "   right: %d,\n" +
+                "   left: %d,\n" +
+                "}"
+        const val SET_SAFE_AREA_INSETS_SCRIPT =
+            "\n\n" +
+                "<script>\n" +
+                "    setSafeAreaInsets(%s);\n" +
+                "</script>"
         const val EVENT_TYPE_KEY = "type"
         const val EVENT_TYPE_RENDERING_COMPLETE = "rendering_complete"
         const val EVENT_TYPE_RESIZE = "resize"

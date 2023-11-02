@@ -24,16 +24,16 @@ class OutcomeEventsBackendServiceTests : FunSpec({
     }
 
     test("send outcome event") {
-        /* Given */
+        // Given
         val evnt = OutcomeEvent(InfluenceType.DIRECT, null, "EVENT_NAME", 0, 0, 0F)
         val spyHttpClient = mockk<IHttpClient>()
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(200, null)
         val outcomeEventsController = OutcomeEventsBackendService(spyHttpClient)
 
-        /* When */
+        // When
         outcomeEventsController.sendOutcomeEvent("appId", "onesignalId", "subscriptionId", "AndroidPush", null, evnt)
 
-        /* Then */
+        // Then
         coVerify {
             spyHttpClient.post(
                 "outcomes/measure",
@@ -52,16 +52,16 @@ class OutcomeEventsBackendServiceTests : FunSpec({
     }
 
     test("send outcome event with weight") {
-        /* Given */
+        // Given
         val evnt = OutcomeEvent(InfluenceType.DIRECT, null, "EVENT_NAME", 0, 0, 1F)
         val spyHttpClient = mockk<IHttpClient>()
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(200, null)
         val outcomeEventsController = OutcomeEventsBackendService(spyHttpClient)
 
-        /* When */
+        // When
         outcomeEventsController.sendOutcomeEvent("appId", "onesignalId", "subscriptionId", "AndroidPush", null, evnt)
 
-        /* Then */
+        // Then
         coVerify {
             spyHttpClient.post(
                 "outcomes/measure",
@@ -80,16 +80,16 @@ class OutcomeEventsBackendServiceTests : FunSpec({
     }
 
     test("send outcome event with indirect") {
-        /* Given */
+        // Given
         val evnt = OutcomeEvent(InfluenceType.DIRECT, null, "EVENT_NAME", 0, 0, 0F)
         val spyHttpClient = mockk<IHttpClient>()
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(200, null)
         val outcomeEventsController = OutcomeEventsBackendService(spyHttpClient)
 
-        /* When */
+        // When
         outcomeEventsController.sendOutcomeEvent("appId", "onesignalId", "subscriptionId", "AndroidPush", false, evnt)
 
-        /* Then */
+        // Then
         coVerify {
             spyHttpClient.post(
                 "outcomes/measure",
@@ -108,16 +108,16 @@ class OutcomeEventsBackendServiceTests : FunSpec({
     }
 
     test("send outcome event with direct") {
-        /* Given */
+        // Given
         val evnt = OutcomeEvent(InfluenceType.DIRECT, null, "EVENT_NAME", 0, 0, 0F)
         val spyHttpClient = mockk<IHttpClient>()
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(200, null)
         val outcomeEventsController = OutcomeEventsBackendService(spyHttpClient)
 
-        /* When */
+        // When
         outcomeEventsController.sendOutcomeEvent("appId", "onesignalId", "subscriptionId", "AndroidPush", true, evnt)
 
-        /* Then */
+        // Then
         coVerify {
             spyHttpClient.post(
                 "outcomes/measure",
@@ -136,16 +136,16 @@ class OutcomeEventsBackendServiceTests : FunSpec({
     }
 
     test("send outcome event with timestamp") {
-        /* Given */
+        // Given
         val evnt = OutcomeEvent(InfluenceType.DIRECT, null, "EVENT_NAME", 1111L, 0, 0F)
         val spyHttpClient = mockk<IHttpClient>()
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(200, null)
         val outcomeEventsController = OutcomeEventsBackendService(spyHttpClient)
 
-        /* When */
+        // When
         outcomeEventsController.sendOutcomeEvent("appId", "onesignalId", "subscriptionId", "AndroidPush", null, evnt)
 
-        /* Then */
+        // Then
         coVerify {
             spyHttpClient.post(
                 "outcomes/measure",
@@ -164,18 +164,19 @@ class OutcomeEventsBackendServiceTests : FunSpec({
     }
 
     test("send outcome event with unsuccessful response") {
-        /* Given */
+        // Given
         val evnt = OutcomeEvent(InfluenceType.DIRECT, null, "EVENT_NAME", 1111L, 0, 0F)
         val spyHttpClient = mockk<IHttpClient>()
         coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(503, "SERVICE UNAVAILABLE")
         val outcomeEventsController = OutcomeEventsBackendService(spyHttpClient)
 
-        /* When */
-        val exception = shouldThrowUnit<BackendException> {
-            outcomeEventsController.sendOutcomeEvent("appId", "onesignalId", "subscriptionId", "AndroidPush", null, evnt)
-        }
+        // When
+        val exception =
+            shouldThrowUnit<BackendException> {
+                outcomeEventsController.sendOutcomeEvent("appId", "onesignalId", "subscriptionId", "AndroidPush", null, evnt)
+            }
 
-        /* Then */
+        // Then
         exception.statusCode shouldBe 503
         exception.response shouldBe "SERVICE UNAVAILABLE"
     }

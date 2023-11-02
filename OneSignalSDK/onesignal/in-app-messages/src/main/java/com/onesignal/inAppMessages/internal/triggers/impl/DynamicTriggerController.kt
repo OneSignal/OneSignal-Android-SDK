@@ -18,9 +18,7 @@ internal class DynamicTriggerController(
     private val _state: InAppStateService,
     private val _session: ISessionService,
     private val _time: ITime,
-
 ) : IEventNotifier<ITriggerHandler> {
-
     val events = EventProducer<ITriggerHandler>()
     private val scheduledMessages: MutableList<String> = mutableListOf()
 
@@ -110,24 +108,30 @@ internal class DynamicTriggerController(
     ): Boolean {
         return when (operator) {
             Trigger.OSTriggerOperator.LESS_THAN -> currentTimeInterval < timeInterval
-            Trigger.OSTriggerOperator.LESS_THAN_OR_EQUAL_TO -> currentTimeInterval <= timeInterval || roughlyEqual(
-                timeInterval,
-                currentTimeInterval,
-            )
+            Trigger.OSTriggerOperator.LESS_THAN_OR_EQUAL_TO ->
+                currentTimeInterval <= timeInterval ||
+                    roughlyEqual(
+                        timeInterval,
+                        currentTimeInterval,
+                    )
             Trigger.OSTriggerOperator.GREATER_THAN -> // Counting equal as greater. This way we don't need to schedule a Runnable for 1ms in the future.
                 currentTimeInterval >= timeInterval
-            Trigger.OSTriggerOperator.GREATER_THAN_OR_EQUAL_TO -> currentTimeInterval >= timeInterval || roughlyEqual(
-                timeInterval,
-                currentTimeInterval,
-            )
-            Trigger.OSTriggerOperator.EQUAL_TO -> roughlyEqual(
-                timeInterval,
-                currentTimeInterval,
-            )
-            Trigger.OSTriggerOperator.NOT_EQUAL_TO -> !roughlyEqual(
-                timeInterval,
-                currentTimeInterval,
-            )
+            Trigger.OSTriggerOperator.GREATER_THAN_OR_EQUAL_TO ->
+                currentTimeInterval >= timeInterval ||
+                    roughlyEqual(
+                        timeInterval,
+                        currentTimeInterval,
+                    )
+            Trigger.OSTriggerOperator.EQUAL_TO ->
+                roughlyEqual(
+                    timeInterval,
+                    currentTimeInterval,
+                )
+            Trigger.OSTriggerOperator.NOT_EQUAL_TO ->
+                !roughlyEqual(
+                    timeInterval,
+                    currentTimeInterval,
+                )
             else -> {
                 Logging.error("Attempted to apply an invalid operator on a time-based in-app-message trigger: $operator")
                 false
@@ -135,7 +139,10 @@ internal class DynamicTriggerController(
         }
     }
 
-    private fun roughlyEqual(left: Double, right: Double): Boolean {
+    private fun roughlyEqual(
+        left: Double,
+        right: Double,
+    ): Boolean {
         return abs(left - right) < REQUIRED_ACCURACY
     }
 
@@ -147,7 +154,9 @@ internal class DynamicTriggerController(
     }
 
     override fun subscribe(handler: ITriggerHandler) = events.subscribe(handler)
+
     override fun unsubscribe(handler: ITriggerHandler) = events.unsubscribe(handler)
+
     override val hasSubscribers: Boolean
         get() = events.hasSubscribers
 }

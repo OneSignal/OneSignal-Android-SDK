@@ -14,7 +14,9 @@ class SetPropertyOperation() : Operation(UpdateUserOperationExecutor.SET_PROPERT
      */
     var appId: String
         get() = getStringProperty(::appId.name)
-        private set(value) { setStringProperty(::appId.name, value) }
+        private set(value) {
+            setStringProperty(::appId.name, value)
+        }
 
     /**
      * The OneSignal ID the purchase was captured under. This ID *may* be locally generated
@@ -22,21 +24,27 @@ class SetPropertyOperation() : Operation(UpdateUserOperationExecutor.SET_PROPERT
      */
     var onesignalId: String
         get() = getStringProperty(::onesignalId.name)
-        private set(value) { setStringProperty(::onesignalId.name, value) }
+        private set(value) {
+            setStringProperty(::onesignalId.name, value)
+        }
 
     /**
      * The property that is to be updated against the user.
      */
     var property: String
         get() = getStringProperty(::property.name)
-        private set(value) { setStringProperty(::property.name, value) }
+        private set(value) {
+            setStringProperty(::property.name, value)
+        }
 
     /**
      * The value of that property to update it to.
      */
     var value: Any?
         get() = getOptAnyProperty(::value.name)
-        private set(value) { setOptAnyProperty(::value.name, value) }
+        private set(value) {
+            setOptAnyProperty(::value.name, value)
+        }
 
     override val createComparisonKey: String get() = ""
     override val modifyComparisonKey: String get() = createComparisonKey

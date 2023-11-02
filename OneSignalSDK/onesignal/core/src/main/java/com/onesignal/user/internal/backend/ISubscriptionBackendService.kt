@@ -16,7 +16,12 @@ interface ISubscriptionBackendService {
      *
      * @return The ID of the subscription created.  Or null if the subscription is already part of the current user.
      */
-    suspend fun createSubscription(appId: String, aliasLabel: String, aliasValue: String, subscription: SubscriptionObject): String?
+    suspend fun createSubscription(
+        appId: String,
+        aliasLabel: String,
+        aliasValue: String,
+        subscription: SubscriptionObject,
+    ): String?
 
     /**
      * Update an existing subscription with the properties provided.
@@ -25,7 +30,11 @@ interface ISubscriptionBackendService {
      * @param subscriptionId The ID of the subscription to update.
      * @param subscription The subscription updates. Any non-null value will be updated.
      */
-    suspend fun updateSubscription(appId: String, subscriptionId: String, subscription: SubscriptionObject)
+    suspend fun updateSubscription(
+        appId: String,
+        subscriptionId: String,
+        subscription: SubscriptionObject,
+    )
 
     /**
      * Delete an existing subscription.
@@ -33,7 +42,10 @@ interface ISubscriptionBackendService {
      * @param appId The ID of the OneSignal application this subscription exists under.
      * @param subscriptionId The ID of the subscription to delete.
      */
-    suspend fun deleteSubscription(appId: String, subscriptionId: String)
+    suspend fun deleteSubscription(
+        appId: String,
+        subscriptionId: String,
+    )
 
     /**
      * Transfer an existing subscription to the user specified.
@@ -43,7 +55,12 @@ interface ISubscriptionBackendService {
      * @param aliasLabel The alias label of the user to transfer the subscription under.
      * @param aliasValue The identifier within the [aliasLabel] that identifies the user to transfer under.
      */
-    suspend fun transferSubscription(appId: String, subscriptionId: String, aliasLabel: String, aliasValue: String)
+    suspend fun transferSubscription(
+        appId: String,
+        subscriptionId: String,
+        aliasLabel: String,
+        aliasValue: String,
+    )
 
     /**
      * Given an existing subscription, retrieve all identities associated to it.
@@ -53,5 +70,8 @@ interface ISubscriptionBackendService {
      *
      * @return The identities associated to the subscription.
      */
-    suspend fun getIdentityFromSubscription(appId: String, subscriptionId: String): Map<String, String>
+    suspend fun getIdentityFromSubscription(
+        appId: String,
+        subscriptionId: String,
+    ): Map<String, String>
 }

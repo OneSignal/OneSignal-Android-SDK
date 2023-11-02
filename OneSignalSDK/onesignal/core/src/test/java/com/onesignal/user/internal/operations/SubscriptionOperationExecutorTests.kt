@@ -36,7 +36,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
     val remoteSubscriptionId = "remote-subscriptionId1"
 
     test("create subscription successfully creates subscription") {
-        /* Given */
+        // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
         coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } returns remoteSubscriptionId
 
@@ -47,21 +47,33 @@ class SubscriptionOperationExecutorTests : FunSpec({
 
         val mockBuildUserService = mockk<IRebuildUserService>()
 
-        val subscriptionOperationExecutor = SubscriptionOperationExecutor(
-            mockSubscriptionBackendService,
-            MockHelper.deviceService(),
-            AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore,
-            MockHelper.configModelStore(),
-            mockBuildUserService,
-        )
+        val subscriptionOperationExecutor =
+            SubscriptionOperationExecutor(
+                mockSubscriptionBackendService,
+                MockHelper.deviceService(),
+                AndroidMockHelper.applicationService(),
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+            )
 
-        val operations = listOf<Operation>(CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionStatus.SUBSCRIBED))
+        val operations =
+            listOf<Operation>(
+                CreateSubscriptionOperation(
+                    appId,
+                    remoteOneSignalId,
+                    localSubscriptionId,
+                    SubscriptionType.PUSH,
+                    true,
+                    "pushToken",
+                    SubscriptionStatus.SUBSCRIBED,
+                ),
+            )
 
-        /* When */
+        // When
         val response = subscriptionOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.SUCCESS
         subscriptionModel1.id shouldBe remoteSubscriptionId
         coVerify(exactly = 1) {
@@ -80,28 +92,40 @@ class SubscriptionOperationExecutorTests : FunSpec({
     }
 
     test("create subscription fails with retry when there is a network condition") {
-        /* Given */
+        // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
         coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } throws BackendException(408)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val mockBuildUserService = mockk<IRebuildUserService>()
 
-        val subscriptionOperationExecutor = SubscriptionOperationExecutor(
-            mockSubscriptionBackendService,
-            MockHelper.deviceService(),
-            AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore,
-            MockHelper.configModelStore(),
-            mockBuildUserService,
-        )
+        val subscriptionOperationExecutor =
+            SubscriptionOperationExecutor(
+                mockSubscriptionBackendService,
+                MockHelper.deviceService(),
+                AndroidMockHelper.applicationService(),
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+            )
 
-        val operations = listOf<Operation>(CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionStatus.SUBSCRIBED))
+        val operations =
+            listOf<Operation>(
+                CreateSubscriptionOperation(
+                    appId,
+                    remoteOneSignalId,
+                    localSubscriptionId,
+                    SubscriptionType.PUSH,
+                    true,
+                    "pushToken",
+                    SubscriptionStatus.SUBSCRIBED,
+                ),
+            )
 
-        /* When */
+        // When
         val response = subscriptionOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.FAIL_RETRY
         coVerify(exactly = 1) {
             mockSubscriptionBackendService.createSubscription(
@@ -119,28 +143,40 @@ class SubscriptionOperationExecutorTests : FunSpec({
     }
 
     test("create subscription fails without retry when there is a backend error") {
-        /* Given */
+        // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
         coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } throws BackendException(404)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val mockBuildUserService = mockk<IRebuildUserService>()
 
-        val subscriptionOperationExecutor = SubscriptionOperationExecutor(
-            mockSubscriptionBackendService,
-            MockHelper.deviceService(),
-            AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore,
-            MockHelper.configModelStore(),
-            mockBuildUserService,
-        )
+        val subscriptionOperationExecutor =
+            SubscriptionOperationExecutor(
+                mockSubscriptionBackendService,
+                MockHelper.deviceService(),
+                AndroidMockHelper.applicationService(),
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+            )
 
-        val operations = listOf<Operation>(CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionStatus.SUBSCRIBED))
+        val operations =
+            listOf<Operation>(
+                CreateSubscriptionOperation(
+                    appId,
+                    remoteOneSignalId,
+                    localSubscriptionId,
+                    SubscriptionType.PUSH,
+                    true,
+                    "pushToken",
+                    SubscriptionStatus.SUBSCRIBED,
+                ),
+            )
 
-        /* When */
+        // When
         val response = subscriptionOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.FAIL_NORETRY
         coVerify(exactly = 1) {
             mockSubscriptionBackendService.createSubscription(
@@ -158,7 +194,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
     }
 
     test("create subscription then delete subscription is a successful no-op") {
-        /* Given */
+        // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
@@ -168,29 +204,39 @@ class SubscriptionOperationExecutorTests : FunSpec({
 
         val mockBuildUserService = mockk<IRebuildUserService>()
 
-        val subscriptionOperationExecutor = SubscriptionOperationExecutor(
-            mockSubscriptionBackendService,
-            MockHelper.deviceService(),
-            AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore,
-            MockHelper.configModelStore(),
-            mockBuildUserService,
-        )
+        val subscriptionOperationExecutor =
+            SubscriptionOperationExecutor(
+                mockSubscriptionBackendService,
+                MockHelper.deviceService(),
+                AndroidMockHelper.applicationService(),
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+            )
 
-        val operations = listOf<Operation>(
-            CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken", SubscriptionStatus.SUBSCRIBED),
-            DeleteSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId),
-        )
+        val operations =
+            listOf<Operation>(
+                CreateSubscriptionOperation(
+                    appId,
+                    remoteOneSignalId,
+                    localSubscriptionId,
+                    SubscriptionType.PUSH,
+                    true,
+                    "pushToken",
+                    SubscriptionStatus.SUBSCRIBED,
+                ),
+                DeleteSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId),
+            )
 
-        /* When */
+        // When
         val response = subscriptionOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.SUCCESS
     }
 
     test("create subscription then update subscription successfully creates subscription") {
-        /* Given */
+        // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
         coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } returns remoteSubscriptionId
 
@@ -201,24 +247,42 @@ class SubscriptionOperationExecutorTests : FunSpec({
 
         val mockBuildUserService = mockk<IRebuildUserService>()
 
-        val subscriptionOperationExecutor = SubscriptionOperationExecutor(
-            mockSubscriptionBackendService,
-            MockHelper.deviceService(),
-            AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore,
-            MockHelper.configModelStore(),
-            mockBuildUserService,
-        )
+        val subscriptionOperationExecutor =
+            SubscriptionOperationExecutor(
+                mockSubscriptionBackendService,
+                MockHelper.deviceService(),
+                AndroidMockHelper.applicationService(),
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+            )
 
-        val operations = listOf<Operation>(
-            CreateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken1", SubscriptionStatus.SUBSCRIBED),
-            UpdateSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED),
-        )
+        val operations =
+            listOf<Operation>(
+                CreateSubscriptionOperation(
+                    appId,
+                    remoteOneSignalId,
+                    localSubscriptionId,
+                    SubscriptionType.PUSH,
+                    true,
+                    "pushToken1",
+                    SubscriptionStatus.SUBSCRIBED,
+                ),
+                UpdateSubscriptionOperation(
+                    appId,
+                    remoteOneSignalId,
+                    localSubscriptionId,
+                    SubscriptionType.PUSH,
+                    true,
+                    "pushToken2",
+                    SubscriptionStatus.SUBSCRIBED,
+                ),
+            )
 
-        /* When */
+        // When
         val response = subscriptionOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.SUCCESS
         subscriptionModel1.id shouldBe remoteSubscriptionId
         coVerify(exactly = 1) {
@@ -237,7 +301,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
     }
 
     test("update subscription successfully updates subscription") {
-        /* Given */
+        // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
         coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } just runs
 
@@ -249,24 +313,42 @@ class SubscriptionOperationExecutorTests : FunSpec({
 
         val mockBuildUserService = mockk<IRebuildUserService>()
 
-        val subscriptionOperationExecutor = SubscriptionOperationExecutor(
-            mockSubscriptionBackendService,
-            MockHelper.deviceService(),
-            AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore,
-            MockHelper.configModelStore(),
-            mockBuildUserService,
-        )
+        val subscriptionOperationExecutor =
+            SubscriptionOperationExecutor(
+                mockSubscriptionBackendService,
+                MockHelper.deviceService(),
+                AndroidMockHelper.applicationService(),
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+            )
 
-        val operations = listOf<Operation>(
-            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED),
-            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken3", SubscriptionStatus.SUBSCRIBED),
-        )
+        val operations =
+            listOf<Operation>(
+                UpdateSubscriptionOperation(
+                    appId,
+                    remoteOneSignalId,
+                    remoteSubscriptionId,
+                    SubscriptionType.PUSH,
+                    true,
+                    "pushToken2",
+                    SubscriptionStatus.SUBSCRIBED,
+                ),
+                UpdateSubscriptionOperation(
+                    appId,
+                    remoteOneSignalId,
+                    remoteSubscriptionId,
+                    SubscriptionType.PUSH,
+                    true,
+                    "pushToken3",
+                    SubscriptionStatus.SUBSCRIBED,
+                ),
+            )
 
-        /* When */
+        // When
         val response = subscriptionOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.SUCCESS
         subscriptionModel1.address shouldBe "pushToken3"
         coVerify(exactly = 1) {
@@ -284,30 +366,40 @@ class SubscriptionOperationExecutorTests : FunSpec({
     }
 
     test("update subscription fails with retry when there is a network condition") {
-        /* Given */
+        // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
         coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(408)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val mockBuildUserService = mockk<IRebuildUserService>()
 
-        val subscriptionOperationExecutor = SubscriptionOperationExecutor(
-            mockSubscriptionBackendService,
-            MockHelper.deviceService(),
-            AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore,
-            MockHelper.configModelStore(),
-            mockBuildUserService,
-        )
+        val subscriptionOperationExecutor =
+            SubscriptionOperationExecutor(
+                mockSubscriptionBackendService,
+                MockHelper.deviceService(),
+                AndroidMockHelper.applicationService(),
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+            )
 
-        val operations = listOf<Operation>(
-            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED),
-        )
+        val operations =
+            listOf<Operation>(
+                UpdateSubscriptionOperation(
+                    appId,
+                    remoteOneSignalId,
+                    remoteSubscriptionId,
+                    SubscriptionType.PUSH,
+                    true,
+                    "pushToken2",
+                    SubscriptionStatus.SUBSCRIBED,
+                ),
+            )
 
-        /* When */
+        // When
         val response = subscriptionOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.FAIL_RETRY
         coVerify(exactly = 1) {
             mockSubscriptionBackendService.updateSubscription(
@@ -324,30 +416,40 @@ class SubscriptionOperationExecutorTests : FunSpec({
     }
 
     test("update subscription fails without retry when there is a backend error") {
-        /* Given */
+        // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
         coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(404)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val mockBuildUserService = mockk<IRebuildUserService>()
 
-        val subscriptionOperationExecutor = SubscriptionOperationExecutor(
-            mockSubscriptionBackendService,
-            MockHelper.deviceService(),
-            AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore,
-            MockHelper.configModelStore(),
-            mockBuildUserService,
-        )
+        val subscriptionOperationExecutor =
+            SubscriptionOperationExecutor(
+                mockSubscriptionBackendService,
+                MockHelper.deviceService(),
+                AndroidMockHelper.applicationService(),
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+            )
 
-        val operations = listOf<Operation>(
-            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED),
-        )
+        val operations =
+            listOf<Operation>(
+                UpdateSubscriptionOperation(
+                    appId,
+                    remoteOneSignalId,
+                    remoteSubscriptionId,
+                    SubscriptionType.PUSH,
+                    true,
+                    "pushToken2",
+                    SubscriptionStatus.SUBSCRIBED,
+                ),
+            )
 
-        /* When */
+        // When
         val response = subscriptionOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.FAIL_NORETRY
         coVerify(exactly = 1) {
             mockSubscriptionBackendService.updateSubscription(
@@ -364,7 +466,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
     }
 
     test("delete subscription successfully deletes subscription") {
-        /* Given */
+        // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
         coEvery { mockSubscriptionBackendService.deleteSubscription(any(), any()) } just runs
 
@@ -373,83 +475,97 @@ class SubscriptionOperationExecutorTests : FunSpec({
 
         val mockBuildUserService = mockk<IRebuildUserService>()
 
-        val subscriptionOperationExecutor = SubscriptionOperationExecutor(
-            mockSubscriptionBackendService,
-            MockHelper.deviceService(),
-            AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore,
-            MockHelper.configModelStore(),
-            mockBuildUserService,
-        )
+        val subscriptionOperationExecutor =
+            SubscriptionOperationExecutor(
+                mockSubscriptionBackendService,
+                MockHelper.deviceService(),
+                AndroidMockHelper.applicationService(),
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+            )
 
-        val operations = listOf<Operation>(
-            UpdateSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED),
-            DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
-        )
+        val operations =
+            listOf<Operation>(
+                UpdateSubscriptionOperation(
+                    appId,
+                    remoteOneSignalId,
+                    remoteSubscriptionId,
+                    SubscriptionType.PUSH,
+                    true,
+                    "pushToken2",
+                    SubscriptionStatus.SUBSCRIBED,
+                ),
+                DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
+            )
 
-        /* When */
+        // When
         val response = subscriptionOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.SUCCESS
         coVerify(exactly = 1) { mockSubscriptionBackendService.deleteSubscription(appId, remoteSubscriptionId) }
         verify(exactly = 1) { mockSubscriptionsModelStore.remove(remoteSubscriptionId, any()) }
     }
 
     test("delete subscription fails with retry when there is a network condition") {
-        /* Given */
+        // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
         coEvery { mockSubscriptionBackendService.deleteSubscription(any(), any()) } throws BackendException(408)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val mockBuildUserService = mockk<IRebuildUserService>()
 
-        val subscriptionOperationExecutor = SubscriptionOperationExecutor(
-            mockSubscriptionBackendService,
-            MockHelper.deviceService(),
-            AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore,
-            MockHelper.configModelStore(),
-            mockBuildUserService,
-        )
+        val subscriptionOperationExecutor =
+            SubscriptionOperationExecutor(
+                mockSubscriptionBackendService,
+                MockHelper.deviceService(),
+                AndroidMockHelper.applicationService(),
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+            )
 
-        val operations = listOf<Operation>(
-            DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
-        )
+        val operations =
+            listOf<Operation>(
+                DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
+            )
 
-        /* When */
+        // When
         val response = subscriptionOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.FAIL_RETRY
         coVerify(exactly = 1) { mockSubscriptionBackendService.deleteSubscription(appId, remoteSubscriptionId) }
     }
 
     test("delete subscription fails without retry when there is a backend error") {
-        /* Given */
+        // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
         coEvery { mockSubscriptionBackendService.deleteSubscription(any(), any()) } throws BackendException(404)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val mockBuildUserService = mockk<IRebuildUserService>()
 
-        val subscriptionOperationExecutor = SubscriptionOperationExecutor(
-            mockSubscriptionBackendService,
-            MockHelper.deviceService(),
-            AndroidMockHelper.applicationService(),
-            mockSubscriptionsModelStore,
-            MockHelper.configModelStore(),
-            mockBuildUserService,
-        )
+        val subscriptionOperationExecutor =
+            SubscriptionOperationExecutor(
+                mockSubscriptionBackendService,
+                MockHelper.deviceService(),
+                AndroidMockHelper.applicationService(),
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+            )
 
-        val operations = listOf<Operation>(
-            DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
-        )
+        val operations =
+            listOf<Operation>(
+                DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
+            )
 
-        /* When */
+        // When
         val response = subscriptionOperationExecutor.execute(operations)
 
-        /* Then */
+        // Then
         response.result shouldBe ExecutionResult.FAIL_NORETRY
         coVerify(exactly = 1) { mockSubscriptionBackendService.deleteSubscription(appId, remoteSubscriptionId) }
     }

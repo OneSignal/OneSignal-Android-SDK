@@ -20,5 +20,8 @@ interface ISingletonModelStore<TModel> :
      * @param model A model that contains all the data for the new effective model.
      * @param tag The tag which identifies how/why the model is being replaced.
      */
-    fun replace(model: TModel, tag: String = ModelChangeTags.NORMAL)
+    fun replace(
+        model: TModel,
+        tag: String = ModelChangeTags.NORMAL,
+    )
 }

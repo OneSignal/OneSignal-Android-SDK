@@ -36,9 +36,15 @@ internal class NoAnalyticsTracker : IAnalyticsTracker {
     override fun trackInfluenceOpenEvent() {
     }
 
-    override fun trackOpenedEvent(notificationId: String, campaign: String) {
+    override fun trackOpenedEvent(
+        notificationId: String,
+        campaign: String,
+    ) {
     }
 
-    override fun trackReceivedEvent(notificationId: String, campaign: String) {
+    override fun trackReceivedEvent(
+        notificationId: String,
+        campaign: String,
+    ) {
     }
 }

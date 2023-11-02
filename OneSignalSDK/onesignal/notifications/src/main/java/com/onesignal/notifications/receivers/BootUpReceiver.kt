@@ -33,7 +33,10 @@ import com.onesignal.OneSignal
 import com.onesignal.notifications.internal.restoration.INotificationRestoreWorkManager
 
 class BootUpReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
+    override fun onReceive(
+        context: Context,
+        intent: Intent,
+    ) {
         if (!OneSignal.initWithContext(context)) {
             return
         }

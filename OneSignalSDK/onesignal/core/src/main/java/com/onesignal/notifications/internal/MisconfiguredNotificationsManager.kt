@@ -16,14 +16,23 @@ internal class MisconfiguredNotificationsManager : INotificationsManager {
         get() = throw EXCEPTION
 
     override suspend fun requestPermission(fallbackToSettings: Boolean): Boolean = throw EXCEPTION
+
     override fun removeNotification(id: Int) = throw EXCEPTION
+
     override fun removeGroupedNotifications(group: String) = throw EXCEPTION
+
     override fun clearAllNotifications() = throw EXCEPTION
+
     override fun addPermissionObserver(observer: IPermissionObserver) = throw EXCEPTION
+
     override fun removePermissionObserver(observer: IPermissionObserver) = throw EXCEPTION
+
     override fun addForegroundLifecycleListener(listener: INotificationLifecycleListener) = throw EXCEPTION
+
     override fun removeForegroundLifecycleListener(listener: INotificationLifecycleListener) = throw EXCEPTION
+
     override fun addClickListener(listener: INotificationClickListener) = throw EXCEPTION
+
     override fun removeClickListener(listener: INotificationClickListener) = throw EXCEPTION
 
     companion object {

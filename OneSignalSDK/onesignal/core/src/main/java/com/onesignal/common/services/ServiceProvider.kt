@@ -8,8 +8,7 @@ import com.onesignal.debug.internal.logging.Logging
 class ServiceProvider(
     registrations: List<ServiceRegistration<*>>,
 ) : IServiceProvider {
-
-    private var _serviceMap: Map<Class<*>, List<ServiceRegistration<*>>>
+    private var serviceMap: Map<Class<*>, List<ServiceRegistration<*>>>
 
     init {
         val serviceMap = mutableMapOf<Class<*>, MutableList<ServiceRegistration<*>>>()
@@ -25,7 +24,7 @@ class ServiceProvider(
             }
         }
 
-        _serviceMap = serviceMap
+        this.serviceMap = serviceMap
     }
 
     internal inline fun <reified T : Any> hasService(): Boolean {
@@ -45,16 +44,17 @@ class ServiceProvider(
     }
 
     override fun <T> hasService(c: Class<T>): Boolean {
-        return _serviceMap.containsKey(c)
+        return serviceMap.containsKey(c)
     }
 
     override fun <T> getAllServices(c: Class<T>): List<T> {
         val listOfServices: MutableList<T> = mutableListOf()
 
-        if (_serviceMap.containsKey(c)) {
-            for (serviceReg in _serviceMap!![c]!!) {
-                val service = serviceReg.resolve(this) as T?
-                    ?: throw Exception("Could not instantiate service: $serviceReg")
+        if (serviceMap.containsKey(c)) {
+            for (serviceReg in serviceMap!![c]!!) {
+                val service =
+                    serviceReg.resolve(this) as T?
+                        ?: throw Exception("Could not instantiate service: $serviceReg")
 
                 listOfServices.add(service)
             }
@@ -76,7 +76,7 @@ class ServiceProvider(
     override fun <T> getServiceOrNull(c: Class<T>): T? {
         Logging.debug("${indent}Retrieving service $c")
 //        indent += "  "
-        val service = _serviceMap[c]?.last()?.resolve(this) as T?
+        val service = serviceMap[c]?.last()?.resolve(this) as T?
 //        indent = indent.substring(0, indent.length-2)
         return service
     }

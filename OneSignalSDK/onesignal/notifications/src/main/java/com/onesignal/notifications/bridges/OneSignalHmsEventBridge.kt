@@ -31,7 +31,11 @@ object OneSignalHmsEventBridge {
     /**
      * Method used by last HMS push version 5.3.0.304 and upper
      */
-    fun onNewToken(context: Context, token: String, bundle: Bundle?) {
+    fun onNewToken(
+        context: Context,
+        token: String,
+        bundle: Bundle?,
+    ) {
         if (firstToken.compareAndSet(true, false)) {
             Logging.info("OneSignalHmsEventBridge onNewToken - HMS token: $token Bundle: $bundle")
             var registerer = OneSignal.getService<IPushRegistratorCallback>()
@@ -48,11 +52,17 @@ object OneSignalHmsEventBridge {
      * @see OneSignalHmsEventBridge.onNewToken
      */
     @Deprecated("")
-    fun onNewToken(context: Context, token: String) {
+    fun onNewToken(
+        context: Context,
+        token: String,
+    ) {
         onNewToken(context, token, null)
     }
 
-    fun onMessageReceived(context: Context, message: RemoteMessage) {
+    fun onMessageReceived(
+        context: Context,
+        message: RemoteMessage,
+    ) {
         if (!OneSignal.initWithContext(context)) {
             return
         }
