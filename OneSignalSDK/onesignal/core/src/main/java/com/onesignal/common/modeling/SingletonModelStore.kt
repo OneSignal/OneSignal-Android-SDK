@@ -12,31 +12,37 @@ open class SingletonModelStore<TModel>(
     private val changeSubscription: EventProducer<ISingletonModelStoreChangeHandler<TModel>> = EventProducer()
     private val singletonId: String = "-singleton-"
 
+    private val replaceLock = Any()
+
     init {
         store.subscribe(this)
     }
 
     override val model: TModel
         get() {
-            val model = store.get(singletonId)
-            if (model != null) {
-                return model
-            }
+            synchronized(this) {
+                val model = store.get(singletonId)
+                if (model != null) {
+                    return model
+                }
 
-            val createdModel = store.create() ?: throw Exception("Unable to initialize model from store $store")
-            createdModel.id = singletonId
-            store.add(createdModel)
-            return createdModel
+                val createdModel = store.create() ?: throw Exception("Unable to initialize model from store $store")
+                createdModel.id = singletonId
+                store.add(createdModel)
+                return createdModel
+            }
         }
 
     override fun replace(
         model: TModel,
         tag: String,
     ) {
-        val existingModel = this.model
-        existingModel.initializeFromModel(singletonId, model)
-        store.persist()
-        changeSubscription.fire { it.onModelReplaced(existingModel, tag) }
+        synchronized(replaceLock) {
+            val existingModel = this.model
+            existingModel.initializeFromModel(singletonId, model)
+            store.persist()
+            changeSubscription.fire { it.onModelReplaced(existingModel, tag) }
+        }
     }
 
     override fun subscribe(handler: ISingletonModelStoreChangeHandler<TModel>) = changeSubscription.subscribe(handler)

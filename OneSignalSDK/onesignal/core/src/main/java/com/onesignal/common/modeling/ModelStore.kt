@@ -40,12 +40,14 @@ abstract class ModelStore<TModel>(
         model: TModel,
         tag: String,
     ) {
-        val oldModel = models.firstOrNull { it.id == model.id }
-        if (oldModel != null) {
-            removeItem(oldModel, tag)
-        }
+        synchronized(models) {
+            val oldModel = models.firstOrNull { it.id == model.id }
+            if (oldModel != null) {
+                removeItem(oldModel, tag)
+            }
 
-        addItem(model, tag)
+            addItem(model, tag)
+        }
     }
 
     override fun add(
@@ -53,12 +55,14 @@ abstract class ModelStore<TModel>(
         model: TModel,
         tag: String,
     ) {
-        val oldModel = models.firstOrNull { it.id == model.id }
-        if (oldModel != null) {
-            removeItem(oldModel, tag)
-        }
+        synchronized(models) {
+            val oldModel = models.firstOrNull { it.id == model.id }
+            if (oldModel != null) {
+                removeItem(oldModel, tag)
+            }
 
-        addItem(model, tag, index)
+            addItem(model, tag, index)
+        }
     }
 
     override fun list(): Collection<TModel> {
@@ -73,40 +77,48 @@ abstract class ModelStore<TModel>(
         id: String,
         tag: String,
     ) {
-        val model = models.firstOrNull { it.id == id } ?: return
-        removeItem(model, tag)
+        synchronized(models) {
+            val model = models.firstOrNull { it.id == id } ?: return
+            removeItem(model, tag)
+        }
     }
 
     override fun onChanged(
         args: ModelChangedArgs,
         tag: String,
     ) {
-        persist()
+        synchronized(models) {
+            persist()
 
-        changeSubscription.fire { it.onModelUpdated(args, tag) }
+            changeSubscription.fire { it.onModelUpdated(args, tag) }
+        }
     }
 
     override fun replaceAll(
         models: List<TModel>,
         tag: String,
     ) {
-        clear(tag)
+        synchronized(models) {
+            clear(tag)
 
-        for (model in models) {
-            add(model, tag)
+            for (model in models) {
+                add(model, tag)
+            }
         }
     }
 
     override fun clear(tag: String) {
-        val localList = models.toList()
-        models.clear()
+        synchronized(models) {
+            val localList = models.toList()
+            models.clear()
 
-        persist()
+            persist()
 
-        for (item in localList) {
-            // no longer listen for changes to this model
-            item.unsubscribe(this)
-            changeSubscription.fire { it.onModelRemoved(item, tag) }
+            for (item in localList) {
+                // no longer listen for changes to this model
+                item.unsubscribe(this)
+                changeSubscription.fire { it.onModelRemoved(item, tag) }
+            }
         }
     }
 
@@ -115,55 +127,63 @@ abstract class ModelStore<TModel>(
         tag: String,
         index: Int? = null,
     ) {
-        if (index != null) {
-            models.add(index, model)
-        } else {
-            models.add(model)
+        synchronized(models) {
+            if (index != null) {
+                models.add(index, model)
+            } else {
+                models.add(model)
+            }
+
+            // listen for changes to this model
+            model.subscribe(this)
+
+            persist()
+
+            changeSubscription.fire { it.onModelAdded(model, tag) }
         }
-
-        // listen for changes to this model
-        model.subscribe(this)
-
-        persist()
-
-        changeSubscription.fire { it.onModelAdded(model, tag) }
     }
 
     private fun removeItem(
         model: TModel,
         tag: String,
     ) {
-        models.remove(model)
+        synchronized(models) {
+            models.remove(model)
 
-        // no longer listen for changes to this model
-        model.unsubscribe(this)
+            // no longer listen for changes to this model
+            model.unsubscribe(this)
 
-        persist()
+            persist()
 
-        changeSubscription.fire { it.onModelRemoved(model, tag) }
+            changeSubscription.fire { it.onModelRemoved(model, tag) }
+        }
     }
 
     protected fun load() {
-        if (name != null && _prefs != null) {
-            val str = _prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, "[]")
-            val jsonArray = JSONArray(str)
-            for (index in 0 until jsonArray.length()) {
-                val newModel = create(jsonArray.getJSONObject(index)) ?: continue
-                models.add(newModel)
-                // listen for changes to this model
-                newModel.subscribe(this)
+        synchronized(models) {
+            if (name != null && _prefs != null) {
+                val str = _prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, "[]")
+                val jsonArray = JSONArray(str)
+                for (index in 0 until jsonArray.length()) {
+                    val newModel = create(jsonArray.getJSONObject(index)) ?: continue
+                    models.add(newModel)
+                    // listen for changes to this model
+                    newModel.subscribe(this)
+                }
             }
         }
     }
 
     fun persist() {
-        if (name != null && _prefs != null) {
-            val jsonArray = JSONArray()
-            for (model in models) {
-                jsonArray.put(model.toJSON())
-            }
+        synchronized(models) {
+            if (name != null && _prefs != null) {
+                val jsonArray = JSONArray()
+                for (model in models) {
+                    jsonArray.put(model.toJSON())
+                }
 
-            _prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, jsonArray.toString())
+                _prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, jsonArray.toString())
+            }
         }
     }
 
