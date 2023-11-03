@@ -51,6 +51,7 @@ open class Model(
      * specified, must also specify [_parentModel]
      */
     private val _parentProperty: String? = null,
+    private val initializationLock: Any = Any(),
 ) : IEventNotifier<IModelChangedHandler> {
     /**
      * A unique identifier for this model.
@@ -123,19 +124,25 @@ open class Model(
         id: String?,
         model: Model,
     ) {
-        data.clear()
+        val newData = Collections.synchronizedMap(mutableMapOf<String, Any?>())
+
         for (item in model.data) {
             if (item.value is Model) {
                 val childModel = item.value as Model
                 childModel._parentModel = this
-                data[item.key] = childModel
+                newData[item.key] = childModel
             } else {
-                data[item.key] = item.value
+                newData[item.key] = item.value
             }
         }
 
         if (id != null) {
-            data[::id.name] = id
+            newData[::id.name] = id
+        }
+
+        synchronized(initializationLock) {
+            data.clear()
+            data.putAll(newData)
         }
     }
 
@@ -429,19 +436,21 @@ open class Model(
         tag: String = ModelChangeTags.NORMAL,
         forceChange: Boolean = false,
     ) {
-        val oldValue = data[name]
+        synchronized(data) {
+            val oldValue = data[name]
 
-        if (oldValue == value && !forceChange) {
-            return
+            if (oldValue == value && !forceChange) {
+                return
+            }
+
+            if (value != null) {
+                data[name] = value
+            } else if (data.containsKey(name)) {
+                data.remove(name)
+            }
+
+            notifyChanged(name, name, tag, oldValue, value)
         }
-
-        if (value != null) {
-            data[name] = value
-        } else if (data.containsKey(name)) {
-            data.remove(name)
-        }
-
-        notifyChanged(name, name, tag, oldValue, value)
     }
 
     /**
@@ -627,12 +636,14 @@ open class Model(
         name: String,
         create: (() -> Any?)? = null,
     ): Any? {
-        return if (data.containsKey(name) || create == null) {
-            data[name]
-        } else {
-            val defaultValue = create()
-            data[name] = defaultValue as Any?
-            defaultValue
+        synchronized(data) {
+            return if (data.containsKey(name) || create == null) {
+                data[name]
+            } else {
+                val defaultValue = create()
+                data[name] = defaultValue as Any?
+                defaultValue
+            }
         }
     }
 
@@ -660,29 +671,31 @@ open class Model(
      * @return The resulting [JSONObject].
      */
     fun toJSON(): JSONObject {
-        val jsonObject = JSONObject()
-        for (kvp in data) {
-            when (val value = kvp.value) {
-                is Model -> {
-                    jsonObject.put(kvp.key, value.toJSON())
-                }
-                is List<*> -> {
-                    val jsonArray = JSONArray()
-                    for (arrayItem in value) {
-                        if (arrayItem is Model) {
-                            jsonArray.put(arrayItem.toJSON())
-                        } else {
-                            jsonArray.put(arrayItem)
-                        }
+        synchronized(initializationLock) {
+            val jsonObject = JSONObject()
+            for (kvp in data) {
+                when (val value = kvp.value) {
+                    is Model -> {
+                        jsonObject.put(kvp.key, value.toJSON())
                     }
-                    jsonObject.put(kvp.key, jsonArray)
-                }
-                else -> {
-                    jsonObject.put(kvp.key, value)
+                    is List<*> -> {
+                        val jsonArray = JSONArray()
+                        for (arrayItem in value) {
+                            if (arrayItem is Model) {
+                                jsonArray.put(arrayItem.toJSON())
+                            } else {
+                                jsonArray.put(arrayItem)
+                            }
+                        }
+                        jsonObject.put(kvp.key, jsonArray)
+                    }
+                    else -> {
+                        jsonObject.put(kvp.key, value)
+                    }
                 }
             }
+            return jsonObject
         }
-        return jsonObject
     }
 
     override fun subscribe(handler: IModelChangedHandler) = changeNotifier.subscribe(handler)
