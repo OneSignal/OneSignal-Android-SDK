@@ -436,19 +436,21 @@ open class Model(
         tag: String = ModelChangeTags.NORMAL,
         forceChange: Boolean = false,
     ) {
-        val oldValue = data[name]
+        synchronized(data) {
+            val oldValue = data[name]
 
-        if (oldValue == value && !forceChange) {
-            return
+            if (oldValue == value && !forceChange) {
+                return
+            }
+
+            if (value != null) {
+                data[name] = value
+            } else if (data.containsKey(name)) {
+                data.remove(name)
+            }
+
+            notifyChanged(name, name, tag, oldValue, value)
         }
-
-        if (value != null) {
-            data[name] = value
-        } else if (data.containsKey(name)) {
-            data.remove(name)
-        }
-
-        notifyChanged(name, name, tag, oldValue, value)
     }
 
     /**
@@ -634,12 +636,14 @@ open class Model(
         name: String,
         create: (() -> Any?)? = null,
     ): Any? {
-        return if (data.containsKey(name) || create == null) {
-            data[name]
-        } else {
-            val defaultValue = create()
-            data[name] = defaultValue as Any?
-            defaultValue
+        synchronized(data) {
+            return if (data.containsKey(name) || create == null) {
+                data[name]
+            } else {
+                val defaultValue = create()
+                data[name] = defaultValue as Any?
+                defaultValue
+            }
         }
     }
 
