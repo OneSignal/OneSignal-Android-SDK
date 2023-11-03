@@ -68,9 +68,7 @@ abstract class ModelStore<TModel>(
     }
 
     override fun get(id: String): TModel? {
-        synchronized(models) {
-            return models.firstOrNull { it.id == id }
-        }
+        return models.firstOrNull { it.id == id }
     }
 
     override fun remove(
@@ -175,9 +173,5 @@ abstract class ModelStore<TModel>(
     override fun unsubscribe(handler: IModelStoreChangeHandler<TModel>) = changeSubscription.unsubscribe(handler)
 
     override val hasSubscribers: Boolean
-        get() {
-            synchronized(changeSubscription) {
-                return changeSubscription.hasSubscribers
-            }
-        }
+        get() = changeSubscription.hasSubscribers
 }
