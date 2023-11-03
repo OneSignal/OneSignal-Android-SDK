@@ -48,8 +48,7 @@ fun suspendifyOnMain(block: suspend () -> Unit) {
                     block()
                 }
             }
-        }
-        catch (e: Exception) {
+        } catch (e: Exception) {
             Logging.error("Exception on thread with switch to main", e)
         }
     }
@@ -70,8 +69,7 @@ fun suspendifyOnThread(
             runBlocking {
                 block()
             }
-        }
-        catch (e: Exception) {
+        } catch (e: Exception) {
             Logging.error("Exception on thread", e)
         }
     }
@@ -93,9 +91,8 @@ fun suspendifyOnThread(
             runBlocking {
                 block()
             }
-        }
-        catch (e: Exception) {
-            Logging.error("Exception on thread '${name}'", e)
+        } catch (e: Exception) {
+            Logging.error("Exception on thread '$name'", e)
         }
     }
 }
