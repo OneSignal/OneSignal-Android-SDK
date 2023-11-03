@@ -45,7 +45,8 @@ abstract class ModelStore<TModel>(
             removeItem(oldModel, tag)
         }
 
-        addItem(model, tag)
+            addItem(model, tag)
+        }
     }
 
     override fun add(
@@ -58,7 +59,8 @@ abstract class ModelStore<TModel>(
             removeItem(oldModel, tag)
         }
 
-        addItem(model, tag, index)
+            addItem(model, tag, index)
+        }
     }
 
     override fun list(): Collection<TModel> {
@@ -92,8 +94,9 @@ abstract class ModelStore<TModel>(
     ) {
         clear(tag)
 
-        for (model in models) {
-            add(model, tag)
+            for (model in models) {
+                add(model, tag)
+            }
         }
     }
 
@@ -101,7 +104,7 @@ abstract class ModelStore<TModel>(
         val localList = models.toList()
         models.clear()
 
-        persist()
+            persist()
 
         for (item in localList) {
             // no longer listen for changes to this model
@@ -121,10 +124,10 @@ abstract class ModelStore<TModel>(
             models.add(model)
         }
 
-        // listen for changes to this model
-        model.subscribe(this)
+            // listen for changes to this model
+            model.subscribe(this)
 
-        persist()
+            persist()
 
         changeSubscription.fire { it.onModelAdded(model, tag) }
     }
@@ -135,10 +138,10 @@ abstract class ModelStore<TModel>(
     ) {
         models.remove(model)
 
-        // no longer listen for changes to this model
-        model.unsubscribe(this)
+            // no longer listen for changes to this model
+            model.unsubscribe(this)
 
-        persist()
+            persist()
 
         changeSubscription.fire { it.onModelRemoved(model, tag) }
     }
@@ -162,8 +165,6 @@ abstract class ModelStore<TModel>(
             for (model in models) {
                 jsonArray.put(model.toJSON())
             }
-
-            _prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, jsonArray.toString())
         }
     }
 

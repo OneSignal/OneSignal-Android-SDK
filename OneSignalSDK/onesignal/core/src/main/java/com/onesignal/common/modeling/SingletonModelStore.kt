@@ -12,6 +12,8 @@ open class SingletonModelStore<TModel>(
     private val changeSubscription: EventProducer<ISingletonModelStoreChangeHandler<TModel>> = EventProducer()
     private val singletonId: String = "-singleton-"
 
+    private val replaceLock = Any()
+
     init {
         store.subscribe(this)
     }
