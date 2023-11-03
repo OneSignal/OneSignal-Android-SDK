@@ -19,7 +19,7 @@ class SessionModel : Model() {
      * Whether the session is valid.
      */
     var isValid: Boolean
-        get() = getBooleanProperty(::isValid.name) { true }
+        get() = getBooleanProperty(::isValid.name) { false }
         set(value) {
             setBooleanProperty(::isValid.name, value)
         }
