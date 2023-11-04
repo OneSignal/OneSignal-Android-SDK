@@ -205,7 +205,7 @@ internal class LoginUserOperationExecutor(
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
                 else ->
-                    ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+                    ExecutionResponse(ExecutionResult.FAIL_PAUSE_OPREPO)
             }
         }
     }

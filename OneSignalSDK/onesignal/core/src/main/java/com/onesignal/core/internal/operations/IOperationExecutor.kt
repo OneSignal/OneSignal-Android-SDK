@@ -71,4 +71,11 @@ enum class ExecutionResult {
      * The operation failed due to a conflict and can be handled.
      */
     FAIL_CONFLICT,
+
+    /**
+     * Used in special create user case.
+     * The operation failed due to a non-retryable error. Pause the operation repo
+     * and retry on a new session, giving the SDK a chance to recover from the failed user create.
+     */
+    FAIL_PAUSE_OPREPO,
 }
