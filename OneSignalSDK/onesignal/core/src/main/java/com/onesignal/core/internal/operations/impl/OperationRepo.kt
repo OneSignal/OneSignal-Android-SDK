@@ -30,6 +30,7 @@ internal class OperationRepo(
     private val executorsMap: Map<String, IOperationExecutor>
     private val queue = mutableListOf<OperationQueueItem>()
     private val waiter = WaiterWithValue<Boolean>()
+    private var paused = false
 
     init {
         val executorsMap: MutableMap<String, IOperationExecutor> = mutableMapOf()
@@ -47,6 +48,7 @@ internal class OperationRepo(
     }
 
     override fun start() {
+        paused = false
         suspendifyOnThread(name = "OpRepo") {
             processQueueForever()
         }
@@ -99,6 +101,10 @@ internal class OperationRepo(
 
         // This runs forever, until the application is destroyed.
         while (true) {
+            if (paused) {
+                Logging.debug("OperationRepo is paused")
+                return
+            }
             try {
                 var ops: List<OperationQueueItem>? = null
 
@@ -194,6 +200,15 @@ internal class OperationRepo(
                     }
                 }
                 ExecutionResult.FAIL_RETRY -> {
+                    // add back all operations to the front of the queue to be re-executed.
+                    synchronized(queue) {
+                        ops.reversed().forEach { queue.add(0, it) }
+                    }
+                }
+                ExecutionResult.FAIL_PAUSE_OPREPO -> {
+                    Logging.error("Operation execution failed with eventual retry, pausing the operation repo: $operations")
+                    // keep the failed operation and pause the operation repo from executing
+                    paused = true
                     // add back all operations to the front of the queue to be re-executed.
                     synchronized(queue) {
                         ops.reversed().forEach { queue.add(0, it) }
