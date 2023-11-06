@@ -1,6 +1,7 @@
 package com.onesignal.internal
 
 import android.content.Context
+import android.os.Build
 import com.onesignal.IOneSignal
 import com.onesignal.common.IDManager
 import com.onesignal.common.OneSignalUtils
@@ -19,6 +20,7 @@ import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
+import com.onesignal.core.internal.preferences.PreferenceStoreFix
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.core.internal.startup.StartupService
 import com.onesignal.debug.IDebugManager
@@ -174,6 +176,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         if (isInitialized) {
             return true
         }
+
+        PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
 
         // start the application service. This is called explicitly first because we want
         // to make sure it has the context provided on input, for all other startable services
