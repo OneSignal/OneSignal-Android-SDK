@@ -34,6 +34,8 @@ internal class UserBackendService(
             requestJSON.put("properties", JSONObject().putMap(properties))
         }
 
+        requestJSON.put("refresh_device_metadata", true)
+
         val response = _httpClient.post("apps/$appId/users", requestJSON)
 
         if (!response.isSuccess) {
