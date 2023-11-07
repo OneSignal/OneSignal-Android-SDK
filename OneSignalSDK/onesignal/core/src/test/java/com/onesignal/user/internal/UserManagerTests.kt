@@ -6,6 +6,7 @@ import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionList
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.every
 import io.mockk.just
@@ -147,11 +148,18 @@ class UserManagerTests : FunSpec({
                 UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext())
 
         // When
-        val allTags = userManager.getTags()
+        val tagSnapshot1 = userManager.getTags()
 
         // Then
-        allTags.size shouldBe propertiesModelStore.model.tags.size
-        allTags["my-tag-key1"] shouldBe propertiesModelStore.model.tags["my-tag-key1"]
+        tagSnapshot1.size shouldBe propertiesModelStore.model.tags.size
+        tagSnapshot1["my-tag-key1"] shouldBe propertiesModelStore.model.tags["my-tag-key1"]
+
+        // Modify
+        userManager.addTag("my-tag-key2", "my-tag-value2")
+        userManager.getTags().size shouldBe 2
+
+        // Then
+        tagSnapshot1.size shouldNotBe userManager.getTags().size
     }
 
     test("subscriptions are backed by the subscriptions manager") {
