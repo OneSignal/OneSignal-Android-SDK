@@ -7,7 +7,6 @@ import com.onesignal.debug.internal.logging.Logging
 import java.io.File
 
 object PreferenceStoreFix {
-
     /**
      * Ensure the OneSignal preference store is not using the v4 obfuscated version, if one
      * exists.
@@ -20,15 +19,18 @@ object PreferenceStoreFix {
             // up the subscription, we need to copy the shared preferences from the obfuscated
             // version to the static "OneSignal" preference name.  We only do this
             // if there isn't already a "OneSignal" preference store.
-            val sharedPrefsDir = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                File(context.dataDir, "shared_prefs")
-            } else {
-                File(context.filesDir.parentFile, "shared_prefs")
-            }
+            val sharedPrefsDir =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    File(context.dataDir, "shared_prefs")
+                } else {
+                    File(context.filesDir.parentFile, "shared_prefs")
+                }
+
             val osPrefsFile = File(sharedPrefsDir, "OneSignal.xml")
 
-            if (!sharedPrefsDir.exists() || !sharedPrefsDir.isDirectory || osPrefsFile.exists())
+            if (!sharedPrefsDir.exists() || !sharedPrefsDir.isDirectory || osPrefsFile.exists()) {
                 return
+            }
 
             val prefsFileList = sharedPrefsDir.listFiles() ?: return
 
