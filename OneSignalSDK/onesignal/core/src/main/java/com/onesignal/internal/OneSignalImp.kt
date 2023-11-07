@@ -1,7 +1,6 @@
 package com.onesignal.internal
 
 import android.content.Context
-import android.os.Build
 import com.onesignal.IOneSignal
 import com.onesignal.common.IDManager
 import com.onesignal.common.OneSignalUtils
