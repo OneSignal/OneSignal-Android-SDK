@@ -9,7 +9,7 @@ import io.kotest.runner.junit4.KotestTestRunner
 import org.junit.runner.RunWith
 
 @RunWith(KotestTestRunner::class)
-class OneSignalImplTests : FunSpec({
+class OneSignalImpTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE
     }
@@ -19,9 +19,10 @@ class OneSignalImplTests : FunSpec({
         val os = OneSignalImp()
 
         // When
-        val exception = shouldThrowUnit<Exception> {
-            os.login("login-id")
-        }
+        val exception =
+            shouldThrowUnit<Exception> {
+                os.login("login-id")
+            }
 
         // Then
         exception.message shouldBe "Must call 'initWithContext' before 'login'"
@@ -32,9 +33,10 @@ class OneSignalImplTests : FunSpec({
         val os = OneSignalImp()
 
         // When
-        val exception = shouldThrowUnit<Exception> {
-            os.logout()
-        }
+        val exception =
+            shouldThrowUnit<Exception> {
+                os.logout()
+            }
 
         // Then
         exception.message shouldBe "Must call 'initWithContext' before 'logout'"

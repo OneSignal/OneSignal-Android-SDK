@@ -250,10 +250,11 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             startupService!!.bootstrap()
 
             if (forceCreateUser || !identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)) {
-                val legacyPlayerId = preferencesService!!.getString(
-                    PreferenceStores.ONESIGNAL,
-                    PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID
-                )
+                val legacyPlayerId =
+                    preferencesService!!.getString(
+                        PreferenceStores.ONESIGNAL,
+                        PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID,
+                    )
                 if (legacyPlayerId == null) {
                     Logging.debug("initWithContext: creating new device-scoped user")
                     createAndSwitchToNewUser()
@@ -293,7 +294,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                         configModel!!.pushSubscriptionId = legacyPlayerId
                         subscriptionModelStore!!.add(
                             pushSubscriptionModel,
-                            ModelChangeTags.NO_PROPOGATE
+                            ModelChangeTags.NO_PROPOGATE,
                         )
                         suppressBackendOperation = true
                     }
@@ -304,13 +305,13 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                         LoginUserFromSubscriptionOperation(
                             configModel!!.appId,
                             identityModelStore!!.model.onesignalId,
-                            legacyPlayerId
+                            legacyPlayerId,
                         ),
                     )
                     preferencesService!!.saveString(
                         PreferenceStores.ONESIGNAL,
                         PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID,
-                        null
+                        null,
                     )
                 }
             } else {
@@ -318,8 +319,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 operationRepo!!.enqueue(
                     RefreshUserOperation(
                         configModel!!.appId,
-                        identityModelStore!!.model.onesignalId
-                    )
+                        identityModelStore!!.model.onesignalId,
+                    ),
                 )
             }
 
