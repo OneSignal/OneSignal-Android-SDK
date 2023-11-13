@@ -134,7 +134,7 @@ class SubscriptionManagerTests : FunSpec({
         val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
 
         // When
-        subscriptionManager.addOrUpdatePushSubscription("pushToken", SubscriptionStatus.SUBSCRIBED)
+        subscriptionManager.addOrUpdatePushSubscriptionToken("pushToken", SubscriptionStatus.SUBSCRIBED)
 
         // Then
         verify {
@@ -170,7 +170,7 @@ class SubscriptionManagerTests : FunSpec({
         val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
 
         // When
-        subscriptionManager.addOrUpdatePushSubscription("pushToken2", SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER)
+        subscriptionManager.addOrUpdatePushSubscriptionToken("pushToken2", SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER)
 
         // Then
         pushSubscription.address shouldBe "pushToken2"
