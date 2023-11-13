@@ -71,7 +71,7 @@ internal class DeviceRegistrationListener(
 
         if (pushSubscription.token.isNotEmpty()) {
             val permission = _notificationsManager.permission
-            _subscriptionManager.addOrUpdatePushSubscription(
+            _subscriptionManager.addOrUpdatePushSubscriptionToken(
                 null,
                 if (permission) SubscriptionStatus.SUBSCRIBED else SubscriptionStatus.NO_PERMISSION,
             )
@@ -79,7 +79,7 @@ internal class DeviceRegistrationListener(
             suspendifyOnThread {
                 val pushTokenAndStatus = _pushTokenManager.retrievePushToken()
                 val permission = _notificationsManager.permission
-                _subscriptionManager.addOrUpdatePushSubscription(
+                _subscriptionManager.addOrUpdatePushSubscriptionToken(
                     pushTokenAndStatus.token,
                     if (permission) pushTokenAndStatus.status else SubscriptionStatus.NO_PERMISSION,
                 )
