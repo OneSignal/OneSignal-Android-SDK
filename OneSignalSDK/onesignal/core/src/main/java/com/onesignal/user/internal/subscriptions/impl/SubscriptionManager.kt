@@ -55,7 +55,7 @@ internal class SubscriptionManager(
         addSubscriptionToModels(SubscriptionType.SMS, sms)
     }
 
-    override fun addOrUpdatePushSubscription(
+    override fun addOrUpdatePushSubscriptionToken(
         pushToken: String?,
         pushTokenStatus: SubscriptionStatus,
     ) {
