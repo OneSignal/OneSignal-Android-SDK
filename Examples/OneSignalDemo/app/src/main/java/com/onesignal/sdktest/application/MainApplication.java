@@ -54,7 +54,7 @@ public class MainApplication extends MultiDexApplication {
         OneSignalNotificationSender.setAppId(appId);
         OneSignal.initWithContext(this, appId);
 
-        OneSignal.getInAppMessages().addLifecycleListener(new IInAppMessageLifecycleListener() {
+/*        OneSignal.getInAppMessages().addLifecycleListener(new IInAppMessageLifecycleListener() {
             @Override
             public void onWillDisplay(@NonNull IInAppMessageWillDisplayEvent event) {
                 Log.v(Tag.LOG_TAG, "onWillDisplayInAppMessage");
@@ -81,7 +81,7 @@ public class MainApplication extends MultiDexApplication {
             public void onClick(@Nullable IInAppMessageClickEvent event) {
                 Log.v(Tag.LOG_TAG, "INotificationClickListener.inAppMessageClicked");
             }
-        });
+        });*/
 
         OneSignal.getNotifications().addClickListener(event ->
         {
@@ -116,8 +116,8 @@ public class MainApplication extends MultiDexApplication {
             }
         });
 
-        OneSignal.getInAppMessages().setPaused(true);
-        OneSignal.getLocation().setShared(false);
+        //OneSignal.getInAppMessages().setPaused(true);
+        //OneSignal.getLocation().setShared(false);
 
         Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT);
     }

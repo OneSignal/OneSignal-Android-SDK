@@ -220,7 +220,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         }
 
         // "Inject" the services required by this main class
-        _location = services.getService()
+        //_location = services.getService()
         _user = services.getService()
         _session = services.getService()
         iam = services.getService()
