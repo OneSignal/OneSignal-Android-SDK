@@ -172,14 +172,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
-        // do not do this again if already initialized
-        if (isInitialized) {
-            Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized")
-            return true
-        }
-
         synchronized(initLock) {
-            // check whether we've been initialized again, now that we have the lock
+            // do not do this again if already initialized
             if (isInitialized) {
                 Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized")
                 return true
