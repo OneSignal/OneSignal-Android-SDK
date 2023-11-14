@@ -1,6 +1,7 @@
 package com.onesignal.user
 
 import com.onesignal.OneSignal
+import com.onesignal.user.internal.state.IUserStateObserver
 import com.onesignal.user.subscriptions.IPushSubscription
 
 /**
@@ -139,6 +140,10 @@ interface IUserManager {
      */
     fun getTags(): Map<String, String>
 
+    /**
+     * Add an observer to the user state, allowing the provider to be
+     * notified whenever the user state has changed.
+     */
     fun addObserver(observer: IUserStateObserver)
 
     /**
