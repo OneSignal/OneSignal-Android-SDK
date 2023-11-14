@@ -8,6 +8,7 @@ import com.onesignal.common.events.EventProducer
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
+import com.onesignal.common.modeling.ModelReplacedArgs
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModel
@@ -184,7 +185,7 @@ internal class InAppMessagesManager(
     }
 
     override fun onModelReplaced(
-        model: ConfigModel,
+        model: ModelReplacedArgs<ConfigModel>,
         tag: String,
     ) {
         suspendifyOnThread {

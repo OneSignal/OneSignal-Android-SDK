@@ -12,7 +12,7 @@ interface ISingletonModelStoreChangeHandler<TModel> where TModel : Model {
      * @param tag The tag which identifies how/why the model was replaced.
      */
     fun onModelReplaced(
-        model: TModel,
+        model: ModelReplacedArgs<TModel>,
         tag: String,
     )
 

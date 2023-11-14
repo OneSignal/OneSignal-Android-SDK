@@ -35,10 +35,14 @@ open class SingletonModelStore<TModel>(
         model: TModel,
         tag: String,
     ) {
-        val existingModel = this.model
-        existingModel.initializeFromModel(singletonId, model)
-        store.persist()
-        changeSubscription.fire { it.onModelReplaced(existingModel, tag) }
+        synchronized(replaceLock) {
+            val oldModel = this.store.create() ?: throw Exception("Unable to initialize model from store $store")
+            oldModel.initializeFromModel(singletonId, this.model)
+            val existingModel = this.model
+            existingModel.initializeFromModel(singletonId, model)
+            store.persist()
+            changeSubscription.fire { it.onModelReplaced(ModelReplacedArgs(oldModel, existingModel), tag) }
+        }
     }
 
     override fun subscribe(handler: ISingletonModelStoreChangeHandler<TModel>) = changeSubscription.subscribe(handler)
