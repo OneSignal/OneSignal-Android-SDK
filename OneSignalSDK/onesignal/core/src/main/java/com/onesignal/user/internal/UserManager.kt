@@ -1,6 +1,7 @@
 package com.onesignal.user.internal
 
 import com.onesignal.common.OneSignalUtils
+import com.onesignal.common.events.EventProducer
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -10,6 +11,7 @@ import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
+import com.onesignal.user.internal.state.IUserStateObserver
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionList
 import com.onesignal.user.subscriptions.IPushSubscription
@@ -31,6 +33,8 @@ internal open class UserManager(
 
     val subscriptions: SubscriptionList
         get() = _subscriptionManager.subscriptions
+
+    val changeHandlersNotifier = EventProducer<IUserStateObserver>()
 
     override val pushSubscription: IPushSubscription
         get() = _subscriptionManager.subscriptions.push
@@ -218,4 +222,8 @@ internal open class UserManager(
             _propertiesModel.tags.remove(it)
         }
     }
+
+    override fun addObserver(observer: IUserStateObserver) = changeHandlersNotifier.subscribe(observer)
+
+    override fun removeObserver(observer: IUserStateObserver) = changeHandlersNotifier.unsubscribe(observer)
 }

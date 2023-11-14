@@ -1,6 +1,7 @@
 package com.onesignal.user
 
 import com.onesignal.OneSignal
+import com.onesignal.user.internal.state.IUserStateObserver
 import com.onesignal.user.subscriptions.IPushSubscription
 
 /**
@@ -133,4 +134,15 @@ interface IUserManager {
      * @param keys The collection of keys, all of which will be removed from the current user.
      */
     fun removeTags(keys: Collection<String>)
+
+    /**
+     * Add an observer to the user state, allowing the provider to be
+     * notified whenever the user state has changed.
+     */
+    fun addObserver(observer: IUserStateObserver)
+
+    /**
+     * Remove an observer from the user state.
+     */
+    fun removeObserver(observer: IUserStateObserver)
 }
