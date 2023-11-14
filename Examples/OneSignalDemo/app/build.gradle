@@ -87,7 +87,7 @@ dependencies {
     //gmsImplementation('com.onesignal:OneSignal:5.0.4')
     gmsImplementation('com.onesignal:core:5.0.4')
     gmsImplementation('com.onesignal:notifications:5.0.4')
-    gmsImplementation('com.onesignal:in-app-messages:5.0.4')
+    //gmsImplementation('com.onesignal:in-app-messages:5.0.4')
     //gmsImplementation('com.onesignal:location:5.0.4')
 
     /** END - Google Play Builds **/
