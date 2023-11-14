@@ -1,6 +1,7 @@
 package com.onesignal.user
 
 import com.onesignal.OneSignal
+import com.onesignal.user.internal.state.IUserStateObserver
 import com.onesignal.user.subscriptions.IPushSubscription
 
 /**
@@ -138,4 +139,11 @@ interface IUserManager {
      * Return a copy of all local tags from the current user.
      */
     fun getTags(): Map<String, String>
+
+    fun addObserver(observer: IUserStateObserver)
+
+    /**
+     * Remove an observer from the user state.
+     */
+    fun removeObserver(observer: IUserStateObserver)
 }
