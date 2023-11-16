@@ -138,15 +138,4 @@ interface IUserManager {
      * Return a copy of all local tags from the current user.
      */
     fun getTags() : Map<String, String>
-
-    /**
-    * Add an observer to the user state, allowing the provider to be
-    * notified whenever the user state has changed.
-    */
-    fun addObserver(observer: IUserStateObserver)
-
-    /**
-     * Remove an observer from the user state.
-     */
-    fun removeObserver(observer: IUserStateObserver)
 }
