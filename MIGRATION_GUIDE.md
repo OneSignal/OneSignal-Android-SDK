@@ -271,7 +271,7 @@ The user name space is accessible via `OneSignal.User` (in Kotlin) or `OneSignal
 | `fun addTags(tags: Map<String, String>)`                                      | `void addTags(Map<String, String> tags)`                                      | *Add multiple tags for the current user.  Tags are key:value pairs used as building blocks for targeting specific users and/or personalizing messages. If the tag key already exists, it will be replaced with the value provided here.* |
 | `fun removeTag(key: String)`                                                  | `void removeTag(String key)`                                                  | *Remove the data tag with the provided key from the current user.*                                                                                                                                                                       |
 | `fun removeTags(keys: Collection<String>)`                                    | `void removeTags(Collection<String> keys)`                                    | *Remove multiple tags from the current user.*                                                                                                                                                                                            |
-
+| `fun getTags()`                                                               | `Map<String, String> getTags()`                                               | *Return a copy of all local tags from the current user.*   
 
 **Session Namespace**
 The session namespace is accessible via `OneSignal.Session` (in Kotlin) or `OneSignal.getSession()` (in Java) and provides access to session-scoped functionality.
