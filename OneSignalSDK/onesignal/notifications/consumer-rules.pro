@@ -20,9 +20,6 @@
     void onPushSubscriptionChange(com.onesignal.user.subscriptions.PushSubscriptionChangedState);
 }
 
--keep class ** implements com.onesignal.user.IUserStateObserver {
-    void onUserChange(com.onesignal.user.UserChangedState);
-}
 -keep class ** implements com.onesignal.notifications.INotificationServiceExtension{
    void onNotificationReceived(com.onesignal.notifications.INotificationReceivedEvent);
 }
