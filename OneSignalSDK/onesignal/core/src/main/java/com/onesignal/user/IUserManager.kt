@@ -137,5 +137,5 @@ interface IUserManager {
     /**
      * Return a copy of all local tags from the current user.
      */
-    fun getTags():Map<String, String>
+    fun getTags(): Map<String, String>
 }
