@@ -11,7 +11,7 @@ import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
-import com.onesignal.user.internal.state.IUserStateObserver
+import com.onesignal.user.IUserStateObserver
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionList
 import com.onesignal.user.subscriptions.IPushSubscription

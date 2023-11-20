@@ -1,4 +1,4 @@
-package com.onesignal.user.internal.state
+package com.onesignal.user
 
 
 /**
