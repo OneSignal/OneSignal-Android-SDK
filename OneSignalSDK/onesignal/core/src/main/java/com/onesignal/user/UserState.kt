@@ -14,7 +14,7 @@ class UserState (
         val onesignalId: String?,
 
         /**
-         * The external identifier that you use to identify users. This will be an empty string
+         * The external identifier that you use to identify users. This will be an null string
          * until the user has been successfully logged in on the backend and
          * assigned an ID.  Use [addObserver] to be notified when the [externalId] has
          * been successfully assigned.
