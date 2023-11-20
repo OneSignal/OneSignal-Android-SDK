@@ -139,6 +139,10 @@ interface IUserManager {
      */
     fun getTags(): Map<String, String>
 
+    /**
+     * Add an observer to the user state, allowing the provider to be
+     * notified whenever the user state has changed.
+     */
     fun addObserver(observer: IUserStateObserver)
 
     /**
