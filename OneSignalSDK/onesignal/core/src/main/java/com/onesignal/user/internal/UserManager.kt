@@ -2,6 +2,9 @@ package com.onesignal.user.internal
 
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.events.EventProducer
+import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
+import com.onesignal.common.modeling.ModelChangedArgs
+import com.onesignal.common.modeling.ModelReplacedArgs
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -12,6 +15,8 @@ import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.IUserStateObserver
+import com.onesignal.user.UserChangedState
+import com.onesignal.user.UserState
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionList
 import com.onesignal.user.subscriptions.IPushSubscription
@@ -21,7 +26,7 @@ internal open class UserManager(
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
     private val _languageContext: ILanguageContext,
-) : IUserManager {
+) : IUserManager, ISingletonModelStoreChangeHandler<IdentityModel> {
     val externalId: String?
         get() = _identityModel.externalId
 
@@ -44,6 +49,10 @@ internal open class UserManager(
 
     override fun setLanguage(value: String) {
         _languageContext.language = value
+    }
+
+    init {
+        _identityModelStore.subscribe()
     }
 
     override fun addAlias(
@@ -227,4 +236,19 @@ internal open class UserManager(
     override fun addObserver(observer: IUserStateObserver) = changeHandlersNotifier.subscribe(observer)
 
     override fun removeObserver(observer: IUserStateObserver) = changeHandlersNotifier.unsubscribe(observer)
+    override fun onModelReplaced(model: ModelReplacedArgs<IdentityModel>, tag: String) {
+        /* TO DO*/
+        var oldUserState = UserState(model.oldModel.onesignalId, model.oldModel.externalId)
+        var newUserState = UserState(model.newModel.onesignalId, model.newModel.externalId)
+
+
+        var newUserChangeState = UserChangedState (UserState(model.oldModel.onesignalId, model.oldModel.externalId), UserState(model.newModel.onesignalId, model.newModel.externalId), )
+        this.changeHandlersNotifier.fire {
+            it.onUserStateChange(newUserChangeState)
+        }
+    }
+
+    override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
+        TODO("Not yet implemented")
+    }
 }
