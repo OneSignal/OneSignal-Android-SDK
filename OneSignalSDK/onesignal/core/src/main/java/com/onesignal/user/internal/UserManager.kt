@@ -1,5 +1,7 @@
 package com.onesignal.user.internal
 
+import android.os.Debug
+import android.util.Log
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
@@ -52,7 +54,7 @@ internal open class UserManager(
     }
 
     init {
-        _identityModelStore.subscribe()
+        _identityModelStore.subscribe(this)
     }
 
     override fun addAlias(
@@ -237,18 +239,28 @@ internal open class UserManager(
 
     override fun removeObserver(observer: IUserStateObserver) = changeHandlersNotifier.unsubscribe(observer)
     override fun onModelReplaced(model: ModelReplacedArgs<IdentityModel>, tag: String) {
-        /* TO DO*/
-        var oldUserState = UserState(model.oldModel.onesignalId, model.oldModel.externalId)
-        var newUserState = UserState(model.newModel.onesignalId, model.newModel.externalId)
+        val oldUserState = UserState(model.oldModel.onesignalId, model.oldModel.externalId)
+        val newUserState = UserState(model.newModel.onesignalId, model.newModel.externalId)
 
+        if (oldUserState.onesignalId.equals(newUserState.onesignalId) && oldUserState.externalId.equals(newUserState.externalId))
+            return
 
-        var newUserChangeState = UserChangedState (UserState(model.oldModel.onesignalId, model.oldModel.externalId), UserState(model.newModel.onesignalId, model.newModel.externalId), )
+        val newUserChangeState = UserChangedState (oldUserState, newUserState)
         this.changeHandlersNotifier.fire {
             it.onUserStateChange(newUserChangeState)
         }
+
+        Logging.debug(oldUserState.toString())
     }
 
     override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
-        TODO("Not yet implemented")
+        Logging.debug(args.property)
+        /*
+        val oldUserState = UserState(args.)
+        val newUserState = UserState(model.newModel.onesignalId, model.newModel.externalId)
+        val newUserChangeState = UserChangedState (oldUserState, newUserState)
+        this.changeHandlersNotifier.fire {
+            it.onUserStateChange(newUserChangeState)
+        }*/
     }
 }

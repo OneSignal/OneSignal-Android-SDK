@@ -28,7 +28,11 @@ import android.widget.TextView;
 
 import com.onesignal.Continue;
 import com.onesignal.OneSignal;
+import com.onesignal.debug.internal.logging.Logging;
 import com.onesignal.sdktest.adapter.SubscriptionRecyclerViewAdapter;
+import com.onesignal.user.IUserStateObserver;
+import com.onesignal.user.UserChangedState;
+import com.onesignal.user.UserState;
 import com.onesignal.user.subscriptions.IEmailSubscription;
 import com.onesignal.user.subscriptions.IPushSubscription;
 import com.onesignal.user.subscriptions.ISmsSubscription;
@@ -63,7 +67,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RequiresApi(api = Build.VERSION_CODES.N)
-public class MainActivityViewModel implements ActivityViewModel, IPushSubscriptionObserver {
+public class MainActivityViewModel implements ActivityViewModel, IPushSubscriptionObserver, IUserStateObserver {
 
     private Animate animate;
     private Dialog dialog;
@@ -499,6 +503,17 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
     @Override
     public void onPushSubscriptionChange(@NonNull PushSubscriptionChangedState state) {
         refreshSubscriptionState();
+    }
+
+    @Override
+    public void onUserStateChange(@NonNull UserChangedState state) {
+        UserState currentState = state.getCurrent();
+        UserState prevState = state.getPrevious();
+        Logging.debug("onUserStateChanged;  previous onesignalId: " + prevState.getOnesignalId().toString()
+                        + ", previous externalId: " + prevState.getExternalId().toString()
+                        + ", current onesignalId: " + currentState.getOnesignalId().toString()
+                        + ", current externalId: " + currentState.getExternalId().toString(),
+                null);
     }
 
     private class DummySubscription implements ISubscription {
