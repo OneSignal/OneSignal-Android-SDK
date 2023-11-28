@@ -21,7 +21,7 @@
 }
 
 -keep class ** implements com.onesignal.user.IUserStateObserver {
-    void onUserChange(com.onesignal.user.UserChangedState);
+    void onUserStateChange(com.onesignal.user.UserChangedState);
 }
 
 -keep class ** implements com.onesignal.notifications.INotificationServiceExtension{

@@ -245,9 +245,8 @@ internal open class UserManager(
         if (oldUserState.onesignalId.equals(newUserState.onesignalId) && oldUserState.externalId.equals(newUserState.externalId))
             return
 
-        val newUserChangeState = UserChangedState (oldUserState, newUserState)
         this.changeHandlersNotifier.fire {
-            it.onUserStateChange(newUserChangeState)
+            it.onUserStateChange(UserChangedState(oldUserState, newUserState))
         }
 
         Logging.debug(oldUserState.toString())
