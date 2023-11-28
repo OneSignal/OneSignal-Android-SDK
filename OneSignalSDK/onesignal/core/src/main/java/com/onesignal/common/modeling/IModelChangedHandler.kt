@@ -53,10 +53,10 @@ class ModelChangedArgs(
 /**
  * The arguments passed to the [IModelChangedHandler] handler when subscribed via [Model.subscribe]
  */
-class ModelReplacedArgs<TModel> (
-        /**
-         * The full model in its previous and current state.
-         */
-        val oldModel: TModel,
-        val newModel: TModel,
+class ModelReplacedArgs<TModel>(
+    /**
+     * The full model in its previous and current state.
+     */
+    val oldModel: TModel,
+    val newModel: TModel,
 ) where TModel : Model

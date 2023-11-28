@@ -1,7 +1,5 @@
 package com.onesignal.user.internal
 
-import android.os.Debug
-import android.util.Log
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
@@ -235,9 +233,14 @@ internal open class UserManager(
         return _propertiesModel.tags.toMap()
     }
 
-    override fun addObserver(observer: IUserStateObserver) = changeHandlersNotifier.subscribe(observer)
+    override fun addObserver(observer: IUserStateObserver) {
+        changeHandlersNotifier.subscribe(observer)
+    }
 
-    override fun removeObserver(observer: IUserStateObserver) = changeHandlersNotifier.unsubscribe(observer)
+    override fun removeObserver(observer: IUserStateObserver) {
+        changeHandlersNotifier.unsubscribe(observer)
+    }
+
     override fun onModelReplaced(model: ModelReplacedArgs<IdentityModel>, tag: String) {
         val oldUserState = UserState(model.oldModel.onesignalId, model.oldModel.externalId)
         val newUserState = UserState(model.newModel.onesignalId, model.newModel.externalId)
