@@ -248,18 +248,9 @@ internal open class UserManager(
         this.changeHandlersNotifier.fire {
             it.onUserStateChange(UserChangedState(oldUserState, newUserState))
         }
-
-        Logging.debug(oldUserState.toString())
     }
 
     override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
         Logging.debug(args.property)
-        /*
-        val oldUserState = UserState(args.)
-        val newUserState = UserState(model.newModel.onesignalId, model.newModel.externalId)
-        val newUserChangeState = UserChangedState (oldUserState, newUserState)
-        this.changeHandlersNotifier.fire {
-            it.onUserStateChange(newUserChangeState)
-        }*/
     }
 }

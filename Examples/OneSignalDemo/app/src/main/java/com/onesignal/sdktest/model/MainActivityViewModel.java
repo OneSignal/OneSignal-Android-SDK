@@ -510,10 +510,10 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
     public void onUserStateChange(@NonNull UserChangedState state) {
         UserState currentState = state.getCurrent();
         UserState prevState = state.getPrevious();
-        Logging.debug("onUserStateChanged;  previous onesignalId: " + prevState.getOnesignalId().toString()
-                        + ", previous externalId: " + prevState.getExternalId().toString()
-                        + ", current onesignalId: " + currentState.getOnesignalId().toString()
-                        + ", current externalId: " + currentState.getExternalId().toString(),
+        Logging.debug("onUserStateChanged;  previous onesignalId: " + String.valueOf(prevState.getOnesignalId())
+                        + ", previous externalId: " + String.valueOf(prevState.getExternalId())
+                        + ", current onesignalId: " + String.valueOf(currentState.getOnesignalId())
+                        + ", current externalId: " + String.valueOf(currentState.getExternalId()),
                 null);
     }
 

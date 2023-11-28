@@ -55,7 +55,7 @@ class ModelChangedArgs(
  */
 class ModelReplacedArgs<TModel> (
         /**
-         * The full model in its current state.
+         * The full model in its previous and current state.
          */
         val oldModel: TModel,
         val newModel: TModel,

@@ -31,8 +31,8 @@ internal abstract class SingletonModelStoreListener<TModel>(
     }
 
     override fun onModelReplaced(
-            model: ModelReplacedArgs<TModel>,
-            tag: String,
+        model: ModelReplacedArgs<TModel>,
+        tag: String,
     ) {
         if (tag != ModelChangeTags.NORMAL) {
             return
