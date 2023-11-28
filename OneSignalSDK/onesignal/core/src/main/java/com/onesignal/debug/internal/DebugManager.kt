@@ -4,7 +4,7 @@ import com.onesignal.debug.IDebugManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 
-internal class DebugManager() : IDebugManager {
+internal class DebugManager : IDebugManager {
     override var logLevel: LogLevel
         get() = Logging.logLevel
         set(value) {

@@ -7,7 +7,7 @@ import com.onesignal.inAppMessages.internal.InAppMessagePage
 import com.onesignal.inAppMessages.internal.lifecycle.IInAppLifecycleEventHandler
 import com.onesignal.inAppMessages.internal.lifecycle.IInAppLifecycleService
 
-internal class IAMLifecycleService() :
+internal class IAMLifecycleService :
     EventProducer<IInAppLifecycleEventHandler>(),
     IInAppLifecycleService {
     override fun messageWillDisplay(message: InAppMessage) {

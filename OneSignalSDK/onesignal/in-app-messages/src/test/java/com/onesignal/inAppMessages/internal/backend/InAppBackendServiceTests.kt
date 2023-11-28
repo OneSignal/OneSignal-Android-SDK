@@ -116,10 +116,10 @@ class InAppBackendServiceTests : FunSpec({
         response.shouldRetry shouldBe false
         response.content shouldNotBe null
         response.content!!.contentHtml shouldStartWith "html1"
-        response.content!!.displayDuration shouldBe 123
-        response.content!!.useHeightMargin shouldBe false
-        response.content!!.useWidthMargin shouldBe false
-        response.content!!.isFullBleed shouldBe true
+        response.content.displayDuration shouldBe 123
+        response.content.useHeightMargin shouldBe false
+        response.content.useWidthMargin shouldBe false
+        response.content.isFullBleed shouldBe true
 
         coVerify(exactly = 1) { mockHttpClient.get("in_app_messages/messageId/variants/variantId/html?app_id=appId", any()) }
     }
@@ -159,10 +159,10 @@ class InAppBackendServiceTests : FunSpec({
         response.shouldRetry shouldBe false
         response.content shouldNotBe null
         response.content!!.contentHtml shouldStartWith "html1"
-        response.content!!.displayDuration shouldBe 123
-        response.content!!.useHeightMargin shouldBe true
-        response.content!!.useWidthMargin shouldBe true
-        response.content!!.isFullBleed shouldBe false
+        response.content.displayDuration shouldBe 123
+        response.content.useHeightMargin shouldBe true
+        response.content.useWidthMargin shouldBe true
+        response.content.isFullBleed shouldBe false
 
         coVerify(exactly = 1) { mockHttpClient.get("in_app_messages/messageId/variants/variantId/html?app_id=appId", any()) }
     }
@@ -252,10 +252,10 @@ class InAppBackendServiceTests : FunSpec({
         // Then
         response shouldNotBe null
         response!!.contentHtml shouldStartWith "html1"
-        response!!.displayDuration shouldBe 123
-        response!!.useHeightMargin shouldBe false
-        response!!.useWidthMargin shouldBe false
-        response!!.isFullBleed shouldBe true
+        response.displayDuration shouldBe 123
+        response.useHeightMargin shouldBe false
+        response.useWidthMargin shouldBe false
+        response.isFullBleed shouldBe true
 
         coVerify(exactly = 1) { mockHttpClient.get("in_app_messages/device_preview?preview_id=previewUUID&app_id=appId", any()) }
     }

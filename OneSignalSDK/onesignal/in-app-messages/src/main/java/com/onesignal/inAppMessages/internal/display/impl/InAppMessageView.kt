@@ -321,9 +321,7 @@ internal class InAppMessageView(
     ) {
         draggableRelativeLayout = DraggableRelativeLayout(context)
         if (relativeLayoutParams != null) {
-            draggableRelativeLayout!!.setLayoutParams(
-                relativeLayoutParams,
-            )
+            draggableRelativeLayout!!.layoutParams = relativeLayoutParams
         }
         draggableRelativeLayout!!.setParams(draggableParams)
         draggableRelativeLayout!!.setListener(
@@ -357,8 +355,8 @@ internal class InAppMessageView(
             marginPxSizeRight,
             marginPxSizeBottom,
         )
-        draggableRelativeLayout!!.setClipChildren(false)
-        draggableRelativeLayout!!.setClipToPadding(false)
+        draggableRelativeLayout!!.clipChildren = false
+        draggableRelativeLayout!!.clipToPadding = false
         draggableRelativeLayout!!.addView(cardView)
     }
 
@@ -505,7 +503,7 @@ internal class InAppMessageView(
         backgroundView: View,
     ) {
         val messageViewCardView =
-            messageView!!.findViewWithTag<CardView>(
+            messageView.findViewWithTag<CardView>(
                 IN_APP_MESSAGE_CARD_VIEW_TAG,
             )
         val cardViewAnimCallback = createAnimationListener(messageViewCardView)

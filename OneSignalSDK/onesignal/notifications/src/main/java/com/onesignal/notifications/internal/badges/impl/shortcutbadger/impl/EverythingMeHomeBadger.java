@@ -10,6 +10,7 @@ import com.onesignal.notifications.internal.badges.impl.shortcutbadger.Badger;
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.ShortcutBadgeException;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 
@@ -35,6 +36,6 @@ public class EverythingMeHomeBadger implements Badger {
 
     @Override
     public List<String> getSupportLaunchers() {
-        return Arrays.asList("me.everything.launcher");
+        return Collections.singletonList("me.everything.launcher");
     }
 }

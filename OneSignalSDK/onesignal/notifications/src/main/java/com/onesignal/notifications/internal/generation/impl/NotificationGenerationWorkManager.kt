@@ -89,7 +89,7 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
                 Logging.error("Error occurred doing work for job with id: $id", e)
                 return Result.failure()
             } finally {
-                removeNotificationIdProcessed(id!!)
+                removeNotificationIdProcessed(id)
             }
             return Result.success()
         }

@@ -24,7 +24,7 @@ public class BroadcastHelper {
 		PackageManager packageManager = context.getPackageManager();
 		List<ResolveInfo> receivers = packageManager.queryBroadcastReceivers(intent, 0);
 
-		return receivers != null ? receivers : Collections.<ResolveInfo>emptyList();
+		return receivers != null ? receivers : Collections.emptyList();
 	}
 
 	public static void sendIntentExplicitly(Context context, Intent intent) throws ShortcutBadgeException {

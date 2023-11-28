@@ -39,29 +39,29 @@ class NotificationGenerationJob(
      * Get the notification title from the payload
      */
     val title: CharSequence?
-        get() = overriddenTitleFromExtender ?: notification!!.title as CharSequence?
+        get() = overriddenTitleFromExtender ?: notification.title as CharSequence?
 
     /**
      * Get the notification body from the payload
      */
     val body: CharSequence?
-        get() = overriddenBodyFromExtender ?: notification!!.body as CharSequence?
+        get() = overriddenBodyFromExtender ?: notification.body as CharSequence?
 
     /**
      * Get the notification additional data json from the payload
      */
     val additionalData: JSONObject
-        get() = notification!!.additionalData ?: JSONObject()
+        get() = notification.additionalData ?: JSONObject()
 
     fun hasExtender(): Boolean {
-        return notification!!.notificationExtender != null
+        return notification.notificationExtender != null
     }
 
     val apiNotificationId: String
         get() = NotificationHelper.getNotificationIdFromFCMJson(jsonPayload) ?: ""
 
     val androidId: Int
-        get() = notification!!.androidNotificationId
+        get() = notification.androidNotificationId
 
     override fun toString(): String {
         return "NotificationGenerationJob{" +

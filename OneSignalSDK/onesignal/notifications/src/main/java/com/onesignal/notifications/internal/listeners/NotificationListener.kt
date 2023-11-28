@@ -70,7 +70,7 @@ internal class NotificationListener(
         notificationId: String,
     ) {
         val config = _configModelStore.model
-        val appId: String = config.appId ?: ""
+        val appId: String = config.appId
         val subscriptionId: String = _subscriptionManager.subscriptions.push.id
         val deviceType = _deviceService.deviceType
 

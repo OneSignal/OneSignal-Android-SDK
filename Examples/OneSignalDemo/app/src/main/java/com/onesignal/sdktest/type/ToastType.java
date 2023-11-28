@@ -9,8 +9,8 @@ public enum ToastType {
     WARNING(R.drawable.ic_alert_white_48dp, R.color.colorToastWarning),
     ERROR(R.drawable.ic_alert_octagon_white_48dp, R.color.colorToastError);
 
-    private int icon;
-    private int color;
+    private final int icon;
+    private final int color;
 
     ToastType(int icon, int color) {
         this.icon = icon;

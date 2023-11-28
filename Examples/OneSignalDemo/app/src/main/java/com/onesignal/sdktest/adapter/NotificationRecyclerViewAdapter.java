@@ -23,11 +23,11 @@ import com.onesignal.sdktest.util.Animate;
 
 public class NotificationRecyclerViewAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    private Animate animate;
-    private LayoutInflater layoutInflater;
+    private final Animate animate;
+    private final LayoutInflater layoutInflater;
 
-    private Context context;
-    private Notification[] notifications;
+    private final Context context;
+    private final Notification[] notifications;
 
 
     public NotificationRecyclerViewAdapter(Context context, Notification[] notifications) {
@@ -65,10 +65,10 @@ public class NotificationRecyclerViewAdapter extends RecyclerView.Adapter<Recycl
 
     public class NotificationViewHolder extends RecyclerView.ViewHolder {
 
-        private LinearLayout notificationLinearLayout;
-        private ImageView notificationImageView;
-        private ProgressBar notificationProgressBar;
-        private TextView notificationTextView;
+        private final LinearLayout notificationLinearLayout;
+        private final ImageView notificationImageView;
+        private final ProgressBar notificationProgressBar;
+        private final TextView notificationTextView;
 
         private Notification notification;
 

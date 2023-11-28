@@ -23,12 +23,12 @@ import com.onesignal.sdktest.util.Toaster;
 
 public class InAppMessageRecyclerViewAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    private Animate animate;
-    private LayoutInflater layoutInflater;
-    private Toaster toaster;
+    private final Animate animate;
+    private final LayoutInflater layoutInflater;
+    private final Toaster toaster;
 
-    private Context context;
-    private InAppMessage[] inAppMessages;
+    private final Context context;
+    private final InAppMessage[] inAppMessages;
 
 
     public InAppMessageRecyclerViewAdapter(Context context, InAppMessage[] inAppMessages) {
@@ -67,10 +67,10 @@ public class InAppMessageRecyclerViewAdapter extends RecyclerView.Adapter<Recycl
 
     public class InAppMessageViewHolder extends RecyclerView.ViewHolder {
 
-        private LinearLayout inAppMessageLinearLayout;
-        private ImageView inAppMessageImageView;
-        private ProgressBar inAppMessageProgressBar;
-        private TextView inAppMessageTextView;
+        private final LinearLayout inAppMessageLinearLayout;
+        private final ImageView inAppMessageImageView;
+        private final ProgressBar inAppMessageProgressBar;
+        private final TextView inAppMessageTextView;
 
         private InAppMessage inAppMessage;
 

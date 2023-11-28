@@ -56,8 +56,8 @@ internal class NotificationDisplayBuilder(
     override fun getTitle(fcmJson: JSONObject): CharSequence {
         val title: CharSequence? = fcmJson.optString("title", null)
         return title
-            ?: currentContext!!.packageManager.getApplicationLabel(
-                currentContext!!.applicationInfo,
+            ?: currentContext.packageManager.getApplicationLabel(
+                currentContext.applicationInfo,
             )
     }
 
@@ -80,7 +80,7 @@ internal class NotificationDisplayBuilder(
     }
 
     override fun getBaseOneSignalNotificationBuilder(notificationJob: NotificationGenerationJob): OneSignalNotificationBuilder {
-        val fcmJson: JSONObject = notificationJob.jsonPayload!!
+        val fcmJson: JSONObject = notificationJob.jsonPayload
         val oneSignalNotificationBuilder = OneSignalNotificationBuilder()
         val notificationBuilder: NotificationCompat.Builder
         notificationBuilder =
@@ -88,9 +88,9 @@ internal class NotificationDisplayBuilder(
                 val channelId: String =
                     _notificationChannelManager.createNotificationChannel(notificationJob)
                 // Will throw if app is using 26.0.0-beta1 or older of the support library.
-                NotificationCompat.Builder(currentContext!!, channelId)
+                NotificationCompat.Builder(currentContext, channelId)
             } catch (t: Throwable) {
-                NotificationCompat.Builder(currentContext!!)
+                NotificationCompat.Builder(currentContext)
             }
         val message = fcmJson.optString("alert", null)
         notificationBuilder
@@ -172,7 +172,7 @@ internal class NotificationDisplayBuilder(
             }
         }
         if (isSoundEnabled(fcmJson)) {
-            val soundUri: Uri? = NotificationHelper.getSoundUri(currentContext!!, fcmJson.optString("sound", null))
+            val soundUri: Uri? = NotificationHelper.getSoundUri(currentContext, fcmJson.optString("sound", null))
             if (soundUri != null) {
                 notifBuilder.setSound(soundUri)
             } else {
@@ -265,7 +265,7 @@ internal class NotificationDisplayBuilder(
         try {
             var bitmap: Bitmap? = null
             try {
-                bitmap = BitmapFactory.decodeStream(currentContext!!.assets.open(bitmapStr))
+                bitmap = BitmapFactory.decodeStream(currentContext.assets.open(bitmapStr))
             } catch (t: Throwable) {
             }
             if (bitmap != null) return bitmap
@@ -273,7 +273,7 @@ internal class NotificationDisplayBuilder(
             for (extension in imageExtensions) {
                 try {
                     bitmap =
-                        BitmapFactory.decodeStream(currentContext!!.assets.open(bitmapStr + extension))
+                        BitmapFactory.decodeStream(currentContext.assets.open(bitmapStr + extension))
                 } catch (t: Throwable) {
                 }
                 if (bitmap != null) return bitmap

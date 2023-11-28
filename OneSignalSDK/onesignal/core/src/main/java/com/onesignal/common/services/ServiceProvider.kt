@@ -51,7 +51,7 @@ class ServiceProvider(
         val listOfServices: MutableList<T> = mutableListOf()
 
         if (serviceMap.containsKey(c)) {
-            for (serviceReg in serviceMap!![c]!!) {
+            for (serviceReg in serviceMap[c]!!) {
                 val service =
                     serviceReg.resolve(this) as T?
                         ?: throw Exception("Could not instantiate service: $serviceReg")

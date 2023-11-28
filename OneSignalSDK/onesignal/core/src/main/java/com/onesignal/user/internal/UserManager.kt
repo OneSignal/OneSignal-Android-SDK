@@ -9,14 +9,14 @@ import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.IUserManager
+import com.onesignal.user.IUserStateObserver
+import com.onesignal.user.UserChangedState
+import com.onesignal.user.UserState
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
-import com.onesignal.user.IUserStateObserver
-import com.onesignal.user.UserChangedState
-import com.onesignal.user.UserState
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionList
 import com.onesignal.user.subscriptions.IPushSubscription
@@ -241,19 +241,33 @@ internal open class UserManager(
         changeHandlersNotifier.unsubscribe(observer)
     }
 
-    override fun onModelReplaced(model: ModelReplacedArgs<IdentityModel>, tag: String) {
+    override fun onModelReplaced(
+        model: ModelReplacedArgs<IdentityModel>,
+        tag: String,
+    ) {
         val oldUserState = UserState(model.oldModel.onesignalId, model.oldModel.externalId)
         val newUserState = UserState(model.newModel.onesignalId, model.newModel.externalId)
 
-        if (oldUserState.onesignalId.equals(newUserState.onesignalId) && oldUserState.externalId.equals(newUserState.externalId))
+        if (oldUserState.onesignalId.equals(newUserState.onesignalId) &&
+            oldUserState.externalId.equals(newUserState.externalId)
+        ) {
             return
+        }
 
         this.changeHandlersNotifier.fire {
-            it.onUserStateChange(UserChangedState(oldUserState, newUserState))
+            it.onUserStateChange(
+                UserChangedState(
+                    oldUserState,
+                    newUserState,
+                ),
+            )
         }
     }
 
-    override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
+    override fun onModelUpdated(
+        args: ModelChangedArgs,
+        tag: String,
+    ) {
         Logging.debug(args.property)
     }
 }

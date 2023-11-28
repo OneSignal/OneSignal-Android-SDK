@@ -74,7 +74,7 @@ internal class NotificationDisplayer(
     // Put the message into a notification and post it.
     private suspend fun showNotification(notificationJob: NotificationGenerationJob): Boolean {
         val notificationId: Int = notificationJob.androidId
-        val fcmJson: JSONObject = notificationJob.jsonPayload!!
+        val fcmJson: JSONObject = notificationJob.jsonPayload
         var group: String? = fcmJson.safeString("grp")
         val intentGenerator = IntentGeneratorForAttachingToNotifications(currentContext)
         var grouplessNotifs = ArrayList<StatusBarNotification>()
@@ -165,11 +165,11 @@ internal class NotificationDisplayer(
         //     created by Android itself.
         if (group == null || Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1) {
             _notificationDisplayBuilder.addXiaomiSettings(oneSignalNotificationBuilder, notification)
-            NotificationManagerCompat.from(currentContext!!).notify(notificationId, notification)
+            NotificationManagerCompat.from(currentContext).notify(notificationId, notification)
         }
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationHelper.areNotificationsEnabled(currentContext!!, notification.channelId)
+            NotificationHelper.areNotificationsEnabled(currentContext, notification.channelId)
         } else {
             true
         }
@@ -210,7 +210,7 @@ internal class NotificationDisplayer(
             var mNotification = mNotificationField[notificationBuilder] as Notification
             notificationJob.orgFlags = mNotification.flags
             notificationJob.orgSound = mNotification.sound
-            notificationBuilder!!.extend(notificationJob.notification!!.notificationExtender!!)
+            notificationBuilder!!.extend(notificationJob.notification.notificationExtender!!)
             mNotification = mNotificationField[notificationBuilder] as Notification
             val mContentTextField =
                 NotificationCompat.Builder::class.java.getDeclaredField("mContentText")
@@ -258,7 +258,7 @@ internal class NotificationDisplayer(
         }
         if (bgImage != null) {
             val customView =
-                RemoteViews(currentContext!!.packageName, R.layout.onesignal_bgimage_notif_layout)
+                RemoteViews(currentContext.packageName, R.layout.onesignal_bgimage_notif_layout)
             customView.setTextViewText(R.id.os_bgimage_notif_title, _notificationDisplayBuilder.getTitle(fcmJson))
             customView.setTextViewText(R.id.os_bgimage_notif_body, fcmJson.optString("alert"))
             setTextColor(
@@ -333,7 +333,7 @@ internal class NotificationDisplayer(
                 customView.setTextColor(
                     viewId,
                     AndroidSupportV4Compat.ContextCompat.getColor(
-                        currentContext!!,
+                            currentContext,
                         colorId,
                     ),
                 )
@@ -358,7 +358,7 @@ internal class NotificationDisplayer(
         try {
             var bitmap: Bitmap? = null
             try {
-                bitmap = BitmapFactory.decodeStream(currentContext!!.assets.open(bitmapStr))
+                bitmap = BitmapFactory.decodeStream(currentContext.assets.open(bitmapStr))
             } catch (t: Throwable) {
             }
             if (bitmap != null) return bitmap
@@ -366,7 +366,7 @@ internal class NotificationDisplayer(
             for (extension in imageExtensions) {
                 try {
                     bitmap =
-                        BitmapFactory.decodeStream(currentContext!!.assets.open(bitmapStr + extension))
+                        BitmapFactory.decodeStream(currentContext.assets.open(bitmapStr + extension))
                 } catch (t: Throwable) {
                 }
                 if (bitmap != null) return bitmap

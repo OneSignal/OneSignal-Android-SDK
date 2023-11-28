@@ -18,7 +18,7 @@ internal object DatabaseMockHelper {
         val mockOneSignalDatabase = spyk<IDatabase>()
 
         if (records != null) {
-            val mockCursor = cursor(records!!)
+            val mockCursor = cursor(records)
             every {
                 mockOneSignalDatabase.query(tableName, any(), any(), any(), any(), any(), any(), any(), any())
             } answers {

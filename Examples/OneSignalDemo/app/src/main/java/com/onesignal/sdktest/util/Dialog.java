@@ -31,12 +31,12 @@ import com.onesignal.sdktest.ui.RecyclerViewBuilder;
 
 public class Dialog {
 
-    private Font font;
-    private LayoutInflater layoutInflater;
-    private RecyclerViewBuilder recyclerViewBuilder;
-    private Toaster toaster;
+    private final Font font;
+    private final LayoutInflater layoutInflater;
+    private final RecyclerViewBuilder recyclerViewBuilder;
+    private final Toaster toaster;
 
-    private Context context;
+    private final Context context;
 
     public Dialog(Context context) {
         this.context = context;

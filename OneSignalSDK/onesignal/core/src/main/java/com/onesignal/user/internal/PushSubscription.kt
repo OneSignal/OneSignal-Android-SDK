@@ -45,7 +45,7 @@ internal open class PushSubscription(
     }
 }
 
-internal class UninitializedPushSubscription() : PushSubscription(createFakePushSub()) {
+internal class UninitializedPushSubscription : PushSubscription(createFakePushSub()) {
     companion object {
         fun createFakePushSub(): SubscriptionModel {
             val pushSubModel = SubscriptionModel()

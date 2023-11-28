@@ -16,12 +16,12 @@ import com.onesignal.sdktest.util.Font;
 
 public class EnumSelectionRecyclerViewAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    private Font font;
-    private LayoutInflater layoutInflater;
+    private final Font font;
+    private final LayoutInflater layoutInflater;
 
-    private Context context;
-    private Object[] enums;
-    private EnumSelectionCallback callback;
+    private final Context context;
+    private final Object[] enums;
+    private final EnumSelectionCallback callback;
 
 
     public EnumSelectionRecyclerViewAdapter(Context context, Object[] enums, EnumSelectionCallback callback) {
@@ -60,8 +60,8 @@ public class EnumSelectionRecyclerViewAdapter extends RecyclerView.Adapter<Recyc
 
     public class EnumSelectionViewHolder extends RecyclerView.ViewHolder {
 
-        private RelativeLayout enumRelativeLayout;
-        private TextView enumTextView;
+        private final RelativeLayout enumRelativeLayout;
+        private final TextView enumTextView;
 
         private String title;
 

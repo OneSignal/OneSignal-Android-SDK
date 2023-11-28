@@ -32,7 +32,7 @@ public class AdwHomeBadger implements Badger {
         if (BroadcastHelper.canResolveBroadcast(context, intent)) {
             context.sendBroadcast(intent);
         } else {
-            throw new ShortcutBadgeException("unable to resolve intent: " + intent.toString());
+            throw new ShortcutBadgeException("unable to resolve intent: " + intent);
         }
     }
 

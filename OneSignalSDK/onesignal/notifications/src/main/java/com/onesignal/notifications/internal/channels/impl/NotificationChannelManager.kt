@@ -38,7 +38,7 @@ internal class NotificationChannelManager(
     override fun createNotificationChannel(notificationJob: NotificationGenerationJob): String {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return DEFAULT_CHANNEL_ID
         val context = _applicationService.appContext
-        val jsonPayload = notificationJob.jsonPayload!!
+        val jsonPayload = notificationJob.jsonPayload
         val notificationManager = NotificationHelper.getNotificationManager(context)
         if (notificationJob.isRestoring) return createRestoreChannel(notificationManager)
 
@@ -80,7 +80,7 @@ internal class NotificationChannelManager(
             } else {
                 objChannelPayload as JSONObject
             }
-        var channelId = channelPayload!!.optString("id", DEFAULT_CHANNEL_ID)
+        var channelId = channelPayload.optString("id", DEFAULT_CHANNEL_ID)
         // Ensure we don't try to use the system reserved id
         if (channelId == NotificationChannel.DEFAULT_CHANNEL_ID) channelId = DEFAULT_CHANNEL_ID
         var payloadWithText = channelPayload

@@ -628,7 +628,7 @@ class OutcomeEventsControllerTests : FunSpec({
                     it.weight shouldBe .2f
                     it.timestamp shouldBe 2222
                     it.notificationIds!!.getString(0) shouldBe "notificationId2"
-                    it.notificationIds!!.getString(1) shouldBe "notificationId3"
+                    it.notificationIds.getString(1) shouldBe "notificationId3"
                 },
             )
         }
@@ -720,7 +720,7 @@ class OutcomeEventsControllerTests : FunSpec({
                     it.weight shouldBe .2f
                     it.timestamp shouldBe 2222
                     it.notificationIds!!.getString(0) shouldBe "notificationId2"
-                    it.notificationIds!!.getString(1) shouldBe "notificationId3"
+                    it.notificationIds.getString(1) shouldBe "notificationId3"
                 },
             )
         }

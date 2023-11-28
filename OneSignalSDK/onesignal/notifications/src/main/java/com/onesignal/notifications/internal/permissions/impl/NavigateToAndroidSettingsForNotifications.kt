@@ -37,11 +37,11 @@ internal object NavigateToAndroidSettingsForNotifications {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
         // for Android 5-7
-        intent.putExtra("app_package", context.getPackageName())
-        intent.putExtra("app_uid", context.getApplicationInfo().uid)
+        intent.putExtra("app_package", context.packageName)
+        intent.putExtra("app_uid", context.applicationInfo.uid)
 
         // for Android 8 and above
-        intent.putExtra("android.provider.extra.APP_PACKAGE", context.getPackageName())
+        intent.putExtra("android.provider.extra.APP_PACKAGE", context.packageName)
         context.startActivity(intent)
     }
 }

@@ -52,7 +52,7 @@ internal class PushRegistratorADM(
                 }
         }
 
-        return result!!
+        return result
     }
 
     override suspend fun fireCallback(id: String?) {

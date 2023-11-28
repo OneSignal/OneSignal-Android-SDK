@@ -1,6 +1,6 @@
 package com.onesignal.inAppMessages.internal.prompt.impl
 
-internal abstract class InAppMessagePrompt() {
+internal abstract class InAppMessagePrompt {
     private var prompted = false
 
     abstract suspend fun handlePrompt(): PromptActionResult?

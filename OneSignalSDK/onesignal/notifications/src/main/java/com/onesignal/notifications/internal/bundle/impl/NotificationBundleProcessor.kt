@@ -70,7 +70,7 @@ internal class NotificationBundleProcessor(
     override fun processBundleFromReceiver(
         context: Context,
         bundle: Bundle,
-    ): INotificationBundleProcessor.ProcessedBundleResult? {
+    ): INotificationBundleProcessor.ProcessedBundleResult {
         val bundleResult = INotificationBundleProcessor.ProcessedBundleResult()
 
         // Not a OneSignal FCM message

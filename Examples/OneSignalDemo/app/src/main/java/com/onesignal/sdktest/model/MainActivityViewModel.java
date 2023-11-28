@@ -490,11 +490,7 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
                 aliasArrayList.clear();
                 aliasArrayList.addAll(aliasSet.entrySet());
 
-                if (aliasArrayList.size() > 0) {
-                    animate.toggleAnimationView(false, View.GONE, aliasesRecyclerView, noAliasesTextView);
-                } else {
-                    animate.toggleAnimationView(true, View.GONE, aliasesRecyclerView, noAliasesTextView);
-                }
+                animate.toggleAnimationView(aliasArrayList.size() <= 0, View.GONE, aliasesRecyclerView, noAliasesTextView);
 
                 aliasesRecyclerViewAdapter.notifyDataSetChanged();
             }
@@ -510,16 +506,16 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
     public void onUserStateChange(@NonNull UserChangedState state) {
         UserState currentState = state.getCurrent();
         UserState prevState = state.getPrevious();
-        Logging.debug("onUserStateChanged;  previous onesignalId: " + String.valueOf(prevState.getOnesignalId())
-                        + ", previous externalId: " + String.valueOf(prevState.getExternalId())
-                        + ", current onesignalId: " + String.valueOf(currentState.getOnesignalId())
-                        + ", current externalId: " + String.valueOf(currentState.getExternalId()),
+        Logging.debug("onUserStateChanged;  previous onesignalId: " + prevState.getOnesignalId()
+                        + ", previous externalId: " + prevState.getExternalId()
+                        + ", current onesignalId: " + currentState.getOnesignalId()
+                        + ", current externalId: " + currentState.getExternalId(),
                 null);
     }
 
     private class DummySubscription implements ISubscription {
 
-        private String _id;
+        private final String _id;
         public DummySubscription(String id) {
             _id = id;
         }
@@ -626,11 +622,7 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
                 tagArrayList.clear();
                 tagArrayList.addAll(tagSet.entrySet());
 
-                if (tagArrayList.size() > 0) {
-                    animate.toggleAnimationView(false, View.GONE, tagsRecyclerView, noTagsTextView);
-                } else {
-                    animate.toggleAnimationView(true, View.GONE, tagsRecyclerView, noTagsTextView);
-                }
+                animate.toggleAnimationView(tagArrayList.size() <= 0, View.GONE, tagsRecyclerView, noTagsTextView);
 
                 tagPairRecyclerViewAdapter.notifyDataSetChanged();
             }
@@ -653,11 +645,7 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
 
     private void refreshEmailRecyclerView() {
         getActivity().runOnUiThread(() -> {
-            if (emailArrayList.size() > 0) {
-                animate.toggleAnimationView(false, View.GONE, emailsRecyclerView, noEmailsTextView);
-            } else {
-                animate.toggleAnimationView(true, View.GONE, emailsRecyclerView, noEmailsTextView);
-            }
+            animate.toggleAnimationView(emailArrayList.size() <= 0, View.GONE, emailsRecyclerView, noEmailsTextView);
 
             emailsRecyclerViewAdapter.notifyDataSetChanged();
         });
@@ -679,11 +667,7 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
 
     private void refreshSMSRecyclerView() {
         getActivity().runOnUiThread(() -> {
-            if (smsArrayList.size() > 0) {
-                animate.toggleAnimationView(false, View.GONE, smssRecyclerView, noSmssTextView);
-            } else {
-                animate.toggleAnimationView(true, View.GONE, smssRecyclerView, noSmssTextView);
-            }
+            animate.toggleAnimationView(smsArrayList.size() <= 0, View.GONE, smssRecyclerView, noSmssTextView);
 
             smssRecyclerViewAdapter.notifyDataSetChanged();
         });
@@ -769,11 +753,7 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
                 triggerArrayList.clear();
                 triggerArrayList.addAll(triggerSet.entrySet());
 
-                if (triggerArrayList.size() > 0) {
-                    animate.toggleAnimationView(false, View.GONE, triggersRecyclerView, noTriggersTextView);
-                } else {
-                    animate.toggleAnimationView(true, View.GONE, triggersRecyclerView, noTriggersTextView);
-                }
+                animate.toggleAnimationView(triggerArrayList.size() <= 0, View.GONE, triggersRecyclerView, noTriggersTextView);
 
                 triggerPairRecyclerViewAdapter.notifyDataSetChanged();
             }
