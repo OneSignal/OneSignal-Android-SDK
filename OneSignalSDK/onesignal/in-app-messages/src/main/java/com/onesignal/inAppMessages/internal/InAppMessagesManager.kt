@@ -185,8 +185,8 @@ internal class InAppMessagesManager(
     }
 
     override fun onModelReplaced(
-            model: ModelReplacedArgs<ConfigModel>,
-            tag: String,
+        model: ModelReplacedArgs<ConfigModel>,
+        tag: String,
     ) {
         suspendifyOnThread {
             fetchMessages()
