@@ -24,6 +24,7 @@ import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.internal.logging.Logging
 import java.lang.ref.WeakReference
+import kotlinx.coroutines.delay
 
 class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, OnGlobalLayoutListener {
     private val activityLifecycleNotifier = EventProducer<IActivityLifecycleHandler>()
@@ -208,10 +209,22 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     }
 
     override suspend fun waitUntilSystemConditionsAvailable(): Boolean {
-        val currentActivity = current
-        if (currentActivity == null) {
-            Logging.warn("ApplicationService.waitUntilSystemConditionsAvailable: current is null")
-            return false
+        var currentActivity = current
+
+        // if this is called just after focusing, it's possible the current activity has not yet
+        // been set up.  So we check for up to 5 seconds, then bail if it doesn't happen. We only
+        // do this when called on a non-main thread, if we're running on the main thread the
+        // activity cannot be setup, so we don't wait around.
+        var waitForActivityRetryCount = if (AndroidUtils.isRunningOnMainThread()) { 50 } else { 0 }
+        while (currentActivity == null) {
+            waitForActivityRetryCount++
+            if(waitForActivityRetryCount > 50) {
+                Logging.warn("ApplicationService.waitUntilSystemConditionsAvailable: current is null")
+                return false
+            }
+            delay(100)
+
+            currentActivity = current
         }
 
         try {
