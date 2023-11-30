@@ -1,11 +1,18 @@
 package com.onesignal.user.internal.subscriptions.impl
 
+import android.os.Build
+import com.onesignal.common.AndroidUtils
+import com.onesignal.common.DeviceUtils
 import com.onesignal.common.IDManager
+import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.modeling.IModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
+import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.session.internal.session.ISessionLifecycleHandler
+import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.internal.EmailSubscription
 import com.onesignal.user.internal.PushSubscription
 import com.onesignal.user.internal.SmsSubscription
@@ -32,8 +39,10 @@ import com.onesignal.user.subscriptions.PushSubscriptionChangedState
  * subscription model.
  */
 internal class SubscriptionManager(
+    private val _applicationService: IApplicationService,
+    private val _sessionService: ISessionService,
     private val _subscriptionModelStore: SubscriptionModelStore,
-) : ISubscriptionManager, IModelStoreChangeHandler<SubscriptionModel> {
+) : ISubscriptionManager, IModelStoreChangeHandler<SubscriptionModel>, ISessionLifecycleHandler {
     private val events = EventProducer<ISubscriptionChangedHandler>()
     override var subscriptions: SubscriptionList = SubscriptionList(listOf(), UninitializedPushSubscription())
     override val pushSubscriptionModel: SubscriptionModel
@@ -45,7 +54,16 @@ internal class SubscriptionManager(
         }
 
         _subscriptionModelStore.subscribe(this)
+        _sessionService.subscribe(this)
     }
+
+    override fun onSessionStarted() {
+        refreshPushSubscriptionState()
+    }
+
+    override fun onSessionActive() { }
+
+    override fun onSessionEnded(duration: Long) { }
 
     override fun addEmailSubscription(email: String) {
         addSubscriptionToModels(SubscriptionType.EMAIL, email)
@@ -95,8 +113,6 @@ internal class SubscriptionManager(
         address: String,
         status: SubscriptionStatus? = null,
     ) {
-        Logging.log(LogLevel.DEBUG, "SubscriptionManager.addSubscription(type: $type, address: $address)")
-
         val subscriptionModel = SubscriptionModel()
         subscriptionModel.id = IDManager.createLocalId()
         subscriptionModel.optedIn = true
@@ -213,6 +229,31 @@ internal class SubscriptionManager(
             SubscriptionType.PUSH -> {
                 PushSubscription(subscriptionModel)
             }
+        }
+    }
+
+    /**
+     * Called when app has gained focus and the subscription state should be refreshed.
+     */
+    private fun refreshPushSubscriptionState() {
+        val pushSub = subscriptions.push
+
+        if (pushSub is UninitializedPushSubscription) {
+            return
+        }
+        val pushSubModel = (pushSub as Subscription).model
+
+        pushSubModel.sdk = OneSignalUtils.SDK_VERSION
+        pushSubModel.deviceOS = Build.VERSION.RELEASE
+
+        val carrier = DeviceUtils.getCarrierName(_applicationService.appContext)
+        carrier?.let {
+            pushSubModel.carrier = carrier
+        }
+
+        val appVersion = AndroidUtils.getAppVersion(_applicationService.appContext)
+        appVersion?.let {
+            pushSubModel.appVersion = appVersion
         }
     }
 }
