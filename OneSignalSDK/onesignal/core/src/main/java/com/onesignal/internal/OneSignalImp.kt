@@ -1,7 +1,10 @@
 package com.onesignal.internal
 
 import android.content.Context
+import android.os.Build
 import com.onesignal.IOneSignal
+import com.onesignal.common.AndroidUtils
+import com.onesignal.common.DeviceUtils
 import com.onesignal.common.IDManager
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.modeling.ModelChangeTags
@@ -270,6 +273,11 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                     pushSubscriptionModel.optedIn = notificationTypes != SubscriptionStatus.NO_PERMISSION.value && notificationTypes != SubscriptionStatus.UNSUBSCRIBE.value
                     pushSubscriptionModel.address = legacyUserSyncJSON.safeString("identifier") ?: ""
                     pushSubscriptionModel.status = SubscriptionStatus.fromInt(notificationTypes) ?: SubscriptionStatus.NO_PERMISSION
+                    pushSubscriptionModel.sdk = OneSignalUtils.SDK_VERSION
+                    pushSubscriptionModel.deviceOS = Build.VERSION.RELEASE
+                    pushSubscriptionModel.carrier = DeviceUtils.getCarrierName(services.getService<IApplicationService>().appContext) ?: ""
+                    pushSubscriptionModel.appVersion = AndroidUtils.getAppVersion(services.getService<IApplicationService>().appContext) ?: ""
+
                     configModel!!.pushSubscriptionId = legacyPlayerId
                     subscriptionModelStore!!.add(pushSubscriptionModel, ModelChangeTags.NO_PROPOGATE)
                     suppressBackendOperation = true
@@ -435,6 +443,10 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         newPushSubscription.optedIn = currentPushSubscription?.optedIn ?: true
         newPushSubscription.address = currentPushSubscription?.address ?: ""
         newPushSubscription.status = currentPushSubscription?.status ?: SubscriptionStatus.NO_PERMISSION
+        newPushSubscription.sdk = OneSignalUtils.SDK_VERSION
+        newPushSubscription.deviceOS = Build.VERSION.RELEASE
+        newPushSubscription.carrier = DeviceUtils.getCarrierName(services.getService<IApplicationService>().appContext) ?: ""
+        newPushSubscription.appVersion = AndroidUtils.getAppVersion(services.getService<IApplicationService>().appContext) ?: ""
 
         // ensure we always know this devices push subscription ID
         configModel!!.pushSubscriptionId = newPushSubscription.id
