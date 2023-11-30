@@ -1,6 +1,5 @@
 package com.onesignal.user
 
-
 /**
  * A user state changed handler. Implement this interface and provide the implementation
  * to be notified when the user has changed.

@@ -1,5 +1,6 @@
 package com.onesignal.user.internal
 
+import com.onesignal.common.IDManager
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
@@ -9,14 +10,14 @@ import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.IUserManager
+import com.onesignal.user.IUserStateObserver
+import com.onesignal.user.UserChangedState
+import com.onesignal.user.UserState
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
-import com.onesignal.user.IUserStateObserver
-import com.onesignal.user.UserChangedState
-import com.onesignal.user.UserState
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionList
 import com.onesignal.user.subscriptions.IPushSubscription
@@ -27,6 +28,9 @@ internal open class UserManager(
     private val _propertiesModelStore: PropertiesModelStore,
     private val _languageContext: ILanguageContext,
 ) : IUserManager, ISingletonModelStoreChangeHandler<IdentityModel> {
+    val onesignalId: String?
+        get() = IDManager.getNonLocalIDOrNull(_identityModel.onesignalId)
+
     val externalId: String?
         get() = _identityModel.externalId
 
@@ -241,19 +245,36 @@ internal open class UserManager(
         changeHandlersNotifier.unsubscribe(observer)
     }
 
-    override fun onModelReplaced(model: ModelReplacedArgs<IdentityModel>, tag: String) {
-        val oldUserState = UserState(model.oldModel.onesignalId, model.oldModel.externalId)
-        val newUserState = UserState(model.newModel.onesignalId, model.newModel.externalId)
+    override fun onModelReplaced(
+        args: ModelReplacedArgs<IdentityModel>,
+        tag: String,
+    ) {
+        val oldUserState = UserState(args.oldModel[IdentityConstants.ONESIGNAL_ID], args.oldModel.externalId)
+        val newUserState = UserState(args.newModel.onesignalId, args.newModel.externalId)
 
-        if (oldUserState.onesignalId.equals(newUserState.onesignalId) && oldUserState.externalId.equals(newUserState.externalId))
+        // do not fire the callback if onesignalId is null or the new model is identical to the old model
+        if (newUserState.onesignalId == null ||
+            oldUserState.onesignalId.equals(newUserState.onesignalId) &&
+            oldUserState.externalId.equals(newUserState.externalId)
+        ) {
             return
-
+        }
         this.changeHandlersNotifier.fire {
             it.onUserStateChange(UserChangedState(oldUserState, newUserState))
         }
     }
 
-    override fun onModelUpdated(args: ModelChangedArgs, tag: String) {
+    override fun onModelUpdated(
+        args: ModelChangedArgs,
+        tag: String,
+    ) {
+        if (args.property.equals(IdentityConstants.ONESIGNAL_ID)) {
+            val oldUserState = UserState(args.oldValue.toString(), externalId)
+            val newUserState = UserState(args.newValue.toString(), externalId)
+            this.changeHandlersNotifier.fire {
+                it.onUserStateChange(UserChangedState(oldUserState, newUserState))
+            }
+        }
         Logging.debug(args.property)
     }
 }

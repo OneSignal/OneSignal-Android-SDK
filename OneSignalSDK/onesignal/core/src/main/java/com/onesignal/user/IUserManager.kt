@@ -1,7 +1,6 @@
 package com.onesignal.user
 
 import com.onesignal.OneSignal
-import com.onesignal.user.internal.state.IUserStateObserver
 import com.onesignal.user.subscriptions.IPushSubscription
 
 /**
