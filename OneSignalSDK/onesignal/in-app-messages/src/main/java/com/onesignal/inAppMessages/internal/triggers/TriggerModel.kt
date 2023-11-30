@@ -18,6 +18,6 @@ class TriggerModel : Model() {
     var value: Any
         get() = getAnyProperty(::value.name) { "" }
         set(value) {
-            setAnyProperty(::value.name, value)
+            setAnyProperty(::value.name, value, forceChange = true)
         }
 }
