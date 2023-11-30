@@ -189,12 +189,12 @@ internal class BackgroundManager(
             needsJobReschedule = true
             return
         }
-        val jobBuilder = JobInfo.Builder(SYNC_TASK_ID, ComponentName(_applicationService.appContext, syncServiceJobClass))
+        val jobBuilder = JobInfo.Builder(SYNC_TASK_ID, ComponentName(_applicationService.appContext!!, syncServiceJobClass!!))
         jobBuilder
             .setMinimumLatency(delayMs)
             .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
         if (hasBootPermission()) jobBuilder.setPersisted(true)
-        val jobScheduler = _applicationService.appContext.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
+        val jobScheduler = _applicationService.appContext!!.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
         try {
             val result = jobScheduler.schedule(jobBuilder.build())
             Logging.info("OSBackgroundSync scheduleSyncServiceAsJob:result: $result")

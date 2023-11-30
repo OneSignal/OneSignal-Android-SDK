@@ -49,7 +49,7 @@ import java.util.concurrent.TimeUnit
 @Implements(value = GoogleApiClient.Builder::class, looseSignatures = true)
 class ShadowGoogleApiClientBuilder {
     @Implementation
-    fun build(): GoogleApiClient {
+    fun build(): GoogleApiClient? {
         return ShadowGoogleApiClient()
     }
 }

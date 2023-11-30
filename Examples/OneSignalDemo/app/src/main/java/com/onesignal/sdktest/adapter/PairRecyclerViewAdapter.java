@@ -18,12 +18,12 @@ import java.util.Map;
 
 public class PairRecyclerViewAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    private final LayoutInflater layoutInflater;
+    private LayoutInflater layoutInflater;
 
-    private final Context context;
+    private Context context;
 
-    private final ArrayList<Map.Entry> tags;
-    private final PairItemActionCallback callback;
+    private ArrayList<Map.Entry> tags;
+    private PairItemActionCallback callback;
 
     public PairRecyclerViewAdapter(Context context, ArrayList<Map.Entry> tags, PairItemActionCallback callback) {
         this.context = context;
@@ -54,9 +54,9 @@ public class PairRecyclerViewAdapter extends RecyclerView.Adapter<RecyclerView.V
 
     public class PairViewHolder extends RecyclerView.ViewHolder {
 
-        private final RelativeLayout pairRelativeLayout;
-        private final TextView pairKeyTextView;
-        private final TextView pairValueTextView;
+        private RelativeLayout pairRelativeLayout;
+        private TextView pairKeyTextView;
+        private TextView pairValueTextView;
 
         private Map.Entry pair;
 

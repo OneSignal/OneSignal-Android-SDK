@@ -9,7 +9,7 @@ import com.onesignal.sdktest.R;
 
 public class RecyclerViewBuilder {
 
-    private final Context context;
+    private Context context;
 
 
     public RecyclerViewBuilder(Context context) {

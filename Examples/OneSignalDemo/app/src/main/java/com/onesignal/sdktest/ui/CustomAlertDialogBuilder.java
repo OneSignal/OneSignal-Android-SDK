@@ -33,7 +33,7 @@ public class CustomAlertDialogBuilder extends AlertDialog.Builder {
     private Button positiveButton;
     private Button negativeButton;
 
-    private final View view;
+    private View view;
     private Boolean mCancelOnTouchOutside = null;
     private boolean isCancelable = true;
 
@@ -115,8 +115,9 @@ public class CustomAlertDialogBuilder extends AlertDialog.Builder {
         alertDialogBuilder.setOnKeyListener(new DialogInterface.OnKeyListener() {
             @Override
             public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
-                if (keyCode == KeyEvent.KEYCODE_BACK) {
-                    return !isCancelable;
+                switch (keyCode) {
+                    case KeyEvent.KEYCODE_BACK:
+                        return !isCancelable;
                 }
                 return false;
             }

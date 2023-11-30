@@ -162,7 +162,7 @@ internal class NotificationRepository(
         withContext(Dispatchers.IO) {
             val retColumn =
                 arrayOf<String>(OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID)
-            val whereArgs = arrayOf(id)
+            val whereArgs = arrayOf(id!!)
             _databaseProvider.os.query(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
                 columns = retColumn,

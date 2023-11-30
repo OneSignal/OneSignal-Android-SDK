@@ -136,7 +136,7 @@ object NotificationHelper {
 
             // Channels were introduced in O
             if (channelId != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val channel = getNotificationManager(context).getNotificationChannel(channelId)
+                val channel = getNotificationManager(context)?.getNotificationChannel(channelId)
                 return channel == null || channel.importance != NotificationManager.IMPORTANCE_NONE
             }
         } catch (t: Throwable) {

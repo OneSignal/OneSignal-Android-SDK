@@ -8,7 +8,7 @@ import kotlinx.coroutines.withContext
  * A standard implementation that implements [ICallbackNotifier] and additional functionality to
  * make callbacks less burdensome to the user.
  */
-open class CallbackProducer<THandler> : ICallbackNotifier<THandler> {
+open class CallbackProducer<THandler>() : ICallbackNotifier<THandler> {
     private var callback: THandler? = null
 
     override val hasCallback: Boolean

@@ -18,12 +18,12 @@ import java.util.ArrayList;
 
 public class SingleRecyclerViewAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    private final LayoutInflater layoutInflater;
+    private LayoutInflater layoutInflater;
 
-    private final Context context;
+    private Context context;
 
-    private final ArrayList<Object> values;
-    private final SingleItemActionCallback callback;
+    private ArrayList<Object> values;
+    private SingleItemActionCallback callback;
 
     public SingleRecyclerViewAdapter(Context context, ArrayList<Object> values, SingleItemActionCallback callback) {
         this.context = context;
@@ -54,8 +54,8 @@ public class SingleRecyclerViewAdapter extends RecyclerView.Adapter<RecyclerView
 
     public class SingleViewHolder extends RecyclerView.ViewHolder {
 
-        private final RelativeLayout singleRelativeLayout;
-        private final TextView singleTextView;
+        private RelativeLayout singleRelativeLayout;
+        private TextView singleTextView;
 
         private Object item;
 

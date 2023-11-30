@@ -10,7 +10,6 @@ import com.onesignal.notifications.internal.badges.impl.shortcutbadger.ShortcutB
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.util.BroadcastHelper;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -40,12 +39,12 @@ public class NewHtcHomeBadger implements Badger {
             context.sendBroadcast(intent1);
             context.sendBroadcast(intent);
         } else {
-            throw new ShortcutBadgeException("unable to resolve intent: " + intent);
+            throw new ShortcutBadgeException("unable to resolve intent: " + intent.toString());
         }
     }
 
     @Override
     public List<String> getSupportLaunchers() {
-        return Collections.singletonList("com.htc.launcher");
+        return Arrays.asList("com.htc.launcher");
     }
 }

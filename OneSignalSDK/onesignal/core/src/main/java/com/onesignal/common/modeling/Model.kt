@@ -641,7 +641,7 @@ open class Model(
                 data[name]
             } else {
                 val defaultValue = create()
-                data[name] = defaultValue
+                data[name] = defaultValue as Any?
                 defaultValue
             }
         }

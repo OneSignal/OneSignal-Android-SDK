@@ -36,7 +36,7 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
             OneTimeWorkRequest.Builder(NotificationRestoreWorker::class.java)
                 .setInitialDelay(restoreDelayInSeconds.toLong(), TimeUnit.SECONDS)
                 .build()
-        WorkManager.getInstance(context)
+        WorkManager.getInstance(context!!)
             .enqueueUniqueWork(
                 NOTIFICATION_RESTORE_WORKER_IDENTIFIER,
                 ExistingWorkPolicy.KEEP,

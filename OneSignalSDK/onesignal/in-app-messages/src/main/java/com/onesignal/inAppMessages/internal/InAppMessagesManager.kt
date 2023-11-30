@@ -707,7 +707,7 @@ internal class InAppMessagesManager(
             }
 
             if (tags?.tagsToRemove != null) {
-                val tagKeys = JSONUtils.newStringSetFromJSONArray(tags.tagsToRemove!!)
+                val tagKeys = JSONUtils.newStringSetFromJSONArray(tags?.tagsToRemove!!)
                 _userManager.removeTags(tagKeys)
             }
         }

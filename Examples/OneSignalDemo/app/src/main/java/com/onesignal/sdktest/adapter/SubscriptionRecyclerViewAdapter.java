@@ -21,12 +21,12 @@ import java.util.ArrayList;
 
 public class SubscriptionRecyclerViewAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    private final LayoutInflater layoutInflater;
+    private LayoutInflater layoutInflater;
 
-    private final Context context;
+    private Context context;
 
-    private final ArrayList<ISubscription> subscriptions;
-    private final SubscriptionItemActionCallback callback;
+    private ArrayList<ISubscription> subscriptions;
+    private SubscriptionItemActionCallback callback;
 
     public SubscriptionRecyclerViewAdapter(Context context, ArrayList<ISubscription> subscriptions, SubscriptionItemActionCallback callback) {
         this.context = context;
@@ -57,10 +57,10 @@ public class SubscriptionRecyclerViewAdapter extends RecyclerView.Adapter<Recycl
 
     public class SubscriptionViewHolder extends RecyclerView.ViewHolder {
 
-        private final LinearLayout singleLinearLayout;
-        private final TextView idTextView;
-        private final TextView addressTitleTextView;
-        private final TextView addressTextView;
+        private LinearLayout singleLinearLayout;
+        private TextView idTextView;
+        private TextView addressTitleTextView;
+        private TextView addressTextView;
 
         private ISubscription item;
 

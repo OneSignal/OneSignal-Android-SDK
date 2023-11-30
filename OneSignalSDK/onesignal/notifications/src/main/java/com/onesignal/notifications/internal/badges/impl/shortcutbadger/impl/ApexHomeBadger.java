@@ -10,7 +10,6 @@ import com.onesignal.notifications.internal.badges.impl.shortcutbadger.ShortcutB
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.util.BroadcastHelper;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -33,12 +32,12 @@ public class ApexHomeBadger implements Badger {
         if (BroadcastHelper.canResolveBroadcast(context, intent)) {
             context.sendBroadcast(intent);
         } else {
-            throw new ShortcutBadgeException("unable to resolve intent: " + intent);
+            throw new ShortcutBadgeException("unable to resolve intent: " + intent.toString());
         }
     }
 
     @Override
     public List<String> getSupportLaunchers() {
-        return Collections.singletonList("com.anddoes.launcher");
+        return Arrays.asList("com.anddoes.launcher");
     }
 }

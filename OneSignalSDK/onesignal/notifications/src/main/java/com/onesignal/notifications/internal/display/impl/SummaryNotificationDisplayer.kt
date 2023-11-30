@@ -94,8 +94,8 @@ internal class SummaryNotificationDisplayer(
         groupAlertBehavior: Int,
     ) {
         val updateSummary: Boolean = notificationJob.isRestoring
-        var fcmJson: JSONObject = notificationJob.jsonPayload
-        val intentGenerator = IntentGeneratorForAttachingToNotifications(currentContext)
+        var fcmJson: JSONObject = notificationJob.jsonPayload!!
+        val intentGenerator = IntentGeneratorForAttachingToNotifications(currentContext!!)
         val group = fcmJson.optString("grp", null)
         val random = SecureRandom()
         val summaryDeleteIntent =
@@ -113,7 +113,7 @@ internal class SummaryNotificationDisplayer(
         if (summaryNotificationId == null) {
             summaryNotificationId = random.nextInt()
 
-            _dataController.createSummaryNotification(summaryNotificationId, group)
+            _dataController.createSummaryNotification(summaryNotificationId!!, group)
         }
 
         val notifications = _dataController.listNotificationsForGroup(group)
@@ -141,7 +141,7 @@ internal class SummaryNotificationDisplayer(
         val summaryContentIntent: PendingIntent? =
             intentGenerator.getNewActionPendingIntent(
                 random.nextInt(),
-                createBaseSummaryIntent(summaryNotificationId, intentGenerator, fcmJson, group),
+                createBaseSummaryIntent(summaryNotificationId!!, intentGenerator, fcmJson, group),
             )
 
         // 2 or more notifications with a group received, group them together as a single notification.
@@ -173,8 +173,8 @@ internal class SummaryNotificationDisplayer(
             summaryBuilder!!.setContentIntent(summaryContentIntent)
                 .setDeleteIntent(summaryDeleteIntent)
                 .setContentTitle(
-                    currentContext.packageManager.getApplicationLabel(
-                        currentContext.applicationInfo,
+                    currentContext!!.packageManager.getApplicationLabel(
+                        currentContext!!.applicationInfo,
                     ),
                 )
                 .setContentText(summaryMessage)
@@ -230,7 +230,7 @@ internal class SummaryNotificationDisplayer(
                 fcmJson,
                 intentGenerator,
                 summaryBuilder,
-                    summaryNotificationId,
+                summaryNotificationId!!,
                 group,
             )
             summaryBuilder.setContentIntent(summaryContentIntent)
@@ -247,8 +247,8 @@ internal class SummaryNotificationDisplayer(
             summaryNotification = summaryBuilder.build()
             _notificationDisplayBuilder.addXiaomiSettings(notifBuilder, summaryNotification)
         }
-        NotificationManagerCompat.from(currentContext)
-            .notify(summaryNotificationId, summaryNotification)
+        NotificationManagerCompat.from(currentContext!!)
+            .notify(summaryNotificationId!!, summaryNotification)
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
@@ -258,13 +258,13 @@ internal class SummaryNotificationDisplayer(
         grouplessNotifCount: Int,
         groupAlertBehavior: Int,
     ) {
-        val fcmJson: JSONObject = notificationJob.jsonPayload
+        val fcmJson: JSONObject = notificationJob.jsonPayload!!
         val summaryNotification: Notification
         val random = SecureRandom()
         val group: String = NotificationHelper.GROUPLESS_SUMMARY_KEY
         val summaryMessage = "$grouplessNotifCount new messages"
         val summaryNotificationId: Int = NotificationHelper.GROUPLESS_SUMMARY_ID
-        _dataController.createSummaryNotification(summaryNotificationId, group)
+        _dataController.createSummaryNotification(summaryNotificationId!!, group)
         val summaryContentIntent: PendingIntent? =
             intentGenerator.getNewActionPendingIntent(
                 random.nextInt(),
@@ -288,8 +288,8 @@ internal class SummaryNotificationDisplayer(
         summaryBuilder!!.setContentIntent(summaryContentIntent)
             .setDeleteIntent(summaryDeleteIntent)
             .setContentTitle(
-                currentContext.packageManager.getApplicationLabel(
-                    currentContext.applicationInfo,
+                currentContext!!.packageManager.getApplicationLabel(
+                    currentContext!!.applicationInfo,
                 ),
             )
             .setContentText(summaryMessage)
@@ -309,7 +309,7 @@ internal class SummaryNotificationDisplayer(
         inboxStyle.setBigContentTitle(summaryMessage)
         summaryBuilder.setStyle(inboxStyle)
         summaryNotification = summaryBuilder.build()
-        NotificationManagerCompat.from(currentContext)
+        NotificationManagerCompat.from(currentContext!!)
             .notify(summaryNotificationId, summaryNotification)
     }
 

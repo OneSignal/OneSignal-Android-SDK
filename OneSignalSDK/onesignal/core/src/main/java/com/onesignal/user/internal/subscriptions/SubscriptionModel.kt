@@ -2,7 +2,7 @@ package com.onesignal.user.internal.subscriptions
 
 import com.onesignal.common.modeling.Model
 
-enum class SubscriptionType {
+enum class SubscriptionType() {
     EMAIL,
     SMS,
     PUSH,

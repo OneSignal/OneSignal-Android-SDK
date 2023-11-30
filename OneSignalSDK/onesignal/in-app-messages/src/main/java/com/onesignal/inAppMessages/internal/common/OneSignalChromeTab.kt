@@ -60,7 +60,7 @@ internal object OneSignalChromeTab {
         )
     }
 
-    private class OneSignalCustomTabsServiceConnection(
+    private class OneSignalCustomTabsServiceConnection internal constructor(
         private val url: String,
         private val openActivity: Boolean,
         private val context: Context,

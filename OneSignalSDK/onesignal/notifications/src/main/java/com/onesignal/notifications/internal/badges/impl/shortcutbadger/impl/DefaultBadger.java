@@ -30,7 +30,7 @@ public class DefaultBadger implements Badger {
         if (BroadcastHelper.canResolveBroadcast(context, intent)) {
             context.sendBroadcast(intent);
         } else {
-            throw new ShortcutBadgeException("unable to resolve intent: " + intent);
+            throw new ShortcutBadgeException("unable to resolve intent: " + intent.toString());
         }
     }
 

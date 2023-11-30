@@ -13,7 +13,7 @@ import com.onesignal.sdktest.activity.MainActivity;
 
 public class IntentTo {
 
-    private final Context context;
+    private Context context;
 
     public IntentTo(Context context) {
         this.context = context;

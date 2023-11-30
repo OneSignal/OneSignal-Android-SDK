@@ -16,8 +16,8 @@ import com.onesignal.sdktest.type.ToastType;
 
 public class Toaster {
 
-    private final Context context;
-    private final Font font;
+    private Context context;
+    private Font font;
 
     public Toaster(Context context) {
         this.context = context;

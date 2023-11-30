@@ -53,7 +53,7 @@ class Notification : IDisplayableMutableNotification {
     override var ttl = 0
     override var rawPayload: String = ""
 
-    constructor(payload: JSONObject, time: ITime) : this(null, payload, 0, time)
+    constructor(payload: JSONObject, time: ITime) : this(null, payload, 0, time) {}
     constructor(
         groupedNotifications: List<Notification>?,
         jsonPayload: JSONObject,

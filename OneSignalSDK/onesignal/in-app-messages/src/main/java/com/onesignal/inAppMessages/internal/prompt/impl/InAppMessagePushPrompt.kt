@@ -6,7 +6,7 @@ import com.onesignal.notifications.INotificationsManager
 internal class InAppMessagePushPrompt(
     private val _notificationsManager: INotificationsManager,
 ) : InAppMessagePrompt() {
-    override suspend fun handlePrompt(): PromptActionResult {
+    override suspend fun handlePrompt(): PromptActionResult? {
         val result = _notificationsManager.requestPermission(true)
 
         return if (result) PromptActionResult.PERMISSION_GRANTED else PromptActionResult.PERMISSION_DENIED

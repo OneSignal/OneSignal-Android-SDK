@@ -20,7 +20,7 @@ public class SplashActivityViewModel implements ActivityViewModel {
 
     private Context context;
 
-    private final boolean[] tasks = {false, false, false};
+    private boolean[] tasks = {false, false, false};
 
     @Override
     public Activity getActivity() {
