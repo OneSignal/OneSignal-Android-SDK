@@ -108,4 +108,29 @@ class SubscriptionModel : Model() {
         set(value) {
             setEnumProperty(::status.name, value)
         }
+
+    // Prior to v5.0.5, we did not save the following properties, so we must default get() to ""
+    var sdk: String
+        get() = getStringProperty(::sdk.name) { "" }
+        set(value) {
+            setStringProperty(::sdk.name, value)
+        }
+
+    var deviceOS: String
+        get() = getStringProperty(::deviceOS.name) { "" }
+        set(value) {
+            setStringProperty(::deviceOS.name, value)
+        }
+
+    var carrier: String
+        get() = getStringProperty(::carrier.name) { "" }
+        set(value) {
+            setStringProperty(::carrier.name, value)
+        }
+
+    var appVersion: String
+        get() = getStringProperty(::appVersion.name) { "" }
+        set(value) {
+            setStringProperty(::appVersion.name, value)
+        }
 }
