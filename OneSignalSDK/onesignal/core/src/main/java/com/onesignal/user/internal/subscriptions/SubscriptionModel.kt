@@ -110,7 +110,6 @@ class SubscriptionModel : Model() {
         }
 
     // Prior to v5.0.5, we did not save the following properties, so we must default get() to ""
-    
     var sdk: String
         get() = getStringProperty(::sdk.name) { "" }
         set(value) {
