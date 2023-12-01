@@ -11,7 +11,7 @@ interface ISubscriptionManager : IEventNotifier<ISubscriptionChangedHandler> {
 
     fun addEmailSubscription(email: String)
 
-    fun addOrUpdatePushSubscription(
+    fun addOrUpdatePushSubscriptionToken(
         pushToken: String?,
         pushTokenStatus: SubscriptionStatus,
     )

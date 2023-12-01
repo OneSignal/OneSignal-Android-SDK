@@ -2,6 +2,8 @@ package com.onesignal.user.internal.subscriptions
 
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
+import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.internal.subscriptions.impl.SubscriptionManager
 import com.onesignal.user.subscriptions.ISmsSubscription
 import io.kotest.core.spec.style.FunSpec
@@ -24,6 +26,8 @@ class SubscriptionManagerTests : FunSpec({
     test("initializes subscriptions from model store") {
         // Given
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
         val pushSubscription = SubscriptionModel()
         pushSubscription.id = "subscription1"
         pushSubscription.type = SubscriptionType.PUSH
@@ -49,7 +53,7 @@ class SubscriptionManagerTests : FunSpec({
         every { mockSubscriptionModelStore.subscribe(any()) } just runs
         every { mockSubscriptionModelStore.list() } returns listOfSubscriptions
 
-        val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
 
         // When
         val subscriptions = subscriptionManager.subscriptions
@@ -71,13 +75,15 @@ class SubscriptionManagerTests : FunSpec({
     test("add email subscription adds to model store") {
         // Given
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
 
         val listOfSubscriptions = listOf<SubscriptionModel>()
         every { mockSubscriptionModelStore.subscribe(any()) } just runs
         every { mockSubscriptionModelStore.add(any()) } just runs
         every { mockSubscriptionModelStore.list() } returns listOfSubscriptions
 
-        val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
 
         // When
         subscriptionManager.addEmailSubscription("name@company.com")
@@ -98,13 +104,15 @@ class SubscriptionManagerTests : FunSpec({
     test("add sms subscription adds to model store") {
         // Given
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
 
         val listOfSubscriptions = listOf<SubscriptionModel>()
         every { mockSubscriptionModelStore.subscribe(any()) } just runs
         every { mockSubscriptionModelStore.add(any()) } just runs
         every { mockSubscriptionModelStore.list() } returns listOfSubscriptions
 
-        val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
 
         // When
         subscriptionManager.addSmsSubscription("+15558675309")
@@ -125,16 +133,18 @@ class SubscriptionManagerTests : FunSpec({
     test("add push subscription adds to model store") {
         // Given
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
 
         val listOfSubscriptions = listOf<SubscriptionModel>()
         every { mockSubscriptionModelStore.subscribe(any()) } just runs
         every { mockSubscriptionModelStore.add(any()) } just runs
         every { mockSubscriptionModelStore.list() } returns listOfSubscriptions
 
-        val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
 
         // When
-        subscriptionManager.addOrUpdatePushSubscription("pushToken", SubscriptionStatus.SUBSCRIBED)
+        subscriptionManager.addOrUpdatePushSubscriptionToken("pushToken", SubscriptionStatus.SUBSCRIBED)
 
         // Then
         verify {
@@ -152,6 +162,8 @@ class SubscriptionManagerTests : FunSpec({
     test("update push subscription updates model store") {
         // Given
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
 
         val pushSubscription = SubscriptionModel()
         pushSubscription.id = "subscription1"
@@ -167,10 +179,10 @@ class SubscriptionManagerTests : FunSpec({
         every { mockSubscriptionModelStore.list() } returns listOfSubscriptions
         every { mockSubscriptionModelStore.get("subscription1") } returns pushSubscription
 
-        val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
 
         // When
-        subscriptionManager.addOrUpdatePushSubscription("pushToken2", SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER)
+        subscriptionManager.addOrUpdatePushSubscriptionToken("pushToken2", SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER)
 
         // Then
         pushSubscription.address shouldBe "pushToken2"
@@ -180,6 +192,8 @@ class SubscriptionManagerTests : FunSpec({
     test("remove email subscription removes from model store") {
         // Given
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
 
         val emailSubscription = SubscriptionModel()
         emailSubscription.id = "subscription1"
@@ -195,7 +209,7 @@ class SubscriptionManagerTests : FunSpec({
         every { mockSubscriptionModelStore.list() } returns listOfSubscriptions
         every { mockSubscriptionModelStore.remove("subscription1") } just runs
 
-        val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
 
         // When
         subscriptionManager.removeEmailSubscription("name@company.com")
@@ -207,6 +221,8 @@ class SubscriptionManagerTests : FunSpec({
     test("remove sms subscription removes from model store") {
         // Given
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
 
         val emailSubscription = SubscriptionModel()
         emailSubscription.id = "subscription1"
@@ -222,7 +238,7 @@ class SubscriptionManagerTests : FunSpec({
         every { mockSubscriptionModelStore.list() } returns listOfSubscriptions
         every { mockSubscriptionModelStore.remove("subscription1") } just runs
 
-        val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
 
         // When
         subscriptionManager.removeSmsSubscription("+18458675309")
@@ -241,6 +257,8 @@ class SubscriptionManagerTests : FunSpec({
         smsSubscription.address = "+18458675309"
 
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
         val listOfSubscriptions = listOf<SubscriptionModel>()
 
         every { mockSubscriptionModelStore.subscribe(any()) } just runs
@@ -248,7 +266,7 @@ class SubscriptionManagerTests : FunSpec({
 
         val spySubscriptionChangedHandler = spyk<ISubscriptionChangedHandler>()
 
-        val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
         subscriptionManager.subscribe(spySubscriptionChangedHandler)
 
         // When
@@ -280,6 +298,8 @@ class SubscriptionManagerTests : FunSpec({
         emailSubscription.address = "+18458675309"
 
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
         val listOfSubscriptions = listOf(emailSubscription)
 
         every { mockSubscriptionModelStore.subscribe(any()) } just runs
@@ -287,7 +307,7 @@ class SubscriptionManagerTests : FunSpec({
 
         val spySubscriptionChangedHandler = spyk<ISubscriptionChangedHandler>()
 
-        val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
         subscriptionManager.subscribe(spySubscriptionChangedHandler)
 
         // When
@@ -321,6 +341,8 @@ class SubscriptionManagerTests : FunSpec({
         smsSubscription.address = "+18458675309"
 
         val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
         val listOfSubscriptions = listOf(smsSubscription)
 
         every { mockSubscriptionModelStore.subscribe(any()) } just runs
@@ -328,7 +350,7 @@ class SubscriptionManagerTests : FunSpec({
 
         val spySubscriptionChangedHandler = spyk<ISubscriptionChangedHandler>()
 
-        val subscriptionManager = SubscriptionManager(mockSubscriptionModelStore)
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
         subscriptionManager.subscribe(spySubscriptionChangedHandler)
 
         // When

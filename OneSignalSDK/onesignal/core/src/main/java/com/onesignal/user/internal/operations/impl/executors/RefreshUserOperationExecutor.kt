@@ -106,6 +106,10 @@ internal class RefreshUserOperationExecutor(
                         }
                     }
                 subscriptionModel.optedIn = subscriptionModel.status != SubscriptionStatus.UNSUBSCRIBE
+                subscriptionModel.sdk = subscription.sdk ?: ""
+                subscriptionModel.deviceOS = subscription.deviceOS ?: ""
+                subscriptionModel.carrier = subscription.carrier ?: ""
+                subscriptionModel.appVersion = subscription.appVersion ?: ""
 
                 // We only add a push subscription if it is this device's push subscription.
                 if (subscriptionModel.type != SubscriptionType.PUSH || subscriptionModel.id == _configModelStore.model.pushSubscriptionId) {
