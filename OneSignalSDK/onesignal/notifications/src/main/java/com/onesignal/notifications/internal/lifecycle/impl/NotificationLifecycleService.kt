@@ -2,6 +2,7 @@ package com.onesignal.notifications.internal.lifecycle.impl
 
 import android.app.Activity
 import android.content.Context
+import com.onesignal.OneSignal
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.events.CallbackProducer
 import com.onesignal.common.events.EventProducer
@@ -87,7 +88,7 @@ internal class NotificationLifecycleService(
         activity: Activity,
         data: JSONObject,
     ): Boolean {
-        var canOpen = false
+        var canOpen = extOpenedCallback.hasSubscribers
         intLifecycleCallback.suspendingFire { canOpen = it.canOpenNotification(activity, data) }
         return canOpen
     }
