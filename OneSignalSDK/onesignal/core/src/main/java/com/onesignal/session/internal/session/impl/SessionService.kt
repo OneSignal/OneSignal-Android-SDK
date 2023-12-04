@@ -55,7 +55,7 @@ internal class SessionService(
     override suspend fun backgroundRun() {
         Logging.log(LogLevel.DEBUG, "SessionService.backgroundRun()")
 
-        if (!session!!.isValid) {
+        if (session!!.activeDuration <= 0L) {
             return
         }
 
@@ -63,6 +63,7 @@ internal class SessionService(
         Logging.debug("SessionService: Session ended. activeDuration: ${session!!.activeDuration}")
         session!!.isValid = false
         sessionLifeCycleNotifier.fire { it.onSessionEnded(session!!.activeDuration) }
+        session!!.activeDuration = 0L
     }
 
     override fun onFocus() {
@@ -73,7 +74,6 @@ internal class SessionService(
             session!!.sessionId = UUID.randomUUID().toString()
             session!!.startTime = _time.currentTimeMillis
             session!!.focusTime = session!!.startTime
-            session!!.activeDuration = 0L
             session!!.isValid = true
 
             Logging.debug("SessionService: New session started at ${session!!.startTime}")
