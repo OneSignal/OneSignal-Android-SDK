@@ -5,7 +5,6 @@ import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.Model
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
-import com.onesignal.common.modeling.ModelReplacedArgs
 import com.onesignal.common.modeling.SingletonModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.Operation
@@ -31,7 +30,7 @@ internal abstract class SingletonModelStoreListener<TModel>(
     }
 
     override fun onModelReplaced(
-        model: ModelReplacedArgs<TModel>,
+        model: TModel,
         tag: String,
     ) {
         if (tag != ModelChangeTags.NORMAL) {
@@ -63,7 +62,7 @@ internal abstract class SingletonModelStoreListener<TModel>(
      *
      * @return The operation to enqueue when the model has been replaced, or null if no operation should be enqueued.
      */
-    abstract fun getReplaceOperation(model: ModelReplacedArgs<TModel>): Operation?
+    abstract fun getReplaceOperation(model: TModel): Operation?
 
     /**
      * Called when the model has been updated.

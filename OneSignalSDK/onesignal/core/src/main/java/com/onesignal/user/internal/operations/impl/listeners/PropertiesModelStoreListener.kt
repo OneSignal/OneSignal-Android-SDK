@@ -1,6 +1,5 @@
 package com.onesignal.user.internal.operations.impl.listeners
 
-import com.onesignal.common.modeling.ModelReplacedArgs
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.Operation
@@ -16,7 +15,7 @@ internal class PropertiesModelStoreListener(
     opRepo: IOperationRepo,
     private val _configModelStore: ConfigModelStore,
 ) : SingletonModelStoreListener<PropertiesModel>(store, opRepo) {
-    override fun getReplaceOperation(model: ModelReplacedArgs<PropertiesModel>): Operation? {
+    override fun getReplaceOperation(model: PropertiesModel): Operation? {
         // when the property model is replaced, nothing to do on the backend. Already handled via login process.
         return null
     }
