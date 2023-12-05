@@ -3,6 +3,8 @@ package com.onesignal.core.internal.application
 import android.app.Activity
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.onesignal.common.threading.WaiterWithValue
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -12,6 +14,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.spyk
 import io.mockk.verify
+import kotlinx.coroutines.delay
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 
@@ -187,6 +190,58 @@ class ApplicationServiceTests : FunSpec({
 
         // Then
         response shouldBe false
+    }
+
+    test("wait until system condition returns false if activity not started within 5 seconds") {
+        // Given
+        val activity: Activity
+        Robolectric.buildActivity(Activity::class.java).use { controller ->
+            controller.setup() // Moves Activity to RESUMED state
+            activity = controller.get()
+        }
+        val applicationService = ApplicationService()
+
+        val waiter = WaiterWithValue<Boolean>()
+
+        // When
+        suspendifyOnThread {
+            val response = applicationService.waitUntilSystemConditionsAvailable()
+            waiter.wake(response)
+        }
+
+        delay(7000)
+
+        applicationService.onActivityStarted(activity)
+        val response = waiter.waitForWake()
+
+        // Then
+        response shouldBe false
+    }
+
+    test("wait until system condition returns true when an activity is started within 5 seconds") {
+        // Given
+        val activity: Activity
+        Robolectric.buildActivity(Activity::class.java).use { controller ->
+            controller.setup() // Moves Activity to RESUMED state
+            activity = controller.get()
+        }
+        val applicationService = ApplicationService()
+
+        val waiter = WaiterWithValue<Boolean>()
+
+        // When
+        suspendifyOnThread {
+            val response = applicationService.waitUntilSystemConditionsAvailable()
+            waiter.wake(response)
+        }
+
+        delay(3000)
+
+        applicationService.onActivityStarted(activity)
+        val response = waiter.waitForWake()
+
+        // Then
+        response shouldBe true
     }
 
     test("wait until system condition returns true when there is no system condition") {
