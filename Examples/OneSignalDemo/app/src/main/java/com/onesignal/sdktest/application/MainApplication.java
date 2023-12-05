@@ -26,6 +26,9 @@ import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.constant.Text;
 import com.onesignal.sdktest.notification.OneSignalNotificationSender;
 import com.onesignal.sdktest.util.SharedPreferenceUtil;
+import com.onesignal.user.IUserStateObserver;
+import com.onesignal.user.UserChangedState;
+import com.onesignal.user.UserState;
 
 import org.json.JSONObject;
 
@@ -113,6 +116,14 @@ public class MainApplication extends MultiDexApplication {
 
                 Thread t = new Thread(r);
                 t.start();
+            }
+        });
+
+        OneSignal.getUser().addObserver(new IUserStateObserver() {
+            @Override
+            public void onUserStateChange(@NonNull UserChangedState state) {
+                UserState currentUserState = state.getCurrent();
+                Log.v(Tag.LOG_TAG, "onUserStateChange fired " + currentUserState.toJSONObject());
             }
         });
 

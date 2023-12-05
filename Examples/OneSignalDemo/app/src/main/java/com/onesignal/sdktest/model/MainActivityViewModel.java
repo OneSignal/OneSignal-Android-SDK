@@ -3,7 +3,6 @@ package com.onesignal.sdktest.model;
 import android.app.Activity;
 import android.content.Context;
 import com.google.android.material.appbar.AppBarLayout;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -13,10 +12,8 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.appcompat.widget.Toolbar;
-
 import android.content.Intent;
 import android.os.Build;
-import android.util.Log;
 import android.util.Pair;
 import android.view.View;
 import android.view.ViewTreeObserver;
@@ -25,17 +22,10 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Switch;
 import android.widget.TextView;
-
 import com.onesignal.Continue;
 import com.onesignal.OneSignal;
-import com.onesignal.debug.internal.logging.Logging;
 import com.onesignal.sdktest.adapter.SubscriptionRecyclerViewAdapter;
-import com.onesignal.user.IUserStateObserver;
-import com.onesignal.user.UserChangedState;
-import com.onesignal.user.UserState;
-import com.onesignal.user.subscriptions.IEmailSubscription;
 import com.onesignal.user.subscriptions.IPushSubscription;
-import com.onesignal.user.subscriptions.ISmsSubscription;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.activity.SecondaryActivity;
 import com.onesignal.sdktest.adapter.InAppMessageRecyclerViewAdapter;
@@ -61,13 +51,12 @@ import com.onesignal.sdktest.util.Toaster;
 import com.onesignal.user.subscriptions.ISubscription;
 import com.onesignal.user.subscriptions.IPushSubscriptionObserver;
 import com.onesignal.user.subscriptions.PushSubscriptionChangedState;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
 @RequiresApi(api = Build.VERSION_CODES.N)
-public class MainActivityViewModel implements ActivityViewModel, IPushSubscriptionObserver, IUserStateObserver {
+public class MainActivityViewModel implements ActivityViewModel, IPushSubscriptionObserver {
 
     private Animate animate;
     private Dialog dialog;
@@ -297,7 +286,6 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
         triggerArrayList = new ArrayList<>();
 
         OneSignal.getUser().getPushSubscription().addObserver(this);
-        OneSignal.getUser().addObserver(this);
         return this;
     }
 
@@ -504,17 +492,6 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
     @Override
     public void onPushSubscriptionChange(@NonNull PushSubscriptionChangedState state) {
         refreshSubscriptionState();
-    }
-
-    @Override
-    public void onUserStateChange(@NonNull UserChangedState state) {
-        UserState currentState = state.getCurrent();
-        UserState prevState = state.getPrevious();
-        Logging.debug("onUserStateChanged;  previous onesignalId: " + String.valueOf(prevState.getOnesignalId())
-                        + ", previous externalId: " + String.valueOf(prevState.getExternalId())
-                        + ", current onesignalId: " + String.valueOf(currentState.getOnesignalId())
-                        + ", current externalId: " + String.valueOf(currentState.getExternalId()),
-                null);
     }
 
     private class DummySubscription implements ISubscription {

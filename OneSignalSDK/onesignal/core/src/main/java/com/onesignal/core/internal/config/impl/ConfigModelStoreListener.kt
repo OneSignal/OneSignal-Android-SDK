@@ -4,7 +4,6 @@ import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
-import com.onesignal.common.modeling.ModelReplacedArgs
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.backend.IParamsBackendService
 import com.onesignal.core.internal.config.ConfigModel
@@ -44,7 +43,7 @@ internal class ConfigModelStoreListener(
     }
 
     override fun onModelReplaced(
-        model: ModelReplacedArgs<ConfigModel>,
+        model: ConfigModel,
         tag: String,
     ) {
         if (tag != ModelChangeTags.NORMAL) {
