@@ -3,7 +3,6 @@ package com.onesignal.notifications.internal.listeners
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
-import com.onesignal.common.modeling.ModelReplacedArgs
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -43,7 +42,7 @@ internal class DeviceRegistrationListener(
     }
 
     override fun onModelReplaced(
-        model: ModelReplacedArgs<ConfigModel>,
+        model: ConfigModel,
         tag: String,
     ) {
         // we only need to do things when the config model was replaced
@@ -52,7 +51,7 @@ internal class DeviceRegistrationListener(
             return
         }
 
-        _channelManager.processChannelList(model.newModel.notificationChannels)
+        _channelManager.processChannelList(model.notificationChannels)
 
         retrievePushTokenAndUpdateSubscription()
     }
