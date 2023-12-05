@@ -38,12 +38,10 @@ open class SingletonModelStore<TModel>(
         tag: String,
     ) {
         synchronized(replaceLock) {
-            val oldModel = this.store.create() ?: throw Exception("Unable to initialize model from store $store")
-            oldModel.initializeFromModel(singletonId, this.model)
             val existingModel = this.model
             existingModel.initializeFromModel(singletonId, model)
             store.persist()
-            changeSubscription.fire { it.onModelReplaced(ModelReplacedArgs(oldModel, existingModel), tag) }
+            changeSubscription.fire { it.onModelReplaced(existingModel, tag) }
         }
     }
 

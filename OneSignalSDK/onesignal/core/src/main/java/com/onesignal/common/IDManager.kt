@@ -26,19 +26,4 @@ object IDManager {
      * @return true if the [id] provided was created via [createLocalId].
      */
     fun isLocalId(id: String): Boolean = id.startsWith(LOCAL_PREFIX)
-
-    /**
-     * Get non local ID or null.
-     *
-     * @param id The ID to test.
-     *
-     * @return [id] or null if the [id] provided was created via [createLocalId].
-     */
-    fun getNonLocalIDOrNull(id: String): String? {
-        if (isLocalId(id)) {
-            return null
-        }
-
-        return id
-    }
 }

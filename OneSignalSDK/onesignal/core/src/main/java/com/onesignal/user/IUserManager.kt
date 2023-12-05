@@ -26,6 +26,16 @@ interface IUserManager {
     val pushSubscription: IPushSubscription
 
     /**
+     * onesignalId, null if this is current unavailable
+     */
+    val onesignalId: String
+
+    /**
+     * externalId, null if this is current unavailable
+     */
+    val externalId: String
+
+    /**
      * Set the 2-character language either as a detected language or explicitly set for this user. See
      * See [Supported Languages | OneSignal](https://documentation.onesignal.com/docs/language-localization#what-languages-are-supported)
      *
