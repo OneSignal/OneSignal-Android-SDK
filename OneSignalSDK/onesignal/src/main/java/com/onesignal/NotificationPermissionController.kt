@@ -28,7 +28,6 @@
 package com.onesignal
 
 import android.os.Build
-import androidx.annotation.ChecksSdkIntAtLeast
 
 object NotificationPermissionController : PermissionsActivity.PermissionCallback {
     private const val PERMISSION_TYPE = "NOTIFICATION"
@@ -42,7 +41,6 @@ object NotificationPermissionController : PermissionsActivity.PermissionCallback
         PermissionsActivity.registerAsCallback(PERMISSION_TYPE, this)
     }
 
-    @ChecksSdkIntAtLeast(api = 33)
     val supportsNativePrompt: Boolean by lazy {
         Build.VERSION.SDK_INT > 32 &&
             OSUtils.getTargetSdkVersion(OneSignal.appContext) > 32
