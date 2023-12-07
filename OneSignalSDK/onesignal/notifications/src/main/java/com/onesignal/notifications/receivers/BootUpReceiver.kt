@@ -37,7 +37,7 @@ class BootUpReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
-        if (!OneSignal.initWithContext(context)) {
+        if (!OneSignal.initWithContext(context.applicationContext)) {
             return
         }
 
