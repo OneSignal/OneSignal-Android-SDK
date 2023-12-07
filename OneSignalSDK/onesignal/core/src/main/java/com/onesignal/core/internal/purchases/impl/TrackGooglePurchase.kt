@@ -132,7 +132,7 @@ internal class TrackGooglePurchase(
             mServiceConn = serviceConn
             val serviceIntent = Intent("com.android.vending.billing.InAppBillingService.BIND")
             serviceIntent.setPackage("com.android.vending")
-            _applicationService.appContext.bindService(serviceIntent, serviceConn, Context.BIND_AUTO_CREATE)
+            _applicationService.appContext.applicationContext.bindService(serviceIntent, serviceConn, Context.BIND_AUTO_CREATE)
         } else if (mIInAppBillingService != null) {
             queryBoughtItems()
         }
