@@ -271,13 +271,22 @@ class OSUtils {
    }
 
    private static boolean packageInstalledAndEnabled(@NonNull String packageName) {
-      try {
-         PackageManager pm = OneSignal.appContext.getPackageManager();
-         PackageInfo info = pm.getPackageInfo(packageName, PackageManager.GET_META_DATA);
-         return info.applicationInfo.enabled;
-      } catch (PackageManager.NameNotFoundException e) {
+      GetPackageInfoResult result =
+           PackageInfoHelper.Companion.getInfo(
+                OneSignal.appContext,
+                packageName,
+                PackageManager.GET_META_DATA
+           );
+      if (!result.getSuccessful()) {
          return false;
       }
+
+      PackageInfo info = result.getPackageInfo();
+      if (info == null) {
+         return false;
+      }
+
+      return info.applicationInfo.enabled;
    }
 
    // TODO: Maybe able to switch to GoogleApiAvailability.isGooglePlayServicesAvailable to simplify
