@@ -27,6 +27,7 @@
 
 package com.onesignal;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -40,6 +41,7 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.DeadSystemException;
 import android.os.Handler;
 import android.os.Looper;
 
@@ -298,9 +300,21 @@ class OSUtils {
    }
 
    private static final int HMS_AVAILABLE_SUCCESSFUL = 0;
+   @TargetApi(24)
    private static boolean isHMSCoreInstalledAndEnabled() {
       HuaweiApiAvailability availability = HuaweiApiAvailability.getInstance();
-      return availability.isHuaweiMobileServicesAvailable(OneSignal.appContext) == HMS_AVAILABLE_SUCCESSFUL;
+      try {
+         return availability.isHuaweiMobileServicesAvailable(OneSignal.appContext) == HMS_AVAILABLE_SUCCESSFUL;
+      } catch (Exception e) {
+         // Suppressing DeadSystemException as the app is already dying for
+         // another reason and allowing this exception to bubble up would
+         // create a red herring for app developers. We still re-throw
+         // others, as we don't want to silently hide other issues.
+         if (!(e instanceof DeadSystemException)) {
+            throw e;
+         }
+         return false;
+      }
    }
 
    private static final String HMS_CORE_SERVICES_PACKAGE = "com.huawei.hwid"; // = HuaweiApiAvailability.SERVICES_PACKAGE
