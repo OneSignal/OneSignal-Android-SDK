@@ -8,7 +8,6 @@ import androidx.annotation.Nullable;
 import androidx.multidex.MultiDexApplication;
 
 import com.onesignal.OneSignal;
-import com.onesignal.inAppMessages.IInAppMessage;
 import com.onesignal.inAppMessages.IInAppMessageClickListener;
 import com.onesignal.inAppMessages.IInAppMessageClickEvent;
 import com.onesignal.inAppMessages.IInAppMessageDidDismissEvent;
@@ -26,9 +25,9 @@ import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.constant.Text;
 import com.onesignal.sdktest.notification.OneSignalNotificationSender;
 import com.onesignal.sdktest.util.SharedPreferenceUtil;
-import com.onesignal.user.IUserStateObserver;
-import com.onesignal.user.UserChangedState;
-import com.onesignal.user.UserState;
+import com.onesignal.user.state.IUserStateObserver;
+import com.onesignal.user.state.UserChangedState;
+import com.onesignal.user.state.UserState;
 
 import org.json.JSONObject;
 
