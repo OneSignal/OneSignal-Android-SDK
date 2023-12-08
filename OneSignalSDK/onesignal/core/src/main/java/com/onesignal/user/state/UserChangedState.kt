@@ -1,4 +1,4 @@
-package com.onesignal.user
+package com.onesignal.user.state
 
 import org.json.JSONObject
 
