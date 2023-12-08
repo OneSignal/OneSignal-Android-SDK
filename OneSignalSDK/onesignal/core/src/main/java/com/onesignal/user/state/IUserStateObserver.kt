@@ -1,8 +1,8 @@
-package com.onesignal.user
+package com.onesignal.user.state
 
 /**
- * A user state changed handler. Implement this interface and provide the implementation
- * to be notified when the user has changed.
+ * A user state changed observer. Implement this interface and provide the implementation
+ * to be notified when the user state has changed.
  */
 interface IUserStateObserver {
     /**
