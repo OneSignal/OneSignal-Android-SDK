@@ -1,6 +1,7 @@
 package com.onesignal.user
 
 import com.onesignal.OneSignal
+import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.subscriptions.IPushSubscription
 
 /**
@@ -26,12 +27,12 @@ interface IUserManager {
     val pushSubscription: IPushSubscription
 
     /**
-     * onesignalId, null if this is current unavailable
+     * onesignalId, empty if this is current unavailable
      */
     val onesignalId: String
 
     /**
-     * externalId, null if this is current unavailable
+     * externalId, empty if this is current unavailable
      */
     val externalId: String
 
