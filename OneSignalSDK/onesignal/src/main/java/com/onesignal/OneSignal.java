@@ -921,17 +921,16 @@ public class OneSignal {
    }
 
    private static void setupPrivacyConsent(Context context) {
-      try {
-         ApplicationInfo ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
-         Bundle bundle = ai.metaData;
-
-         // Read the current privacy consent setting from AndroidManifest.xml
-         String requireSetting = bundle.getString("com.onesignal.PrivacyConsent");
-         if (requireSetting != null)
-            setRequiresUserPrivacyConsent("ENABLE".equalsIgnoreCase(requireSetting));
-      } catch (Throwable t) {
-         t.printStackTrace();
+      ApplicationInfo ai = ApplicationInfoHelper.Companion.getInfo(context);
+      if (ai == null) {
+         return;
       }
+      Bundle bundle = ai.metaData;
+
+      // Read the current privacy consent setting from AndroidManifest.xml
+      String requireSetting = bundle.getString("com.onesignal.PrivacyConsent");
+      if (requireSetting != null)
+         setRequiresUserPrivacyConsent("ENABLE".equalsIgnoreCase(requireSetting));
    }
 
    private static void handleAppIdChange() {

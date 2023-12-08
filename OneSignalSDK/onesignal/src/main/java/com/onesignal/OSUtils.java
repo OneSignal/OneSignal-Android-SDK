@@ -416,15 +416,11 @@ class OSUtils {
    }
 
    static Bundle getManifestMetaBundle(Context context) {
-      ApplicationInfo ai;
-      try {
-         ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
-         return ai.metaData;
-      } catch (PackageManager.NameNotFoundException e) {
-         Log(OneSignal.LOG_LEVEL.ERROR, "Manifest application info not found", e);
+      ApplicationInfo ai = ApplicationInfoHelper.Companion.getInfo(context);
+      if (ai == null) {
+         return null;
       }
-
-      return null;
+      return ai.metaData;
    }
 
    static boolean getManifestMetaBoolean(Context context, String metaName) {
@@ -496,16 +492,11 @@ class OSUtils {
    }
 
    static int getTargetSdkVersion(Context context) {
-      String packageName = context.getPackageName();
-      PackageManager packageManager = context.getPackageManager();
-      try {
-         ApplicationInfo applicationInfo = packageManager.getApplicationInfo(packageName, 0);
-         return applicationInfo.targetSdkVersion;
-      } catch (PackageManager.NameNotFoundException e) {
-         e.printStackTrace();
+      ApplicationInfo applicationInfo = ApplicationInfoHelper.Companion.getInfo(context);
+      if (applicationInfo == null) {
+         return Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1;
       }
-
-      return Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1;
+      return applicationInfo.targetSdkVersion;
    }
 
    static boolean isValidResourceName(String name) {
