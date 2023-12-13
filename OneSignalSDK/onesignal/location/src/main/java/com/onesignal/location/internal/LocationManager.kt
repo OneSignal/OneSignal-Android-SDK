@@ -188,7 +188,7 @@ internal class LocationManager(
             } catch (t: Throwable) {
                 Logging.warn(
                     "LocationManager.startGetLocation: Location permission exists but there was an error initializing: ",
-                    t
+                    t,
                 )
             }
         }
