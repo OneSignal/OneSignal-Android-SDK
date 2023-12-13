@@ -438,7 +438,6 @@ open class Model(
     ) {
         synchronized(data) {
             val oldValue = data[name]
-
             if (oldValue == value && !forceChange) {
                 return
             }
@@ -700,7 +699,9 @@ open class Model(
 
     override fun subscribe(handler: IModelChangedHandler) = changeNotifier.subscribe(handler)
 
-    override fun unsubscribe(handler: IModelChangedHandler) = changeNotifier.unsubscribe(handler)
+    override fun unsubscribe(handler: IModelChangedHandler) {
+        changeNotifier.unsubscribe(handler)
+    }
 
     override val hasSubscribers: Boolean
         get() = changeNotifier.hasSubscribers
