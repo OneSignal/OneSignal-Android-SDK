@@ -231,7 +231,11 @@ internal class GmsLocationController(
             googleApiClient: GoogleApiClient,
             locationListener: LocationListener,
         ) {
-            LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationListener)
+            try {
+                LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationListener)
+            } catch (e: IllegalStateException) {
+                Logging.warn("Caught IllegalStateException in cancelLocationUpdates", e)
+            }
         }
 
         fun requestLocationUpdates(
