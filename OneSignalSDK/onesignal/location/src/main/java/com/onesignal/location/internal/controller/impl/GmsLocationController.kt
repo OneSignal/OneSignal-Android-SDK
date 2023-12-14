@@ -227,14 +227,22 @@ internal class GmsLocationController(
     }
 
     internal object FusedLocationApiWrapper {
-        fun cancelLocationUpdates(
-            googleApiClient: GoogleApiClient,
-            locationListener: LocationListener,
-        ) {
-            try {
+//        fun cancelLocationUpdates(
+//            googleApiClient: GoogleApiClient,
+//            locationListener: LocationListener,
+//        ) {
+//            try {
+//                LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationListener)
+//            } catch (e: IllegalStateException) {
+//                Logging.warn("Caught IllegalStateException in cancelLocationUpdates", e)
+//            }
+//        }
+
+        fun cancelLocationUpdates(googleApiClient: GoogleApiClient, locationListener: LocationListener) {
+            if (googleApiClient.isConnected) {
                 LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationListener)
-            } catch (e: IllegalStateException) {
-                Logging.warn("Caught IllegalStateException in cancelLocationUpdates", e)
+            } else {
+                Logging.warn("GoogleApiClient is not connected. Unable to cancel location updates.")
             }
         }
 
