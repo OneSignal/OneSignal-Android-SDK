@@ -34,6 +34,7 @@ import android.app.NotificationManager;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Build;
+import android.os.DeadSystemException;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -47,7 +48,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -239,14 +239,9 @@ class NotificationChannelManager {
       if (syncedChannelSet.isEmpty())
          return;
 
-      List<NotificationChannel> existingChannels = new ArrayList<>();
-
-      try {
-         existingChannels  = notificationManager.getNotificationChannels();
-      } catch (NullPointerException e) {
-         // Catch issue caused by "Attempt to invoke virtual method 'boolean android.app.NotificationChannel.isDeleted()' on a null object reference"
-         // https://github.com/OneSignal/OneSignal-Android-SDK/issues/1291
-         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Error when trying to delete notification channel: " + e.getMessage());
+      List<NotificationChannel> existingChannels = getChannelList(notificationManager);
+      if (existingChannels == null) {
+         return;
       }
 
       // Delete old channels - Payload will include all changes for the app. Any extra OS_ ones must
@@ -257,7 +252,29 @@ class NotificationChannelManager {
             notificationManager.deleteNotificationChannel(id);
       }
    }
-   
+
+   @RequiresApi(api = Build.VERSION_CODES.O)
+   private static List<NotificationChannel> getChannelList(NotificationManager notificationManager) {
+      try {
+         return notificationManager.getNotificationChannels();
+      } catch (NullPointerException e) {
+         // Catching known Android bug, Sometimes throws,
+         // "Attempt to invoke virtual method 'boolean android.app.NotificationChannel.isDeleted()' on a null object reference"
+         // https://github.com/OneSignal/OneSignal-Android-SDK/issues/1291
+         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.ERROR, "Error when trying to delete notification channel: " + e.getMessage());
+      }
+      catch (Exception e) {
+         // Suppressing DeadSystemException as the app is already dying for
+         // another reason and allowing this exception to bubble up would
+         // create a red herring for app developers. We still re-throw
+         // others, as we don't want to silently hide other issues.
+         if (!(e instanceof DeadSystemException)) {
+            throw e;
+         }
+      }
+      return null;
+   }
+
    private static int priorityToImportance(int priority) {
       if (priority > 9)
          return NotificationManagerCompat.IMPORTANCE_MAX;
