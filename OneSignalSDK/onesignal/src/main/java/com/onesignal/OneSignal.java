@@ -921,17 +921,16 @@ public class OneSignal {
    }
 
    private static void setupPrivacyConsent(Context context) {
-      try {
-         ApplicationInfo ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
-         Bundle bundle = ai.metaData;
-
-         // Read the current privacy consent setting from AndroidManifest.xml
-         String requireSetting = bundle.getString("com.onesignal.PrivacyConsent");
-         if (requireSetting != null)
-            setRequiresUserPrivacyConsent("ENABLE".equalsIgnoreCase(requireSetting));
-      } catch (Throwable t) {
-         t.printStackTrace();
+      ApplicationInfo ai = ApplicationInfoHelper.Companion.getInfo(context);
+      if (ai == null) {
+         return;
       }
+      Bundle bundle = ai.metaData;
+
+      // Read the current privacy consent setting from AndroidManifest.xml
+      String requireSetting = bundle.getString("com.onesignal.PrivacyConsent");
+      if (requireSetting != null)
+         setRequiresUserPrivacyConsent("ENABLE".equalsIgnoreCase(requireSetting));
    }
 
    private static void handleAppIdChange() {
@@ -1502,7 +1501,6 @@ public class OneSignal {
 
    private static void registerUserTask() throws JSONException {
       String packageName = appContext.getPackageName();
-      PackageManager packageManager = appContext.getPackageManager();
 
       JSONObject deviceInfo = new JSONObject();
 
@@ -1516,11 +1514,10 @@ public class OneSignal {
       deviceInfo.put("sdk_type", sdkType);
       deviceInfo.put("android_package", packageName);
       deviceInfo.put("device_model", Build.MODEL);
-
-      try {
-         deviceInfo.put("game_version", packageManager.getPackageInfo(packageName, 0).versionCode);
-      } catch (PackageManager.NameNotFoundException e) {}
-
+      Integer appVersion = getAppVersion();
+      if (appVersion != null) {
+         deviceInfo.put("game_version", appVersion);
+      }
       deviceInfo.put("net_type", osUtils.getNetType());
       deviceInfo.put("carrier", osUtils.getCarrierName());
       deviceInfo.put("rooted", RootToolsInternalMethods.isRooted());
@@ -1541,6 +1538,21 @@ public class OneSignal {
       OneSignalStateSynchronizer.readyToUpdate(true);
 
       waitingToPostStateSync = false;
+   }
+
+   private static Integer getAppVersion() {
+      String packageName = appContext.getPackageName();
+      GetPackageInfoResult result =
+           PackageInfoHelper.Companion.getInfo(
+                OneSignal.appContext,
+                packageName,
+                0
+           );
+      if (!result.getSuccessful() || result.getPackageInfo() == null) {
+         return null;
+      }
+
+      return result.getPackageInfo().versionCode;
    }
 
    public static void setSMSNumber(@NonNull final String smsNumber, OSSMSUpdateHandler callback) {

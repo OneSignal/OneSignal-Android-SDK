@@ -33,6 +33,7 @@ import android.app.PendingIntent;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -133,6 +134,15 @@ class GenerateNotification {
       if (OSUtils.isRunningOnMainThread())
          throw new OSThrowable.OSMainThreadException("Process for showing a notification should never been done on Main Thread!");
    }
+
+   private static CharSequence getApplicationLabel() {
+      ApplicationInfo applicationInfo = ApplicationInfoHelper.Companion.getInfo(currentContext);
+      if (applicationInfo == null) {
+         return "";
+      }
+
+      return currentContext.getPackageManager().getApplicationLabel(applicationInfo);
+   }
    
    private static CharSequence getTitle(JSONObject fcmJson) {
       CharSequence title = fcmJson.optString("title", null);
@@ -140,7 +150,7 @@ class GenerateNotification {
       if (title != null)
          return title;
 
-      return currentContext.getPackageManager().getApplicationLabel(currentContext.getApplicationInfo());
+      return getApplicationLabel();
    }
 
    private static PendingIntent getNewDismissActionPendingIntent(int requestCode, Intent intent) {
@@ -615,7 +625,7 @@ class GenerateNotification {
          //   Default small and large icons are used instead of the payload options to enforce this.
          summaryBuilder.setContentIntent(summaryContentIntent)
               .setDeleteIntent(summaryDeleteIntent)
-              .setContentTitle(currentContext.getPackageManager().getApplicationLabel(currentContext.getApplicationInfo()))
+              .setContentTitle(getApplicationLabel())
               .setContentText(summaryMessage)
               .setNumber(notificationCount)
               .setSmallIcon(getDefaultSmallIconId())
@@ -735,7 +745,7 @@ class GenerateNotification {
       //   Default small and large icons are used instead of the payload options to enforce this.
       summaryBuilder.setContentIntent(summaryContentIntent)
             .setDeleteIntent(summaryDeleteIntent)
-            .setContentTitle(currentContext.getPackageManager().getApplicationLabel(currentContext.getApplicationInfo()))
+            .setContentTitle(getApplicationLabel())
             .setContentText(summaryMessage)
             .setNumber(grouplessNotifCount)
             .setSmallIcon(getDefaultSmallIconId())

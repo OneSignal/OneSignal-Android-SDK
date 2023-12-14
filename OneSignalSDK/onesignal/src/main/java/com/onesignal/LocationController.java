@@ -28,7 +28,6 @@
 package com.onesignal;
 
 import android.content.Context;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Build;
@@ -221,48 +220,54 @@ class LocationController {
          startGetLocation();
       } else { // Android 6.0+
          if (locationFinePermission != PackageManager.PERMISSION_GRANTED) {
-            try {
-               PackageInfo packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), PackageManager.GET_PERMISSIONS);
-               List<String> permissionList = Arrays.asList(packageInfo.requestedPermissions);
-               OneSignal.PromptActionResult result = OneSignal.PromptActionResult.PERMISSION_DENIED;
+            GetPackageInfoResult packageResult =
+                 PackageInfoHelper.Companion.getInfo(
+                      context,
+                      context.getPackageName(),
+                      PackageManager.GET_PERMISSIONS
+                 );
 
-               if (permissionList.contains("android.permission.ACCESS_FINE_LOCATION")) {
-                  // ACCESS_FINE_LOCATION permission defined on Manifest, prompt for permission
-                  // If permission already given prompt will return positive, otherwise will prompt again or show settings
-                  requestPermission = "android.permission.ACCESS_FINE_LOCATION";
-               } else if (permissionList.contains("android.permission.ACCESS_COARSE_LOCATION")) {
-                  if (locationCoarsePermission != PackageManager.PERMISSION_GRANTED) {
-                     // ACCESS_COARSE_LOCATION permission defined on Manifest, prompt for permission
-                     // If permission already given prompt will return positive, otherwise will prompt again or show settings
-                     requestPermission = "android.permission.ACCESS_COARSE_LOCATION";
-                  } else if (Build.VERSION.SDK_INT >= 29 && permissionList.contains("android.permission.ACCESS_BACKGROUND_LOCATION")) {
-                     // ACCESS_BACKGROUND_LOCATION permission defined on Manifest, prompt for permission
-                     requestPermission = "android.permission.ACCESS_BACKGROUND_LOCATION";
-                  }
-               } else {
-                  OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "Location permissions not added on AndroidManifest file");
-                  result = OneSignal.PromptActionResult.LOCATION_PERMISSIONS_MISSING_MANIFEST;
-               }
-
-               // We handle the following cases:
-               //  1 - If needed and available then prompt for permissions
-               //       - Request permission can be ACCESS_COARSE_LOCATION or ACCESS_FINE_LOCATION
-               //  2 - If the permission were already granted then start getting location
-               //  3 - If permission wasn't granted then trigger fail flow
-               //
-               // For each case, we call the prompt handlers
-               if (requestPermission != null && promptLocation) {
-                  LocationPermissionController.INSTANCE.prompt(fallbackToSettings, requestPermission);
-               } else if (locationCoarsePermission == PackageManager.PERMISSION_GRANTED) {
-                  sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.PERMISSION_GRANTED);
-                  startGetLocation();
-               } else {
-                  sendAndClearPromptHandlers(promptLocation, result);
-                  fireFailedComplete();
-               }
-            } catch (PackageManager.NameNotFoundException e) {
+            if (!packageResult.getSuccessful() || packageResult.getPackageInfo() == null) {
                sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.ERROR);
-               e.printStackTrace();
+               return;
+            }
+
+            List<String> permissionList = Arrays.asList(packageResult.getPackageInfo().requestedPermissions);
+            OneSignal.PromptActionResult result = OneSignal.PromptActionResult.PERMISSION_DENIED;
+
+            if (permissionList.contains("android.permission.ACCESS_FINE_LOCATION")) {
+               // ACCESS_FINE_LOCATION permission defined on Manifest, prompt for permission
+               // If permission already given prompt will return positive, otherwise will prompt again or show settings
+               requestPermission = "android.permission.ACCESS_FINE_LOCATION";
+            } else if (permissionList.contains("android.permission.ACCESS_COARSE_LOCATION")) {
+               if (locationCoarsePermission != PackageManager.PERMISSION_GRANTED) {
+                  // ACCESS_COARSE_LOCATION permission defined on Manifest, prompt for permission
+                  // If permission already given prompt will return positive, otherwise will prompt again or show settings
+                  requestPermission = "android.permission.ACCESS_COARSE_LOCATION";
+               } else if (Build.VERSION.SDK_INT >= 29 && permissionList.contains("android.permission.ACCESS_BACKGROUND_LOCATION")) {
+                  // ACCESS_BACKGROUND_LOCATION permission defined on Manifest, prompt for permission
+                  requestPermission = "android.permission.ACCESS_BACKGROUND_LOCATION";
+               }
+            } else {
+               OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO, "Location permissions not added on AndroidManifest file");
+               result = OneSignal.PromptActionResult.LOCATION_PERMISSIONS_MISSING_MANIFEST;
+            }
+
+            // We handle the following cases:
+            //  1 - If needed and available then prompt for permissions
+            //       - Request permission can be ACCESS_COARSE_LOCATION or ACCESS_FINE_LOCATION
+            //  2 - If the permission were already granted then start getting location
+            //  3 - If permission wasn't granted then trigger fail flow
+            //
+            // For each case, we call the prompt handlers
+            if (requestPermission != null && promptLocation) {
+               LocationPermissionController.INSTANCE.prompt(fallbackToSettings, requestPermission);
+            } else if (locationCoarsePermission == PackageManager.PERMISSION_GRANTED) {
+               sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.PERMISSION_GRANTED);
+               startGetLocation();
+            } else {
+               sendAndClearPromptHandlers(promptLocation, result);
+               fireFailedComplete();
             }
          } else if (Build.VERSION.SDK_INT >= 29 && locationBackgroundPermission != PackageManager.PERMISSION_GRANTED) {
             backgroundLocationPermissionLogic(context, promptLocation, fallbackToSettings);
@@ -279,25 +284,31 @@ class LocationController {
     * If background permission is asked at the same time as fine and coarse then both permission request are ignored
     * */
    private static void backgroundLocationPermissionLogic(Context context, boolean promptLocation, boolean fallbackToSettings) {
-      try {
-         PackageInfo packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), PackageManager.GET_PERMISSIONS);
-         List<String> permissionList = Arrays.asList(packageInfo.requestedPermissions);
+      GetPackageInfoResult result =
+           PackageInfoHelper.Companion.getInfo(
+                context,
+                context.getPackageName(),
+                PackageManager.GET_PERMISSIONS
+           );
 
-         if (permissionList.contains("android.permission.ACCESS_BACKGROUND_LOCATION")) {
-            // ACCESS_BACKGROUND_LOCATION permission defined on Manifest, prompt for permission
-            requestPermission = "android.permission.ACCESS_BACKGROUND_LOCATION";
-         }
-
-         if (requestPermission != null && promptLocation) {
-            LocationPermissionController.INSTANCE.prompt(fallbackToSettings, requestPermission);
-         } else {
-            // Fine permission already granted
-            sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.PERMISSION_GRANTED);
-            startGetLocation();
-         }
-      } catch (PackageManager.NameNotFoundException e) {
+      if (!result.getSuccessful() || result.getPackageInfo() == null) {
          sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.ERROR);
-         e.printStackTrace();
+         return;
+      }
+
+      List<String> permissionList = Arrays.asList(result.getPackageInfo().requestedPermissions);
+
+      if (permissionList.contains("android.permission.ACCESS_BACKGROUND_LOCATION")) {
+         // ACCESS_BACKGROUND_LOCATION permission defined on Manifest, prompt for permission
+         requestPermission = "android.permission.ACCESS_BACKGROUND_LOCATION";
+      }
+
+      if (requestPermission != null && promptLocation) {
+         LocationPermissionController.INSTANCE.prompt(fallbackToSettings, requestPermission);
+      } else {
+         // Fine permission already granted
+         sendAndClearPromptHandlers(promptLocation, OneSignal.PromptActionResult.PERMISSION_GRANTED);
+         startGetLocation();
       }
    }
 

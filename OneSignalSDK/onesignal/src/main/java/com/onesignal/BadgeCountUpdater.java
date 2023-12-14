@@ -29,7 +29,6 @@ package com.onesignal;
 
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.os.Build;
 import android.os.Bundle;
@@ -51,19 +50,20 @@ class BadgeCountUpdater {
       if (badgesEnabled != -1)
          return (badgesEnabled == 1);
 
-      try {
-         ApplicationInfo ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
-         Bundle bundle = ai.metaData;
-         if (bundle != null) {
-            String defaultStr = bundle.getString("com.onesignal.BadgeCount");
-            badgesEnabled = "DISABLE".equals(defaultStr) ? 0 : 1;
-         }
-         else
-            badgesEnabled = 1;
-      } catch (PackageManager.NameNotFoundException e) {
+      ApplicationInfo ai = ApplicationInfoHelper.Companion.getInfo(context);
+      if (ai == null) {
          badgesEnabled = 0;
-         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error reading meta-data tag 'com.onesignal.BadgeCount'. Disabling badge setting.", e);
+         OneSignal.Log(OneSignal.LOG_LEVEL.ERROR, "Error reading meta-data tag 'com.onesignal.BadgeCount'. Disabling badge setting.");
+         return false;
       }
+
+      Bundle bundle = ai.metaData;
+      if (bundle != null) {
+         String defaultStr = bundle.getString("com.onesignal.BadgeCount");
+         badgesEnabled = "DISABLE".equals(defaultStr) ? 0 : 1;
+      }
+      else
+         badgesEnabled = 1;
 
       return (badgesEnabled == 1);
    }

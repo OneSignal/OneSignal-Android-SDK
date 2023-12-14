@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.content.DialogInterface;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 
 import com.google.android.gms.common.GoogleApiAvailability;
@@ -13,18 +12,23 @@ import static com.onesignal.OSUtils.getResourceString;
 
 class GooglePlayServicesUpgradePrompt {
    private static final int PLAY_SERVICES_RESOLUTION_REQUEST = 9_000;
-
    private static boolean isGooglePlayStoreInstalled() {
-      try {
-         PackageManager pm = OneSignal.appContext.getPackageManager();
-         PackageInfo info = pm.getPackageInfo(GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE, PackageManager.GET_META_DATA);
-         String label = (String) info.applicationInfo.loadLabel(pm);
-         return (!label.equals("Market"));
-      } catch (PackageManager.NameNotFoundException e) {
-         // Google Play Store might not be installed, ignore exception if so
+      GetPackageInfoResult result =
+          PackageInfoHelper.Companion.getInfo(
+              OneSignal.appContext,
+              GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE,
+              PackageManager.GET_META_DATA
+          );
+      if (!result.getSuccessful()) {
+         return false;
+      }
+      if (result.getPackageInfo() == null) {
+         return false;
       }
 
-      return false;
+      PackageManager pm = OneSignal.appContext.getPackageManager();
+      String label = (String) result.getPackageInfo().applicationInfo.loadLabel(pm);
+      return !label.equals("Market");
    }
 
    static void showUpdateGPSDialog() {

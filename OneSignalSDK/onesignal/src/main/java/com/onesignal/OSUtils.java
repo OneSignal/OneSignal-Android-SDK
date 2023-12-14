@@ -27,6 +27,7 @@
 
 package com.onesignal;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -40,6 +41,7 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.DeadSystemException;
 import android.os.Handler;
 import android.os.Looper;
 
@@ -271,13 +273,22 @@ class OSUtils {
    }
 
    private static boolean packageInstalledAndEnabled(@NonNull String packageName) {
-      try {
-         PackageManager pm = OneSignal.appContext.getPackageManager();
-         PackageInfo info = pm.getPackageInfo(packageName, PackageManager.GET_META_DATA);
-         return info.applicationInfo.enabled;
-      } catch (PackageManager.NameNotFoundException e) {
+      GetPackageInfoResult result =
+           PackageInfoHelper.Companion.getInfo(
+                OneSignal.appContext,
+                packageName,
+                PackageManager.GET_META_DATA
+           );
+      if (!result.getSuccessful()) {
          return false;
       }
+
+      PackageInfo info = result.getPackageInfo();
+      if (info == null) {
+         return false;
+      }
+
+      return info.applicationInfo.enabled;
    }
 
    // TODO: Maybe able to switch to GoogleApiAvailability.isGooglePlayServicesAvailable to simplify
@@ -289,9 +300,21 @@ class OSUtils {
    }
 
    private static final int HMS_AVAILABLE_SUCCESSFUL = 0;
+   @TargetApi(24)
    private static boolean isHMSCoreInstalledAndEnabled() {
       HuaweiApiAvailability availability = HuaweiApiAvailability.getInstance();
-      return availability.isHuaweiMobileServicesAvailable(OneSignal.appContext) == HMS_AVAILABLE_SUCCESSFUL;
+      try {
+         return availability.isHuaweiMobileServicesAvailable(OneSignal.appContext) == HMS_AVAILABLE_SUCCESSFUL;
+      } catch (Exception e) {
+         // Suppressing DeadSystemException as the app is already dying for
+         // another reason and allowing this exception to bubble up would
+         // create a red herring for app developers. We still re-throw
+         // others, as we don't want to silently hide other issues.
+         if (!(e instanceof DeadSystemException)) {
+            throw e;
+         }
+         return false;
+      }
    }
 
    private static final String HMS_CORE_SERVICES_PACKAGE = "com.huawei.hwid"; // = HuaweiApiAvailability.SERVICES_PACKAGE
@@ -407,15 +430,11 @@ class OSUtils {
    }
 
    static Bundle getManifestMetaBundle(Context context) {
-      ApplicationInfo ai;
-      try {
-         ai = context.getPackageManager().getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
-         return ai.metaData;
-      } catch (PackageManager.NameNotFoundException e) {
-         Log(OneSignal.LOG_LEVEL.ERROR, "Manifest application info not found", e);
+      ApplicationInfo ai = ApplicationInfoHelper.Companion.getInfo(context);
+      if (ai == null) {
+         return null;
       }
-
-      return null;
+      return ai.metaData;
    }
 
    static boolean getManifestMetaBoolean(Context context, String metaName) {
@@ -487,16 +506,11 @@ class OSUtils {
    }
 
    static int getTargetSdkVersion(Context context) {
-      String packageName = context.getPackageName();
-      PackageManager packageManager = context.getPackageManager();
-      try {
-         ApplicationInfo applicationInfo = packageManager.getApplicationInfo(packageName, 0);
-         return applicationInfo.targetSdkVersion;
-      } catch (PackageManager.NameNotFoundException e) {
-         e.printStackTrace();
+      ApplicationInfo applicationInfo = ApplicationInfoHelper.Companion.getInfo(context);
+      if (applicationInfo == null) {
+         return Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1;
       }
-
-      return Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1;
+      return applicationInfo.targetSdkVersion;
    }
 
    static boolean isValidResourceName(String name) {

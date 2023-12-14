@@ -38,7 +38,10 @@ object NavigateToAndroidSettingsForNotifications {
 
         // for Android 5-7
         intent.putExtra("app_package", context.getPackageName())
-        intent.putExtra("app_uid", context.getApplicationInfo().uid)
+        val applicationInfo = ApplicationInfoHelper.getInfo(context)
+        if (applicationInfo != null) {
+            intent.putExtra("app_uid", applicationInfo.uid)
+        }
 
         // for Android 8 and above
         intent.putExtra("android.provider.extra.APP_PACKAGE", context.getPackageName())
