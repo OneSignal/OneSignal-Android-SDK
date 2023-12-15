@@ -231,7 +231,11 @@ internal class GmsLocationController(
             googleApiClient: GoogleApiClient,
             locationListener: LocationListener,
         ) {
-            LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationListener)
+            if (googleApiClient.isConnected) {
+                LocationServices.FusedLocationApi.removeLocationUpdates(googleApiClient, locationListener)
+            } else {
+                Logging.warn("GoogleApiClient is not connected. Unable to cancel location updates.")
+            }
         }
 
         fun requestLocationUpdates(
