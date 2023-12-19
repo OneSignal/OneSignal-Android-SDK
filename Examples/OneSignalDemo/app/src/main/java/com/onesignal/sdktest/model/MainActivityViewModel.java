@@ -563,7 +563,8 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
 
     private void setupTagsLayout() {
         setupTagRecyclerView();
-
+        System.out.println("❌ calling requestPermission within setupTagsLayout");
+        OneSignal.getNotifications().requestPermission(false, Continue.with(r -> {}));
         addTagButton.setOnClickListener(v -> dialog.createAddPairAlertDialog("Add Tag", ProfileUtil.FieldType.TAG, new AddPairAlertDialogCallback() {
             @Override
             public void onSuccess(Pair<String, Object> pair) {

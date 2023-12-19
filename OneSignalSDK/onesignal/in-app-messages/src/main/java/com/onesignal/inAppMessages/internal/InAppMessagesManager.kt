@@ -1,6 +1,7 @@
 package com.onesignal.inAppMessages.internal
 
 import android.app.AlertDialog
+import com.onesignal.OneSignal
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.IDManager
 import com.onesignal.common.JSONUtils
@@ -338,6 +339,8 @@ internal class InAppMessagesManager(
     }
 
     private suspend fun attemptToShowInAppMessage() {
+        println("❌ calling requestPermission within attemptToShowInAppMessage")
+        var resp = OneSignal.Notifications.requestPermission(false);
         // We need to wait for system conditions to be the correct ones
         if (!_applicationService.waitUntilSystemConditionsAvailable()) {
             Logging.warn("InAppMessagesManager.attemptToShowInAppMessage: In app message not showing due to system condition not correct")
