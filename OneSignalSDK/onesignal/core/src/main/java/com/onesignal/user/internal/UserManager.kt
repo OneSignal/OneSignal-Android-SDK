@@ -217,6 +217,13 @@ internal open class UserManager(
     }
 
     override fun getTags(): Map<String, String> {
+        getInfo()
         return _propertiesModel.tags.toMap()
+    }
+
+    override fun getInfo() {
+        Logging.debug("❌ _propertiesModel: ${_propertiesModel.toJSON()}")
+        Logging.debug("❌ _identityModel: ${_identityModel.toJSON()}")
+        subscriptions.collection.forEach { println("❌ subscription: ${it.id}") }
     }
 }

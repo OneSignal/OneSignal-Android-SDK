@@ -74,7 +74,7 @@ class ServiceProvider(
     }
 
     override fun <T> getServiceOrNull(c: Class<T>): T? {
-        Logging.debug("${indent}Retrieving service $c")
+        // Logging.debug("${indent}Retrieving service $c")
 //        indent += "  "
         val service = serviceMap[c]?.last()?.resolve(this) as T?
 //        indent = indent.substring(0, indent.length-2)

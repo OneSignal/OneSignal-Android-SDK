@@ -319,12 +319,12 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 }
             } else {
                 Logging.debug("initWithContext: using cached user ${identityModelStore!!.model.onesignalId}")
-                operationRepo!!.enqueue(
-                    RefreshUserOperation(
-                        configModel!!.appId,
-                        identityModelStore!!.model.onesignalId,
-                    ),
-                )
+//                operationRepo!!.enqueue(
+//                    RefreshUserOperation(
+//                        configModel!!.appId,
+//                        identityModelStore!!.model.onesignalId,
+//                    ),
+//                )
             }
 
             startupService!!.start()

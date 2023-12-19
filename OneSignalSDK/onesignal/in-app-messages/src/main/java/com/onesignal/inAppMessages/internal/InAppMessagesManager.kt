@@ -146,7 +146,8 @@ internal class InAppMessagesManager(
             }
 
             // attempt to fetch messages from the backend (if we have the pre-requisite data already)
-            fetchMessages()
+            Logging.debug("❌ IAM Manager start() calling fetchMessages")
+            // fetchMessages()
         }
     }
 
@@ -215,6 +216,7 @@ internal class InAppMessagesManager(
         }
 
         suspendifyOnThread {
+            Logging.debug("❌ IAM Manager onSessionStarted() calling fetchMessages")
             fetchMessages()
         }
     }
@@ -224,7 +226,9 @@ internal class InAppMessagesManager(
     override fun onSessionEnded(duration: Long) { }
 
     // called when a new push subscription is added, or the app id is updated, or a new session starts
-    private suspend fun fetchMessages() {
+    private suspend fun fetchMessages() { // TODO: ❌ Fetch on cold start
+        Logging.debug("❌  top of  fetchMessages")
+
         val appId = _configModelStore.model.appId
         val subscriptionId = _subscriptionManager.subscriptions.push.id
 
@@ -235,6 +239,8 @@ internal class InAppMessagesManager(
         fetchIAMMutex.withLock {
             val now = _time.currentTimeMillis
             if (lastTimeFetchedIAMs != null && (now - lastTimeFetchedIAMs!!) < _configModelStore.model.fetchIAMMinInterval) {
+                Logging.debug("❌ fetchMessages returning early with lastTimeFetchedIAMs $lastTimeFetchedIAMs and diff ${(now - lastTimeFetchedIAMs!!)}")
+
                 return
             }
 
@@ -242,6 +248,7 @@ internal class InAppMessagesManager(
         }
 
         val newMessages = _backend.listInAppMessages(appId, subscriptionId)
+        Logging.debug("❌ fetchMessages: $newMessages")
 
         if (newMessages != null) {
             this.messages = newMessages

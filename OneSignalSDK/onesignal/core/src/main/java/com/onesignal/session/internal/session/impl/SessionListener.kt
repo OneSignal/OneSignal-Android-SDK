@@ -8,6 +8,7 @@ import com.onesignal.session.internal.outcomes.IOutcomeEventsController
 import com.onesignal.session.internal.session.ISessionLifecycleHandler
 import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.operations.RefreshUserOperation
 import com.onesignal.user.internal.operations.TrackSessionEndOperation
 import com.onesignal.user.internal.operations.TrackSessionStartOperation
 
@@ -40,6 +41,8 @@ internal class SessionListener(
 
     override fun onSessionStarted() {
         _operationRepo.enqueue(TrackSessionStartOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId))
+        _operationRepo.enqueue(RefreshUserOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId)
+        )
     }
 
     override fun onSessionActive() {

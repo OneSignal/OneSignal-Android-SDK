@@ -160,6 +160,8 @@ abstract class ModelStore<TModel>(
     }
 
     protected fun load() {
+
+        println("❌ ModelStore $name load() called")
         synchronized(models) {
             if (name != null && _prefs != null) {
                 val str = _prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, "[]")

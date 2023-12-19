@@ -41,6 +41,7 @@ public class MainApplication extends MultiDexApplication {
     @Override
     public void onCreate() {
         super.onCreate();
+        System.out.println("❌ MainApp onCreate");
         OneSignal.getDebug().setLogLevel(LogLevel.DEBUG);
 
         // OneSignal Initialization

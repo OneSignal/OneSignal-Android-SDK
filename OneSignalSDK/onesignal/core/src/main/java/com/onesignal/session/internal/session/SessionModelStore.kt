@@ -16,7 +16,9 @@ open class SessionModelStore(prefs: IPreferencesService) : SingletonModelStore<S
      * On cold starts, reset the session validity property to drive a new session.
      */
     init {
+        println("❌ SessionModelStore init called with models ${store.list()}")
         if (!store.list().isEmpty()) {
+            println("❌ SessionModelStore NOT EMPTY}")
             model.isValid = false
         }
     }

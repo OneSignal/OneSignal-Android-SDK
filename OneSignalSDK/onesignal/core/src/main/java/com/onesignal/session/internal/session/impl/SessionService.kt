@@ -47,15 +47,17 @@ internal class SessionService(
     private var config: ConfigModel? = null
 
     override fun start() {
+        Logging.debug("❌ SessionService start called")
         session = _sessionModelStore.model
         config = _configModelStore.model
         _applicationService.addApplicationLifecycleHandler(this)
     }
 
     override suspend fun backgroundRun() {
-        Logging.log(LogLevel.DEBUG, "SessionService.backgroundRun()")
+        Logging.log(LogLevel.DEBUG, "❌ SessionService.backgroundRun() called")
 
         if (session!!.activeDuration <= 0L) {
+            Logging.log(LogLevel.DEBUG, "❌ SessionService.activeDuration is 0!")
             return
         }
 
@@ -64,10 +66,13 @@ internal class SessionService(
         session!!.isValid = false
         sessionLifeCycleNotifier.fire { it.onSessionEnded(session!!.activeDuration) }
         session!!.activeDuration = 0L
+        Logging.debug("SessionService: Session ended. activeDuration: ${session!!.activeDuration}")
     }
 
     override fun onFocus() {
-        Logging.log(LogLevel.DEBUG, "SessionService.onFocus()")
+        Logging.log(LogLevel.DEBUG, "❌ SessionService.onFocus() called")
+        val isVal = session?.isValid
+        Logging.log(LogLevel.DEBUG, "❌ SessionService.onFocus() session.isValid $isVal")
 
         if (!session!!.isValid) {
             // As the old session was made inactive, we need to create a new session
@@ -76,22 +81,24 @@ internal class SessionService(
             session!!.focusTime = session!!.startTime
             session!!.isValid = true
 
-            Logging.debug("SessionService: New session started at ${session!!.startTime}")
+            Logging.debug("❌ SessionService: New session started at ${session!!.startTime}")
             sessionLifeCycleNotifier.fire { it.onSessionStarted() }
         } else {
             // existing session: just remember the focus time so we can calculate the active time
             // when onUnfocused is called.
+            Logging.debug("❌ SessionService: onSessionActive() w/ focusTime = ${_time.currentTimeMillis}")
             session!!.focusTime = _time.currentTimeMillis
             sessionLifeCycleNotifier.fire { it.onSessionActive() }
         }
     }
 
     override fun onUnfocused() {
-        Logging.log(LogLevel.DEBUG, "SessionService.onUnfocused()")
+        Logging.log(LogLevel.DEBUG, "❌ SessionService.onUnfocused() called")
 
         // capture the amount of time the app was focused
         val dt = _time.currentTimeMillis - session!!.focusTime
         session!!.activeDuration += dt
+        Logging.debug("❌ activeDuration added $dt and is now ${session!!.activeDuration}")
     }
 
     override fun subscribe(handler: ISessionLifecycleHandler) = sessionLifeCycleNotifier.subscribe(handler)

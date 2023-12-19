@@ -578,6 +578,7 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
                 }
 
                 refreshTagRecyclerView();
+                OneSignal.getUser().getTags();
             }
 
             @Override
