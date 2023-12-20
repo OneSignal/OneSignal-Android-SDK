@@ -32,6 +32,8 @@ internal class LocationManager(
             Logging.debug("LocationManager.setIsShared(value: $value)")
             _prefs.saveBool("OneSignal", "PREFS_OS_LOCATION_SHARED", value)
             _isShared = value
+
+            onLocationPermissionChanged(value)
         }
 
     override fun start() {
