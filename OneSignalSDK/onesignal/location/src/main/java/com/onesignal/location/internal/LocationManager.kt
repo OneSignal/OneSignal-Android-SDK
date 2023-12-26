@@ -76,7 +76,7 @@ internal class LocationManager(
         var result = false
         withContext(Dispatchers.Main) {
             if (!isShared) {
-                return@withContext false
+                Logging.error("Location permissions must be granted by setting isShared to true")
             }
 
             val hasFinePermissionGranted =
