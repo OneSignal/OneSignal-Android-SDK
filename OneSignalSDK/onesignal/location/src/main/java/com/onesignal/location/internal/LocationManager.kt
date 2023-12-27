@@ -5,6 +5,8 @@ import com.onesignal.common.AndroidUtils
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.preferences.IPreferencesService
+import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
+import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -25,12 +27,12 @@ internal class LocationManager(
     private val _locationPermissionController: LocationPermissionController,
     private val _prefs: IPreferencesService,
 ) : ILocationManager, IStartableService, ILocationPermissionChangedHandler {
-    private var _isShared: Boolean = _prefs.getBool("OneSignal", "PREFS_OS_LOCATION_SHARED", false)!!
+    private var _isShared: Boolean = _prefs.getBool(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_LOCATION_SHARED, false)!!
     override var isShared
         get() = _isShared
         set(value) {
             Logging.debug("LocationManager.setIsShared(value: $value)")
-            _prefs.saveBool("OneSignal", "PREFS_OS_LOCATION_SHARED", value)
+            _prefs.saveBool(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_LOCATION_SHARED, value)
             _isShared = value
 
             onLocationPermissionChanged(value)
@@ -76,7 +78,7 @@ internal class LocationManager(
         var result = false
         withContext(Dispatchers.Main) {
             if (!isShared) {
-                Logging.error("Location permissions must be granted by setting isShared to true")
+                Logging.warn("Requesting location permission, but location sharing must also be enabled by setting isShared to true")
             }
 
             val hasFinePermissionGranted =
