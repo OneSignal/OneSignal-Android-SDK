@@ -194,6 +194,11 @@ object PreferenceOneSignalKeys {
      */
     const val PREFS_OS_LAST_LOCATION_TIME = "OS_LAST_LOCATION_TIME"
 
+    /**
+     * (Boolean) Whether location should be shared with OneSignal.
+     */
+    const val PREFS_OS_LOCATION_SHARED = "OS_LOCATION_SHARED"
+
     // Permissions
 
     /**
