@@ -65,7 +65,7 @@ object MockHelper {
             action(identityModel)
         }
 
-        val mockIdentityStore = mockk<IdentityModelStore>()
+        val mockIdentityStore = mockk<IdentityModelStore>(relaxed = true)
 
         every { mockIdentityStore.model } returns identityModel
 

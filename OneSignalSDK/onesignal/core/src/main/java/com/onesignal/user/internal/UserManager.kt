@@ -1,6 +1,10 @@
 package com.onesignal.user.internal
 
+import com.onesignal.common.IDManager
 import com.onesignal.common.OneSignalUtils
+import com.onesignal.common.events.EventProducer
+import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
+import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -12,6 +16,9 @@ import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionList
+import com.onesignal.user.state.IUserStateObserver
+import com.onesignal.user.state.UserChangedState
+import com.onesignal.user.state.UserState
 import com.onesignal.user.subscriptions.IPushSubscription
 
 internal open class UserManager(
@@ -19,15 +26,20 @@ internal open class UserManager(
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
     private val _languageContext: ILanguageContext,
-) : IUserManager {
-    val externalId: String?
-        get() = _identityModel.externalId
+) : IUserManager, ISingletonModelStoreChangeHandler<IdentityModel> {
+    override val onesignalId: String
+        get() = if (IDManager.isLocalId(_identityModel.onesignalId)) "" else _identityModel.onesignalId
+
+    override val externalId: String
+        get() = _identityModel.externalId ?: ""
 
     val aliases: Map<String, String>
         get() = _identityModel.filter { it.key != IdentityModel::id.name }.toMap()
 
     val subscriptions: SubscriptionList
         get() = _subscriptionManager.subscriptions
+
+    val changeHandlersNotifier = EventProducer<IUserStateObserver>()
 
     override val pushSubscription: IPushSubscription
         get() = _subscriptionManager.subscriptions.push
@@ -40,6 +52,10 @@ internal open class UserManager(
 
     override fun setLanguage(value: String) {
         _languageContext.language = value
+    }
+
+    init {
+        _identityModelStore.subscribe(this)
     }
 
     override fun addAlias(
@@ -218,5 +234,30 @@ internal open class UserManager(
 
     override fun getTags(): Map<String, String> {
         return _propertiesModel.tags.toMap()
+    }
+
+    override fun addObserver(observer: IUserStateObserver) {
+        changeHandlersNotifier.subscribe(observer)
+    }
+
+    override fun removeObserver(observer: IUserStateObserver) {
+        changeHandlersNotifier.unsubscribe(observer)
+    }
+
+    override fun onModelReplaced(
+        model: IdentityModel,
+        tag: String,
+    ) { }
+
+    override fun onModelUpdated(
+        args: ModelChangedArgs,
+        tag: String,
+    ) {
+        if (args.property == IdentityConstants.ONESIGNAL_ID) {
+            val newUserState = UserState(args.newValue.toString(), externalId)
+            this.changeHandlersNotifier.fire {
+                it.onUserStateChange(UserChangedState(newUserState))
+            }
+        }
     }
 }
