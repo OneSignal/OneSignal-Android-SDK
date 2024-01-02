@@ -1,12 +1,9 @@
 package com.onesignal.user.internal.subscriptions
 
 import com.onesignal.common.modeling.IModelChangedHandler
-import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.core.internal.application.IApplicationService
-import com.onesignal.core.internal.config.ConfigModel
-import com.onesignal.extensions.RobolectricTest
 import com.onesignal.mocks.MockHelper
 import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.internal.subscriptions.impl.SubscriptionManager
@@ -26,7 +23,6 @@ import io.mockk.verify
 import junit.framework.TestCase
 import org.junit.runner.RunWith
 
-@RobolectricTest
 @RunWith(KotestTestRunner::class)
 class SubscriptionManagerTests : FunSpec({
 
@@ -56,9 +52,10 @@ class SubscriptionManagerTests : FunSpec({
 
         t1.start()
         t2.start()
+
         // Give some time for the thread to complete the task
         Thread.sleep(1000)
-
+        // verify if the thread has been successfully terminated
         TestCase.assertEquals(Thread.State.TERMINATED, t1.state)
     }
 
