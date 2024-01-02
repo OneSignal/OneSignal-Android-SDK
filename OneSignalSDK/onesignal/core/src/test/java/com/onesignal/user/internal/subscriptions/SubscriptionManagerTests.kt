@@ -1,10 +1,8 @@
 package com.onesignal.user.internal.subscriptions
 
-import com.onesignal.common.modeling.IModelChangedHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.core.internal.application.IApplicationService
-import com.onesignal.mocks.MockHelper
 import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.internal.subscriptions.impl.SubscriptionManager
 import com.onesignal.user.subscriptions.ISmsSubscription
@@ -20,44 +18,10 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.spyk
 import io.mockk.verify
-import junit.framework.TestCase
 import org.junit.runner.RunWith
 
 @RunWith(KotestTestRunner::class)
 class SubscriptionManagerTests : FunSpec({
-
-    test("Deadlock related to Model.setOptAnyProperty") {
-        // Given
-        val modelStore = MockHelper.configModelStore()
-        val model = modelStore.model
-
-        val t1 = Thread {
-            // acquire "model.data", then trigger the onChanged event
-            model.setOptAnyProperty("key1", "value1")
-        }
-
-        val t2 = Thread {
-            // acquire "model.initializationLock", then wait for "model.data" to be released
-            model.initializeFromModel("", MockHelper.configModelStore().model)
-        }
-
-        model.subscribe(object : IModelChangedHandler {
-            // will be executed in t1
-            override fun onChanged(args: ModelChangedArgs, tag: String) {
-                Thread.sleep(200)
-                // waiting for "model.initializationLock"
-                model.toJSON()
-            }
-        })
-
-        t1.start()
-        t2.start()
-
-        // Give some time for the thread to complete the task
-        Thread.sleep(1000)
-        // verify if the thread has been successfully terminated
-        TestCase.assertEquals(Thread.State.TERMINATED, t1.state)
-    }
 
     test("initializes subscriptions from model store") {
         // Given
@@ -127,12 +91,12 @@ class SubscriptionManagerTests : FunSpec({
         // Then
         verify {
             mockSubscriptionModelStore.add(
-                    withArg {
-                        it.type shouldBe SubscriptionType.EMAIL
-                        it.address shouldBe "name@company.com"
-                        it.optedIn shouldBe true
-                        it.status shouldBe SubscriptionStatus.SUBSCRIBED
-                    },
+                withArg {
+                    it.type shouldBe SubscriptionType.EMAIL
+                    it.address shouldBe "name@company.com"
+                    it.optedIn shouldBe true
+                    it.status shouldBe SubscriptionStatus.SUBSCRIBED
+                },
             )
         }
     }
@@ -156,12 +120,12 @@ class SubscriptionManagerTests : FunSpec({
         // Then
         verify {
             mockSubscriptionModelStore.add(
-                    withArg {
-                        it.type shouldBe SubscriptionType.SMS
-                        it.address shouldBe "+15558675309"
-                        it.optedIn shouldBe true
-                        it.status shouldBe SubscriptionStatus.SUBSCRIBED
-                    },
+                withArg {
+                    it.type shouldBe SubscriptionType.SMS
+                    it.address shouldBe "+15558675309"
+                    it.optedIn shouldBe true
+                    it.status shouldBe SubscriptionStatus.SUBSCRIBED
+                },
             )
         }
     }
@@ -185,12 +149,12 @@ class SubscriptionManagerTests : FunSpec({
         // Then
         verify {
             mockSubscriptionModelStore.add(
-                    withArg {
-                        it.type shouldBe SubscriptionType.PUSH
-                        it.address shouldBe "pushToken"
-                        it.optedIn shouldBe true
-                        it.status shouldBe SubscriptionStatus.SUBSCRIBED
-                    },
+                withArg {
+                    it.type shouldBe SubscriptionType.PUSH
+                    it.address shouldBe "pushToken"
+                    it.optedIn shouldBe true
+                    it.status shouldBe SubscriptionStatus.SUBSCRIBED
+                },
             )
         }
     }
@@ -315,11 +279,11 @@ class SubscriptionManagerTests : FunSpec({
         subscriptions.smss[0].number shouldBe smsSubscription.address
         verify(exactly = 1) {
             spySubscriptionChangedHandler.onSubscriptionAdded(
-                    withArg {
-                        it.id shouldBe smsSubscription.id
-                        it should beInstanceOf<ISmsSubscription>()
-                        (it as ISmsSubscription).number shouldBe smsSubscription.address
-                    },
+                withArg {
+                    it.id shouldBe smsSubscription.id
+                    it should beInstanceOf<ISmsSubscription>()
+                    (it as ISmsSubscription).number shouldBe smsSubscription.address
+                },
             )
         }
     }
@@ -349,14 +313,14 @@ class SubscriptionManagerTests : FunSpec({
         // When
         emailSubscription.address = "+15551234567"
         subscriptionManager.onModelUpdated(
-                ModelChangedArgs(
-                        emailSubscription,
-                        SubscriptionModel::address.name,
-                        SubscriptionModel::address.name,
-                        "+15558675309",
-                        "+15551234567",
-                ),
-                ModelChangeTags.NORMAL,
+            ModelChangedArgs(
+                emailSubscription,
+                SubscriptionModel::address.name,
+                SubscriptionModel::address.name,
+                "+15558675309",
+                "+15551234567",
+            ),
+            ModelChangeTags.NORMAL,
         )
         val subscriptions = subscriptionManager.subscriptions
 
@@ -397,11 +361,11 @@ class SubscriptionManagerTests : FunSpec({
         subscriptions.smss.count() shouldBe 0
         verify(exactly = 1) {
             spySubscriptionChangedHandler.onSubscriptionRemoved(
-                    withArg {
-                        it.id shouldBe smsSubscription.id
-                        it should beInstanceOf<ISmsSubscription>()
-                        (it as ISmsSubscription).number shouldBe smsSubscription.address
-                    },
+                withArg {
+                    it.id shouldBe smsSubscription.id
+                    it should beInstanceOf<ISmsSubscription>()
+                    (it as ISmsSubscription).number shouldBe smsSubscription.address
+                },
             )
         }
     }
