@@ -134,9 +134,8 @@ abstract class ModelStore<TModel>(
             model.subscribe(this)
 
             persist()
-
-            changeSubscription.fire { it.onModelAdded(model, tag) }
         }
+        changeSubscription.fire { it.onModelAdded(model, tag) }
     }
 
     private fun removeItem(
@@ -150,9 +149,8 @@ abstract class ModelStore<TModel>(
             model.unsubscribe(this)
 
             persist()
-
-            changeSubscription.fire { it.onModelRemoved(model, tag) }
         }
+        changeSubscription.fire { it.onModelRemoved(model, tag) }
     }
 
     protected fun load() {
