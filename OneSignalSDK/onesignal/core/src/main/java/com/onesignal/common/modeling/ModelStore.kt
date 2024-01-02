@@ -128,7 +128,7 @@ abstract class ModelStore<TModel>(
             model.subscribe(this)
 
             persist()
-
+        }
         changeSubscription.fire { it.onModelAdded(model, tag) }
     }
 
@@ -142,7 +142,7 @@ abstract class ModelStore<TModel>(
             model.unsubscribe(this)
 
             persist()
-
+        }
         changeSubscription.fire { it.onModelRemoved(model, tag) }
     }
 
