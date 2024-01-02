@@ -84,7 +84,6 @@ abstract class ModelStore<TModel>(
         tag: String,
     ) {
         persist()
-
         changeSubscription.fire { it.onModelUpdated(args, tag) }
     }
 
@@ -102,10 +101,11 @@ abstract class ModelStore<TModel>(
 
     override fun clear(tag: String) {
         val localList = models.toList()
-        models.clear()
+        synchronized(models) {
+            models.clear()
 
             persist()
-
+        }
         for (item in localList) {
             // no longer listen for changes to this model
             item.unsubscribe(this)
