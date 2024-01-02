@@ -24,7 +24,6 @@ import android.widget.Switch;
 import android.widget.TextView;
 import com.onesignal.Continue;
 import com.onesignal.OneSignal;
-import com.onesignal.core.internal.config.ConfigModelStore;
 import com.onesignal.sdktest.adapter.SubscriptionRecyclerViewAdapter;
 import com.onesignal.user.subscriptions.IPushSubscription;
 import com.onesignal.sdktest.R;
@@ -272,11 +271,6 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
         Button navigateNextActivity = getActivity().findViewById(R.id.main_activity_navigate_button);
         navigateNextActivity.setOnClickListener(v -> {
             getActivity().startActivity(new Intent(getActivity(), SecondaryActivity.class));
-        });
-
-        Button createDeadlock = getActivity().findViewById(R.id.main_activity_deadlock_button);
-        createDeadlock.setOnClickListener(v -> {
-            createDeadlock();
         });
 
         aliasSet = new HashMap<>();
@@ -936,45 +930,5 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
         triggerSet.clear();
         // triggers are not persisted, they are always "starting from scratch"
         refreshTriggerRecyclerView();
-    }
-
-    private void createDeadlock() {
-
-        // register test observers
-        IPushSubscriptionObserver observer = state -> {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-            OneSignal.getUser().getPushSubscription().optIn();
-            System.out.println("JinTest optedout");
-        };
-        OneSignal.getUser().getPushSubscription().addObserver(observer);
-
-        // calling login will call setOptAnyProperty, which locks model.data
-        // then, any observer added will be fired, which will lock subscribers
-        Thread t1 = new Thread() {
-            @Override
-            public void run() {
-                OneSignal.getUser().getPushSubscription().optOut();
-                OneSignal.getUser().getPushSubscription().optIn();
-                System.out.println("JinTest optedin");
-            }
-        };
-
-        Thread t2 = new Thread() {
-            @Override
-            public void run() {
-                OneSignal.logout();
-                OneSignal.login("testJin");
-                System.out.println("JinTest login");
-            }
-        };
-
-        t1.start();
-        t2.start();
-
-
     }
 }

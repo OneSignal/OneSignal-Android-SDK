@@ -95,35 +95,26 @@ open class Model(
                         data[property] = listOfItems
                     }
                 } else {
-                    val method = this.javaClass.methods.firstOrNull {
-                        it.returnType != Void::class.java && it.name.contains(
-                            property,
-                            true
-                        )
-                    }
+                    val method =
+                        this.javaClass.methods.firstOrNull {
+                            it.returnType !=
+                                Void::class.java &&
+                                it.name.contains(
+                                    property,
+                                    true,
+                                )
+                        }
 
                     if (method == null) {
                         data[property] = jsonObject.get(property)
                     } else {
                         when (method.returnType) {
-                            Double::class.java, java.lang.Double::class.java -> data[property] =
-                                jsonObject.getDouble(property)
-
-                            Long::class.java, java.lang.Long::class.java -> data[property] =
-                                jsonObject.getLong(property)
-
-                            Float::class.java, java.lang.Float::class.java -> data[property] =
-                                jsonObject.getDouble(property).toFloat()
-
-                            Int::class.java, java.lang.Integer::class.java -> data[property] =
-                                jsonObject.getInt(property)
-
-                            Boolean::class.java, java.lang.Boolean::class.java -> data[property] =
-                                jsonObject.getBoolean(property)
-
-                            String::class.java, java.lang.String::class.java -> data[property] =
-                                jsonObject.getString(property)
-
+                            Double::class.java, java.lang.Double::class.java -> data[property] = jsonObject.getDouble(property)
+                            Long::class.java, java.lang.Long::class.java -> data[property] = jsonObject.getLong(property)
+                            Float::class.java, java.lang.Float::class.java -> data[property] = jsonObject.getDouble(property).toFloat()
+                            Int::class.java, java.lang.Integer::class.java -> data[property] = jsonObject.getInt(property)
+                            Boolean::class.java, java.lang.Boolean::class.java -> data[property] = jsonObject.getBoolean(property)
+                            String::class.java, java.lang.String::class.java -> data[property] = jsonObject.getString(property)
                             else -> data[property] = jsonObject.get(property)
                         }
                     }
@@ -723,9 +714,7 @@ open class Model(
 
     override fun subscribe(handler: IModelChangedHandler) = changeNotifier.subscribe(handler)
 
-    override fun unsubscribe(handler: IModelChangedHandler) {
-        changeNotifier.unsubscribe(handler)
-    }
+    override fun unsubscribe(handler: IModelChangedHandler) = changeNotifier.unsubscribe(handler)
 
     override val hasSubscribers: Boolean
         get() = changeNotifier.hasSubscribers
