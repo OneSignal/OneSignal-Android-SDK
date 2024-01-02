@@ -87,11 +87,8 @@ abstract class ModelStore<TModel>(
         args: ModelChangedArgs,
         tag: String,
     ) {
-        synchronized(models) {
-            persist()
-
-            changeSubscription.fire { it.onModelUpdated(args, tag) }
-        }
+        persist()
+        changeSubscription.fire { it.onModelUpdated(args, tag) }
     }
 
     override fun replaceAll(
@@ -108,17 +105,16 @@ abstract class ModelStore<TModel>(
     }
 
     override fun clear(tag: String) {
+        val localList = models.toList()
         synchronized(models) {
-            val localList = models.toList()
             models.clear()
 
             persist()
-
-            for (item in localList) {
-                // no longer listen for changes to this model
-                item.unsubscribe(this)
-                changeSubscription.fire { it.onModelRemoved(item, tag) }
-            }
+        }
+        for (item in localList) {
+            // no longer listen for changes to this model
+            item.unsubscribe(this)
+            changeSubscription.fire { it.onModelRemoved(item, tag) }
         }
     }
 
