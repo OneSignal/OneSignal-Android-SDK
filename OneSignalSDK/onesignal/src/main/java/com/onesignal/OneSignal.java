@@ -31,6 +31,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Application;
 import android.app.NotificationManager;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
@@ -182,6 +183,13 @@ public class OneSignal {
        */
       void notificationOpened(OSNotificationOpenedResult result);
    }
+
+    /**
+     * Fires delegate when starting destination Activity fail.
+     */
+    public interface OSNotificationOpenedError {
+        void onOpenDestinationActivityNotFoundError(ActivityNotFoundException exception);
+    }
 
    /**
     * An interface used to process a OneSignal In-App Message the user just tapped on.
@@ -404,6 +412,7 @@ public class OneSignal {
    static OSRemoteNotificationReceivedHandler remoteNotificationReceivedHandler;
    static OSNotificationWillShowInForegroundHandler notificationWillShowInForegroundHandler;
    static OSNotificationOpenedHandler notificationOpenedHandler;
+   static OSNotificationOpenedError notificationOpenedError;
    static OSInAppMessageClickHandler inAppMessageClickHandler;
 
    // Is the init() of OneSignal SDK finished yet
@@ -2459,8 +2468,14 @@ public class OneSignal {
          }
       } catch (JSONException e) {
          e.printStackTrace();
+      } catch (ActivityNotFoundException e) {
+         if (notificationOpenedError != null) {
+             notificationOpenedError.onOpenDestinationActivityNotFoundError(e);
+         } else {
+            e.printStackTrace();
+         }
       }
-   }
+}
 
    private static boolean shouldInitDirectSessionFromNotificationOpen(Activity context, final JSONArray data) {
       if (inForeground) {
