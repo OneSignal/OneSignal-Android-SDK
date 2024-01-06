@@ -1169,6 +1169,141 @@
 
             </LinearLayout>
 
+            <!-- Misc Buttons for Testing -->
+
+            <LinearLayout
+                android:id="@+id/main_activity_misc_buttons_linear_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/main_activity_misc_buttons_title_text_view"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:gravity="start|center_vertical"
+                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginLeft="12dp"
+                    android:text="@string/misc_buttons"
+                    android:textColor="@color/colorDarkText" />
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="12dp"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:background="@color/colorPrimary">
+
+                            <Button
+                                android:id="@+id/main_activity_misc_1_button"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:text="@string/misc_button_1"
+                                android:textSize="19sp"
+                                android:textColor="@android:color/white"
+                                android:background="@drawable/ripple_selector_white_red"
+                                android:visibility="visible"/>
+
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="12dp"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:background="@color/colorPrimary">
+
+                            <Button
+                                android:id="@+id/main_activity_misc_2_button"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:text="@string/misc_button_2"
+                                android:textSize="19sp"
+                                android:textColor="@android:color/white"
+                                android:background="@drawable/ripple_selector_white_red"
+                                android:visibility="visible"/>
+
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="12dp"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:background="@color/colorPrimary">
+
+                            <Button
+                                android:id="@+id/main_activity_misc_3_button"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:text="@string/misc_button_3"
+                                android:textSize="19sp"
+                                android:textColor="@android:color/white"
+                                android:background="@drawable/ripple_selector_white_red"
+                                android:visibility="visible"/>
+
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+            </LinearLayout>
+
             <!-- Send Push Notifications -->
 
             <LinearLayout

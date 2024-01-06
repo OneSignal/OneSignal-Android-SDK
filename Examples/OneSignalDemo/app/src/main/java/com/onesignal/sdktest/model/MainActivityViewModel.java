@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.appcompat.widget.Toolbar;
 import android.content.Intent;
 import android.os.Build;
+import android.util.Log;
 import android.util.Pair;
 import android.view.View;
 import android.view.ViewTreeObserver;
@@ -25,6 +26,7 @@ import android.widget.TextView;
 import com.onesignal.Continue;
 import com.onesignal.OneSignal;
 import com.onesignal.sdktest.adapter.SubscriptionRecyclerViewAdapter;
+import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.user.subscriptions.IPushSubscription;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.activity.SecondaryActivity;
@@ -144,6 +146,12 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
     private Switch locationSharedSwitch;
     private Button promptLocationButton;
 
+    // Misc Buttons for Testing
+    private TextView miscButtonsTitleTextView;
+    private Button miscButton1;
+    private Button miscButton2;
+    private Button miscButton3;
+
     // Push
     private TextView pushSubscriptionIdTitleTextView;
     private TextView pushSubscriptionIdTextView;
@@ -254,6 +262,11 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
         locationSharedSwitch = getActivity().findViewById(R.id.main_activity_location_shared_switch);
         promptLocationButton = getActivity().findViewById(R.id.main_activity_location_prompt_location_button);
 
+        miscButtonsTitleTextView = getActivity().findViewById(R.id.main_activity_misc_buttons_title_text_view);
+        miscButton1 = getActivity().findViewById(R.id.main_activity_misc_1_button);
+        miscButton2 = getActivity().findViewById(R.id.main_activity_misc_2_button);
+        miscButton3 = getActivity().findViewById(R.id.main_activity_misc_3_button);
+
         pushSubscriptionEnabledRelativeLayout = getActivity().findViewById(R.id.main_activity_push_subscription_relative_layout);
         pushSubscriptionEnabledTitleTextView = getActivity().findViewById(R.id.main_activity_push_subscription_info_text_view);
         pushSubscriptionIdTitleTextView = getActivity().findViewById(R.id.main_activity_push_subscription_id_title_text_view);
@@ -327,6 +340,10 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
         font.applyFont(pauseInAppMessagesTextView, font.saralaBold);
         font.applyFont(pauseInAppMessagesDescriptionTextView, font.saralaRegular);
         font.applyFont(revokeConsentButton, font.saralaBold);
+        font.applyFont(miscButtonsTitleTextView, font.saralaBold);
+        font.applyFont(miscButton1, font.saralaBold);
+        font.applyFont(miscButton2, font.saralaBold);
+        font.applyFont(miscButton3, font.saralaBold);
 
         boolean hasConsent = SharedPreferenceUtil.getUserPrivacyConsent(context);
         setupConsentLayout(hasConsent);
@@ -418,6 +435,20 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
         logoutUserButton.setOnClickListener(v -> {
             OneSignal.logout();
             refreshState();
+        });
+
+        // Misc Buttons to help with testing
+
+        miscButton1.setOnClickListener(v -> {
+            Log.v(Tag.LOG_TAG, "Fill out what you want this button to do!");
+        });
+
+        miscButton2.setOnClickListener(v -> {
+            Log.v(Tag.LOG_TAG, "Fill out what you want this button to do!");
+        });
+
+        miscButton3.setOnClickListener(v -> {
+            Log.v(Tag.LOG_TAG, "Fill out what you want this button to do!");
         });
     }
 
