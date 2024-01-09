@@ -24,6 +24,7 @@ open class SubscriptionModelStore(prefs: IPreferencesService) : SimpleModelStore
                         model.deviceOS = existingPushModel.deviceOS
                         model.carrier = existingPushModel.carrier
                         model.appVersion = existingPushModel.appVersion
+                        model.status = existingPushModel.status
                     }
                     break
                 }
