@@ -51,7 +51,6 @@ open class Model(
      * specified, must also specify [_parentModel]
      */
     private val _parentProperty: String? = null,
-    private val initializationLock: Any = Any(),
 ) : IEventNotifier<IModelChangedHandler> {
     /**
      * A unique identifier for this model.
@@ -80,33 +79,43 @@ open class Model(
      * @param jsonObject The [JSONObject] to initialize this model from.
      */
     fun initializeFromJson(jsonObject: JSONObject) {
-        data.clear()
-        for (property in jsonObject.keys()) {
-            val jsonValue = jsonObject.get(property)
-            if (jsonValue is JSONObject) {
-                val childModel = createModelForProperty(property, jsonValue)
-                if (childModel != null) {
-                    data[property] = childModel
-                }
-            } else if (jsonValue is JSONArray) {
-                val listOfItems = createListForProperty(property, jsonValue)
-                if (listOfItems != null) {
-                    data[property] = listOfItems
-                }
-            } else {
-                val method = this.javaClass.methods.firstOrNull { it.returnType != Void::class.java && it.name.contains(property, true) }
-
-                if (method == null) {
-                    data[property] = jsonObject.get(property)
+        synchronized(data) {
+            data.clear()
+            for (property in jsonObject.keys()) {
+                val jsonValue = jsonObject.get(property)
+                if (jsonValue is JSONObject) {
+                    val childModel = createModelForProperty(property, jsonValue)
+                    if (childModel != null) {
+                        data[property] = childModel
+                    }
+                } else if (jsonValue is JSONArray) {
+                    val listOfItems = createListForProperty(property, jsonValue)
+                    if (listOfItems != null) {
+                        data[property] = listOfItems
+                    }
                 } else {
-                    when (method.returnType) {
-                        Double::class.java, java.lang.Double::class.java -> data[property] = jsonObject.getDouble(property)
-                        Long::class.java, java.lang.Long::class.java -> data[property] = jsonObject.getLong(property)
-                        Float::class.java, java.lang.Float::class.java -> data[property] = jsonObject.getDouble(property).toFloat()
-                        Int::class.java, java.lang.Integer::class.java -> data[property] = jsonObject.getInt(property)
-                        Boolean::class.java, java.lang.Boolean::class.java -> data[property] = jsonObject.getBoolean(property)
-                        String::class.java, java.lang.String::class.java -> data[property] = jsonObject.getString(property)
-                        else -> data[property] = jsonObject.get(property)
+                    val method =
+                        this.javaClass.methods.firstOrNull {
+                            it.returnType !=
+                                Void::class.java &&
+                                it.name.contains(
+                                    property,
+                                    true,
+                                )
+                        }
+
+                    if (method == null) {
+                        data[property] = jsonObject.get(property)
+                    } else {
+                        when (method.returnType) {
+                            Double::class.java, java.lang.Double::class.java -> data[property] = jsonObject.getDouble(property)
+                            Long::class.java, java.lang.Long::class.java -> data[property] = jsonObject.getLong(property)
+                            Float::class.java, java.lang.Float::class.java -> data[property] = jsonObject.getDouble(property).toFloat()
+                            Int::class.java, java.lang.Integer::class.java -> data[property] = jsonObject.getInt(property)
+                            Boolean::class.java, java.lang.Boolean::class.java -> data[property] = jsonObject.getBoolean(property)
+                            String::class.java, java.lang.String::class.java -> data[property] = jsonObject.getString(property)
+                            else -> data[property] = jsonObject.get(property)
+                        }
                     }
                 }
             }
@@ -140,7 +149,7 @@ open class Model(
             newData[::id.name] = id
         }
 
-        synchronized(initializationLock) {
+        synchronized(data) {
             data.clear()
             data.putAll(newData)
         }
@@ -436,9 +445,8 @@ open class Model(
         tag: String = ModelChangeTags.NORMAL,
         forceChange: Boolean = false,
     ) {
+        val oldValue = data[name]
         synchronized(data) {
-            val oldValue = data[name]
-
             if (oldValue == value && !forceChange) {
                 return
             }
@@ -448,9 +456,8 @@ open class Model(
             } else if (data.containsKey(name)) {
                 data.remove(name)
             }
-
-            notifyChanged(name, name, tag, oldValue, value)
         }
+        notifyChanged(name, name, tag, oldValue, value)
     }
 
     /**
@@ -671,13 +678,14 @@ open class Model(
      * @return The resulting [JSONObject].
      */
     fun toJSON(): JSONObject {
-        synchronized(initializationLock) {
-            val jsonObject = JSONObject()
+        val jsonObject = JSONObject()
+        synchronized(data) {
             for (kvp in data) {
                 when (val value = kvp.value) {
                     is Model -> {
                         jsonObject.put(kvp.key, value.toJSON())
                     }
+
                     is List<*> -> {
                         val jsonArray = JSONArray()
                         for (arrayItem in value) {
@@ -689,13 +697,14 @@ open class Model(
                         }
                         jsonObject.put(kvp.key, jsonArray)
                     }
+
                     else -> {
                         jsonObject.put(kvp.key, value)
                     }
                 }
             }
-            return jsonObject
         }
+        return jsonObject
     }
 
     override fun subscribe(handler: IModelChangedHandler) = changeNotifier.subscribe(handler)
