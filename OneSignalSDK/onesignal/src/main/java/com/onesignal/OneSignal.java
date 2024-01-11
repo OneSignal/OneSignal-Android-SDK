@@ -816,6 +816,10 @@ public class OneSignal {
          fireCallbackForOpenedNotifications();
    }
 
+   public static void setNotificationOpenedError(@Nullable OSNotificationOpenedError callback) {
+      notificationOpenedError = callback;
+   }
+
    public static void setInAppMessageClickHandler(@Nullable OSInAppMessageClickHandler callback) {
       inAppMessageClickHandler = callback;
    }
