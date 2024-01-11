@@ -105,7 +105,7 @@ internal class RefreshUserOperationExecutor(
                             SubscriptionType.PUSH
                         }
                     }
-                subscriptionModel.optedIn = subscriptionModel.status != SubscriptionStatus.UNSUBSCRIBE
+                subscriptionModel.optedIn = subscriptionModel.status != SubscriptionStatus.UNSUBSCRIBE && subscriptionModel.status != SubscriptionStatus.DISABLED_FROM_REST_API_DEFAULT_REASON
                 subscriptionModel.sdk = subscription.sdk ?: ""
                 subscriptionModel.deviceOS = subscription.deviceOS ?: ""
                 subscriptionModel.carrier = subscription.carrier ?: ""

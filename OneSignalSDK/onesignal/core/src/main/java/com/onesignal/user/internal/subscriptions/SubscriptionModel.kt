@@ -67,6 +67,9 @@ enum class SubscriptionStatus(val value: Int) {
     /** The subscription is not enabled due to an FCM authentication failed IOException */
     FIREBASE_FCM_ERROR_IOEXCEPTION_AUTHENTICATION_FAILED(-29),
 
+    /** The subscription is not enabled because the app has disabled the subscription via API */
+    DISABLED_FROM_REST_API_DEFAULT_REASON(-30),
+
     /** The subscription is not enabled due to some other (unknown locally) error */
     ERROR(9999),
     ;
@@ -79,6 +82,10 @@ enum class SubscriptionStatus(val value: Int) {
 }
 
 class SubscriptionModel : Model() {
+    /**
+     * Reflects user preference only, defaults true.
+     * The public API for [IPushSubscription.optedIn] considers this value AND permission.
+     */
     var optedIn: Boolean
         get() = getBooleanProperty(::optedIn.name)
         set(value) {
@@ -97,6 +104,13 @@ class SubscriptionModel : Model() {
             setStringProperty(::address.name, value)
         }
 
+    /**
+     * This reflects the "device-level" subscription status.
+     *
+     * For example, if [IPushSubscription.optOut] is called, the SDK sends UNSUBSCRIBE(-2) to the server.
+     * However, locally on the model, we still keep the existing status.
+     * It is necessary when [IPushSubscription.optIn] is called again to know the true device status.
+     */
     var status: SubscriptionStatus
         get() {
             if (!hasProperty(::status.name)) {
