@@ -440,15 +440,15 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
         // Misc Buttons to help with testing
 
         miscButton1.setOnClickListener(v -> {
-            Log.v(Tag.LOG_TAG, "Fill out what you want this button to do!");
+            Log.v(Tag.LOG_TAG, "Fill out what you want this button to do!!");
         });
 
         miscButton2.setOnClickListener(v -> {
-            Log.v(Tag.LOG_TAG, "Fill out what you want this button to do!");
+            Log.v(Tag.LOG_TAG, "Fill out what you want this button to do!!");
         });
 
         miscButton3.setOnClickListener(v -> {
-            Log.v(Tag.LOG_TAG, "Fill out what you want this button to do!");
+            Log.v(Tag.LOG_TAG, "Fill out what you want this button to do!!");
         });
     }
 
