@@ -39,10 +39,9 @@ open class EventProducer<THandler> : IEventNotifier<THandler> {
      * @param callback The callback will be invoked for each subscribed handler, allowing you to call the handler.
      */
     fun fire(callback: (THandler) -> Unit) {
-        synchronized(subscribers) {
-            for (s in subscribers) {
-                callback(s)
-            }
+        val localList = subscribers.toList()
+        for (s in localList) {
+            callback(s)
         }
     }
 
