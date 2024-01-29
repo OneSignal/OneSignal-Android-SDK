@@ -9,6 +9,7 @@ import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
 import io.kotest.runner.junit4.KotestTestRunner
 import junit.framework.TestCase
 import org.junit.runner.RunWith
@@ -70,13 +71,11 @@ class ModelingTests : FunSpec({
         val t1 =
             Thread {
                 // acquire "ModelStore.models", then trigger the onChanged event
-                System.out.println("1")
                 modelStore.add(newSubscriptionModel)
             }
 
         val t2 =
             Thread {
-                System.out.println("2")
                 // acquire "model.data", then wait for "ModelStore.models"
                 newSubscriptionModel.toJSON()
             }
@@ -115,5 +114,30 @@ class ModelingTests : FunSpec({
 
         // verify if the thread has been successfully terminated
         TestCase.assertEquals(Thread.State.TERMINATED, t2.state)
+    }
+
+    test("Unsubscribing handler in change event may cause the concurrent modification exception") {
+        // Given an arbitrary model
+        val modelStore = MockHelper.configModelStore()
+        val model = modelStore.model
+
+        // subscribe to a change handler
+        model.subscribe(
+            object : IModelChangedHandler {
+                override fun onChanged(
+                    args: ModelChangedArgs,
+                    tag: String,
+                ) {
+                    // remove from "subscribers" while "subscribers" is being accessed
+                    model.unsubscribe(this)
+                }
+            },
+        )
+
+        // this will trigger EventProducer.fire and loop through the list "subscribers"
+        model.setOptAnyProperty("key1", "value1")
+
+        // ensure no concurrent modification exception is thrown and "subcribers" is clear
+        model.hasSubscribers shouldBe false
     }
 })
