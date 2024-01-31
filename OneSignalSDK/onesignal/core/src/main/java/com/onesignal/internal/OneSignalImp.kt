@@ -51,6 +51,7 @@ import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
+import org.json.JSONObject
 
 internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val sdkVersion: String = OneSignalUtils.SDK_VERSION

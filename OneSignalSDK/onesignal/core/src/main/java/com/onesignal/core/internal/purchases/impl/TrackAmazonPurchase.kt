@@ -58,6 +58,9 @@ internal class TrackAmazonPurchase(
     private var listenerHandlerObject: Any? = null
     private var listenerHandlerField: Field? = null
 
+    // appstore v3.x requires PurchasingService.registerListener() to run on main UI thread
+    private var registerListenerOnMainThread = false
+
     override fun start() {
         if (!canTrack()) {
             return
@@ -129,7 +132,13 @@ internal class TrackAmazonPurchase(
     }
 
     private fun setListener() {
-        PurchasingService.registerListener(_applicationService.appContext, osPurchasingListener)
+        if (registerListenerOnMainThread) {
+            suspendifyOnMain {
+                PurchasingService.registerListener(_applicationService.appContext, osPurchasingListener)
+            }
+        } else {
+            PurchasingService.registerListener(_applicationService.appContext, osPurchasingListener)
+        }
     }
 
     private inner class OSPurchasingListener(
