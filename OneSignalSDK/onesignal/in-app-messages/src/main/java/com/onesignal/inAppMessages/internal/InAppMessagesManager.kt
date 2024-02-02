@@ -528,9 +528,10 @@ internal class InAppMessagesManager(
     override fun onMessageWasDisplayed(message: InAppMessage) {
         if (!lifecycleCallback.hasSubscribers) {
             Logging.verbose("InAppMessagesManager.onMessageWasDisplayed: inAppMessageLifecycleHandler is null")
-            return
         }
-        lifecycleCallback.fireOnMain { it.onDidDisplay(InAppMessageLifecycleEvent(message)) }
+        else {
+            lifecycleCallback.fireOnMain { it.onDidDisplay(InAppMessageLifecycleEvent(message)) }
+        }
 
         if (message.isPreview) {
             return
