@@ -369,11 +369,19 @@ class OSUtils {
       if (supportsADM())
          return UserState.DEVICE_TYPE_FIREOS;
 
-      if (supportsGooglePush())
+      boolean preferHMS = false;
+      boolean supportsHMS = supportsHMS();
+      boolean supportsFCM = supportsGooglePush();
+      
+      if (supportsFCM && supportsHMS) {
+         return preferHMS ? UserState.DEVICE_TYPE_HUAWEI: UserState.DEVICE_TYPE_ANDROID;
+      }
+
+      if (supportsFCM)
          return UserState.DEVICE_TYPE_ANDROID;
 
       // Some Huawei devices have both FCM & HMS support, but prefer FCM (Google push) over HMS
-      if (supportsHMS())
+      if (supportsHMS)
          return UserState.DEVICE_TYPE_HUAWEI;
 
       // Start - Fallback logic
