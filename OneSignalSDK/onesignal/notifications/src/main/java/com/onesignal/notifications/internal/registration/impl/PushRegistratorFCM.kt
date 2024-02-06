@@ -128,7 +128,7 @@ internal class PushRegistratorFCM(
                 try {
                     token = Tasks.await(tokenTask)
                 } catch (e: ExecutionException) {
-                    throw tokenTask.exception
+                    throw tokenTask.exception ?: e
                 }
             }
 
