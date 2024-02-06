@@ -1,15 +1,12 @@
 package com.onesignal.sdktest.util;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.drawable.Drawable;
-import androidx.annotation.Nullable;
 import com.google.android.material.textfield.TextInputLayout;
 import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import android.util.Log;
 import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,29 +17,20 @@ import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-import com.onesignal.OSOutcomeEvent;
-import com.onesignal.OneSignal;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.adapter.EnumSelectionRecyclerViewAdapter;
 import com.onesignal.sdktest.callback.AddPairAlertDialogCallback;
-import com.onesignal.sdktest.callback.EmailUpdateCallback;
 import com.onesignal.sdktest.callback.EnumSelectionCallback;
-import com.onesignal.sdktest.callback.SMSUpdateCallback;
+import com.onesignal.sdktest.callback.SendOutcomeAlertDialogCallback;
 import com.onesignal.sdktest.callback.UpdateAlertDialogCallback;
-import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.constant.Text;
 import com.onesignal.sdktest.type.OutcomeEvent;
 import com.onesignal.sdktest.type.ToastType;
 import com.onesignal.sdktest.ui.CustomAlertDialogBuilder;
 import com.onesignal.sdktest.ui.RecyclerViewBuilder;
-import com.onesignal.sdktest.user.CurrentUser;
-
-import org.json.JSONException;
-import org.json.JSONObject;
 
 public class Dialog {
 
-    private CurrentUser currentUser;
     private Font font;
     private LayoutInflater layoutInflater;
     private RecyclerViewBuilder recyclerViewBuilder;
@@ -53,25 +41,30 @@ public class Dialog {
     public Dialog(Context context) {
         this.context = context;
 
-        currentUser = CurrentUser.getInstance();
         font = new Font(context);
         layoutInflater = LayoutInflater.from(context);
         recyclerViewBuilder = new RecyclerViewBuilder(context);
         toaster = new Toaster(context);
     }
 
+    public enum DialogAction {
+        LOGIN,
+        ADD,
+        UPDATE
+    }
+
     /**
      * Create an AlertDialog for when the user updates a single value field
      * Click OK to verify and update the field being updated
      */
-    public void createUpdateAlertDialog(final String content, final ProfileUtil.FieldType field, final UpdateAlertDialogCallback callback) {
+    public void createUpdateAlertDialog(final String content, final DialogAction action, final ProfileUtil.FieldType field, final UpdateAlertDialogCallback callback) {
         View updateAlertDialogView = layoutInflater.inflate(R.layout.update_alert_dialog_layout, null, false);
 
         final TextInputLayout updateAlertDialogTextInputLayout = updateAlertDialogView.findViewById(R.id.update_alert_dialog_text_input_layout);
         final EditText updateAlertDialogEditText = updateAlertDialogView.findViewById(R.id.update_alert_dialog_edit_text);
         final ProgressBar updateAlertDialogProgressBar = updateAlertDialogView.findViewById(R.id.update_alert_dialog_progress_bar);
 
-        String hintTitle = "New " + field.getTitle();
+        String hintTitle = action == DialogAction.LOGIN ? field.getTitle() : "New " + field.getTitle();
         updateAlertDialogTextInputLayout.setHint(hintTitle);
         updateAlertDialogEditText.setText(content);
 
@@ -82,7 +75,21 @@ public class Dialog {
         updateAlertDialog.setView(updateAlertDialogView);
         updateAlertDialog.setIsCancelable(true);
         updateAlertDialog.setCanceledOnTouchOutside(false);
-        updateAlertDialog.setPositiveButton(Text.BUTTON_UPDATE, new DialogInterface.OnClickListener() {
+
+        String buttonText = Text.BUTTON_UPDATE;
+
+        switch (action) {
+            case ADD:
+                buttonText = Text.BUTTON_ADD;
+                break;
+            case UPDATE:
+                buttonText = Text.BUTTON_UPDATE;
+                break;
+            case LOGIN:
+                buttonText = Text.BUTTON_LOGIN;
+                break;
+        }
+        updateAlertDialog.setPositiveButton(buttonText, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(final DialogInterface dialog, int which) {
                 toggleUpdateAlertDialogAttributes(true);
@@ -96,24 +103,9 @@ public class Dialog {
                     dialog.dismiss();
                 } else if (ProfileUtil.isContentValid(field, updateAlertDialogTextInputLayout)) {
                     InterfaceUtil.hideKeyboardFrom(context, updateAlertDialogEditText);
-
-                    switch (field) {
-                        case APP_ID:
-                            updateAppId(dialog, newContent);
-                            break;
-
-                        case EMAIL:
-                            updateEmail(dialog, newContent);
-                            break;
-
-                        case SMS:
-                            updateSMsNumber(dialog, newContent);
-                            break;
-
-                        case EXTERNAL_USER_ID:
-                            updateExternalUserId(dialog, newContent);
-                            break;
-                    }
+                    toggleUpdateAlertDialogAttributes(false);
+                    dialog.dismiss();
+                    callback.onSuccess(newContent);
                 } else {
                     toggleUpdateAlertDialogAttributes(false);
                 }
@@ -131,177 +123,6 @@ public class Dialog {
                 updateAlertDialog.getNegativeButtonElement().setEnabled(!disableAttributes);
                 updateAlertDialog.setIsCancelable(!disableAttributes);
             }
-
-            /**
-             * Handles changing the app id for the SDK by reinitializing and caching
-             */
-            private void updateAppId(DialogInterface dialog, String appId) {
-                OneSignal.setAppId(appId);
-                SharedPreferenceUtil.cacheOneSignalAppId(context, appId);
-
-                toggleUpdateAlertDialogAttributes(false);
-                dialog.dismiss();
-                callback.onSuccess(appId);
-            }
-
-            /**
-             * Updates the email attached to the device and caches
-             */
-            private void updateEmail(final DialogInterface dialog, final String email) {
-                currentUser.setEmail(email, new EmailUpdateCallback() {
-                    @Override
-                    public void onSuccess() {
-                        SharedPreferenceUtil.cacheUserEmail(context, email);
-                        Log.d(Tag.DEBUG, Text.EMAIL_SET_SUCCESSFULLY);
-
-                        ((Activity) context).runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                toggleUpdateAlertDialogAttributes(false);
-
-                                dialog.dismiss();
-                                callback.onSuccess(email);
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onFailure() {
-                        Log.d(Tag.ERROR, Text.EMAIL_SET_FAILURE);
-
-                        ((Activity) context).runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                toggleUpdateAlertDialogAttributes(false);
-
-                                dialog.dismiss();
-                                callback.onFailure();
-                            }
-                        });
-                    }
-                });
-            }
-
-            /**
-             * Updates the SMS number attached to the device and caches
-             */
-            private void updateSMsNumber(final DialogInterface dialog, final String smsNumber) {
-                currentUser.setSMSNumber(smsNumber, new SMSUpdateCallback() {
-                    @Override
-                    public void onSuccess() {
-                        SharedPreferenceUtil.cacheUserSMSNumber(context, smsNumber);
-                        Log.d(Tag.DEBUG, Text.SMS_SET_SUCCESSFULLY);
-
-                        ((Activity) context).runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                toggleUpdateAlertDialogAttributes(false);
-
-                                dialog.dismiss();
-                                callback.onSuccess(smsNumber);
-                            }
-                        });
-                    }
-
-                    @Override
-                    public void onFailure() {
-                        Log.d(Tag.ERROR, Text.SMS_SET_FAILURE);
-
-                        ((Activity) context).runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                toggleUpdateAlertDialogAttributes(false);
-
-                                dialog.dismiss();
-                                callback.onFailure();
-                            }
-                        });
-                    }
-                });
-            }
-
-            /**
-             * Set external id attached to the user/email of the device
-             */
-            private void updateExternalUserId(final DialogInterface dialog, final String externalUserId) {
-                OneSignal.setExternalUserId(externalUserId, new OneSignal.OSExternalUserIdUpdateCompletionHandler() {
-                    @Override
-                    public void onSuccess(JSONObject results) {
-                        // Default success to false until we know push came back successful
-                        boolean successful = false;
-
-                        // Check push exists with success status and success status is true
-                        if (isExternalUserIdPushSuccessful(results)) {
-                            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Push channel external user id set successfully");
-                            SharedPreferenceUtil.cacheUserExternalUserId(context, externalUserId);
-                            successful = true;
-                        }
-
-                        // Check email exists with success status and success status is true
-                        if (isExternalUserIdEmailSuccessful(results)) {
-                            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "Email channel external user id set successfully");
-                        }
-
-                        // We base success on the push success existing and being true, call success callback for AlertDialog callback
-                        // We could eventually check email also but not important for now
-                        if (successful)
-                            callback.onSuccess(externalUserId);
-                        else
-                            callback.onFailure();
-
-                        toggleUpdateAlertDialogAttributes(false);
-                        dialog.dismiss();
-                    }
-
-                    @Override
-                    public void onFailure(OneSignal.ExternalIdError error) {
-                        OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "External user id set failed with error: " + error);
-                        callback.onFailure();
-                        dialog.dismiss();
-                    }
-
-                    /**
-                     * Parse the results of the external user id completion callback and make sure push.success = true
-                     */
-                    private boolean isExternalUserIdPushSuccessful(JSONObject status) {
-                        boolean successful = false;
-                        try {
-                            if (!status.has("push"))
-                                return false;
-
-                            JSONObject pushStatus = status.getJSONObject("push");
-                            if (!pushStatus.has("success"))
-                                return false;
-
-                            successful = pushStatus.getBoolean("success");
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                        return successful;
-                    }
-
-                    /**
-                     * Parse the results of the external user id completion callback and make sure email.success = true
-                     */
-                    private boolean isExternalUserIdEmailSuccessful(JSONObject status) {
-                        boolean successful = false;
-                        try {
-                            if (!status.has("email"))
-                                return false;
-
-                            JSONObject emailStatus = status.getJSONObject("email");
-                            if (!emailStatus.has("success"))
-                                return false;
-
-                            successful = emailStatus.getBoolean("success");
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                        return successful;
-                    }
-                });
-            }
-
         }).setNegativeButton(Text.BUTTON_CANCEL, null);
         updateAlertDialog.show();
         updateAlertDialogEditText.requestFocus();
@@ -346,23 +167,14 @@ public class Dialog {
                 Object pairValue = pairStringValue;
                 if (Util.isBoolean(pairStringValue)) {
                     pairValue = Boolean.parseBoolean(pairStringValue.toLowerCase());
-                } else if (Util.isNumeric(pairStringValue)) {
+                } else if (Util.isInteger(pairStringValue)) {
+                    pairValue = Long.parseLong(pairStringValue);
+                } else if (Util.isFloat(pairStringValue)) {
                     pairValue = Double.parseDouble(pairStringValue);
                 }
 
                 if (ProfileUtil.isContentValid(field, addPairAlertDialogKeyTextInputLayout)) {
                     InterfaceUtil.hideKeyboardFrom(context, addPairAlertDialogView);
-
-                    switch (field) {
-                        case TAG:
-                            OneSignal.sendTag(pairKey, pairStringValue);
-                            break;
-
-                        case TRIGGER:
-                            OneSignal.addTrigger(pairKey, pairValue);
-                            break;
-                    }
-
                     dialog.dismiss();
                     callback.onSuccess(new Pair<>(pairKey, pairValue));
                 } else {
@@ -388,7 +200,7 @@ public class Dialog {
         addPairAlertDialogKeyEditText.requestFocus();
     }
 
-    public void createSendOutcomeAlertDialog(final String content) {
+    public void createSendOutcomeAlertDialog(final String content, final SendOutcomeAlertDialogCallback callback) {
         final View sendOutcomeAlertDialogView = layoutInflater.inflate(R.layout.send_outcome_alert_dialog_layout, null, false);
 
         final CardView sendOutcomeDialogTitleCardView = sendOutcomeAlertDialogView.findViewById(R.id.send_outcome_alert_dialog_selection_card_view);
@@ -535,58 +347,11 @@ public class Dialog {
                     return;
                 }
 
-                switch (outcomeEvent) {
-                    case OUTCOME:
-                        OneSignal.sendOutcome(name, new OneSignal.OutcomeCallback() {
-                            @Override
-                            public void onSuccess(@Nullable OSOutcomeEvent outcomeEvent) {
-                                ((Activity) context).runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        toggleUpdateAlertDialogAttributes(false);
-                                        dialog.dismiss();
-                                    }
-                                });
-                            }
-                        });
-                        break;
-                    case UNIQUE_OUTCOME:
-                        OneSignal.sendUniqueOutcome(name, new OneSignal.OutcomeCallback() {
-                            @Override
-                            public void onSuccess(@Nullable OSOutcomeEvent outcomeEvent) {
-                                ((Activity) context).runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        toggleUpdateAlertDialogAttributes(false);
-                                        dialog.dismiss();
-                                    }
-                                });
-                            }
-                        });
-                        break;
-                    case OUTCOME_WITH_VALUE:
-                        if (value.isEmpty()) {
-                            toaster.makeCustomViewToast("Please enter an outcome value!", ToastType.ERROR);
-                            toggleUpdateAlertDialogAttributes(false);
-                            return;
-                        }
-
-                        OneSignal.sendOutcomeWithValue(name, Float.parseFloat(value), new OneSignal.OutcomeCallback() {
-                            @Override
-                            public void onSuccess(@Nullable OSOutcomeEvent outcomeEvent) {
-                                ((Activity) context).runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        toggleUpdateAlertDialogAttributes(false);
-                                        dialog.dismiss();
-                                    }
-                                });
-                            }
-                        });
-                        break;
+                if(callback.onSuccess(outcomeEvent, name, value)) {
+                    toggleUpdateAlertDialogAttributes(false);
+                    dialog.dismiss();
+                    InterfaceUtil.hideKeyboardFrom(context, sendOutcomeAlertDialogView);
                 }
-
-                InterfaceUtil.hideKeyboardFrom(context, sendOutcomeAlertDialogView);
             }
 
             private void toggleUpdateAlertDialogAttributes(boolean disableAttributes) {

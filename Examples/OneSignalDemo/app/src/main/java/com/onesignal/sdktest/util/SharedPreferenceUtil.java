@@ -11,8 +11,6 @@ public class SharedPreferenceUtil {
 
     public static final  String OS_APP_ID_SHARED_PREF = "OS_APP_ID_SHARED_PREF";
     private static final String PRIVACY_CONSENT_SHARED_PREF = "PRIVACY_CONSENT_SHARED_PREF";
-    public static final String USER_EMAIL_SHARED_PREF = "USER_EMAIL_SHARED_PREF";
-    public static final String USER_SMS_NUMBER_SHARED_PREF = "USER_SMS_NUMBER_SHARED_PREF";
     public static final String USER_EXTERNAL_USER_ID_SHARED_PREF = "USER_EXTERNAL_USER_ID_SHARED_PREF";
     private static final String LOCATION_SHARED_PREF = "LOCATION_SHARED_PREF";
     private static final String IN_APP_MESSAGING_PAUSED_PREF = "IN_APP_MESSAGING_PAUSED_PREF";
@@ -31,10 +29,6 @@ public class SharedPreferenceUtil {
 
     public static boolean getUserPrivacyConsent(Context context) {
         return getSharedPreference(context).getBoolean(PRIVACY_CONSENT_SHARED_PREF, false);
-    }
-
-    public static String getCachedUserEmail(Context context) {
-        return getSharedPreference(context).getString(USER_EMAIL_SHARED_PREF, Text.EMPTY);
     }
 
     public static String getCachedUserExternalUserId(Context context) {
@@ -57,14 +51,6 @@ public class SharedPreferenceUtil {
         getSharedPreference(context).edit().putBoolean(PRIVACY_CONSENT_SHARED_PREF, privacyConsent).apply();
     }
 
-    public static void cacheUserEmail(Context context, String email) {
-        getSharedPreference(context).edit().putString(USER_EMAIL_SHARED_PREF, email).apply();
-    }
-
-    public static void cacheUserSMSNumber(Context context, String smsNumber) {
-        getSharedPreference(context).edit().putString(USER_SMS_NUMBER_SHARED_PREF, smsNumber).apply();
-    }
-
     public static void cacheUserExternalUserId(Context context, String userId) {
         getSharedPreference(context).edit().putString(USER_EXTERNAL_USER_ID_SHARED_PREF, userId).apply();
     }
@@ -75,9 +61,5 @@ public class SharedPreferenceUtil {
 
     public static void cacheInAppMessagingPausedStatus(Context context, boolean paused) {
         getSharedPreference(context).edit().putBoolean(IN_APP_MESSAGING_PAUSED_PREF, paused).apply();
-    }
-
-    public static void clearCachedEmail(Context context) {
-        getSharedPreference(context).edit().remove(USER_EMAIL_SHARED_PREF).apply();
     }
 }

@@ -1,25 +1,16 @@
-ext {
-    buildVersions = [
-            minSdkVersion: 16
-    ]
+plugins {
+    id 'com.android.library'
 }
-
-apply plugin: 'com.android.library'
-apply plugin: 'kotlin-android'
-apply plugin: 'org.jlleitschuh.gradle.ktlint'
-apply plugin: 'io.gitlab.arturbosch.detekt'
 
 android {
     compileSdkVersion rootProject.buildVersions.compileSdkVersion
     defaultConfig {
-        minSdkVersion buildVersions.minSdkVersion
-        consumerProguardFiles 'consumer-proguard-rules.pro'
+        minSdkVersion rootProject.buildVersions.minSdkVersion
     }
 
     buildTypes {
         original {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
         release {
             minifyEnabled false
@@ -28,90 +19,24 @@ android {
             minifyEnabled false
         }
     }
-
     // Forced downgrade to Java 8 so SDK is backwards compatible in consuming projects
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+    namespace 'com.onesignal'
 }
 
-// api || implementation = compile and runtime
+ext {
+    projectName = "OneSignal SDK"
+    projectDescription = "OneSignal Android SDK - All Modules"
+}
 
-// KEEP: version ranges, these get used in the released POM file for maven central
-// NOTE: To prevent consumers from getting alpha or beta version of dependencies listed here
-//         make sure the latest minor value is a known stable version. Using a range for the
-//         patch version is ok, since this allows getting bug fix versions.
 dependencies {
-    compileOnly fileTree(dir: 'libs', include: ['*.jar'])
-    compileOnly('com.amazon.device:amazon-appstore-sdk:[3.0.1, 3.0.99]')
-
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
-
-    // play-services-location:16.0.0 is the last version before going to AndroidX
-    // play-services-location:17.0.0 is the first version using AndroidX
-    compileOnly('com.google.android.gms:play-services-location:[17.0.0, 18.0.99]') {
-        version {
-            require '[17.0.0, 18.0.99]'
-            prefer '18.0.0'
-        }
-    }
-
-    // play-services-base:16.1.0 is the last version before going to AndroidX
-    // play-services-base:17.0.0 is the first version using AndroidX
-    // Required for GoogleApiAvailability
-    implementation('com.google.android.gms:play-services-base') {
-        version {
-            require '[17.0.0, 17.6.99]'
-            prefer '17.6.0'
-        }
-    }
-
-    // firebase-messaging:18.0.0 is the last version before going to AndroidX
-    // firebase-messaging:19.0.0 is the first version using AndroidX
-    // firebase-messaging:23.0.0 incoporates fix for SecurityException: Not allowed to bind to service
-    api('com.google.firebase:firebase-messaging') {
-        version {
-            require '[19.0.0, 23.0.99]'
-            prefer '23.0.0'
-        }
-    }
-
-    // Huawei PushKit
-    // KEEP as "compileOnly", so OneSignal isn't a direct dependency in the POM file.
-    compileOnly "com.huawei.hms:push:$huaweiHMSPushVersion"
-    compileOnly "com.huawei.hms:location:$huaweiHMSLocationVersion"
-
-    api('androidx.cardview:cardview') {
-        version {
-            require '[1.0.0, 1.0.99]'
-            prefer '1.0.0'
-        }
-    }
-    api('androidx.legacy:legacy-support-v4') {
-        version {
-            require '[1.0.0, 1.0.99]'
-            prefer '1.0.0'
-        }
-    }
-    api('androidx.browser:browser') {
-        version {
-            require '[1.0.0, 1.3.99]'
-            prefer '1.3.0'
-        }
-    }
-    api('androidx.appcompat:appcompat') {
-        version {
-            require '[1.0.0, 1.3.99]'
-            prefer '1.3.1'
-        }
-    }
-    api('androidx.work:work-runtime') {
-        version {
-            require '[2.1.0, 2.7.99]'
-            prefer '2.7.1'
-        }
-    }
+    api project(':OneSignal:core')
+    api project(':OneSignal:notifications')
+    api project(':OneSignal:in-app-messages')
+    api project(':OneSignal:location')
 }
 
 apply from: 'maven-push.gradle'

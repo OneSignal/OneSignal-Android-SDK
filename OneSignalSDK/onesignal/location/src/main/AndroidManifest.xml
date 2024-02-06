@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest>
+
+    <!-- At a minimum the location module requires the app to include ACCESS_COARSE_LOCATION,
+         with the option to also include ACCESS_FINE_LOCATION and/or ACCESS_BACKGROUND_LOCATION -->
+</manifest>

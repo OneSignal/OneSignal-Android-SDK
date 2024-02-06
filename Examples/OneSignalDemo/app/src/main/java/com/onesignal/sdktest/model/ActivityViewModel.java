@@ -4,15 +4,13 @@ import android.app.Activity;
 import android.content.Context;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.onesignal.OSEmailSubscriptionObserver;
-import com.onesignal.OSPermissionObserver;
-import com.onesignal.OSSubscriptionObserver;
+import com.onesignal.notifications.IPermissionObserver;
 
 /**
  * This is the interface created with a few generic methods for setting a ViewModel
  * as the responsible guardian of an Activity
  */
-public interface ActivityViewModel extends OSPermissionObserver, OSSubscriptionObserver, OSEmailSubscriptionObserver  {
+public interface ActivityViewModel extends IPermissionObserver {
 
     /**
      * Casts Context of the given Activity to an Activity object

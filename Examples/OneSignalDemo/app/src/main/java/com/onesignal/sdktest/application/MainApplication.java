@@ -1,48 +1,49 @@
 package com.onesignal.sdktest.application;
 
+import android.os.StrictMode;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.multidex.MultiDexApplication;
 
-import com.onesignal.OSInAppMessage;
-import com.onesignal.OSNotification;
-import com.onesignal.OSInAppMessageLifecycleHandler;
 import com.onesignal.OneSignal;
+import com.onesignal.inAppMessages.IInAppMessageClickListener;
+import com.onesignal.inAppMessages.IInAppMessageClickEvent;
+import com.onesignal.inAppMessages.IInAppMessageDidDismissEvent;
+import com.onesignal.inAppMessages.IInAppMessageDidDisplayEvent;
+import com.onesignal.inAppMessages.IInAppMessageLifecycleListener;
+import com.onesignal.debug.LogLevel;
+import com.onesignal.inAppMessages.IInAppMessageWillDismissEvent;
+import com.onesignal.inAppMessages.IInAppMessageWillDisplayEvent;
+import com.onesignal.notifications.IDisplayableNotification;
+import com.onesignal.notifications.INotificationLifecycleListener;
+import com.onesignal.notifications.INotificationWillDisplayEvent;
+import com.onesignal.sdktest.BuildConfig;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.constant.Text;
+import com.onesignal.sdktest.notification.OneSignalNotificationSender;
 import com.onesignal.sdktest.util.SharedPreferenceUtil;
+import com.onesignal.user.state.IUserStateObserver;
+import com.onesignal.user.state.UserChangedState;
+import com.onesignal.user.state.UserState;
 
 import org.json.JSONObject;
 
 public class MainApplication extends MultiDexApplication {
+    private static final int SLEEP_TIME_TO_MIMIC_ASYNC_OPERATION = 2000;
+
+    public MainApplication() {
+        // run strict mode default in debug mode to surface any potential issues easier
+        if(BuildConfig.DEBUG)
+            StrictMode.enableDefaults();
+    }
 
     @Override
     public void onCreate() {
         super.onCreate();
-
-        OSInAppMessageLifecycleHandler handler = new OSInAppMessageLifecycleHandler() {
-            @Override
-            public void onWillDisplayInAppMessage(OSInAppMessage message) {
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "MainApplication onWillDisplayInAppMessage");
-            }
-            @Override
-            public void onDidDisplayInAppMessage(OSInAppMessage message) {
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "MainApplication onDidDisplayInAppMessage");
-            }
-            @Override
-            public void onWillDismissInAppMessage(OSInAppMessage message) {
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "MainApplication onWillDismissInAppMessage");
-            }
-            @Override
-            public void onDidDismissInAppMessage(OSInAppMessage message) {
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "MainApplication onDidDismissInAppMessage");
-            }
-        };
-
-        OneSignal.setInAppMessageLifecycleHandler(handler);
-
-        OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
+        OneSignal.getDebug().setLogLevel(LogLevel.DEBUG);
 
         // OneSignal Initialization
         String appId = SharedPreferenceUtil.getOneSignalAppId(this);
@@ -51,27 +52,84 @@ public class MainApplication extends MultiDexApplication {
             appId = getString(R.string.onesignal_app_id);
             SharedPreferenceUtil.cacheOneSignalAppId(this, appId);
         }
-        OneSignal.setAppId(appId);
-        OneSignal.initWithContext(this);
 
-        OneSignal.setNotificationOpenedHandler(result ->
-                OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "OSNotificationOpenedResult result: " + result.toString()));
+        OneSignalNotificationSender.setAppId(appId);
+        OneSignal.initWithContext(this, appId);
 
-        OneSignal.setNotificationWillShowInForegroundHandler(notificationReceivedEvent -> {
-            OneSignal.onesignalLog(OneSignal.LOG_LEVEL.VERBOSE, "NotificationWillShowInForegroundHandler fired!" +
-                    " with notification event: " + notificationReceivedEvent.toString());
+        OneSignal.getInAppMessages().addLifecycleListener(new IInAppMessageLifecycleListener() {
+            @Override
+            public void onWillDisplay(@NonNull IInAppMessageWillDisplayEvent event) {
+                Log.v(Tag.LOG_TAG, "onWillDisplayInAppMessage");
+            }
 
-            OSNotification notification = notificationReceivedEvent.getNotification();
-            JSONObject data = notification.getAdditionalData();
+            @Override
+            public void onDidDisplay(@NonNull IInAppMessageDidDisplayEvent event) {
+                Log.v(Tag.LOG_TAG, "onDidDisplayInAppMessage");
+            }
 
-            notificationReceivedEvent.complete(notification);
+            @Override
+            public void onWillDismiss(@NonNull IInAppMessageWillDismissEvent event) {
+                Log.v(Tag.LOG_TAG, "onWillDismissInAppMessage");
+            }
+
+            @Override
+            public void onDidDismiss(@NonNull IInAppMessageDidDismissEvent event) {
+                Log.v(Tag.LOG_TAG, "onDidDismissInAppMessage");
+            }
         });
 
-        OneSignal.unsubscribeWhenNotificationsAreDisabled(true);
-        OneSignal.pauseInAppMessages(true);
-        OneSignal.setLocationShared(false);
+        OneSignal.getInAppMessages().addClickListener(new IInAppMessageClickListener() {
+            @Override
+            public void onClick(@Nullable IInAppMessageClickEvent event) {
+                Log.v(Tag.LOG_TAG, "INotificationClickListener.inAppMessageClicked");
+            }
+        });
 
-        Log.d(Tag.DEBUG, Text.ONESIGNAL_SDK_INIT);
+        OneSignal.getNotifications().addClickListener(event ->
+        {
+            Log.v(Tag.LOG_TAG, "INotificationClickListener.onClick fired" +
+                    " with event: " + event);
+        });
+
+        OneSignal.getNotifications().addForegroundLifecycleListener(new INotificationLifecycleListener() {
+            @Override
+            public void onWillDisplay(@NonNull INotificationWillDisplayEvent event) {
+                Log.v(Tag.LOG_TAG, "INotificationLifecycleListener.onWillDisplay fired" +
+                        " with event: " + event);
+
+                IDisplayableNotification notification = event.getNotification();
+                JSONObject data = notification.getAdditionalData();
+
+                //Prevent OneSignal from displaying the notification immediately on return. Spin
+                //up a new thread to mimic some asynchronous behavior, when the async behavior (which
+                //takes 2 seconds) completes, then the notification can be displayed.
+                event.preventDefault();
+                Runnable r = () -> {
+                    try {
+                        Thread.sleep(SLEEP_TIME_TO_MIMIC_ASYNC_OPERATION);
+                    } catch (InterruptedException ignored) {
+                    }
+
+                    notification.display();
+                };
+
+                Thread t = new Thread(r);
+                t.start();
+            }
+        });
+
+        OneSignal.getUser().addObserver(new IUserStateObserver() {
+            @Override
+            public void onUserStateChange(@NonNull UserChangedState state) {
+                UserState currentUserState = state.getCurrent();
+                Log.v(Tag.LOG_TAG, "onUserStateChange fired " + currentUserState.toJSONObject());
+            }
+        });
+
+        OneSignal.getInAppMessages().setPaused(true);
+        OneSignal.getLocation().setShared(false);
+
+        Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT);
     }
 
 }

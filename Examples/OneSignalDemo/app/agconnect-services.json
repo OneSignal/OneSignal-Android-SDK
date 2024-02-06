@@ -1,49 +1,75 @@
 {
 	"agcgw":{
-		"backurl":"connect-dre.dbankcloud.cn",
-		"url":"connect-dre.hispace.hicloud.com",
-		"websocketbackurl":"connect-ws-dre.hispace.dbankcloud.cn",
-		"websocketurl":"connect-ws-dre.hispace.dbankcloud.com"
+		"backurl":"connect-dre.hispace.hicloud.com",
+		"url":"connect-dre.dbankcloud.cn",
+		"websocketbackurl":"connect-ws-dre.hispace.dbankcloud.com",
+		"websocketurl":"connect-ws-dre.hispace.dbankcloud.cn"
 	},
 	"agcgw_all":{
-		"CN":"connect-drcn.hispace.hicloud.com",
-		"CN_back":"connect-drcn.dbankcloud.cn",
-		"DE":"connect-dre.hispace.hicloud.com",
-		"DE_back":"connect-dre.dbankcloud.cn",
-		"RU":"connect-drru.hispace.hicloud.com",
-		"RU_back":"connect-drru.dbankcloud.cn",
-		"SG":"connect-dra.hispace.hicloud.com",
-		"SG_back":"connect-dra.dbankcloud.cn"
+		"CN":"connect-drcn.dbankcloud.cn",
+		"CN_back":"connect-drcn.hispace.hicloud.com",
+		"DE":"connect-dre.dbankcloud.cn",
+		"DE_back":"connect-dre.hispace.hicloud.com",
+		"RU":"connect-drru.hispace.dbankcloud.ru",
+		"RU_back":"connect-drru.hispace.dbankcloud.cn",
+		"SG":"connect-dra.dbankcloud.cn",
+		"SG_back":"connect-dra.hispace.hicloud.com"
+	},
+	"websocketgw_all":{
+		"CN":"connect-ws-drcn.hispace.dbankcloud.cn",
+		"CN_back":"connect-ws-drcn.hispace.dbankcloud.com",
+		"DE":"connect-ws-dre.hispace.dbankcloud.cn",
+		"DE_back":"connect-ws-dre.hispace.dbankcloud.com",
+		"RU":"connect-ws-drru.hispace.dbankcloud.ru",
+		"RU_back":"connect-ws-drru.hispace.dbankcloud.cn",
+		"SG":"connect-ws-dra.hispace.dbankcloud.cn",
+		"SG_back":"connect-ws-dra.hispace.dbankcloud.com"
 	},
 	"client":{
 		"cp_id":"5190001000034239317",
-		"product_id":"9105385871709201822",
-		"client_id":"336482233541985344",
-		"client_secret":"5E30C748A012DE67BAF83E2C542A4AB694CCAA89F1D5E8FCEFA57E0F28A077FB",
-		"project_id":"9105385871709201822",
-		"app_id":"102009847",
-		"api_key":"CV68fkx9E2fU8Fv/v3zbuO8+rCjJ8w6QiMha7ZJUpIGTxs08n0/ddVXbOueUKBtxf3sD+ni8WPx27htLHhtse5eP5VrT",
-		"package_name":"com.onesignal.example"
+		"product_id":"388421841221340564",
+		"client_id":"1103097158011211392",
+		"client_secret":"14843C60CAFDCFD5E50025C14864697AFF55886BCF00558E8C817F141E0B4704",
+		"project_id":"388421841221340564",
+		"app_id":"107780279",
+		"api_key":"DAEDAN06wwm3fsiHbQaQzugegFDUc6lpsR9VZGRNoWEbjHpDphR5rSbobUr5/ohT1WlRTyIykjr4GzzEJ/jSxlziFmXF/8e56HAYiw==",
+		"package_name":"com.onesignal.sdktest"
 	},
 	"oauth_client":{
-		"client_id":"102009847",
+		"client_id":"107780279",
 		"client_type":1
 	},
 	"app_info":{
-		"app_id":"102009847",
-		"package_name":"com.onesignal.example"
+		"app_id":"107780279",
+		"package_name":"com.onesignal.sdktest"
 	},
 	"service":{
 		"analytics":{
 			"collector_url":"datacollector-dre.dt.hicloud.com,datacollector-dre.dt.dbankcloud.cn",
+			"collector_url_ru":"datacollector-drru.dt.dbankcloud.ru,datacollector-drru.dt.hicloud.com",
+			"collector_url_sg":"datacollector-dra.dt.hicloud.com,datacollector-dra.dt.dbankcloud.cn",
+			"collector_url_de":"datacollector-dre.dt.hicloud.com,datacollector-dre.dt.dbankcloud.cn",
+			"collector_url_cn":"datacollector-drcn.dt.hicloud.com,datacollector-drcn.dt.dbankcloud.cn",
 			"resource_id":"p1",
 			"channel_id":""
+		},
+		"edukit":{
+			"edu_url":"edukit.edu.cloud.huawei.com.cn",
+			"dh_url":"edukit.edu.cloud.huawei.com.cn"
 		},
 		"search":{
 			"url":"https://search-dre.cloud.huawei.com"
 		},
 		"cloudstorage":{
-			"storage_url":"https://ops-dre.agcstorage.link"
+			"storage_url_sg_back":"https://agc-storage-dra.cloud.huawei.asia",
+			"storage_url_ru_back":"https://agc-storage-drru.cloud.huawei.ru",
+			"storage_url_ru":"https://agc-storage-drru.cloud.huawei.ru",
+			"storage_url_de_back":"https://agc-storage-dre.cloud.huawei.eu",
+			"storage_url_de":"https://ops-dre.agcstorage.link",
+			"storage_url":"https://agc-storage-drcn.platform.dbankcloud.cn",
+			"storage_url_sg":"https://ops-dra.agcstorage.link",
+			"storage_url_cn_back":"https://agc-storage-drcn.cloud.huawei.com.cn",
+			"storage_url_cn":"https://agc-storage-drcn.platform.dbankcloud.cn"
 		},
 		"ml":{
 			"mlservice_url":"ml-api-dre.ai.dbankcloud.com,ml-api-dre.ai.dbankcloud.cn"
@@ -53,17 +79,17 @@
 	"configuration_version":"3.0",
 	"appInfos":[
 		{
-			"package_name":"com.onesignal.example",
+			"package_name":"com.onesignal.sdktest",
 			"client":{
-				"app_id":"102009847"
+				"app_id":"107780279"
 			},
 			"app_info":{
-				"package_name":"com.onesignal.example",
-				"app_id":"102009847"
+				"package_name":"com.onesignal.sdktest",
+				"app_id":"107780279"
 			},
 			"oauth_client":{
 				"client_type":1,
-				"client_id":"102009847"
+				"client_id":"107780279"
 			}
 		}
 	]
