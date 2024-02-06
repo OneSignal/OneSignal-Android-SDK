@@ -43,7 +43,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId, "aliasLabel1" to "aliasValue1"),
                 PropertiesObject(country = "US"),
-                listOf(SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "pushToken"), SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL, token = "name@company.com")),
+                listOf(SubscriptionObject(existingSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "pushToken1"), SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "pushToken2"), SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL, token = "name@company.com")),
             )
 
         // Given

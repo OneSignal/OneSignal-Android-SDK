@@ -40,10 +40,11 @@ abstract class ModelStore<TModel>(
         model: TModel,
         tag: String,
     ) {
-        val oldModel = models.firstOrNull { it.id == model.id }
-        if (oldModel != null) {
-            removeItem(oldModel, tag)
-        }
+        synchronized(models) {
+            val oldModel = models.firstOrNull { it.id == model.id }
+            if (oldModel != null) {
+                removeItem(oldModel, tag)
+            }
 
             addItem(model, tag)
         }
@@ -54,10 +55,11 @@ abstract class ModelStore<TModel>(
         model: TModel,
         tag: String,
     ) {
-        val oldModel = models.firstOrNull { it.id == model.id }
-        if (oldModel != null) {
-            removeItem(oldModel, tag)
-        }
+        synchronized(models) {
+            val oldModel = models.firstOrNull { it.id == model.id }
+            if (oldModel != null) {
+                removeItem(oldModel, tag)
+            }
 
             addItem(model, tag, index)
         }
@@ -75,8 +77,10 @@ abstract class ModelStore<TModel>(
         id: String,
         tag: String,
     ) {
-        val model = models.firstOrNull { it.id == id } ?: return
-        removeItem(model, tag)
+        synchronized(models) {
+            val model = models.firstOrNull { it.id == id } ?: return
+            removeItem(model, tag)
+        }
     }
 
     override fun onChanged(
@@ -91,7 +95,8 @@ abstract class ModelStore<TModel>(
         models: List<TModel>,
         tag: String,
     ) {
-        clear(tag)
+        synchronized(models) {
+            clear(tag)
 
             for (model in models) {
                 add(model, tag)
@@ -118,11 +123,12 @@ abstract class ModelStore<TModel>(
         tag: String,
         index: Int? = null,
     ) {
-        if (index != null) {
-            models.add(index, model)
-        } else {
-            models.add(model)
-        }
+        synchronized(models) {
+            if (index != null) {
+                models.add(index, model)
+            } else {
+                models.add(model)
+            }
 
             // listen for changes to this model
             model.subscribe(this)
@@ -136,7 +142,8 @@ abstract class ModelStore<TModel>(
         model: TModel,
         tag: String,
     ) {
-        models.remove(model)
+        synchronized(models) {
+            models.remove(model)
 
             // no longer listen for changes to this model
             model.unsubscribe(this)
@@ -147,23 +154,29 @@ abstract class ModelStore<TModel>(
     }
 
     protected fun load() {
-        if (name != null && _prefs != null) {
-            val str = _prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, "[]")
-            val jsonArray = JSONArray(str)
-            for (index in 0 until jsonArray.length()) {
-                val newModel = create(jsonArray.getJSONObject(index)) ?: continue
-                models.add(newModel)
-                // listen for changes to this model
-                newModel.subscribe(this)
+        synchronized(models) {
+            if (name != null && _prefs != null) {
+                val str = _prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, "[]")
+                val jsonArray = JSONArray(str)
+                for (index in 0 until jsonArray.length()) {
+                    val newModel = create(jsonArray.getJSONObject(index)) ?: continue
+                    models.add(newModel)
+                    // listen for changes to this model
+                    newModel.subscribe(this)
+                }
             }
         }
     }
 
     fun persist() {
-        if (name != null && _prefs != null) {
-            val jsonArray = JSONArray()
-            for (model in models) {
-                jsonArray.put(model.toJSON())
+        synchronized(models) {
+            if (name != null && _prefs != null) {
+                val jsonArray = JSONArray()
+                for (model in models) {
+                    jsonArray.put(model.toJSON())
+                }
+
+                _prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, jsonArray.toString())
             }
         }
     }
