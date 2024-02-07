@@ -27,7 +27,6 @@ android {
         }
         huawei {
             dimension "default"
-            minSdkVersion 17
             applicationId "com.onesignal.example"
         }
         combined {
@@ -52,6 +51,8 @@ android {
             googleServices { disableVersionCheck = true }
         } else if (getGradle().getStartParameter().getTaskRequests().toString().contains("huawei")) {
             apply plugin: 'com.huawei.agconnect'
+            apply plugin: 'com.google.gms.google-services'
+            googleServices { disableVersionCheck = true }
         } else {
             apply plugin: 'com.google.gms.google-services'
             googleServices { disableVersionCheck = true }
@@ -90,4 +91,7 @@ dependencies {
     // Optionally add HMS location
     huaweiImplementation 'com.huawei.hms:location:4.0.0.300'
     /** END - Huawei Builds **/
+//    combinedImplementation 'com.huawei.hms:push:6.3.0.304'
+//    combinedImplementation 'com.huawei.hms:location:4.0.0.300'
+
 }
