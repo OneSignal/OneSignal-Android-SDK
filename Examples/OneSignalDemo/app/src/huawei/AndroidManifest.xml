@@ -2,13 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     xmlns:amazon="http://schemas.amazon.com/apk/res/android"
-    package="com.onesignal.sdktest">
+    package="com.onesignal.example">
 
     <application
         android:name=".application.MainApplication">
 
         <service
-          android:name="com.onesignal.sdktest.notification.HmsMessageServiceAppLevel"
+          android:name="com.onesignal.example.notification.HmsMessageServiceAppLevel"
           android:exported="false">
           <intent-filter>
             <action android:name="com.huawei.push.action.MESSAGING_EVENT" />

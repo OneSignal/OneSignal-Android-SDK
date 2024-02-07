@@ -1,9 +1,9 @@
-package com.onesignal.sdktest.util;
+package com.onesignal.example.util;
 
 import com.google.android.material.textfield.TextInputLayout;
 import android.util.Patterns;
 
-import com.onesignal.sdktest.constant.Text;
+import com.onesignal.example.constant.Text;
 
 public class ProfileUtil {
 

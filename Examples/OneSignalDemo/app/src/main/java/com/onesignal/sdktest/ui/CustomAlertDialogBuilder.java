@@ -1,4 +1,4 @@
-package com.onesignal.sdktest.ui;
+package com.onesignal.example.ui;
 
 import android.app.AlertDialog;
 import android.content.Context;
@@ -7,7 +7,7 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Button;
 
-import com.onesignal.sdktest.R;
+import com.onesignal.example.R;
 
 public class CustomAlertDialogBuilder extends AlertDialog.Builder {
 

@@ -1,4 +1,4 @@
-package com.onesignal.sdktest.util;
+package com.onesignal.example.util;
 
 import android.app.Activity;
 import android.content.Context;
@@ -22,20 +22,20 @@ import android.widget.TextView;
 
 import com.onesignal.OSOutcomeEvent;
 import com.onesignal.OneSignal;
-import com.onesignal.sdktest.R;
-import com.onesignal.sdktest.adapter.EnumSelectionRecyclerViewAdapter;
-import com.onesignal.sdktest.callback.AddPairAlertDialogCallback;
-import com.onesignal.sdktest.callback.EmailUpdateCallback;
-import com.onesignal.sdktest.callback.EnumSelectionCallback;
-import com.onesignal.sdktest.callback.SMSUpdateCallback;
-import com.onesignal.sdktest.callback.UpdateAlertDialogCallback;
-import com.onesignal.sdktest.constant.Tag;
-import com.onesignal.sdktest.constant.Text;
-import com.onesignal.sdktest.type.OutcomeEvent;
-import com.onesignal.sdktest.type.ToastType;
-import com.onesignal.sdktest.ui.CustomAlertDialogBuilder;
-import com.onesignal.sdktest.ui.RecyclerViewBuilder;
-import com.onesignal.sdktest.user.CurrentUser;
+import com.onesignal.example.R;
+import com.onesignal.example.adapter.EnumSelectionRecyclerViewAdapter;
+import com.onesignal.example.callback.AddPairAlertDialogCallback;
+import com.onesignal.example.callback.EmailUpdateCallback;
+import com.onesignal.example.callback.EnumSelectionCallback;
+import com.onesignal.example.callback.SMSUpdateCallback;
+import com.onesignal.example.callback.UpdateAlertDialogCallback;
+import com.onesignal.example.constant.Tag;
+import com.onesignal.example.constant.Text;
+import com.onesignal.example.type.OutcomeEvent;
+import com.onesignal.example.type.ToastType;
+import com.onesignal.example.ui.CustomAlertDialogBuilder;
+import com.onesignal.example.ui.RecyclerViewBuilder;
+import com.onesignal.example.user.CurrentUser;
 
 import org.json.JSONException;
 import org.json.JSONObject;

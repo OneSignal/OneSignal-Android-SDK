@@ -1,13 +1,13 @@
-package com.onesignal.sdktest.util;
+package com.onesignal.example.util;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import com.onesignal.sdktest.constant.Text;
+import com.onesignal.example.constant.Text;
 
 public class SharedPreferenceUtil {
 
-    private static final String APP_SHARED_PREFS = "com.onesignal.sdktest";
+    private static final String APP_SHARED_PREFS = "com.onesignal.example";
 
     public static final  String OS_APP_ID_SHARED_PREF = "OS_APP_ID_SHARED_PREF";
     private static final String PRIVACY_CONSENT_SHARED_PREF = "PRIVACY_CONSENT_SHARED_PREF";

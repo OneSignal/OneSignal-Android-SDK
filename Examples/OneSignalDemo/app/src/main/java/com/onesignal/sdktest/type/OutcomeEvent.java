@@ -1,4 +1,4 @@
-package com.onesignal.sdktest.type;
+package com.onesignal.example.type;
 
 public enum OutcomeEvent {
 

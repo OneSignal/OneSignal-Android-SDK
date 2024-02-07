@@ -1,4 +1,4 @@
-package com.onesignal.sdktest.notification;
+package com.onesignal.example.notification;
 
 public class NotificationData {
 

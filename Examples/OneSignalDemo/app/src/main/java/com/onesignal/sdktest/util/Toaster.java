@@ -1,4 +1,4 @@
-package com.onesignal.sdktest.util;
+package com.onesignal.example.util;
 
 import android.app.Activity;
 import android.content.Context;
@@ -10,9 +10,9 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.onesignal.sdktest.R;
-import com.onesignal.sdktest.constant.Text;
-import com.onesignal.sdktest.type.ToastType;
+import com.onesignal.example.R;
+import com.onesignal.example.constant.Text;
+import com.onesignal.example.type.ToastType;
 
 public class Toaster {
 

@@ -1,4 +1,4 @@
-package com.onesignal.sdktest.adapter;
+package com.onesignal.example.adapter;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -15,11 +15,11 @@ import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.BitmapImageViewTarget;
-import com.onesignal.sdktest.R;
-import com.onesignal.sdktest.type.InAppMessage;
-import com.onesignal.sdktest.type.ToastType;
-import com.onesignal.sdktest.util.Animate;
-import com.onesignal.sdktest.util.Toaster;
+import com.onesignal.example.R;
+import com.onesignal.example.type.InAppMessage;
+import com.onesignal.example.type.ToastType;
+import com.onesignal.example.util.Animate;
+import com.onesignal.example.util.Toaster;
 
 public class InAppMessageRecyclerViewAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 

@@ -1,4 +1,4 @@
-package com.onesignal.sdktest.constant;
+package com.onesignal.example.constant;
 
 public class Tag {
 

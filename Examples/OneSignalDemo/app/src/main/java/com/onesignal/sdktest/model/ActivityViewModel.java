@@ -1,4 +1,4 @@
-package com.onesignal.sdktest.model;
+package com.onesignal.example.model;
 
 import android.app.Activity;
 import android.content.Context;

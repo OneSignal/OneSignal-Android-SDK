@@ -1,4 +1,4 @@
-package com.onesignal.sdktest.adapter;
+package com.onesignal.example.adapter;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -16,10 +16,10 @@ import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.BitmapImageViewTarget;
-import com.onesignal.sdktest.R;
-import com.onesignal.sdktest.notification.OneSignalNotificationSender;
-import com.onesignal.sdktest.type.Notification;
-import com.onesignal.sdktest.util.Animate;
+import com.onesignal.example.R;
+import com.onesignal.example.notification.OneSignalNotificationSender;
+import com.onesignal.example.type.Notification;
+import com.onesignal.example.util.Animate;
 
 public class NotificationRecyclerViewAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 

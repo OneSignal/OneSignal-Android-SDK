@@ -1,11 +1,11 @@
-package com.onesignal.sdktest.activity;
+package com.onesignal.example.activity;
 
 import android.os.Bundle;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.onesignal.sdktest.R;
-import com.onesignal.sdktest.model.SplashActivityViewModel;
+import com.onesignal.example.R;
+import com.onesignal.example.model.SplashActivityViewModel;
 
 public class SplashActivity extends AppCompatActivity {
 

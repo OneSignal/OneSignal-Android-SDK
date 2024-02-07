@@ -1,11 +1,11 @@
-package com.onesignal.sdktest.ui;
+package com.onesignal.example.ui;
 
 import android.content.Context;
 import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.onesignal.sdktest.R;
+import com.onesignal.example.R;
 
 public class RecyclerViewBuilder {
 
