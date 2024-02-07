@@ -72,6 +72,8 @@
 
         <meta-data android:name="com.onesignal.NotificationServiceExtension"
             android:value="com.onesignal.example.notification.NotificationServiceExtension" />
+        <meta-data android:name="com.onesignal.preferHMS"
+            android:value="true" />
 
         <activity
             android:name=".activity.SplashActivity"
