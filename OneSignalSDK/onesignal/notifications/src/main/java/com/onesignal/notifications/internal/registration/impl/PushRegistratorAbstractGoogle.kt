@@ -34,6 +34,7 @@ import com.onesignal.notifications.internal.registration.IPushRegistrator
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import kotlinx.coroutines.delay
 import java.io.IOException
+import java.util.concurrent.ExecutionException
 
 /**
  * The abstract google push registration service.  It is expected [PushRegistratorFCM] will extend
@@ -47,7 +48,7 @@ internal abstract class PushRegistratorAbstractGoogle(
     IPushRegistrator, IPushRegistratorCallback {
     abstract val providerName: String
 
-    @Throws(Throwable::class)
+    @Throws(ExecutionException::class, InterruptedException::class, IOException::class)
     abstract suspend fun getToken(senderId: String): String
 
     override suspend fun registerForPush(): IPushRegistrator.RegisterResult {
