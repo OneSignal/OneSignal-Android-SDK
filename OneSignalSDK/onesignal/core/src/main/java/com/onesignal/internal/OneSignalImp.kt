@@ -277,7 +277,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
                     if (legacyUserSyncString != null) {
                         val legacyUserSyncJSON = JSONObject(legacyUserSyncString)
-                        val notificationTypes = legacyUserSyncJSON.getInt("notification_types")
+                        val notificationTypes = legacyUserSyncJSON.optInt("notification_types", SubscriptionStatus.NO_PERMISSION.value)
 
                         val pushSubscriptionModel = SubscriptionModel()
                         pushSubscriptionModel.id = legacyPlayerId
