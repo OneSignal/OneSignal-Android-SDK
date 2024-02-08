@@ -246,12 +246,15 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             startupService = services.getService()
             startupService!!.bootstrap()
 
+            forceCreateUser = true;
             if (forceCreateUser || !identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)) {
-                val legacyPlayerId =
+                var legacyPlayerId =
                     preferencesService!!.getString(
                         PreferenceStores.ONESIGNAL,
                         PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID,
                     )
+                // creating a non-null legacyPlayerId
+                legacyPlayerId = "temp";
                 if (legacyPlayerId == null) {
                     Logging.debug("initWithContext: creating new device-scoped user")
                     createAndSwitchToNewUser()
@@ -268,13 +271,15 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                     // Converting a 4.x SDK to the 5.x SDK.  We pull the legacy user sync values to create the subscription model, then enqueue
                     // a specialized `LoginUserFromSubscriptionOperation`, which will drive fetching/refreshing of the local user
                     // based on the subscription ID we do have.
-                    val legacyUserSyncString =
+                    var legacyUserSyncString =
                         preferencesService!!.getString(
                             PreferenceStores.ONESIGNAL,
                             PreferenceOneSignalKeys.PREFS_LEGACY_USER_SYNCVALUES,
                         )
                     var suppressBackendOperation = false
 
+                    // creating a non-null legacyUserSyncString
+                    legacyUserSyncString = "{name: test}";
                     if (legacyUserSyncString != null) {
                         val legacyUserSyncJSON = JSONObject(legacyUserSyncString)
                         val notificationTypes = legacyUserSyncJSON.getInt("notification_types")
