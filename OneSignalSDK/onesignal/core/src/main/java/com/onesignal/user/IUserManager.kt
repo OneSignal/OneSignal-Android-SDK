@@ -40,6 +40,12 @@ interface IUserManager {
     val externalId: String
 
     /**
+     * A JWT token generated on your server and given to a OneSignal Client SDK so it can manage
+     * a specific User, their Subscriptions, and Identities (AKA add/remove Aliases).
+     */
+    val jwtToken: String
+
+    /**
      * Set the 2-character language either as a detected language or explicitly set for this user. See
      * See [Supported Languages | OneSignal](https://documentation.onesignal.com/docs/language-localization#what-languages-are-supported)
      *

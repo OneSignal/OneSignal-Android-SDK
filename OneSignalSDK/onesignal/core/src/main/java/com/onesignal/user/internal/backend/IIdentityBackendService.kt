@@ -48,4 +48,9 @@ internal object IdentityConstants {
      * The alias label for the internal onesignal ID alias.
      */
     const val ONESIGNAL_ID = "onesignal_id"
+
+    /**
+     * The alias label for the jwt token.
+     */
+    const val JWT_TOKEN = "jwt_token"
 }
