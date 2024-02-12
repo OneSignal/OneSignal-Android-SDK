@@ -56,6 +56,7 @@ import org.json.JSONObject
 internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val sdkVersion: String = OneSignalUtils.SDK_VERSION
     override var isInitialized: Boolean = false
+    override val isIdentityVerificationEnabled: Boolean = false
 
     override var consentRequired: Boolean
         get() = configModel?.consentRequired ?: (_consentRequired == true)
@@ -358,6 +359,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             // TODO: Set JWT Token for all future requests.
             createAndSwitchToNewUser { identityModel, _ ->
                 identityModel.externalId = externalId
+                identityModel.jwtToken = jwtBearerToken ?: null
             }
 
             newIdentityOneSignalId = identityModelStore!!.model.onesignalId
@@ -410,7 +412,13 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             )
 
             // TODO: remove JWT Token for all future requests.
+            // calling createAndSwitchToNewUser() replaces model with a default null jwt
         }
+    }
+
+    override fun updateUserJwt(externalId: String, token: String) {
+        if (identityModelStore!!.model.externalId.equals(externalId))
+            identityModelStore!!.model.jwtToken = token;
     }
 
     private fun createAndSwitchToNewUser(
