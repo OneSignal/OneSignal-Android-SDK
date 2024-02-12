@@ -59,7 +59,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val sdkVersion: String = OneSignalUtils.SDK_VERSION
     override var isInitialized: Boolean = false
     override val useIdentityVerification: Boolean
-        get() = configModel?.useIdentityVerification?: true
+        get() = configModel?.useIdentityVerification ?: true
 
     override var consentRequired: Boolean
         get() = configModel?.consentRequired ?: (_consentRequired == true)
@@ -291,7 +291,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                         pushSubscriptionModel.id = legacyPlayerId
                         pushSubscriptionModel.type = SubscriptionType.PUSH
                         pushSubscriptionModel.optedIn =
-                            notificationTypes != SubscriptionStatus.NO_PERMISSION.value && notificationTypes != SubscriptionStatus.UNSUBSCRIBE.value
+                            notificationTypes != SubscriptionStatus.NO_PERMISSION.value &&
+                            notificationTypes != SubscriptionStatus.UNSUBSCRIBE.value
                         pushSubscriptionModel.address =
                             legacyUserSyncJSON.safeString("identifier") ?: ""
                         if (notificationTypes != null) {
@@ -376,7 +377,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             // TODO: Set JWT Token for all future requests.
             createAndSwitchToNewUser { identityModel, _ ->
                 identityModel.externalId = externalId
-                identityModel.jwtToken = jwtBearerToken
+                identityModel.jwtToken = jwtBearerToken ?: null
             }
 
             newIdentityOneSignalId = identityModelStore!!.model.onesignalId
@@ -431,9 +432,13 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         }
     }
 
-    override fun updateUserJwt(externalId: String, token: String) {
-        if (!identityModelStore!!.model.externalId.equals(externalId))
+    override fun updateUserJwt(
+        externalId: String,
+        token: String,
+    ) {
+        if (!identityModelStore!!.model.externalId.equals(externalId)) {
             return
+        }
 
         identityModelStore!!.model.jwtToken = token
     }
