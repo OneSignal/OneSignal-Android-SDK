@@ -1,12 +1,18 @@
 package com.onesignal.sdktest.application;
 
+import android.annotation.SuppressLint;
+import android.content.Context;
 import android.os.StrictMode;
+import android.provider.Settings;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.multidex.MultiDexApplication;
 
+import com.google.android.gms.ads.identifier.AdvertisingIdClient;
+import com.google.android.gms.common.GooglePlayServicesNotAvailableException;
+import com.google.android.gms.common.GooglePlayServicesRepairableException;
 import com.onesignal.OneSignal;
 import com.onesignal.inAppMessages.IInAppMessageClickListener;
 import com.onesignal.inAppMessages.IInAppMessageClickEvent;
@@ -30,6 +36,8 @@ import com.onesignal.user.state.UserChangedState;
 import com.onesignal.user.state.UserState;
 
 import org.json.JSONObject;
+
+import java.io.IOException;
 
 public class MainApplication extends MultiDexApplication {
     private static final int SLEEP_TIME_TO_MIMIC_ASYNC_OPERATION = 2000;
@@ -55,6 +63,14 @@ public class MainApplication extends MultiDexApplication {
 
         OneSignalNotificationSender.setAppId(appId);
         OneSignal.initWithContext(this, appId);
+
+//        OneSignal.login("a");
+//        OneSignal.getUser().getPushSubscription().optOut();
+//        OneSignal.getUser().getPushSubscription().optOut();
+//        OneSignal.getUser().getPushSubscription().optOut();
+//        OneSignal.getUser().getPushSubscription().optOut();
+//        OneSignal.getUser().getPushSubscription().optOut();
+//        OneSignal.getUser().getPushSubscription().optOut();
 
         OneSignal.getInAppMessages().addLifecycleListener(new IInAppMessageLifecycleListener() {
             @Override
@@ -130,6 +146,33 @@ public class MainApplication extends MultiDexApplication {
         OneSignal.getLocation().setShared(false);
 
         Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT);
+
+        printGoogleAdId();
+        printAndroidId();
+    }
+    private void printGoogleAdId() {
+        final Context context = this;
+        new Thread(() -> {
+            AdvertisingIdClient.Info adInfo = null;
+            try {
+                adInfo = AdvertisingIdClient.getAdvertisingIdInfo(context);
+
+            } catch (IOException e) {
+                // Unrecoverable error connecting to Google Play services (e.g.,
+                // the old version of the service doesn't support getting AdvertisingId).
+
+            } catch (GooglePlayServicesNotAvailableException | GooglePlayServicesRepairableException e) {
+                // Google Play services is not available entirely.
+                e.printStackTrace();
+            }
+            Log.e("G-ad_id", "adInfo.getId(): " + adInfo.getId());
+        }).start();
     }
 
+    @SuppressLint("HardwareIds")
+    private void printAndroidId() {
+        Log.e("HWID", "ANDROID_ID: " +
+            Settings.Secure.getString(this.getContentResolver(), Settings.Secure.ANDROID_ID)
+        );
+    }
 }
