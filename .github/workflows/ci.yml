@@ -19,12 +19,10 @@ jobs:
         with:
           gradle-version: 7.3.1
       - name: "[Setup] Android"
-        uses: maxim-lobanov/setup-android-tools@v1
+        uses: android-actions/setup-android@v3
         with:
-          packages: |
-            platforms;android-31
-            build-tools;31.0.0
-          cache: true
+          cmdline-tools-version: 10406996
+          log-accepted-android-sdk-licenses: false
       - name: "[Test] Linting"
         working-directory: OneSignalSDK
         run: |
