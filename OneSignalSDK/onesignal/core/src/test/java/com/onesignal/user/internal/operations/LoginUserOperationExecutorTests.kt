@@ -129,7 +129,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val response = loginUserOperationExecutor.execute(operations)
 
         // Then
-        response.result shouldBe ExecutionResult.FAIL_NORETRY
+        response.result shouldBe ExecutionResult.FAIL_PAUSE_OPREPO
         coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any()) }
     }
 
