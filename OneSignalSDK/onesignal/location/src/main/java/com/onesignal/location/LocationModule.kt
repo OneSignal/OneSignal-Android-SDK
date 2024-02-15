@@ -12,8 +12,10 @@ import com.onesignal.location.internal.capture.ILocationCapturer
 import com.onesignal.location.internal.capture.impl.LocationCapturer
 import com.onesignal.location.internal.common.LocationUtils
 import com.onesignal.location.internal.controller.ILocationController
+import com.onesignal.location.internal.controller.impl.FusedLocationApiWrapperImpl
 import com.onesignal.location.internal.controller.impl.GmsLocationController
 import com.onesignal.location.internal.controller.impl.HmsLocationController
+import com.onesignal.location.internal.controller.impl.IFusedLocationApiWrapper
 import com.onesignal.location.internal.controller.impl.NullLocationController
 import com.onesignal.location.internal.permissions.LocationPermissionController
 import com.onesignal.location.internal.preferences.ILocationPreferencesService
@@ -25,11 +27,15 @@ internal class LocationModule : IModule {
             .provides<LocationPermissionController>()
             .provides<IStartableService>()
 
+        builder.register<FusedLocationApiWrapperImpl>().provides<IFusedLocationApiWrapper>()
         builder.register {
             val deviceService = it.getService(IDeviceService::class.java)
             val service =
                 if (deviceService.isAndroidDeviceType && LocationUtils.hasGMSLocationLibrary()) {
-                    GmsLocationController(it.getService(IApplicationService::class.java))
+                    GmsLocationController(
+                        it.getService(IApplicationService::class.java),
+                        it.getService(IFusedLocationApiWrapper::class.java),
+                    )
                 } else if (deviceService.isHuaweiDeviceType && LocationUtils.hasHMSLocationLibrary()) {
                     HmsLocationController(it.getService(IApplicationService::class.java))
                 } else {
