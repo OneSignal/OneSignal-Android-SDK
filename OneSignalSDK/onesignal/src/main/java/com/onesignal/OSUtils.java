@@ -370,12 +370,12 @@ class OSUtils {
       if (supportsADM())
          return UserState.DEVICE_TYPE_FIREOS;
 
-      Context context = OneSignal.appContext;
-      boolean preferHMS = context != null && OSUtils.getManifestMetaBoolean(context, PREFER_HMS_METADATA_NAME);
       boolean supportsHMS = supportsHMS();
       boolean supportsFCM = supportsGooglePush();
       
       if (supportsFCM && supportsHMS) {
+         Context context = OneSignal.appContext;
+         boolean preferHMS = context != null && OSUtils.getManifestMetaBoolean(context, PREFER_HMS_METADATA_NAME);
          return preferHMS ? UserState.DEVICE_TYPE_HUAWEI: UserState.DEVICE_TYPE_ANDROID;
       }
 
