@@ -4,6 +4,7 @@ import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.Operation
+import com.onesignal.extensions.RobolectricTest
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.backend.CreateUserResponse
 import com.onesignal.user.internal.backend.IUserBackendService
@@ -29,6 +30,7 @@ import io.mockk.runs
 import org.junit.runner.RunWith
 
 @RunWith(KotestTestRunner::class)
+@RobolectricTest
 class RefreshUserOperationExecutorTests : FunSpec({
     val appId = "appId"
     val existingSubscriptionId1 = "existing-subscriptionId1"

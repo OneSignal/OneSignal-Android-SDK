@@ -4,6 +4,7 @@ import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.Operation
+import com.onesignal.extensions.RobolectricTest
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.backend.IIdentityBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
@@ -24,6 +25,7 @@ import io.mockk.verify
 import org.junit.runner.RunWith
 
 @RunWith(KotestTestRunner::class)
+@RobolectricTest
 class IdentityOperationExecutorTests : FunSpec({
 
     test("execution of set alias operation") {

@@ -5,6 +5,7 @@
  */
 package com.onesignal.extensions
 
+import io.kotest.core.spec.Spec
 import org.junit.runners.model.FrameworkMethod
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -17,17 +18,21 @@ internal class ContainedRobolectricRunner(
     private val config: Config?,
 ) : RobolectricTestRunner(PlaceholderTest::class.java, injector) {
     private val placeHolderMethod: FrameworkMethod = children[0]
-    val sdkEnvironment =
+    val sdkEnvironment by lazy {
         getSandbox(placeHolderMethod).also {
             configureSandbox(it, placeHolderMethod)
         }
-    private val bootStrapMethod =
-        sdkEnvironment.bootstrappedClass<Any>(testClass.javaClass)
-            .getMethod(PlaceholderTest::bootStrapMethod.name)
-
+    }
+    private var bootStrapMethod: Method? = null
     fun containedBefore() {
         Thread.currentThread().contextClassLoader = sdkEnvironment.robolectricClassLoader
-        super.beforeTest(sdkEnvironment, placeHolderMethod, bootStrapMethod)
+        bootStrapMethod = sdkEnvironment.bootstrappedClass<Spec>(testClass.javaClass)
+            .getMethod(PlaceholderTest::testPlaceholder.name)
+        try {
+            super.beforeTest(sdkEnvironment, placeHolderMethod, bootStrapMethod)
+        } catch (t: Throwable) {
+            t.printStackTrace()
+        }
     }
 
     fun containedAfter() {
@@ -58,9 +63,6 @@ internal class ContainedRobolectricRunner(
     class PlaceholderTest {
         @org.junit.Test
         fun testPlaceholder() {
-        }
-
-        fun bootStrapMethod() {
         }
     }
 
