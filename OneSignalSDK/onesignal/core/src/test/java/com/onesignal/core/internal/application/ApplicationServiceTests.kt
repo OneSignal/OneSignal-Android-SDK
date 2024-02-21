@@ -8,7 +8,7 @@ import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.extensions.RobolectricTest
+import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.runner.junit4.KotestTestRunner

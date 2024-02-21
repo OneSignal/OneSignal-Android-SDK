@@ -8,7 +8,7 @@ import com.onesignal.location.mocks.FusedLocationApiWrapperMock
 import com.onesignal.location.shadows.ShadowGoogleApiClient
 import com.onesignal.location.shadows.ShadowGoogleApiClientBuilder
 import com.onesignal.mocks.AndroidMockHelper
-import com.onesignal.notifications.extensions.RobolectricTest
+import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe

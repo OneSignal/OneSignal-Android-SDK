@@ -11,7 +11,7 @@ import com.onesignal.location.internal.common.LocationConstants
 import com.onesignal.location.internal.preferences.ILocationPreferencesService
 import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.MockHelper
-import com.onesignal.notifications.extensions.RobolectricTest
+import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.runner.junit4.KotestTestRunner

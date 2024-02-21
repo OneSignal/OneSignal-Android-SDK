@@ -6,8 +6,8 @@ import com.onesignal.core.internal.database.impl.OSDatabase
 import com.onesignal.core.internal.database.impl.OneSignalDbContract
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.extensions.RobolectricTest
 import com.onesignal.session.internal.outcomes.impl.OutcomeTableProvider
+import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.runner.junit4.KotestTestRunner

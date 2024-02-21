@@ -3,13 +3,13 @@ package com.onesignal.inAppMessages.internal.preview
 import android.app.Activity
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.inAppMessages.extensions.RobolectricTest
 import com.onesignal.inAppMessages.internal.display.IInAppDisplayer
 import com.onesignal.inAppMessages.internal.state.InAppStateService
 import com.onesignal.inAppMessages.mocks.MockHelper
 import com.onesignal.notifications.internal.INotificationActivityOpener
 import com.onesignal.notifications.internal.display.INotificationDisplayer
 import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleService
+import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.runner.junit4.KotestTestRunner
