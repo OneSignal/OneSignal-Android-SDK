@@ -16,6 +16,7 @@ import io.kotest.core.test.TestResult
 import org.robolectric.annotation.Config
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
+import kotlin.time.Duration
 
 /**
  * We override TestCaseExtension to configure the Robolectric environment because TestCase intercept
@@ -60,6 +61,19 @@ internal class RobolectricExtension : ConstructorExtension, TestCaseExtension {
     }
 
     override suspend fun intercept(
+        testCase: TestCase,
+        execute: suspend (TestCase) -> TestResult,
+    ): TestResult {
+        return try {
+            runTest(testCase, execute)
+        } catch (t: Throwable) {
+            // Without this the whole test class will be silently be skipped
+            // if something throws
+            TestResult.Error(Duration.ZERO, t)
+        }
+    }
+
+    private suspend fun runTest(
         testCase: TestCase,
         execute: suspend (TestCase) -> TestResult,
     ): TestResult {
