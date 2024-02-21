@@ -83,10 +83,17 @@ internal class RobolectricExtension : ConstructorExtension, TestCaseExtension {
                 annotation.annotationClass.qualifiedName == RobolectricTest::class.qualifiedName
             }
 
-        if (!hasRobolectricAnnotation) {
-            return execute(testCase)
+        return if (hasRobolectricAnnotation) {
+            runTestRobolectric(testCase, execute)
+        } else {
+            execute(testCase)
         }
+    }
 
+    private suspend fun runTestRobolectric(
+        testCase: TestCase,
+        execute: suspend (TestCase) -> TestResult,
+    ): TestResult {
         val containedRobolectricRunner = ContainedRobolectricRunner(testCase.spec::class.getConfig())
         containedRobolectricRunner.containedBefore()
         val result = execute(testCase)
