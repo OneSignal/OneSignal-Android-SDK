@@ -7,6 +7,7 @@
 package com.onesignal.extensions
 
 import android.app.Application
+import io.kotest.common.runBlocking
 import io.kotest.core.extensions.ConstructorExtension
 import io.kotest.core.extensions.TestCaseExtension
 import io.kotest.core.spec.AutoScan
@@ -14,6 +15,7 @@ import io.kotest.core.spec.Spec
 import io.kotest.core.test.TestCase
 import io.kotest.core.test.TestResult
 import org.robolectric.annotation.Config
+import java.util.concurrent.Callable
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 import kotlin.time.Duration
@@ -94,11 +96,18 @@ internal class RobolectricExtension : ConstructorExtension, TestCaseExtension {
         testCase: TestCase,
         execute: suspend (TestCase) -> TestResult,
     ): TestResult {
-        val containedRobolectricRunner = ContainedRobolectricRunner(testCase.spec::class.getConfig())
-        containedRobolectricRunner.containedBefore()
-        val result = execute(testCase)
-        containedRobolectricRunner.containedAfter()
-        return result
+        val containedRobolectricRunner =
+            ContainedRobolectricRunner(testCase.spec::class.getConfig())
+        // sdkEnvironment.runOnMainThread is important to ensure Robolectric's
+        // looper state doesn't carry over to the next test class.
+        return containedRobolectricRunner.sdkEnvironment.runOnMainThread(
+            Callable {
+                containedRobolectricRunner.containedBefore()
+                val result = runBlocking { execute(testCase) }
+                containedRobolectricRunner.containedAfter()
+                result
+            },
+        )
     }
 }
 
