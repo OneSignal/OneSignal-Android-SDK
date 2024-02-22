@@ -149,6 +149,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val mockBuildUserService = mockk<IRebuildUserService>()
+        every { mockBuildUserService.getRebuildOperationsIfCurrentUser(any(), any()) } answers { null }
 
         val subscriptionOperationExecutor =
             SubscriptionOperationExecutor(
