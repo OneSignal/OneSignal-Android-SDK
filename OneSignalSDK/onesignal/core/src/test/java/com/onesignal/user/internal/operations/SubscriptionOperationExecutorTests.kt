@@ -539,7 +539,9 @@ class SubscriptionOperationExecutorTests : FunSpec({
         coVerify(exactly = 1) { mockSubscriptionBackendService.deleteSubscription(appId, remoteSubscriptionId) }
     }
 
-    test("delete subscription fails without retry when there is a backend error") {
+    // If we get a 404 then the subscription has already been deleted,
+    // so we count it as successful
+    test("delete subscription is successful if there is a 404") {
         // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
         coEvery { mockSubscriptionBackendService.deleteSubscription(any(), any()) } throws BackendException(404)
@@ -566,7 +568,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
         val response = subscriptionOperationExecutor.execute(operations)
 
         // Then
-        response.result shouldBe ExecutionResult.FAIL_NORETRY
+        response.result shouldBe ExecutionResult.SUCCESS
         coVerify(exactly = 1) { mockSubscriptionBackendService.deleteSubscription(appId, remoteSubscriptionId) }
     }
 })
