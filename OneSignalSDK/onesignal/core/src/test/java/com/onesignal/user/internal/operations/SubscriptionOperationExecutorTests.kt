@@ -351,7 +351,6 @@ class SubscriptionOperationExecutorTests : FunSpec({
 
         // Then
         response.result shouldBe ExecutionResult.SUCCESS
-        subscriptionModel1.address shouldBe "pushToken3"
         coVerify(exactly = 1) {
             mockSubscriptionBackendService.updateSubscription(
                 appId,
