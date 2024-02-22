@@ -274,7 +274,7 @@ internal class InAppMessageView(
                 parentRelativeLayout,
                 if (hasBackground) WindowManager.LayoutParams.MATCH_PARENT else pageWidth,
                 if (hasBackground) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT,
-                true,
+                false,
             )
         popupWindow!!.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         popupWindow!!.isTouchable = true
