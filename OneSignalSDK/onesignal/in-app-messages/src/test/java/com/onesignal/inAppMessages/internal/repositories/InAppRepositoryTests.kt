@@ -5,8 +5,8 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.inAppMessages.internal.preferences.IInAppPreferencesController
 import com.onesignal.inAppMessages.internal.repositories.impl.InAppRepository
-import com.onesignal.inAppMessages.mocks.DatabaseMockHelper
-import com.onesignal.inAppMessages.mocks.MockHelper
+import com.onesignal.mocks.DatabaseMockHelper
+import com.onesignal.mocks.MockHelper
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.runner.junit4.KotestTestRunner

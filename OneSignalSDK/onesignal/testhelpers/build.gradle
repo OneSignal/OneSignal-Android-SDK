@@ -36,10 +36,14 @@ android {
 }
 
 dependencies {
+    implementation(project(':OneSignal:core'))
+
     implementation("junit:junit:$junitVersion")
     implementation("io.kotest:kotest-runner-junit4:$kotestVersion")
     implementation("org.robolectric:robolectric:4.8.1")
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+    implementation("io.mockk:mockk:1.13.2")
+    implementation("androidx.test:core-ktx:1.5.0")
 }
 
 ktlint {

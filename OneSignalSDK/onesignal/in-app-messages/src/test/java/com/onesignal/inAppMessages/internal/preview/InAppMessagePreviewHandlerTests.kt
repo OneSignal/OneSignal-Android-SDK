@@ -5,7 +5,7 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.inAppMessages.internal.display.IInAppDisplayer
 import com.onesignal.inAppMessages.internal.state.InAppStateService
-import com.onesignal.inAppMessages.mocks.MockHelper
+import com.onesignal.mocks.MockHelper
 import com.onesignal.notifications.internal.INotificationActivityOpener
 import com.onesignal.notifications.internal.display.INotificationDisplayer
 import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleService
