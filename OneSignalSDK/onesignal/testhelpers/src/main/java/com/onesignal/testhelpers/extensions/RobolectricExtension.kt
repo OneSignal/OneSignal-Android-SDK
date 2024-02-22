@@ -33,15 +33,26 @@ class RobolectricExtension : ConstructorExtension, TestCaseExtension {
     }
 
     private fun KClass<*>.getConfig(): Config {
-        val annotations =
+        val configAnnotations =
+            listOf(this.java).plus(this.java.getParentClass())
+                .mapNotNull { it.kotlin.findAnnotation<Config>() }
+                .asSequence()
+
+        val configAnnotation = configAnnotations.firstOrNull()
+
+        if (configAnnotation != null) {
+            return Config.Builder(configAnnotation).build()
+        }
+
+        val robolectricTestAnnotations =
             listOf(this.java).plus(this.java.getParentClass())
                 .mapNotNull { it.kotlin.findAnnotation<RobolectricTest>() }
                 .asSequence()
 
         val application: KClass<out Application>? =
-            annotations
+            robolectricTestAnnotations
                 .firstOrNull { it.application != KotestDefaultApplication::class }?.application
-        val sdk: Int? = annotations.firstOrNull { it.sdk != -1 }?.takeUnless { it.sdk == -1 }?.sdk
+        val sdk: Int? = robolectricTestAnnotations.firstOrNull { it.sdk != -1 }?.takeUnless { it.sdk == -1 }?.sdk
 
         return Config.Builder()
             .also { builder ->
