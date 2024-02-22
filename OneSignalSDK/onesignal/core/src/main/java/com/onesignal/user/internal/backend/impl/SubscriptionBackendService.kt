@@ -17,9 +17,9 @@ internal class SubscriptionBackendService(
         aliasValue: String,
         subscription: SubscriptionObject,
     ): String? {
-        val requestJSON =
-            JSONObject()
-                .put("subscription", JSONConverter.convertToJSON(subscription))
+        val jsonSubscription = JSONConverter.convertToJSON(subscription)
+        jsonSubscription.remove("id")
+        val requestJSON = JSONObject().put("subscription", jsonSubscription)
 
         val response = _httpClient.post("apps/$appId/users/by/$aliasLabel/$aliasValue/subscriptions", requestJSON)
 
