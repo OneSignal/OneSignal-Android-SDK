@@ -100,8 +100,12 @@ dependencies {
     testImplementation("androidx.test:core-ktx:1.4.0")
     testImplementation("androidx.test:core:1.4.0")
     testImplementation("io.mockk:mockk:1.13.2")
-    testImplementation("org.json:json:20180813")
     testImplementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+
+    // org.json:json is needed for non-Robolectric tests.
+    // On the flip side this can break tests using Robolectric so
+    // ContainedRobolectricRunner.kt contains a workaround.
+    testImplementation("org.json:json:20240205")
 }
 
 ktlint {
