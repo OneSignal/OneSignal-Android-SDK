@@ -42,14 +42,17 @@ class JSONObjectExtensionsTest : DescribeSpec({
                 )
         }
 
-        it("supports JSONArray") {
-            val test =
-                JSONObject()
-                    .put("MyArray", JSONArray().put("String"))
-            test.toMap() shouldBe
-                mapOf(
-                    "MyArray" to listOf("String"),
-                )
+        describe("JSONArray") {
+            it("supports empty") {
+                val test = JSONObject().put("MyArray", JSONArray())
+                test.toMap() shouldBe
+                    mapOf("MyArray" to emptyList<Any>())
+            }
+            it("supports one item") {
+                val test = JSONObject().put("MyArray", JSONArray().put("String"))
+                test.toMap() shouldBe
+                    mapOf("MyArray" to listOf("String"))
+            }
         }
 
         it("supports JSONObject") {
