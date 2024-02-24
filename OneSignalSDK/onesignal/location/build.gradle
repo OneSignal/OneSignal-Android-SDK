@@ -32,6 +32,9 @@ android {
         unitTests {
             includeAndroidResources = true
         }
+        unitTests.all {
+            it.useJUnitPlatform()
+        }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -78,9 +81,9 @@ dependencies {
     compileOnly "com.huawei.hms:location:$huaweiHMSLocationVersion"
 
     testImplementation(project(':OneSignal:testhelpers'))
-    testImplementation("junit:junit:$junitVersion")
-    testImplementation("io.kotest:kotest-runner-junit4:$kotestVersion")
-    testImplementation("io.kotest:kotest-runner-junit4-jvm:$kotestVersion")
+
+    testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
+    testImplementation("io.kotest:kotest-runner-junit5-jvm:$kotestVersion")
     testImplementation("io.kotest:kotest-assertions-core:$kotestVersion")
     testImplementation("io.kotest:kotest-property:$kotestVersion")
     testImplementation("org.robolectric:robolectric:4.8.1")

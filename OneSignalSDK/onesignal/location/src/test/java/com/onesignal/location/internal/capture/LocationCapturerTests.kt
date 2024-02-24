@@ -9,15 +9,12 @@ import com.onesignal.location.internal.preferences.ILocationPreferencesService
 import com.onesignal.mocks.MockHelper
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
-import org.junit.runner.RunWith
 
-@RunWith(KotestTestRunner::class)
 class LocationCapturerTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE

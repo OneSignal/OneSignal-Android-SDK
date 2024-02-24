@@ -11,12 +11,9 @@ import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.beInstanceOf
-import io.kotest.runner.junit4.KotestTestRunner
 import kotlinx.coroutines.TimeoutCancellationException
 import org.json.JSONObject
-import org.junit.runner.RunWith
 
-@RunWith(KotestTestRunner::class)
 class HttpClientTests : FunSpec({
 
     beforeAny {

@@ -9,14 +9,11 @@ import com.onesignal.notifications.shadows.ShadowRoboNotificationManager
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import org.junit.runner.RunWith
 
-@RunWith(KotestTestRunner::class)
 class PushTokenManagerTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE

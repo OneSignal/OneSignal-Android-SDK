@@ -16,10 +16,8 @@ import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.runner.junit4.KotestTestRunner
 import org.json.JSONArray
 import org.json.JSONObject
-import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import java.math.BigInteger
 
@@ -29,7 +27,6 @@ import java.math.BigInteger
     sdk = [26],
 )
 @RobolectricTest
-@RunWith(KotestTestRunner::class)
 class NotificationChannelManagerTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE

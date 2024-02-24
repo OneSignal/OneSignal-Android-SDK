@@ -23,7 +23,6 @@ import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -35,9 +34,7 @@ import io.mockk.runs
 import io.mockk.spyk
 import kotlinx.coroutines.delay
 import org.json.JSONArray
-import org.junit.runner.RunWith
 
-@RunWith(KotestTestRunner::class)
 class OutcomeEventsControllerTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE

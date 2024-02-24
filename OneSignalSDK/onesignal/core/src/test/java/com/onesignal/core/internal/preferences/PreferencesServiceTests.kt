@@ -11,12 +11,9 @@ import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.runner.junit4.KotestTestRunner
 import kotlinx.coroutines.delay
-import org.junit.runner.RunWith
 
 @RobolectricTest
-@RunWith(KotestTestRunner::class)
 class PreferencesServiceTests : FunSpec({
     val mockPrefStoreName = PreferenceStores.ONESIGNAL
     val mockBoolPrefStoreKey = "mock-bool"

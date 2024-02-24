@@ -5,10 +5,7 @@ import com.onesignal.debug.internal.logging.Logging
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.runner.junit4.KotestTestRunner
-import org.junit.runner.RunWith
 
-@RunWith(KotestTestRunner::class)
 class OneSignalImpTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE

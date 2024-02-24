@@ -4,12 +4,9 @@ import com.onesignal.mocks.MockHelper
 import com.onesignal.session.internal.session.impl.SessionService
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.spyk
 import io.mockk.verify
-import org.junit.runner.RunWith
 
-@RunWith(KotestTestRunner::class)
 class SessionServiceTests : FunSpec({
 
     test("session created on focus when current session invalid") {

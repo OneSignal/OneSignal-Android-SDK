@@ -19,16 +19,13 @@ import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
-import org.junit.runner.RunWith
 
-@RunWith(KotestTestRunner::class)
 class RefreshUserOperationExecutorTests : FunSpec({
     val appId = "appId"
     val existingSubscriptionId1 = "existing-subscriptionId1"

@@ -11,16 +11,13 @@ import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.beInstanceOf
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.spyk
 import io.mockk.verify
-import org.junit.runner.RunWith
 
-@RunWith(KotestTestRunner::class)
 class SubscriptionManagerTests : FunSpec({
 
     test("initializes subscriptions from model store") {

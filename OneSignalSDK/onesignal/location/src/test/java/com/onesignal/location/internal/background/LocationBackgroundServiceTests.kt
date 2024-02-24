@@ -14,17 +14,14 @@ import com.onesignal.mocks.MockHelper
 import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
-import org.junit.runner.RunWith
 import org.robolectric.Shadows
 
 @RobolectricTest
-@RunWith(KotestTestRunner::class)
 class LocationBackgroundServiceTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE

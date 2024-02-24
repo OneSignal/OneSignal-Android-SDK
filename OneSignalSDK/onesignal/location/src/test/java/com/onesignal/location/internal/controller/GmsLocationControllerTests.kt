@@ -12,12 +12,10 @@ import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.every
 import io.mockk.spyk
 import io.mockk.verify
 import io.mockk.verifySequence
-import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
 @Config(
@@ -26,7 +24,6 @@ import org.robolectric.annotation.Config
     sdk = [26],
 )
 @RobolectricTest
-@RunWith(KotestTestRunner::class)
 class GmsLocationControllerTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE

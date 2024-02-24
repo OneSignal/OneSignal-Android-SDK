@@ -9,14 +9,11 @@ import com.onesignal.session.internal.session.ISessionService
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
-import org.junit.runner.RunWith
 
-@RunWith(KotestTestRunner::class)
 class InfluenceManagerTests : FunSpec({
 
     test("default are disabled influences") {

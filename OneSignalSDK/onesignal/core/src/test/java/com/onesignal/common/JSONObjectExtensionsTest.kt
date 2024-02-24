@@ -2,14 +2,11 @@ package com.onesignal.common
 
 import io.kotest.core.spec.style.DescribeSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.mockkStatic
 import io.mockk.verify
 import org.json.JSONArray
 import org.json.JSONObject
-import org.junit.runner.RunWith
 
-@RunWith(KotestTestRunner::class)
 class JSONObjectExtensionsTest : DescribeSpec({
     describe("toMap") {
         // Some org.json JVM libraries define their own toMap. We want to

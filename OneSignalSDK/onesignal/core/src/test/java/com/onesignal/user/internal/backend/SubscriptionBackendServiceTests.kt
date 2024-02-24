@@ -10,15 +10,12 @@ import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import org.junit.runner.RunWith
 
 // WARNING: Adding @RobolectricTest will cause JSONObject.map() to stop working
 // at runtime.
-@RunWith(KotestTestRunner::class)
 class SubscriptionBackendServiceTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE

@@ -12,12 +12,10 @@ import com.onesignal.notifications.internal.limiting.impl.NotificationLimitManag
 import com.onesignal.notifications.internal.summary.INotificationSummaryManager
 import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.spyk
-import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.Implements
 
@@ -27,7 +25,6 @@ import org.robolectric.annotation.Implements
     sdk = [26],
 )
 @RobolectricTest
-@RunWith(KotestTestRunner::class)
 class NotificationLimitManagerTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE
