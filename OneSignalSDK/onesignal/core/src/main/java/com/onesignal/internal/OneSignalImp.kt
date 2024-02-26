@@ -289,6 +289,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                             legacyUserSyncJSON.safeString("identifier") ?: ""
                         if (notificationTypes != null) {
                             pushSubscriptionModel.status = SubscriptionStatus.fromInt(notificationTypes) ?: SubscriptionStatus.NO_PERMISSION
+                        } else {
+                            pushSubscriptionModel.status = SubscriptionStatus.SUBSCRIBED
                         }
 
                         pushSubscriptionModel.sdk = OneSignalUtils.SDK_VERSION
