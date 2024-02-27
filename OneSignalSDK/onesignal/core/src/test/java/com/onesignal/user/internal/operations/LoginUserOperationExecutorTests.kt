@@ -4,9 +4,9 @@ import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.Operation
-import com.onesignal.extensions.RobolectricTest
 import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.MockHelper
+import com.onesignal.testhelpers.extensions.RobolectricTest
 import com.onesignal.user.internal.backend.CreateUserResponse
 import com.onesignal.user.internal.backend.IUserBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
@@ -129,7 +129,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val response = loginUserOperationExecutor.execute(operations)
 
         // Then
-        response.result shouldBe ExecutionResult.FAIL_NORETRY
+        response.result shouldBe ExecutionResult.FAIL_PAUSE_OPREPO
         coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any()) }
     }
 
@@ -392,13 +392,18 @@ class LoginUserOperationExecutorTests : FunSpec({
         coVerify(exactly = 1) {
             mockUserBackendService.createUser(
                 appId,
-                mapOf("aliasLabel1" to "aliasValue1-2"),
+                // Aliases omitted intentionally in PR #1794, to avoid failed create user calls.
+                //  - Ideally we batch as much as possible into the create as most of the time it
+                //    should be successful. Then when there are failures omit the "bad data" and try
+                //    again, however this is more complex which is why it wasn't done initially.
+                mapOf(),
                 withArg {
                     it.count() shouldBe 1
-                    it[0].type shouldBe SubscriptionObjectType.ANDROID_PUSH
-                    it[0].enabled shouldBe true
-                    it[0].token shouldBe "pushToken2"
-                    it[0].notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED
+                    val subscription = it[0]
+                    subscription.type shouldBe SubscriptionObjectType.ANDROID_PUSH
+                    subscription.enabled shouldBe true
+                    subscription.token shouldBe "pushToken2"
+                    SubscriptionStatus.fromInt(subscription.notificationTypes!!) shouldBe SubscriptionStatus.SUBSCRIBED
                 },
                 any(),
             )

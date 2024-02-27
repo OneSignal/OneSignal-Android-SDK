@@ -1,0 +1,47 @@
+plugins {
+    id 'com.android.library'
+    id 'kotlin-android'
+    id 'org.jlleitschuh.gradle.ktlint'
+}
+
+android {
+    compileSdkVersion rootProject.buildVersions.compileSdkVersion
+    defaultConfig {
+        minSdkVersion rootProject.buildVersions.minSdkVersion
+    }
+
+    buildTypes {
+        original {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        release {
+            minifyEnabled false
+        }
+        unity {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+    namespace 'com.onesignal.testhelpers'
+
+    kotlinOptions.freeCompilerArgs += ['-module-name', namespace]
+}
+
+dependencies {
+    implementation("junit:junit:$junitVersion")
+    implementation("io.kotest:kotest-runner-junit4:$kotestVersion")
+    implementation("org.robolectric:robolectric:4.8.1")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+}
+
+ktlint {
+    version = "$ktlintVersion"
+}

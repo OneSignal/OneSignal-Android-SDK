@@ -3,7 +3,7 @@
  *
  * LICENSE: https://github.com/kotest/kotest-extensions-robolectric/blob/master/LICENSE
  */
-package com.onesignal.inAppMessages.extensions
+package com.onesignal.testhelpers.extensions
 
 import org.junit.runners.model.FrameworkMethod
 import org.robolectric.RobolectricTestRunner
@@ -13,7 +13,7 @@ import org.robolectric.pluginapi.config.ConfigurationStrategy
 import org.robolectric.plugins.ConfigConfigurer
 import java.lang.reflect.Method
 
-internal class ContainedRobolectricRunner(
+class ContainedRobolectricRunner(
     private val config: Config?,
 ) : RobolectricTestRunner(PlaceholderTest::class.java, injector) {
     private val placeHolderMethod: FrameworkMethod = children[0]

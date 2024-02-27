@@ -4,11 +4,11 @@ import android.location.Location
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.location.internal.controller.impl.GmsLocationController
-import com.onesignal.location.shadows.ShadowFusedLocationProviderApi
+import com.onesignal.location.mocks.FusedLocationApiWrapperMock
 import com.onesignal.location.shadows.ShadowGoogleApiClient
 import com.onesignal.location.shadows.ShadowGoogleApiClientBuilder
 import com.onesignal.mocks.AndroidMockHelper
-import com.onesignal.notifications.extensions.RobolectricTest
+import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -37,11 +37,11 @@ class GmsLocationControllerTests : FunSpec({
         val location = Location("TEST_PROVIDER")
         location.latitude = 123.45
         location.longitude = 678.91
+        val fusedLocationApiWrapperMock = FusedLocationApiWrapperMock(listOf(location))
 
-        ShadowFusedLocationProviderApi.injectToLocationServices(listOf(location))
         val applicationService = AndroidMockHelper.applicationService()
         every { applicationService.isInForeground } returns true
-        val gmsLocationController = GmsLocationController(applicationService)
+        val gmsLocationController = GmsLocationController(applicationService, fusedLocationApiWrapperMock)
 
         val spyLocationUpdateHandler = spyk<ILocationUpdatedHandler>()
         gmsLocationController.subscribe(spyLocationUpdateHandler)
@@ -71,11 +71,11 @@ class GmsLocationControllerTests : FunSpec({
         val location2 = Location("TEST_PROVIDER")
         location2.latitude = 678.91
         location2.longitude = 123.45
+        val fusedLocationApiWrapperMock = FusedLocationApiWrapperMock(listOf(location1, location2))
 
-        ShadowFusedLocationProviderApi.injectToLocationServices(listOf(location1, location2))
         val applicationService = AndroidMockHelper.applicationService()
         every { applicationService.isInForeground } returns true
-        val gmsLocationController = GmsLocationController(applicationService)
+        val gmsLocationController = GmsLocationController(applicationService, fusedLocationApiWrapperMock)
 
         val spyLocationUpdateHandler = spyk<ILocationUpdatedHandler>()
         gmsLocationController.subscribe(spyLocationUpdateHandler)
@@ -114,10 +114,10 @@ class GmsLocationControllerTests : FunSpec({
         location2.latitude = 678.91
         location2.longitude = 123.45
 
-        ShadowFusedLocationProviderApi.injectToLocationServices(listOf(location1, location2))
+        val fusedLocationApiWrapperMock = FusedLocationApiWrapperMock(listOf(location1, location2))
         val applicationService = AndroidMockHelper.applicationService()
         every { applicationService.isInForeground } returns true
-        val gmsLocationController = GmsLocationController(applicationService)
+        val gmsLocationController = GmsLocationController(applicationService, fusedLocationApiWrapperMock)
 
         val spyLocationUpdateHandler = spyk<ILocationUpdatedHandler>()
         gmsLocationController.subscribe(spyLocationUpdateHandler)
@@ -152,10 +152,10 @@ class GmsLocationControllerTests : FunSpec({
         location2.latitude = 678.91
         location2.longitude = 123.45
 
-        ShadowFusedLocationProviderApi.injectToLocationServices(listOf(location1, location2))
+        val fusedLocationApiWrapperMock = FusedLocationApiWrapperMock(listOf(location1, location2))
         val applicationService = AndroidMockHelper.applicationService()
         every { applicationService.isInForeground } returns true
-        val gmsLocationController = GmsLocationController(applicationService)
+        val gmsLocationController = GmsLocationController(applicationService, fusedLocationApiWrapperMock)
 
         val spyLocationUpdateHandler = spyk<ILocationUpdatedHandler>()
         gmsLocationController.subscribe(spyLocationUpdateHandler)

@@ -5,7 +5,6 @@ import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.extensions.RobolectricTest
 import com.onesignal.user.internal.backend.impl.SubscriptionBackendService
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import io.kotest.assertions.throwables.shouldThrowUnit
@@ -17,7 +16,8 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import org.junit.runner.RunWith
 
-@RobolectricTest
+// WARNING: Adding @RobolectricTest will cause JSONObject.map() to stop working
+// at runtime.
 @RunWith(KotestTestRunner::class)
 class SubscriptionBackendServiceTests : FunSpec({
     beforeAny {
@@ -29,7 +29,7 @@ class SubscriptionBackendServiceTests : FunSpec({
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{id: \"subscriptionId\"}")
+        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{ \"subscription\": { id: \"subscriptionId\" } }")
         val subscriptionBackendService = SubscriptionBackendService(spyHttpClient)
 
         // When
@@ -48,13 +48,14 @@ class SubscriptionBackendServiceTests : FunSpec({
         response shouldBe "subscriptionId"
         coVerify {
             spyHttpClient.post(
-                "apps/appId/user/by/$aliasLabel/$aliasValue/subscription",
+                "apps/appId/users/by/$aliasLabel/$aliasValue/subscriptions",
                 withArg {
-                    it.has("id") shouldBe false
-                    it.getString("type") shouldBe "AndroidPush"
-                    it.getString("token") shouldBe "pushToken"
-                    it.getBoolean("enabled") shouldBe true
-                    it.getInt("notification_types") shouldBe 1
+                    val sub = it.getJSONObject("subscription")
+                    sub.has("id") shouldBe false
+                    sub.getString("type") shouldBe "AndroidPush"
+                    sub.getString("token") shouldBe "pushToken"
+                    sub.getBoolean("enabled") shouldBe true
+                    sub.getInt("notification_types") shouldBe 1
                 },
             )
         }
@@ -92,13 +93,14 @@ class SubscriptionBackendServiceTests : FunSpec({
         // Then
         coVerify {
             spyHttpClient.post(
-                "apps/appId/user/by/$aliasLabel/$aliasValue/subscription",
+                "apps/appId/users/by/$aliasLabel/$aliasValue/subscriptions",
                 withArg {
-                    it.has("id") shouldBe false
-                    it.getString("type") shouldBe "AndroidPush"
-                    it.getString("token") shouldBe "pushToken"
-                    it.getBoolean("enabled") shouldBe true
-                    it.getInt("notification_types") shouldBe 1
+                    val sub = it.getJSONObject("subscription")
+                    sub.has("id") shouldBe false
+                    sub.getString("type") shouldBe "AndroidPush"
+                    sub.getString("token") shouldBe "pushToken"
+                    sub.getBoolean("enabled") shouldBe true
+                    sub.getInt("notification_types") shouldBe 1
                 },
             )
         }

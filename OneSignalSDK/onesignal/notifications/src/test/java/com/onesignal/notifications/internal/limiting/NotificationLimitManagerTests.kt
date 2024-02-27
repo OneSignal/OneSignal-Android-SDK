@@ -7,10 +7,10 @@ import androidx.test.core.app.ApplicationProvider
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.AndroidMockHelper
-import com.onesignal.notifications.extensions.RobolectricTest
 import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.limiting.impl.NotificationLimitManager
 import com.onesignal.notifications.internal.summary.INotificationSummaryManager
+import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.coEvery

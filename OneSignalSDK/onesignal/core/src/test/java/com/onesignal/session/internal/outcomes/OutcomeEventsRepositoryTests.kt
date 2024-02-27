@@ -2,7 +2,6 @@ package com.onesignal.session.internal.outcomes
 
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.extensions.RobolectricTest
 import com.onesignal.mocks.DatabaseMockHelper
 import com.onesignal.session.internal.influence.Influence
 import com.onesignal.session.internal.influence.InfluenceChannel
@@ -13,6 +12,7 @@ import com.onesignal.session.internal.outcomes.impl.OutcomeEventsRepository
 import com.onesignal.session.internal.outcomes.impl.OutcomeEventsTable
 import com.onesignal.session.internal.outcomes.impl.OutcomeSource
 import com.onesignal.session.internal.outcomes.impl.OutcomeSourceBody
+import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -171,6 +171,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     OutcomeEventsTable.COLUMN_NAME_NAME to "outcomeId1",
                     OutcomeEventsTable.COLUMN_NAME_WEIGHT to 0.2f,
                     OutcomeEventsTable.COLUMN_NAME_TIMESTAMP to 1111L,
+                    OutcomeEventsTable.COLUMN_NAME_SESSION_TIME to 1L,
                     OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE to "unattributed",
                     OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE to "unattributed",
                 ),
@@ -178,6 +179,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     OutcomeEventsTable.COLUMN_NAME_NAME to "outcomeId2",
                     OutcomeEventsTable.COLUMN_NAME_WEIGHT to 0.4f,
                     OutcomeEventsTable.COLUMN_NAME_TIMESTAMP to 2222L,
+                    OutcomeEventsTable.COLUMN_NAME_SESSION_TIME to 2L,
                     OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE to "indirect",
                     OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS to "[\"notificationId1\",\"notificationId2\"]",
                     OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE to "indirect",
@@ -187,6 +189,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
                     OutcomeEventsTable.COLUMN_NAME_NAME to "outcomeId3",
                     OutcomeEventsTable.COLUMN_NAME_WEIGHT to 0.6f,
                     OutcomeEventsTable.COLUMN_NAME_TIMESTAMP to 3333L,
+                    OutcomeEventsTable.COLUMN_NAME_SESSION_TIME to 3L,
                     OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_INFLUENCE_TYPE to "direct",
                     OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS to "[\"notificationId3\"]",
                     OutcomeEventsTable.COLUMN_NAME_IAM_INFLUENCE_TYPE to "direct",
@@ -205,12 +208,14 @@ class OutcomeEventsRepositoryTests : FunSpec({
         events[0].outcomeId shouldBe "outcomeId1"
         events[0].weight shouldBe 0.2f
         events[0].timestamp shouldBe 1111L
+        events[0].sessionTime shouldBe 1L
         events[0].outcomeSource shouldNotBe null
         events[0].outcomeSource!!.directBody shouldBe null
         events[0].outcomeSource!!.indirectBody shouldBe null
         events[1].outcomeId shouldBe "outcomeId2"
         events[1].weight shouldBe 0.4f
         events[1].timestamp shouldBe 2222L
+        events[1].sessionTime shouldBe 2L
         events[1].outcomeSource shouldNotBe null
         events[1].outcomeSource!!.directBody shouldBe null
         events[1].outcomeSource!!.indirectBody shouldNotBe null
@@ -223,6 +228,7 @@ class OutcomeEventsRepositoryTests : FunSpec({
         events[2].outcomeId shouldBe "outcomeId3"
         events[2].weight shouldBe 0.6f
         events[2].timestamp shouldBe 3333L
+        events[2].sessionTime shouldBe 3L
         events[2].outcomeSource shouldNotBe null
         events[2].outcomeSource!!.indirectBody shouldBe null
         events[2].outcomeSource!!.directBody shouldNotBe null

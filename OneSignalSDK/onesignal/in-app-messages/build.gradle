@@ -78,6 +78,7 @@ dependencies {
         }
     }
 
+    testImplementation(project(':OneSignal:testhelpers'))
     testImplementation("junit:junit:$junitVersion")
     testImplementation("io.kotest:kotest-runner-junit4:$kotestVersion")
     testImplementation("io.kotest:kotest-runner-junit4-jvm:$kotestVersion")

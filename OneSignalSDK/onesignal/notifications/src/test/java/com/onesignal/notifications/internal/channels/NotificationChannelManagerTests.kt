@@ -9,10 +9,10 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.MockHelper
-import com.onesignal.notifications.extensions.RobolectricTest
 import com.onesignal.notifications.internal.channels.impl.NotificationChannelManager
 import com.onesignal.notifications.internal.common.NotificationGenerationJob
 import com.onesignal.notifications.shadows.ShadowRoboNotificationManager
+import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe

@@ -3,9 +3,9 @@ package com.onesignal.user.internal.operations
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.Operation
-import com.onesignal.extensions.RobolectricTest
 import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.MockHelper
+import com.onesignal.testhelpers.extensions.RobolectricTest
 import com.onesignal.user.internal.backend.ISubscriptionBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObjectType
@@ -149,6 +149,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val mockBuildUserService = mockk<IRebuildUserService>()
+        every { mockBuildUserService.getRebuildOperationsIfCurrentUser(any(), any()) } answers { null }
 
         val subscriptionOperationExecutor =
             SubscriptionOperationExecutor(
@@ -350,7 +351,6 @@ class SubscriptionOperationExecutorTests : FunSpec({
 
         // Then
         response.result shouldBe ExecutionResult.SUCCESS
-        subscriptionModel1.address shouldBe "pushToken3"
         coVerify(exactly = 1) {
             mockSubscriptionBackendService.updateSubscription(
                 appId,
@@ -539,7 +539,9 @@ class SubscriptionOperationExecutorTests : FunSpec({
         coVerify(exactly = 1) { mockSubscriptionBackendService.deleteSubscription(appId, remoteSubscriptionId) }
     }
 
-    test("delete subscription fails without retry when there is a backend error") {
+    // If we get a 404 then the subscription has already been deleted,
+    // so we count it as successful
+    test("delete subscription is successful if there is a 404") {
         // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
         coEvery { mockSubscriptionBackendService.deleteSubscription(any(), any()) } throws BackendException(404)
@@ -566,7 +568,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
         val response = subscriptionOperationExecutor.execute(operations)
 
         // Then
-        response.result shouldBe ExecutionResult.FAIL_NORETRY
+        response.result shouldBe ExecutionResult.SUCCESS
         coVerify(exactly = 1) { mockSubscriptionBackendService.deleteSubscription(appId, remoteSubscriptionId) }
     }
 })

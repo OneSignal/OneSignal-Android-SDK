@@ -77,6 +77,7 @@ dependencies {
     // KEEP as "compileOnly", so OneSignal isn't a direct dependency in the POM file.
     compileOnly "com.huawei.hms:location:$huaweiHMSLocationVersion"
 
+    testImplementation(project(':OneSignal:testhelpers'))
     testImplementation("junit:junit:$junitVersion")
     testImplementation("io.kotest:kotest-runner-junit4:$kotestVersion")
     testImplementation("io.kotest:kotest-runner-junit4-jvm:$kotestVersion")
