@@ -12,7 +12,7 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.inAppMessages.internal.Trigger
 import com.onesignal.inAppMessages.internal.backend.impl.InAppBackendService
 import com.onesignal.inAppMessages.internal.hydrators.InAppHydrator
-import com.onesignal.inAppMessages.mocks.MockHelper
+import com.onesignal.mocks.MockHelper
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe

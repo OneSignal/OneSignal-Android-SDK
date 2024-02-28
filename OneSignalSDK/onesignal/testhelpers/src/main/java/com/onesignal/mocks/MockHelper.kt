@@ -16,6 +16,7 @@ import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
 import java.util.UUID
 
 /**
@@ -33,6 +34,7 @@ object MockHelper {
         val mockAppService = mockk<IApplicationService>()
 
         every { mockAppService.addApplicationLifecycleHandler(any()) } just Runs
+        every { mockAppService.removeApplicationLifecycleHandler(any()) } just Runs
 
         return mockAppService
     }
@@ -51,6 +53,7 @@ object MockHelper {
         val mockConfigStore = mockk<ConfigModelStore>()
 
         every { mockConfigStore.model } returns configModel
+        every { mockConfigStore.subscribe(any()) } just runs
 
         return mockConfigStore
     }
@@ -65,7 +68,7 @@ object MockHelper {
             action(identityModel)
         }
 
-        val mockIdentityStore = mockk<IdentityModelStore>()
+        val mockIdentityStore = mockk<IdentityModelStore>(relaxed = true)
 
         every { mockIdentityStore.model } returns identityModel
 

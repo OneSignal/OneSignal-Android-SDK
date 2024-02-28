@@ -10,7 +10,7 @@ import io.mockk.spyk
 /**
  * Singleton which provides common mock services.
  */
-internal object DatabaseMockHelper {
+object DatabaseMockHelper {
     fun databaseProvider(
         tableName: String,
         records: List<Map<String, Any>>? = null,

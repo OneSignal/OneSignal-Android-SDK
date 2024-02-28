@@ -8,7 +8,7 @@ import com.onesignal.inAppMessages.internal.preferences.IInAppPreferencesControl
 import com.onesignal.inAppMessages.internal.repositories.IInAppRepository
 import com.onesignal.inAppMessages.internal.state.InAppStateService
 import com.onesignal.inAppMessages.internal.triggers.ITriggerController
-import com.onesignal.inAppMessages.mocks.MockHelper
+import com.onesignal.mocks.MockHelper
 import com.onesignal.session.internal.influence.IInfluenceManager
 import com.onesignal.session.internal.outcomes.IOutcomeEventsController
 import com.onesignal.session.internal.session.ISessionService
