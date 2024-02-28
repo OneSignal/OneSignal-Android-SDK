@@ -87,9 +87,11 @@ dependencies {
     testImplementation("androidx.test:core-ktx:1.4.0")
     testImplementation("androidx.test:core:1.4.0")
     testImplementation("io.mockk:mockk:1.13.2")
-    testImplementation("org.json:json:20180813")
     testImplementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
     testImplementation("com.google.android.gms:play-services-location:18.0.0")
+
+    // com.tdunning:json is needed for non-Robolectric tests.
+    testImplementation("com.tdunning:json:$tdunningJsonForTest")
 }
 
 ktlint {

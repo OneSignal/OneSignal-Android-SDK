@@ -2,6 +2,7 @@ package com.onesignal.common
 
 import org.json.JSONArray
 import org.json.JSONObject
+import org.json.JSONObject.NULL
 
 /**
  * Retrieve an [Int] from the [JSONObject] safely.
@@ -95,15 +96,46 @@ fun JSONObject.safeJSONObject(name: String): JSONObject? {
 
 /**
  * Create a [Map] from the [JSONObject].
+ * Supports nested JSONObjects and JSONArrays.
  */
-fun JSONObject.toMap(): Map<String, Any> {
-    val map = mutableMapOf<String, Any>()
-
+fun JSONObject.toMap(): MutableMap<String, Any?> {
+    val results: MutableMap<String, Any?> = HashMap()
     for (key in this.keys()) {
-        map[key] = this[key]
+        val value = this[key]
+        results[key] =
+            if (NULL.equals(value)) {
+                null
+            } else if (value is JSONObject) {
+                value.toMap()
+            } else if (value is JSONArray) {
+                value.toList()
+            } else {
+                value
+            }
     }
+    return results
+}
 
-    return map
+/**
+ * Create a [List] from the [JSONArray].
+ * Supports nested JSONObjects and JSONArrays.
+ */
+fun JSONArray.toList(): List<Any?>? {
+    val size = this.length()
+    val results: MutableList<Any?> = ArrayList(size)
+    for (i in 0 until size) {
+        val element = this.opt(i)
+        if (NULL.equals(element)) {
+            results.add(null)
+        } else if (element is JSONArray) {
+            results.add(element.toList())
+        } else if (element is JSONObject) {
+            results.add(element.toMap())
+        } else {
+            results.add(element)
+        }
+    }
+    return results
 }
 
 /**
