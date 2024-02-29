@@ -17,7 +17,6 @@ buildscript {
         kotestVersion = '5.8.0'
         ktlintPluginVersion = '11.6.1'
         ktlintVersion = '1.0.1'
-        junitVersion = '4.13.2'
         // DO NOT upgrade for tests, using an old version so it matches AOSP
         tdunningJsonForTest = '1.0'
     }
