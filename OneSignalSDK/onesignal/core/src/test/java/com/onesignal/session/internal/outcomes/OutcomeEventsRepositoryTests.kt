@@ -16,15 +16,12 @@ import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.verify
 import io.mockk.verifyAll
 import io.mockk.verifySequence
 import org.json.JSONArray
-import org.junit.runner.RunWith
 
 @RobolectricTest
-@RunWith(KotestTestRunner::class)
 class OutcomeEventsRepositoryTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE

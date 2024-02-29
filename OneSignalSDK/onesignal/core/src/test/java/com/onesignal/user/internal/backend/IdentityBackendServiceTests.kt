@@ -7,13 +7,10 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.impl.IdentityBackendService
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import org.junit.runner.RunWith
 
-@RunWith(KotestTestRunner::class)
 class IdentityBackendServiceTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE

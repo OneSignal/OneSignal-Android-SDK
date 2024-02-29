@@ -7,16 +7,13 @@ import com.onesignal.user.internal.subscriptions.SubscriptionList
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
 import io.mockk.verify
-import org.junit.runner.RunWith
 
-@RunWith(KotestTestRunner::class)
 class UserManagerTests : FunSpec({
 
     test("language is backed by the language context") {

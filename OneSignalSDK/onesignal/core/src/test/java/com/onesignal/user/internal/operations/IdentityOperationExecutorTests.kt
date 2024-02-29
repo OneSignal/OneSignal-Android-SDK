@@ -13,7 +13,6 @@ import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.impl.executors.IdentityOperationExecutor
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -21,9 +20,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
-import org.junit.runner.RunWith
 
-@RunWith(KotestTestRunner::class)
 class IdentityOperationExecutorTests : FunSpec({
 
     test("execution of set alias operation") {

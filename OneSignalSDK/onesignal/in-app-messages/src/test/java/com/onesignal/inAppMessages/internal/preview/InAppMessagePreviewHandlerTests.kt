@@ -12,7 +12,6 @@ import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleServ
 import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -20,7 +19,6 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import org.json.JSONObject
-import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.annotation.Config
 
@@ -29,7 +27,6 @@ import org.robolectric.annotation.Config
     sdk = [26],
 )
 @RobolectricTest
-@RunWith(KotestTestRunner::class)
 class InAppMessagePreviewHandlerTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE

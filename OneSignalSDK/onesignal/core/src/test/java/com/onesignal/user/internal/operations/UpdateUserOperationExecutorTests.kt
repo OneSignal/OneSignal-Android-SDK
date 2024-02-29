@@ -11,16 +11,13 @@ import com.onesignal.user.internal.properties.PropertiesModel
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
-import org.junit.runner.RunWith
 import java.math.BigDecimal
 
-@RunWith(KotestTestRunner::class)
 class UpdateUserOperationExecutorTests : FunSpec({
     val appId = "appId"
     val localOneSignalId = "local-onesignalId"

@@ -25,15 +25,12 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldBeOneOf
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import org.junit.runner.RunWith
 
 @RobolectricTest
-@RunWith(KotestTestRunner::class)
 class LoginUserOperationExecutorTests : FunSpec({
     val appId = "appId"
     val localOneSignalId = "local-onesignalId"

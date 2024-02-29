@@ -10,11 +10,7 @@ import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.runner.junit4.KotestTestRunner
-import junit.framework.TestCase
-import org.junit.runner.RunWith
 
-@RunWith(KotestTestRunner::class)
 class ModelingTests : FunSpec({
 
     test("Deadlock related to Model.setOptAnyProperty") {
@@ -55,7 +51,7 @@ class ModelingTests : FunSpec({
         t2.join(1000)
 
         // verify if the thread has been successfully terminated
-        TestCase.assertEquals(Thread.State.TERMINATED, t2.state)
+        t2.state shouldBe Thread.State.TERMINATED
     }
 
     test("Deadlock related to ModelSstore add() or remove()") {
@@ -113,7 +109,7 @@ class ModelingTests : FunSpec({
         t2.join(1000)
 
         // verify if the thread has been successfully terminated
-        TestCase.assertEquals(Thread.State.TERMINATED, t2.state)
+        t2.state shouldBe Thread.State.TERMINATED
     }
 
     test("Unsubscribing handler in change event may cause the concurrent modification exception") {

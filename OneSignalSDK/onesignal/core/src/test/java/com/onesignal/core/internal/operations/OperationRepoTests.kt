@@ -8,7 +8,6 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.CapturingSlot
 import io.mockk.coEvery
 import io.mockk.coVerifyOrder
@@ -17,9 +16,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
-import org.junit.runner.RunWith
 
-@RunWith(KotestTestRunner::class)
 class OperationRepoTests : FunSpec({
 
     beforeAny {

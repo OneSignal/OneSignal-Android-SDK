@@ -11,15 +11,12 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.delay
-import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 
 @RobolectricTest
-@RunWith(KotestTestRunner::class)
 class ApplicationServiceTests : FunSpec({
 
     beforeAny {

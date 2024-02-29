@@ -18,13 +18,10 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldStartWith
-import io.kotest.runner.junit4.KotestTestRunner
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import org.junit.runner.RunWith
 
-@RunWith(KotestTestRunner::class)
 class InAppBackendServiceTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE

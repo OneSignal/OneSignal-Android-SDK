@@ -5,9 +5,7 @@ import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.core.spec.style.funSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.runner.junit4.KotestTestRunner
 import org.json.JSONObject
-import org.junit.runner.RunWith
 
 /**
  * This purpose of this file is to ensure org.json classes being used in
@@ -29,7 +27,6 @@ val keyAOSPBehavior =
     }
 
 @RobolectricTest
-@RunWith(KotestTestRunner::class)
 class JSONObjectRobolectricEnvTest : FunSpec({
     test("ensure our src JSON Kotlin extension methods work with @RobolectricTest") {
         val test = JSONObject()
@@ -41,7 +38,6 @@ class JSONObjectRobolectricEnvTest : FunSpec({
     include(keyAOSPBehavior)
 })
 
-@RunWith(KotestTestRunner::class)
 class JSONObjectJVMEnvTest : FunSpec({
     include(keyAOSPBehavior)
 })
