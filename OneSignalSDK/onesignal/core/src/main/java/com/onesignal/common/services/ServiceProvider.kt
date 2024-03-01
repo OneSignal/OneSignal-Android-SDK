@@ -8,11 +8,9 @@ import com.onesignal.debug.internal.logging.Logging
 class ServiceProvider(
     registrations: List<ServiceRegistration<*>>,
 ) : IServiceProvider {
-    private var serviceMap: Map<Class<*>, List<ServiceRegistration<*>>>
+    private val serviceMap = mutableMapOf<Class<*>, MutableList<ServiceRegistration<*>>>()
 
     init {
-        val serviceMap = mutableMapOf<Class<*>, MutableList<ServiceRegistration<*>>>()
-
         // go through the registrations to create the service map for easier lookup post-build
         for (reg in registrations) {
             for (service in reg.services) {
@@ -23,8 +21,6 @@ class ServiceProvider(
                 }
             }
         }
-
-        this.serviceMap = serviceMap
     }
 
     internal inline fun <reified T : Any> hasService(): Boolean {
@@ -44,23 +40,27 @@ class ServiceProvider(
     }
 
     override fun <T> hasService(c: Class<T>): Boolean {
-        return serviceMap.containsKey(c)
+        synchronized(serviceMap) {
+            return serviceMap.containsKey(c)
+        }
     }
 
     override fun <T> getAllServices(c: Class<T>): List<T> {
-        val listOfServices: MutableList<T> = mutableListOf()
+        synchronized(serviceMap) {
+            val listOfServices: MutableList<T> = mutableListOf()
 
-        if (serviceMap.containsKey(c)) {
-            for (serviceReg in serviceMap!![c]!!) {
-                val service =
-                    serviceReg.resolve(this) as T?
-                        ?: throw Exception("Could not instantiate service: $serviceReg")
+            if (serviceMap.containsKey(c)) {
+                for (serviceReg in serviceMap!![c]!!) {
+                    val service =
+                        serviceReg.resolve(this) as T?
+                            ?: throw Exception("Could not instantiate service: $serviceReg")
 
-                listOfServices.add(service)
+                    listOfServices.add(service)
+                }
             }
-        }
 
-        return listOfServices
+            return listOfServices
+        }
     }
 
     override fun <T> getService(c: Class<T>): T {
@@ -74,11 +74,10 @@ class ServiceProvider(
     }
 
     override fun <T> getServiceOrNull(c: Class<T>): T? {
-        Logging.debug("${indent}Retrieving service $c")
-//        indent += "  "
-        val service = serviceMap[c]?.last()?.resolve(this) as T?
-//        indent = indent.substring(0, indent.length-2)
-        return service
+        synchronized(serviceMap) {
+            Logging.debug("${indent}Retrieving service $c")
+            return serviceMap[c]?.last()?.resolve(this) as T?
+        }
     }
 
     companion object {
