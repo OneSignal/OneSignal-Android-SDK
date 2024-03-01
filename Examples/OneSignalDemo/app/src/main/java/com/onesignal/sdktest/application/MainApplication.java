@@ -1,5 +1,7 @@
 package com.onesignal.sdktest.application;
 
+import android.content.Context;
+import android.os.Looper;
 import android.os.StrictMode;
 import android.util.Log;
 
@@ -31,6 +33,9 @@ import com.onesignal.user.state.UserState;
 
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class MainApplication extends MultiDexApplication {
     private static final int SLEEP_TIME_TO_MIMIC_ASYNC_OPERATION = 2000;
 
@@ -38,6 +43,19 @@ public class MainApplication extends MultiDexApplication {
         // run strict mode default in debug mode to surface any potential issues easier
         if(BuildConfig.DEBUG)
             StrictMode.enableDefaults();
+    }
+
+
+    private Thread startInitInThread(final Context context, final String appId) {
+        Thread thread = new Thread(() -> { Looper.prepare(); OneSignal.initWithContext(context, appId);});
+        thread.start();
+        return thread;
+    }
+
+    private Thread startRaceGetServiceThread() {
+        Thread thread = new Thread(() -> OneSignal.testGetServiceRace());
+        thread.start();
+        return thread;
     }
 
     @Override
@@ -54,6 +72,23 @@ public class MainApplication extends MultiDexApplication {
         }
 
         OneSignalNotificationSender.setAppId(appId);
+
+        // Create a ton of thread to reproduce concurrency issue
+        List<Thread> threads = new ArrayList<>();
+        for(int i = 0;  i < 100; i++) {
+            threads.add(startInitInThread(this, appId));
+            threads.add(startRaceGetServiceThread());
+        }
+
+        // Wait for all thread we created above
+        for(int i = 0; i < threads.size(); i++) {
+            try {
+                threads.get(i).join();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         OneSignal.initWithContext(this, appId);
 
         OneSignal.getInAppMessages().addLifecycleListener(new IInAppMessageLifecycleListener() {

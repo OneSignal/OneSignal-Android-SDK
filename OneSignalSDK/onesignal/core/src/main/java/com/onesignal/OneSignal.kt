@@ -2,6 +2,7 @@ package com.onesignal
 
 import android.content.Context
 import com.onesignal.common.services.IServiceProvider
+import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.IDebugManager
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.internal.OneSignalImp
@@ -233,5 +234,11 @@ object OneSignal {
      */
     inline fun <reified T : Any> getServiceOrNull(): T? {
         return services.getServiceOrNull(T::class.java)
+    }
+
+    @JvmStatic
+    fun testGetServiceRace() {
+        val app: IApplicationService = OneSignal.getService()
+        println("IApplicationService: $app")
     }
 }
