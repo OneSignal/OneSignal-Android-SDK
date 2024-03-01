@@ -29,7 +29,10 @@ abstract class ServiceRegistration<T> {
         return this
     }
 
-    abstract fun resolve(provider: IServiceProvider): Any?
+    abstract fun resolve(
+        provider: IServiceProvider,
+        vararg params: Any?,
+    ): Any?
 }
 
 /**
@@ -51,7 +54,10 @@ class ServiceRegistrationReflection<T>(
 ) : ServiceRegistration<T>() {
     private var obj: T? = null
 
-    override fun resolve(provider: IServiceProvider): Any? {
+    override fun resolve(
+        provider: IServiceProvider,
+        vararg params: Any?,
+    ): Any? {
         if (obj != null) {
             Logging.debug("${ServiceProvider.indent}Already instantiated: $obj")
             return obj
@@ -59,7 +65,7 @@ class ServiceRegistrationReflection<T>(
 
         // use reflection to try to instantiate the thing
         for (constructor in clazz.constructors) {
-            if (doesHaveAllParameters(constructor, provider)) {
+            if (doesHaveAllParameters(constructor, provider, params)) {
                 Logging.debug("${ServiceProvider.indent}Found constructor: $constructor")
                 var paramList: MutableList<Any?> = mutableListOf()
 
@@ -79,7 +85,17 @@ class ServiceRegistrationReflection<T>(
                             paramList.add(null)
                         }
                     } else if (param is Class<*>) {
-                        paramList.add(provider.getService(param) as T)
+                        // TODO: Is looping even what we want?
+                        // Should we allow mixing inputParams and auto fill in ones?
+                        val passedInParam =
+                            params.firstOrNull {
+                                param.isInstance(it)
+                            }
+                        if (passedInParam != null) {
+                            paramList.add(passedInParam)
+                        } else {
+                            paramList.add(provider.getService(param) as T)
+                        }
                     } else {
                         paramList.add(null)
                     }
@@ -97,6 +113,7 @@ class ServiceRegistrationReflection<T>(
     private fun doesHaveAllParameters(
         constructor: Constructor<*>,
         provider: IServiceProvider,
+        vararg params: Any?,
     ): Boolean {
         for (param in constructor.genericParameterTypes) {
             if (param is ParameterizedType) {
@@ -106,22 +123,37 @@ class ServiceRegistrationReflection<T>(
                     val clazz = argType.upperBounds.first()
                     if (clazz is Class<*>) {
                         if (!provider.hasService(clazz)) {
-                            Logging.debug("Constructor $constructor could not find service: $clazz")
-                            return false
+                            // TODO: Figure out how to check type
+//                            val result = ArrayList<Any?>()
+//                            for (t in params) {
+//                                result.add(t)
+//                            }
+//                            val paramClass = result[0]
+//                            val javaClass = paramClass!!.javaClass
+//                            if (clazz is paramClass::class) {
+//                                Logging.debug("HERE")
+//                            }
+                            return true
+//                            Logging.debug("Constructor $constructor could not find service: $clazz")
+//                            return false
                         }
                     }
                 } else if (argType is Class<*>) {
                     if (!provider.hasService(argType)) {
-                        Logging.debug("Constructor $constructor could not find service: $argType")
-                        return false
+                        // TODO: Figure out how to check types in params
+                        return true
+//                        Logging.debug("Constructor $constructor could not find service: $argType")
+//                        return false
                     }
                 } else {
                     return false
                 }
             } else if (param is Class<*>) {
                 if (!provider.hasService(param)) {
-                    Logging.debug("Constructor $constructor could not find service: $param")
-                    return false
+                    // TODO: Figure out how to check types in params
+                    return true
+//                    Logging.debug("Constructor $constructor could not find service: $param")
+//                    return false
                 }
             } else {
                 Logging.debug("Constructor $constructor could not identify param type: $param")
@@ -141,7 +173,10 @@ class ServiceRegistrationReflection<T>(
 class ServiceRegistrationSingleton<T>(
     private var obj: T,
 ) : ServiceRegistration<T>() {
-    override fun resolve(provider: IServiceProvider): Any? = obj
+    override fun resolve(
+        provider: IServiceProvider,
+        vararg params: Any?,
+    ): Any? = obj
 }
 
 /**
@@ -156,7 +191,10 @@ class ServiceRegistrationLambda<T>(
 ) : ServiceRegistration<T>() {
     private var obj: T? = null
 
-    override fun resolve(provider: IServiceProvider): Any? {
+    override fun resolve(
+        provider: IServiceProvider,
+        vararg params: Any?,
+    ): Any? {
         if (obj != null) {
             return obj
         }

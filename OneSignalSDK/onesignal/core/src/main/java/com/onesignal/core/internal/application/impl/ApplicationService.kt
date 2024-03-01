@@ -26,18 +26,23 @@ import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.delay
 import java.lang.ref.WeakReference
 
-class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, OnGlobalLayoutListener {
+class ApplicationService(context: Context) : IApplicationService, ActivityLifecycleCallbacks, OnGlobalLayoutListener {
     private val activityLifecycleNotifier = EventProducer<IActivityLifecycleHandler>()
     private val applicationLifecycleNotifier = EventProducer<IApplicationLifecycleHandler>()
     private val systemConditionNotifier = EventProducer<ISystemConditionHandler>()
 
+    private val _appContext: Context
+
+    init {
+        this._appContext = context.applicationContext
+    }
+
+    override val appContext: Context
+        get() = _appContext
+
     override val isInForeground: Boolean
         get() = entryState.isAppOpen || entryState.isNotificationClick
     override var entryState: AppEntryAction = AppEntryAction.APP_CLOSE
-
-    private var _appContext: Context? = null
-    override val appContext: Context
-        get() = _appContext!!
 
     private var _current: Activity? = null
     override var current: Activity?
@@ -73,9 +78,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
      * @param context The context the SDK has been initialized under.
      */
     fun start(context: Context) {
-        _appContext = context
-
-        val application = context.applicationContext as Application
+        val application = _appContext as Application
         application.registerActivityLifecycleCallbacks(this)
 
         val configuration =
@@ -97,6 +100,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
 
         application.registerComponentCallbacks(configuration)
 
+        // TODO: Can set this flag with init?
         val isContextActivity = context is Activity
         val isCurrentActivityNull = current == null
 

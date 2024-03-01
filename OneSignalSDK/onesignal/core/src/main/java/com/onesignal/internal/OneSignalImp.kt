@@ -190,7 +190,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             // start the application service. This is called explicitly first because we want
             // to make sure it has the context provided on input, for all other startable services
             // to depend on if needed.
-            val applicationService = services.getService<IApplicationService>()
+            val applicationService = services.getService<IApplicationService>(IApplicationService::class.java, context)
             (applicationService as ApplicationService).start(context)
 
             // Give the logging singleton access to the application service to support visual logging.
@@ -507,9 +507,9 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
     override fun <T> hasService(c: Class<T>): Boolean = services.hasService(c)
 
-    override fun <T> getService(c: Class<T>): T = services.getService(c)
+    override fun <T> getService(c: Class<T>, vararg params: Any?): T = services.getService(c, params)
 
-    override fun <T> getServiceOrNull(c: Class<T>): T? = services.getServiceOrNull(c)
+    override fun <T> getServiceOrNull(c: Class<T>, vararg params: Any?): T? = services.getServiceOrNull(c, params)
 
     override fun <T> getAllServices(c: Class<T>): List<T> = services.getAllServices(c)
 }

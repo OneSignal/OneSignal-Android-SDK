@@ -63,8 +63,8 @@ class ServiceProvider(
         }
     }
 
-    override fun <T> getService(c: Class<T>): T {
-        val service = getServiceOrNull(c)
+    override fun <T> getService(c: Class<T>, vararg params: Any?): T {
+        val service = getServiceOrNull(c, *params)
         if (service == null) {
             Logging.warn("Service not found: $c")
             throw Exception("Service $c could not be instantiated")
@@ -73,10 +73,10 @@ class ServiceProvider(
         return service
     }
 
-    override fun <T> getServiceOrNull(c: Class<T>): T? {
+    override fun <T> getServiceOrNull(c: Class<T>, vararg params: Any?): T? {
         synchronized(serviceMap) {
             Logging.debug("${indent}Retrieving service $c")
-            return serviceMap[c]?.last()?.resolve(this) as T?
+            return serviceMap[c]?.last()?.resolve(this, *params) as T?
         }
     }
 

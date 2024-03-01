@@ -19,7 +19,10 @@ interface IServiceProvider {
      *
      * @return The instance of the implementation of that service.
      */
-    fun <T> getService(c: Class<T>): T
+    fun <T> getService(
+        c: Class<T>,
+        vararg params: Any?,
+    ): T
 
     /**
      * Retrieve the service that is a [T].  If multiple services
@@ -30,7 +33,10 @@ interface IServiceProvider {
      *
      * @return The instance of the implementation of that service, or null if no service exists.
      */
-    fun <T> getServiceOrNull(c: Class<T>): T?
+    fun <T> getServiceOrNull(
+        c: Class<T>,
+        vararg params: Any?,
+    ): T?
 
     /**
      * Retrieve the list of services that are a [T].  If no service exists, an empty
