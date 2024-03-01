@@ -8,12 +8,9 @@ import com.onesignal.debug.internal.logging.Logging
 class ServiceProvider(
     registrations: List<ServiceRegistration<*>>,
 ) : IServiceProvider {
-    private var serviceMap: Map<Class<*>, List<ServiceRegistration<*>>>
-    private val serviceMapLock = Any()
+    private val serviceMap = mutableMapOf<Class<*>, MutableList<ServiceRegistration<*>>>()
 
     init {
-        val serviceMap = mutableMapOf<Class<*>, MutableList<ServiceRegistration<*>>>()
-
         // go through the registrations to create the service map for easier lookup post-build
         for (reg in registrations) {
             for (service in reg.services) {
@@ -24,8 +21,6 @@ class ServiceProvider(
                 }
             }
         }
-
-        this.serviceMap = serviceMap
     }
 
     internal inline fun <reified T : Any> hasService(): Boolean {
@@ -45,13 +40,13 @@ class ServiceProvider(
     }
 
     override fun <T> hasService(c: Class<T>): Boolean {
-        synchronized(serviceMapLock) {
+        synchronized(serviceMap) {
             return serviceMap.containsKey(c)
         }
     }
 
     override fun <T> getAllServices(c: Class<T>): List<T> {
-        synchronized(serviceMapLock) {
+        synchronized(serviceMap) {
             val listOfServices: MutableList<T> = mutableListOf()
 
             if (serviceMap.containsKey(c)) {
@@ -79,7 +74,7 @@ class ServiceProvider(
     }
 
     override fun <T> getServiceOrNull(c: Class<T>): T? {
-        synchronized(serviceMapLock) {
+        synchronized(serviceMap) {
             Logging.debug("${indent}Retrieving service $c")
             return serviceMap[c]?.last()?.resolve(this) as T?
         }
