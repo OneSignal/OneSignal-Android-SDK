@@ -9,6 +9,7 @@ class ServiceProvider(
     registrations: List<ServiceRegistration<*>>,
 ) : IServiceProvider {
     private var serviceMap: Map<Class<*>, List<ServiceRegistration<*>>>
+    private val serviceMapLock = Any()
 
     init {
         val serviceMap = mutableMapOf<Class<*>, MutableList<ServiceRegistration<*>>>()
@@ -44,23 +45,27 @@ class ServiceProvider(
     }
 
     override fun <T> hasService(c: Class<T>): Boolean {
-        return serviceMap.containsKey(c)
+        synchronized(serviceMapLock) {
+            return serviceMap.containsKey(c)
+        }
     }
 
     override fun <T> getAllServices(c: Class<T>): List<T> {
-        val listOfServices: MutableList<T> = mutableListOf()
+        synchronized(serviceMapLock) {
+            val listOfServices: MutableList<T> = mutableListOf()
 
-        if (serviceMap.containsKey(c)) {
-            for (serviceReg in serviceMap!![c]!!) {
-                val service =
-                    serviceReg.resolve(this) as T?
-                        ?: throw Exception("Could not instantiate service: $serviceReg")
+            if (serviceMap.containsKey(c)) {
+                for (serviceReg in serviceMap!![c]!!) {
+                    val service =
+                        serviceReg.resolve(this) as T?
+                            ?: throw Exception("Could not instantiate service: $serviceReg")
 
-                listOfServices.add(service)
+                    listOfServices.add(service)
+                }
             }
-        }
 
-        return listOfServices
+            return listOfServices
+        }
     }
 
     override fun <T> getService(c: Class<T>): T {
@@ -74,11 +79,10 @@ class ServiceProvider(
     }
 
     override fun <T> getServiceOrNull(c: Class<T>): T? {
-        Logging.debug("${indent}Retrieving service $c")
-//        indent += "  "
-        val service = serviceMap[c]?.last()?.resolve(this) as T?
-//        indent = indent.substring(0, indent.length-2)
-        return service
+        synchronized(serviceMapLock) {
+            Logging.debug("${indent}Retrieving service $c")
+            return serviceMap[c]?.last()?.resolve(this) as T?
+        }
     }
 
     companion object {
