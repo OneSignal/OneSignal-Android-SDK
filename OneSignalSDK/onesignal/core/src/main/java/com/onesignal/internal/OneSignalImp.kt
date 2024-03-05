@@ -359,15 +359,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             currentIdentityOneSignalId = identityModelStore!!.model.onesignalId
 
             if (currentIdentityExternalId == externalId) {
-                // login is for same user that is already logged in, fetch (refresh)
-                // the current user.
-                operationRepo!!.enqueue(
-                    RefreshUserOperation(
-                        configModel!!.appId,
-                        identityModelStore!!.model.onesignalId,
-                    ),
-                    true,
-                )
                 return
             }
 
