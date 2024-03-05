@@ -18,7 +18,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - run: npm install @octokit/action
-      - uses: actions/github-script@v6
+      - uses: actions/github-script@v6.0.7
         id: set-time 
         with:
           result-encoding: string
