@@ -14,9 +14,15 @@ class ADMMessageHandlerJob : ADMMessageHandlerJobBase() {
         context: Context?,
         intent: Intent?,
     ) {
-        val bundle = intent?.extras
-
+        if (context == null) {
+            return
+        }
+        if (!OneSignal.initWithContext(context.applicationContext)) {
+            return
+        }
         val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
+
+        val bundle = intent?.extras
 
         bundleProcessor.processBundleFromReceiver(context!!, bundle!!)
     }
