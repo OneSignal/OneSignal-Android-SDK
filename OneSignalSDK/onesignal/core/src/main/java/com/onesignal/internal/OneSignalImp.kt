@@ -384,6 +384,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                         newIdentityOneSignalId,
                         externalId,
                         if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
+                        _user?.jwtToken
                     ),
                 )
 
