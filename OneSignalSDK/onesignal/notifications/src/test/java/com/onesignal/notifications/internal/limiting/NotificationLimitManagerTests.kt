@@ -4,13 +4,13 @@ import android.content.Context
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.test.core.app.ApplicationProvider
+import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.limiting.impl.NotificationLimitManager
 import com.onesignal.notifications.internal.summary.INotificationSummaryManager
-import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.mockk.coEvery
 import io.mockk.coVerify

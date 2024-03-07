@@ -2,12 +2,12 @@ package com.onesignal.core.internal.preferences
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.core.internal.preferences.impl.PreferencesService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.MockHelper
-import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe

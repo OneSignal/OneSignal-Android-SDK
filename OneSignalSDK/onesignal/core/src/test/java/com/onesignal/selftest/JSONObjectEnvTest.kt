@@ -1,7 +1,7 @@
 package com.onesignal.selftest
 
+import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.toMap
-import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.core.spec.style.funSpec
 import io.kotest.matchers.shouldBe

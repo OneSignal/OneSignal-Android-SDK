@@ -1,10 +1,10 @@
 package com.onesignal.location.internal.permissions
 
+import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.AndroidMockHelper
-import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.longs.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe

@@ -1,5 +1,6 @@
 package com.onesignal.session.internal.outcomes
 
+import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.DatabaseMockHelper
@@ -12,7 +13,6 @@ import com.onesignal.session.internal.outcomes.impl.OutcomeEventsRepository
 import com.onesignal.session.internal.outcomes.impl.OutcomeEventsTable
 import com.onesignal.session.internal.outcomes.impl.OutcomeSource
 import com.onesignal.session.internal.outcomes.impl.OutcomeSourceBody
-import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
