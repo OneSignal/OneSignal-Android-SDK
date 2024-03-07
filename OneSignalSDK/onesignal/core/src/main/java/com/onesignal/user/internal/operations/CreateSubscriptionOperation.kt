@@ -1,5 +1,6 @@
 package com.onesignal.user.internal.operations
 
+import com.onesignal.OneSignal
 import com.onesignal.common.IDManager
 import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.Operation
@@ -82,13 +83,22 @@ class CreateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.CR
             setEnumProperty(::status.name, value)
         }
 
+    /**
+     * The jwt token used for the operation that creates a subscription
+     */
+    var jwt: String?
+        get() = getStringProperty(::jwt.name)
+        private set(value) {
+            setStringProperty(::jwt.name, value!!)
+        }
+
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Subscription.$subscriptionId"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.ALTER
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
     override val applyToRecordId: String get() = onesignalId
 
-    constructor(appId: String, onesignalId: String, subscriptionId: String, type: SubscriptionType, enabled: Boolean, address: String, status: SubscriptionStatus) : this() {
+    constructor(appId: String, onesignalId: String, subscriptionId: String, type: SubscriptionType, enabled: Boolean, address: String, status: SubscriptionStatus, jwt: String? = null) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
         this.subscriptionId = subscriptionId
@@ -96,6 +106,7 @@ class CreateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.CR
         this.enabled = enabled
         this.address = address
         this.status = status
+        this.jwt = jwt
     }
 
     override fun translateIds(map: Map<String, String>) {
