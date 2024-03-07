@@ -25,6 +25,7 @@ internal class OperationRepo(
     private class OperationQueueItem(
         val operation: Operation,
         val waiter: WaiterWithValue<Boolean>? = null,
+        var retries: Int = 0,
     )
 
     private val executorsMap: Map<String, IOperationExecutor>
@@ -200,10 +201,18 @@ internal class OperationRepo(
                     }
                 }
                 ExecutionResult.FAIL_RETRY -> {
+                    Logging.error("Operation execution failed, retrying: $operations")
                     // add back all operations to the front of the queue to be re-executed.
+                    var highestRetries = 0
                     synchronized(queue) {
-                        ops.reversed().forEach { queue.add(0, it) }
+                        ops.reversed().forEach {
+                            if (++it.retries > highestRetries) {
+                                highestRetries = it.retries
+                            }
+                            queue.add(0, it)
+                        }
                     }
+                    delayBeforeRetry(highestRetries)
                 }
                 ExecutionResult.FAIL_PAUSE_OPREPO -> {
                     Logging.error("Operation execution failed with eventual retry, pausing the operation repo: $operations")
@@ -235,6 +244,13 @@ internal class OperationRepo(
             ops.forEach { _operationModelStore.remove(it.operation.id) }
             ops.forEach { it.waiter?.wake(false) }
         }
+    }
+
+    suspend fun delayBeforeRetry(retries: Int) {
+        val delayFor = retries * 15_000L
+        if (delayFor < 1) return
+        Logging.error("Operations being delay for: $delayFor")
+        delay(delayFor)
     }
 
     /**

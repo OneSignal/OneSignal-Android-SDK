@@ -16,6 +16,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
+import io.mockk.spyk
 
 class OperationRepoTests : FunSpec({
 
@@ -73,7 +74,15 @@ class OperationRepoTests : FunSpec({
         every { mockOperationModelStore.remove(any()) } just runs
 
         val operationRepo =
-            OperationRepo(listOf(mockExecutor), mockOperationModelStore, MockHelper.configModelStore(), MockHelper.time(1000))
+            spyk(
+                OperationRepo(
+                    listOf(mockExecutor),
+                    mockOperationModelStore,
+                    MockHelper.configModelStore(),
+                    MockHelper.time(1000),
+                ),
+            )
+        coEvery { operationRepo.delayBeforeRetry(any()) } just runs
 
         val operationIdSlot = slot<String>()
         val operation = mockOperation(operationIdSlot = operationIdSlot)
@@ -93,6 +102,7 @@ class OperationRepoTests : FunSpec({
                     it[0] shouldBe operation
                 },
             )
+            operationRepo.delayBeforeRetry(1)
             mockExecutor.execute(
                 withArg {
                     it.count() shouldBe 1
