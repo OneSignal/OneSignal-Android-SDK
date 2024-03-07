@@ -77,6 +77,7 @@ import static com.onesignal.OneSignal.Log;
 class OSUtils {
 
    public static final int UNINITIALIZABLE_STATUS = -999;
+   private static final String PREFER_HMS_METADATA_NAME = "com.onesignal.preferHMS";
 
    public static int MAX_NETWORK_REQUEST_ATTEMPT_COUNT = 3;
    static final int[] NO_RETRY_NETWROK_REQUEST_STATUS_CODES = {401, 402, 403, 404, 410};
@@ -369,11 +370,20 @@ class OSUtils {
       if (supportsADM())
          return UserState.DEVICE_TYPE_FIREOS;
 
-      if (supportsGooglePush())
+      boolean supportsHMS = supportsHMS();
+      boolean supportsFCM = supportsGooglePush();
+      
+      if (supportsFCM && supportsHMS) {
+         Context context = OneSignal.appContext;
+         boolean preferHMS = context != null && OSUtils.getManifestMetaBoolean(context, PREFER_HMS_METADATA_NAME);
+         return preferHMS ? UserState.DEVICE_TYPE_HUAWEI: UserState.DEVICE_TYPE_ANDROID;
+      }
+
+      if (supportsFCM)
          return UserState.DEVICE_TYPE_ANDROID;
 
       // Some Huawei devices have both FCM & HMS support, but prefer FCM (Google push) over HMS
-      if (supportsHMS())
+      if (supportsHMS)
          return UserState.DEVICE_TYPE_HUAWEI;
 
       // Start - Fallback logic
