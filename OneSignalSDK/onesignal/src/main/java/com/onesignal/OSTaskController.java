@@ -49,25 +49,27 @@ class OSTaskController {
     }
 
     private void addTaskToQueue(PendingTaskRunnable task) {
-        task.taskId = lastTaskId.incrementAndGet();
+        synchronized (taskQueueWaitingForInit) {
+            task.taskId = lastTaskId.incrementAndGet();
 
-        if (pendingTaskExecutor == null) {
-            logger.debug("Adding a task to the pending queue with ID: " + task.taskId);
-            // The tasks haven't been executed yet...add them to the waiting queue
-            taskQueueWaitingForInit.add(task);
-        } else if (!pendingTaskExecutor.isShutdown()) {
-            logger.debug("Executor is still running, add to the executor with ID: " + task.taskId);
-            try {
-                // If the executor isn't done with tasks, submit the task to the executor
-                pendingTaskExecutor.submit(task);
-            } catch (RejectedExecutionException e) {
-                logger.info("Executor is shutdown, running task manually with ID: " + task.taskId);
-                // Run task manually when RejectedExecutionException occurs due to the ThreadPoolExecutor.AbortPolicy
-                // The pendingTaskExecutor is already shutdown by the time it tries to run the task
-                // Issue #669
-                // https://github.com/OneSignal/OneSignal-Android-SDK/issues/669
-                task.run();
-                e.printStackTrace();
+            if (pendingTaskExecutor == null) {
+                logger.debug("Adding a task to the pending queue with ID: " + task.taskId);
+                // The tasks haven't been executed yet...add them to the waiting queue
+                taskQueueWaitingForInit.add(task);
+            } else if (!pendingTaskExecutor.isShutdown()) {
+                logger.debug("Executor is still running, add to the executor with ID: " + task.taskId);
+                try {
+                    // If the executor isn't done with tasks, submit the task to the executor
+                    pendingTaskExecutor.submit(task);
+                } catch (RejectedExecutionException e) {
+                    logger.info("Executor is shutdown, running task manually with ID: " + task.taskId);
+                    // Run task manually when RejectedExecutionException occurs due to the ThreadPoolExecutor.AbortPolicy
+                    // The pendingTaskExecutor is already shutdown by the time it tries to run the task
+                    // Issue #669
+                    // https://github.com/OneSignal/OneSignal-Android-SDK/issues/669
+                    task.run();
+                    e.printStackTrace();
+                }
             }
         }
     }
@@ -77,19 +79,21 @@ class OSTaskController {
      * Run available pending tasks on an Executor
      */
     void startPendingTasks() {
-        OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "startPendingTasks with task queue quantity: " + taskQueueWaitingForInit.size());
-        if (!taskQueueWaitingForInit.isEmpty()) {
-            pendingTaskExecutor = Executors.newSingleThreadExecutor(new ThreadFactory() {
-                @Override
-                public Thread newThread(@NonNull Runnable runnable) {
-                    Thread newThread = new Thread(runnable);
-                    newThread.setName(OS_PENDING_EXECUTOR + newThread.getId());
-                    return newThread;
-                }
-            });
+        synchronized (taskQueueWaitingForInit) {
+            OneSignal.Log(OneSignal.LOG_LEVEL.DEBUG, "startPendingTasks with task queue quantity: " + taskQueueWaitingForInit.size());
+            if (!taskQueueWaitingForInit.isEmpty()) {
+                pendingTaskExecutor = Executors.newSingleThreadExecutor(new ThreadFactory() {
+                    @Override
+                    public Thread newThread(@NonNull Runnable runnable) {
+                        Thread newThread = new Thread(runnable);
+                        newThread.setName(OS_PENDING_EXECUTOR + newThread.getId());
+                        return newThread;
+                    }
+                });
 
-            while (!taskQueueWaitingForInit.isEmpty()) {
-                pendingTaskExecutor.submit(taskQueueWaitingForInit.poll());
+                while (!taskQueueWaitingForInit.isEmpty()) {
+                    pendingTaskExecutor.submit(taskQueueWaitingForInit.poll());
+                }
             }
         }
     }
@@ -102,7 +106,9 @@ class OSTaskController {
     }
 
     ConcurrentLinkedQueue<Runnable> getTaskQueueWaitingForInit() {
-        return taskQueueWaitingForInit;
+        synchronized (taskQueueWaitingForInit) {
+            return taskQueueWaitingForInit;
+        }
     }
 
     void shutdownNow() {
