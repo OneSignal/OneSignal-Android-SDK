@@ -28,6 +28,8 @@ class FocusTimeController {
    // Only present if app is currently in focus.
    private Long timeFocusedAtMs;
 
+   private Object timeFocusedAtMsLock = new Object();
+
    private OSFocusTimeProcessorFactory processorFactory;
    private OSLogger logger;
 
@@ -42,13 +44,17 @@ class FocusTimeController {
    }
 
    void appForegrounded() {
-      timeFocusedAtMs = OneSignal.getTime().getElapsedRealtime();
-      logger.debug("Application foregrounded focus time: " + timeFocusedAtMs);
+      synchronized (timeFocusedAtMsLock) {
+         timeFocusedAtMs = OneSignal.getTime().getElapsedRealtime();
+         logger.debug("Application foregrounded focus time: " + timeFocusedAtMs);
+      }
    }
 
    void appStopped() {
       Long timeElapsed = getTimeFocusedElapsed();
-      logger.debug("Application stopped focus time: " + timeFocusedAtMs + " timeElapsed: " + timeElapsed);
+      synchronized (timeFocusedAtMsLock) {
+         logger.debug("Application stopped focus time: " + timeFocusedAtMs + " timeElapsed: " + timeElapsed);
+      }
 
       if (timeElapsed == null)
          return;
@@ -58,9 +64,11 @@ class FocusTimeController {
    }
 
    void appBackgrounded() {
-      logger.debug("Application backgrounded focus time: " + timeFocusedAtMs);
-      processorFactory.getTimeProcessorSaved().sendUnsentTimeNow();
-      timeFocusedAtMs = null;
+      synchronized (timeFocusedAtMsLock) {
+         logger.debug("Application backgrounded focus time: " + timeFocusedAtMs);
+         processorFactory.getTimeProcessorSaved().sendUnsentTimeNow();
+         timeFocusedAtMs = null;
+      }
    }
 
    void doBlockingBackgroundSyncOfUnsentTime() {
@@ -91,16 +99,19 @@ class FocusTimeController {
    // Get time past since app was put into focus.
    // Will be null if time is invalid or 0
    private @Nullable Long getTimeFocusedElapsed() {
-      // timeFocusedAtMs is cleared when the app goes into the background so we don't have a focus time
-      if (timeFocusedAtMs == null)
-         return null;
+      synchronized (timeFocusedAtMsLock) {
+         // timeFocusedAtMs is cleared when the app goes into the background so we don't have a focus time
+         if (timeFocusedAtMs == null)
+            return null;
 
-      long timeElapsed = (long)(((OneSignal.getTime().getElapsedRealtime() - timeFocusedAtMs) / 1_000d) + 0.5d);
+         long timeElapsed = (long) (((OneSignal.getTime().getElapsedRealtime() - timeFocusedAtMs) / 1_000d) + 0.5d);
 
-      // Time is invalid if below 1 or over a day
-      if (timeElapsed < 1 || timeElapsed > 86_400)
-         return null;
-      return timeElapsed;
+
+         // Time is invalid if below 1 or over a day
+         if (timeElapsed < 1 || timeElapsed > 86_400)
+            return null;
+         return timeElapsed;
+      }
    }
 
    static class FocusTimeProcessorUnattributed extends FocusTimeProcessorBase {
