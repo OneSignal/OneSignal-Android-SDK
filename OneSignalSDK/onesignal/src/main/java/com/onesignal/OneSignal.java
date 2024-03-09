@@ -75,6 +75,7 @@ import java.util.TimeZone;
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
 import static com.onesignal.NotificationBundleProcessor.newJsonArray;
+import static com.onesignal.OSUtils.startThreadWithRetry;
 
 /**
  * The main OneSignal class - this is where you will interface with the OneSignal SDK
@@ -1488,7 +1489,7 @@ public class OneSignal {
          return;
       }
 
-      new Thread(new Runnable() {
+      Thread thread = new Thread(new Runnable() {
          public void run() {
             try {
                registerUserTask();
@@ -1496,7 +1497,8 @@ public class OneSignal {
                Log(LOG_LEVEL.FATAL, "FATAL Error registering device!", t);
             }
          }
-      }, "OS_REG_USER").start();
+      }, "OS_REG_USER");
+      startThreadWithRetry(thread);
    }
 
    private static void registerUserTask() throws JSONException {
