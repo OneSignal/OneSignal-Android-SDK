@@ -27,6 +27,8 @@
 
 package com.onesignal;
 
+import static com.onesignal.OSUtils.startThreadWithRetry;
+
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.app.job.JobInfo;
@@ -63,7 +65,7 @@ abstract class OSBackgroundSync {
         OneSignal.onesignalLog(OneSignal.LOG_LEVEL.DEBUG, "OSBackground sync, calling initWithContext");
         OneSignal.initWithContext(context);
         syncBgThread = new Thread(runnable, getSyncTaskThreadId());
-        syncBgThread.start();
+        startThreadWithRetry(syncBgThread);
     }
 
     boolean stopSyncBgThread() {

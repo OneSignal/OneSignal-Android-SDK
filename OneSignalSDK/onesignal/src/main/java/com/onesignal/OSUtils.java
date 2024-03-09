@@ -691,4 +691,18 @@ class OSUtils {
    static String getRootCauseMessage(@NonNull Throwable throwable) {
       return getRootCauseThrowable(throwable).getMessage();
    }
+
+   static void startThreadWithRetry(@NonNull Thread thread) {
+      boolean started = false;
+      while (!started) {
+         try {
+            thread.start();
+            started = true;
+         } catch (OutOfMemoryError ignored) {
+            try {
+               Thread.sleep(250);
+            } catch (InterruptedException ignoreInterrupted) {}
+         }
+      }
+   }
 }

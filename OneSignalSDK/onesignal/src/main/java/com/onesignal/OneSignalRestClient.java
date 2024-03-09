@@ -27,6 +27,8 @@
 
 package com.onesignal;
 
+import static com.onesignal.OSUtils.startThreadWithRetry;
+
 import android.net.TrafficStats;
 import android.os.Build;
 import androidx.annotation.NonNull;
@@ -65,27 +67,30 @@ class OneSignalRestClient {
    }
 
    public static void put(final String url, final JSONObject jsonBody, final ResponseHandler responseHandler) {
-      new Thread(new Runnable() {
+      Thread thread = new Thread(new Runnable() {
          public void run() {
             makeRequest(url, "PUT", jsonBody, responseHandler, TIMEOUT, null);
          }
-      }, "OS_REST_ASYNC_PUT").start();
+      }, "OS_REST_ASYNC_PUT");
+      startThreadWithRetry(thread);
    }
 
    public static void post(final String url, final JSONObject jsonBody, final ResponseHandler responseHandler) {
-      new Thread(new Runnable() {
+      Thread thread = new Thread(new Runnable() {
          public void run() {
             makeRequest(url, "POST", jsonBody, responseHandler, TIMEOUT, null);
          }
-      }, "OS_REST_ASYNC_POST").start();
+      }, "OS_REST_ASYNC_POST");
+      startThreadWithRetry(thread);
    }
 
    public static void get(final String url, final ResponseHandler responseHandler, @NonNull final String cacheKey) {
-      new Thread(new Runnable() {
+      Thread thread = new Thread(new Runnable() {
          public void run() {
             makeRequest(url, null, null, responseHandler, GET_TIMEOUT, cacheKey);
          }
-      }, "OS_REST_ASYNC_GET").start();
+      }, "OS_REST_ASYNC_GET");
+      startThreadWithRetry(thread);
    }
 
    public static void getSync(final String url, final ResponseHandler responseHandler, @NonNull String cacheKey) {
@@ -114,8 +119,8 @@ class OneSignalRestClient {
             callbackThread[0] = startHTTPConnection(url, method, jsonBody, responseHandler, timeout, cacheKey);
          }
       }, "OS_HTTPConnection");
-      
-      connectionThread.start();
+
+      startThreadWithRetry(connectionThread);
       
       // getResponseCode() can hang past it's timeout setting so join it's thread to ensure it is timing out.
       try {
@@ -129,7 +134,7 @@ class OneSignalRestClient {
          e.printStackTrace();
       }
    }
-   
+
    private static Thread startHTTPConnection(String url, String method, JSONObject jsonBody, ResponseHandler responseHandler, int timeout, @Nullable String cacheKey) {
       int httpResponse = -1;
       HttpURLConnection con = null;
@@ -279,7 +284,7 @@ class OneSignalRestClient {
             handler.onSuccess(response);
          }
       }, "OS_REST_SUCCESS_CALLBACK");
-      thread.start();
+      startThreadWithRetry(thread);
       
       return thread;
    }
@@ -293,7 +298,7 @@ class OneSignalRestClient {
             handler.onFailure(statusCode, response, throwable);
          }
       }, "OS_REST_FAILURE_CALLBACK");
-      thread.start();
+      startThreadWithRetry(thread);
       
       return thread;
    }
