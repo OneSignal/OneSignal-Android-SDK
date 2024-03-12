@@ -1,5 +1,6 @@
 package com.onesignal.user
 
+import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.OneSignal
 import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.subscriptions.IPushSubscription
@@ -172,4 +173,8 @@ interface IUserManager {
      * Remove an observer from the user state.
      */
     fun removeObserver(observer: IUserStateObserver)
+
+    fun addUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener)
+
+    fun removeUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener)
 }

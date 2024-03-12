@@ -1,5 +1,7 @@
 package com.onesignal.user.internal
 
+import com.onesignal.IUserJwtInvalidatedListener
+import com.onesignal.UserJwtInvalidatedEvent
 import com.onesignal.common.IDManager
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.events.EventProducer
@@ -43,6 +45,8 @@ internal open class UserManager(
         get() = _subscriptionManager.subscriptions
 
     val changeHandlersNotifier = EventProducer<IUserStateObserver>()
+
+    val jwtInvalidatedCallback = EventProducer<IUserJwtInvalidatedListener>()
 
     override val pushSubscription: IPushSubscription
         get() = _subscriptionManager.subscriptions.push
@@ -247,6 +251,16 @@ internal open class UserManager(
         changeHandlersNotifier.unsubscribe(observer)
     }
 
+    override fun addUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
+        Logging.debug("OneSignal.addClickListener(listener: $listener)")
+        jwtInvalidatedCallback.subscribe(listener)
+    }
+
+    override fun removeUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
+        Logging.debug("OneSignal.removeClickListener(listener: $listener)")
+        jwtInvalidatedCallback.unsubscribe(listener)
+    }
+
     override fun onModelReplaced(
         model: IdentityModel,
         tag: String,
@@ -256,10 +270,20 @@ internal open class UserManager(
         args: ModelChangedArgs,
         tag: String,
     ) {
-        if (args.property == IdentityConstants.ONESIGNAL_ID) {
-            val newUserState = UserState(args.newValue.toString(), externalId)
-            this.changeHandlersNotifier.fire {
-                it.onUserStateChange(UserChangedState(newUserState))
+        when (args.property) {
+            IdentityConstants.ONESIGNAL_ID -> {
+                val newUserState = UserState(args.newValue.toString(), externalId)
+                this.changeHandlersNotifier.fire {
+                    it.onUserStateChange(UserChangedState(newUserState))
+                }
+            }
+            IdentityConstants.JWT_TOKEN -> {
+                // Fire the event when the JWT has been invalidated.
+                if (args.newValue == null) {
+                    jwtInvalidatedCallback.fire {
+                        it.onUserJwtInvalidated(UserJwtInvalidatedEvent((externalId)))
+                    }
+                }
             }
         }
     }

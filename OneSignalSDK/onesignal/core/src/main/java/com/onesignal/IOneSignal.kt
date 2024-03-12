@@ -133,4 +133,8 @@ interface IOneSignal {
      * Update JWT token for a user
      */
     fun updateUserJwt(externalId: String, token: String)
+
+    fun addUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener)
+
+    fun removeUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener)
 }
