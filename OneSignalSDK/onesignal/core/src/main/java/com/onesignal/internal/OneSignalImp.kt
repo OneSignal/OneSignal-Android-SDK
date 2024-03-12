@@ -377,7 +377,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             // TODO: Set JWT Token for all future requests.
             createAndSwitchToNewUser { identityModel, _ ->
                 identityModel.externalId = externalId
-                identityModel.jwtToken = jwtBearerToken ?: null
+                identityModel.jwtToken = jwtBearerToken
             }
 
             newIdentityOneSignalId = identityModelStore!!.model.onesignalId
@@ -398,7 +398,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                         newIdentityOneSignalId,
                         externalId,
                         if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
-                        _user?.jwtToken
+                        jwtBearerToken,
                     ),
                 )
 
@@ -449,6 +449,14 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     }
 
     override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
+        user.removeUserJwtInvalidatedListner(listener)
+    }
+
+    override fun addUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
+        user.addUserJwtInvalidatedListner(listener)
+    }
+
+    override fun removeUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
         user.removeUserJwtInvalidatedListner(listener)
     }
 
