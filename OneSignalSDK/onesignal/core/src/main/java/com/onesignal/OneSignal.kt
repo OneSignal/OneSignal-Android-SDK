@@ -200,8 +200,21 @@ object OneSignal {
     fun logout() = oneSignal.logout()
 
     @JvmStatic
+    fun updateUserJwt(
+        externalId: String,
+        token: String,
+    ) {
+        oneSignal.updateUserJwt(externalId, token)
+    }
+
+    @JvmStatic
     fun addUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
-        oneSignal.addUserJwtInvalidatedListener(listener)
+        oneSignal.addUserJwtInvalidatedListner(listener)
+    }
+
+    @JvmStatic
+    fun removeUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
+        oneSignal.removeUserJwtInvalidatedListner(listener)
     }
 
     private val oneSignal: IOneSignal by lazy {

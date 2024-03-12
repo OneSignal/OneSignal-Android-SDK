@@ -7,5 +7,8 @@ internal class OperationResultRetrying {
     /**
      * The reason for the operation retrying
      */
-    val reason: ReasonRetrying,
+    val reason: ReasonRetrying
+        get() {
+            TODO()
+        }
 }

@@ -7,5 +7,5 @@ internal class OperationResultFailed : IOperationResult {
     /**
      * The reason for the operation failure
      */
-    val reason: ReasonFailed,
+    private val reason: ReasonFailed,
 }
