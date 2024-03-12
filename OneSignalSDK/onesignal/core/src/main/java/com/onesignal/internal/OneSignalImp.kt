@@ -3,6 +3,7 @@ package com.onesignal.internal
 import android.content.Context
 import android.os.Build
 import com.onesignal.IOneSignal
+import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.IDManager
@@ -366,7 +367,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             // TODO: Set JWT Token for all future requests.
             createAndSwitchToNewUser { identityModel, _ ->
                 identityModel.externalId = externalId
-                identityModel.jwtToken = jwtBearerToken ?: null
+                identityModel.jwtToken = jwtBearerToken
             }
 
             newIdentityOneSignalId = identityModelStore!!.model.onesignalId
@@ -387,7 +388,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                         newIdentityOneSignalId,
                         externalId,
                         if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
-                        _user?.jwtToken
+                        jwtBearerToken,
                     ),
                     true,
                 )
@@ -440,6 +441,14 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     override fun updateUserJwt(externalId: String, token: String) {
         if (identityModelStore!!.model.externalId.equals(externalId))
             identityModelStore!!.model.jwtToken = token;
+    }
+
+    override fun addUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
+        user.addUserJwtInvalidatedListner(listener)
+    }
+
+    override fun removeUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
+        user.removeUserJwtInvalidatedListner(listener)
     }
 
     private fun createAndSwitchToNewUser(
