@@ -39,16 +39,26 @@ class TransferSubscriptionOperation() : Operation(SubscriptionOperationExecutor.
             setStringProperty(::onesignalId.name, value)
         }
 
+    /**
+     * The jwt token used for the operation that transfers a subscription.
+     */
+    var jwt: String?
+        get() = getStringProperty(::jwt.name)
+        private set(value) {
+            setStringProperty(::jwt.name, value!!)
+        }
+
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String get() = "$appId.Subscription.$subscriptionId.Transfer"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.NONE
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId) && !IDManager.isLocalId(subscriptionId)
     override val applyToRecordId: String get() = subscriptionId
 
-    constructor(appId: String, subscriptionId: String, onesignalId: String) : this() {
+    constructor(appId: String, subscriptionId: String, onesignalId: String, jwt: String? = null) : this() {
         this.appId = appId
         this.subscriptionId = subscriptionId
         this.onesignalId = onesignalId
+        this.jwt = jwt
     }
 
     override fun translateIds(map: Map<String, String>) {
