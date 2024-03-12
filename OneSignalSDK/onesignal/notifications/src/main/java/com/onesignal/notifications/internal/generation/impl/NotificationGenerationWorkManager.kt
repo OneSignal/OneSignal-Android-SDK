@@ -63,8 +63,8 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
 
     class NotificationGenerationWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
         override suspend fun doWork(): Result {
-            if (!OneSignal.isInitialized) {
-                return Result.failure()
+            if (!OneSignal.initWithContext(applicationContext)) {
+                return Result.success()
             }
 
             val notificationProcessor: INotificationGenerationProcessor = OneSignal.getService()
