@@ -3,6 +3,7 @@ package com.onesignal.location.internal.background
 import android.Manifest
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
+import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.location.ILocationManager
@@ -11,7 +12,6 @@ import com.onesignal.location.internal.common.LocationConstants
 import com.onesignal.location.internal.preferences.ILocationPreferencesService
 import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.MockHelper
-import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every

@@ -5,7 +5,7 @@ plugins {
 android {
     compileSdkVersion 33
     defaultConfig {
-        minSdkVersion 19
+        minSdkVersion 21
         targetSdkVersion 33
         versionCode 1
         versionName "1.0"
@@ -33,7 +33,7 @@ android {
         }
         huawei {
             dimension "default"
-            minSdkVersion 19
+            minSdkVersion 21
             applicationId "com.onesignal.sdktest"
         }
     }

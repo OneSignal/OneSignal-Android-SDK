@@ -1,5 +1,6 @@
 package com.onesignal.notifications.internal.summary
 
+import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.AndroidMockHelper
@@ -9,7 +10,6 @@ import com.onesignal.notifications.internal.display.ISummaryNotificationDisplaye
 import com.onesignal.notifications.internal.restoration.INotificationRestoreProcessor
 import com.onesignal.notifications.internal.summary.impl.NotificationSummaryManager
 import com.onesignal.notifications.shadows.ShadowRoboNotificationManager
-import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery

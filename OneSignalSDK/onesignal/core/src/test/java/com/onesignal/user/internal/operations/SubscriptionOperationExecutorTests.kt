@@ -1,11 +1,11 @@
 package com.onesignal.user.internal.operations
 
+import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.MockHelper
-import com.onesignal.testhelpers.extensions.RobolectricTest
 import com.onesignal.user.internal.backend.ISubscriptionBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObjectType

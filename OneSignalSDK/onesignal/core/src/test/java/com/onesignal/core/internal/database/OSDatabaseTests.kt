@@ -2,12 +2,12 @@ package com.onesignal.core.internal.database
 
 import android.content.ContentValues
 import androidx.test.core.app.ApplicationProvider
+import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.core.internal.database.impl.OSDatabase
 import com.onesignal.core.internal.database.impl.OneSignalDbContract
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.session.internal.outcomes.impl.OutcomeTableProvider
-import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.mockk

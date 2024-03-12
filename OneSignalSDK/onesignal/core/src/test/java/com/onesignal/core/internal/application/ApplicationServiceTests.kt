@@ -3,12 +3,12 @@ package com.onesignal.core.internal.application
 import android.app.Activity
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.testhelpers.extensions.RobolectricTest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.spyk

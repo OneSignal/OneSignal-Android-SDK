@@ -38,14 +38,8 @@ android {
 dependencies {
     implementation(project(':OneSignal:core'))
 
-    // Only use for RobolectricExtension.kt,
-    // to bridge Robolectric's JUnit4 usage to Kotest's Junit 5
-    implementation("junit:junit:4.13.2")
-
     implementation("io.kotest:kotest-runner-junit5:$kotestVersion")
     implementation("io.kotest:kotest-runner-junit5-jvm:$kotestVersion")
-    implementation("org.robolectric:robolectric:4.8.1")
-    implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
     implementation("io.mockk:mockk:1.13.2")
     implementation("androidx.test:core-ktx:1.5.0")
 }
