@@ -354,6 +354,16 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             currentIdentityOneSignalId = identityModelStore!!.model.onesignalId
 
             if (currentIdentityExternalId == externalId) {
+                // login is for same user that is already logged in, fetch (refresh)
+                // the current user.
+                identityModelStore!!.model.jwtToken = jwtBearerToken
+                operationRepo!!.enqueue(
+                    RefreshUserOperation(
+                        configModel!!.appId,
+                        identityModelStore!!.model.onesignalId,
+                    ),
+                    true,
+                )
                 return
             }
 
@@ -381,7 +391,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                         newIdentityOneSignalId,
                         externalId,
                         if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
-                        jwtBearerToken,
                     ),
                 )
 
