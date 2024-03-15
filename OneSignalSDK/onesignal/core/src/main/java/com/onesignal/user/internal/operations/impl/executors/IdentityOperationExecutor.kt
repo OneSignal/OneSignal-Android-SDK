@@ -38,6 +38,7 @@ internal class IdentityOperationExecutor(
                     IdentityConstants.ONESIGNAL_ID,
                     lastOperation.onesignalId,
                     mapOf(lastOperation.label to lastOperation.value),
+                    _identityModelStore.model.jwtToken,
                 )
 
                 // ensure the now created alias is in the model as long as the user is still current.
@@ -73,6 +74,7 @@ internal class IdentityOperationExecutor(
                     IdentityConstants.ONESIGNAL_ID,
                     lastOperation.onesignalId,
                     lastOperation.label,
+                    _identityModelStore.model.jwtToken,
                 )
 
                 // ensure the now deleted alias is not in the model as long as the user is still current.

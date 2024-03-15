@@ -7,7 +7,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.multidex.MultiDexApplication;
 
+import com.onesignal.IUserJwtInvalidatedListener;
 import com.onesignal.OneSignal;
+import com.onesignal.UserJwtInvalidatedEvent;
 import com.onesignal.inAppMessages.IInAppMessageClickListener;
 import com.onesignal.inAppMessages.IInAppMessageClickEvent;
 import com.onesignal.inAppMessages.IInAppMessageDidDismissEvent;
@@ -123,6 +125,13 @@ public class MainApplication extends MultiDexApplication {
             public void onUserStateChange(@NonNull UserChangedState state) {
                 UserState currentUserState = state.getCurrent();
                 Log.v(Tag.LOG_TAG, "onUserStateChange fired " + currentUserState.toJSONObject());
+            }
+        });
+
+        OneSignal.addUserJwtInvalidatedListner(new IUserJwtInvalidatedListener() {
+            @Override
+            public void onUserJwtInvalidated(@NonNull UserJwtInvalidatedEvent event) {
+                Log.v(Tag.LOG_TAG, "onUserJwtInvalidated fired with ID:" + event.getExternal_id());
             }
         });
 

@@ -128,8 +128,13 @@ internal class RefreshUserOperationExecutor(
             return when (responseType) {
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
                     ExecutionResponse(ExecutionResult.FAIL_RETRY)
-                NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
+                    _identityModelStore.model.setStringProperty(
+                            IdentityConstants.JWT_TOKEN,
+                            "",
+                    )
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                }
                 NetworkUtils.ResponseStatusType.MISSING -> {
                     val operations = _buildUserService.getRebuildOperationsIfCurrentUser(op.appId, op.onesignalId)
                     if (operations == null) {
