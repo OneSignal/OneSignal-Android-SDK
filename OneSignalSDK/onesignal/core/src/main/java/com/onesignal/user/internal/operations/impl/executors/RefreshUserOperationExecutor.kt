@@ -53,6 +53,7 @@ internal class RefreshUserOperationExecutor(
                     op.appId,
                     IdentityConstants.ONESIGNAL_ID,
                     op.onesignalId,
+                    _identityModelStore.model.jwtToken,
                 )
 
             if (op.onesignalId != _identityModelStore.model.onesignalId) {

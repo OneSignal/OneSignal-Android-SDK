@@ -21,6 +21,7 @@ interface ISubscriptionBackendService {
         aliasLabel: String,
         aliasValue: String,
         subscription: SubscriptionObject,
+        jwt: String?,
     ): String?
 
     /**
@@ -34,6 +35,7 @@ interface ISubscriptionBackendService {
         appId: String,
         subscriptionId: String,
         subscription: SubscriptionObject,
+        jwt: String?,
     )
 
     /**
@@ -45,6 +47,7 @@ interface ISubscriptionBackendService {
     suspend fun deleteSubscription(
         appId: String,
         subscriptionId: String,
+        jwt: String?,
     )
 
     /**
@@ -60,6 +63,7 @@ interface ISubscriptionBackendService {
         subscriptionId: String,
         aliasLabel: String,
         aliasValue: String,
+        jwt: String?,
     )
 
     /**
@@ -73,5 +77,6 @@ interface ISubscriptionBackendService {
     suspend fun getIdentityFromSubscription(
         appId: String,
         subscriptionId: String,
+        jwt: String?,
     ): Map<String, String>
 }
