@@ -36,9 +36,6 @@ internal open class UserManager(
     override val externalId: String
         get() = _identityModel.externalId ?: ""
 
-    override val jwtToken: String
-        get() = _identityModel.jwtToken ?: ""
-
     val aliases: Map<String, String>
         get() = _identityModel.filter { it.key != IdentityModel::id.name }.toMap()
 

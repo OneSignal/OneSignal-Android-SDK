@@ -137,8 +137,6 @@ internal class RefreshUserOperationExecutor(
             return when (responseType) {
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
                     ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
-                NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
-                    ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
                     _identityModelStore.invalidateJwt()
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
