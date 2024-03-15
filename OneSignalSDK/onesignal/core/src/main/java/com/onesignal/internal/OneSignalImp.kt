@@ -419,8 +419,11 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     }
 
     override fun updateUserJwt(externalId: String, token: String) {
-        if (identityModelStore!!.model.externalId.equals(externalId))
-            identityModelStore!!.model.jwtToken = token;
+        if (!identityModelStore!!.model.externalId.equals(externalId))
+            return
+
+        identityModelStore!!.model.jwtToken = token
+        // TODO: update OperationRepo with new JWT
     }
 
     override fun addUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {

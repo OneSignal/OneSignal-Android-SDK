@@ -59,6 +59,7 @@ internal class RefreshUserOperationExecutor(
                     op.appId,
                     IdentityConstants.ONESIGNAL_ID,
                     op.onesignalId,
+                    _identityModelStore.model.jwtToken,
                 )
 
             if (op.onesignalId != _identityModelStore.model.onesignalId) {
@@ -98,7 +99,9 @@ internal class RefreshUserOperationExecutor(
                 val subscriptionModel = SubscriptionModel()
                 subscriptionModel.id = subscription.id!!
                 subscriptionModel.address = subscription.token ?: ""
-                subscriptionModel.status = SubscriptionStatus.fromInt(subscription.notificationTypes ?: SubscriptionStatus.SUBSCRIBED.value) ?: SubscriptionStatus.SUBSCRIBED
+                subscriptionModel.status = SubscriptionStatus.fromInt(
+                    subscription.notificationTypes ?: SubscriptionStatus.SUBSCRIBED.value,
+                ) ?: SubscriptionStatus.SUBSCRIBED
                 subscriptionModel.type =
                     when (subscription.type!!) {
                         SubscriptionObjectType.EMAIL -> {
@@ -136,6 +139,13 @@ internal class RefreshUserOperationExecutor(
                     ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
+                NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
+                    _identityModelStore.model.setStringProperty(
+                        IdentityConstants.JWT_TOKEN,
+                        "",
+                    )
+                    ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                }
                 NetworkUtils.ResponseStatusType.MISSING -> {
                     if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(op.onesignalId)) {
                         return ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
