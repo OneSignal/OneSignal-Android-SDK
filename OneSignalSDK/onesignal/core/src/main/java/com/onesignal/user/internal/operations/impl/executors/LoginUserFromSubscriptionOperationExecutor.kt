@@ -46,6 +46,7 @@ internal class LoginUserFromSubscriptionOperationExecutor(
                 _subscriptionBackend.getIdentityFromSubscription(
                     loginUserOp.appId,
                     loginUserOp.subscriptionId,
+                    _identityModelStore.model.jwtToken,
                 )
             val backendOneSignalId = identities.getOrDefault(IdentityConstants.ONESIGNAL_ID, null)
 

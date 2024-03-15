@@ -129,6 +129,7 @@ internal class UpdateUserOperationExecutor(
                     propertiesObject,
                     refreshDeviceMetadata,
                     deltasObject,
+                    _identityModelStore.model.jwtToken,
                 )
 
                 if (_identityModelStore.model.onesignalId == onesignalId) {

@@ -22,6 +22,7 @@ import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.builduser.IRebuildUserService
+import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
 import com.onesignal.user.internal.operations.TransferSubscriptionOperation
@@ -35,6 +36,7 @@ internal class SubscriptionOperationExecutor(
     private val _subscriptionBackend: ISubscriptionBackendService,
     private val _deviceService: IDeviceService,
     private val _applicationService: IApplicationService,
+    private val _identityModelStore: IdentityModelStore,
     private val _subscriptionModelStore: SubscriptionModelStore,
     private val _configModelStore: ConfigModelStore,
     private val _buildUserService: IRebuildUserService,
@@ -107,6 +109,7 @@ internal class SubscriptionOperationExecutor(
                     IdentityConstants.ONESIGNAL_ID,
                     createOperation.onesignalId,
                     subscription,
+                    _identityModelStore.model.jwtToken,
                 ) ?: return ExecutionResponse(ExecutionResult.SUCCESS)
 
             // update the subscription model with the new ID, if it's still active.
@@ -175,7 +178,12 @@ internal class SubscriptionOperationExecutor(
                     AndroidUtils.getAppVersion(_applicationService.appContext),
                 )
 
-            _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription)
+            _subscriptionBackend.updateSubscription(
+                lastOperation.appId,
+                lastOperation.subscriptionId,
+                subscription,
+                _identityModelStore.model.jwtToken,
+            )
         } catch (ex: BackendException) {
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
 
@@ -223,6 +231,7 @@ internal class SubscriptionOperationExecutor(
                 startingOperation.subscriptionId,
                 IdentityConstants.ONESIGNAL_ID,
                 startingOperation.onesignalId,
+                _identityModelStore.model.jwtToken,
             )
         } catch (ex: BackendException) {
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
@@ -254,7 +263,7 @@ internal class SubscriptionOperationExecutor(
 
     private suspend fun deleteSubscription(op: DeleteSubscriptionOperation): ExecutionResponse {
         try {
-            _subscriptionBackend.deleteSubscription(op.appId, op.subscriptionId)
+            _subscriptionBackend.deleteSubscription(op.appId, op.subscriptionId, _identityModelStore.model.jwtToken,)
 
             // remove the subscription model as a HYDRATE in case for some reason it still exists.
             _subscriptionModelStore.remove(op.subscriptionId, ModelChangeTags.HYDRATE)
