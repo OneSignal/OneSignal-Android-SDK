@@ -54,7 +54,7 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
         }
 
     /**
-     * The jwt token used for the operation that logs in the user
+     * The JWT token used for the operation that logs in the user.
      */
     var jwt: String?
         get() = getStringProperty(::jwt.name)

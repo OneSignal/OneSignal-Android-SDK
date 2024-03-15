@@ -1,6 +1,7 @@
 package com.onesignal.user.internal
 
 import com.onesignal.IUserJwtInvalidatedListener
+import com.onesignal.OneSignal
 import com.onesignal.UserJwtInvalidatedEvent
 import com.onesignal.common.IDManager
 import com.onesignal.common.OneSignalUtils
@@ -34,9 +35,6 @@ internal open class UserManager(
 
     override val externalId: String
         get() = _identityModel.externalId ?: ""
-
-    override val jwtToken: String
-        get() = _identityModel.jwtToken ?: ""
 
     val aliases: Map<String, String>
         get() = _identityModel.filter { it.key != IdentityModel::id.name }.toMap()
@@ -279,7 +277,9 @@ internal open class UserManager(
             }
             IdentityConstants.JWT_TOKEN -> {
                 // Fire the event when the JWT has been invalidated.
-                if (args.newValue == null) {
+                val oldJwt = args.oldValue.toString()
+                val newJwt = args.newValue.toString()
+                if (OneSignal.isIdentityVerificationEnabled && oldJwt == newJwt && newJwt.isBlank()) {
                     jwtInvalidatedCallback.fire {
                         it.onUserJwtInvalidated(UserJwtInvalidatedEvent((externalId)))
                     }

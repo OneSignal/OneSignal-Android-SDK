@@ -45,33 +45,40 @@ internal class HttpClient(
     override suspend fun post(
         url: String,
         body: JSONObject,
+        jwt: String?,
     ): HttpResponse {
-        return makeRequest(url, "POST", body, _configModelStore.model.httpTimeout, null)
+        return makeRequest(url, "POST", body, _configModelStore.model.httpTimeout, null, jwt)
     }
 
     override suspend fun get(
         url: String,
         cacheKey: String?,
+        jwt: String?,
     ): HttpResponse {
-        return makeRequest(url, null, null, _configModelStore.model.httpGetTimeout, cacheKey)
+        return makeRequest(url, null, null, _configModelStore.model.httpGetTimeout, cacheKey, jwt)
     }
 
     override suspend fun put(
         url: String,
         body: JSONObject,
+        jwt: String?,
     ): HttpResponse {
-        return makeRequest(url, "PUT", body, _configModelStore.model.httpTimeout, null)
+        return makeRequest(url, "PUT", body, _configModelStore.model.httpTimeout, null, jwt)
     }
 
     override suspend fun patch(
         url: String,
         body: JSONObject,
+        jwt: String?,
     ): HttpResponse {
-        return makeRequest(url, "PATCH", body, _configModelStore.model.httpTimeout, null)
+        return makeRequest(url, "PATCH", body, _configModelStore.model.httpTimeout, null, jwt)
     }
 
-    override suspend fun delete(url: String): HttpResponse {
-        return makeRequest(url, "DELETE", null, _configModelStore.model.httpTimeout, null)
+    override suspend fun delete(
+        url: String,
+        jwt: String?,
+    ): HttpResponse {
+        return makeRequest(url, "DELETE", null, _configModelStore.model.httpTimeout, null, jwt)
     }
 
     private suspend fun makeRequest(
@@ -80,6 +87,7 @@ internal class HttpClient(
         jsonBody: JSONObject?,
         timeout: Int,
         cacheKey: String?,
+        jwt: String? = null
     ): HttpResponse {
         // If privacy consent is required but not yet given, any non-GET request should be blocked.
         if (method != null && _configModelStore.model.consentRequired == true && _configModelStore.model.consentGiven != true) {
@@ -94,7 +102,7 @@ internal class HttpClient(
 
         try {
             return withTimeout(getThreadTimeout(timeout).toLong()) {
-                return@withTimeout makeRequestIODispatcher(url, method, jsonBody, timeout, cacheKey)
+                return@withTimeout makeRequestIODispatcher(url, method, jsonBody, timeout, cacheKey, jwt)
             }
         } catch (e: TimeoutCancellationException) {
             Logging.error("HttpClient: Request timed out: $url", e)
@@ -111,6 +119,7 @@ internal class HttpClient(
         jsonBody: JSONObject?,
         timeout: Int,
         cacheKey: String?,
+        jwt: String? = null
     ): HttpResponse {
         var retVal: HttpResponse? = null
 
@@ -140,6 +149,10 @@ internal class HttpClient(
                     con.connectTimeout = timeout
                     con.readTimeout = timeout
                     con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignalUtils.SDK_VERSION)
+
+                    if (jwt != null) {
+                        con.setRequestProperty("Authentication", jwt)
+                    }
 
                     if (OneSignalWrapper.sdkType != null && OneSignalWrapper.sdkVersion != null) {
                         con.setRequestProperty("SDK-Wrapper", "onesignal/${OneSignalWrapper.sdkType}/${OneSignalWrapper.sdkVersion}")
