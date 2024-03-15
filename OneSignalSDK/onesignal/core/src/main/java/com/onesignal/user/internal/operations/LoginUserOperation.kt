@@ -53,27 +53,17 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
             setOptStringProperty(::existingOnesignalId.name, value)
         }
 
-    /**
-     * The JWT token used for the operation that logs in the user.
-     */
-    var jwt: String?
-        get() = getStringProperty(::jwt.name)
-        private set(value) {
-            setStringProperty(::jwt.name, value!!)
-        }
-
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String = ""
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.CREATE
     override val canStartExecute: Boolean get() = existingOnesignalId == null || !IDManager.isLocalId(existingOnesignalId!!)
     override val applyToRecordId: String get() = existingOnesignalId ?: onesignalId
 
-    constructor(appId: String, onesignalId: String, externalId: String?, existingOneSignalId: String? = null, jwt: String? = null) : this() {
+    constructor(appId: String, onesignalId: String, externalId: String?, existingOneSignalId: String? = null) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
         this.externalId = externalId
         this.existingOnesignalId = existingOneSignalId
-        this.jwt = jwt
     }
 
     override fun translateIds(map: Map<String, String>) {
