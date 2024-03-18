@@ -534,6 +534,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
         coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(404)
 
+        val mockIdentityModelStore = MockHelper.identityModelStore()
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val mockBuildUserService = mockk<IRebuildUserService>()
         val mockConfigModelStore = MockHelper.configModelStore().also { it.model.opRepoPostCreateRetryUpTo = 1_000 }
@@ -544,6 +545,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 mockSubscriptionBackendService,
                 MockHelper.deviceService(),
                 AndroidMockHelper.applicationService(),
+                mockIdentityModelStore,
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 mockBuildUserService,
