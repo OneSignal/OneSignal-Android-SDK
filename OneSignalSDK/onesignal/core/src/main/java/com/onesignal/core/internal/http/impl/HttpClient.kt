@@ -150,8 +150,8 @@ internal class HttpClient(
                     con.readTimeout = timeout
                     con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignalUtils.SDK_VERSION)
 
-                    if (jwt != null) {
-                        con.setRequestProperty("Authentication", jwt)
+                    if (!jwt.isNullOrEmpty()) {
+                        con.setRequestProperty("Authentication", "Bearer $jwt")
                     }
 
                     if (OneSignalWrapper.sdkType != null && OneSignalWrapper.sdkVersion != null) {

@@ -131,7 +131,7 @@ public class MainApplication extends MultiDexApplication {
         OneSignal.addUserJwtInvalidatedListner(new IUserJwtInvalidatedListener() {
             @Override
             public void onUserJwtInvalidated(@NonNull UserJwtInvalidatedEvent event) {
-                Log.v(Tag.LOG_TAG, "onUserJwtInvalidated fired with ID:" + event.getExternal_id());
+                Log.v(Tag.LOG_TAG, "onUserJwtInvalidated fired with ID:" + event.getExternalId());
             }
         });
 

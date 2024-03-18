@@ -83,8 +83,10 @@ internal class LoginUserFromSubscriptionOperationExecutor(
             return when (responseType) {
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
                     ExecutionResponse(ExecutionResult.FAIL_RETRY)
-                NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
+                    _identityModelStore.invalidateJwt()
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                }
                 else ->
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)
             }

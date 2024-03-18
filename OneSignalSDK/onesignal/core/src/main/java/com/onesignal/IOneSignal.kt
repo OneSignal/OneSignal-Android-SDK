@@ -22,7 +22,7 @@ interface IOneSignal {
     /**
      * Whether the security feature to authenticate your external user ids is enabled
      */
-    val isIdentityVerificationEnabled: Boolean
+    val useIdentityVerification: Boolean
 
     /**
      * The user manager for accessing user-scoped
@@ -134,7 +134,7 @@ interface IOneSignal {
      */
     fun updateUserJwt(externalId: String, token: String)
 
-    fun addUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener)
+    fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
 
-    fun removeUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener)
+    fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
 }

@@ -83,7 +83,13 @@ internal class UpdateUserOperationExecutor(
                     // that exist in this group.
                     val sessionCount = if (deltasObject.sessionCount != null) deltasObject.sessionCount!! + 1 else 1
 
-                    deltasObject = PropertiesDeltasObject(deltasObject.sessionTime, sessionCount, deltasObject.amountSpent, deltasObject.purchases)
+                    deltasObject =
+                        PropertiesDeltasObject(
+                            deltasObject.sessionTime,
+                            sessionCount,
+                            deltasObject.amountSpent,
+                            deltasObject.purchases,
+                        )
                     refreshDeviceMetadata = true
                 }
                 is TrackSessionEndOperation -> {
@@ -96,7 +102,13 @@ internal class UpdateUserOperationExecutor(
                     // operations that exist in this group.
                     val sessionTime = if (deltasObject.sessionTime != null) deltasObject.sessionTime!! + operation.sessionTime else operation.sessionTime
 
-                    deltasObject = PropertiesDeltasObject(sessionTime, deltasObject.sessionCount, deltasObject.amountSpent, deltasObject.purchases)
+                    deltasObject =
+                        PropertiesDeltasObject(
+                            sessionTime,
+                            deltasObject.sessionCount,
+                            deltasObject.amountSpent,
+                            deltasObject.purchases,
+                        )
                 }
                 is TrackPurchaseOperation -> {
                     if (appId == null) {
@@ -163,8 +175,10 @@ internal class UpdateUserOperationExecutor(
                 return when (responseType) {
                     NetworkUtils.ResponseStatusType.RETRYABLE ->
                         ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
-                    NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                    NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
+                        _identityModelStore.invalidateJwt()
                         ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
+                    }
                     NetworkUtils.ResponseStatusType.MISSING -> {
                         if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(onesignalId)) {
                             return ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)

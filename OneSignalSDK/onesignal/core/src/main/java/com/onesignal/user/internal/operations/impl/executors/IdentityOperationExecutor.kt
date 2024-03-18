@@ -67,8 +67,10 @@ internal class IdentityOperationExecutor(
                         ExecutionResponse(ExecutionResult.FAIL_NORETRY)
                     NetworkUtils.ResponseStatusType.CONFLICT ->
                         ExecutionResponse(ExecutionResult.FAIL_CONFLICT, retryAfterSeconds = ex.retryAfterSeconds)
-                    NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
-                        ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
+                    NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
+                        _identityModelStore.invalidateJwt()
+                        return ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                    }
                     NetworkUtils.ResponseStatusType.MISSING -> {
                         if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(lastOperation.onesignalId)) {
                             return ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
@@ -112,8 +114,10 @@ internal class IdentityOperationExecutor(
                         ExecutionResponse(ExecutionResult.SUCCESS)
                     NetworkUtils.ResponseStatusType.INVALID ->
                         ExecutionResponse(ExecutionResult.FAIL_NORETRY)
-                    NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
-                        ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
+                    NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
+                        _identityModelStore.invalidateJwt()
+                        return ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                    }
                     NetworkUtils.ResponseStatusType.MISSING -> {
                         return if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(lastOperation.onesignalId)) {
                             ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)

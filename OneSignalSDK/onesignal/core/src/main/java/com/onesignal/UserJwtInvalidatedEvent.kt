@@ -6,7 +6,7 @@ package com.onesignal
  *
  */
 class UserJwtInvalidatedEvent(
-        val external_id: String
+        val externalId: String
 ) {
 
 }
