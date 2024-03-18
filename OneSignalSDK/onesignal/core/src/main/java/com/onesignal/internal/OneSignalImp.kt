@@ -57,7 +57,8 @@ import org.json.JSONObject
 internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val sdkVersion: String = OneSignalUtils.SDK_VERSION
     override var isInitialized: Boolean = false
-    override val isIdentityVerificationEnabled: Boolean = false
+    override val useIdentityVerification: Boolean
+        get() = configModel?.useIdentityVerification?: true
 
     override var consentRequired: Boolean
         get() = configModel?.consentRequired ?: (_consentRequired == true)
@@ -135,6 +136,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     private var sessionModel: SessionModel? = null
     private var _consentRequired: Boolean? = null
     private var _consentGiven: Boolean? = null
+    private var _useIdentityVerification: Boolean? = false
     private var _disableGMSMissingPrompt: Boolean? = null
     private val initLock: Any = Any()
     private val loginLock: Any = Any()
@@ -413,6 +415,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 return
             }
 
+            // calling createAndSwitchToNewUser() replaces model with a default empty jwt
             createAndSwitchToNewUser()
             operationRepo!!.enqueue(
                 LoginUserOperation(
@@ -421,9 +424,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                     identityModelStore!!.model.externalId,
                 ),
             )
-
-            // TODO: remove JWT Token for all future requests.
-            // calling createAndSwitchToNewUser() replaces model with a default null jwt
         }
     }
 
@@ -432,14 +432,13 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             return
 
         identityModelStore!!.model.jwtToken = token
-        // TODO: update OperationRepo with new JWT
     }
 
-    override fun addUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
+    override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
         user.addUserJwtInvalidatedListner(listener)
     }
 
-    override fun removeUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
+    override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
         user.removeUserJwtInvalidatedListner(listener)
     }
 
