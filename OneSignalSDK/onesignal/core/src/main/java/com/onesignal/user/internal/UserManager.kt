@@ -279,7 +279,7 @@ internal open class UserManager(
                 // Fire the event when the JWT has been invalidated.
                 val oldJwt = args.oldValue.toString()
                 val newJwt = args.newValue.toString()
-                if (OneSignal.isIdentityVerificationEnabled && oldJwt == newJwt && newJwt.isBlank()) {
+                if (OneSignal.isIdentityVerificationEnabled && oldJwt == newJwt && newJwt.isEmpty()) {
                     jwtInvalidatedCallback.fire {
                         it.onUserJwtInvalidated(UserJwtInvalidatedEvent((externalId)))
                     }
