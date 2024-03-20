@@ -97,53 +97,37 @@ internal class OperationRepo(
      * dedicated thread.
      */
     private suspend fun processQueueForever() {
-        var lastSyncTime = _time.currentTimeMillis
-        var force = false
-
-        // This runs forever, until the application is destroyed.
+        var force = waitForWake()
         while (true) {
             if (paused) {
                 Logging.debug("OperationRepo is paused")
                 return
             }
-            try {
-                val ops = getNextOps()
 
-                // if the queue is empty at this point, we are no longer in force flush mode. We
-                // check this now so if the execution is unsuccessful with retry, we don't find ourselves
-                // continuously retrying without delaying.
-                if (queue.isEmpty()) {
-                    force = false
-                }
+            val ops = getNextOps()
+            Logging.debug("processQueueForever:force:$force, ops:$ops")
 
-                if (ops != null) {
-                    executeOperations(ops!!)
-                }
-
-                if (!force) {
-                    // potentially delay to prevent this from constant IO if a bunch of
-                    // operations are set sequentially.
-                    val newTime = _time.currentTimeMillis
-
-                    val delay = (lastSyncTime - newTime) + _configModelStore.model.opRepoExecutionInterval
-                    lastSyncTime = newTime
-                    if (delay > 0) {
-                        withTimeoutOrNull(delay) {
-                            // wait to be woken up for the next pass
-                            force = waiter.waitForWake()
-                        }
-
-                        // This secondary delay allows for any subsequent operations (beyond the first one
-                        // that woke us) to be enqueued before we pull from the queue.
-                        delay(_configModelStore.model.opRepoPostWakeDelay)
-
-                        lastSyncTime = _time.currentTimeMillis
-                    }
-                }
-            } catch (e: Throwable) {
-                Logging.log(LogLevel.ERROR, "Error occurred with Operation work loop", e)
+            if (ops != null) {
+                executeOperations(ops)
+                // Allows for any subsequent operations (beyond the first one
+                // that woke us) to be enqueued before we pull from the queue.
+                delay(_configModelStore.model.opRepoPostWakeDelay)
+            } else if (!force) {
+                force = waitForWake()
+            } else {
+                force = false
             }
         }
+    }
+
+    private suspend fun waitForWake(): Boolean {
+        var force = waiter.waitForWake()
+        if (!force) {
+            withTimeoutOrNull(_configModelStore.model.opRepoExecutionInterval) {
+                force = waiter.waitForWake()
+            }
+        }
+        return force
     }
 
     private suspend fun executeOperations(ops: List<OperationQueueItem>) {
@@ -240,7 +224,7 @@ internal class OperationRepo(
     suspend fun delayBeforeRetry(retries: Int) {
         val delayFor = retries * 15_000L
         if (delayFor < 1) return
-        Logging.error("Operations being delay for: $delayFor")
+        Logging.error("Operations being delay for: $delayFor ms")
         delay(delayFor)
     }
 
