@@ -22,7 +22,7 @@ internal class OperationRepo(
     private val _configModelStore: ConfigModelStore,
     private val _time: ITime,
 ) : IOperationRepo, IStartableService {
-    private class OperationQueueItem(
+    internal class OperationQueueItem(
         val operation: Operation,
         val waiter: WaiterWithValue<Boolean>? = null,
         var retries: Int = 0,
@@ -107,16 +107,7 @@ internal class OperationRepo(
                 return
             }
             try {
-                var ops: List<OperationQueueItem>? = null
-
-                synchronized(queue) {
-                    val startingOp = queue.firstOrNull { it.operation.canStartExecute }
-
-                    if (startingOp != null) {
-                        queue.remove(startingOp)
-                        ops = getGroupableOperations(startingOp)
-                    }
-                }
+                val ops = getNextOps()
 
                 // if the queue is empty at this point, we are no longer in force flush mode. We
                 // check this now so if the execution is unsuccessful with retry, we don't find ourselves
@@ -251,6 +242,19 @@ internal class OperationRepo(
         if (delayFor < 1) return
         Logging.error("Operations being delay for: $delayFor")
         delay(delayFor)
+    }
+
+    internal fun getNextOps(): List<OperationQueueItem>? {
+        return synchronized(queue) {
+            val startingOp = queue.firstOrNull { it.operation.canStartExecute }
+
+            if (startingOp != null) {
+                queue.remove(startingOp)
+                getGroupableOperations(startingOp)
+            } else {
+                null
+            }
+        }
     }
 
     /**

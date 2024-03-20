@@ -17,11 +17,55 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
 import io.mockk.spyk
+import io.mockk.verify
+import kotlinx.coroutines.delay
 
 class OperationRepoTests : FunSpec({
 
     beforeAny {
         Logging.logLevel = LogLevel.NONE
+    }
+
+    // Ensures we are not continuously waking the CPU
+    test("ensure processQueueForever suspends when queue is empty") {
+        // Given
+        val mockExecutor = mockk<IOperationExecutor>()
+        every { mockExecutor.operations } returns listOf("DUMMY_OPERATION")
+        coEvery { mockExecutor.execute(any()) } returns ExecutionResponse(ExecutionResult.SUCCESS)
+
+        val mockOperationModelStore = mockk<OperationModelStore>()
+        every { mockOperationModelStore.list() } returns listOf()
+        every { mockOperationModelStore.add(any()) } just runs
+        every { mockOperationModelStore.remove(any()) } just runs
+
+        val operationRepo =
+            spyk(
+                OperationRepo(
+                    listOf(mockExecutor),
+                    mockOperationModelStore,
+                    MockHelper.configModelStore(),
+                    MockHelper.time(1000),
+                ),
+            )
+
+        val operationIdSlot = slot<String>()
+        val operation = mockOperation(operationIdSlot = operationIdSlot)
+
+        // When
+        operationRepo.start()
+        val response = operationRepo.enqueueAndWait(operation)
+        // Must wait for background logic to spin to see how many times it
+        // will call getNextOps()
+        delay(1_000)
+
+        // Then
+        response shouldBe true
+        verify(exactly = 2) {
+            // 1st: gets the operation
+            // 2nd: will be empty
+            // 3rd: shouldn't be called, loop should be waiting on next operation
+            operationRepo.getNextOps()
+        }
     }
 
     test("enqueue operation executes and is removed when executed") {
