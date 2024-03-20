@@ -3,6 +3,7 @@ package com.onesignal.core.internal.operations
 import com.onesignal.common.threading.Waiter
 import com.onesignal.core.internal.operations.impl.OperationModelStore
 import com.onesignal.core.internal.operations.impl.OperationRepo
+import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
@@ -19,9 +20,12 @@ import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 
 // Mocks used by every test in this file
 private class Mocks {
+    val configModelStore = MockHelper.configModelStore()
+
     val operationModelStore: OperationModelStore =
         run {
             val mockOperationModelStore = mockk<OperationModelStore>()
@@ -45,8 +49,8 @@ private class Mocks {
                 OperationRepo(
                     listOf(executor),
                     operationModelStore,
-                    MockHelper.configModelStore(),
-                    MockHelper.time(1000),
+                    configModelStore,
+                    Time(),
                 ),
             )
         }
@@ -311,6 +315,38 @@ class OperationRepoTests : FunSpec({
             )
             mocks.operationModelStore.remove("operationId2")
         }
+    }
+
+    test("enqueuing normal operations should not skip minimum wait time") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoExecutionInterval = 1_000
+
+        // When
+        mocks.operationRepo.start()
+        mocks.operationRepo.enqueue(mockOperation())
+        val response =
+            withTimeoutOrNull(100) {
+                val value = mocks.operationRepo.enqueueAndWait(mockOperation())
+                value
+            }
+        response shouldBe null
+    }
+
+    test("enqueuing with flush = true should skip minimum wait time") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoExecutionInterval = 1_000
+
+        // When
+        mocks.operationRepo.start()
+        mocks.operationRepo.enqueue(mockOperation())
+        val response =
+            withTimeoutOrNull(100) {
+                val value = mocks.operationRepo.enqueueAndWait(mockOperation(), flush = true)
+                value
+            }
+        response shouldBe true
     }
 }) {
     companion object {

@@ -97,7 +97,7 @@ internal class OperationRepo(
      * dedicated thread.
      */
     private suspend fun processQueueForever() {
-        var force = waitForWake()
+        waitForNewOperationAndExecutionInterval()
         while (true) {
             if (paused) {
                 Logging.debug("OperationRepo is paused")
@@ -105,29 +105,40 @@ internal class OperationRepo(
             }
 
             val ops = getNextOps()
-            Logging.debug("processQueueForever:force:$force, ops:$ops")
+            Logging.debug("processQueueForever:ops:$ops")
 
             if (ops != null) {
                 executeOperations(ops)
                 // Allows for any subsequent operations (beyond the first one
                 // that woke us) to be enqueued before we pull from the queue.
                 delay(_configModelStore.model.opRepoPostWakeDelay)
-            } else if (!force) {
-                force = waitForWake()
             } else {
-                force = false
+                waitForNewOperationAndExecutionInterval()
             }
         }
     }
 
-    private suspend fun waitForWake(): Boolean {
+    /**
+     *  Waits until a new operation is enqueued, then wait an additional
+     *  amount of time afterwards, so operations can be grouped/batched.
+     */
+    private suspend fun waitForNewOperationAndExecutionInterval() {
+        // 1. Wait for an operation to be enqueued
         var force = waiter.waitForWake()
-        if (!force) {
-            withTimeoutOrNull(_configModelStore.model.opRepoExecutionInterval) {
+
+        // 2. Wait at least the time defined in opRepoExecutionInterval
+        //    so operations can be grouped, unless one of them used
+        //    flush=true (AKA force)
+        val startTime = _time.currentTimeMillis
+        var lastTime = startTime
+        var remainingTime = _configModelStore.model.opRepoExecutionInterval
+        while (!force && remainingTime > 0) {
+            withTimeoutOrNull(remainingTime) {
                 force = waiter.waitForWake()
             }
+            remainingTime -= _time.currentTimeMillis - lastTime
+            lastTime = _time.currentTimeMillis
         }
-        return force
     }
 
     private suspend fun executeOperations(ops: List<OperationQueueItem>) {
