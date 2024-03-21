@@ -11,6 +11,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.CapturingSlot
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.just
@@ -343,10 +344,40 @@ class OperationRepoTests : FunSpec({
         mocks.operationRepo.enqueue(mockOperation())
         val response =
             withTimeoutOrNull(100) {
-                val value = mocks.operationRepo.enqueueAndWait(mockOperation(), flush = true)
-                value
+                mocks.operationRepo.enqueueAndWait(mockOperation(), flush = true)
             }
         response shouldBe true
+    }
+
+    // TODO: Not easy to solve, but the idea is to allow back-to-back operations if
+    //       they are from an internal event, but not from a customer.
+    //          * Maybe we just kep this simple and just always batch by 5 seconds?
+    //             - This is probably due to stuff like login, where we can get a 409 when adding the alias. (but maybe we just use force for this?)
+    //             - TODO: Is it worth keeping the force rule?
+    // We want to ensure a misbehaving loop in an app doesn't cause a bunch
+    // of network calls
+    test("enqueuing should only catch up operations while it was waiting to batch") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoExecutionInterval = 1_000
+
+        // When
+        mocks.operationRepo.start()
+        mocks.operationRepo.enqueue(mockOperation())
+        val waiter = Waiter()
+        coEvery { mocks.operationRepo.executeOperations(any()) } coAnswers {
+            delay(10)
+            waiter.wake()
+        }
+        waiter.waitForWake()
+        repeat(20) {
+            mocks.operationRepo.enqueue(mockOperation())
+            delay(10)
+        }
+
+        coVerify(exactly = 1) {
+            mocks.operationRepo.executeOperations(any())
+        }
     }
 }) {
     companion object {

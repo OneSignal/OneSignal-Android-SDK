@@ -32,6 +32,7 @@ internal class OperationRepo(
     private val queue = mutableListOf<OperationQueueItem>()
     private val waiter = WaiterWithValue<Boolean>()
     private var paused = false
+    private var lastTimeOperationGrabbed: Long? = null
 
     init {
         val executorsMap: MutableMap<String, IOperationExecutor> = mutableMapOf()
@@ -141,7 +142,7 @@ internal class OperationRepo(
         }
     }
 
-    private suspend fun executeOperations(ops: List<OperationQueueItem>) {
+    internal suspend fun executeOperations(ops: List<OperationQueueItem>) {
         try {
             val startingOp = ops.first()
             val executor =
@@ -239,11 +240,20 @@ internal class OperationRepo(
         delay(delayFor)
     }
 
-    internal fun getNextOps(): List<OperationQueueItem>? {
+    internal fun getNextOps(flush: Boolean): List<OperationQueueItem>? {
         return synchronized(queue) {
-            val startingOp = queue.firstOrNull { it.operation.canStartExecute }
+            val startingOp =
+                queue.firstOrNull {
+                    it.operation.canStartExecute &&
+                        (
+                            // TODO: Time should probably be per operation, or a bucket they go into instead
+                            flush ||
+                                (_time.currentTimeMillis - (lastTimeOperationGrabbed ?: 0)) >= _configModelStore.model.opRepoExecutionInterval
+                        )
+                }
 
             if (startingOp != null) {
+                lastTimeOperationGrabbed = _time.currentTimeMillis
                 queue.remove(startingOp)
                 getGroupableOperations(startingOp)
             } else {
