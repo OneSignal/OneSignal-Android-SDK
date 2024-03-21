@@ -44,6 +44,9 @@ object MockHelper {
     fun configModelStore(action: ((ConfigModel) -> Unit)? = null): ConfigModelStore {
         val configModel = ConfigModel()
 
+        configModel.opRepoExecutionInterval = 1
+        configModel.opRepoPostWakeDelay = 1
+
         configModel.appId = DEFAULT_APP_ID
 
         if (action != null) {
