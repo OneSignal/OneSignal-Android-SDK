@@ -1,7 +1,6 @@
 package com.onesignal.common.threading
 
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.runBlocking
 
 /**
  * An abstraction which allows for a suspending function to coordinate
@@ -18,7 +17,13 @@ class Waiter {
     /**
      * Wake the suspending function that has called [waitForWake].
      */
-    fun wake() = runBlocking { channel.send(null) }
+    fun wake() {
+        val result = channel.trySend(null)
+        if (result.isFailure) {
+            // Most likely only happens when the chanel is misconfigured or misused
+            throw Exception("Waiter.wait failed", result.exceptionOrNull())
+        }
+    }
 }
 
 /**
@@ -40,5 +45,11 @@ open class WaiterWithValue<TType> {
      *
      * @param value The data to be returned by the [waitForWake].
      */
-    fun wake(value: TType) = runBlocking { channel.send(value) }
+    fun wake(value: TType) {
+        val result = channel.trySend(value)
+        if (result.isFailure) {
+            // Most likely only happens when the chanel is misconfigured or misused
+            throw Exception("WaiterWithValue.wait failed", result.exceptionOrNull())
+        }
+    }
 }
