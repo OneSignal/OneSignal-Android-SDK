@@ -45,7 +45,7 @@ open class EventProducer<THandler> : IEventNotifier<THandler> {
      * @param callback The callback will be invoked for each subscribed handler, allowing you to call the handler.
      */
     fun fire(callback: (THandler) -> Unit) {
-        val localList = subscribers.toList()
+        val localList = synchronized(subscribers) { subscribers.toList() }
         for (s in localList) {
             callback(s)
         }
@@ -60,7 +60,7 @@ open class EventProducer<THandler> : IEventNotifier<THandler> {
      */
     fun fireOnMain(callback: (THandler) -> Unit) {
         suspendifyOnMain {
-            val localList = subscribers.toList()
+            val localList = synchronized(subscribers) { subscribers.toList() }
             for (s in localList) {
                 callback(s)
             }
@@ -74,7 +74,7 @@ open class EventProducer<THandler> : IEventNotifier<THandler> {
      * @param callback The callback will be invoked for each subscribed handler, allowing you to call the handler.
      */
     suspend fun suspendingFire(callback: suspend (THandler) -> Unit) {
-        val localList = subscribers.toList()
+        val localList = synchronized(subscribers) { subscribers.toList() }
         for (s in localList) {
             callback(s)
         }
@@ -88,7 +88,7 @@ open class EventProducer<THandler> : IEventNotifier<THandler> {
      */
     suspend fun suspendingFireOnMain(callback: suspend (THandler) -> Unit) {
         withContext(Dispatchers.Main) {
-            val localList = subscribers.toList()
+            val localList = synchronized(subscribers) { subscribers.toList() }
             for (s in localList) {
                 callback(s)
             }
