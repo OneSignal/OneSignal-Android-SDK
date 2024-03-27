@@ -9,6 +9,7 @@ import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -71,7 +72,8 @@ internal class InAppMessagesManager(
     ISingletonModelStoreChangeHandler<ConfigModel>,
     IInAppLifecycleEventHandler,
     ITriggerHandler,
-    ISessionLifecycleHandler {
+    ISessionLifecycleHandler,
+    IApplicationLifecycleHandler {
     private val lifecycleCallback = EventProducer<IInAppMessageLifecycleListener>()
     private val messageClickCallback = EventProducer<IInAppMessageClickListener>()
 
@@ -133,6 +135,7 @@ internal class InAppMessagesManager(
         _lifecycle.subscribe(this)
         _triggerController.subscribe(this)
         _sessionService.subscribe(this)
+        _applicationService.addApplicationLifecycleHandler(this)
 
         suspendifyOnThread {
             _repository.cleanCachedInAppMessages()
@@ -225,6 +228,14 @@ internal class InAppMessagesManager(
 
     // called when a new push subscription is added, or the app id is updated, or a new session starts
     private suspend fun fetchMessages() {
+        // We only want to fetch IAMs if we know the app is in the
+        // foreground, as we don't want to do this for background
+        // events (such as push received), wasting resources for
+        // IAMs that are never shown.
+        if (!_applicationService.isInForeground) {
+            return
+        }
+
         val appId = _configModelStore.model.appId
         val subscriptionId = _subscriptionManager.subscriptions.push.id
 
@@ -869,4 +880,16 @@ internal class InAppMessagesManager(
             .setPositiveButton(android.R.string.ok) { _, _ -> suspendifyOnThread { showMultiplePrompts(inAppMessage, prompts) } }
             .show()
     }
+
+    private var onFocusCalled: Boolean = false
+
+    override fun onFocus() {
+        if (onFocusCalled) return
+        onFocusCalled = true
+        suspendifyOnThread {
+            fetchMessages()
+        }
+    }
+
+    override fun onUnfocused() { }
 }
