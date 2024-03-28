@@ -138,8 +138,10 @@ internal class SubscriptionOperationExecutor(
                 NetworkUtils.ResponseStatusType.INVALID,
                 ->
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)
-                NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
+                    _identityModelStore.invalidateJwt()
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
+                }
                 NetworkUtils.ResponseStatusType.MISSING -> {
                     if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(createOperation.onesignalId)) {
                         return ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
@@ -148,7 +150,11 @@ internal class SubscriptionOperationExecutor(
                     if (operations == null) {
                         return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
                     } else {
-                        return ExecutionResponse(ExecutionResult.FAIL_RETRY, operations = operations, retryAfterSeconds = ex.retryAfterSeconds)
+                        return ExecutionResponse(
+                            ExecutionResult.FAIL_RETRY,
+                            operations = operations,
+                            retryAfterSeconds = ex.retryAfterSeconds,
+                        )
                     }
                 }
             }
@@ -263,7 +269,7 @@ internal class SubscriptionOperationExecutor(
 
     private suspend fun deleteSubscription(op: DeleteSubscriptionOperation): ExecutionResponse {
         try {
-            _subscriptionBackend.deleteSubscription(op.appId, op.subscriptionId, _identityModelStore.model.jwtToken,)
+            _subscriptionBackend.deleteSubscription(op.appId, op.subscriptionId, _identityModelStore.model.jwtToken)
 
             // remove the subscription model as a HYDRATE in case for some reason it still exists.
             _subscriptionModelStore.remove(op.subscriptionId, ModelChangeTags.HYDRATE)

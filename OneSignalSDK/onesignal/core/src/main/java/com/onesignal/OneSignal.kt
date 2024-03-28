@@ -33,8 +33,8 @@ object OneSignal {
      * Whether the security feature to authenticate your external user ids is enabled
      */
     @JvmStatic
-    val isIdentityVerificationEnabled: Boolean
-        get() = oneSignal.isIdentityVerificationEnabled
+    val useIdentityVerification: Boolean
+        get() = oneSignal.useIdentityVerification
 
     /**
      * The current SDK version as a string.

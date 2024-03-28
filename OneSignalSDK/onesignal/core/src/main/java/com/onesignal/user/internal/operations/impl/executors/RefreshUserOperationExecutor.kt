@@ -140,10 +140,7 @@ internal class RefreshUserOperationExecutor(
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
-                    _identityModelStore.model.setStringProperty(
-                        IdentityConstants.JWT_TOKEN,
-                        "",
-                    )
+                    _identityModelStore.invalidateJwt()
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
                 }
                 NetworkUtils.ResponseStatusType.MISSING -> {

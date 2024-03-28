@@ -22,7 +22,7 @@ interface IOneSignal {
     /**
      * Whether the security feature to authenticate your external user ids is enabled
      */
-    val isIdentityVerificationEnabled: Boolean
+    val useIdentityVerification: Boolean
 
     /**
      * The user manager for accessing user-scoped

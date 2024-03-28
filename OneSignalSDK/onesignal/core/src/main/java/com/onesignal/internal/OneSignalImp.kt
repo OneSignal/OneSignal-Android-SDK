@@ -57,7 +57,8 @@ import org.json.JSONObject
 internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val sdkVersion: String = OneSignalUtils.SDK_VERSION
     override var isInitialized: Boolean = false
-    override val isIdentityVerificationEnabled: Boolean = false
+    override val useIdentityVerification: Boolean
+        get() = configModel?.useIdentityVerification?: true
 
     override var consentRequired: Boolean
         get() = configModel?.consentRequired ?: (_consentRequired == true)
@@ -135,6 +136,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     private var sessionModel: SessionModel? = null
     private var _consentRequired: Boolean? = null
     private var _consentGiven: Boolean? = null
+    private var _useIdentityVerification: Boolean? = false
     private var _disableGMSMissingPrompt: Boolean? = null
     private val initLock: Any = Any()
     private val loginLock: Any = Any()
