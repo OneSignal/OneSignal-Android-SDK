@@ -55,8 +55,10 @@ internal class IdentityOperationExecutor(
                         ExecutionResponse(ExecutionResult.FAIL_NORETRY)
                     NetworkUtils.ResponseStatusType.CONFLICT ->
                         ExecutionResponse(ExecutionResult.FAIL_CONFLICT)
-                    NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
-                        ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                    NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
+                        _identityModelStore.invalidateJwt()
+                        return ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                    }
                     NetworkUtils.ResponseStatusType.MISSING -> {
                         val operations = _buildUserService.getRebuildOperationsIfCurrentUser(lastOperation.appId, lastOperation.onesignalId)
                         if (operations == null) {
@@ -92,8 +94,10 @@ internal class IdentityOperationExecutor(
                         ExecutionResponse(ExecutionResult.SUCCESS)
                     NetworkUtils.ResponseStatusType.INVALID ->
                         ExecutionResponse(ExecutionResult.FAIL_NORETRY)
-                    NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
-                        ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                    NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
+                        _identityModelStore.invalidateJwt()
+                        return ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                    }
                     NetworkUtils.ResponseStatusType.MISSING -> {
                         val operations = _buildUserService.getRebuildOperationsIfCurrentUser(lastOperation.appId, lastOperation.onesignalId)
                         if (operations == null) {
