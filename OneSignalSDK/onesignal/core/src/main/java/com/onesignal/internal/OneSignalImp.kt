@@ -137,6 +137,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     private var sessionModel: SessionModel? = null
     private var _consentRequired: Boolean? = null
     private var _consentGiven: Boolean? = null
+    private var _useIdentityVerification: Boolean? = false
     private var _disableGMSMissingPrompt: Boolean? = null
     private val initLock: Any = Any()
     private val loginLock: Any = Any()
