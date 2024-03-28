@@ -129,8 +129,10 @@ internal class SubscriptionOperationExecutor(
                 NetworkUtils.ResponseStatusType.INVALID,
                 ->
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)
-                NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
+                    _identityModelStore.invalidateJwt()
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                }
                 NetworkUtils.ResponseStatusType.MISSING -> {
                     val operations = _buildUserService.getRebuildOperationsIfCurrentUser(createOperation.appId, createOperation.onesignalId)
                     if (operations == null) {

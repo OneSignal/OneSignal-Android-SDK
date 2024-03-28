@@ -126,10 +126,7 @@ internal class LoginUserOperationExecutor(
                     createUser(loginUserOp, operations)
                 }
                 ExecutionResult.FAIL_UNAUTHORIZED -> {
-                    _identityModelStore.model.setStringProperty(
-                            IdentityConstants.JWT_TOKEN,
-                            "",
-                    )
+                    _identityModelStore.invalidateJwt()
                     ExecutionResponse(result.result)
                 }
                 else -> ExecutionResponse(result.result)
@@ -209,8 +206,10 @@ internal class LoginUserOperationExecutor(
             return when (responseType) {
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
                     ExecutionResponse(ExecutionResult.FAIL_RETRY)
-                NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
+                    _identityModelStore.invalidateJwt()
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                }
                 else ->
                     ExecutionResponse(ExecutionResult.FAIL_PAUSE_OPREPO)
             }
