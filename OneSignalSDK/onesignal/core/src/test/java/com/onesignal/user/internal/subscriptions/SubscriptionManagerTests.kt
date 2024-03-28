@@ -1,9 +1,11 @@
 package com.onesignal.user.internal.subscriptions
 
+import com.onesignal.common.IDManager.LOCAL_PREFIX
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.session.internal.session.ISessionService
+import com.onesignal.user.internal.Subscription
 import com.onesignal.user.internal.subscriptions.impl.SubscriptionManager
 import com.onesignal.user.subscriptions.ISmsSubscription
 import io.kotest.core.spec.style.FunSpec
@@ -11,6 +13,7 @@ import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.beInstanceOf
+import io.kotest.matchers.types.shouldBeSameInstanceAs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -325,6 +328,53 @@ class SubscriptionManagerTests : FunSpec({
         subscriptions.smss.count() shouldBe 1
         subscriptions.smss[0].id shouldBe emailSubscription.id
         subscriptions.smss[0].number shouldBe "+15551234567"
+        verify(exactly = 1) { spySubscriptionChangedHandler.onSubscriptionChanged(any(), any()) }
+    }
+
+    // This is a common case where updates (such as optedIn) should
+    // still propagate even if we haven't sent the POST /users create
+    // call yet. Motivation for this test was a bug was discovered
+    // where calling OneSignal.User.pushSubscription.optIn() was not
+    // prompting for notification permission if it was called before
+    // the create User network call finished.
+    test("subscription modified when model updated, but with local-id") {
+        // Given
+        val pushSubscriptionModel = SubscriptionModel()
+        pushSubscriptionModel.id = "${LOCAL_PREFIX}subscription1"
+        pushSubscriptionModel.type = SubscriptionType.PUSH
+        pushSubscriptionModel.optedIn = true
+        pushSubscriptionModel.address = "my_push_token-org"
+
+        val mockSubscriptionModelStore = mockk<SubscriptionModelStore>()
+        val mockApplicationService = mockk<IApplicationService>()
+        val mockSessionService = mockk<ISessionService>(relaxed = true)
+        val listOfSubscriptions = listOf(pushSubscriptionModel)
+
+        every { mockSubscriptionModelStore.subscribe(any()) } just runs
+        every { mockSubscriptionModelStore.list() } returns listOfSubscriptions
+
+        val spySubscriptionChangedHandler = spyk<ISubscriptionChangedHandler>()
+
+        val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)
+        subscriptionManager.subscribe(spySubscriptionChangedHandler)
+
+        // When
+        pushSubscriptionModel.address = "my_push_token-new"
+        subscriptionManager.onModelUpdated(
+            ModelChangedArgs(
+                pushSubscriptionModel,
+                SubscriptionModel::address.name,
+                SubscriptionModel::address.name,
+                "my_push_token-org",
+                "my_push_token-new",
+            ),
+            ModelChangeTags.NORMAL,
+        )
+        val subscriptions = subscriptionManager.subscriptions
+
+        // Then
+        (subscriptions.push as Subscription).model shouldBeSameInstanceAs pushSubscriptionModel
+        subscriptions.push.token shouldBe "my_push_token-new"
         verify(exactly = 1) { spySubscriptionChangedHandler.onSubscriptionChanged(any(), any()) }
     }
 
