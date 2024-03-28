@@ -7,7 +7,7 @@ import java.util.UUID
  * and detect whether a provided ID was generated locally.
  */
 object IDManager {
-    private const val LOCAL_PREFIX = "local-"
+    internal const val LOCAL_PREFIX = "local-"
 
     /**
      * Create a new local ID to be used temporarily prior to backend generation.
