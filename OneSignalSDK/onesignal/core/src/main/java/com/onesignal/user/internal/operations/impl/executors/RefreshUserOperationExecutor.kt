@@ -53,6 +53,7 @@ internal class RefreshUserOperationExecutor(
                     op.appId,
                     IdentityConstants.ONESIGNAL_ID,
                     op.onesignalId,
+                    _identityModelStore.model.jwtToken,
                 )
 
             if (op.onesignalId != _identityModelStore.model.onesignalId) {
@@ -128,8 +129,10 @@ internal class RefreshUserOperationExecutor(
             return when (responseType) {
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
                     ExecutionResponse(ExecutionResult.FAIL_RETRY)
-                NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
+                    _identityModelStore.invalidateJwt()
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                }
                 NetworkUtils.ResponseStatusType.MISSING -> {
                     val operations = _buildUserService.getRebuildOperationsIfCurrentUser(op.appId, op.onesignalId)
                     if (operations == null) {

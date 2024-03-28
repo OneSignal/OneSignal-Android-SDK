@@ -3,6 +3,7 @@ package com.onesignal.internal
 import android.content.Context
 import android.os.Build
 import com.onesignal.IOneSignal
+import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.IDManager
@@ -57,6 +58,8 @@ import org.json.JSONObject
 internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val sdkVersion: String = OneSignalUtils.SDK_VERSION
     override var isInitialized: Boolean = false
+    override val isIdentityVerificationEnabled: Boolean
+        get() = configModel?.useIdentityVerification?: false
 
     override var consentRequired: Boolean
         get() = configModel?.consentRequired ?: (_consentRequired == true)
@@ -134,6 +137,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     private var sessionModel: SessionModel? = null
     private var _consentRequired: Boolean? = null
     private var _consentGiven: Boolean? = null
+    private var _useIdentityVerification: Boolean? = false
     private var _disableGMSMissingPrompt: Boolean? = null
     private val initLock: Any = Any()
     private val loginLock: Any = Any()
@@ -359,12 +363,23 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             currentIdentityOneSignalId = identityModelStore!!.model.onesignalId
 
             if (currentIdentityExternalId == externalId) {
+                // login is for same user that is already logged in, fetch (refresh)
+                // the current user.
+                identityModelStore!!.model.jwtToken = jwtBearerToken
+                operationRepo!!.enqueue(
+                    RefreshUserOperation(
+                        configModel!!.appId,
+                        identityModelStore!!.model.onesignalId,
+                    ),
+                    true,
+                )
                 return
             }
 
             // TODO: Set JWT Token for all future requests.
             createAndSwitchToNewUser { identityModel, _ ->
                 identityModel.externalId = externalId
+                identityModel.jwtToken = jwtBearerToken
             }
 
             newIdentityOneSignalId = identityModelStore!!.model.onesignalId
@@ -430,7 +445,24 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             )
 
             // TODO: remove JWT Token for all future requests.
+            // calling createAndSwitchToNewUser() replaces model with a default null jwt
         }
+    }
+
+    override fun updateUserJwt(externalId: String, token: String) {
+        if (!identityModelStore!!.model.externalId.equals(externalId))
+            return
+
+        identityModelStore!!.model.jwtToken = token
+        // TODO: update OperationRepo with new JWT
+    }
+
+    override fun addUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
+        user.addUserJwtInvalidatedListner(listener)
+    }
+
+    override fun removeUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
+        user.removeUserJwtInvalidatedListner(listener)
     }
 
     private fun createAndSwitchToNewUser(

@@ -18,6 +18,7 @@ interface IHttpClient {
     suspend fun post(
         url: String,
         body: JSONObject,
+        jwt: String? = null
     ): HttpResponse
 
     /**
@@ -34,6 +35,7 @@ interface IHttpClient {
     suspend fun get(
         url: String,
         cacheKey: String? = null,
+        jwt: String? = null
     ): HttpResponse
 
     /**
@@ -47,6 +49,7 @@ interface IHttpClient {
     suspend fun put(
         url: String,
         body: JSONObject,
+        jwt: String? = null
     ): HttpResponse
 
     /**
@@ -60,6 +63,7 @@ interface IHttpClient {
     suspend fun patch(
         url: String,
         body: JSONObject,
+        jwt: String? = null
     ): HttpResponse
 
     /**
@@ -69,7 +73,10 @@ interface IHttpClient {
      *
      * @return The response returned.
      */
-    suspend fun delete(url: String): HttpResponse
+    suspend fun delete(
+        url: String,
+        jwt: String? = null
+    ): HttpResponse
 }
 
 /**
