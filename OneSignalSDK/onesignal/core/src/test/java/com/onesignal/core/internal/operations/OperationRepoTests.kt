@@ -3,6 +3,7 @@ package com.onesignal.core.internal.operations
 import com.onesignal.common.threading.Waiter
 import com.onesignal.core.internal.operations.impl.OperationModelStore
 import com.onesignal.core.internal.operations.impl.OperationRepo
+import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
@@ -17,6 +18,43 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
 import io.mockk.spyk
+import io.mockk.verify
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
+
+// Mocks used by every test in this file
+private class Mocks {
+    val configModelStore = MockHelper.configModelStore()
+
+    val operationModelStore: OperationModelStore =
+        run {
+            val mockOperationModelStore = mockk<OperationModelStore>()
+            every { mockOperationModelStore.list() } returns listOf()
+            every { mockOperationModelStore.add(any()) } just runs
+            every { mockOperationModelStore.remove(any()) } just runs
+            mockOperationModelStore
+        }
+
+    val executor: IOperationExecutor =
+        run {
+            val mockExecutor = mockk<IOperationExecutor>()
+            every { mockExecutor.operations } returns listOf("DUMMY_OPERATION")
+            coEvery { mockExecutor.execute(any()) } returns ExecutionResponse(ExecutionResult.SUCCESS)
+            mockExecutor
+        }
+
+    val operationRepo: OperationRepo =
+        run {
+            spyk(
+                OperationRepo(
+                    listOf(executor),
+                    operationModelStore,
+                    configModelStore,
+                    Time(),
+                ),
+            )
+        }
+}
 
 class OperationRepoTests : FunSpec({
 
@@ -24,306 +62,291 @@ class OperationRepoTests : FunSpec({
         Logging.logLevel = LogLevel.NONE
     }
 
+    // Ensures we are not continuously waking the CPU
+    test("ensure processQueueForever suspends when queue is empty") {
+        // Given
+        val mocks = Mocks()
+
+        // When
+        mocks.operationRepo.start()
+        val response = mocks.operationRepo.enqueueAndWait(mockOperation())
+        // Must wait for background logic to spin to see how many times it
+        // will call getNextOps()
+        delay(1_000)
+
+        // Then
+        response shouldBe true
+        verify(exactly = 2) {
+            // 1st: gets the operation
+            // 2nd: will be empty
+            // 3rd: shouldn't be called, loop should be waiting on next operation
+            mocks.operationRepo.getNextOps()
+        }
+    }
+
     test("enqueue operation executes and is removed when executed") {
         // Given
-        val mockExecutor = mockk<IOperationExecutor>()
-        every { mockExecutor.operations } returns listOf("DUMMY_OPERATION")
-        coEvery { mockExecutor.execute(any()) } returns ExecutionResponse(ExecutionResult.SUCCESS)
-
-        val mockOperationModelStore = mockk<OperationModelStore>()
-        every { mockOperationModelStore.list() } returns listOf()
-        every { mockOperationModelStore.add(any()) } just runs
-        every { mockOperationModelStore.remove(any()) } just runs
-
-        val operationRepo =
-            OperationRepo(listOf(mockExecutor), mockOperationModelStore, MockHelper.configModelStore(), MockHelper.time(1000))
+        val mocks = Mocks()
 
         val operationIdSlot = slot<String>()
         val operation = mockOperation(operationIdSlot = operationIdSlot)
 
         // When
-        operationRepo.start()
-        val response = operationRepo.enqueueAndWait(operation)
+        mocks.operationRepo.start()
+        val response = mocks.operationRepo.enqueueAndWait(operation)
 
         // Then
         response shouldBe true
         operationIdSlot.isCaptured shouldBe true
         coVerifyOrder {
-            mockOperationModelStore.add(operation)
-            mockExecutor.execute(
+            mocks.operationModelStore.add(operation)
+            mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation
                 },
             )
-            mockOperationModelStore.remove("operationId")
+            mocks.operationModelStore.remove("operationId")
         }
     }
 
     test("enqueue operation executes and is removed when executed after retry") {
         // Given
-        val mockExecutor = mockk<IOperationExecutor>()
-        every { mockExecutor.operations } returns listOf("DUMMY_OPERATION")
+        val mocks = Mocks()
+        coEvery { mocks.operationRepo.delayBeforeRetry(any()) } just runs
         coEvery {
-            mockExecutor.execute(any())
+            mocks.executor.execute(any())
         } returns ExecutionResponse(ExecutionResult.FAIL_RETRY) andThen ExecutionResponse(ExecutionResult.SUCCESS)
-
-        val mockOperationModelStore = mockk<OperationModelStore>()
-        every { mockOperationModelStore.list() } returns listOf()
-        every { mockOperationModelStore.add(any()) } just runs
-        every { mockOperationModelStore.remove(any()) } just runs
-
-        val operationRepo =
-            spyk(
-                OperationRepo(
-                    listOf(mockExecutor),
-                    mockOperationModelStore,
-                    MockHelper.configModelStore(),
-                    MockHelper.time(1000),
-                ),
-            )
-        coEvery { operationRepo.delayBeforeRetry(any()) } just runs
 
         val operationIdSlot = slot<String>()
         val operation = mockOperation(operationIdSlot = operationIdSlot)
 
         // When
-        operationRepo.start()
-        val response = operationRepo.enqueueAndWait(operation)
+        mocks.operationRepo.start()
+        val response = mocks.operationRepo.enqueueAndWait(operation)
 
         // Then
         response shouldBe true
         operationIdSlot.isCaptured shouldBe true
         coVerifyOrder {
-            mockOperationModelStore.add(operation)
-            mockExecutor.execute(
+            mocks.operationModelStore.add(operation)
+            mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation
                 },
             )
-            operationRepo.delayBeforeRetry(1)
-            mockExecutor.execute(
+            mocks.operationRepo.delayBeforeRetry(1)
+            mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation
                 },
             )
-            mockOperationModelStore.remove("operationId")
+            mocks.operationModelStore.remove("operationId")
         }
     }
 
     test("enqueue operation executes and is removed when executed after fail") {
         // Given
-        val mockExecutor = mockk<IOperationExecutor>()
-        every { mockExecutor.operations } returns listOf("DUMMY_OPERATION")
-        coEvery { mockExecutor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_NORETRY)
-
-        val mockOperationModelStore = mockk<OperationModelStore>()
-        every { mockOperationModelStore.list() } returns listOf()
-        every { mockOperationModelStore.add(any()) } just runs
-        every { mockOperationModelStore.remove(any()) } just runs
-
-        val operationRepo =
-            OperationRepo(listOf(mockExecutor), mockOperationModelStore, MockHelper.configModelStore(), MockHelper.time(1000))
+        val mocks = Mocks()
+        coEvery { mocks.executor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_NORETRY)
 
         val operationIdSlot = slot<String>()
         val operation = mockOperation(operationIdSlot = operationIdSlot)
 
         // When
-        operationRepo.start()
-        val response = operationRepo.enqueueAndWait(operation)
+        mocks.operationRepo.start()
+        val response = mocks.operationRepo.enqueueAndWait(operation)
 
         // Then
         response shouldBe false
         operationIdSlot.isCaptured shouldBe true
         coVerifyOrder {
-            mockOperationModelStore.add(operation)
-            mockExecutor.execute(
+            mocks.operationModelStore.add(operation)
+            mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation
                 },
             )
-            mockOperationModelStore.remove("operationId")
+            mocks.operationModelStore.remove("operationId")
         }
     }
 
     test("enqueue 2 operations that cannot be grouped will be executed separately from each other") {
         // Given
+        val mocks = Mocks()
         val waiter = Waiter()
-        val mockExecutor = mockk<IOperationExecutor>()
-        every { mockExecutor.operations } returns listOf("DUMMY_OPERATION")
-        coEvery { mockExecutor.execute(any()) } returns ExecutionResponse(ExecutionResult.SUCCESS)
-
-        val mockOperationModelStore = mockk<OperationModelStore>()
-        every { mockOperationModelStore.list() } returns listOf()
-        every { mockOperationModelStore.add(any()) } just runs
-        every { mockOperationModelStore.remove(any()) } answers {} andThenAnswer { waiter.wake() }
-
-        val operationRepo =
-            OperationRepo(listOf(mockExecutor), mockOperationModelStore, MockHelper.configModelStore(), MockHelper.time(1000))
+        every { mocks.operationModelStore.remove(any()) } answers {} andThenAnswer { waiter.wake() }
 
         val operation1 = mockOperation("operationId1", groupComparisonType = GroupComparisonType.CREATE)
         val operation2 = mockOperation("operationId2", createComparisonKey = "create-key2")
 
         // When
-        operationRepo.enqueue(operation1)
-        operationRepo.enqueue(operation2)
-        operationRepo.start()
+        mocks.operationRepo.enqueue(operation1)
+        mocks.operationRepo.enqueue(operation2)
+        mocks.operationRepo.start()
 
         waiter.waitForWake()
 
         // Then
         coVerifyOrder {
-            mockOperationModelStore.add(operation1)
-            mockOperationModelStore.add(operation2)
-            mockExecutor.execute(
+            mocks.operationModelStore.add(operation1)
+            mocks.operationModelStore.add(operation2)
+            mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation1
                 },
             )
-            mockOperationModelStore.remove("operationId1")
-            mockExecutor.execute(
+            mocks.operationModelStore.remove("operationId1")
+            mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation2
                 },
             )
-            mockOperationModelStore.remove("operationId2")
+            mocks.operationModelStore.remove("operationId2")
         }
     }
 
     test("enqueue 2 operations that can be grouped via create will be executed as a group") {
         // Given
+        val mocks = Mocks()
         val waiter = Waiter()
-        val mockExecutor = mockk<IOperationExecutor>()
-        every { mockExecutor.operations } returns listOf("DUMMY_OPERATION")
-        coEvery { mockExecutor.execute(any()) } returns ExecutionResponse(ExecutionResult.SUCCESS)
-
-        val mockOperationModelStore = mockk<OperationModelStore>()
-        every { mockOperationModelStore.list() } returns listOf()
-        every { mockOperationModelStore.add(any()) } just runs
-        every { mockOperationModelStore.remove(any()) } answers {} andThenAnswer { waiter.wake() }
-
-        val operationRepo =
-            OperationRepo(listOf(mockExecutor), mockOperationModelStore, MockHelper.configModelStore(), MockHelper.time(1000))
+        every { mocks.operationModelStore.remove(any()) } answers {} andThenAnswer { waiter.wake() }
 
         val operation1 = mockOperation("operationId1", groupComparisonType = GroupComparisonType.CREATE)
         val operation2 = mockOperation("operationId2")
 
         // When
-        operationRepo.enqueue(operation1)
-        operationRepo.enqueue(operation2)
-        operationRepo.start()
+        mocks.operationRepo.enqueue(operation1)
+        mocks.operationRepo.enqueue(operation2)
+        mocks.operationRepo.start()
 
         waiter.waitForWake()
 
         // Then
         coVerifyOrder {
-            mockOperationModelStore.add(operation1)
-            mockOperationModelStore.add(operation2)
-            mockExecutor.execute(
+            mocks.operationModelStore.add(operation1)
+            mocks.operationModelStore.add(operation2)
+            mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 2
                     it[0] shouldBe operation1
                     it[1] shouldBe operation2
                 },
             )
-            mockOperationModelStore.remove("operationId1")
-            mockOperationModelStore.remove("operationId2")
+            mocks.operationModelStore.remove("operationId1")
+            mocks.operationModelStore.remove("operationId2")
         }
     }
 
     test("enqueue 2 operations where the first cannot be executed but can be grouped via create will be executed as a group") {
         // Given
+        val mocks = Mocks()
         val waiter = Waiter()
-        val mockExecutor = mockk<IOperationExecutor>()
-        every { mockExecutor.operations } returns listOf("DUMMY_OPERATION")
-        coEvery { mockExecutor.execute(any()) } returns ExecutionResponse(ExecutionResult.SUCCESS)
-
-        val mockOperationModelStore = mockk<OperationModelStore>()
-        every { mockOperationModelStore.list() } returns listOf()
-        every { mockOperationModelStore.add(any()) } just runs
-        every { mockOperationModelStore.remove(any()) } answers {} andThenAnswer { waiter.wake() }
-
-        val operationRepo =
-            OperationRepo(listOf(mockExecutor), mockOperationModelStore, MockHelper.configModelStore(), MockHelper.time(1000))
+        every { mocks.operationModelStore.remove(any()) } answers {} andThenAnswer { waiter.wake() }
 
         val operation1 = mockOperation("operationId1", canStartExecute = false, groupComparisonType = GroupComparisonType.ALTER)
         val operation2 = mockOperation("operationId2", groupComparisonType = GroupComparisonType.CREATE)
 
         // When
-        operationRepo.enqueue(operation1)
-        operationRepo.enqueue(operation2)
-        operationRepo.start()
+        mocks.operationRepo.enqueue(operation1)
+        mocks.operationRepo.enqueue(operation2)
+        mocks.operationRepo.start()
 
         waiter.waitForWake()
 
         // Then
         coVerifyOrder {
-            mockOperationModelStore.add(operation1)
-            mockOperationModelStore.add(operation2)
-            mockExecutor.execute(
+            mocks.operationModelStore.add(operation1)
+            mocks.operationModelStore.add(operation2)
+            mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 2
                     it[0] shouldBe operation2
                     it[1] shouldBe operation1
                 },
             )
-            mockOperationModelStore.remove("operationId2")
-            mockOperationModelStore.remove("operationId1")
+            mocks.operationModelStore.remove("operationId2")
+            mocks.operationModelStore.remove("operationId1")
         }
     }
 
     test("execution of 1 operation with translation IDs will drive translateId of subsequence operations") {
         // Given
+        val mocks = Mocks()
         val waiter = Waiter()
-        val mockExecutor = mockk<IOperationExecutor>()
-        every { mockExecutor.operations } returns listOf("DUMMY_OPERATION")
         coEvery {
-            mockExecutor.execute(any())
+            mocks.executor.execute(any())
         } returns ExecutionResponse(ExecutionResult.SUCCESS, mapOf("id1" to "id2")) andThen ExecutionResponse(ExecutionResult.SUCCESS)
 
-        val mockOperationModelStore = mockk<OperationModelStore>()
-        every { mockOperationModelStore.list() } returns listOf()
-        every { mockOperationModelStore.add(any()) } just runs
-        every { mockOperationModelStore.remove(any()) } answers {} andThenAnswer { waiter.wake() }
-
-        val operationRepo =
-            OperationRepo(listOf(mockExecutor), mockOperationModelStore, MockHelper.configModelStore(), MockHelper.time(1000))
+        every { mocks.operationModelStore.remove(any()) } answers {} andThenAnswer { waiter.wake() }
 
         val operation1 = mockOperation("operationId1")
         val operation2 = mockOperation("operationId2")
 
         // When
-        operationRepo.enqueue(operation1)
-        operationRepo.enqueue(operation2)
-        operationRepo.start()
+        mocks.operationRepo.enqueue(operation1)
+        mocks.operationRepo.enqueue(operation2)
+        mocks.operationRepo.start()
 
         waiter.waitForWake()
 
         // Then
         coVerifyOrder {
-            mockOperationModelStore.add(operation1)
-            mockOperationModelStore.add(operation2)
-            mockExecutor.execute(
+            mocks.operationModelStore.add(operation1)
+            mocks.operationModelStore.add(operation2)
+            mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation1
                 },
             )
             operation2.translateIds(mapOf("id1" to "id2"))
-            mockOperationModelStore.remove("operationId1")
-            mockExecutor.execute(
+            mocks.operationModelStore.remove("operationId1")
+            mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation2
                 },
             )
-            mockOperationModelStore.remove("operationId2")
+            mocks.operationModelStore.remove("operationId2")
         }
+    }
+
+    test("enqueuing normal operations should not skip minimum wait time") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoExecutionInterval = 1_000
+
+        // When
+        mocks.operationRepo.start()
+        mocks.operationRepo.enqueue(mockOperation())
+        val response =
+            withTimeoutOrNull(100) {
+                val value = mocks.operationRepo.enqueueAndWait(mockOperation())
+                value
+            }
+        response shouldBe null
+    }
+
+    test("enqueuing with flush = true should skip minimum wait time") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoExecutionInterval = 1_000
+
+        // When
+        mocks.operationRepo.start()
+        mocks.operationRepo.enqueue(mockOperation())
+        val response =
+            withTimeoutOrNull(100) {
+                val value = mocks.operationRepo.enqueueAndWait(mockOperation(), flush = true)
+                value
+            }
+        response shouldBe true
     }
 }) {
     companion object {

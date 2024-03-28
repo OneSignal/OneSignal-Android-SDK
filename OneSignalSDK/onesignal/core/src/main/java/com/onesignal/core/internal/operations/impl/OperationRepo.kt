@@ -22,7 +22,7 @@ internal class OperationRepo(
     private val _configModelStore: ConfigModelStore,
     private val _time: ITime,
 ) : IOperationRepo, IStartableService {
-    private class OperationQueueItem(
+    internal class OperationQueueItem(
         val operation: Operation,
         val waiter: WaiterWithValue<Boolean>? = null,
         var retries: Int = 0,
@@ -97,61 +97,46 @@ internal class OperationRepo(
      * dedicated thread.
      */
     private suspend fun processQueueForever() {
-        var lastSyncTime = _time.currentTimeMillis
-        var force = false
-
-        // This runs forever, until the application is destroyed.
+        waitForNewOperationAndExecutionInterval()
         while (true) {
             if (paused) {
                 Logging.debug("OperationRepo is paused")
                 return
             }
-            try {
-                var ops: List<OperationQueueItem>? = null
 
-                synchronized(queue) {
-                    val startingOp = queue.firstOrNull { it.operation.canStartExecute }
+            val ops = getNextOps()
+            Logging.debug("processQueueForever:ops:$ops")
 
-                    if (startingOp != null) {
-                        queue.remove(startingOp)
-                        ops = getGroupableOperations(startingOp)
-                    }
-                }
-
-                // if the queue is empty at this point, we are no longer in force flush mode. We
-                // check this now so if the execution is unsuccessful with retry, we don't find ourselves
-                // continuously retrying without delaying.
-                if (queue.isEmpty()) {
-                    force = false
-                }
-
-                if (ops != null) {
-                    executeOperations(ops!!)
-                }
-
-                if (!force) {
-                    // potentially delay to prevent this from constant IO if a bunch of
-                    // operations are set sequentially.
-                    val newTime = _time.currentTimeMillis
-
-                    val delay = (lastSyncTime - newTime) + _configModelStore.model.opRepoExecutionInterval
-                    lastSyncTime = newTime
-                    if (delay > 0) {
-                        withTimeoutOrNull(delay) {
-                            // wait to be woken up for the next pass
-                            force = waiter.waitForWake()
-                        }
-
-                        // This secondary delay allows for any subsequent operations (beyond the first one
-                        // that woke us) to be enqueued before we pull from the queue.
-                        delay(_configModelStore.model.opRepoPostWakeDelay)
-
-                        lastSyncTime = _time.currentTimeMillis
-                    }
-                }
-            } catch (e: Throwable) {
-                Logging.log(LogLevel.ERROR, "Error occurred with Operation work loop", e)
+            if (ops != null) {
+                executeOperations(ops)
+                // Allows for any subsequent operations (beyond the first one
+                // that woke us) to be enqueued before we pull from the queue.
+                delay(_configModelStore.model.opRepoPostWakeDelay)
+            } else {
+                waitForNewOperationAndExecutionInterval()
             }
+        }
+    }
+
+    /**
+     *  Waits until a new operation is enqueued, then wait an additional
+     *  amount of time afterwards, so operations can be grouped/batched.
+     */
+    private suspend fun waitForNewOperationAndExecutionInterval() {
+        // 1. Wait for an operation to be enqueued
+        var force = waiter.waitForWake()
+
+        // 2. Wait at least the time defined in opRepoExecutionInterval
+        //    so operations can be grouped, unless one of them used
+        //    flush=true (AKA force)
+        var lastTime = _time.currentTimeMillis
+        var remainingTime = _configModelStore.model.opRepoExecutionInterval
+        while (!force && remainingTime > 0) {
+            withTimeoutOrNull(remainingTime) {
+                force = waiter.waitForWake()
+            }
+            remainingTime -= _time.currentTimeMillis - lastTime
+            lastTime = _time.currentTimeMillis
         }
     }
 
@@ -249,8 +234,21 @@ internal class OperationRepo(
     suspend fun delayBeforeRetry(retries: Int) {
         val delayFor = retries * 15_000L
         if (delayFor < 1) return
-        Logging.error("Operations being delay for: $delayFor")
+        Logging.error("Operations being delay for: $delayFor ms")
         delay(delayFor)
+    }
+
+    internal fun getNextOps(): List<OperationQueueItem>? {
+        return synchronized(queue) {
+            val startingOp = queue.firstOrNull { it.operation.canStartExecute }
+
+            if (startingOp != null) {
+                queue.remove(startingOp)
+                getGroupableOperations(startingOp)
+            } else {
+                null
+            }
+        }
     }
 
     /**
