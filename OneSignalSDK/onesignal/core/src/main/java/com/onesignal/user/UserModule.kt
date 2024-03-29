@@ -4,6 +4,7 @@ import com.onesignal.common.modules.IModule
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.core.internal.startup.IBootstrapService
+import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.user.internal.UserManager
 import com.onesignal.user.internal.backend.IIdentityBackendService
 import com.onesignal.user.internal.backend.ISubscriptionBackendService
@@ -24,6 +25,7 @@ import com.onesignal.user.internal.operations.impl.listeners.IdentityModelStoreL
 import com.onesignal.user.internal.operations.impl.listeners.PropertiesModelStoreListener
 import com.onesignal.user.internal.operations.impl.listeners.SubscriptionModelStoreListener
 import com.onesignal.user.internal.properties.PropertiesModelStore
+import com.onesignal.user.internal.service.UserRefreshService
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.impl.SubscriptionManager
@@ -61,5 +63,7 @@ internal class UserModule : IModule {
         builder.register<LoginUserFromSubscriptionOperationExecutor>().provides<IOperationExecutor>()
         builder.register<RefreshUserOperationExecutor>().provides<IOperationExecutor>()
         builder.register<UserManager>().provides<IUserManager>()
+
+        builder.register<UserRefreshService>().provides<IStartableService>()
     }
 }
