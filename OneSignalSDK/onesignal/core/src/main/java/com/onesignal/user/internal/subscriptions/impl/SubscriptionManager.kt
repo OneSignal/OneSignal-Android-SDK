@@ -157,7 +157,10 @@ internal class SubscriptionManager(
         args: ModelChangedArgs,
         tag: String,
     ) {
-        val subscription = subscriptions.collection.firstOrNull { it.id == args.model.id }
+        val subscription =
+            subscriptions.collection.firstOrNull {
+                args.model == (it as Subscription).model
+            }
 
         if (subscription == null) {
             // this shouldn't happen, but create a new subscription if a model was updated and we
