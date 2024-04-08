@@ -1,7 +1,6 @@
 package com.onesignal.user.internal.operations
 
 import com.onesignal.common.IDManager
-import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.user.internal.operations.impl.executors.UpdateUserOperationExecutor
 
@@ -37,10 +36,7 @@ class DeleteTagOperation() : Operation(UpdateUserOperationExecutor.DELETE_TAG) {
         private set(value) {
             setStringProperty(::key.name, value)
         }
-
-    override val createComparisonKey: String get() = ""
-    override val modifyComparisonKey: String get() = createComparisonKey
-    override val groupComparisonType: GroupComparisonType = GroupComparisonType.ALTER
+    override val groupingKey: String get() = "$appId.$onesignalId"
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
 
     constructor(appId: String, onesignalId: String, key: String) : this() {

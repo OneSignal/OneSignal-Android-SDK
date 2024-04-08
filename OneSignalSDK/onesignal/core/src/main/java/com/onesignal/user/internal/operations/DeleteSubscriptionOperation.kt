@@ -1,7 +1,6 @@
 package com.onesignal.user.internal.operations
 
 import com.onesignal.common.IDManager
-import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
 
@@ -38,9 +37,9 @@ class DeleteSubscriptionOperation() : Operation(SubscriptionOperationExecutor.DE
             setStringProperty(::subscriptionId.name, value)
         }
 
-    override val createComparisonKey: String get() = "$appId.User.$onesignalId"
-    override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Subscription.$subscriptionId"
-    override val groupComparisonType: GroupComparisonType = GroupComparisonType.NONE
+    // TODO: Does this account for switching users?s
+    //   * Scenario is what happens if we add then remove an email? Eiter before or after the switch user happens?
+    override val groupingKey: String get() = "$appId.$onesignalId.$subscriptionId"
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId) && !IDManager.isLocalId(onesignalId)
 
     constructor(appId: String, onesignalId: String, subscriptionId: String) : this() {

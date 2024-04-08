@@ -82,9 +82,9 @@ class CreateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.CR
             setEnumProperty(::status.name, value)
         }
 
-    override val createComparisonKey: String get() = "$appId.User.$onesignalId"
-    override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Subscription.$subscriptionId"
-    override val groupComparisonType: GroupComparisonType = GroupComparisonType.ALTER
+
+    // TODO: Use a compare instead of a string?
+    override val groupingKey: String get() = "$appId.$onesignalId.$subscriptionId"
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
 
     constructor(appId: String, onesignalId: String, subscriptionId: String, type: SubscriptionType, enabled: Boolean, address: String, status: SubscriptionStatus) : this() {

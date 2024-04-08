@@ -21,6 +21,19 @@ interface IOperationExecutor {
      * a match to be executed alongside the starting operation.
      */
     suspend fun execute(operations: List<Operation>): ExecutionResponse
+
+    /**
+     * Effects the operations given to execute.
+     *
+     * This function must determine if specific instances of supported
+     * operations can be processed together.
+     *    - supported = OperationRepo will first check this executor's operations list.
+     *    - processed together = Normally means will be sent as a single network call.
+     *
+     * @param operations The operations to be check if they can be processed together. (TODO: note if the list will always be size 2 or will we pass more?)
+     * @return Boolean true if they should be given to execute later, false if not
+     */
+    fun canProcessTogether(operations: List<Operation>): Boolean
 }
 
 class ExecutionResponse(

@@ -4,7 +4,6 @@ import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResult
-import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.Operation
@@ -26,7 +25,11 @@ internal class OperationRepo(
         val operation: Operation,
         val waiter: WaiterWithValue<Boolean>? = null,
         var retries: Int = 0,
-    )
+    ) {
+        override fun toString(): String {
+            return Pair(operation.toString(), retries).toString()
+        }
+    }
 
     private val executorsMap: Map<String, IOperationExecutor>
     private val queue = mutableListOf<OperationQueueItem>()
@@ -36,6 +39,7 @@ internal class OperationRepo(
     init {
         val executorsMap: MutableMap<String, IOperationExecutor> = mutableMapOf()
 
+        // TODO: Let's throw on dups, so we know if a mistake was made
         for (executor in executors) {
             for (operation in executor.operations) {
                 executorsMap[operation] = executor
@@ -107,6 +111,15 @@ internal class OperationRepo(
             val ops = getNextOps()
             Logging.debug("processQueueForever:ops:$ops")
 
+//            if (ops != null) {
+//                for(op in ops) {
+//                    Logging.debug("processQueueForever:ops:$op")
+//                }
+//            }
+//            else {
+//                Logging.debug("processQueueForever:ops:null")
+//            }
+
             if (ops != null) {
                 executeOperations(ops)
                 // Allows for any subsequent operations (beyond the first one
@@ -148,6 +161,8 @@ internal class OperationRepo(
                     ?: throw Exception("Could not find executor for operation ${startingOp.operation.name}")
 
             val operations = ops.map { it.operation }
+            // TODO: We should throw if we pass operations that the executor didn't process.
+            //   Probably throw here, instead of the executor. Base it on if it happened to skip any operations
             val response = executor.execute(operations)
 
             Logging.debug("OperationRepo: execute response = ${response.result}")
@@ -256,31 +271,44 @@ internal class OperationRepo(
      * can be executed along with the starting operation.  The full list of operations, with
      * the starting operation being first, will be returned.
      *
-     * THIS SHOULD BE CALLED WHILE THE QUEUE IS SYNCHRONIZED!!
+     * THIS MUST BE CALLED WHILE THE QUEUE IS SYNCHRONIZED!!
+     *
+     * ***** FUTURE:Optimization:
+     * Operations don't always need to be process in the same order as they
+     * exists in the queue. Some operations don't have an effect on following
+     * ones. We could introduce a dependency concept to solve this.
+     * WARNING: Adding such an improvement shouldn't be taken lightly!
+     * Maintenance required and real world benefits should be considered in
+     * the decision before committing. It should also be heavily unit tested!
      */
-    private fun getGroupableOperations(startingOp: OperationQueueItem): List<OperationQueueItem> {
+    private fun getGroupableOperations(startingOp: OperationQueueItem):  List<OperationQueueItem> {
         val ops = mutableListOf<OperationQueueItem>()
         ops.add(startingOp)
 
-        if (startingOp.operation.groupComparisonType == GroupComparisonType.NONE) {
-            return ops
-        }
+        var lastOp = startingOp.operation
+        val executor = getExecutor(lastOp)
 
-        val startingKey =
-            if (startingOp.operation.groupComparisonType == GroupComparisonType.CREATE) startingOp.operation.createComparisonKey else startingOp.operation.modifyComparisonKey
+        if (queue.isEmpty()) return ops
 
-        if (queue.isNotEmpty()) {
-            for (item in queue.toList()) {
-                val itemKey =
-                    if (startingOp.operation.groupComparisonType == GroupComparisonType.CREATE) item.operation.createComparisonKey else item.operation.modifyComparisonKey
+        for (item in queue.toList()) {
+            // Only group if operations use the same executors
+            val itemExecutor = getExecutor(item.operation)
+            if (itemExecutor != executor) break
 
-                if (itemKey == startingKey) {
-                    queue.remove(item)
-                    ops.add(item)
-                }
-            }
+            // Only group if the executor says it can
+            val canGroup = listOf(lastOp, item.operation)
+            if (!executor.canProcessTogether(canGroup)) break
+
+            queue.remove(item)
+            ops.add(item)
+            lastOp = item.operation
         }
 
         return ops
+    }
+
+    private fun getExecutor(operation: Operation): IOperationExecutor {
+        return executorsMap[operation.name]
+            ?: throw Exception("Could not find executor for operation ${operation.name}")
     }
 }

@@ -23,6 +23,28 @@ internal class IdentityOperationExecutor(
     override val operations: List<String>
         get() = listOf(SET_ALIAS, DELETE_ALIAS)
 
+    override fun canProcessTogether(operations: List<Operation>): Boolean {
+        val firstKey = operations.first().groupingKey
+        return operations.all { firstKey == it.groupingKey }
+    }
+
+//    override fun canProcessTogether(operations: List<Operation>): Boolean {
+//        val firstKey = getKeyFromOperation(operations.first())
+//        return operations.all { firstKey == getKeyFromOperation(it) }
+////        for (op in operations) {
+////            if (firstKey != getKeyFromOperation(op)) return false
+////        }
+////        return true
+//    }
+//
+//    private fun getKeyFromOperation(operation: Operation): String {
+//        return when (val it = operation) {
+//            is SetAliasOperation -> "${it::class.java.name}:${it.appId}:${it.onesignalId}"
+//            is DeleteAliasOperation -> "${it::class.java.name}:${it.appId}:${it.onesignalId}"
+//            else -> throw Exception("Unhandleable operation")
+//        }
+//    }
+
     override suspend fun execute(operations: List<Operation>): ExecutionResponse {
         Logging.debug("IdentityOperationExecutor(operations: $operations)")
 
