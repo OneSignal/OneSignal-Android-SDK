@@ -278,6 +278,10 @@ internal class OperationRepo(
                 val itemKey =
                     if (startingOp.operation.groupComparisonType == GroupComparisonType.CREATE) item.operation.createComparisonKey else item.operation.modifyComparisonKey
 
+                if (itemKey == "" && startingKey == "") {
+                    throw Exception("Both comparison keys can not be blank!")
+                }
+
                 if (itemKey == startingKey) {
                     queue.remove(item)
                     ops.add(item)
