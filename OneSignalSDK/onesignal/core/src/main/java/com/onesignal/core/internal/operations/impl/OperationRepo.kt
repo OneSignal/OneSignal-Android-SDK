@@ -26,7 +26,11 @@ internal class OperationRepo(
         val operation: Operation,
         val waiter: WaiterWithValue<Boolean>? = null,
         var retries: Int = 0,
-    )
+    ) {
+        override fun toString(): String {
+            return Pair(operation.toString(), retries).toString() + "\n"
+        }
+    }
 
     private val executorsMap: Map<String, IOperationExecutor>
     private val queue = mutableListOf<OperationQueueItem>()
@@ -105,7 +109,7 @@ internal class OperationRepo(
             }
 
             val ops = getNextOps()
-            Logging.debug("processQueueForever:ops:$ops")
+            Logging.debug("processQueueForever:ops:\n$ops")
 
             if (ops != null) {
                 executeOperations(ops)
