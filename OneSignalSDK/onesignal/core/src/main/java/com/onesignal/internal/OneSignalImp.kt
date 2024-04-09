@@ -415,6 +415,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 return
             }
 
+            // calling createAndSwitchToNewUser() replaces model with a default empty jwt
             createAndSwitchToNewUser()
             operationRepo!!.enqueue(
                 LoginUserOperation(
@@ -423,9 +424,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                     identityModelStore!!.model.externalId,
                 ),
             )
-
-            // TODO: remove JWT Token for all future requests.
-            // calling createAndSwitchToNewUser() replaces model with a default null jwt
         }
     }
 
@@ -434,7 +432,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             return
 
         identityModelStore!!.model.jwtToken = token
-        // TODO: update OperationRepo with new JWT
     }
 
     override fun addUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
