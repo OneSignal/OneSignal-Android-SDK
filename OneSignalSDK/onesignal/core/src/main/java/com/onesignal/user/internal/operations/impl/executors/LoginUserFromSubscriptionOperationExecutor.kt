@@ -27,6 +27,10 @@ internal class LoginUserFromSubscriptionOperationExecutor(
     override suspend fun execute(operations: List<Operation>): ExecutionResponse {
         Logging.debug("LoginUserFromSubscriptionOperationExecutor(operation: $operations)")
 
+        if (operations.size > 1) {
+            throw Exception("Only supports one operation! Attempted operations:\n$operations")
+        }
+
         val startingOp = operations.first()
 
         if (startingOp is LoginUserFromSubscriptionOperation) {

@@ -38,6 +38,10 @@ internal class RefreshUserOperationExecutor(
     override suspend fun execute(operations: List<Operation>): ExecutionResponse {
         Logging.log(LogLevel.DEBUG, "RefreshUserOperationExecutor(operation: $operations)")
 
+        if (operations.any { it !is RefreshUserOperation }) {
+            throw Exception("Unrecognized operation(s)! Attempted operations:\n$operations")
+        }
+
         val startingOp = operations.first()
         if (startingOp is RefreshUserOperation) {
             return getUser(startingOp)

@@ -114,6 +114,7 @@ internal class UpdateUserOperationExecutor(
 
                     deltasObject = PropertiesDeltasObject(deltasObject.sessionTime, deltasObject.sessionCount, amountSpent, purchasesArray)
                 }
+                else -> throw Exception("Unrecognized operation: $operation")
             }
         }
 
