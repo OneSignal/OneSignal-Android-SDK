@@ -333,10 +333,6 @@ class LoginUserOperationExecutorTests : FunSpec({
         val operations =
             listOf<Operation>(
                 LoginUserOperation(appId, localOneSignalId, null, null),
-                SetAliasOperation(appId, localOneSignalId, "aliasLabel1", "aliasValue1-1"),
-                SetAliasOperation(appId, localOneSignalId, "aliasLabel1", "aliasValue1-2"),
-                SetAliasOperation(appId, localOneSignalId, "aliasLabel2", "aliasValue2"),
-                DeleteAliasOperation(appId, localOneSignalId, "aliasLabel2"),
                 CreateSubscriptionOperation(
                     appId,
                     localOneSignalId,
@@ -365,20 +361,6 @@ class LoginUserOperationExecutorTests : FunSpec({
                     SubscriptionStatus.SUBSCRIBED,
                 ),
                 DeleteSubscriptionOperation(appId, localOneSignalId, "subscriptionId2"),
-                SetTagOperation(appId, localOneSignalId, "tagKey1", "tagValue1-1"),
-                SetTagOperation(appId, localOneSignalId, "tagKey1", "tagValue1-2"),
-                SetTagOperation(appId, localOneSignalId, "tagKey2", "tagValue2"),
-                DeleteTagOperation(appId, localOneSignalId, "tagKey2"),
-                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::language.name, "lang1"),
-                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::language.name, "lang2"),
-                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::timezone.name, "timezone"),
-                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::country.name, "country"),
-                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationLatitude.name, 123.45),
-                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationLongitude.name, 678.90),
-                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationType.name, 1),
-                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationAccuracy.name, 0.15),
-                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationBackground.name, true),
-                SetPropertyOperation(appId, localOneSignalId, PropertiesModel::locationTimestamp.name, 1111L),
             )
 
         // When
