@@ -15,6 +15,7 @@ import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
+import kotlin.reflect.KClass
 
 internal class OperationRepo(
     executors: List<IOperationExecutor>,
@@ -49,6 +50,12 @@ internal class OperationRepo(
 
         for (operation in _operationModelStore.list()) {
             internalEnqueue(OperationQueueItem(operation), flush = false, addToStore = false)
+        }
+    }
+
+    override fun <T : Operation> containsInstanceOf(type: KClass<T>): Boolean {
+        synchronized(queue) {
+            return queue.any { type.isInstance(it.operation) }
         }
     }
 

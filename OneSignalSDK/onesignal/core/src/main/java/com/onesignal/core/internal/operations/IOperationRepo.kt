@@ -1,5 +1,7 @@
 package com.onesignal.core.internal.operations
 
+import kotlin.reflect.KClass
+
 /**
  * The operation queue provides a mechanism to queue one or more [Operation] with the promise
  * it will be executed in a background thread at some point in the future.  Operations are
@@ -31,4 +33,13 @@ interface IOperationRepo {
         operation: Operation,
         flush: Boolean = false,
     ): Boolean
+
+    /**
+     * Check if the queue contains a specific operation type
+     */
+    fun <T : Operation> containsInstanceOf(type: KClass<T>): Boolean
 }
+
+// Extension function so the syntax containsInstanceOf<Operation>() can be used over
+// containsInstanceOf(Operation::class)
+inline fun <reified T : Operation> IOperationRepo.containsInstanceOf(): Boolean = containsInstanceOf(T::class)

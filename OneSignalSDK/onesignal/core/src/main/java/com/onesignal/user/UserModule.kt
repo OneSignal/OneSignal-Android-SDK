@@ -15,6 +15,7 @@ import com.onesignal.user.internal.backend.impl.UserBackendService
 import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.builduser.impl.RebuildUserService
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.migrations.RecoverFromDroppedLoginBug
 import com.onesignal.user.internal.operations.impl.executors.IdentityOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.LoginUserFromSubscriptionOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.LoginUserOperationExecutor
@@ -65,5 +66,7 @@ internal class UserModule : IModule {
         builder.register<UserManager>().provides<IUserManager>()
 
         builder.register<UserRefreshService>().provides<IStartableService>()
+
+        builder.register<RecoverFromDroppedLoginBug>().provides<IStartableService>()
     }
 }
