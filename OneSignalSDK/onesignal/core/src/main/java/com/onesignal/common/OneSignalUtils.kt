@@ -6,7 +6,7 @@ object OneSignalUtils {
     /**
      * The version of this SDK.
      */
-    const val SDK_VERSION: String = "050107"
+    const val SDK_VERSION: String = "050108"
 
     fun isValidEmail(email: String): Boolean {
         if (email.isEmpty()) {
