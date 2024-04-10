@@ -55,7 +55,7 @@ internal class LoginUserOperationExecutor(
         val startingOp = operations.first()
 
         if (startingOp is LoginUserOperation) {
-            return loginUser(startingOp, operations)
+            return loginUser(startingOp, operations.drop(1))
         }
 
         throw Exception("Unrecognized operation: $startingOp")
@@ -153,6 +153,7 @@ internal class LoginUserOperationExecutor(
                 is TransferSubscriptionOperation -> subscriptions = createSubscriptionsFromOperation(operation, subscriptions)
                 is UpdateSubscriptionOperation -> subscriptions = createSubscriptionsFromOperation(operation, subscriptions)
                 is DeleteSubscriptionOperation -> subscriptions = createSubscriptionsFromOperation(operation, subscriptions)
+                else -> throw Exception("Unrecognized operation: $operation")
             }
         }
 

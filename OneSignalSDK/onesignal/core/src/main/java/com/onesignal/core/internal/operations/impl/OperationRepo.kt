@@ -15,6 +15,7 @@ import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
+import kotlin.reflect.KClass
 
 internal class OperationRepo(
     executors: List<IOperationExecutor>,
@@ -26,7 +27,11 @@ internal class OperationRepo(
         val operation: Operation,
         val waiter: WaiterWithValue<Boolean>? = null,
         var retries: Int = 0,
-    )
+    ) {
+        override fun toString(): String {
+            return Pair(operation.toString(), retries).toString() + "\n"
+        }
+    }
 
     private val executorsMap: Map<String, IOperationExecutor>
     private val queue = mutableListOf<OperationQueueItem>()
@@ -45,6 +50,12 @@ internal class OperationRepo(
 
         for (operation in _operationModelStore.list()) {
             internalEnqueue(OperationQueueItem(operation), flush = false, addToStore = false)
+        }
+    }
+
+    override fun <T : Operation> containsInstanceOf(type: KClass<T>): Boolean {
+        synchronized(queue) {
+            return queue.any { type.isInstance(it.operation) }
         }
     }
 
@@ -105,7 +116,7 @@ internal class OperationRepo(
             }
 
             val ops = getNextOps()
-            Logging.debug("processQueueForever:ops:$ops")
+            Logging.debug("processQueueForever:ops:\n$ops")
 
             if (ops != null) {
                 executeOperations(ops)
@@ -273,6 +284,10 @@ internal class OperationRepo(
             for (item in queue.toList()) {
                 val itemKey =
                     if (startingOp.operation.groupComparisonType == GroupComparisonType.CREATE) item.operation.createComparisonKey else item.operation.modifyComparisonKey
+
+                if (itemKey == "" && startingKey == "") {
+                    throw Exception("Both comparison keys can not be blank!")
+                }
 
                 if (itemKey == startingKey) {
                     queue.remove(item)

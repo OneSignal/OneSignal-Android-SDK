@@ -39,7 +39,7 @@ class DeleteTagOperation() : Operation(UpdateUserOperationExecutor.DELETE_TAG) {
         }
 
     override val createComparisonKey: String get() = ""
-    override val modifyComparisonKey: String get() = createComparisonKey
+    override val modifyComparisonKey: String get() = "$appId.User.$onesignalId"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.ALTER
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
 

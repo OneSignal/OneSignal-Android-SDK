@@ -49,10 +49,17 @@ internal class SubscriptionOperationExecutor(
         return if (startingOp is CreateSubscriptionOperation) {
             createSubscription(startingOp, operations)
         } else if (operations.any { it is DeleteSubscriptionOperation }) {
-            deleteSubscription(operations.first { it is DeleteSubscriptionOperation } as DeleteSubscriptionOperation)
+            if (operations.size > 1) {
+                throw Exception("Only supports one operation! Attempted operations:\n$operations")
+            }
+            val deleteSubOps = operations.filterIsInstance<DeleteSubscriptionOperation>()
+            deleteSubscription(deleteSubOps.first())
         } else if (startingOp is UpdateSubscriptionOperation) {
             updateSubscription(startingOp, operations)
         } else if (startingOp is TransferSubscriptionOperation) {
+            if (operations.size > 1) {
+                throw Exception("TransferSubscriptionOperation only supports one operation! Attempted operations:\n$operations")
+            }
             transferSubscription(startingOp)
         } else {
             throw Exception("Unrecognized operation: $startingOp")

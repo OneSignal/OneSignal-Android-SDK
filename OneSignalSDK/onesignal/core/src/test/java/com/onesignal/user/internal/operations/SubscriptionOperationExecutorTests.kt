@@ -484,15 +484,6 @@ class SubscriptionOperationExecutorTests : FunSpec({
 
         val operations =
             listOf<Operation>(
-                UpdateSubscriptionOperation(
-                    appId,
-                    remoteOneSignalId,
-                    remoteSubscriptionId,
-                    SubscriptionType.PUSH,
-                    true,
-                    "pushToken2",
-                    SubscriptionStatus.SUBSCRIBED,
-                ),
                 DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
             )
 

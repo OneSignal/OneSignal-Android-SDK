@@ -62,6 +62,28 @@ class OperationRepoTests : FunSpec({
         Logging.logLevel = LogLevel.NONE
     }
 
+    test("containsInstanceOf") {
+        // Given
+        val operationRepo = Mocks().operationRepo
+
+        open class MyOperation : Operation("MyOp") {
+            override val createComparisonKey = ""
+            override val modifyComparisonKey = ""
+            override val groupComparisonType = GroupComparisonType.NONE
+            override val canStartExecute = false
+        }
+
+        class MyOperation2 : MyOperation()
+
+        // When
+        operationRepo.start()
+        operationRepo.enqueue(MyOperation())
+
+        // Then
+        operationRepo.containsInstanceOf<MyOperation>() shouldBe true
+        operationRepo.containsInstanceOf<MyOperation2>() shouldBe false
+    }
+
     // Ensures we are not continuously waking the CPU
     test("ensure processQueueForever suspends when queue is empty") {
         // Given

@@ -26,6 +26,16 @@ internal class IdentityOperationExecutor(
     override suspend fun execute(operations: List<Operation>): ExecutionResponse {
         Logging.debug("IdentityOperationExecutor(operations: $operations)")
 
+        if (operations.any { it !is SetAliasOperation && it !is DeleteAliasOperation }) {
+            throw Exception("Unrecognized operation(s)! Attempted operations:\n$operations")
+        }
+
+        if (operations.any { it is SetAliasOperation } &&
+            operations.any { it is DeleteAliasOperation }
+        ) {
+            throw Exception("Can't process SetAliasOperation and DeleteAliasOperation at the same time.")
+        }
+
         // An alias group is an appId/onesignalId/aliasLabel combo, so we only care
         // about the last operation in the group, as that will be the effective end
         // state to this specific alias for this user.
