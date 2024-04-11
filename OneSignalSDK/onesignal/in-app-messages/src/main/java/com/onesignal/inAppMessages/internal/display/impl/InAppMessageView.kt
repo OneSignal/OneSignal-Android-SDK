@@ -49,6 +49,7 @@ internal class InAppMessageView(
     private var webView: WebView?,
     private val messageContent: InAppMessageContent,
     private val disableDragDismiss: Boolean,
+    private val hideGrayOverlay: Boolean,
 ) {
     private var popupWindow: PopupWindow? = null
 
@@ -611,13 +612,19 @@ internal class InAppMessageView(
                 cardViewAnimCallback,
             )
 
+        var overlayColor = Color.parseColor("#BB000000")
+
+        if (hideGrayOverlay) {
+            overlayColor = Color.TRANSPARENT
+        }
+
         // Animate background behind the message so it doesn't just show the dark transparency
         val backgroundAnimation =
             animateBackgroundColor(
                 backgroundView,
                 IN_APP_BACKGROUND_ANIMATION_DURATION_MS,
                 ACTIVITY_BACKGROUND_COLOR_EMPTY,
-                ACTIVITY_BACKGROUND_COLOR_FULL,
+                overlayColor,
                 backgroundAnimCallback,
             )
         messageAnimation.start()
@@ -634,11 +641,17 @@ internal class InAppMessageView(
                 }
             }
 
+        var overlayColor = Color.parseColor("#BB000000")
+
+        if (hideGrayOverlay) {
+            overlayColor = Color.TRANSPARENT
+        }
+
         // Animate background behind the message so it hides before being removed from the view
         animateBackgroundColor(
             backgroundView,
             IN_APP_BACKGROUND_ANIMATION_DURATION_MS,
-            ACTIVITY_BACKGROUND_COLOR_FULL,
+            overlayColor,
             ACTIVITY_BACKGROUND_COLOR_EMPTY,
             animCallback,
         )
@@ -681,7 +694,6 @@ internal class InAppMessageView(
     companion object {
         private const val IN_APP_MESSAGE_CARD_VIEW_TAG = "IN_APP_MESSAGE_CARD_VIEW_TAG"
         private val ACTIVITY_BACKGROUND_COLOR_EMPTY = Color.parseColor("#00000000")
-        private val ACTIVITY_BACKGROUND_COLOR_FULL = Color.parseColor("#BB000000")
         private const val IN_APP_BANNER_ANIMATION_DURATION_MS = 1000
         private const val IN_APP_CENTER_ANIMATION_DURATION_MS = 1000
         private const val IN_APP_BACKGROUND_ANIMATION_DURATION_MS = 400

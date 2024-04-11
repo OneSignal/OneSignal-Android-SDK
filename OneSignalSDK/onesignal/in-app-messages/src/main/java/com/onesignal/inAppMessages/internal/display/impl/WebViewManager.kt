@@ -7,6 +7,7 @@ import android.os.Build
 import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import com.onesignal.common.AndroidUtils
 import com.onesignal.common.ViewUtils
 import com.onesignal.common.safeString
 import com.onesignal.common.threading.suspendifyOnMain
@@ -359,7 +360,8 @@ internal class WebViewManager(
 
     fun createNewInAppMessageView(dragToDismissDisabled: Boolean) {
         lastPageHeight = messageContent.pageHeight
-        val newView = InAppMessageView(webView!!, messageContent, dragToDismissDisabled)
+        val hideGrayOverlay = AndroidUtils.getManifestMetaBoolean(_applicationService.appContext, "com.onesignal.inAppMessageHideGrayOverlay")
+        val newView = InAppMessageView(webView!!, messageContent, dragToDismissDisabled, hideGrayOverlay)
         setMessageView(newView)
         val self = this
         messageView!!.setMessageController(
