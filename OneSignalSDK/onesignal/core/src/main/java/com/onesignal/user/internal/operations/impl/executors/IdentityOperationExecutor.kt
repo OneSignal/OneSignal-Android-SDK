@@ -103,12 +103,10 @@ internal class IdentityOperationExecutor(
                     NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                         ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
                     NetworkUtils.ResponseStatusType.MISSING -> {
-                        val operations = _buildUserService.getRebuildOperationsIfCurrentUser(lastOperation.appId, lastOperation.onesignalId)
-                        if (operations == null) {
-                            return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
-                        } else {
-                            return ExecutionResponse(ExecutionResult.FAIL_RETRY, operations = operations)
-                        }
+                        // This means either the User or the Alias was already
+                        // deleted, either way the end state is the same, the
+                        // alias no longer exists on that User.
+                        ExecutionResponse(ExecutionResult.SUCCESS)
                     }
                 }
             }
