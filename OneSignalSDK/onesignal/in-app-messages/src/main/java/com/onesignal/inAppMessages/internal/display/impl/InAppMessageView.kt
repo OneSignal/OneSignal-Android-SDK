@@ -384,7 +384,11 @@ internal class InAppMessageView(
             cardView.cardElevation =
                 0f
         } else {
-            cardView.cardElevation = ViewUtils.dpToPx(5).toFloat()
+            if (getInAppMessageHideDropShadow(context)) {
+                cardView.cardElevation = 0f
+            } else {
+                cardView.cardElevation = ViewUtils.dpToPx(5).toFloat()
+            }
         }
         cardView.radius = ViewUtils.dpToPx(8).toFloat()
         cardView.clipChildren = false
@@ -392,6 +396,10 @@ internal class InAppMessageView(
         cardView.preventCornerOverlap = false
         cardView.setCardBackgroundColor(Color.TRANSPARENT)
         return cardView
+    }
+
+    private fun getInAppMessageHideDropShadow(context: Context): Boolean {
+        return AndroidUtils.getManifestMetaBoolean(context, "com.onesignal.inAppMessageHideDropShadow")
     }
 
     /**
