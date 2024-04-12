@@ -20,7 +20,10 @@ import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.UUID
+import kotlin.concurrent.thread
 
 // Mocks used by every test in this file
 private class Mocks {
@@ -98,10 +101,10 @@ class OperationRepoTests : FunSpec({
 
         // Then
         response shouldBe true
+        // TODO: This goes back to 2 right?
         verify(exactly = 2) {
             // 1st: gets the operation
-            // 2nd: will be empty
-            // 3rd: shouldn't be called, loop should be waiting on next operation
+            // 2nd: shouldn't be called, as it should be waiting on next operation
             mocks.operationRepo.getNextOps()
         }
     }
@@ -349,26 +352,73 @@ class OperationRepoTests : FunSpec({
         mocks.operationRepo.enqueue(mockOperation())
         val response =
             withTimeoutOrNull(100) {
-                val value = mocks.operationRepo.enqueueAndWait(mockOperation())
-                value
+                mocks.operationRepo.enqueueAndWait(mockOperation())
             }
         response shouldBe null
     }
 
-    test("enqueuing with flush = true should skip minimum wait time") {
+    test("enqueuing with flush = true should skip minimum wait time, if batched together") {
         // Given
         val mocks = Mocks()
         mocks.configModelStore.model.opRepoExecutionInterval = 1_000
 
         // When
         mocks.operationRepo.start()
-        mocks.operationRepo.enqueue(mockOperation())
+        mocks.operationRepo.enqueue(mockOperation(groupComparisonType = GroupComparisonType.CREATE))
         val response =
             withTimeoutOrNull(100) {
-                val value = mocks.operationRepo.enqueueAndWait(mockOperation(), flush = true)
-                value
+                mocks.operationRepo.enqueueAndWait(mockOperation(groupComparisonType = GroupComparisonType.CREATE), flush = true)
             }
         response shouldBe true
+    }
+
+    test("should process all non-grouping operations that were enqueued while in the execution interval") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoExecutionInterval = 200
+
+        // When
+        mocks.operationRepo.start()
+        // Adding a few operations as a buffer, to ensure test isn't flaky due to thread timing
+        repeat(4) {
+            mocks.operationRepo.enqueue(mockOperation(groupComparisonType = GroupComparisonType.NONE))
+        }
+        val response =
+            withTimeoutOrNull(400) {
+                mocks.operationRepo.enqueueAndWait(mockOperation(groupComparisonType = GroupComparisonType.NONE))
+            }
+
+        // Then
+        response shouldBe true
+    }
+
+    // This test is important as misbehaving app could be stuck in a thigh loop calling addTag
+    // over-and-over, which if not handled correctly could cause network calls without delay.
+    // This is the counter point to the test above:
+    //   "should process all non-grouping operations that were enqueued while in the execution interval"
+    test("continually adding operations should not bypass the next batching delay") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoPostWakeDelay = 1
+        mocks.configModelStore.model.opRepoExecutionInterval = 10
+//        val operationsList: List<Operation> = List(100) { mockOperation() }
+
+        // When
+        mocks.operationRepo.start()
+        repeat(100) {
+            mocks.operationRepo.enqueue(mockOperation(groupComparisonType = GroupComparisonType.NONE))
+//            delay(1)
+            Thread.sleep(1)
+        }
+        val response =
+            withTimeoutOrNull(999) {
+                // 100 non-groupable operations should take over 1000ms (100 ops * 10ms delay)
+                // If this finishes anywhere under that then we didn't enforce the delay correctly
+                mocks.operationRepo.enqueueAndWait(mockOperation(groupComparisonType = GroupComparisonType.NONE))
+            }
+
+        // Then
+        response shouldBe null
     }
 }) {
     companion object {
