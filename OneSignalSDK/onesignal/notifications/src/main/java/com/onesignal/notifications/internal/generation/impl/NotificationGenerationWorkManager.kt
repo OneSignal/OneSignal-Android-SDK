@@ -5,12 +5,12 @@ import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
-import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.onesignal.OneSignal
 import com.onesignal.common.AndroidUtils
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.common.NotificationFormatHelper
+import com.onesignal.notifications.internal.common.OSWorkManagerHelper
 import com.onesignal.notifications.internal.generation.INotificationGenerationProcessor
 import com.onesignal.notifications.internal.generation.INotificationGenerationWorkManager
 import org.json.JSONException
@@ -55,7 +55,7 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
         Logging.debug(
             "NotificationWorkManager enqueueing notification work with notificationId: $osNotificationId and jsonPayload: $jsonPayload",
         )
-        WorkManager.getInstance(context)
+        OSWorkManagerHelper.getInstance(context)
             .enqueueUniqueWork(osNotificationId, ExistingWorkPolicy.KEEP, workRequest)
 
         return true
