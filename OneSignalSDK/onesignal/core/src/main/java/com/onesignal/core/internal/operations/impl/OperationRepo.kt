@@ -151,7 +151,7 @@ internal class OperationRepo(
         }
     }
 
-    private suspend fun executeOperations(ops: List<OperationQueueItem>) {
+    internal suspend fun executeOperations(ops: List<OperationQueueItem>) {
         try {
             val startingOp = ops.first()
             val executor =

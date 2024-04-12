@@ -11,6 +11,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.CapturingSlot
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.just
@@ -369,6 +370,37 @@ class OperationRepoTests : FunSpec({
                 value
             }
         response shouldBe true
+    }
+
+    // This ensures a misbehaving app can't add operations (such as addTag())
+    // in a tight loop and cause a number of back-to-back operations without delay.
+    test("operations enqueued while repo is executing should be executed only after the next opRepoExecutionInterval") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoExecutionInterval = 100
+        val enqueueAndWaitMaxTime = mocks.configModelStore.model.opRepoExecutionInterval / 2
+        val opRepo = mocks.operationRepo
+
+        val executeOperationsCall = Waiter()
+        coEvery { opRepo.executeOperations(any()) } coAnswers {
+            executeOperationsCall.wake()
+            delay(10)
+        }
+
+        // When
+        opRepo.start()
+        opRepo.enqueue(mockOperation(groupComparisonType = GroupComparisonType.NONE))
+        executeOperationsCall.waitForWake()
+        val secondEnqueueResult =
+            withTimeoutOrNull(enqueueAndWaitMaxTime) {
+                opRepo.enqueueAndWait(mockOperation(groupComparisonType = GroupComparisonType.NONE))
+            }
+
+        // Then
+        secondEnqueueResult shouldBe null
+        coVerify(exactly = 1) {
+            opRepo.executeOperations(any())
+        }
     }
 }) {
     companion object {
