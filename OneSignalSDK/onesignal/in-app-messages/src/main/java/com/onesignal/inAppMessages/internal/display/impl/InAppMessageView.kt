@@ -385,7 +385,7 @@ internal class InAppMessageView(
             cardView.cardElevation =
                 0f
         } else {
-            if (getInAppMessageHideDropShadow(context)) {
+            if (getHideDropShadow(context)) {
                 cardView.cardElevation = 0f
             } else {
                 cardView.cardElevation = ViewUtils.dpToPx(5).toFloat()
@@ -399,7 +399,7 @@ internal class InAppMessageView(
         return cardView
     }
 
-    private fun getInAppMessageHideDropShadow(context: Context): Boolean {
+    private fun getHideDropShadow(context: Context): Boolean {
         return AndroidUtils.getManifestMetaBoolean(context, "com.onesignal.inAppMessageHideDropShadow")
     }
 
@@ -612,19 +612,13 @@ internal class InAppMessageView(
                 cardViewAnimCallback,
             )
 
-        var overlayColor = Color.parseColor("#BB000000")
-
-        if (hideGrayOverlay) {
-            overlayColor = Color.TRANSPARENT
-        }
-
         // Animate background behind the message so it doesn't just show the dark transparency
         val backgroundAnimation =
             animateBackgroundColor(
                 backgroundView,
                 IN_APP_BACKGROUND_ANIMATION_DURATION_MS,
                 ACTIVITY_BACKGROUND_COLOR_EMPTY,
-                overlayColor,
+                getOverlayColor(),
                 backgroundAnimCallback,
             )
         messageAnimation.start()
@@ -641,17 +635,11 @@ internal class InAppMessageView(
                 }
             }
 
-        var overlayColor = Color.parseColor("#BB000000")
-
-        if (hideGrayOverlay) {
-            overlayColor = Color.TRANSPARENT
-        }
-
         // Animate background behind the message so it hides before being removed from the view
         animateBackgroundColor(
             backgroundView,
             IN_APP_BACKGROUND_ANIMATION_DURATION_MS,
-            overlayColor,
+            getOverlayColor(),
             ACTIVITY_BACKGROUND_COLOR_EMPTY,
             animCallback,
         )
@@ -691,9 +679,18 @@ internal class InAppMessageView(
             '}'
     }
 
+    private fun getOverlayColor(): Int {
+        return if (hideGrayOverlay) {
+            ACTIVITY_BACKGROUND_COLOR_EMPTY
+        } else {
+            ACTIVITY_BACKGROUND_COLOR_FULL
+        }
+    }
+
     companion object {
         private const val IN_APP_MESSAGE_CARD_VIEW_TAG = "IN_APP_MESSAGE_CARD_VIEW_TAG"
-        private val ACTIVITY_BACKGROUND_COLOR_EMPTY = Color.parseColor("#00000000")
+        private const val ACTIVITY_BACKGROUND_COLOR_EMPTY = Color.TRANSPARENT
+        private val ACTIVITY_BACKGROUND_COLOR_FULL = Color.parseColor("#BB000000")
         private const val IN_APP_BANNER_ANIMATION_DURATION_MS = 1000
         private const val IN_APP_CENTER_ANIMATION_DURATION_MS = 1000
         private const val IN_APP_BACKGROUND_ANIMATION_DURATION_MS = 400
