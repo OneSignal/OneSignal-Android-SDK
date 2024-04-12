@@ -7,13 +7,13 @@ import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
-import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.onesignal.OneSignal
 import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.notifications.internal.common.OSWorkManagerHelper
 import com.onesignal.notifications.internal.receivereceipt.IReceiveReceiptProcessor
 import com.onesignal.notifications.internal.receivereceipt.IReceiveReceiptWorkManager
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
@@ -57,7 +57,7 @@ internal class ReceiveReceiptWorkManager(
         Logging.debug(
             "OSReceiveReceiptController enqueueing send receive receipt work with notificationId: $notificationId and delay: $delay seconds",
         )
-        WorkManager.getInstance(_applicationService.appContext)
+        OSWorkManagerHelper.getInstance(_applicationService.appContext)
             .enqueueUniqueWork(
                 notificationId + "_receive_receipt",
                 ExistingWorkPolicy.KEEP,

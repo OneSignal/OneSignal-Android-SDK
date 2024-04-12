@@ -4,10 +4,10 @@ import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
-import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.onesignal.OneSignal
 import com.onesignal.notifications.internal.common.NotificationHelper
+import com.onesignal.notifications.internal.common.OSWorkManagerHelper
 import com.onesignal.notifications.internal.restoration.INotificationRestoreProcessor
 import com.onesignal.notifications.internal.restoration.INotificationRestoreWorkManager
 import java.util.concurrent.TimeUnit
@@ -36,7 +36,7 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
             OneTimeWorkRequest.Builder(NotificationRestoreWorker::class.java)
                 .setInitialDelay(restoreDelayInSeconds.toLong(), TimeUnit.SECONDS)
                 .build()
-        WorkManager.getInstance(context!!)
+        OSWorkManagerHelper.getInstance(context!!)
             .enqueueUniqueWork(
                 NOTIFICATION_RESTORE_WORKER_IDENTIFIER,
                 ExistingWorkPolicy.KEEP,
