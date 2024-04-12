@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.work.Configuration
 import androidx.work.WorkManager
 import androidx.work.impl.WorkManagerImpl
+import com.onesignal.debug.internal.logging.Logging
 
 object OSWorkManagerHelper {
     /**
@@ -34,11 +35,15 @@ object OSWorkManagerHelper {
     fun getInstance(context: Context): WorkManager {
         if (!isInitialized()) {
             try {
-                // Initialization can fail if another thread initializes in the small time gap
-                // https://android.googlesource.com/platform/frameworks/support/+/60ae0eec2a32396c22ad92502cde952c80d514a0/work/workmanager/src/main/java/androidx/work/impl/WorkManagerImpl.java#177
                 WorkManager.initialize(context, Configuration.Builder().build())
             } catch (e: IllegalStateException) {
-                // Admittedly starting to get hacky
+                /*
+                This catch is meant for the exception -
+                https://android.googlesource.com/platform/frameworks/support/+/60ae0eec2a32396c22ad92502cde952c80d514a0/work/workmanager/src/main/java/androidx/work/impl/WorkManagerImpl.java#177
+                1. We lost the race with another call to  WorkManager.initialize outside of OneSignal.
+                2. It is possible for some other unexpected error is thrown from WorkManager.
+                 */
+                Logging.error("OSWorkManagerHelper initializing WorkManager failed: ", e)
             }
         }
         return WorkManager.getInstance(context)
