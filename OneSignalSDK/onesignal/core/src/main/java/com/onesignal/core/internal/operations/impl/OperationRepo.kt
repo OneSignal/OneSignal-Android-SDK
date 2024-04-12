@@ -26,10 +26,11 @@ internal class OperationRepo(
     internal class OperationQueueItem(
         val operation: Operation,
         val waiter: WaiterWithValue<Boolean>? = null,
+        val bucket: Int,
         var retries: Int = 0,
     ) {
         override fun toString(): String {
-            return Pair(operation.toString(), retries).toString() + "\n"
+            return "bucket:$bucket, retries:$retries, operation:$operation\n"
         }
     }
 
@@ -37,6 +38,27 @@ internal class OperationRepo(
     private val queue = mutableListOf<OperationQueueItem>()
     private val waiter = WaiterWithValue<Boolean>()
     private var paused = false
+
+    /** *** Buckets ***
+     * Purpose: Bucketing is a pattern we are using to help save network
+     * calls. It works together with opRepoExecutionInterval to define
+     * a time window operations can be added to the bucket.
+     *
+     * When enqueue() is called it creates a new OperationQueueItem with it's
+     * bucket = enqueueIntoBucket. Just before we start processing a bucket we
+     * enqueueIntoBucket++, this ensures anything new that comes in while
+     * executing doesn't cause it to skip the opRepoExecutionInterval delay.
+     *
+     * NOTE: Bucketing only effects the starting operation we grab.
+     *       The reason is we still want getGroupableOperations() to find
+     *       other operations it can execute in one go (same network call).
+     *       It's more efficient overall, as it lowers the total number of
+     *       network calls.
+     */
+    private var enqueueIntoBucket = 0
+    private val executeBucket: Int get() {
+        return if (enqueueIntoBucket == 0) 0 else enqueueIntoBucket - 1
+    }
 
     init {
         val executorsMap: MutableMap<String, IOperationExecutor> = mutableMapOf()
@@ -49,7 +71,7 @@ internal class OperationRepo(
         this.executorsMap = executorsMap
 
         for (operation in _operationModelStore.list()) {
-            internalEnqueue(OperationQueueItem(operation), flush = false, addToStore = false)
+            internalEnqueue(OperationQueueItem(operation, bucket = enqueueIntoBucket), flush = false, addToStore = false)
         }
     }
 
@@ -73,7 +95,7 @@ internal class OperationRepo(
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueue(operation: $operation, flush: $flush)")
 
         operation.id = UUID.randomUUID().toString()
-        internalEnqueue(OperationQueueItem(operation), flush, true)
+        internalEnqueue(OperationQueueItem(operation, bucket = enqueueIntoBucket), flush, true)
     }
 
     override suspend fun enqueueAndWait(
@@ -84,7 +106,7 @@ internal class OperationRepo(
 
         operation.id = UUID.randomUUID().toString()
         val waiter = WaiterWithValue<Boolean>()
-        internalEnqueue(OperationQueueItem(operation, waiter), flush, true)
+        internalEnqueue(OperationQueueItem(operation, waiter, bucket = enqueueIntoBucket), flush, true)
         return waiter.waitForWake()
     }
 
@@ -109,13 +131,14 @@ internal class OperationRepo(
      */
     private suspend fun processQueueForever() {
         waitForNewOperationAndExecutionInterval()
+        enqueueIntoBucket++
         while (true) {
             if (paused) {
                 Logging.debug("OperationRepo is paused")
                 return
             }
 
-            val ops = getNextOps()
+            val ops = getNextOps(executeBucket)
             Logging.debug("processQueueForever:ops:\n$ops")
 
             if (ops != null) {
@@ -125,6 +148,7 @@ internal class OperationRepo(
                 delay(_configModelStore.model.opRepoPostWakeDelay)
             } else {
                 waitForNewOperationAndExecutionInterval()
+                enqueueIntoBucket++
             }
         }
     }
@@ -227,7 +251,7 @@ internal class OperationRepo(
                 synchronized(queue) {
                     for (op in response.operations.reversed()) {
                         op.id = UUID.randomUUID().toString()
-                        val queueItem = OperationQueueItem(op)
+                        val queueItem = OperationQueueItem(op, bucket = 0)
                         queue.add(0, queueItem)
                         _operationModelStore.add(0, queueItem.operation)
                     }
@@ -249,9 +273,12 @@ internal class OperationRepo(
         delay(delayFor)
     }
 
-    internal fun getNextOps(): List<OperationQueueItem>? {
+    internal fun getNextOps(bucketFilter: Int): List<OperationQueueItem>? {
         return synchronized(queue) {
-            val startingOp = queue.firstOrNull { it.operation.canStartExecute }
+            val startingOp =
+                queue.firstOrNull {
+                    it.operation.canStartExecute && it.bucket <= bucketFilter
+                }
 
             if (startingOp != null) {
                 queue.remove(startingOp)

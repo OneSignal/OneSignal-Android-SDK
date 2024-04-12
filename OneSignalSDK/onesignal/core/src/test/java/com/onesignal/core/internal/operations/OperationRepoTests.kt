@@ -103,7 +103,7 @@ class OperationRepoTests : FunSpec({
             // 1st: gets the operation
             // 2nd: will be empty
             // 3rd: shouldn't be called, loop should be waiting on next operation
-            mocks.operationRepo.getNextOps()
+            mocks.operationRepo.getNextOps(withArg { Any() })
         }
     }
 
