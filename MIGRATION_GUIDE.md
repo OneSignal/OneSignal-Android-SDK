@@ -3,6 +3,16 @@ In this release, we are making a significant shift from a device-centered model 
 
 This migration guide will walk you through the Android SDK v5.0.0 changes as a result of this shift.
 
+#### ⚠️ Migration Advisory for current OneSignal customers
+Our new [user-centric APIs and v5.x.x SDKs](https://onesignal.com/blog/unify-your-users-across-channels-and-devices/) offer an improved user and data management experience. However, they may not be at 1:1 feature parity with our previous versions yet.
+
+If you are migrating an existing app, we suggest using Android’s Phased Rollout capabilities to ensure that there are no unexpected issues or edge cases. Here is the documentation for each:
+
+[Google Play Staged Rollouts](https://support.google.com/googleplay/android-developer/answer/6346149?hl=en)
+
+If you run into any challenges or have concerns, please contact our support team at support@onesignal.com
+
+
 # Overview
 
 Under the user-centered model, the concept of a "player" is being replaced with three new concepts: users, subscriptions, and aliases.
