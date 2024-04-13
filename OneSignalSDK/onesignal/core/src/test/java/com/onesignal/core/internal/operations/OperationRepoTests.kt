@@ -4,6 +4,7 @@ import com.onesignal.common.threading.Waiter
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.operations.impl.OperationModelStore
 import com.onesignal.core.internal.operations.impl.OperationRepo
+import com.onesignal.core.internal.operations.impl.OperationRepo.OperationQueueItem
 import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -452,6 +453,37 @@ class OperationRepoTests : FunSpec({
         // Then
         immediateResult shouldBe null
         delayedResult shouldBe true
+    }
+
+    test("ensure results from executeOperations are added to beginning of the queue") {
+        // Given
+        val mocks = Mocks()
+        val executor = mocks.executor
+        val opWithResult = mockOperationNonGroupable()
+        val opFromResult = mockOperationNonGroupable()
+        coEvery {
+            executor.execute(listOf(opWithResult))
+        } coAnswers {
+            ExecutionResponse(ExecutionResult.SUCCESS, operations = listOf(opFromResult))
+        }
+        val firstOp = mockOperationNonGroupable()
+        val secondOp = mockOperationNonGroupable()
+
+        // When
+        mocks.operationRepo.start()
+        mocks.operationRepo.enqueue(firstOp)
+        mocks.operationRepo.executeOperations(
+            listOf(OperationQueueItem(opWithResult, bucket = 0)),
+        )
+        mocks.operationRepo.enqueueAndWait(secondOp)
+
+        // Then
+        coVerifyOrder {
+            executor.execute(withArg { it[0] shouldBe opWithResult })
+            executor.execute(withArg { it[0] shouldBe opFromResult })
+            executor.execute(withArg { it[0] shouldBe firstOp })
+            executor.execute(withArg { it[0] shouldBe secondOp })
+        }
     }
 }) {
     companion object {
