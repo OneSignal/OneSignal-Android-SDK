@@ -381,24 +381,48 @@ class OperationRepoTests : FunSpec({
         val enqueueAndWaitMaxTime = mocks.configModelStore.model.opRepoExecutionInterval / 2
         val opRepo = mocks.operationRepo
 
-        val executeOperationsCall = Waiter()
-        coEvery { opRepo.executeOperations(any()) } coAnswers {
-            executeOperationsCall.wake()
-            delay(10)
-        }
+        val executeOperationsCall = mockExecuteOperations(opRepo)
 
         // When
         opRepo.start()
-        opRepo.enqueue(mockOperation(groupComparisonType = GroupComparisonType.NONE))
+        opRepo.enqueue(mockOperationNonGroupable())
         executeOperationsCall.waitForWake()
         val secondEnqueueResult =
             withTimeoutOrNull(enqueueAndWaitMaxTime) {
-                opRepo.enqueueAndWait(mockOperation(groupComparisonType = GroupComparisonType.NONE))
+                opRepo.enqueueAndWait(mockOperationNonGroupable())
             }
 
         // Then
         secondEnqueueResult shouldBe null
         coVerify(exactly = 1) {
+            opRepo.executeOperations(any())
+        }
+    }
+
+    // This ensures there are no off-by-one errors with the same scenario as above, but on a 2nd
+    // pass of OperationRepo
+    test("operations enqueued while repo is executing should be executed only after the next opRepoExecutionInterval, 2nd pass") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoExecutionInterval = 100
+        val enqueueAndWaitMaxTime = mocks.configModelStore.model.opRepoExecutionInterval / 2
+        val opRepo = mocks.operationRepo
+
+        val executeOperationsCall = mockExecuteOperations(opRepo)
+
+        // When
+        opRepo.start()
+        opRepo.enqueue(mockOperationNonGroupable())
+        executeOperationsCall.waitForWake()
+        opRepo.enqueueAndWait(mockOperationNonGroupable())
+        val thirdEnqueueResult =
+            withTimeoutOrNull(enqueueAndWaitMaxTime) {
+                opRepo.enqueueAndWait(mockOperationNonGroupable())
+            }
+
+        // Then
+        thirdEnqueueResult shouldBe null
+        coVerify(exactly = 2) {
             opRepo.executeOperations(any())
         }
     }
@@ -426,6 +450,18 @@ class OperationRepoTests : FunSpec({
             every { operation.translateIds(any()) } just runs
 
             return operation
+        }
+
+        private fun mockOperationNonGroupable() = mockOperation(groupComparisonType = GroupComparisonType.NONE)
+
+        private fun mockExecuteOperations(opRepo: OperationRepo): Waiter {
+            val executeWaiter = Waiter()
+            coEvery { opRepo.executeOperations(any()) } coAnswers {
+                executeWaiter.wake()
+                delay(10)
+                firstArg<List<OperationRepo.OperationQueueItem>>().forEach { it.waiter?.wake(true) }
+            }
+            return executeWaiter
         }
     }
 }
