@@ -110,6 +110,7 @@ internal class OperationRepo(
         return waiter.waitForWake()
     }
 
+    // WARNING: Never set to true, until budget rules are added, even for internal use!
     private fun internalEnqueue(
         queueItem: OperationQueueItem,
         flush: Boolean,

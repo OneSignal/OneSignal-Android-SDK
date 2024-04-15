@@ -79,7 +79,6 @@ class RecoverFromDroppedLoginBug(
                 _identityModelStore.model.externalId,
                 null,
             ),
-            true,
         )
     }
 }

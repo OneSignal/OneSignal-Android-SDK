@@ -380,7 +380,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                         externalId,
                         if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
                     ),
-                    true,
                 )
 
             if (!result) {
@@ -395,7 +394,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                         configModel!!.appId,
                         identityModelStore!!.model.onesignalId,
                     ),
-                    true,
                 )
             }
         }
