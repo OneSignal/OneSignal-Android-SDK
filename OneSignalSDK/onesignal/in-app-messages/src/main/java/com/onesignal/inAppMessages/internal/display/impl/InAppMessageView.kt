@@ -49,6 +49,7 @@ internal class InAppMessageView(
     private var webView: WebView?,
     private val messageContent: InAppMessageContent,
     private val disableDragDismiss: Boolean,
+    private val hideGrayOverlay: Boolean,
 ) {
     private var popupWindow: PopupWindow? = null
 
@@ -384,7 +385,11 @@ internal class InAppMessageView(
             cardView.cardElevation =
                 0f
         } else {
-            cardView.cardElevation = ViewUtils.dpToPx(5).toFloat()
+            if (getHideDropShadow(context)) {
+                cardView.cardElevation = 0f
+            } else {
+                cardView.cardElevation = ViewUtils.dpToPx(5).toFloat()
+            }
         }
         cardView.radius = ViewUtils.dpToPx(8).toFloat()
         cardView.clipChildren = false
@@ -392,6 +397,10 @@ internal class InAppMessageView(
         cardView.preventCornerOverlap = false
         cardView.setCardBackgroundColor(Color.TRANSPARENT)
         return cardView
+    }
+
+    private fun getHideDropShadow(context: Context): Boolean {
+        return AndroidUtils.getManifestMetaBoolean(context, "com.onesignal.inAppMessageHideDropShadow")
     }
 
     /**
@@ -609,7 +618,7 @@ internal class InAppMessageView(
                 backgroundView,
                 IN_APP_BACKGROUND_ANIMATION_DURATION_MS,
                 ACTIVITY_BACKGROUND_COLOR_EMPTY,
-                ACTIVITY_BACKGROUND_COLOR_FULL,
+                getOverlayColor(),
                 backgroundAnimCallback,
             )
         messageAnimation.start()
@@ -630,7 +639,7 @@ internal class InAppMessageView(
         animateBackgroundColor(
             backgroundView,
             IN_APP_BACKGROUND_ANIMATION_DURATION_MS,
-            ACTIVITY_BACKGROUND_COLOR_FULL,
+            getOverlayColor(),
             ACTIVITY_BACKGROUND_COLOR_EMPTY,
             animCallback,
         )
@@ -670,9 +679,17 @@ internal class InAppMessageView(
             '}'
     }
 
+    private fun getOverlayColor(): Int {
+        return if (hideGrayOverlay) {
+            ACTIVITY_BACKGROUND_COLOR_EMPTY
+        } else {
+            ACTIVITY_BACKGROUND_COLOR_FULL
+        }
+    }
+
     companion object {
         private const val IN_APP_MESSAGE_CARD_VIEW_TAG = "IN_APP_MESSAGE_CARD_VIEW_TAG"
-        private val ACTIVITY_BACKGROUND_COLOR_EMPTY = Color.parseColor("#00000000")
+        private const val ACTIVITY_BACKGROUND_COLOR_EMPTY = Color.TRANSPARENT
         private val ACTIVITY_BACKGROUND_COLOR_FULL = Color.parseColor("#BB000000")
         private const val IN_APP_BANNER_ANIMATION_DURATION_MS = 1000
         private const val IN_APP_CENTER_ANIMATION_DURATION_MS = 1000
