@@ -1,8 +1,10 @@
 package com.onesignal.core.internal.operations
 
 import com.onesignal.common.threading.Waiter
+import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.operations.impl.OperationModelStore
 import com.onesignal.core.internal.operations.impl.OperationRepo
+import com.onesignal.core.internal.operations.impl.OperationRepo.OperationQueueItem
 import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -11,6 +13,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.CapturingSlot
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.just
@@ -43,17 +46,16 @@ private class Mocks {
             mockExecutor
         }
 
-    val operationRepo: OperationRepo =
-        run {
-            spyk(
-                OperationRepo(
-                    listOf(executor),
-                    operationModelStore,
-                    configModelStore,
-                    Time(),
-                ),
-            )
-        }
+    val operationRepo: OperationRepo by lazy {
+        spyk(
+            OperationRepo(
+                listOf(executor),
+                operationModelStore,
+                configModelStore,
+                Time(),
+            ),
+        )
+    }
 }
 
 class OperationRepoTests : FunSpec({
@@ -102,7 +104,7 @@ class OperationRepoTests : FunSpec({
             // 1st: gets the operation
             // 2nd: will be empty
             // 3rd: shouldn't be called, loop should be waiting on next operation
-            mocks.operationRepo.getNextOps()
+            mocks.operationRepo.getNextOps(withArg { Any() })
         }
     }
 
@@ -135,7 +137,8 @@ class OperationRepoTests : FunSpec({
     test("enqueue operation executes and is removed when executed after retry") {
         // Given
         val mocks = Mocks()
-        coEvery { mocks.operationRepo.delayBeforeRetry(any()) } just runs
+        val opRepo = mocks.operationRepo
+        coEvery { opRepo.delayBeforeRetry(any()) } just runs
         coEvery {
             mocks.executor.execute(any())
         } returns ExecutionResponse(ExecutionResult.FAIL_RETRY) andThen ExecutionResponse(ExecutionResult.SUCCESS)
@@ -144,8 +147,8 @@ class OperationRepoTests : FunSpec({
         val operation = mockOperation(operationIdSlot = operationIdSlot)
 
         // When
-        mocks.operationRepo.start()
-        val response = mocks.operationRepo.enqueueAndWait(operation)
+        opRepo.start()
+        val response = opRepo.enqueueAndWait(operation)
 
         // Then
         response shouldBe true
@@ -158,7 +161,7 @@ class OperationRepoTests : FunSpec({
                     it[0] shouldBe operation
                 },
             )
-            mocks.operationRepo.delayBeforeRetry(1)
+            opRepo.delayBeforeRetry(1)
             mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 1
@@ -370,6 +373,118 @@ class OperationRepoTests : FunSpec({
             }
         response shouldBe true
     }
+
+    // This ensures a misbehaving app can't add operations (such as addTag())
+    // in a tight loop and cause a number of back-to-back operations without delay.
+    test("operations enqueued while repo is executing should be executed only after the next opRepoExecutionInterval") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoExecutionInterval = 100
+        val enqueueAndWaitMaxTime = mocks.configModelStore.model.opRepoExecutionInterval / 2
+        val opRepo = mocks.operationRepo
+
+        val executeOperationsCall = mockExecuteOperations(opRepo)
+
+        // When
+        opRepo.start()
+        opRepo.enqueue(mockOperationNonGroupable())
+        executeOperationsCall.waitForWake()
+        val secondEnqueueResult =
+            withTimeoutOrNull(enqueueAndWaitMaxTime) {
+                opRepo.enqueueAndWait(mockOperationNonGroupable())
+            }
+
+        // Then
+        secondEnqueueResult shouldBe null
+        coVerify(exactly = 1) {
+            opRepo.executeOperations(any())
+        }
+    }
+
+    // This ensures there are no off-by-one errors with the same scenario as above, but on a 2nd
+    // pass of OperationRepo
+    test("operations enqueued while repo is executing should be executed only after the next opRepoExecutionInterval, 2nd pass") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoExecutionInterval = 100
+        val enqueueAndWaitMaxTime = mocks.configModelStore.model.opRepoExecutionInterval / 2
+        val opRepo = mocks.operationRepo
+
+        val executeOperationsCall = mockExecuteOperations(opRepo)
+
+        // When
+        opRepo.start()
+        opRepo.enqueue(mockOperationNonGroupable())
+        executeOperationsCall.waitForWake()
+        opRepo.enqueueAndWait(mockOperationNonGroupable())
+        val thirdEnqueueResult =
+            withTimeoutOrNull(enqueueAndWaitMaxTime) {
+                opRepo.enqueueAndWait(mockOperationNonGroupable())
+            }
+
+        // Then
+        thirdEnqueueResult shouldBe null
+        coVerify(exactly = 2) {
+            opRepo.executeOperations(any())
+        }
+    }
+
+    // Starting operations are operations we didn't process the last time the app was running.
+    // We want to ensure we process them, but only after the standard batching delay to be as
+    // optional as possible with network calls.
+    test("starting OperationModelStore should be processed, following normal delay rules") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoExecutionInterval = 100
+        every { mocks.operationModelStore.list() } returns listOf(mockOperation())
+        val executeOperationsCall = mockExecuteOperations(mocks.operationRepo)
+
+        // When
+        mocks.operationRepo.start()
+        val immediateResult =
+            withTimeoutOrNull(100) {
+                executeOperationsCall.waitForWake()
+            }
+        val delayedResult =
+            withTimeoutOrNull(200) {
+                executeOperationsCall.waitForWake()
+            }
+
+        // Then
+        immediateResult shouldBe null
+        delayedResult shouldBe true
+    }
+
+    test("ensure results from executeOperations are added to beginning of the queue") {
+        // Given
+        val mocks = Mocks()
+        val executor = mocks.executor
+        val opWithResult = mockOperationNonGroupable()
+        val opFromResult = mockOperationNonGroupable()
+        coEvery {
+            executor.execute(listOf(opWithResult))
+        } coAnswers {
+            ExecutionResponse(ExecutionResult.SUCCESS, operations = listOf(opFromResult))
+        }
+        val firstOp = mockOperationNonGroupable()
+        val secondOp = mockOperationNonGroupable()
+
+        // When
+        mocks.operationRepo.start()
+        mocks.operationRepo.enqueue(firstOp)
+        mocks.operationRepo.executeOperations(
+            listOf(OperationQueueItem(opWithResult, bucket = 0)),
+        )
+        mocks.operationRepo.enqueueAndWait(secondOp)
+
+        // Then
+        coVerifyOrder {
+            executor.execute(withArg { it[0] shouldBe opWithResult })
+            executor.execute(withArg { it[0] shouldBe opFromResult })
+            executor.execute(withArg { it[0] shouldBe firstOp })
+            executor.execute(withArg { it[0] shouldBe secondOp })
+        }
+    }
 }) {
     companion object {
         private fun mockOperation(
@@ -394,6 +509,18 @@ class OperationRepoTests : FunSpec({
             every { operation.translateIds(any()) } just runs
 
             return operation
+        }
+
+        private fun mockOperationNonGroupable() = mockOperation(groupComparisonType = GroupComparisonType.NONE)
+
+        private fun mockExecuteOperations(opRepo: OperationRepo): WaiterWithValue<Boolean> {
+            val executeWaiter = WaiterWithValue<Boolean>()
+            coEvery { opRepo.executeOperations(any()) } coAnswers {
+                executeWaiter.wake(true)
+                delay(10)
+                firstArg<List<OperationRepo.OperationQueueItem>>().forEach { it.waiter?.wake(true) }
+            }
+            return executeWaiter
         }
     }
 }
