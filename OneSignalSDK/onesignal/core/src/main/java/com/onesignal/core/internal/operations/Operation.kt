@@ -21,6 +21,12 @@ abstract class Operation(name: String) : Model() {
     }
 
     /**
+     * This is a unique id that points to a record this operation will affect.
+     * Example: If the operation is updating tags on a User this will be the onesignalId.
+     */
+    abstract val applyToRecordId: String
+
+    /**
      * The key of this operation for when the starting operation has a [groupComparisonType]
      * of [GroupComparisonType.CREATE]
      */

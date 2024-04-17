@@ -1,7 +1,6 @@
 package com.onesignal.core.internal.operations.impl
 
 import com.onesignal.common.threading.WaiterWithValue
-import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.GroupComparisonType
@@ -12,7 +11,11 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.user.internal.operations.impl.states.NewRecordsState
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import kotlin.reflect.KClass
@@ -22,6 +25,7 @@ internal class OperationRepo(
     private val _operationModelStore: OperationModelStore,
     private val _configModelStore: ConfigModelStore,
     private val _time: ITime,
+    private val _newRecordState: NewRecordsState,
 ) : IOperationRepo, IStartableService {
     internal class OperationQueueItem(
         val operation: Operation,
@@ -38,6 +42,7 @@ internal class OperationRepo(
     private val queue = mutableListOf<OperationQueueItem>()
     private val waiter = WaiterWithValue<Boolean>()
     private var paused = false
+    private var coroutineScope = CoroutineScope(newSingleThreadContext(name = "OpRepo"))
 
     /** *** Buckets ***
      * Purpose: Bucketing is a pattern we are using to help save network
@@ -56,13 +61,11 @@ internal class OperationRepo(
      *       network calls.
      */
     private var enqueueIntoBucket = 0
-    private val executeBucket: Int get() {
-        return if (enqueueIntoBucket == 0) 0 else enqueueIntoBucket - 1
-    }
+    private val executeBucket get() =
+        if (enqueueIntoBucket == 0) 0 else enqueueIntoBucket - 1
 
     init {
         val executorsMap: MutableMap<String, IOperationExecutor> = mutableMapOf()
-
         for (executor in executors) {
             for (operation in executor.operations) {
                 executorsMap[operation] = executor
@@ -83,9 +86,7 @@ internal class OperationRepo(
 
     override fun start() {
         paused = false
-        suspendifyOnThread(name = "OpRepo") {
-            processQueueForever()
-        }
+        coroutineScope.launch { processQueueForever() }
     }
 
     override fun enqueue(
@@ -195,6 +196,18 @@ internal class OperationRepo(
                 synchronized(queue) {
                     queue.forEach { it.operation.translateIds(response.idTranslations) }
                 }
+                response.idTranslations.values.forEach { _newRecordState.add(it) }
+                coroutineScope.launch {
+                    delay(_configModelStore.model.opRepoPostCreateDelay)
+                    synchronized(queue) {
+                        // NOTE: Even if the queue is not empty we may wake
+                        // when not needed, as those operations may not have
+                        // depended on these ids. This however should be very
+                        // rare and the side-effect is only a bit less
+                        // batching.
+                        if (queue.isNotEmpty()) waiter.wake(false)
+                    }
+                }
             }
 
             when (response.result) {
@@ -278,7 +291,9 @@ internal class OperationRepo(
         return synchronized(queue) {
             val startingOp =
                 queue.firstOrNull {
-                    it.operation.canStartExecute && it.bucket <= bucketFilter
+                    it.operation.canStartExecute &&
+                        _newRecordState.canAccess(it.operation.applyToRecordId) &&
+                        it.bucket <= bucketFilter
                 }
 
             if (startingOp != null) {

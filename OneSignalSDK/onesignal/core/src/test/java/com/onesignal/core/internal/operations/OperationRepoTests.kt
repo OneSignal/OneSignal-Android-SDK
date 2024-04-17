@@ -9,6 +9,7 @@ import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
+import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.CapturingSlot
@@ -55,6 +56,7 @@ private class Mocks {
                 operationModelStore,
                 configModelStore,
                 Time(),
+                getNewRecordState(configModelStore),
             ),
         )
     }
@@ -75,6 +77,7 @@ class OperationRepoTests : FunSpec({
             override val modifyComparisonKey = ""
             override val groupComparisonType = GroupComparisonType.NONE
             override val canStartExecute = false
+            override val applyToRecordId = ""
         }
 
         class MyOperation2 : MyOperation()
@@ -558,6 +561,7 @@ class OperationRepoTests : FunSpec({
             every { operation.createComparisonKey } returns createComparisonKey
             every { operation.modifyComparisonKey } returns modifyComparisonKey
             every { operation.translateIds(any()) } just runs
+            every { operation.applyToRecordId } returns applyToRecordId
 
             return operation
         }

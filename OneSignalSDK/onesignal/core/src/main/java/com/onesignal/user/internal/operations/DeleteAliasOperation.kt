@@ -41,6 +41,7 @@ class DeleteAliasOperation() : Operation(IdentityOperationExecutor.DELETE_ALIAS)
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Alias.$label"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.NONE
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
+    override val applyToRecordId: String get() = onesignalId
 
     constructor(appId: String, onesignalId: String, label: String) : this() {
         this.appId = appId
