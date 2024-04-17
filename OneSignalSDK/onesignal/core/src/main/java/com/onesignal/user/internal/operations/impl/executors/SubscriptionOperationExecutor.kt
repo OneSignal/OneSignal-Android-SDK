@@ -26,6 +26,7 @@ import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
 import com.onesignal.user.internal.operations.TransferSubscriptionOperation
 import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
+import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionType
@@ -37,6 +38,7 @@ internal class SubscriptionOperationExecutor(
     private val _subscriptionModelStore: SubscriptionModelStore,
     private val _configModelStore: ConfigModelStore,
     private val _buildUserService: IRebuildUserService,
+    private val _newRecordState: NewRecordsState,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(CREATE_SUBSCRIPTION, UPDATE_SUBSCRIPTION, DELETE_SUBSCRIPTION, TRANSFER_SUBSCRIPTION)
@@ -136,6 +138,9 @@ internal class SubscriptionOperationExecutor(
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
                 NetworkUtils.ResponseStatusType.MISSING -> {
+                    if (_newRecordState.isInMissingRetryWindow(createOperation.onesignalId)) {
+                        return ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                    }
                     val operations = _buildUserService.getRebuildOperationsIfCurrentUser(createOperation.appId, createOperation.onesignalId)
                     if (operations == null) {
                         return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
@@ -177,7 +182,14 @@ internal class SubscriptionOperationExecutor(
             return when (responseType) {
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
                     ExecutionResponse(ExecutionResult.FAIL_RETRY)
-                NetworkUtils.ResponseStatusType.MISSING ->
+                NetworkUtils.ResponseStatusType.MISSING -> {
+                    if (listOf(
+                            lastOperation.onesignalId,
+                            lastOperation.subscriptionId,
+                        ).any { _newRecordState.isInMissingRetryWindow(it) }
+                    ) {
+                        return ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                    }
                     // toss this, but create an identical CreateSubscriptionOperation to re-create the subscription being updated.
                     ExecutionResponse(
                         ExecutionResult.FAIL_NORETRY,
@@ -194,6 +206,7 @@ internal class SubscriptionOperationExecutor(
                                 ),
                             ),
                     )
+                }
                 else ->
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)
             }
@@ -248,9 +261,14 @@ internal class SubscriptionOperationExecutor(
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
 
             return when (responseType) {
-                NetworkUtils.ResponseStatusType.MISSING ->
-                    // if the subscription is missing, we are good!
-                    ExecutionResponse(ExecutionResult.SUCCESS)
+                NetworkUtils.ResponseStatusType.MISSING -> {
+                    if (listOf(op.onesignalId, op.subscriptionId).any { _newRecordState.isInMissingRetryWindow(it) }) {
+                        ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                    } else {
+                        // if the subscription is missing, we are good!
+                        ExecutionResponse(ExecutionResult.SUCCESS)
+                    }
+                }
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
                     ExecutionResponse(ExecutionResult.FAIL_RETRY)
                 else ->

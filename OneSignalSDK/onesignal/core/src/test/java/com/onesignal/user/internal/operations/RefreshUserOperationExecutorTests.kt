@@ -13,6 +13,7 @@ import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.identity.IdentityModel
+import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.impl.executors.RefreshUserOperationExecutor
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
@@ -40,7 +41,11 @@ class RefreshUserOperationExecutorTests : FunSpec({
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId, "aliasLabel1" to "aliasValue1"),
                 PropertiesObject(country = "US"),
-                listOf(SubscriptionObject(existingSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "pushToken1"), SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "pushToken2"), SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL, token = "name@company.com")),
+                listOf(
+                    SubscriptionObject(existingSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "pushToken1"),
+                    SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "pushToken2"),
+                    SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL, token = "name@company.com"),
+                ),
             )
 
         // Given
@@ -76,6 +81,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 mockConfigModelStore,
                 mockBuildUserService,
+                getNewRecordState(),
             )
 
         val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
@@ -150,6 +156,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 mockBuildUserService,
+                getNewRecordState(),
             )
 
         val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
@@ -186,6 +193,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 mockBuildUserService,
+                getNewRecordState(),
             )
 
         val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
@@ -219,6 +227,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 mockBuildUserService,
+                getNewRecordState(),
             )
 
         val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
@@ -228,6 +237,78 @@ class RefreshUserOperationExecutorTests : FunSpec({
 
         // Then
         response.result shouldBe ExecutionResult.FAIL_NORETRY
+        coVerify(exactly = 1) {
+            mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId)
+        }
+    }
+
+    test("refresh user fails without retry when backend returns MISSING") {
+        // Given
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId) } throws BackendException(404)
+
+        // Given
+        val mockIdentityModelStore = MockHelper.identityModelStore()
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        val mockBuildUserService = mockk<IRebuildUserService>()
+        every { mockBuildUserService.getRebuildOperationsIfCurrentUser(any(), any()) } returns null
+
+        val loginUserOperationExecutor =
+            RefreshUserOperationExecutor(
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+                getNewRecordState(),
+            )
+
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+
+        // When
+        val response = loginUserOperationExecutor.execute(operations)
+
+        // Then
+        response.result shouldBe ExecutionResult.FAIL_NORETRY
+        coVerify(exactly = 1) {
+            mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId)
+        }
+    }
+
+    test("refresh user is retried when backend returns MISSING, but isInMissingRetryWindow") {
+        // Given
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId) } throws BackendException(404)
+
+        // Given
+        val mockIdentityModelStore = MockHelper.identityModelStore()
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
+        val mockConfigModelStore = MockHelper.configModelStore().also { it.model.opRepoPostCreateRetryUpTo = 1_000 }
+        val newRecordState = getNewRecordState(mockConfigModelStore).also { it.add(remoteOneSignalId) }
+
+        val loginUserOperationExecutor =
+            RefreshUserOperationExecutor(
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+                newRecordState,
+            )
+
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+
+        // When
+        val response = loginUserOperationExecutor.execute(operations)
+
+        // Then
+        response.result shouldBe ExecutionResult.FAIL_RETRY
         coVerify(exactly = 1) {
             mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId)
         }
