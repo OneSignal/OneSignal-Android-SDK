@@ -6,7 +6,8 @@ import com.onesignal.core.internal.time.ITime
 /**
  * Purpose: Keeps track of ids that were just created on the backend.
  * This list gets used to delay network calls to ensure upcoming
- * requests are ready to be accepted by the backend.
+ * requests are ready to be accepted by the backend. Also used for retries
+ * as a fallback if the server is under extra load.
  */
 class NewRecordsState(
     private val _time: ITime,
@@ -23,5 +24,10 @@ class NewRecordsState(
     fun canAccess(key: String): Boolean {
         val timeLastMovedOrCreated = records[key] ?: return true
         return _time.currentTimeMillis - timeLastMovedOrCreated > _configModelStore.model.opRepoPostCreateDelay
+    }
+
+    fun isInMissingRetryWindow(key: String): Boolean {
+        val timeLastMovedOrCreated = records[key] ?: return false
+        return _time.currentTimeMillis - timeLastMovedOrCreated <= _configModelStore.model.opRepoPostCreateRetryUpTo
     }
 }

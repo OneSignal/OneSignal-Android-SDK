@@ -14,11 +14,13 @@ import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.DeleteAliasOperation
 import com.onesignal.user.internal.operations.SetAliasOperation
+import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 
 internal class IdentityOperationExecutor(
     private val _identityBackend: IIdentityBackendService,
     private val _identityModelStore: IdentityModelStore,
     private val _buildUserService: IRebuildUserService,
+    private val _newRecordState: NewRecordsState,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(SET_ALIAS, DELETE_ALIAS)
@@ -67,11 +69,15 @@ internal class IdentityOperationExecutor(
                     NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                         ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
                     NetworkUtils.ResponseStatusType.MISSING -> {
-                        val operations = _buildUserService.getRebuildOperationsIfCurrentUser(lastOperation.appId, lastOperation.onesignalId)
-                        if (operations == null) {
+                        if (_newRecordState.isInMissingRetryWindow(lastOperation.onesignalId)) {
+                            return ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                        }
+
+                        val rebuildOps = _buildUserService.getRebuildOperationsIfCurrentUser(lastOperation.appId, lastOperation.onesignalId)
+                        if (rebuildOps == null) {
                             return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
                         } else {
-                            return ExecutionResponse(ExecutionResult.FAIL_RETRY, operations = operations)
+                            return ExecutionResponse(ExecutionResult.FAIL_RETRY, operations = rebuildOps)
                         }
                     }
                 }
@@ -103,10 +109,14 @@ internal class IdentityOperationExecutor(
                     NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                         ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
                     NetworkUtils.ResponseStatusType.MISSING -> {
-                        // This means either the User or the Alias was already
-                        // deleted, either way the end state is the same, the
-                        // alias no longer exists on that User.
-                        ExecutionResponse(ExecutionResult.SUCCESS)
+                        return if (_newRecordState.isInMissingRetryWindow(lastOperation.onesignalId)) {
+                            ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                        } else {
+                            // This means either the User or the Alias was already
+                            // deleted, either way the end state is the same, the
+                            // alias no longer exists on that User.
+                            ExecutionResponse(ExecutionResult.SUCCESS)
+                        }
                     }
                 }
             }

@@ -1,11 +1,13 @@
 package com.onesignal.user.internal.operations
 
+import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.backend.IUserBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.builduser.IRebuildUserService
+import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.impl.executors.UpdateUserOperationExecutor
 import com.onesignal.user.internal.properties.PropertiesModel
 import io.kotest.core.spec.style.FunSpec
@@ -13,6 +15,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
@@ -39,6 +42,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 mockIdentityModelStore,
                 mockPropertiesModelStore,
                 mockBuildUserService,
+                getNewRecordState(),
             )
         val operations = listOf<Operation>(SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1"))
 
@@ -77,6 +81,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 mockIdentityModelStore,
                 mockPropertiesModelStore,
                 mockBuildUserService,
+                getNewRecordState(),
             )
         val operations =
             listOf<Operation>(
@@ -137,6 +142,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 mockIdentityModelStore,
                 mockPropertiesModelStore,
                 mockBuildUserService,
+                getNewRecordState(),
             )
         val operations =
             listOf<Operation>(
@@ -180,6 +186,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 mockIdentityModelStore,
                 mockPropertiesModelStore,
                 mockBuildUserService,
+                getNewRecordState(),
             )
         val operations =
             listOf<Operation>(
@@ -243,6 +250,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 mockIdentityModelStore,
                 mockPropertiesModelStore,
                 mockBuildUserService,
+                getNewRecordState(),
             )
         val operations =
             listOf<Operation>(
@@ -270,5 +278,64 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 },
             )
         }
+    }
+
+    test("update user single operation fails with MISSING") {
+        // Given
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } throws BackendException(404)
+
+        // Given
+        val mockIdentityModelStore = MockHelper.identityModelStore()
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockBuildUserService = mockk<IRebuildUserService>()
+        every { mockBuildUserService.getRebuildOperationsIfCurrentUser(any(), any()) } returns null
+
+        val loginUserOperationExecutor =
+            UpdateUserOperationExecutor(
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockBuildUserService,
+                getNewRecordState(),
+            )
+        val operations = listOf(SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1"))
+
+        // When
+        val response = loginUserOperationExecutor.execute(operations)
+
+        // Then
+        response.result shouldBe ExecutionResult.FAIL_NORETRY
+    }
+
+    test("update user single operation fails with MISSING, but isInMissingRetryWindow") {
+        // Given
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } throws BackendException(404)
+
+        // Given
+        val mockIdentityModelStore = MockHelper.identityModelStore()
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockBuildUserService = mockk<IRebuildUserService>()
+        every { mockBuildUserService.getRebuildOperationsIfCurrentUser(any(), any()) } returns null
+
+        val mockConfigModelStore = MockHelper.configModelStore().also { it.model.opRepoPostCreateRetryUpTo = 1_000 }
+        val newRecordState = getNewRecordState(mockConfigModelStore).also { it.add(remoteOneSignalId) }
+
+        val loginUserOperationExecutor =
+            UpdateUserOperationExecutor(
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockBuildUserService,
+                newRecordState,
+            )
+        val operations = listOf(SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1"))
+
+        // When
+        val response = loginUserOperationExecutor.execute(operations)
+
+        // Then
+        response.result shouldBe ExecutionResult.FAIL_RETRY
     }
 })
