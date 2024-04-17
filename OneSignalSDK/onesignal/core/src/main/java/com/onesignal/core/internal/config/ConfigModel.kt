@@ -142,6 +142,19 @@ class ConfigModel : Model() {
         }
 
     /**
+     * The number milliseconds to delay after an operation completes
+     * that creates or changes ids.
+     * This is a "cold down" period to avoid a caveat with OneSignal's backend
+     * replication, where you may incorrectly get a 404 when attempting a GET
+     * or PATCH REST API call on something just after it is created.
+     */
+    var opRepoPostCreateDelay: Long
+        get() = getLongProperty(::opRepoPostCreateDelay.name) { 5_000 }
+        set(value) {
+            setLongProperty(::opRepoPostCreateDelay.name, value)
+        }
+
+    /**
      * The minimum number of milliseconds required to pass to allow the fetching of IAM to occur.
      */
     var fetchIAMMinInterval: Long
