@@ -69,7 +69,7 @@ internal class IdentityOperationExecutor(
                     NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                         ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
                     NetworkUtils.ResponseStatusType.MISSING -> {
-                        if (_newRecordState.isInMissingRetryWindow(lastOperation.onesignalId)) {
+                        if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(lastOperation.onesignalId)) {
                             return ExecutionResponse(ExecutionResult.FAIL_RETRY)
                         }
 
@@ -109,7 +109,7 @@ internal class IdentityOperationExecutor(
                     NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                         ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
                     NetworkUtils.ResponseStatusType.MISSING -> {
-                        return if (_newRecordState.isInMissingRetryWindow(lastOperation.onesignalId)) {
+                        return if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(lastOperation.onesignalId)) {
                             ExecutionResponse(ExecutionResult.FAIL_RETRY)
                         } else {
                             // This means either the User or the Alias was already

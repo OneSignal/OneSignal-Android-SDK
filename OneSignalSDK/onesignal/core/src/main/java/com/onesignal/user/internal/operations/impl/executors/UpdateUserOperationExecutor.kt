@@ -165,7 +165,7 @@ internal class UpdateUserOperationExecutor(
                     NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                         ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
                     NetworkUtils.ResponseStatusType.MISSING -> {
-                        if (_newRecordState.isInMissingRetryWindow(onesignalId)) {
+                        if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(onesignalId)) {
                             return ExecutionResponse(ExecutionResult.FAIL_RETRY)
                         }
                         val operations = _buildUserService.getRebuildOperationsIfCurrentUser(appId, onesignalId)

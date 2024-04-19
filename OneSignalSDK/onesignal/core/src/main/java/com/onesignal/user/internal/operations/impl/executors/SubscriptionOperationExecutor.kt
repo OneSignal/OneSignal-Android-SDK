@@ -138,7 +138,7 @@ internal class SubscriptionOperationExecutor(
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
                 NetworkUtils.ResponseStatusType.MISSING -> {
-                    if (_newRecordState.isInMissingRetryWindow(createOperation.onesignalId)) {
+                    if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(createOperation.onesignalId)) {
                         return ExecutionResponse(ExecutionResult.FAIL_RETRY)
                     }
                     val operations = _buildUserService.getRebuildOperationsIfCurrentUser(createOperation.appId, createOperation.onesignalId)
@@ -183,7 +183,8 @@ internal class SubscriptionOperationExecutor(
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
                     ExecutionResponse(ExecutionResult.FAIL_RETRY)
                 NetworkUtils.ResponseStatusType.MISSING -> {
-                    if (listOf(
+                    if (ex.statusCode == 404 &&
+                        listOf(
                             lastOperation.onesignalId,
                             lastOperation.subscriptionId,
                         ).any { _newRecordState.isInMissingRetryWindow(it) }
@@ -262,7 +263,12 @@ internal class SubscriptionOperationExecutor(
 
             return when (responseType) {
                 NetworkUtils.ResponseStatusType.MISSING -> {
-                    if (listOf(op.onesignalId, op.subscriptionId).any { _newRecordState.isInMissingRetryWindow(it) }) {
+                    if (ex.statusCode == 404 &&
+                        listOf(
+                            op.onesignalId,
+                            op.subscriptionId,
+                        ).any { _newRecordState.isInMissingRetryWindow(it) }
+                    ) {
                         ExecutionResponse(ExecutionResult.FAIL_RETRY)
                     } else {
                         // if the subscription is missing, we are good!
