@@ -22,6 +22,7 @@ import com.onesignal.user.internal.operations.SetTagOperation
 import com.onesignal.user.internal.operations.TrackPurchaseOperation
 import com.onesignal.user.internal.operations.TrackSessionEndOperation
 import com.onesignal.user.internal.operations.TrackSessionStartOperation
+import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import com.onesignal.user.internal.properties.PropertiesModelStore
 
 internal class UpdateUserOperationExecutor(
@@ -29,6 +30,7 @@ internal class UpdateUserOperationExecutor(
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
     private val _buildUserService: IRebuildUserService,
+    private val _newRecordState: NewRecordsState,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(SET_TAG, DELETE_TAG, SET_PROPERTY, TRACK_SESSION_START, TRACK_SESSION_END, TRACK_PURCHASE)
@@ -163,6 +165,9 @@ internal class UpdateUserOperationExecutor(
                     NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                         ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
                     NetworkUtils.ResponseStatusType.MISSING -> {
+                        if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(onesignalId)) {
+                            return ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                        }
                         val operations = _buildUserService.getRebuildOperationsIfCurrentUser(appId, onesignalId)
                         if (operations == null) {
                             return ExecutionResponse(ExecutionResult.FAIL_NORETRY)

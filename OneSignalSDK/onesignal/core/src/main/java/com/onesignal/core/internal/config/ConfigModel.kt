@@ -142,6 +142,32 @@ class ConfigModel : Model() {
         }
 
     /**
+     * The number of milliseconds to delay after an operation completes
+     * that creates or changes ids.
+     * This is a "cold down" period to avoid a caveat with OneSignal's backend
+     * replication, where you may incorrectly get a 404 when attempting a GET
+     * or PATCH REST API call on something just after it is created.
+     */
+    var opRepoPostCreateDelay: Long
+        get() = getLongProperty(::opRepoPostCreateDelay.name) { 5_000 }
+        set(value) {
+            setLongProperty(::opRepoPostCreateDelay.name, value)
+        }
+
+    /**
+     * The number of milliseconds to retry operations for new models.
+     * This is a fallback to opRepoPostCreateDelay, where it's delay may
+     * not be enough. The server may be unusually overloaded so we will
+     * retry these (back-off rules apply to all retries) as we only want
+     * to re-create records as a last resort.
+     */
+    var opRepoPostCreateRetryUpTo: Long
+        get() = getLongProperty(::opRepoPostCreateRetryUpTo.name) { 60_000 }
+        set(value) {
+            setLongProperty(::opRepoPostCreateRetryUpTo.name, value)
+        }
+
+    /**
      * The minimum number of milliseconds required to pass to allow the fetching of IAM to occur.
      */
     var fetchIAMMinInterval: Long

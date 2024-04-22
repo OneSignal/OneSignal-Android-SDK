@@ -40,6 +40,7 @@ class LoginUserFromSubscriptionOperation() : Operation(LoginUserFromSubscription
     override val modifyComparisonKey: String get() = "$appId.Subscription.$subscriptionId.Login"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.NONE
     override val canStartExecute: Boolean = true
+    override val applyToRecordId: String get() = subscriptionId
 
     constructor(appId: String, onesignalId: String, subscriptionId: String) : this() {
         this.appId = appId

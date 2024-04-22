@@ -9,6 +9,7 @@ import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
+import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.CapturingSlot
@@ -23,7 +24,9 @@ import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.yield
 
 // Mocks used by every test in this file
 private class Mocks {
@@ -53,6 +56,7 @@ private class Mocks {
                 operationModelStore,
                 configModelStore,
                 Time(),
+                getNewRecordState(configModelStore),
             ),
         )
     }
@@ -73,6 +77,7 @@ class OperationRepoTests : FunSpec({
             override val modifyComparisonKey = ""
             override val groupComparisonType = GroupComparisonType.NONE
             override val canStartExecute = false
+            override val applyToRecordId = ""
         }
 
         class MyOperation2 : MyOperation()
@@ -485,6 +490,54 @@ class OperationRepoTests : FunSpec({
             executor.execute(withArg { it[0] shouldBe secondOp })
         }
     }
+
+    // This is to account for the case where we create a User or Subscription
+    // and attempt to immediately access it (via GET or PATCH). A delay is
+    // needed as the backend may incorrectly 404 otherwise, due to a small
+    // delay in it's server replication.
+    // A cold down period like this also helps improve batching as well.
+    test("execution of an operation with translation IDs delays follow up operations") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoPostCreateDelay = 100
+        val operation1 = mockOperation(groupComparisonType = GroupComparisonType.NONE)
+        val operation2 = mockOperation(groupComparisonType = GroupComparisonType.NONE, applyToRecordId = "id2")
+        val operation3 = mockOperation(groupComparisonType = GroupComparisonType.NONE)
+        coEvery {
+            mocks.executor.execute(listOf(operation1))
+        } returns ExecutionResponse(ExecutionResult.SUCCESS, mapOf("local-id1" to "id2"))
+
+        // When
+        mocks.operationRepo.start()
+        mocks.operationRepo.enqueue(operation1)
+        val job = launch { mocks.operationRepo.enqueueAndWait(operation2) }.also { yield() }
+        mocks.operationRepo.enqueue(operation3)
+        job.join()
+
+        // Then
+        coVerifyOrder {
+            mocks.executor.execute(
+                withArg {
+                    it.count() shouldBe 1
+                    it[0] shouldBe operation1
+                },
+            )
+            operation2.translateIds(mapOf("local-id1" to "id2"))
+            mocks.executor.execute(
+                withArg {
+                    it.count() shouldBe 1
+                    it[0] shouldBe operation3
+                },
+            )
+            // Ensure operation2 runs after operation3 as it has to wait for the create delay
+            mocks.executor.execute(
+                withArg {
+                    it.count() shouldBe 1
+                    it[0] shouldBe operation2
+                },
+            )
+        }
+    }
 }) {
     companion object {
         private fun mockOperation(
@@ -495,6 +548,7 @@ class OperationRepoTests : FunSpec({
             createComparisonKey: String = "create-key",
             modifyComparisonKey: String = "modify-key",
             operationIdSlot: CapturingSlot<String>? = null,
+            applyToRecordId: String = "",
         ): Operation {
             val operation = mockk<Operation>()
             val opIdSlot = operationIdSlot ?: slot()
@@ -507,6 +561,7 @@ class OperationRepoTests : FunSpec({
             every { operation.createComparisonKey } returns createComparisonKey
             every { operation.modifyComparisonKey } returns modifyComparisonKey
             every { operation.translateIds(any()) } just runs
+            every { operation.applyToRecordId } returns applyToRecordId
 
             return operation
         }

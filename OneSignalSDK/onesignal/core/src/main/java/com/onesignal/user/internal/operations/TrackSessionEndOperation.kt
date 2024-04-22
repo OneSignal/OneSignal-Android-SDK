@@ -41,6 +41,7 @@ class TrackSessionEndOperation() : Operation(UpdateUserOperationExecutor.TRACK_S
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.ALTER
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
+    override val applyToRecordId: String get() = onesignalId
 
     constructor(appId: String, onesignalId: String, sessionTime: Long) : this() {
         this.appId = appId

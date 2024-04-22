@@ -1,7 +1,6 @@
 package com.onesignal.core.internal.operations.impl
 
 import com.onesignal.common.threading.WaiterWithValue
-import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.GroupComparisonType
@@ -12,7 +11,11 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.user.internal.operations.impl.states.NewRecordsState
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import kotlin.reflect.KClass
@@ -22,6 +25,7 @@ internal class OperationRepo(
     private val _operationModelStore: OperationModelStore,
     private val _configModelStore: ConfigModelStore,
     private val _time: ITime,
+    private val _newRecordState: NewRecordsState,
 ) : IOperationRepo, IStartableService {
     internal class OperationQueueItem(
         val operation: Operation,
@@ -34,10 +38,16 @@ internal class OperationRepo(
         }
     }
 
+    internal class LoopWaiterMessage(
+        val force: Boolean,
+        val previousWaitedTime: Long = 0,
+    )
+
     private val executorsMap: Map<String, IOperationExecutor>
     private val queue = mutableListOf<OperationQueueItem>()
-    private val waiter = WaiterWithValue<Boolean>()
+    private val waiter = WaiterWithValue<LoopWaiterMessage>()
     private var paused = false
+    private var coroutineScope = CoroutineScope(newSingleThreadContext(name = "OpRepo"))
 
     /** *** Buckets ***
      * Purpose: Bucketing is a pattern we are using to help save network
@@ -56,13 +66,11 @@ internal class OperationRepo(
      *       network calls.
      */
     private var enqueueIntoBucket = 0
-    private val executeBucket: Int get() {
-        return if (enqueueIntoBucket == 0) 0 else enqueueIntoBucket - 1
-    }
+    private val executeBucket get() =
+        if (enqueueIntoBucket == 0) 0 else enqueueIntoBucket - 1
 
     init {
         val executorsMap: MutableMap<String, IOperationExecutor> = mutableMapOf()
-
         for (executor in executors) {
             for (operation in executor.operations) {
                 executorsMap[operation] = executor
@@ -83,9 +91,7 @@ internal class OperationRepo(
 
     override fun start() {
         paused = false
-        suspendifyOnThread(name = "OpRepo") {
-            processQueueForever()
-        }
+        coroutineScope.launch { processQueueForever() }
     }
 
     override fun enqueue(
@@ -123,7 +129,7 @@ internal class OperationRepo(
             }
         }
 
-        waiter.wake(flush)
+        waiter.wake(LoopWaiterMessage(flush, 0))
     }
 
     /**
@@ -160,16 +166,16 @@ internal class OperationRepo(
      */
     private suspend fun waitForNewOperationAndExecutionInterval() {
         // 1. Wait for an operation to be enqueued
-        var force = waiter.waitForWake()
+        var wakeMessage = waiter.waitForWake()
 
         // 2. Wait at least the time defined in opRepoExecutionInterval
         //    so operations can be grouped, unless one of them used
         //    flush=true (AKA force)
         var lastTime = _time.currentTimeMillis
-        var remainingTime = _configModelStore.model.opRepoExecutionInterval
-        while (!force && remainingTime > 0) {
+        var remainingTime = _configModelStore.model.opRepoExecutionInterval - wakeMessage.previousWaitedTime
+        while (!wakeMessage.force && remainingTime > 0) {
             withTimeoutOrNull(remainingTime) {
-                force = waiter.waitForWake()
+                wakeMessage = waiter.waitForWake()
             }
             remainingTime -= _time.currentTimeMillis - lastTime
             lastTime = _time.currentTimeMillis
@@ -194,6 +200,14 @@ internal class OperationRepo(
                 ops.forEach { it.operation.translateIds(response.idTranslations) }
                 synchronized(queue) {
                     queue.forEach { it.operation.translateIds(response.idTranslations) }
+                }
+                response.idTranslations.values.forEach { _newRecordState.add(it) }
+                coroutineScope.launch {
+                    val waitTime = _configModelStore.model.opRepoPostCreateDelay
+                    delay(waitTime)
+                    synchronized(queue) {
+                        if (queue.isNotEmpty()) waiter.wake(LoopWaiterMessage(false, waitTime))
+                    }
                 }
             }
 
@@ -278,7 +292,9 @@ internal class OperationRepo(
         return synchronized(queue) {
             val startingOp =
                 queue.firstOrNull {
-                    it.operation.canStartExecute && it.bucket <= bucketFilter
+                    it.operation.canStartExecute &&
+                        _newRecordState.canAccess(it.operation.applyToRecordId) &&
+                        it.bucket <= bucketFilter
                 }
 
             if (startingOp != null) {

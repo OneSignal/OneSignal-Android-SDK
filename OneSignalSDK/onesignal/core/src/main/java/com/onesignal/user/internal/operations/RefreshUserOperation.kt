@@ -33,6 +33,7 @@ class RefreshUserOperation() : Operation(RefreshUserOperationExecutor.REFRESH_US
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Refresh"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.CREATE
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
+    override val applyToRecordId: String get() = onesignalId
 
     constructor(appId: String, onesignalId: String) : this() {
         this.appId = appId

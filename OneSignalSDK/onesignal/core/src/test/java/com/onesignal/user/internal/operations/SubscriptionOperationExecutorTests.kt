@@ -10,6 +10,7 @@ import com.onesignal.user.internal.backend.ISubscriptionBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.builduser.IRebuildUserService
+import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
@@ -52,6 +53,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 mockBuildUserService,
+                getNewRecordState(),
             )
 
         val operations =
@@ -104,6 +106,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 mockBuildUserService,
+                getNewRecordState(),
             )
 
         val operations =
@@ -156,6 +159,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 mockBuildUserService,
+                getNewRecordState(),
             )
 
         val operations =
@@ -191,6 +195,47 @@ class SubscriptionOperationExecutorTests : FunSpec({
         }
     }
 
+    test("create subscription fails with retry when the backend returns MISSING, when isInMissingRetryWindow") {
+        // Given
+        val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
+        coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } throws BackendException(404)
+
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        val mockBuildUserService = mockk<IRebuildUserService>()
+        val mockConfigModelStore = MockHelper.configModelStore().also { it.model.opRepoPostCreateRetryUpTo = 1_000 }
+        val newRecordState = getNewRecordState(mockConfigModelStore).also { it.add(remoteOneSignalId) }
+
+        val subscriptionOperationExecutor =
+            SubscriptionOperationExecutor(
+                mockSubscriptionBackendService,
+                MockHelper.deviceService(),
+                AndroidMockHelper.applicationService(),
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+                newRecordState,
+            )
+
+        val operations =
+            listOf<Operation>(
+                CreateSubscriptionOperation(
+                    appId,
+                    remoteOneSignalId,
+                    localSubscriptionId,
+                    SubscriptionType.PUSH,
+                    true,
+                    "pushToken",
+                    SubscriptionStatus.SUBSCRIBED,
+                ),
+            )
+
+        // When
+        val response = subscriptionOperationExecutor.execute(operations)
+
+        // Then
+        response.result shouldBe ExecutionResult.FAIL_RETRY
+    }
+
     test("create subscription then delete subscription is a successful no-op") {
         // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
@@ -210,6 +255,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 mockBuildUserService,
+                getNewRecordState(),
             )
 
         val operations =
@@ -253,6 +299,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 mockBuildUserService,
+                getNewRecordState(),
             )
 
         val operations =
@@ -319,6 +366,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 mockBuildUserService,
+                getNewRecordState(),
             )
 
         val operations =
@@ -378,6 +426,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 mockBuildUserService,
+                getNewRecordState(),
             )
 
         val operations =
@@ -428,6 +477,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 mockBuildUserService,
+                getNewRecordState(),
             )
 
         val operations =
@@ -462,6 +512,47 @@ class SubscriptionOperationExecutorTests : FunSpec({
         }
     }
 
+    test("update subscription fails with retry when the backend returns MISSING, when isInMissingRetryWindow") {
+        // Given
+        val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
+        coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(404)
+
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        val mockBuildUserService = mockk<IRebuildUserService>()
+        val mockConfigModelStore = MockHelper.configModelStore().also { it.model.opRepoPostCreateRetryUpTo = 1_000 }
+        val newRecordState = getNewRecordState(mockConfigModelStore).also { it.add(remoteOneSignalId) }
+
+        val subscriptionOperationExecutor =
+            SubscriptionOperationExecutor(
+                mockSubscriptionBackendService,
+                MockHelper.deviceService(),
+                AndroidMockHelper.applicationService(),
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+                newRecordState,
+            )
+
+        val operations =
+            listOf<Operation>(
+                UpdateSubscriptionOperation(
+                    appId,
+                    remoteOneSignalId,
+                    remoteSubscriptionId,
+                    SubscriptionType.PUSH,
+                    true,
+                    "pushToken2",
+                    SubscriptionStatus.SUBSCRIBED,
+                ),
+            )
+
+        // When
+        val response = subscriptionOperationExecutor.execute(operations)
+
+        // Then
+        response.result shouldBe ExecutionResult.FAIL_RETRY
+    }
+
     test("delete subscription successfully deletes subscription") {
         // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
@@ -480,6 +571,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 mockBuildUserService,
+                getNewRecordState(),
             )
 
         val operations =
@@ -512,6 +604,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 mockBuildUserService,
+                getNewRecordState(),
             )
 
         val operations =
@@ -545,6 +638,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 mockBuildUserService,
+                getNewRecordState(),
             )
 
         val operations =
@@ -558,5 +652,38 @@ class SubscriptionOperationExecutorTests : FunSpec({
         // Then
         response.result shouldBe ExecutionResult.SUCCESS
         coVerify(exactly = 1) { mockSubscriptionBackendService.deleteSubscription(appId, remoteSubscriptionId) }
+    }
+
+    test("delete subscription fails with retry when the backend returns MISSING, when isInMissingRetryWindow") {
+        // Given
+        val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
+        coEvery { mockSubscriptionBackendService.deleteSubscription(any(), any()) } throws BackendException(404)
+
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        val mockBuildUserService = mockk<IRebuildUserService>()
+        val mockConfigModelStore = MockHelper.configModelStore().also { it.model.opRepoPostCreateRetryUpTo = 1_000 }
+        val newRecordState = getNewRecordState(mockConfigModelStore).also { it.add(remoteOneSignalId) }
+
+        val subscriptionOperationExecutor =
+            SubscriptionOperationExecutor(
+                mockSubscriptionBackendService,
+                MockHelper.deviceService(),
+                AndroidMockHelper.applicationService(),
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+                newRecordState,
+            )
+
+        val operations =
+            listOf<Operation>(
+                DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
+            )
+
+        // When
+        val response = subscriptionOperationExecutor.execute(operations)
+
+        // Then
+        response.result shouldBe ExecutionResult.FAIL_RETRY
     }
 })

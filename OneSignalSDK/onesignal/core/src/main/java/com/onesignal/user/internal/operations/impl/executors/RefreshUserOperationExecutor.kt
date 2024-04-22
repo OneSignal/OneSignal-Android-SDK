@@ -17,6 +17,7 @@ import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.RefreshUserOperation
+import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -31,6 +32,7 @@ internal class RefreshUserOperationExecutor(
     private val _subscriptionsModelStore: SubscriptionModelStore,
     private val _configModelStore: ConfigModelStore,
     private val _buildUserService: IRebuildUserService,
+    private val _newRecordState: NewRecordsState,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(REFRESH_USER)
@@ -135,6 +137,9 @@ internal class RefreshUserOperationExecutor(
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
                 NetworkUtils.ResponseStatusType.MISSING -> {
+                    if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(op.onesignalId)) {
+                        return ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                    }
                     val operations = _buildUserService.getRebuildOperationsIfCurrentUser(op.appId, op.onesignalId)
                     if (operations == null) {
                         return ExecutionResponse(ExecutionResult.FAIL_NORETRY)

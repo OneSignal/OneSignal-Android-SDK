@@ -42,6 +42,7 @@ class TransferSubscriptionOperation() : Operation(SubscriptionOperationExecutor.
     override val modifyComparisonKey: String get() = "$appId.Subscription.$subscriptionId.Transfer"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.NONE
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId) && !IDManager.isLocalId(subscriptionId)
+    override val applyToRecordId: String get() = subscriptionId
 
     constructor(appId: String, subscriptionId: String, onesignalId: String) : this() {
         this.appId = appId
