@@ -538,6 +538,32 @@ class OperationRepoTests : FunSpec({
             )
         }
     }
+
+    // We want to prevent a misbehaving app stuck in a loop from continuously
+    // sending updates every opRepoExecutionInterval (5 seconds currently).
+    // By waiting for the dust to settle we ensure the app is done making
+    // updates.
+    test("ensure each time enqueue is called it restarts the delay time") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoExecutionInterval = 100
+
+        // When
+        mocks.operationRepo.start()
+        launch {
+            repeat(10) {
+                mocks.operationRepo.enqueue(mockOperation(groupComparisonType = GroupComparisonType.ALTER))
+                delay(50)
+            }
+        }
+        val result =
+            withTimeoutOrNull(500) {
+                mocks.operationRepo.enqueueAndWait(mockOperation(groupComparisonType = GroupComparisonType.ALTER))
+            }
+
+        // Then
+        result shouldBe null
+    }
 }) {
     companion object {
         private fun mockOperation(

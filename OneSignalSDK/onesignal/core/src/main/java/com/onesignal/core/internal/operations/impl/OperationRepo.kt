@@ -163,22 +163,32 @@ internal class OperationRepo(
     /**
      *  Waits until a new operation is enqueued, then wait an additional
      *  amount of time afterwards, so operations can be grouped/batched.
+     *  NOTE: Any operations that are enqueued while waiting here causes
+     *        the wait timer to restart over. This is intentional, we
+     *        are basically wait for "the dust to settle" / "the water
+     *        is calm" to ensure the app is done making updates.
+     *  FUTURE: Highly recommend not removing this "the dust to settle"
+     *          logic, as it ensures any app stuck in a loop can't
+     *          cause continuous network requests. If the delay is too
+     *          long for legitimate use-cases then allow tweaking the
+     *          opRepoExecutionInterval value or allow commitNow()
+     *          with a budget.
      */
     private suspend fun waitForNewOperationAndExecutionInterval() {
         // 1. Wait for an operation to be enqueued
         var wakeMessage = waiter.waitForWake()
 
-        // 2. Wait at least the time defined in opRepoExecutionInterval
-        //    so operations can be grouped, unless one of them used
-        //    flush=true (AKA force)
-        var lastTime = _time.currentTimeMillis
+        // 2. Now wait opRepoExecutionInterval, restart the wait
+        //    time everytime something new is enqueued, to ensure
+        //    the dust has settled.
         var remainingTime = _configModelStore.model.opRepoExecutionInterval - wakeMessage.previousWaitedTime
-        while (!wakeMessage.force && remainingTime > 0) {
-            withTimeoutOrNull(remainingTime) {
-                wakeMessage = waiter.waitForWake()
-            }
-            remainingTime -= _time.currentTimeMillis - lastTime
-            lastTime = _time.currentTimeMillis
+        while (!wakeMessage.force) {
+            val waitedTheFullTime =
+                withTimeoutOrNull(remainingTime) {
+                    wakeMessage = waiter.waitForWake()
+                } == null
+            if (waitedTheFullTime) break
+            remainingTime = _configModelStore.model.opRepoExecutionInterval
         }
     }
 
