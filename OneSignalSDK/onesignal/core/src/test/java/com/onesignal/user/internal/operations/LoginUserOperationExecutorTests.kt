@@ -156,6 +156,47 @@ class LoginUserOperationExecutorTests : FunSpec({
         ) { mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any(), any()) }
     }
 
+    // If the User is identified then the backend may have found an existing User, if so
+    // we need to refresh it so we get all it's full subscription list
+    test("login identified user returns result with RefreshUser") {
+        // Given
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
+
+        val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
+
+        val mockIdentityModelStore = MockHelper.identityModelStore()
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+
+        val loginUserOperationExecutor =
+            LoginUserOperationExecutor(
+                mockIdentityOperationExecutor,
+                MockHelper.applicationService(),
+                MockHelper.deviceService(),
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                MockHelper.languageContext(),
+            )
+        val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", null))
+
+        // When
+        val response = loginUserOperationExecutor.execute(operations)
+
+        // Then
+        response.result shouldBe ExecutionResult.SUCCESS
+        response.operations!!.size shouldBe 1
+        (response.operations!![0] as RefreshUserOperation).let {
+            it.shouldBeInstanceOf<RefreshUserOperation>()
+            it.appId shouldBe appId
+            it.onesignalId shouldBe remoteOneSignalId
+        }
+    }
+
     test("login identified user with association succeeds when association is successful") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
