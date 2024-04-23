@@ -2,11 +2,10 @@ package com.onesignal;
 
 import androidx.annotation.NonNull;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicLong;
@@ -15,8 +14,8 @@ class OSTaskController {
 
     static final String OS_PENDING_EXECUTOR = "OS_PENDING_EXECUTOR_";
 
-    // The concurrent queue in which we pin pending tasks upon finishing initialization
-    private final ConcurrentLinkedQueue<Runnable> taskQueueWaitingForInit = new ConcurrentLinkedQueue<>();
+    // The queue in which we pin pending tasks upon finishing initialization
+    private final Queue<Runnable> taskQueueWaitingForInit = new LinkedBlockingQueue<>();
     private final AtomicLong lastTaskId = new AtomicLong();
     private ExecutorService pendingTaskExecutor;
 
@@ -105,7 +104,7 @@ class OSTaskController {
         }
     }
 
-    ConcurrentLinkedQueue<Runnable> getTaskQueueWaitingForInit() {
+    Queue<Runnable> getTaskQueueWaitingForInit() {
         synchronized (taskQueueWaitingForInit) {
             return taskQueueWaitingForInit;
         }
