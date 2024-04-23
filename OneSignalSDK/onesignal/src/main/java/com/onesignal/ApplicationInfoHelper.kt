@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.DeadSystemException
-import android.util.AndroidException
 
 class ApplicationInfoHelper {
     companion object {
@@ -26,15 +25,20 @@ class ApplicationInfoHelper {
                     PackageManager.GET_META_DATA,
                 )
                 cachedInfo
-            } catch (e: AndroidException) {
+            } catch (e: RuntimeException) {
+                // Android internally throws this via RemoteException.rethrowFromSystemServer()
+                // so we must catch RuntimeException and check the cause.
+
                 // Suppressing DeadSystemException as the app is already dying for
                 // another reason and allowing this exception to bubble up would
                 // create a red herring for app developers. We still re-throw
                 // others, as we don't want to silently hide other issues.
-                if (e !is DeadSystemException) {
+                if (e.cause is DeadSystemException) {
+                    null
+                }
+                else {
                     throw e
                 }
-                null
             }
         }
     }

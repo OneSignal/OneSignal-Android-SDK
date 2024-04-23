@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.DeadSystemException
-import android.util.AndroidException
 
 data class GetPackageInfoResult(
     // Check this value first, if false ignore other properties
@@ -35,15 +34,20 @@ class PackageInfoHelper {
             } catch (e: PackageManager.NameNotFoundException) {
                 // Expected if package is not installed on the device.
                 GetPackageInfoResult(true, null)
-            } catch (e: AndroidException) {
+            } catch (e: RuntimeException) {
+                // Android internally throws this via RemoteException.rethrowFromSystemServer()
+                // so we must catch RuntimeException and check the cause.
+
                 // Suppressing DeadSystemException as the app is already dying for
                 // another reason and allowing this exception to bubble up would
                 // create a red herring for app developers. We still re-throw
                 // others, as we don't want to silently hide other issues.
-                if (e !is DeadSystemException) {
+                if (e.cause is DeadSystemException) {
+                    GetPackageInfoResult(false, null)
+                }
+                else {
                     throw e
                 }
-                GetPackageInfoResult(false, null)
             }
         }
     }

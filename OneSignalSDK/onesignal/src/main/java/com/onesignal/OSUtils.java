@@ -306,15 +306,18 @@ class OSUtils {
       HuaweiApiAvailability availability = HuaweiApiAvailability.getInstance();
       try {
          return availability.isHuaweiMobileServicesAvailable(OneSignal.appContext) == HMS_AVAILABLE_SUCCESSFUL;
-      } catch (Exception e) {
+      } catch (RuntimeException e) {
+         // Android internally throws this via RemoteException.rethrowFromSystemServer()
+         // so we must catch RuntimeException and check the cause.
+
          // Suppressing DeadSystemException as the app is already dying for
          // another reason and allowing this exception to bubble up would
          // create a red herring for app developers. We still re-throw
          // others, as we don't want to silently hide other issues.
-         if (!(e instanceof DeadSystemException)) {
-            throw e;
+         if (e.getCause() instanceof DeadSystemException) {
+            return false;
          }
-         return false;
+         throw e;
       }
    }
 
