@@ -18,7 +18,7 @@ import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.onesignal.OSInAppMessageController.IN_APP_MESSAGES_JSON_KEY;
@@ -93,9 +93,9 @@ abstract class UserStateSynchronizer {
 
     // Maintain a list of handlers so that if the user calls
     //    sendTags() multiple times it will call each callback
-    final private Queue<ChangeTagsUpdateHandler> sendTagsHandlers = new ConcurrentLinkedQueue<>();
-    final private Queue<OneSignal.OSInternalExternalUserIdUpdateCompletionHandler> externalUserIdUpdateHandlers = new ConcurrentLinkedQueue<>();
-    final private Queue<OSDeviceInfoCompletionHandler> deviceInfoCompletionHandler = new ConcurrentLinkedQueue<>();
+    final private Queue<ChangeTagsUpdateHandler> sendTagsHandlers = new LinkedBlockingQueue<>();
+    final private Queue<OneSignal.OSInternalExternalUserIdUpdateCompletionHandler> externalUserIdUpdateHandlers = new LinkedBlockingQueue<>();
+    final private Queue<OSDeviceInfoCompletionHandler> deviceInfoCompletionHandler = new LinkedBlockingQueue<>();
 
     boolean hasQueuedHandlers() {
         return externalUserIdUpdateHandlers.size() > 0;
