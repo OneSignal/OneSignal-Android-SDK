@@ -44,7 +44,6 @@ import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.LoginUserFromSubscriptionOperation
 import com.onesignal.user.internal.operations.LoginUserOperation
-import com.onesignal.user.internal.operations.RefreshUserOperation
 import com.onesignal.user.internal.operations.TransferSubscriptionOperation
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
@@ -384,17 +383,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
             if (!result) {
                 Logging.log(LogLevel.ERROR, "Could not login user")
-            } else {
-                // enqueue a RefreshUserOperation to pull the user from the backend and refresh the models.
-                // This is a separate enqueue operation to ensure any outstanding operations that happened
-                // after the createAndSwitchToNewUser have been executed, and the retrieval will be the
-                // most up to date reflection of the user.
-                operationRepo!!.enqueueAndWait(
-                    RefreshUserOperation(
-                        configModel!!.appId,
-                        identityModelStore!!.model.onesignalId,
-                    ),
-                )
             }
         }
     }

@@ -26,6 +26,7 @@ import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
 import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.operations.RefreshUserOperation
 import com.onesignal.user.internal.operations.SetAliasOperation
 import com.onesignal.user.internal.operations.TransferSubscriptionOperation
 import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
@@ -196,7 +197,15 @@ internal class LoginUserOperationExecutor(
                 subscriptionModel?.setStringProperty(SubscriptionModel::id.name, backendSubscription.id, ModelChangeTags.HYDRATE)
             }
 
-            return ExecutionResponse(ExecutionResult.SUCCESS, idTranslations)
+            val wasPossiblyAnUpsert = identities.isNotEmpty()
+            val followUpOperations =
+                if (wasPossiblyAnUpsert) {
+                    listOf(RefreshUserOperation(createUserOperation.appId, backendOneSignalId))
+                } else {
+                    null
+                }
+
+            return ExecutionResponse(ExecutionResult.SUCCESS, idTranslations, followUpOperations)
         } catch (ex: BackendException) {
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
 

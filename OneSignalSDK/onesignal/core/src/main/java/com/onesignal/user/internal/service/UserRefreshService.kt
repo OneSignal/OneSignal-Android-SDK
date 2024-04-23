@@ -1,5 +1,6 @@
 package com.onesignal.user.internal.service
 
+import com.onesignal.common.IDManager
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -21,6 +22,8 @@ class UserRefreshService(
 ) : IStartableService,
     IApplicationLifecycleHandler {
     private fun refreshUser() {
+        if (IDManager.isLocalId(_identityModelStore.model.onesignalId)) return
+
         _operationRepo.enqueue(
             RefreshUserOperation(
                 _configModelStore.model.appId,
