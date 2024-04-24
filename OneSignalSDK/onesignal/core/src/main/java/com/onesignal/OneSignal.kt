@@ -209,12 +209,12 @@ object OneSignal {
 
     @JvmStatic
     fun addUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
-        oneSignal.addUserJwtInvalidatedListner(listener)
+        oneSignal.addUserJwtInvalidatedListener(listener)
     }
 
     @JvmStatic
     fun removeUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
-        oneSignal.removeUserJwtInvalidatedListner(listener)
+        oneSignal.removeUserJwtInvalidatedListener(listener)
     }
 
     private val oneSignal: IOneSignal by lazy {

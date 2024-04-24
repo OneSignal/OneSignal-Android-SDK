@@ -452,14 +452,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         user.removeUserJwtInvalidatedListner(listener)
     }
 
-    override fun addUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
-        user.addUserJwtInvalidatedListner(listener)
-    }
-
-    override fun removeUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
-        user.removeUserJwtInvalidatedListner(listener)
-    }
-
     private fun createAndSwitchToNewUser(
         suppressBackendOperation: Boolean = false,
         modify: (
