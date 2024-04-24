@@ -134,7 +134,7 @@ interface IOneSignal {
      */
     fun updateUserJwt(externalId: String, token: String)
 
-    fun addUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener)
+    fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
 
-    fun removeUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener)
+    fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
 }

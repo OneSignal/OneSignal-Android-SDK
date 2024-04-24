@@ -434,11 +434,11 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         identityModelStore!!.model.jwtToken = token
     }
 
-    override fun addUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
+    override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
         user.addUserJwtInvalidatedListner(listener)
     }
 
-    override fun removeUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
+    override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
         user.removeUserJwtInvalidatedListner(listener)
     }
 
