@@ -37,6 +37,11 @@ class ExecutionResponse(
      * When specified, any operations that should be prepended to the operation repo.
      */
     val operations: List<Operation>? = null,
+    /**
+     * Optional Integer value maybe returned from the backend.
+     * The module handing this should delay any future requests by this time.
+     */
+    val retryAfterSeconds: Int? = null,
 )
 
 enum class ExecutionResult {

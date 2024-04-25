@@ -18,6 +18,11 @@ class HttpResponse(
      * When non-null, the throwable that was thrown during processing.
      */
     val throwable: Throwable? = null,
+    /**
+     * Optional Integer value maybe returned from the backend.
+     * The module handing this should delay any future requests by this time.
+     */
+    val retryAfterSeconds: Int? = null,
 ) {
     /**
      * Whether the response is a successful one.

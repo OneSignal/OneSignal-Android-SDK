@@ -123,7 +123,7 @@ internal class InAppBackendService(
                 response.payload,
             )
 
-            throw BackendException(response.statusCode, response.payload)
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
     }
 
@@ -151,7 +151,7 @@ internal class InAppBackendService(
             printHttpSuccessForInAppMessageRequest("page impression", response.payload!!)
         } else {
             printHttpErrorForInAppMessageRequest("page impression", response.statusCode, response.payload)
-            throw BackendException(response.statusCode, response.payload)
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
     }
 
@@ -178,7 +178,7 @@ internal class InAppBackendService(
             printHttpSuccessForInAppMessageRequest("impression", response.payload!!)
         } else {
             printHttpErrorForInAppMessageRequest("impression", response.statusCode, response.payload)
-            throw BackendException(response.statusCode, response.payload)
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
     }
 

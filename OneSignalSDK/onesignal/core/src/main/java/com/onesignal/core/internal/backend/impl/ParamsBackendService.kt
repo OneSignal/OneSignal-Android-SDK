@@ -34,7 +34,7 @@ internal class ParamsBackendService(
         val response = _http.get(paramsUrl, CacheKeys.REMOTE_PARAMS)
 
         if (!response.isSuccess) {
-            throw BackendException(response.statusCode, response.payload)
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
 
         val responseJson = JSONObject(response.payload!!)

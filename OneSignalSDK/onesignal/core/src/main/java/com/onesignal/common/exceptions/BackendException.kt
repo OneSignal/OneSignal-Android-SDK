@@ -12,4 +12,9 @@ class BackendException(
      * The response, if one exists.
      */
     val response: String? = null,
+    /**
+     * Optional Integer value maybe returned from the backend.
+     * The module handing this should delay any future requests by this time.
+     */
+    val retryAfterSeconds: Int? = null,
 ) : Exception()
