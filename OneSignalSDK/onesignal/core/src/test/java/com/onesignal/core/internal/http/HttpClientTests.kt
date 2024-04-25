@@ -2,6 +2,7 @@ package com.onesignal.core.internal.http
 
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.core.internal.http.impl.HttpClient
+import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
@@ -12,6 +13,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.beInstanceOf
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 
 class Mocks {
@@ -19,7 +21,7 @@ class Mocks {
     internal val response = MockHttpConnectionFactory.MockResponse()
     internal val factory = MockHttpConnectionFactory(response)
     internal val httpClient by lazy {
-        HttpClient(factory, MockPreferencesService(), mockConfigModel)
+        HttpClient(factory, MockPreferencesService(), mockConfigModel, Time())
     }
 }
 
@@ -207,5 +209,44 @@ class HttpClientTests : FunSpec({
 
         // Then
         response.retryAfterSeconds shouldBe 60
+    }
+
+    // If the OneSignal server ever responses with a Retry-After we want to
+    // make sure we delay any future requests until that delay has past. To
+    // be safe we assume the server's Retry-After value means all traffic
+    // should be delayed until then. If we wanted finer grain control we
+    // could work with the the backend to decide which endpoints should be
+    // affected.
+    test("ensure next request is delayed by the Retry-After value") {
+        // Given
+        val mocks = Mocks()
+
+        val mockRetryAfterResponse = MockHttpConnectionFactory.MockResponse()
+        mockRetryAfterResponse.status = 429
+        mockRetryAfterResponse.mockProps["Retry-After"] = "1"
+        mockRetryAfterResponse.errorResponseBody = "{}"
+
+        val mockSuccessfulResponse = MockHttpConnectionFactory.MockResponse()
+        mockSuccessfulResponse.status = 200
+        mockSuccessfulResponse.responseBody = "{}"
+
+        // When
+        mocks.factory.mockResponse = mockRetryAfterResponse
+        mocks.httpClient.post("URL", JSONObject())
+
+        mocks.factory.mockResponse = mockSuccessfulResponse
+        val response2 =
+            withTimeoutOrNull(999) {
+                mocks.httpClient.post("URL", JSONObject())
+            }
+
+        val response3 =
+            withTimeoutOrNull(100) {
+                mocks.httpClient.post("URL", JSONObject())
+            }
+
+        // Then
+        response2 shouldBe null
+        response3 shouldNotBe null
     }
 })
