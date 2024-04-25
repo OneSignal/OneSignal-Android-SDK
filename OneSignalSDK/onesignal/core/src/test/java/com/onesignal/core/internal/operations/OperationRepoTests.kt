@@ -143,7 +143,7 @@ class OperationRepoTests : FunSpec({
         // Given
         val mocks = Mocks()
         val opRepo = mocks.operationRepo
-        coEvery { opRepo.delayBeforeRetry(any()) } just runs
+        coEvery { opRepo.delayBeforeNextExecution(any(), any()) } just runs
         coEvery {
             mocks.executor.execute(any())
         } returns ExecutionResponse(ExecutionResult.FAIL_RETRY) andThen ExecutionResponse(ExecutionResult.SUCCESS)
@@ -166,7 +166,7 @@ class OperationRepoTests : FunSpec({
                     it[0] shouldBe operation
                 },
             )
-            opRepo.delayBeforeRetry(1)
+            opRepo.delayBeforeNextExecution(1, null)
             mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 1
@@ -175,6 +175,31 @@ class OperationRepoTests : FunSpec({
             )
             mocks.operationModelStore.remove("operationId")
         }
+    }
+
+    test("delays processing queue by retryAfterSeconds from the last executor's results") {
+        // Given
+        val mocks = Mocks()
+        val opRepo = mocks.operationRepo
+        coEvery {
+            mocks.executor.execute(any())
+        } returns ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = 1) andThen ExecutionResponse(ExecutionResult.SUCCESS)
+
+        // When
+        opRepo.start()
+        opRepo.enqueue(mockOperation())
+        val response1 =
+            withTimeoutOrNull(999) {
+                opRepo.enqueueAndWait(mockOperation())
+            }
+        val response2 =
+            withTimeoutOrNull(100) {
+                opRepo.enqueueAndWait(mockOperation())
+            }
+
+        // Then
+        response1 shouldBe null
+        response2 shouldBe true
     }
 
     test("enqueue operation executes and is removed when executed after fail") {

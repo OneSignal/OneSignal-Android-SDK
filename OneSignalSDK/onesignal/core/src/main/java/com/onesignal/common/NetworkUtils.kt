@@ -17,6 +17,7 @@ object NetworkUtils {
             401, 403 -> ResponseStatusType.UNAUTHORIZED
             404, 410 -> ResponseStatusType.MISSING
             409 -> ResponseStatusType.CONFLICT
+            429 -> ResponseStatusType.RETRYABLE
             else -> ResponseStatusType.RETRYABLE
         }
     }

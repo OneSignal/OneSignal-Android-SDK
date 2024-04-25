@@ -178,6 +178,18 @@ class ConfigModel : Model() {
         }
 
     /**
+     * The number of milliseconds times the number of times FAIL_RETRY
+     * is returned from an executor for a specific operation. AKA this
+     * backoff will increase each time we retry a specific operation
+     * by this value.
+     */
+    var opRepoDefaultFailRetryBackoff: Long
+        get() = getLongProperty(::opRepoDefaultFailRetryBackoff.name) { 15_000 }
+        set(value) {
+            setLongProperty(::opRepoDefaultFailRetryBackoff.name, value)
+        }
+
+    /**
      * The minimum number of milliseconds required to pass to allow the fetching of IAM to occur.
      */
     var fetchIAMMinInterval: Long

@@ -48,6 +48,7 @@ object MockHelper {
         configModel.opRepoPostWakeDelay = 1
         configModel.opRepoPostCreateDelay = 1
         configModel.opRepoPostCreateRetryUpTo = 1
+        configModel.opRepoDefaultFailRetryBackoff = 1
 
         configModel.appId = DEFAULT_APP_ID
 

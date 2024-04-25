@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
+import kotlin.math.max
 import kotlin.reflect.KClass
 
 internal class OperationRepo(
@@ -221,6 +222,7 @@ internal class OperationRepo(
                 }
             }
 
+            var highestRetries = 0
             when (response.result) {
                 ExecutionResult.SUCCESS -> {
                     // on success we remove the operation from the store and wake any waiters
@@ -248,7 +250,6 @@ internal class OperationRepo(
                 ExecutionResult.FAIL_RETRY -> {
                     Logging.error("Operation execution failed, retrying: $operations")
                     // add back all operations to the front of the queue to be re-executed.
-                    var highestRetries = 0
                     synchronized(queue) {
                         ops.reversed().forEach {
                             if (++it.retries > highestRetries) {
@@ -257,7 +258,6 @@ internal class OperationRepo(
                             queue.add(0, it)
                         }
                     }
-                    delayBeforeRetry(highestRetries)
                 }
                 ExecutionResult.FAIL_PAUSE_OPREPO -> {
                     Logging.error("Operation execution failed with eventual retry, pausing the operation repo: $operations")
@@ -282,6 +282,8 @@ internal class OperationRepo(
                     }
                 }
             }
+
+            delayBeforeNextExecution(highestRetries, response.retryAfterSeconds)
         } catch (e: Throwable) {
             Logging.log(LogLevel.ERROR, "Error attempting to execute operation: $ops", e)
 
@@ -291,8 +293,18 @@ internal class OperationRepo(
         }
     }
 
-    suspend fun delayBeforeRetry(retries: Int) {
-        val delayFor = retries * 15_000L
+    /**
+     * Wait which ever is longer, retryAfterSeconds returned by the server,
+     * or based on the retry count.
+     */
+    suspend fun delayBeforeNextExecution(
+        retries: Int,
+        retryAfterSeconds: Int?,
+    ) {
+        Logging.debug("retryAfterSeconds: $retryAfterSeconds")
+        val retryAfterSecondsNonNull = retryAfterSeconds?.toLong() ?: 0L
+        val delayForOnRetries = retries * _configModelStore.model.opRepoDefaultFailRetryBackoff
+        val delayFor = max(delayForOnRetries, retryAfterSecondsNonNull * 1_000)
         if (delayFor < 1) return
         Logging.error("Operations being delay for: $delayFor ms")
         delay(delayFor)

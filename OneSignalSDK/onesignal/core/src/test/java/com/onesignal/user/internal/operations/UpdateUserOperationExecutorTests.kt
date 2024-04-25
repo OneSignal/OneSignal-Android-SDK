@@ -311,7 +311,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
     test("update user single operation fails with MISSING, but isInMissingRetryWindow") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } throws BackendException(404)
+        coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } throws BackendException(404, retryAfterSeconds = 10)
 
         // Given
         val mockIdentityModelStore = MockHelper.identityModelStore()
@@ -337,5 +337,6 @@ class UpdateUserOperationExecutorTests : FunSpec({
 
         // Then
         response.result shouldBe ExecutionResult.FAIL_RETRY
+        response.retryAfterSeconds shouldBe 10
     }
 })
