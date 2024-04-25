@@ -42,8 +42,8 @@ internal class MockHttpConnectionFactory(
         override fun connect() {
         }
 
-        override fun getHeaderField(name: String): String {
-            return mockResponse.mockProps[name]!!
+        override fun getHeaderField(name: String): String? {
+            return mockResponse.mockProps[name]
         }
 
         @Throws(IOException::class)
