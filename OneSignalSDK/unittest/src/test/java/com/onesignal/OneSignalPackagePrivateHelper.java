@@ -22,8 +22,8 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static com.test.onesignal.TestHelpers.threadAndTaskWait;
 import static org.robolectric.Shadows.shadowOf;
@@ -295,7 +295,7 @@ public class OneSignalPackagePrivateHelper {
       return OneSignal.getDelayedInitParams();
    }
 
-   public static ConcurrentLinkedQueue<Runnable> OneSignal_taskQueueWaitingForInit() {
+   public static Queue<Runnable> OneSignal_taskQueueWaitingForInit() {
       return OneSignal.getTaskRemoteController().getTaskQueueWaitingForInit();
    }
 
