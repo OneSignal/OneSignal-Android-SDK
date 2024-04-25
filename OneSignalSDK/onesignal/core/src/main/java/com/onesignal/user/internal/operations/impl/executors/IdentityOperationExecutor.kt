@@ -61,23 +61,27 @@ internal class IdentityOperationExecutor(
 
                 return when (responseType) {
                     NetworkUtils.ResponseStatusType.RETRYABLE ->
-                        ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                        ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                     NetworkUtils.ResponseStatusType.INVALID ->
                         ExecutionResponse(ExecutionResult.FAIL_NORETRY)
                     NetworkUtils.ResponseStatusType.CONFLICT ->
-                        ExecutionResponse(ExecutionResult.FAIL_CONFLICT)
+                        ExecutionResponse(ExecutionResult.FAIL_CONFLICT, retryAfterSeconds = ex.retryAfterSeconds)
                     NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
-                        ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                        ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
                     NetworkUtils.ResponseStatusType.MISSING -> {
                         if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(lastOperation.onesignalId)) {
-                            return ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                            return ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                         }
 
                         val rebuildOps = _buildUserService.getRebuildOperationsIfCurrentUser(lastOperation.appId, lastOperation.onesignalId)
                         if (rebuildOps == null) {
                             return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
                         } else {
-                            return ExecutionResponse(ExecutionResult.FAIL_RETRY, operations = rebuildOps)
+                            return ExecutionResponse(
+                                ExecutionResult.FAIL_RETRY,
+                                operations = rebuildOps,
+                                retryAfterSeconds = ex.retryAfterSeconds,
+                            )
                         }
                     }
                 }
@@ -100,17 +104,17 @@ internal class IdentityOperationExecutor(
 
                 return when (responseType) {
                     NetworkUtils.ResponseStatusType.RETRYABLE ->
-                        ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                        ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                     NetworkUtils.ResponseStatusType.CONFLICT ->
                         // A conflict indicates the alias doesn't exist on the user it's being deleted from. This is good!
                         ExecutionResponse(ExecutionResult.SUCCESS)
                     NetworkUtils.ResponseStatusType.INVALID ->
                         ExecutionResponse(ExecutionResult.FAIL_NORETRY)
                     NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
-                        ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                        ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
                     NetworkUtils.ResponseStatusType.MISSING -> {
                         return if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(lastOperation.onesignalId)) {
-                            ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                            ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                         } else {
                             // This means either the User or the Alias was already
                             // deleted, either way the end state is the same, the

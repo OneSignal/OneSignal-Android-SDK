@@ -24,7 +24,7 @@ internal class NotificationBackendService(
         var response = _httpClient.put("notifications/$notificationId/report_received", jsonBody)
 
         if (!response.isSuccess) {
-            throw BackendException(response.statusCode, response.payload)
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
     }
 
@@ -43,7 +43,7 @@ internal class NotificationBackendService(
         var response = _httpClient.put("notifications/$notificationId", jsonBody)
 
         if (!response.isSuccess) {
-            throw BackendException(response.statusCode, response.payload)
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
     }
 }

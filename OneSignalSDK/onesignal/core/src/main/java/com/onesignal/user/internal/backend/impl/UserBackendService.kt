@@ -39,7 +39,7 @@ internal class UserBackendService(
         val response = _httpClient.post("apps/$appId/users", requestJSON)
 
         if (!response.isSuccess) {
-            throw BackendException(response.statusCode, response.payload)
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
 
         return JSONConverter.convertToCreateUserResponse(JSONObject(response.payload!!))
@@ -68,7 +68,7 @@ internal class UserBackendService(
         val response = _httpClient.patch("apps/$appId/users/by/$aliasLabel/$aliasValue", jsonObject)
 
         if (!response.isSuccess) {
-            throw BackendException(response.statusCode, response.payload)
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
     }
 
@@ -80,7 +80,7 @@ internal class UserBackendService(
         val response = _httpClient.get("apps/$appId/users/by/$aliasLabel/$aliasValue")
 
         if (!response.isSuccess) {
-            throw BackendException(response.statusCode, response.payload)
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
 
         return JSONConverter.convertToCreateUserResponse(JSONObject(response.payload))

@@ -147,4 +147,73 @@ class HttpClientTests : FunSpec({
         response.statusCode shouldBe 400
         response.payload shouldBe payload
     }
+
+    test("should parse valid Retry-After, on 429") {
+        // Given
+        val mockResponse = MockHttpConnectionFactory.MockResponse()
+        mockResponse.status = 429
+        mockResponse.mockProps["Retry-After"] = "1234"
+        mockResponse.errorResponseBody = "{}"
+
+        val factory = MockHttpConnectionFactory(mockResponse)
+        val httpClient = HttpClient(factory, MockPreferencesService(), MockHelper.configModelStore())
+
+        // When
+        val response = httpClient.post("URL", JSONObject())
+
+        // Then
+        response.retryAfterSeconds shouldBe 1234
+    }
+
+    test("should parse valid Retry-After, on 500") {
+        // Given
+        val mockResponse = MockHttpConnectionFactory.MockResponse()
+        mockResponse.status = 500
+        mockResponse.mockProps["Retry-After"] = "1234"
+        mockResponse.errorResponseBody = "{}"
+
+        val factory = MockHttpConnectionFactory(mockResponse)
+        val httpClient = HttpClient(factory, MockPreferencesService(), MockHelper.configModelStore())
+
+        // When
+        val response = httpClient.post("URL", JSONObject())
+
+        // Then
+        response.retryAfterSeconds shouldBe 1234
+    }
+
+    test("should use set fallback retryAfterSeconds if can't parse Retry-After") {
+        // Given
+        val mockResponse = MockHttpConnectionFactory.MockResponse()
+        mockResponse.status = 429
+        mockResponse.mockProps["Retry-After"] = "INVALID FORMAT"
+        mockResponse.errorResponseBody = "{}"
+
+        val factory = MockHttpConnectionFactory(mockResponse)
+        val httpClient = HttpClient(factory, MockPreferencesService(), MockHelper.configModelStore())
+
+        // When
+        val response = httpClient.post("URL", JSONObject())
+
+        // Then
+        response.retryAfterSeconds shouldBe 60
+    }
+
+    // Since 429 means "Too Many Requests", for some reason the server doesn't give us a
+    // Retry-After we should assume a our safe fallback.
+    test("should use set fallback retryAfterSeconds if 429 and Retry-After is missing") {
+        // Given
+        val mockResponse = MockHttpConnectionFactory.MockResponse()
+        mockResponse.status = 429
+        mockResponse.errorResponseBody = "{}"
+
+        val factory = MockHttpConnectionFactory(mockResponse)
+        val httpClient = HttpClient(factory, MockPreferencesService(), MockHelper.configModelStore())
+
+        // When
+        val response = httpClient.post("URL", JSONObject())
+
+        // Then
+        response.retryAfterSeconds shouldBe 60
+    }
 })

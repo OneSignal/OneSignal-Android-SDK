@@ -24,7 +24,7 @@ internal class SubscriptionBackendService(
         val response = _httpClient.post("apps/$appId/users/by/$aliasLabel/$aliasValue/subscriptions", requestJSON)
 
         if (!response.isSuccess) {
-            throw BackendException(response.statusCode, response.payload)
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
 
         val responseJSON = JSONObject(response.payload!!)
@@ -48,7 +48,7 @@ internal class SubscriptionBackendService(
         val response = _httpClient.patch("apps/$appId/subscriptions/$subscriptionId", requestJSON)
 
         if (!response.isSuccess) {
-            throw BackendException(response.statusCode, response.payload)
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
     }
 
@@ -59,7 +59,7 @@ internal class SubscriptionBackendService(
         val response = _httpClient.delete("apps/$appId/subscriptions/$subscriptionId")
 
         if (!response.isSuccess) {
-            throw BackendException(response.statusCode, response.payload)
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
     }
 
@@ -76,7 +76,7 @@ internal class SubscriptionBackendService(
         val response = _httpClient.patch("apps/$appId/subscriptions/$subscriptionId/owner", requestJSON)
 
         if (!response.isSuccess) {
-            throw BackendException(response.statusCode, response.payload)
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
     }
 
@@ -87,7 +87,7 @@ internal class SubscriptionBackendService(
         val response = _httpClient.get("apps/$appId/subscriptions/$subscriptionId/user/identity")
 
         if (!response.isSuccess) {
-            throw BackendException(response.statusCode, response.payload)
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
 
         val responseJSON = JSONObject(response.payload!!)

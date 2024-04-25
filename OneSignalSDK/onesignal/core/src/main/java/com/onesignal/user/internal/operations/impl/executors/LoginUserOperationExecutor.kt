@@ -211,9 +211,9 @@ internal class LoginUserOperationExecutor(
 
             return when (responseType) {
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
-                    ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                    ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
-                    ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                    ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
                 else ->
                     ExecutionResponse(ExecutionResult.FAIL_PAUSE_OPREPO)
             }

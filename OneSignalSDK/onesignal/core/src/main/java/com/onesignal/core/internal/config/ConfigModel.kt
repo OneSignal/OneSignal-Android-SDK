@@ -112,6 +112,16 @@ class ConfigModel : Model() {
         }
 
     /**
+     * The fallback Retry-After to use if the header is present, but the server
+     * give us a format we can't parse.
+     */
+    var httpRetryAfterParseFailFallback: Int
+        get() = getIntProperty(::httpRetryAfterParseFailFallback.name) { 60 }
+        set(value) {
+            setIntProperty(::httpRetryAfterParseFailFallback.name, value)
+        }
+
+    /**
      * Maximum time in milliseconds a user can spend out of focus before a new session is created.
      */
     var sessionFocusTimeout: Long
