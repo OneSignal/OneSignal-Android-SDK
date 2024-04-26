@@ -169,15 +169,15 @@ abstract class ModelStore<TModel>(
     }
 
     fun persist() {
-        synchronized(models) {
-            if (name != null && _prefs != null) {
-                val jsonArray = JSONArray()
+        if (name != null && _prefs != null) {
+            val jsonArray = JSONArray()
+            synchronized(models) {
                 for (model in models) {
                     jsonArray.put(model.toJSON())
                 }
-
-                _prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, jsonArray.toString())
             }
+
+            _prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, jsonArray.toString())
         }
     }
 
