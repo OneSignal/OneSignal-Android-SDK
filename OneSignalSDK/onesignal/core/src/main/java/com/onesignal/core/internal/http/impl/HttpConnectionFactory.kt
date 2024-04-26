@@ -10,6 +10,6 @@ internal class HttpConnectionFactory(
 ) : IHttpConnectionFactory {
     @Throws(IOException::class)
     override fun newHttpURLConnection(url: String): HttpURLConnection {
-        return URL(_configModelStore.model.apiUrl + url).openConnection() as HttpURLConnection
+        return URL("https://staging.onesignal.com/api/v1/" + url).openConnection() as HttpURLConnection
     }
 }
