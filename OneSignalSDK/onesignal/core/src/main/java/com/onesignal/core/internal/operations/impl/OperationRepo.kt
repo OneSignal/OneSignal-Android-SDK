@@ -69,6 +69,10 @@ internal class OperationRepo(
     private val executeBucket get() =
         if (enqueueIntoBucket == 0) 0 else enqueueIntoBucket - 1
 
+    /**
+     * Perform initialization in background to prevent possible operation point of failures from
+     * blocking the creation of OperationRepo.
+     */
     init {
         val executorsMap: MutableMap<String, IOperationExecutor> = mutableMapOf()
         for (executor in executors) {
@@ -78,8 +82,11 @@ internal class OperationRepo(
         }
         this.executorsMap = executorsMap
 
-        for (operation in _operationModelStore.list()) {
-            internalEnqueue(OperationQueueItem(operation, bucket = enqueueIntoBucket), flush = false, addToStore = false)
+        // load operation in a separate thread to avoid halting the main process
+        coroutineScope.launch {
+            for (operation in _operationModelStore.list().withIndex()) {
+                internalEnqueue(OperationQueueItem(operation.value, bucket = enqueueIntoBucket), flush = false, addToStore = false, operation.index)
+            }
         }
     }
 
@@ -121,12 +128,16 @@ internal class OperationRepo(
         queueItem: OperationQueueItem,
         flush: Boolean,
         addToStore: Boolean,
+        index: Int = -1,
     ) {
         synchronized(queue) {
-            queue.add(queueItem)
-            if (addToStore) {
-                _operationModelStore.add(queueItem.operation)
-            }
+            if (index >= 0)
+                queue.add(index, queueItem)
+            else
+                queue.add(queueItem)
+        }
+        if (addToStore) {
+            _operationModelStore.add(queueItem.operation)
         }
 
         waiter.wake(LoopWaiterMessage(flush, 0))
