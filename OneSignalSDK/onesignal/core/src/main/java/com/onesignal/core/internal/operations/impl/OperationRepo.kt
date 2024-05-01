@@ -81,13 +81,6 @@ internal class OperationRepo(
             }
         }
         this.executorsMap = executorsMap
-
-        // load operation in a separate thread to avoid halting the main process
-        coroutineScope.launch {
-            for (operation in _operationModelStore.list().withIndex()) {
-                internalEnqueue(OperationQueueItem(operation.value, bucket = enqueueIntoBucket), flush = false, addToStore = false, operation.index)
-            }
-        }
     }
 
     override fun <T : Operation> containsInstanceOf(type: KClass<T>): Boolean {
@@ -98,7 +91,11 @@ internal class OperationRepo(
 
     override fun start() {
         paused = false
-        coroutineScope.launch { processQueueForever() }
+        coroutineScope.launch {
+            // load saved operations first then start processing the queue to ensure correct operation order
+            loadSavedOperations()
+            processQueueForever()
+        }
     }
 
     override fun enqueue(
@@ -128,10 +125,10 @@ internal class OperationRepo(
         queueItem: OperationQueueItem,
         flush: Boolean,
         addToStore: Boolean,
-        index: Int = -1,
+        index: Int? = null,
     ) {
         synchronized(queue) {
-            if (index >= 0)
+            if (index != null)
                 queue.add(index, queueItem)
             else
                 queue.add(queueItem)
@@ -362,5 +359,17 @@ internal class OperationRepo(
         }
 
         return ops
+    }
+
+    /**
+     * Load saved operations from preference service and add them into the queue
+     * NOTE: sometimes the loading might take longer than expectedly due to device's state
+     */
+    private fun loadSavedOperations() {
+        // load operation in a separate thread to avoid halting the main process
+        _operationModelStore.loadOperations()
+        for (operation in _operationModelStore.list().withIndex()) {
+            internalEnqueue(OperationQueueItem(operation.value, bucket = enqueueIntoBucket), flush = false, addToStore = false, operation.index)
+        }
     }
 }
