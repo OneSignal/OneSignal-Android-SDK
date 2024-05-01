@@ -11,11 +11,13 @@ import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
@@ -29,7 +31,14 @@ internal class HttpClient(
     private val _connectionFactory: IHttpConnectionFactory,
     private val _prefs: IPreferencesService,
     private val _configModelStore: ConfigModelStore,
+    private val _time: ITime,
 ) : IHttpClient {
+    /**
+     * Delay making network requests until we reach this time.
+     * Used when the OneSignal backend returns a Retry-After value.
+     */
+    private var delayNewRequestsUntil = 0L
+
     override suspend fun post(
         url: String,
         body: JSONObject,
@@ -76,6 +85,9 @@ internal class HttpClient(
             )
             return HttpResponse(0, null, null)
         }
+
+        val delayUntil = delayNewRequestsUntil - _time.currentTimeMillis
+        if (delayUntil > 0) delay(delayUntil)
 
         try {
             return withTimeout(getThreadTimeout(timeout).toLong()) {
@@ -171,6 +183,10 @@ internal class HttpClient(
                     // Network request is made from getResponseCode()
                     httpResponse = con.responseCode
 
+                    val retryAfter = retryAfterFromResponse(con)
+                    val newDelayUntil = _time.currentTimeMillis + (retryAfter ?: 0) * 1_000
+                    if (newDelayUntil > delayNewRequestsUntil) delayNewRequestsUntil = newDelayUntil
+
                     when (httpResponse) {
                         HttpURLConnection.HTTP_NOT_MODIFIED -> {
                             val cachedResponse =
@@ -181,7 +197,7 @@ internal class HttpClient(
                             Logging.debug("HttpClient: ${method ?: "GET"} $url - Using Cached response due to 304: " + cachedResponse)
 
                             // TODO: SHOULD RETURN OK INSTEAD OF NOT_MODIFIED TO MAKE TRANSPARENT?
-                            retVal = HttpResponse(httpResponse, cachedResponse)
+                            retVal = HttpResponse(httpResponse, cachedResponse, retryAfterSeconds = retryAfter)
                         }
                         HttpURLConnection.HTTP_ACCEPTED, HttpURLConnection.HTTP_CREATED, HttpURLConnection.HTTP_OK -> {
                             val inputStream = con.inputStream
@@ -208,7 +224,7 @@ internal class HttpClient(
                                 }
                             }
 
-                            retVal = HttpResponse(httpResponse, json)
+                            retVal = HttpResponse(httpResponse, json, retryAfterSeconds = retryAfter)
                         }
                         else -> {
                             Logging.debug("HttpClient: ${method ?: "GET"} $url - FAILED STATUS: $httpResponse")
@@ -229,7 +245,7 @@ internal class HttpClient(
                                 Logging.warn("HttpClient: $method HTTP Code: $httpResponse No response body!")
                             }
 
-                            retVal = HttpResponse(httpResponse, jsonResponse)
+                            retVal = HttpResponse(httpResponse, jsonResponse, retryAfterSeconds = retryAfter)
                         }
                     }
                 } catch (t: Throwable) {
@@ -251,6 +267,22 @@ internal class HttpClient(
 
     private fun getThreadTimeout(timeout: Int): Int {
         return timeout + 5000
+    }
+
+    /**
+     * Reads the HTTP Retry-After from the response.
+     * Only supports number format, not the date format.
+     */
+    private fun retryAfterFromResponse(con: HttpURLConnection): Int? {
+        val retryAfterStr = con.getHeaderField("Retry-After")
+        return if (retryAfterStr != null) {
+            Logging.debug("HttpClient: Response Retry-After: $retryAfterStr")
+            retryAfterStr.toIntOrNull() ?: _configModelStore.model.httpRetryAfterParseFailFallback
+        } else if (con.responseCode == 429) {
+            _configModelStore.model.httpRetryAfterParseFailFallback
+        } else {
+            null
+        }
     }
 
     companion object {

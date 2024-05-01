@@ -2,6 +2,7 @@ package com.onesignal.core.internal.http
 
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.core.internal.http.impl.HttpClient
+import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
@@ -12,7 +13,17 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.beInstanceOf
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
+
+class Mocks {
+    internal val mockConfigModel = MockHelper.configModelStore()
+    internal val response = MockHttpConnectionFactory.MockResponse()
+    internal val factory = MockHttpConnectionFactory(response)
+    internal val httpClient by lazy {
+        HttpClient(factory, MockPreferencesService(), mockConfigModel, Time())
+    }
+}
 
 class HttpClientTests : FunSpec({
 
@@ -22,20 +33,16 @@ class HttpClientTests : FunSpec({
 
     test("timeout request will give a bad response") {
         // Given
-        val mockResponse = MockHttpConnectionFactory.MockResponse()
-        mockResponse.mockRequestTime = 10000 // HttpClient will add 5 seconds to the httpTimeout to "give up" so we need to fail the request more than 5 seconds beyond our timeout.
-
-        val mockConfigModel =
-            MockHelper.configModelStore {
-                it.httpTimeout = 200
-                it.httpGetTimeout = 200
-            }
-
-        val factory = MockHttpConnectionFactory(mockResponse)
-        val httpClient = HttpClient(factory, MockPreferencesService(), mockConfigModel)
+        val mocks = Mocks()
+        // HttpClient will add 5 seconds to the httpTimeout to "give up" so we need to fail the request more than 5 seconds beyond our timeout.
+        mocks.response.mockRequestTime = 10_000
+        mocks.mockConfigModel.model.let {
+            it.httpGetTimeout = 200
+            it.httpGetTimeout = 200
+        }
 
         // When
-        val response = httpClient.get("URL")
+        val response = mocks.httpClient.get("URL")
 
         // Then
         response.statusCode shouldBe 0
@@ -45,9 +52,8 @@ class HttpClientTests : FunSpec({
 
     test("SDKHeader is included in all requests") {
         // Given
-        val mockResponse = MockHttpConnectionFactory.MockResponse()
-        val factory = MockHttpConnectionFactory(mockResponse)
-        val httpClient = HttpClient(factory, MockPreferencesService(), MockHelper.configModelStore())
+        val mocks = Mocks()
+        val httpClient = mocks.httpClient
 
         // When
         httpClient.get("URL")
@@ -57,30 +63,31 @@ class HttpClientTests : FunSpec({
         httpClient.put("URL", JSONObject())
 
         // Then
-        for (connection in factory.connections) {
+        for (connection in mocks.factory.connections) {
             connection.getRequestProperty("SDK-Version") shouldBe "onesignal/android/${OneSignalUtils.SDK_VERSION}"
         }
     }
 
     test("GET with cache key uses cache when unchanged") {
         // Given
+        val mocks = Mocks()
         val payload = "RESPONSE IS THIS"
         val mockResponse1 = MockHttpConnectionFactory.MockResponse()
         mockResponse1.status = 200
         mockResponse1.responseBody = payload
         mockResponse1.mockProps.put("etag", "MOCK_ETAG")
+        mocks.factory.mockResponse = mockResponse1
 
         val mockResponse2 = MockHttpConnectionFactory.MockResponse()
         mockResponse2.status = 304
 
-        val factory = MockHttpConnectionFactory(mockResponse1)
-        val httpClient = HttpClient(factory, MockPreferencesService(), MockHelper.configModelStore())
+        val factory = mocks.factory
+        val httpClient = mocks.httpClient
 
         // When
-        var response1 = httpClient.get("URL", "CACHE_KEY")
-
+        val response1 = httpClient.get("URL", "CACHE_KEY")
         factory.mockResponse = mockResponse2
-        var response2 = httpClient.get("URL", "CACHE_KEY")
+        val response2 = httpClient.get("URL", "CACHE_KEY")
 
         // Then
         response1.statusCode shouldBe 200
@@ -92,12 +99,14 @@ class HttpClientTests : FunSpec({
 
     test("GET with cache key replaces cache when changed") {
         // Given
+        val mocks = Mocks()
         val payload1 = "RESPONSE IS THIS"
         val payload2 = "A DIFFERENT RESPONSE"
         val mockResponse1 = MockHttpConnectionFactory.MockResponse()
         mockResponse1.status = 200
         mockResponse1.responseBody = payload1
         mockResponse1.mockProps.put("etag", "MOCK_ETAG1")
+        mocks.factory.mockResponse = mockResponse1
 
         val mockResponse2 = MockHttpConnectionFactory.MockResponse()
         mockResponse2.status = 200
@@ -107,17 +116,17 @@ class HttpClientTests : FunSpec({
         val mockResponse3 = MockHttpConnectionFactory.MockResponse()
         mockResponse3.status = 304
 
-        val factory = MockHttpConnectionFactory(mockResponse1)
-        val httpClient = HttpClient(factory, MockPreferencesService(), MockHelper.configModelStore())
+        val factory = mocks.factory
+        val httpClient = mocks.httpClient
 
         // When
-        var response1 = httpClient.get("URL", "CACHE_KEY")
+        val response1 = httpClient.get("URL", "CACHE_KEY")
 
         factory.mockResponse = mockResponse2
-        var response2 = httpClient.get("URL", "CACHE_KEY")
+        val response2 = httpClient.get("URL", "CACHE_KEY")
 
         factory.mockResponse = mockResponse3
-        var response3 = httpClient.get("URL", "CACHE_KEY")
+        val response3 = httpClient.get("URL", "CACHE_KEY")
 
         // Then
         response1.statusCode shouldBe 200
@@ -132,19 +141,112 @@ class HttpClientTests : FunSpec({
 
     test("Error response") {
         // Given
+        val mocks = Mocks()
         val payload = "ERROR RESPONSE"
-        val mockResponse = MockHttpConnectionFactory.MockResponse()
-        mockResponse.status = 400
-        mockResponse.errorResponseBody = payload
-
-        val factory = MockHttpConnectionFactory(mockResponse)
-        val httpClient = HttpClient(factory, MockPreferencesService(), MockHelper.configModelStore())
+        mocks.response.status = 400
+        mocks.response.errorResponseBody = payload
 
         // When
-        var response = httpClient.post("URL", JSONObject())
+        val response = mocks.httpClient.post("URL", JSONObject())
 
         // Then
         response.statusCode shouldBe 400
         response.payload shouldBe payload
+    }
+
+    test("should parse valid Retry-After, on 429") {
+        // Given
+        val mocks = Mocks()
+        mocks.response.status = 429
+        mocks.response.mockProps["Retry-After"] = "1234"
+        mocks.response.errorResponseBody = "{}"
+
+        // When
+        val response = mocks.httpClient.post("URL", JSONObject())
+
+        // Then
+        response.retryAfterSeconds shouldBe 1234
+    }
+
+    test("should parse valid Retry-After, on 500") {
+        // Given
+        val mocks = Mocks()
+        mocks.response.status = 500
+        mocks.response.mockProps["Retry-After"] = "1234"
+        mocks.response.errorResponseBody = "{}"
+
+        // When
+        val response = mocks.httpClient.post("URL", JSONObject())
+
+        // Then
+        response.retryAfterSeconds shouldBe 1234
+    }
+
+    test("should use set fallback retryAfterSeconds if can't parse Retry-After") {
+        // Given
+        val mocks = Mocks()
+        mocks.response.status = 429
+        mocks.response.mockProps["Retry-After"] = "INVALID FORMAT"
+        mocks.response.errorResponseBody = "{}"
+
+        // When
+        val response = mocks.httpClient.post("URL", JSONObject())
+
+        // Then
+        response.retryAfterSeconds shouldBe 60
+    }
+
+    // Since 429 means "Too Many Requests", for some reason the server doesn't give us a
+    // Retry-After we should assume a our safe fallback.
+    test("should use set fallback retryAfterSeconds if 429 and Retry-After is missing") {
+        // Given
+        val mocks = Mocks()
+        mocks.response.status = 429
+        mocks.response.errorResponseBody = "{}"
+
+        // When
+        val response = mocks.httpClient.post("URL", JSONObject())
+
+        // Then
+        response.retryAfterSeconds shouldBe 60
+    }
+
+    // If the OneSignal server ever responses with a Retry-After we want to
+    // make sure we delay any future requests until that delay has past. To
+    // be safe we assume the server's Retry-After value means all traffic
+    // should be delayed until then. If we wanted finer grain control we
+    // could work with the the backend to decide which endpoints should be
+    // affected.
+    test("ensure next request is delayed by the Retry-After value") {
+        // Given
+        val mocks = Mocks()
+
+        val mockRetryAfterResponse = MockHttpConnectionFactory.MockResponse()
+        mockRetryAfterResponse.status = 429
+        mockRetryAfterResponse.mockProps["Retry-After"] = "1"
+        mockRetryAfterResponse.errorResponseBody = "{}"
+
+        val mockSuccessfulResponse = MockHttpConnectionFactory.MockResponse()
+        mockSuccessfulResponse.status = 200
+        mockSuccessfulResponse.responseBody = "{}"
+
+        // When
+        mocks.factory.mockResponse = mockRetryAfterResponse
+        mocks.httpClient.post("URL", JSONObject())
+
+        mocks.factory.mockResponse = mockSuccessfulResponse
+        val response2 =
+            withTimeoutOrNull(999) {
+                mocks.httpClient.post("URL", JSONObject())
+            }
+
+        val response3 =
+            withTimeoutOrNull(100) {
+                mocks.httpClient.post("URL", JSONObject())
+            }
+
+        // Then
+        response2 shouldBe null
+        response3 shouldNotBe null
     }
 })

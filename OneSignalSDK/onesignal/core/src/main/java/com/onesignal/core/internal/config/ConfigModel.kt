@@ -112,6 +112,16 @@ class ConfigModel : Model() {
         }
 
     /**
+     * The fallback Retry-After to use if the header is present, but the server
+     * give us a format we can't parse.
+     */
+    var httpRetryAfterParseFailFallback: Int
+        get() = getIntProperty(::httpRetryAfterParseFailFallback.name) { 60 }
+        set(value) {
+            setIntProperty(::httpRetryAfterParseFailFallback.name, value)
+        }
+
+    /**
      * Maximum time in milliseconds a user can spend out of focus before a new session is created.
      */
     var sessionFocusTimeout: Long
@@ -165,6 +175,18 @@ class ConfigModel : Model() {
         get() = getLongProperty(::opRepoPostCreateRetryUpTo.name) { 60_000 }
         set(value) {
             setLongProperty(::opRepoPostCreateRetryUpTo.name, value)
+        }
+
+    /**
+     * The number of milliseconds times the number of times FAIL_RETRY
+     * is returned from an executor for a specific operation. AKA this
+     * backoff will increase each time we retry a specific operation
+     * by this value.
+     */
+    var opRepoDefaultFailRetryBackoff: Long
+        get() = getLongProperty(::opRepoDefaultFailRetryBackoff.name) { 15_000 }
+        set(value) {
+            setLongProperty(::opRepoDefaultFailRetryBackoff.name, value)
         }
 
     /**

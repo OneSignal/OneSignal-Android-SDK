@@ -130,22 +130,22 @@ internal class SubscriptionOperationExecutor(
 
             return when (responseType) {
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
-                    ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                    ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                 NetworkUtils.ResponseStatusType.CONFLICT,
                 NetworkUtils.ResponseStatusType.INVALID,
                 ->
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
-                    ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                    ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
                 NetworkUtils.ResponseStatusType.MISSING -> {
                     if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(createOperation.onesignalId)) {
-                        return ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                        return ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                     }
                     val operations = _buildUserService.getRebuildOperationsIfCurrentUser(createOperation.appId, createOperation.onesignalId)
                     if (operations == null) {
                         return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
                     } else {
-                        return ExecutionResponse(ExecutionResult.FAIL_RETRY, operations = operations)
+                        return ExecutionResponse(ExecutionResult.FAIL_RETRY, operations = operations, retryAfterSeconds = ex.retryAfterSeconds)
                     }
                 }
             }
@@ -181,7 +181,7 @@ internal class SubscriptionOperationExecutor(
 
             return when (responseType) {
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
-                    ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                    ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                 NetworkUtils.ResponseStatusType.MISSING -> {
                     if (ex.statusCode == 404 &&
                         listOf(
@@ -189,7 +189,7 @@ internal class SubscriptionOperationExecutor(
                             lastOperation.subscriptionId,
                         ).any { _newRecordState.isInMissingRetryWindow(it) }
                     ) {
-                        return ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                        return ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                     }
                     // toss this, but create an identical CreateSubscriptionOperation to re-create the subscription being updated.
                     ExecutionResponse(
@@ -229,7 +229,7 @@ internal class SubscriptionOperationExecutor(
 
             return when (responseType) {
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
-                    ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                    ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                 else ->
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)
             }
@@ -269,14 +269,14 @@ internal class SubscriptionOperationExecutor(
                             op.subscriptionId,
                         ).any { _newRecordState.isInMissingRetryWindow(it) }
                     ) {
-                        ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                        ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                     } else {
                         // if the subscription is missing, we are good!
                         ExecutionResponse(ExecutionResult.SUCCESS)
                     }
                 }
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
-                    ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                    ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                 else ->
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)
             }

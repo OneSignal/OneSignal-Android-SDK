@@ -56,7 +56,14 @@ class IdentityOperationExecutorTests : FunSpec({
     test("execution of set alias operation with network timeout") {
         // Given
         val mockIdentityBackendService = mockk<IIdentityBackendService>()
-        coEvery { mockIdentityBackendService.setAlias(any(), any(), any(), any()) } throws BackendException(408, "TIMEOUT")
+        coEvery {
+            mockIdentityBackendService.setAlias(
+                any(),
+                any(),
+                any(),
+                any(),
+            )
+        } throws BackendException(408, "TIMEOUT", retryAfterSeconds = 10)
 
         val mockIdentityModelStore = MockHelper.identityModelStore()
         val mockBuildUserService = mockk<IRebuildUserService>()
@@ -71,6 +78,7 @@ class IdentityOperationExecutorTests : FunSpec({
 
         // Then
         response.result shouldBe ExecutionResult.FAIL_RETRY
+        response.retryAfterSeconds shouldBe 10
     }
 
     test("execution of set alias operation with non-retryable error") {

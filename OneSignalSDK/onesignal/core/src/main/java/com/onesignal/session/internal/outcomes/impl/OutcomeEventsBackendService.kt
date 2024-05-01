@@ -49,7 +49,7 @@ internal class OutcomeEventsBackendService(private val _http: IHttpClient) :
         val response = _http.post("outcomes/measure", jsonObject)
 
         if (!response.isSuccess) {
-            throw BackendException(response.statusCode, response.payload)
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
     }
 }

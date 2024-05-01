@@ -133,18 +133,22 @@ internal class RefreshUserOperationExecutor(
 
             return when (responseType) {
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
-                    ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                    ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
-                    ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                    ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
                 NetworkUtils.ResponseStatusType.MISSING -> {
                     if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(op.onesignalId)) {
-                        return ExecutionResponse(ExecutionResult.FAIL_RETRY)
+                        return ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                     }
                     val operations = _buildUserService.getRebuildOperationsIfCurrentUser(op.appId, op.onesignalId)
-                    if (operations == null) {
-                        return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+                    return if (operations == null) {
+                        ExecutionResponse(ExecutionResult.FAIL_NORETRY)
                     } else {
-                        return ExecutionResponse(ExecutionResult.FAIL_RETRY, operations = operations)
+                        ExecutionResponse(
+                            ExecutionResult.FAIL_RETRY,
+                            operations = operations,
+                            retryAfterSeconds = ex.retryAfterSeconds,
+                        )
                     }
                 }
                 else ->

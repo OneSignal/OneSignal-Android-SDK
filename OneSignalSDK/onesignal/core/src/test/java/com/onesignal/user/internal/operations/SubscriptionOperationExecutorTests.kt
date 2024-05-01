@@ -93,7 +93,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
     test("create subscription fails with retry when there is a network condition") {
         // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-        coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } throws BackendException(408)
+        coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } throws BackendException(408, retryAfterSeconds = 10)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val mockBuildUserService = mockk<IRebuildUserService>()
@@ -127,6 +127,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
 
         // Then
         response.result shouldBe ExecutionResult.FAIL_RETRY
+        response.retryAfterSeconds shouldBe 10
         coVerify(exactly = 1) {
             mockSubscriptionBackendService.createSubscription(
                 appId,
