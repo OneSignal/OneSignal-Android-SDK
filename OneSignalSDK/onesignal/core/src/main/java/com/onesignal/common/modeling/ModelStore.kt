@@ -154,8 +154,9 @@ abstract class ModelStore<TModel>(
     }
 
     protected fun load() {
-        if (name == null || _prefs == null)
+        if (name == null || _prefs == null) {
             return
+        }
 
         val str = _prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, "[]")
         val jsonArray = JSONArray(str)
@@ -167,12 +168,12 @@ abstract class ModelStore<TModel>(
                 newModel.subscribe(this)
             }
         }
-
     }
 
     fun persist() {
-        if (name == null || _prefs == null)
+        if (name == null || _prefs == null) {
             return
+        }
 
         val jsonArray = JSONArray()
         synchronized(models) {
