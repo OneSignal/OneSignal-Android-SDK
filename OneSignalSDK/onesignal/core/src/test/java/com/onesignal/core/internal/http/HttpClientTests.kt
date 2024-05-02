@@ -1,6 +1,7 @@
 package com.onesignal.core.internal.http
 
 import com.onesignal.common.OneSignalUtils
+import com.onesignal.core.internal.device.impl.InstallIdService
 import com.onesignal.core.internal.http.impl.HttpClient
 import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
@@ -21,7 +22,7 @@ class Mocks {
     internal val response = MockHttpConnectionFactory.MockResponse()
     internal val factory = MockHttpConnectionFactory(response)
     internal val httpClient by lazy {
-        HttpClient(factory, MockPreferencesService(), mockConfigModel, Time())
+        HttpClient(factory, MockPreferencesService(), mockConfigModel, Time(), InstallIdService(MockPreferencesService()))
     }
 }
 

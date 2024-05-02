@@ -6,6 +6,7 @@ import com.onesignal.common.JSONUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.OneSignalWrapper
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.device.IInstallIdService
 import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.preferences.IPreferencesService
@@ -32,6 +33,7 @@ internal class HttpClient(
     private val _prefs: IPreferencesService,
     private val _configModelStore: ConfigModelStore,
     private val _time: ITime,
+    private val _installIdService: IInstallIdService,
 ) : IHttpClient {
     /**
      * Delay making network requests until we reach this time.
@@ -148,6 +150,8 @@ internal class HttpClient(
                     if (subscriptionId != null && subscriptionId.isNotEmpty()) {
                         con.setRequestProperty("OneSignal-Subscription-Id", subscriptionId)
                     }
+
+                    con.setRequestProperty("OneSignal-Install-Id", _installIdService.getId().toString())
 
                     if (jsonBody != null) {
                         con.doInput = true
