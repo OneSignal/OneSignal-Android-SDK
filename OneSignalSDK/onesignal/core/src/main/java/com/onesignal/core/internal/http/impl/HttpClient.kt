@@ -24,6 +24,7 @@ import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import java.net.ConnectException
 import java.net.HttpURLConnection
+import java.net.URL
 import java.net.UnknownHostException
 import java.util.Scanner
 import javax.net.ssl.HttpsURLConnection
@@ -163,16 +164,14 @@ internal class HttpClient(
                         con.doOutput = true
                     }
 
+                    logHTTPSent(con.requestMethod, con.url, jsonBody, con.requestProperties)
+
                     if (jsonBody != null) {
                         val strJsonBody = JSONUtils.toUnescapedEUIDString(jsonBody)
-                        Logging.debug("HttpClient: ${method ?: "GET"} $url - $strJsonBody")
-
                         val sendBytes = strJsonBody.toByteArray(charset("UTF-8"))
                         con.setFixedLengthStreamingMode(sendBytes.size)
                         val outputStream = con.outputStream
                         outputStream.write(sendBytes)
-                    } else {
-                        Logging.debug("HttpClient: ${method ?: "GET"} $url")
                     }
 
                     if (cacheKey != null) {
@@ -287,6 +286,18 @@ internal class HttpClient(
         } else {
             null
         }
+    }
+
+    private fun logHTTPSent(
+        method: String?,
+        url: URL,
+        jsonBody: JSONObject?,
+        headers: Map<String, List<String>>,
+    ) {
+        val headersStr = headers.entries.joinToString()
+        val methodStr = method ?: "GET"
+        val bodyStr = if (jsonBody != null) JSONUtils.toUnescapedEUIDString(jsonBody) else null
+        Logging.debug("HttpClient: Request Sent = $methodStr $url - Body: $bodyStr - Headers: $headersStr")
     }
 
     companion object {
