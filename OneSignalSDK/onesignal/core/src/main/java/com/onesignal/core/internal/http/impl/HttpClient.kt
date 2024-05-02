@@ -197,7 +197,7 @@ internal class HttpClient(
                                     PreferenceStores.ONESIGNAL,
                                     PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + cacheKey,
                                 )
-                            Logging.debug("HttpClient: ${method ?: "GET"} $url - Using Cached response due to 304: " + cachedResponse)
+                            Logging.debug("HttpClient: Got Response = ${method ?: "GET"} ${con.url} - Using Cached response due to 304: " + cachedResponse)
 
                             // TODO: SHOULD RETURN OK INSTEAD OF NOT_MODIFIED TO MAKE TRANSPARENT?
                             retVal = HttpResponse(httpResponse, cachedResponse, retryAfterSeconds = retryAfter)
@@ -207,12 +207,12 @@ internal class HttpClient(
                             val scanner = Scanner(inputStream, "UTF-8")
                             val json = if (scanner.useDelimiter("\\A").hasNext()) scanner.next() else ""
                             scanner.close()
-                            Logging.debug("HttpClient: ${method ?: "GET"} $url - STATUS: $httpResponse JSON: " + json)
+                            Logging.debug("HttpClient: Got Response = ${method ?: "GET"} ${con.url} - STATUS: $httpResponse - Body: " + json)
 
                             if (cacheKey != null) {
                                 val eTag = con.getHeaderField("etag")
                                 if (eTag != null) {
-                                    Logging.debug("HttpClient: Response has etag of $eTag so caching the response.")
+                                    Logging.debug("HttpClient: Got Response = Response has etag of $eTag so caching the response.")
 
                                     _prefs.saveString(
                                         PreferenceStores.ONESIGNAL,
@@ -230,7 +230,7 @@ internal class HttpClient(
                             retVal = HttpResponse(httpResponse, json, retryAfterSeconds = retryAfter)
                         }
                         else -> {
-                            Logging.debug("HttpClient: ${method ?: "GET"} $url - FAILED STATUS: $httpResponse")
+                            Logging.debug("HttpClient: Got Response = ${method ?: "GET"} ${con.url} - FAILED STATUS: $httpResponse")
 
                             var inputStream = con.errorStream
                             if (inputStream == null) {
@@ -243,9 +243,9 @@ internal class HttpClient(
                                 jsonResponse =
                                     if (scanner.useDelimiter("\\A").hasNext()) scanner.next() else ""
                                 scanner.close()
-                                Logging.warn("HttpClient: $method RECEIVED JSON: $jsonResponse")
+                                Logging.warn("HttpClient: Got Response = $method - STATUS: $httpResponse - Body: $jsonResponse")
                             } else {
-                                Logging.warn("HttpClient: $method HTTP Code: $httpResponse No response body!")
+                                Logging.warn("HttpClient: Got Response = $method - STATUS: $httpResponse - No response body!")
                             }
 
                             retVal = HttpResponse(httpResponse, jsonResponse, retryAfterSeconds = retryAfter)
