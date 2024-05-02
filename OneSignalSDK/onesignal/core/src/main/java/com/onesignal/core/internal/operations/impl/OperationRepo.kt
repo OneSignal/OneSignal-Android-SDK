@@ -69,10 +69,6 @@ internal class OperationRepo(
     private val executeBucket get() =
         if (enqueueIntoBucket == 0) 0 else enqueueIntoBucket - 1
 
-    /**
-     * Perform initialization in background to prevent possible operation point of failures from
-     * blocking the creation of OperationRepo.
-     */
     init {
         val executorsMap: MutableMap<String, IOperationExecutor> = mutableMapOf()
         for (executor in executors) {
@@ -128,10 +124,11 @@ internal class OperationRepo(
         index: Int? = null,
     ) {
         synchronized(queue) {
-            if (index != null)
+            if (index != null) {
                 queue.add(index, queueItem)
-            else
+            } else {
                 queue.add(queueItem)
+            }
         }
         if (addToStore) {
             _operationModelStore.add(queueItem.operation)
@@ -340,12 +337,20 @@ internal class OperationRepo(
         }
 
         val startingKey =
-            if (startingOp.operation.groupComparisonType == GroupComparisonType.CREATE) startingOp.operation.createComparisonKey else startingOp.operation.modifyComparisonKey
+            if (startingOp.operation.groupComparisonType == GroupComparisonType.CREATE) {
+                startingOp.operation.createComparisonKey
+            } else {
+                startingOp.operation.modifyComparisonKey
+            }
 
         if (queue.isNotEmpty()) {
             for (item in queue.toList()) {
                 val itemKey =
-                    if (startingOp.operation.groupComparisonType == GroupComparisonType.CREATE) item.operation.createComparisonKey else item.operation.modifyComparisonKey
+                    if (startingOp.operation.groupComparisonType == GroupComparisonType.CREATE) {
+                        item.operation.createComparisonKey
+                    } else {
+                        item.operation.modifyComparisonKey
+                    }
 
                 if (itemKey == "" && startingKey == "") {
                     throw Exception("Both comparison keys can not be blank!")
@@ -363,13 +368,18 @@ internal class OperationRepo(
 
     /**
      * Load saved operations from preference service and add them into the queue
-     * NOTE: sometimes the loading might take longer than expectedly due to device's state
+     * NOTE: Sometimes the loading might take longer than expected due to I/O reads from disk
+     *      Any I/O implies executing time will vary greatly.
      */
     private fun loadSavedOperations() {
-        // load operation in a separate thread to avoid halting the main process
         _operationModelStore.loadOperations()
         for (operation in _operationModelStore.list().withIndex()) {
-            internalEnqueue(OperationQueueItem(operation.value, bucket = enqueueIntoBucket), flush = false, addToStore = false, operation.index)
+            internalEnqueue(
+                OperationQueueItem(operation.value, bucket = enqueueIntoBucket),
+                flush = false,
+                addToStore = false,
+                operation.index,
+            )
         }
     }
 }

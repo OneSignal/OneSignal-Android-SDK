@@ -25,14 +25,9 @@ import com.onesignal.user.internal.operations.impl.executors.LoginUserOperationE
 import com.onesignal.user.internal.operations.impl.executors.RefreshUserOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.UpdateUserOperationExecutor
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 internal class OperationModelStore(prefs: IPreferencesService) : ModelStore<Operation>("operations", prefs) {
-
     fun loadOperations() {
         load()
     }
