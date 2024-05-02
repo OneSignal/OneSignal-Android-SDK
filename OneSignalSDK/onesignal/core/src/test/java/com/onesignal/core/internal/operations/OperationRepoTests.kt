@@ -35,6 +35,7 @@ private class Mocks {
     val operationModelStore: OperationModelStore =
         run {
             val mockOperationModelStore = mockk<OperationModelStore>()
+            every { mockOperationModelStore.loadOperations() } just runs
             every { mockOperationModelStore.list() } returns listOf()
             every { mockOperationModelStore.add(any()) } just runs
             every { mockOperationModelStore.remove(any()) } just runs

@@ -78,10 +78,6 @@ internal class OperationRepo(
             }
         }
         this.executorsMap = executorsMap
-
-        for (operation in _operationModelStore.list()) {
-            internalEnqueue(OperationQueueItem(operation, bucket = enqueueIntoBucket), flush = false, addToStore = false)
-        }
     }
 
     override fun <T : Operation> containsInstanceOf(type: KClass<T>): Boolean {
@@ -92,7 +88,11 @@ internal class OperationRepo(
 
     override fun start() {
         paused = false
-        coroutineScope.launch { processQueueForever() }
+        coroutineScope.launch {
+            // load saved operations first then start processing the queue to ensure correct operation order
+            loadSavedOperations()
+            processQueueForever()
+        }
     }
 
     override fun enqueue(
@@ -122,12 +122,17 @@ internal class OperationRepo(
         queueItem: OperationQueueItem,
         flush: Boolean,
         addToStore: Boolean,
+        index: Int? = null,
     ) {
         synchronized(queue) {
-            queue.add(queueItem)
-            if (addToStore) {
-                _operationModelStore.add(queueItem.operation)
+            if (index != null) {
+                queue.add(index, queueItem)
+            } else {
+                queue.add(queueItem)
             }
+        }
+        if (addToStore) {
+            _operationModelStore.add(queueItem.operation)
         }
 
         waiter.wake(LoopWaiterMessage(flush, 0))
@@ -344,12 +349,20 @@ internal class OperationRepo(
         }
 
         val startingKey =
-            if (startingOp.operation.groupComparisonType == GroupComparisonType.CREATE) startingOp.operation.createComparisonKey else startingOp.operation.modifyComparisonKey
+            if (startingOp.operation.groupComparisonType == GroupComparisonType.CREATE) {
+                startingOp.operation.createComparisonKey
+            } else {
+                startingOp.operation.modifyComparisonKey
+            }
 
         if (queue.isNotEmpty()) {
             for (item in queue.toList()) {
                 val itemKey =
-                    if (startingOp.operation.groupComparisonType == GroupComparisonType.CREATE) item.operation.createComparisonKey else item.operation.modifyComparisonKey
+                    if (startingOp.operation.groupComparisonType == GroupComparisonType.CREATE) {
+                        item.operation.createComparisonKey
+                    } else {
+                        item.operation.modifyComparisonKey
+                    }
 
                 if (itemKey == "" && startingKey == "") {
                     throw Exception("Both comparison keys can not be blank!")
@@ -363,5 +376,22 @@ internal class OperationRepo(
         }
 
         return ops
+    }
+
+    /**
+     * Load saved operations from preference service and add them into the queue
+     * NOTE: Sometimes the loading might take longer than expected due to I/O reads from disk
+     *      Any I/O implies executing time will vary greatly.
+     */
+    private fun loadSavedOperations() {
+        _operationModelStore.loadOperations()
+        for (operation in _operationModelStore.list().withIndex()) {
+            internalEnqueue(
+                OperationQueueItem(operation.value, bucket = enqueueIntoBucket),
+                flush = false,
+                addToStore = false,
+                operation.index,
+            )
+        }
     }
 }

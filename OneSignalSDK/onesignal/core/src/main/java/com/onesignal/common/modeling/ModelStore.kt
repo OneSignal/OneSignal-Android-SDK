@@ -154,31 +154,35 @@ abstract class ModelStore<TModel>(
     }
 
     protected fun load() {
+        if (name == null || _prefs == null) {
+            return
+        }
+
+        val str = _prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, "[]")
+        val jsonArray = JSONArray(str)
         synchronized(models) {
-            if (name != null && _prefs != null) {
-                val str = _prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, "[]")
-                val jsonArray = JSONArray(str)
-                for (index in 0 until jsonArray.length()) {
-                    val newModel = create(jsonArray.getJSONObject(index)) ?: continue
-                    models.add(newModel)
-                    // listen for changes to this model
-                    newModel.subscribe(this)
-                }
+            for (index in 0 until jsonArray.length()) {
+                val newModel = create(jsonArray.getJSONObject(index)) ?: continue
+                models.add(newModel)
+                // listen for changes to this model
+                newModel.subscribe(this)
             }
         }
     }
 
     fun persist() {
-        synchronized(models) {
-            if (name != null && _prefs != null) {
-                val jsonArray = JSONArray()
-                for (model in models) {
-                    jsonArray.put(model.toJSON())
-                }
+        if (name == null || _prefs == null) {
+            return
+        }
 
-                _prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, jsonArray.toString())
+        val jsonArray = JSONArray()
+        synchronized(models) {
+            for (model in models) {
+                jsonArray.put(model.toJSON())
             }
         }
+
+        _prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, jsonArray.toString())
     }
 
     override fun subscribe(handler: IModelStoreChangeHandler<TModel>) = changeSubscription.subscribe(handler)

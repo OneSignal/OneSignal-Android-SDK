@@ -28,7 +28,7 @@ import com.onesignal.user.internal.operations.impl.executors.UpdateUserOperation
 import org.json.JSONObject
 
 internal class OperationModelStore(prefs: IPreferencesService) : ModelStore<Operation>("operations", prefs) {
-    init {
+    fun loadOperations() {
         load()
     }
 
