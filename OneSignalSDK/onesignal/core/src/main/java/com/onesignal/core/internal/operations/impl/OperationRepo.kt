@@ -58,11 +58,11 @@ internal class OperationRepo(
         get() = loadedSubscription.hasSubscribers
 
     override fun unsubscribe(handler: IOperationRepoLoadedListener) {
-        loadedSubscription.subscribe(handler)
+        loadedSubscription.unsubscribe(handler)
     }
 
     override fun subscribe(handler: IOperationRepoLoadedListener) {
-        loadedSubscription.unsubscribe(handler)
+        loadedSubscription.subscribe(handler)
     }
 
     /** *** Buckets ***
