@@ -9,6 +9,9 @@ import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
+import com.onesignal.user.internal.identity.IdentityModel
+import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.migrations.RecoverFromDroppedLoginBug
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -589,6 +592,20 @@ class OperationRepoTests : FunSpec({
 
         // Then
         result shouldBe null
+    }
+
+    test("IOperationRepoLoadedListener") {
+        val mocks = Mocks()
+        val mockIdentityModel = mockk<IdentityModel>()
+        val mockIdentityModelStore = mockk<IdentityModelStore>()
+        val recovery = RecoverFromDroppedLoginBug(mocks.operationRepo, mockIdentityModelStore, mocks.configModelStore)
+
+        mocks.operationRepo.start()
+        recovery.start()
+
+        verify {
+            mocks.operationRepo.subscribe(recovery)
+        }
     }
 }) {
     companion object {
