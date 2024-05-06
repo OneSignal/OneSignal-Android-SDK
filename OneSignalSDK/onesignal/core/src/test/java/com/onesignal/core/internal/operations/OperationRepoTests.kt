@@ -590,6 +590,24 @@ class OperationRepoTests : FunSpec({
         // Then
         result shouldBe null
     }
+
+    test("ensure onOperationRepoLoaded is called once loading is completed") {
+        // Given
+        val mocks = Mocks()
+        val spyListener = spyk<IOperationRepoLoadedListener>()
+
+        // When
+        mocks.operationRepo.addOperationLoadedListener(spyListener)
+        mocks.operationRepo.start()
+
+        // Then
+        mocks.operationRepo.hasSubscribers shouldBe true
+        coVerifyOrder {
+            mocks.operationRepo.subscribe(any())
+            mocks.operationModelStore.loadOperations()
+            spyListener.onOperationRepoLoaded()
+        }
+    }
 }) {
     companion object {
         private fun mockOperation(

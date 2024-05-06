@@ -1,11 +1,14 @@
 package com.onesignal.core.internal.operations.impl
 
+import com.onesignal.common.events.EventProducer
+import com.onesignal.common.events.IEventNotifier
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.core.internal.operations.IOperationRepo
+import com.onesignal.core.internal.operations.IOperationRepoLoadedListener
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
@@ -27,7 +30,7 @@ internal class OperationRepo(
     private val _configModelStore: ConfigModelStore,
     private val _time: ITime,
     private val _newRecordState: NewRecordsState,
-) : IOperationRepo, IStartableService {
+) : IOperationRepo, IStartableService, IEventNotifier<IOperationRepoLoadedListener> {
     internal class OperationQueueItem(
         val operation: Operation,
         val waiter: WaiterWithValue<Boolean>? = null,
@@ -49,6 +52,18 @@ internal class OperationRepo(
     private val waiter = WaiterWithValue<LoopWaiterMessage>()
     private var paused = false
     private var coroutineScope = CoroutineScope(newSingleThreadContext(name = "OpRepo"))
+    private val loadedSubscription: EventProducer<IOperationRepoLoadedListener> = EventProducer()
+
+    override val hasSubscribers: Boolean
+        get() = loadedSubscription.hasSubscribers
+
+    override fun unsubscribe(handler: IOperationRepoLoadedListener) {
+        loadedSubscription.unsubscribe(handler)
+    }
+
+    override fun subscribe(handler: IOperationRepoLoadedListener) {
+        loadedSubscription.subscribe(handler)
+    }
 
     /** *** Buckets ***
      * Purpose: Bucketing is a pattern we are using to help save network
@@ -84,6 +99,10 @@ internal class OperationRepo(
         synchronized(queue) {
             return queue.any { type.isInstance(it.operation) }
         }
+    }
+
+    override fun addOperationLoadedListener(handler: IOperationRepoLoadedListener) {
+        subscribe(handler)
     }
 
     override fun start() {
@@ -393,5 +412,6 @@ internal class OperationRepo(
                 operation.index,
             )
         }
+        loadedSubscription.fire { it.onOperationRepoLoaded() }
     }
 }

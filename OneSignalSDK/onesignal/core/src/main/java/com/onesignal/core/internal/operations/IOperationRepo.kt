@@ -38,6 +38,8 @@ interface IOperationRepo {
      * Check if the queue contains a specific operation type
      */
     fun <T : Operation> containsInstanceOf(type: KClass<T>): Boolean
+
+    fun addOperationLoadedListener(handler: IOperationRepoLoadedListener)
 }
 
 // Extension function so the syntax containsInstanceOf<Operation>() can be used over

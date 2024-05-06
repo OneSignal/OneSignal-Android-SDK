@@ -3,6 +3,7 @@ package com.onesignal.user.internal.migrations
 import com.onesignal.common.IDManager
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
+import com.onesignal.core.internal.operations.IOperationRepoLoadedListener
 import com.onesignal.core.internal.operations.containsInstanceOf
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
@@ -30,8 +31,12 @@ class RecoverFromDroppedLoginBug(
     private val _operationRepo: IOperationRepo,
     private val _identityModelStore: IdentityModelStore,
     private val _configModelStore: ConfigModelStore,
-) : IStartableService {
+) : IStartableService, IOperationRepoLoadedListener {
     override fun start() {
+        _operationRepo.addOperationLoadedListener(this)
+    }
+
+    override fun onOperationRepoLoaded() {
         if (isInBadState()) {
             Logging.warn(
                 "User with externalId:" +
