@@ -6,6 +6,7 @@ import com.onesignal.common.JSONUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.OneSignalWrapper
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.device.IInstallIdService
 import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.preferences.IPreferencesService
@@ -23,6 +24,7 @@ import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import java.net.ConnectException
 import java.net.HttpURLConnection
+import java.net.URL
 import java.net.UnknownHostException
 import java.util.Scanner
 import javax.net.ssl.HttpsURLConnection
@@ -32,6 +34,7 @@ internal class HttpClient(
     private val _prefs: IPreferencesService,
     private val _configModelStore: ConfigModelStore,
     private val _time: ITime,
+    private val _installIdService: IInstallIdService,
 ) : IHttpClient {
     /**
      * Delay making network requests until we reach this time.
@@ -149,6 +152,8 @@ internal class HttpClient(
                         con.setRequestProperty("OneSignal-Subscription-Id", subscriptionId)
                     }
 
+                    con.setRequestProperty("OneSignal-Install-Id", _installIdService.getId().toString())
+
                     if (jsonBody != null) {
                         con.doInput = true
                     }
@@ -159,16 +164,14 @@ internal class HttpClient(
                         con.doOutput = true
                     }
 
+                    logHTTPSent(con.requestMethod, con.url, jsonBody, con.requestProperties)
+
                     if (jsonBody != null) {
                         val strJsonBody = JSONUtils.toUnescapedEUIDString(jsonBody)
-                        Logging.debug("HttpClient: ${method ?: "GET"} $url - $strJsonBody")
-
                         val sendBytes = strJsonBody.toByteArray(charset("UTF-8"))
                         con.setFixedLengthStreamingMode(sendBytes.size)
                         val outputStream = con.outputStream
                         outputStream.write(sendBytes)
-                    } else {
-                        Logging.debug("HttpClient: ${method ?: "GET"} $url")
                     }
 
                     if (cacheKey != null) {
@@ -194,7 +197,7 @@ internal class HttpClient(
                                     PreferenceStores.ONESIGNAL,
                                     PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + cacheKey,
                                 )
-                            Logging.debug("HttpClient: ${method ?: "GET"} $url - Using Cached response due to 304: " + cachedResponse)
+                            Logging.debug("HttpClient: Got Response = ${method ?: "GET"} ${con.url} - Using Cached response due to 304: " + cachedResponse)
 
                             // TODO: SHOULD RETURN OK INSTEAD OF NOT_MODIFIED TO MAKE TRANSPARENT?
                             retVal = HttpResponse(httpResponse, cachedResponse, retryAfterSeconds = retryAfter)
@@ -204,12 +207,12 @@ internal class HttpClient(
                             val scanner = Scanner(inputStream, "UTF-8")
                             val json = if (scanner.useDelimiter("\\A").hasNext()) scanner.next() else ""
                             scanner.close()
-                            Logging.debug("HttpClient: ${method ?: "GET"} $url - STATUS: $httpResponse JSON: " + json)
+                            Logging.debug("HttpClient: Got Response = ${method ?: "GET"} ${con.url} - STATUS: $httpResponse - Body: " + json)
 
                             if (cacheKey != null) {
                                 val eTag = con.getHeaderField("etag")
                                 if (eTag != null) {
-                                    Logging.debug("HttpClient: Response has etag of $eTag so caching the response.")
+                                    Logging.debug("HttpClient: Got Response = Response has etag of $eTag so caching the response.")
 
                                     _prefs.saveString(
                                         PreferenceStores.ONESIGNAL,
@@ -227,7 +230,7 @@ internal class HttpClient(
                             retVal = HttpResponse(httpResponse, json, retryAfterSeconds = retryAfter)
                         }
                         else -> {
-                            Logging.debug("HttpClient: ${method ?: "GET"} $url - FAILED STATUS: $httpResponse")
+                            Logging.debug("HttpClient: Got Response = ${method ?: "GET"} ${con.url} - FAILED STATUS: $httpResponse")
 
                             var inputStream = con.errorStream
                             if (inputStream == null) {
@@ -240,9 +243,9 @@ internal class HttpClient(
                                 jsonResponse =
                                     if (scanner.useDelimiter("\\A").hasNext()) scanner.next() else ""
                                 scanner.close()
-                                Logging.warn("HttpClient: $method RECEIVED JSON: $jsonResponse")
+                                Logging.warn("HttpClient: Got Response = $method - STATUS: $httpResponse - Body: $jsonResponse")
                             } else {
-                                Logging.warn("HttpClient: $method HTTP Code: $httpResponse No response body!")
+                                Logging.warn("HttpClient: Got Response = $method - STATUS: $httpResponse - No response body!")
                             }
 
                             retVal = HttpResponse(httpResponse, jsonResponse, retryAfterSeconds = retryAfter)
@@ -283,6 +286,18 @@ internal class HttpClient(
         } else {
             null
         }
+    }
+
+    private fun logHTTPSent(
+        method: String?,
+        url: URL,
+        jsonBody: JSONObject?,
+        headers: Map<String, List<String>>,
+    ) {
+        val headersStr = headers.entries.joinToString()
+        val methodStr = method ?: "GET"
+        val bodyStr = if (jsonBody != null) JSONUtils.toUnescapedEUIDString(jsonBody) else null
+        Logging.debug("HttpClient: Request Sent = $methodStr $url - Body: $bodyStr - Headers: $headersStr")
     }
 
     companion object {

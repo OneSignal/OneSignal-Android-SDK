@@ -216,6 +216,13 @@ object PreferenceOneSignalKeys {
     const val PREFS_OS_ETAG_PREFIX = "PREFS_OS_ETAG_PREFIX_"
 
     /**
+     * (String) A install id, a UUIDv4 generated once when app is first opened.
+     * Value is for a HTTP header, OneSignal-Install-Id, added on all calls
+     * made to OneSignal's backend.
+     */
+    const val PREFS_OS_INSTALL_ID = "PREFS_OS_INSTALL_ID"
+
+    /**
      * (String) A prefix key for retrieving the response for a given HTTP GET cache key. The cache
      * key should be appended to this prefix.
      */

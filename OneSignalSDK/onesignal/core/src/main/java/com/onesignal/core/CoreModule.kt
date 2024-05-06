@@ -13,7 +13,9 @@ import com.onesignal.core.internal.config.impl.ConfigModelStoreListener
 import com.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.core.internal.database.impl.DatabaseProvider
 import com.onesignal.core.internal.device.IDeviceService
+import com.onesignal.core.internal.device.IInstallIdService
 import com.onesignal.core.internal.device.impl.DeviceService
+import com.onesignal.core.internal.device.impl.InstallIdService
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.http.impl.HttpClient
 import com.onesignal.core.internal.http.impl.HttpConnectionFactory
@@ -53,6 +55,7 @@ internal class CoreModule : IModule {
         builder.register<Time>().provides<ITime>()
         builder.register<DatabaseProvider>().provides<IDatabaseProvider>()
         builder.register<StartupService>().provides<StartupService>()
+        builder.register<InstallIdService>().provides<IInstallIdService>()
 
         // Params (Config)
         builder.register<ConfigModelStore>().provides<ConfigModelStore>()

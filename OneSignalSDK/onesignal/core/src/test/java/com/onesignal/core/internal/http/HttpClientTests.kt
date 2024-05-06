@@ -1,6 +1,7 @@
 package com.onesignal.core.internal.http
 
 import com.onesignal.common.OneSignalUtils
+import com.onesignal.core.internal.device.impl.InstallIdService
 import com.onesignal.core.internal.http.impl.HttpClient
 import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
@@ -20,8 +21,9 @@ class Mocks {
     internal val mockConfigModel = MockHelper.configModelStore()
     internal val response = MockHttpConnectionFactory.MockResponse()
     internal val factory = MockHttpConnectionFactory(response)
+    internal val installIdService = InstallIdService(MockPreferencesService())
     internal val httpClient by lazy {
-        HttpClient(factory, MockPreferencesService(), mockConfigModel, Time())
+        HttpClient(factory, MockPreferencesService(), mockConfigModel, Time(), installIdService)
     }
 }
 
@@ -50,7 +52,7 @@ class HttpClientTests : FunSpec({
         response.throwable should beInstanceOf<TimeoutCancellationException>()
     }
 
-    test("SDKHeader is included in all requests") {
+    test("SDK Headers are included in all requests") {
         // Given
         val mocks = Mocks()
         val httpClient = mocks.httpClient
@@ -65,6 +67,7 @@ class HttpClientTests : FunSpec({
         // Then
         for (connection in mocks.factory.connections) {
             connection.getRequestProperty("SDK-Version") shouldBe "onesignal/android/${OneSignalUtils.SDK_VERSION}"
+            connection.getRequestProperty("OneSignal-Install-Id") shouldBe mocks.installIdService.getId().toString()
         }
     }
 
