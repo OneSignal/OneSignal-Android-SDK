@@ -65,8 +65,11 @@ abstract class ModelStore<TModel>(
         }
     }
 
+    /**
+     * @return list of read-only models, cloned for thread safety
+     */
     override fun list(): Collection<TModel> {
-        return models
+        return synchronized(models) { models.toList() }
     }
 
     override fun get(id: String): TModel? {

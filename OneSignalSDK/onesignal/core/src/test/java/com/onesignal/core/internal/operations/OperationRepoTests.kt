@@ -38,7 +38,7 @@ private class Mocks {
             val operationStoreList = mutableListOf<Operation>()
             val mockOperationModelStore = mockk<OperationModelStore>()
             every { mockOperationModelStore.loadOperations() } just runs
-            every { mockOperationModelStore.list() } returns operationStoreList
+            every { mockOperationModelStore.list() } answers { operationStoreList.toList() }
             every { mockOperationModelStore.add(any()) } answers { operationStoreList.add(firstArg<Operation>()) }
             every { mockOperationModelStore.remove(any()) } answers {
                 val id = firstArg<String>()

@@ -136,20 +136,25 @@ internal class OperationRepo(
         return waiter.waitForWake()
     }
 
-    // WARNING: Never set to true, until budget rules are added, even for internal use!
+    /**
+     * Only used inside this class, adds OperationQueueItem to queue
+     * WARNING: Never set flush=true until budget rules are added, even for internal use!
+     *
+     * @returns true if the OperationQueueItem was added, false if not
+     */
     private fun internalEnqueue(
         queueItem: OperationQueueItem,
         flush: Boolean,
         addToStore: Boolean,
         index: Int? = null,
-    ) {
-        val hasExisting = queue.any { it.operation.id == queueItem.operation.id }
-        if (hasExisting) {
-            Logging.debug("OperationRepo: internalEnqueue - operation.id: ${queueItem.operation.id} already exists in the queue.")
-            return
-        }
-
+    ): Boolean {
         synchronized(queue) {
+            val hasExisting = queue.any { it.operation.id == queueItem.operation.id }
+            if (hasExisting) {
+                Logging.debug("OperationRepo: internalEnqueue - operation.id: ${queueItem.operation.id} already exists in the queue.")
+                return false
+            }
+
             if (index != null) {
                 queue.add(index, queueItem)
             } else {
@@ -161,6 +166,7 @@ internal class OperationRepo(
         }
 
         waiter.wake(LoopWaiterMessage(flush, 0))
+        return true
     }
 
     /**
@@ -405,18 +411,25 @@ internal class OperationRepo(
 
     /**
      * Load saved operations from preference service and add them into the queue
+     * WARNING: Make sure queue.remove is NEVER called while this method is
+     * running, as internalEnqueue will throw IndexOutOfBounds or put things
+     * out of order if what was removed was something added by this method.
+     *   - This never happens now, but is a landmine to be aware of!
      * NOTE: Sometimes the loading might take longer than expected due to I/O reads from disk
      *      Any I/O implies executing time will vary greatly.
      */
     internal fun loadSavedOperations() {
         _operationModelStore.loadOperations()
-        for (operation in _operationModelStore.list().withIndex()) {
-            internalEnqueue(
-                OperationQueueItem(operation.value, bucket = enqueueIntoBucket),
-                flush = false,
-                addToStore = false,
-                operation.index,
-            )
+        var successfulIndex = 0
+        for (operation in _operationModelStore.list()) {
+            val successful =
+                internalEnqueue(
+                    OperationQueueItem(operation, bucket = enqueueIntoBucket),
+                    flush = false,
+                    addToStore = false,
+                    index = successfulIndex,
+                )
+            if (successful) successfulIndex++
         }
         loadedSubscription.fire { it.onOperationRepoLoaded() }
     }
