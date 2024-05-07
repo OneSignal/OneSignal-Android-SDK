@@ -27,6 +27,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.yield
+import java.util.UUID
 
 // Mocks used by every test in this file
 private class Mocks {
@@ -34,11 +35,16 @@ private class Mocks {
 
     val operationModelStore: OperationModelStore =
         run {
+            val operationStoreList = mutableListOf<Operation>()
             val mockOperationModelStore = mockk<OperationModelStore>()
             every { mockOperationModelStore.loadOperations() } just runs
-            every { mockOperationModelStore.list() } returns listOf()
-            every { mockOperationModelStore.add(any()) } just runs
-            every { mockOperationModelStore.remove(any()) } just runs
+            every { mockOperationModelStore.list() } returns operationStoreList
+            every { mockOperationModelStore.add(any()) } answers { operationStoreList.add(firstArg<Operation>()) }
+            every { mockOperationModelStore.remove(any()) } answers {
+                val id = firstArg<String>()
+                val op = operationStoreList.firstOrNull { it.id == id }
+                operationStoreList.remove(op)
+            }
             mockOperationModelStore
         }
 
@@ -117,9 +123,9 @@ class OperationRepoTests : FunSpec({
     test("enqueue operation executes and is removed when executed") {
         // Given
         val mocks = Mocks()
-
         val operationIdSlot = slot<String>()
         val operation = mockOperation(operationIdSlot = operationIdSlot)
+        val opId = operation.id
 
         // When
         mocks.operationRepo.start()
@@ -136,7 +142,7 @@ class OperationRepoTests : FunSpec({
                     it[0] shouldBe operation
                 },
             )
-            mocks.operationModelStore.remove("operationId")
+            mocks.operationModelStore.remove(opId)
         }
     }
 
@@ -151,6 +157,7 @@ class OperationRepoTests : FunSpec({
 
         val operationIdSlot = slot<String>()
         val operation = mockOperation(operationIdSlot = operationIdSlot)
+        val opId = operation.id
 
         // When
         opRepo.start()
@@ -174,7 +181,7 @@ class OperationRepoTests : FunSpec({
                     it[0] shouldBe operation
                 },
             )
-            mocks.operationModelStore.remove("operationId")
+            mocks.operationModelStore.remove(opId)
         }
     }
 
@@ -210,6 +217,7 @@ class OperationRepoTests : FunSpec({
 
         val operationIdSlot = slot<String>()
         val operation = mockOperation(operationIdSlot = operationIdSlot)
+        val opId = operation.id
 
         // When
         mocks.operationRepo.start()
@@ -226,7 +234,7 @@ class OperationRepoTests : FunSpec({
                     it[0] shouldBe operation
                 },
             )
-            mocks.operationModelStore.remove("operationId")
+            mocks.operationModelStore.remove(opId)
         }
     }
 
@@ -608,10 +616,24 @@ class OperationRepoTests : FunSpec({
             spyListener.onOperationRepoLoaded()
         }
     }
+
+    test("ensure loadSavedOperations doesn't duplicate existing OperationItems") {
+        // Given
+        val mocks = Mocks()
+        val op = mockOperation()
+        mocks.operationRepo.enqueue(op)
+
+        // When
+        mocks.operationRepo.loadSavedOperations()
+
+        // Then
+        mocks.operationRepo.queue.size shouldBe 1
+        mocks.operationRepo.queue.first().operation shouldBe op
+    }
 }) {
     companion object {
         private fun mockOperation(
-            id: String = "operationId",
+            id: String = UUID.randomUUID().toString(),
             name: String = "DUMMY_OPERATION",
             canStartExecute: Boolean = true,
             groupComparisonType: GroupComparisonType = GroupComparisonType.NONE,
