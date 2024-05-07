@@ -630,6 +630,26 @@ class OperationRepoTests : FunSpec({
         mocks.operationRepo.queue.size shouldBe 1
         mocks.operationRepo.queue.first().operation shouldBe op
     }
+
+    // Real world scenario is this can happen if a few operations are added when the device is
+    // offline then the app is restarted.
+    test("ensure loadSavedOperations doesn't index out of bounds on queue when duplicates exist") {
+        // Given
+        val mocks = Mocks()
+        val op1 = mockOperation()
+        val op2 = mockOperation()
+
+        repeat(2) { mocks.operationModelStore.add(op1) }
+        mocks.operationModelStore.add(op2)
+
+        // When
+        mocks.operationRepo.loadSavedOperations()
+
+        // Then
+        mocks.operationRepo.queue.size shouldBe 2
+        mocks.operationRepo.queue[0].operation shouldBe op1
+        mocks.operationRepo.queue[1].operation shouldBe op2
+    }
 }) {
     companion object {
         private fun mockOperation(
