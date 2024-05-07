@@ -48,7 +48,7 @@ internal class OperationRepo(
     )
 
     private val executorsMap: Map<String, IOperationExecutor>
-    private val queue = mutableListOf<OperationQueueItem>()
+    internal val queue = mutableListOf<OperationQueueItem>()
     private val waiter = WaiterWithValue<LoopWaiterMessage>()
     private var paused = false
     private var coroutineScope = CoroutineScope(newSingleThreadContext(name = "OpRepo"))
@@ -143,6 +143,12 @@ internal class OperationRepo(
         addToStore: Boolean,
         index: Int? = null,
     ) {
+        val hasExisting = queue.any { it.operation.id == queueItem.operation.id }
+        if (hasExisting) {
+            Logging.debug("OperationRepo: internalEnqueue - operation.id: ${queueItem.operation.id} already exists in the queue.")
+            return
+        }
+
         synchronized(queue) {
             if (index != null) {
                 queue.add(index, queueItem)
@@ -402,7 +408,7 @@ internal class OperationRepo(
      * NOTE: Sometimes the loading might take longer than expected due to I/O reads from disk
      *      Any I/O implies executing time will vary greatly.
      */
-    private fun loadSavedOperations() {
+    internal fun loadSavedOperations() {
         _operationModelStore.loadOperations()
         for (operation in _operationModelStore.list().withIndex()) {
             internalEnqueue(
