@@ -38,7 +38,7 @@ private class Mocks {
             val operationStoreList = mutableListOf<Operation>()
             val mockOperationModelStore = mockk<OperationModelStore>()
             every { mockOperationModelStore.loadOperations() } just runs
-            every { mockOperationModelStore.list() } returns operationStoreList
+            every { mockOperationModelStore.list() } answers { operationStoreList.toList() }
             every { mockOperationModelStore.add(any()) } answers { operationStoreList.add(firstArg<Operation>()) }
             every { mockOperationModelStore.remove(any()) } answers {
                 val id = firstArg<String>()
@@ -629,6 +629,26 @@ class OperationRepoTests : FunSpec({
         // Then
         mocks.operationRepo.queue.size shouldBe 1
         mocks.operationRepo.queue.first().operation shouldBe op
+    }
+
+    // Real world scenario is this can happen if a few operations are added when the device is
+    // offline then the app is restarted.
+    test("ensure loadSavedOperations doesn't index out of bounds on queue when duplicates exist") {
+        // Given
+        val mocks = Mocks()
+        val op1 = mockOperation()
+        val op2 = mockOperation()
+
+        repeat(2) { mocks.operationModelStore.add(op1) }
+        mocks.operationModelStore.add(op2)
+
+        // When
+        mocks.operationRepo.loadSavedOperations()
+
+        // Then
+        mocks.operationRepo.queue.size shouldBe 2
+        mocks.operationRepo.queue[0].operation shouldBe op1
+        mocks.operationRepo.queue[1].operation shouldBe op2
     }
 }) {
     companion object {
