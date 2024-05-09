@@ -607,6 +607,8 @@ class OperationRepoTests : FunSpec({
         // When
         mocks.operationRepo.addOperationLoadedListener(spyListener)
         mocks.operationRepo.start()
+        // enqueueAndWait used to know we are fully loaded.
+        mocks.operationRepo.enqueueAndWait(mockOperation())
 
         // Then
         mocks.operationRepo.hasSubscribers shouldBe true
