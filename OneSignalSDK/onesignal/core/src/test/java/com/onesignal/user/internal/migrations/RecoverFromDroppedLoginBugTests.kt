@@ -1,14 +1,15 @@
 package com.onesignal.user.internal.migrations
 
-import com.onesignal.common.threading.Waiter
-import com.onesignal.core.internal.config.ConfigModelStore
-import com.onesignal.core.internal.operations.IOperationRepoLoadedListener
 import com.onesignal.core.internal.operations.impl.OperationModelStore
 import com.onesignal.core.internal.operations.impl.OperationRepo
 import com.onesignal.core.internal.time.impl.Time
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.operations.ExecutorMocks
+import com.onesignal.user.internal.operations.LoginUserOperation
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -24,9 +25,11 @@ private class Mocks {
             val mockOperationModelStore = mockk<OperationModelStore>()
             every { mockOperationModelStore.loadOperations() } just runs
             every { mockOperationModelStore.list() } returns listOf()
+            every { mockOperationModelStore.add(any()) } just runs
+            every { mockOperationModelStore.remove(any()) } just runs
             mockOperationModelStore
         }
-    val configModelStore = mockk<ConfigModelStore>()
+    val configModelStore = MockHelper.configModelStore()
     val operationRepo =
         spyk(
             OperationRepo(
@@ -38,36 +41,59 @@ private class Mocks {
             ),
         )
 
-    val recovery = spyk(RecoverFromDroppedLoginBug(operationRepo, MockHelper.identityModelStore(), configModelStore))
+    var oneSignalId = "local-id"
+    val identityModelStore by lazy {
+        MockHelper.identityModelStore {
+            it.onesignalId = oneSignalId
+            it.externalId = "myExtId"
+        }
+    }
+    val recovery = spyk(RecoverFromDroppedLoginBug(operationRepo, identityModelStore, configModelStore))
+
+    val expectedOperation by lazy {
+        LoginUserOperation(
+            configModelStore.model.appId,
+            identityModelStore.model.onesignalId,
+            identityModelStore.model.externalId,
+            null,
+        )
+    }
+
+    fun verifyExpectedLoginOperation(expectedOp: LoginUserOperation = expectedOperation) {
+        verify(exactly = 1) {
+            operationRepo.enqueue(
+                withArg {
+                    (it is LoginUserOperation) shouldBe true
+                    val op = it as LoginUserOperation
+                    op.appId shouldBe expectedOp.appId
+                    op.externalId shouldBe expectedOp.externalId
+                    op.existingOnesignalId shouldBe expectedOp.existingOnesignalId
+                    op.onesignalId shouldBe expectedOp.onesignalId
+                },
+            )
+        }
+    }
 }
 
 class RecoverFromDroppedLoginBugTests : FunSpec({
-    test("ensure onOperationRepoLoaded callback fires from operationRepo") {
+    beforeAny {
+        Logging.logLevel = LogLevel.NONE
+    }
+
+    test("ensure it adds missing operation") {
         // Given
         val mocks = Mocks()
 
         // When
         mocks.recovery.start()
-        val waiter = Waiter()
-        mocks.operationRepo.addOperationLoadedListener(
-            object : IOperationRepoLoadedListener {
-                override fun onOperationRepoLoaded() {
-                    waiter.wake()
-                }
-            },
-        )
         mocks.operationRepo.start()
-        // Waiting here ensures recovery.onOperationRepoLoaded() is called consistently
-        waiter.waitForWake()
+        mocks.operationRepo.awaitInitialized()
 
         // Then
-        verify(exactly = 1) {
-            mocks.operationRepo.subscribe(mocks.recovery)
-            mocks.recovery.onOperationRepoLoaded()
-        }
+        mocks.verifyExpectedLoginOperation()
     }
 
-    test("ensure onOperationRepoLoaded callback fires from operationRepo, even if started first") {
+    test("ensure it adds missing operation, even if operationRepo is already initialized") {
         // Given
         val mocks = Mocks()
 
@@ -77,22 +103,9 @@ class RecoverFromDroppedLoginBugTests : FunSpec({
         delay(200)
 
         mocks.recovery.start()
-
-        val waiter = Waiter()
-        mocks.operationRepo.addOperationLoadedListener(
-            object : IOperationRepoLoadedListener {
-                override fun onOperationRepoLoaded() {
-                    waiter.wake()
-                }
-            },
-        )
-        // Waiting here ensures recovery.onOperationRepoLoaded() is called consistently
-        withTimeout(1_000) { waiter.waitForWake() }
+        withTimeout(1_000) { mocks.operationRepo.awaitInitialized() }
 
         // Then
-        verify(exactly = 1) {
-            mocks.operationRepo.subscribe(mocks.recovery)
-            mocks.recovery.onOperationRepoLoaded()
-        }
+        mocks.verifyExpectedLoginOperation()
     }
 })

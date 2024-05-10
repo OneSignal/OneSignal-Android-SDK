@@ -1,20 +1,18 @@
 package com.onesignal.core.internal.operations.impl
 
-import com.onesignal.common.events.EventProducer
-import com.onesignal.common.events.IEventNotifier
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.core.internal.operations.IOperationRepo
-import com.onesignal.core.internal.operations.IOperationRepoLoadedListener
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -30,7 +28,7 @@ internal class OperationRepo(
     private val _configModelStore: ConfigModelStore,
     private val _time: ITime,
     private val _newRecordState: NewRecordsState,
-) : IOperationRepo, IStartableService, IEventNotifier<IOperationRepoLoadedListener> {
+) : IOperationRepo, IStartableService {
     internal class OperationQueueItem(
         val operation: Operation,
         val waiter: WaiterWithValue<Boolean>? = null,
@@ -52,17 +50,10 @@ internal class OperationRepo(
     private val waiter = WaiterWithValue<LoopWaiterMessage>()
     private var paused = false
     private var coroutineScope = CoroutineScope(newSingleThreadContext(name = "OpRepo"))
-    private val loadedSubscription: EventProducer<IOperationRepoLoadedListener> = EventProducer()
+    private val initialized = CompletableDeferred<Unit>()
 
-    override val hasSubscribers: Boolean
-        get() = loadedSubscription.hasSubscribers
-
-    override fun unsubscribe(handler: IOperationRepoLoadedListener) {
-        loadedSubscription.unsubscribe(handler)
-    }
-
-    override fun subscribe(handler: IOperationRepoLoadedListener) {
-        loadedSubscription.subscribe(handler)
+    override suspend fun awaitInitialized() {
+        initialized.await()
     }
 
     /** *** Buckets ***
@@ -99,10 +90,6 @@ internal class OperationRepo(
         synchronized(queue) {
             return queue.any { type.isInstance(it.operation) }
         }
-    }
-
-    override fun addOperationLoadedListener(handler: IOperationRepoLoadedListener) {
-        subscribe(handler)
     }
 
     override fun start() {
@@ -431,6 +418,6 @@ internal class OperationRepo(
                 )
             if (successful) successfulIndex++
         }
-        loadedSubscription.fire { it.onOperationRepoLoaded() }
+        initialized.complete(Unit)
     }
 }

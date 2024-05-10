@@ -25,6 +25,8 @@ import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.time.withTimeout
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.yield
 import java.util.UUID
@@ -599,24 +601,17 @@ class OperationRepoTests : FunSpec({
         result shouldBe null
     }
 
-    test("ensure onOperationRepoLoaded is called once loading is completed") {
+    test("ensure awaitInitialized() unsuspends") {
         // Given
         val mocks = Mocks()
-        val spyListener = spyk<IOperationRepoLoadedListener>()
 
         // When
-        mocks.operationRepo.addOperationLoadedListener(spyListener)
         mocks.operationRepo.start()
         // enqueueAndWait used to know we are fully loaded.
         mocks.operationRepo.enqueueAndWait(mockOperation())
 
         // Then
-        mocks.operationRepo.hasSubscribers shouldBe true
-        coVerifyOrder {
-            mocks.operationRepo.subscribe(any())
-            mocks.operationModelStore.loadOperations()
-            spyListener.onOperationRepoLoaded()
-        }
+        withTimeout(1_000) { mocks.operationRepo.awaitInitialized() }
     }
 
     test("ensure loadSavedOperations doesn't duplicate existing OperationItems") {
