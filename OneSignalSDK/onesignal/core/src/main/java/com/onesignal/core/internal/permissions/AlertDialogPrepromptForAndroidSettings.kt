@@ -53,15 +53,17 @@ object AlertDialogPrepromptForAndroidSettings {
         val messageTemplate = activity.getString(R.string.permission_not_available_message)
         val message = messageTemplate.format(previouslyDeniedPostfix)
 
-        AlertDialog.Builder(activity)
-            .setTitle(title)
-            .setMessage(message)
-            .setPositiveButton(R.string.permission_not_available_open_settings_option) { dialog, which ->
-                callback.onAccept()
-            }
-            .setNegativeButton(android.R.string.no) { dialog, which ->
-                callback.onDecline()
-            }
-            .show()
+        if (!activity.isFinishing && !activity.isDestroyed) {
+            AlertDialog.Builder(activity)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(R.string.permission_not_available_open_settings_option) { dialog, which ->
+                    callback.onAccept()
+                }
+                .setNegativeButton(android.R.string.no) { dialog, which ->
+                    callback.onDecline()
+                }
+                .show()
+        }
     }
 }
