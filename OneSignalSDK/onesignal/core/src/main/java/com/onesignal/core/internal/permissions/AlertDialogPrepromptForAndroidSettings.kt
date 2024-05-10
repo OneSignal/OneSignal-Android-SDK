@@ -62,6 +62,9 @@ object AlertDialogPrepromptForAndroidSettings {
             .setNegativeButton(android.R.string.no) { dialog, which ->
                 callback.onDecline()
             }
+            .setOnCancelListener {
+                callback.onDecline()
+            }
             .show()
     }
 }
