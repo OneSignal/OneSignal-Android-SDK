@@ -39,7 +39,7 @@ interface IOperationRepo {
      */
     fun <T : Operation> containsInstanceOf(type: KClass<T>): Boolean
 
-    fun addOperationLoadedListener(handler: IOperationRepoLoadedListener)
+    suspend fun awaitInitialized()
 }
 
 // Extension function so the syntax containsInstanceOf<Operation>() can be used over

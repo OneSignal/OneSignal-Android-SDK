@@ -3,12 +3,14 @@ package com.onesignal.user.internal.migrations
 import com.onesignal.common.IDManager
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
-import com.onesignal.core.internal.operations.IOperationRepoLoadedListener
 import com.onesignal.core.internal.operations.containsInstanceOf
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.LoginUserOperation
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 /**
  * Purpose: Automatically recovers a stalled User in the OperationRepo due
@@ -31,21 +33,20 @@ class RecoverFromDroppedLoginBug(
     private val _operationRepo: IOperationRepo,
     private val _identityModelStore: IdentityModelStore,
     private val _configModelStore: ConfigModelStore,
-) : IStartableService, IOperationRepoLoadedListener {
+) : IStartableService {
     override fun start() {
-        _operationRepo.addOperationLoadedListener(this)
-    }
-
-    override fun onOperationRepoLoaded() {
-        if (isInBadState()) {
-            Logging.warn(
-                "User with externalId:" +
-                    "${_identityModelStore.model.externalId} " +
-                    "was in a bad state, causing it to not update on OneSignal's " +
-                    "backend! We are recovering and replaying all unsent " +
-                    "operations now.",
-            )
-            recoverByAddingBackDroppedLoginOperation()
+        GlobalScope.launch(Dispatchers.IO) {
+            _operationRepo.awaitInitialized()
+            if (isInBadState()) {
+                Logging.warn(
+                    "User with externalId:" +
+                        "${_identityModelStore.model.externalId} " +
+                        "was in a bad state, causing it to not update on OneSignal's " +
+                        "backend! We are recovering and replaying all unsent " +
+                        "operations now.",
+                )
+                recoverByAddingBackDroppedLoginOperation()
+            }
         }
     }
 
