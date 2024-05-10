@@ -1,6 +1,8 @@
 package com.onesignal.user.internal.migrations
 
+import com.onesignal.common.threading.Waiter
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.operations.IOperationRepoLoadedListener
 import com.onesignal.core.internal.operations.impl.OperationModelStore
 import com.onesignal.core.internal.operations.impl.OperationRepo
 import com.onesignal.core.internal.time.impl.Time
@@ -31,16 +33,24 @@ class RecoverFromDroppedLoginBugTests : FunSpec({
             )
         every { mockOperationModelStore.loadOperations() } just runs
         every { mockOperationModelStore.list() } returns listOf()
-
-        val recovery = RecoverFromDroppedLoginBug(operationRepo, MockHelper.identityModelStore(), mockConfigModelStore)
-        every { recovery.onOperationRepoLoaded() } just runs
+        val recovery = spyk(RecoverFromDroppedLoginBug(operationRepo, MockHelper.identityModelStore(), mockConfigModelStore))
 
         // When
-        operationRepo.start()
         recovery.start()
+        val waiter = Waiter()
+        operationRepo.addOperationLoadedListener(
+            object : IOperationRepoLoadedListener {
+                override fun onOperationRepoLoaded() {
+                    waiter.wake()
+                }
+            },
+        )
+        operationRepo.start()
+        // Waiting here ensures recovery.onOperationRepoLoaded() is called consistently
+        waiter.waitForWake()
 
         // Then
-        verify {
+        verify(exactly = 1) {
             operationRepo.subscribe(recovery)
             recovery.onOperationRepoLoaded()
         }

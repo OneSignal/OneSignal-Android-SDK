@@ -239,7 +239,7 @@ class HttpClientTests : FunSpec({
 
         mocks.factory.mockResponse = mockSuccessfulResponse
         val response2 =
-            withTimeoutOrNull(999) {
+            withTimeoutOrNull(975) {
                 mocks.httpClient.post("URL", JSONObject())
             }
 
