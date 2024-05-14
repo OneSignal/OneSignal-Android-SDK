@@ -134,12 +134,12 @@ internal class OperationRepo(
         flush: Boolean,
         addToStore: Boolean,
         index: Int? = null,
-    ): Boolean {
+    ) {
         synchronized(queue) {
             val hasExisting = queue.any { it.operation.id == queueItem.operation.id }
             if (hasExisting) {
                 Logging.debug("OperationRepo: internalEnqueue - operation.id: ${queueItem.operation.id} already exists in the queue.")
-                return false
+                return
             }
 
             if (index != null) {
@@ -153,7 +153,6 @@ internal class OperationRepo(
         }
 
         waiter.wake(LoopWaiterMessage(flush, 0))
-        return true
     }
 
     /**
@@ -402,25 +401,18 @@ internal class OperationRepo(
 
     /**
      * Load saved operations from preference service and add them into the queue
-     * WARNING: Make sure queue.remove is NEVER called while this method is
-     * running, as internalEnqueue will throw IndexOutOfBounds or put things
-     * out of order if what was removed was something added by this method.
-     *   - This never happens now, but is a landmine to be aware of!
-     * NOTE: Sometimes the loading might take longer than expected due to I/O reads from disk
-     *      Any I/O implies executing time will vary greatly.
+     * NOTE: Sometimes the loading might take longer than expected due to I/O reads from disk,
+     *       so always ensure this is call off the main thread.
      */
     internal fun loadSavedOperations() {
         _operationModelStore.loadOperations()
-        var successfulIndex = 0
-        for (operation in _operationModelStore.list()) {
-            val successful =
-                internalEnqueue(
-                    OperationQueueItem(operation, bucket = enqueueIntoBucket),
-                    flush = false,
-                    addToStore = false,
-                    index = successfulIndex,
-                )
-            if (successful) successfulIndex++
+        for (operation in _operationModelStore.list().reversed()) {
+            internalEnqueue(
+                OperationQueueItem(operation, bucket = enqueueIntoBucket),
+                flush = false,
+                addToStore = false,
+                index = 0,
+            )
         }
         initialized.complete(Unit)
     }
