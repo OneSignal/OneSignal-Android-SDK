@@ -372,27 +372,25 @@ internal class OperationRepo(
                 startingOp.operation.modifyComparisonKey
             }
 
-        if (queue.isNotEmpty()) {
-            for (item in queue.toList()) {
-                val itemKey =
-                    if (startingOp.operation.groupComparisonType == GroupComparisonType.CREATE) {
-                        item.operation.createComparisonKey
-                    } else {
-                        item.operation.modifyComparisonKey
-                    }
-
-                if (itemKey == "" && startingKey == "") {
-                    throw Exception("Both comparison keys can not be blank!")
+        for (item in queue.toList()) {
+            val itemKey =
+                if (startingOp.operation.groupComparisonType == GroupComparisonType.CREATE) {
+                    item.operation.createComparisonKey
+                } else {
+                    item.operation.modifyComparisonKey
                 }
 
-                if (!_newRecordState.canAccess(item.operation.applyToRecordId)) {
-                    continue
-                }
+            if (itemKey == "" && startingKey == "") {
+                throw Exception("Both comparison keys can not be blank!")
+            }
 
-                if (itemKey == startingKey) {
-                    queue.remove(item)
-                    ops.add(item)
-                }
+            if (!_newRecordState.canAccess(item.operation.applyToRecordId)) {
+                continue
+            }
+
+            if (itemKey == startingKey) {
+                queue.remove(item)
+                ops.add(item)
             }
         }
 
