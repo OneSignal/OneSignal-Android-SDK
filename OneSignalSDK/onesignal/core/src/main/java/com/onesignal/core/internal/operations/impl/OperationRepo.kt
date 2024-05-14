@@ -386,6 +386,10 @@ internal class OperationRepo(
                     throw Exception("Both comparison keys can not be blank!")
                 }
 
+                if (!_newRecordState.canAccess(item.operation.applyToRecordId)) {
+                    continue
+                }
+
                 if (itemKey == startingKey) {
                     queue.remove(item)
                     ops.add(item)
