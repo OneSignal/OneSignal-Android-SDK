@@ -358,8 +358,7 @@ internal class OperationRepo(
      * THIS SHOULD BE CALLED WHILE THE QUEUE IS SYNCHRONIZED!!
      */
     private fun getGroupableOperations(startingOp: OperationQueueItem): List<OperationQueueItem> {
-        val ops = mutableListOf<OperationQueueItem>()
-        ops.add(startingOp)
+        val ops = mutableListOf(startingOp)
 
         if (startingOp.operation.groupComparisonType == GroupComparisonType.NONE) {
             return ops
