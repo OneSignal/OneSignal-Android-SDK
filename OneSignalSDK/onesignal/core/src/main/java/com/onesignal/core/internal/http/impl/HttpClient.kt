@@ -87,7 +87,7 @@ internal class HttpClient(
         jsonBody: JSONObject?,
         timeout: Int,
         cacheKey: String?,
-        jwt: String? = null
+        jwt: String? = null,
     ): HttpResponse {
         // If privacy consent is required but not yet given, any non-GET request should be blocked.
         if (method != null && _configModelStore.model.consentRequired == true && _configModelStore.model.consentGiven != true) {
@@ -119,7 +119,7 @@ internal class HttpClient(
         jsonBody: JSONObject?,
         timeout: Int,
         cacheKey: String?,
-        jwt: String? = null
+        jwt: String? = null,
     ): HttpResponse {
         var retVal: HttpResponse? = null
 
@@ -210,7 +210,9 @@ internal class HttpClient(
                                     PreferenceStores.ONESIGNAL,
                                     PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + cacheKey,
                                 )
-                            Logging.debug("HttpClient: Got Response = ${method ?: "GET"} ${con.url} - Using Cached response due to 304: " + cachedResponse)
+                            Logging.debug(
+                                "HttpClient: Got Response = ${method ?: "GET"} ${con.url} - Using Cached response due to 304: " + cachedResponse,
+                            )
 
                             // TODO: SHOULD RETURN OK INSTEAD OF NOT_MODIFIED TO MAKE TRANSPARENT?
                             retVal = HttpResponse(httpResponse, cachedResponse, retryAfterSeconds = retryAfter)
@@ -220,7 +222,9 @@ internal class HttpClient(
                             val scanner = Scanner(inputStream, "UTF-8")
                             val json = if (scanner.useDelimiter("\\A").hasNext()) scanner.next() else ""
                             scanner.close()
-                            Logging.debug("HttpClient: Got Response = ${method ?: "GET"} ${con.url} - STATUS: $httpResponse - Body: " + json)
+                            Logging.debug(
+                                "HttpClient: Got Response = ${method ?: "GET"} ${con.url} - STATUS: $httpResponse - Body: " + json,
+                            )
 
                             if (cacheKey != null) {
                                 val eTag = con.getHeaderField("etag")
