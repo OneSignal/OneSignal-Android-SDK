@@ -23,7 +23,7 @@ class NewRecordsState(
 
     fun canAccess(key: String): Boolean {
         val timeLastMovedOrCreated = records[key] ?: return true
-        return _time.currentTimeMillis - timeLastMovedOrCreated > _configModelStore.model.opRepoPostCreateDelay
+        return _time.currentTimeMillis - timeLastMovedOrCreated >= _configModelStore.model.opRepoPostCreateDelay
     }
 
     fun isInMissingRetryWindow(key: String): Boolean {
