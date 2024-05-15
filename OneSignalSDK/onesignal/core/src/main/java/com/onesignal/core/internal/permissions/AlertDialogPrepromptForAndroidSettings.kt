@@ -29,7 +29,11 @@ package com.onesignal.core.internal.permissions
 
 import android.app.Activity
 import android.app.AlertDialog
+import com.onesignal.common.AndroidUtils
 import com.onesignal.core.R
+import com.onesignal.core.activities.PermissionsActivity
+import com.onesignal.core.internal.application.IActivityLifecycleHandler
+import com.onesignal.core.internal.application.IApplicationService
 
 /**
  * A singleton helper which will display the fallback-to-settings alert dialog.
@@ -42,29 +46,43 @@ object AlertDialogPrepromptForAndroidSettings {
     }
 
     fun show(
-        activity: Activity,
+        application: IApplicationService,
         titlePrefix: String,
         previouslyDeniedPostfix: String,
         callback: Callback,
     ) {
-        val titleTemplate = activity.getString(R.string.permission_not_available_title)
-        val title = titleTemplate.format(titlePrefix)
+        // show the prompt only when an activity is available
+        application.addActivityLifecycleHandler(
+            object : IActivityLifecycleHandler {
+                override fun onActivityAvailable(activity: Activity) {
+                    if (AndroidUtils.isActivityFullyReady(activity)) {
+                        val titleTemplate =
+                            activity.getString(R.string.permission_not_available_title)
+                        val title = titleTemplate.format(titlePrefix)
 
-        val messageTemplate = activity.getString(R.string.permission_not_available_message)
-        val message = messageTemplate.format(previouslyDeniedPostfix)
+                        val messageTemplate =
+                            activity.getString(R.string.permission_not_available_message)
+                        val message = messageTemplate.format(previouslyDeniedPostfix)
 
-        AlertDialog.Builder(activity)
-            .setTitle(title)
-            .setMessage(message)
-            .setPositiveButton(R.string.permission_not_available_open_settings_option) { dialog, which ->
-                callback.onAccept()
-            }
-            .setNegativeButton(android.R.string.no) { dialog, which ->
-                callback.onDecline()
-            }
-            .setOnCancelListener {
-                callback.onDecline()
-            }
-            .show()
+                        AlertDialog.Builder(activity)
+                            .setTitle(title)
+                            .setMessage(message)
+                            .setPositiveButton(R.string.permission_not_available_open_settings_option) { dialog, which ->
+                                callback.onAccept()
+                            }
+                            .setNegativeButton(android.R.string.no) { dialog, which ->
+                                callback.onDecline()
+                            }
+                            .setOnCancelListener {
+                                callback.onDecline()
+                            }
+                            .show()
+                        application.removeActivityLifecycleHandler(this)
+                    }
+                }
+
+                override fun onActivityStopped(activity: Activity) {
+                }
+            })
     }
 }

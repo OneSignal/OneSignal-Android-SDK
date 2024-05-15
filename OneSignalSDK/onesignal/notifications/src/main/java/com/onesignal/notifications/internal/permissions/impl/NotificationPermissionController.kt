@@ -137,7 +137,7 @@ internal class NotificationPermissionController(
         val activity = _application.current ?: return false
 
         AlertDialogPrepromptForAndroidSettings.show(
-            activity,
+            _application,
             activity.getString(R.string.notification_permission_name_for_title),
             activity.getString(R.string.notification_permission_settings_message),
             object : AlertDialogPrepromptForAndroidSettings.Callback {
