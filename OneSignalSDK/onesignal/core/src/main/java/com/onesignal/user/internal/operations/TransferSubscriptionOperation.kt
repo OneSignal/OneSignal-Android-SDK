@@ -1,6 +1,5 @@
 package com.onesignal.user.internal.operations
 
-import com.onesignal.OneSignal
 import com.onesignal.common.IDManager
 import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.Operation
