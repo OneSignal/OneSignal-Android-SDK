@@ -10,8 +10,8 @@ open class IdentityModelStore(prefs: IPreferencesService) : SingletonModelStore<
 ) {
     fun invalidateJwt() {
         model.setStringProperty(
-                IdentityConstants.JWT_TOKEN,
-                "",
+            IdentityConstants.JWT_TOKEN,
+            "",
         )
     }
 }

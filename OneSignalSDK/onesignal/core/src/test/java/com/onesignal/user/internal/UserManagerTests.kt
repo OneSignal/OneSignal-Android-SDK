@@ -1,8 +1,6 @@
 package com.onesignal.user.internal
 
 import com.onesignal.IUserJwtInvalidatedListener
-import com.onesignal.common.modeling.ModelChangeTags
-import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -157,7 +155,8 @@ class UserManagerTests : FunSpec({
                 it.tags["my-tag-key1"] = "my-tag-value1"
             }
 
-        val userManager = UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext())
+        val userManager =
+            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext())
 
         // When
         val tagSnapshot1 = userManager.getTags()
@@ -224,19 +223,29 @@ class UserManagerTests : FunSpec({
         // mock backend service
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
-                CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
+            CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         // mock operation for login user
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
         coEvery { mockIdentityOperationExecutor.execute(any()) } returns
-                ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+            ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
         val loginUserOperationExecutor =
-                LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), mockLanguageContext)
+            LoginUserOperationExecutor(
+                mockIdentityOperationExecutor,
+                MockHelper.applicationService(),
+                MockHelper.deviceService(),
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockLanguageContext,
+            )
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         // mock user manager with jwtInvalidatedListener added
         val userManager =
-                UserManager(mockSubscriptionManager, mockIdentityModelStore, mockPropertiesModelStore, mockLanguageContext)
+            UserManager(mockSubscriptionManager, mockIdentityModelStore, mockPropertiesModelStore, mockLanguageContext)
         mockIdentityModelStore.subscribe(userManager)
         val spyJwtInvalidatedListener = spyk<IUserJwtInvalidatedListener>()
         userManager.addUserJwtInvalidatedListner(spyJwtInvalidatedListener)
