@@ -546,31 +546,15 @@ class OperationRepoTests : FunSpec({
         mocks.operationRepo.start()
         mocks.operationRepo.enqueue(operation1)
         val job = launch { mocks.operationRepo.enqueueAndWait(operation2) }.also { yield() }
-        mocks.operationRepo.enqueue(operation3)
+        mocks.operationRepo.enqueueAndWait(operation3)
         job.join()
 
         // Then
         coVerifyOrder {
-            mocks.executor.execute(
-                withArg {
-                    it.count() shouldBe 1
-                    it[0] shouldBe operation1
-                },
-            )
+            mocks.executor.execute(listOf(operation1))
             operation2.translateIds(mapOf("local-id1" to "id2"))
-            mocks.executor.execute(
-                withArg {
-                    it.count() shouldBe 1
-                    it[0] shouldBe operation3
-                },
-            )
-            // Ensure operation2 runs after operation3 as it has to wait for the create delay
-            mocks.executor.execute(
-                withArg {
-                    it.count() shouldBe 1
-                    it[0] shouldBe operation2
-                },
-            )
+            mocks.executor.execute(listOf(operation2))
+            mocks.executor.execute(listOf(operation3))
         }
     }
 
@@ -595,25 +579,9 @@ class OperationRepoTests : FunSpec({
 
         // Then
         coVerifyOrder {
-            mocks.executor.execute(
-                withArg {
-                    it.count() shouldBe 1
-                    it[0] shouldBe operation1
-                },
-            )
+            mocks.executor.execute(listOf(operation1))
             operation2.translateIds(mapOf("local-id1" to "id2"))
-            mocks.executor.execute(
-                withArg {
-                    it.count() shouldBe 1
-                    it[0] shouldBe operation2
-                },
-            )
-            mocks.executor.execute(
-                withArg {
-                    it.count() shouldBe 1
-                    it[0] shouldBe operation3
-                },
-            )
+            mocks.executor.execute(listOf(operation2, operation3))
         }
     }
 

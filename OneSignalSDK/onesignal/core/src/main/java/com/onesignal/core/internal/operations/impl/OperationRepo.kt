@@ -235,12 +235,17 @@ internal class OperationRepo(
                     queue.forEach { it.operation.translateIds(response.idTranslations) }
                 }
                 response.idTranslations.values.forEach { _newRecordState.add(it) }
-                coroutineScope.launch {
-                    val waitTime = _configModelStore.model.opRepoPostCreateDelay
-                    delay(waitTime)
-                    synchronized(queue) {
-                        if (queue.isNotEmpty()) waiter.wake(LoopWaiterMessage(false, waitTime))
-                    }
+                // Stall processing the queue so the backend's DB has to time
+                // reflect the change before we do any other operations to it.
+                // NOTE: Future: We could run this logic in a
+                // coroutineScope.launch() block so other operations not
+                // effecting this these id's can still be done in parallel,
+                // however other parts of the system don't currently account
+                // for this so this is not safe to do.
+                val waitTime = _configModelStore.model.opRepoPostCreateDelay
+                delay(waitTime)
+                synchronized(queue) {
+                    if (queue.isNotEmpty()) waiter.wake(LoopWaiterMessage(false, waitTime))
                 }
             }
 
