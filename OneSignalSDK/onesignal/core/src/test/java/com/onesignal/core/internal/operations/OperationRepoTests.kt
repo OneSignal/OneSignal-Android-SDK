@@ -25,7 +25,6 @@ import io.mockk.spyk
 import io.mockk.verify
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.time.withTimeout
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.yield
@@ -547,31 +546,42 @@ class OperationRepoTests : FunSpec({
         mocks.operationRepo.start()
         mocks.operationRepo.enqueue(operation1)
         val job = launch { mocks.operationRepo.enqueueAndWait(operation2) }.also { yield() }
-        mocks.operationRepo.enqueue(operation3)
+        mocks.operationRepo.enqueueAndWait(operation3)
         job.join()
 
         // Then
         coVerifyOrder {
-            mocks.executor.execute(
-                withArg {
-                    it.count() shouldBe 1
-                    it[0] shouldBe operation1
-                },
-            )
+            mocks.executor.execute(listOf(operation1))
             operation2.translateIds(mapOf("local-id1" to "id2"))
-            mocks.executor.execute(
-                withArg {
-                    it.count() shouldBe 1
-                    it[0] shouldBe operation3
-                },
-            )
-            // Ensure operation2 runs after operation3 as it has to wait for the create delay
-            mocks.executor.execute(
-                withArg {
-                    it.count() shouldBe 1
-                    it[0] shouldBe operation2
-                },
-            )
+            mocks.executor.execute(listOf(operation2))
+            mocks.executor.execute(listOf(operation3))
+        }
+    }
+
+    // This tests the same logic as above, but makes sure the delay also
+    // applies to grouping operations.
+    test("execution of an operation with translation IDs delays follow up operations, including grouping") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoPostCreateDelay = 100
+        val operation1 = mockOperation(groupComparisonType = GroupComparisonType.NONE)
+        val operation2 = mockOperation(groupComparisonType = GroupComparisonType.CREATE)
+        val operation3 = mockOperation(groupComparisonType = GroupComparisonType.CREATE, applyToRecordId = "id2")
+        coEvery {
+            mocks.executor.execute(listOf(operation1))
+        } returns ExecutionResponse(ExecutionResult.SUCCESS, mapOf("local-id1" to "id2"))
+
+        // When
+        mocks.operationRepo.start()
+        mocks.operationRepo.enqueue(operation1)
+        mocks.operationRepo.enqueue(operation2)
+        mocks.operationRepo.enqueueAndWait(operation3)
+
+        // Then
+        coVerifyOrder {
+            mocks.executor.execute(listOf(operation1))
+            operation2.translateIds(mapOf("local-id1" to "id2"))
+            mocks.executor.execute(listOf(operation2, operation3))
         }
     }
 
