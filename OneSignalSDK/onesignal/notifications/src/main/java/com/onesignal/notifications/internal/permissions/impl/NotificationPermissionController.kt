@@ -84,11 +84,7 @@ internal class NotificationPermissionController(
      * to notify of the status.
      */
     override suspend fun prompt(fallbackToSettings: Boolean): Boolean {
-        if (notificationsEnabled()) {
-            return true
-        }
-
-        if (supportsNativePrompt) {
+        if (notificationsEnabled() || supportsNativePrompt) {
             _requestPermission.startPrompt(
                 fallbackToSettings,
                 PERMISSION_TYPE,
