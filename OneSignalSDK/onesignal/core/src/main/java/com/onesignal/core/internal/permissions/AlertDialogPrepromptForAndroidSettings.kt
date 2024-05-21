@@ -31,7 +31,6 @@ import android.app.Activity
 import android.app.AlertDialog
 import com.onesignal.common.AndroidUtils
 import com.onesignal.core.R
-import com.onesignal.core.activities.PermissionsActivity
 import com.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 
@@ -83,6 +82,7 @@ object AlertDialogPrepromptForAndroidSettings {
 
                 override fun onActivityStopped(activity: Activity) {
                 }
-            })
+            },
+        )
     }
 }
