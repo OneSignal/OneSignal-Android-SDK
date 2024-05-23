@@ -9,9 +9,15 @@ internal class NotificationReceivedEvent(
     override val notification: Notification,
 ) : INotificationReceivedEvent {
     var isPreventDefault: Boolean = false
+    var discard: Boolean = false
 
     override fun preventDefault() {
+        preventDefault(false)
+    }
+
+    override fun preventDefault(discard: Boolean) {
         Logging.debug("NotificationReceivedEvent.preventDefault()")
         isPreventDefault = true
+        this.discard = discard
     }
 }
