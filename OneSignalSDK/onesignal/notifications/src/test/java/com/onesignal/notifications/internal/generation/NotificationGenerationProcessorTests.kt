@@ -23,6 +23,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import org.robolectric.annotation.Config
 
@@ -371,6 +372,101 @@ class NotificationGenerationProcessorTests : FunSpec({
                     it.shownTimeStamp shouldBe 1111
                 },
             )
+        }
+    }
+
+    test("processNotificationData should immediately drop the notification when will display callback indicates to") {
+        // Given
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val mockTime = MockHelper.time(1111)
+        val mockApplicationService = AndroidMockHelper.applicationService()
+        every { mockApplicationService.isInForeground } returns true
+        val mockNotificationDisplayer = mockk<INotificationDisplayer>()
+        val mockNotificationRepository = mockk<INotificationRepository>()
+        coEvery { mockNotificationRepository.doesNotificationExist(any()) } returns false
+        coEvery { mockNotificationRepository.createNotification(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } just runs
+        val mockNotificationSummaryManager = mockk<INotificationSummaryManager>()
+        val mockNotificationLifecycleService = mockk<INotificationLifecycleService>()
+        coEvery { mockNotificationLifecycleService.canReceiveNotification(any()) } returns true
+        coEvery { mockNotificationLifecycleService.notificationReceived(any()) } just runs
+        coEvery { mockNotificationLifecycleService.externalRemoteNotificationReceived(any()) } just runs
+        coEvery { mockNotificationLifecycleService.externalNotificationWillShowInForeground(any()) } answers {
+            val willDisplayEvent = firstArg<INotificationWillDisplayEvent>()
+            // Setting discard parameter to true indicating we should immediately discard
+            willDisplayEvent.preventDefault(true)
+        }
+
+        val notificationGenerationProcessor =
+            NotificationGenerationProcessor(
+                mockApplicationService,
+                mockNotificationDisplayer,
+                MockHelper.configModelStore(),
+                mockNotificationRepository,
+                mockNotificationSummaryManager,
+                mockNotificationLifecycleService,
+                mockTime,
+            )
+
+        val payload =
+            JSONObject()
+                .put("alert", "test message")
+                .put("title", "test title")
+                .put(
+                    "custom",
+                    JSONObject()
+                        .put("i", "UUID1"),
+                )
+
+        // If discard is set to false this should timeout waiting for display()
+        withTimeout(1_000) {
+            notificationGenerationProcessor.processNotificationData(context, 1, payload, false, 1111)
+        }
+    }
+
+    test("processNotificationData should immediately drop the notification when received event callback indicates to") {
+        // Given
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val mockTime = MockHelper.time(1111)
+        val mockApplicationService = AndroidMockHelper.applicationService()
+        every { mockApplicationService.isInForeground } returns true
+        val mockNotificationDisplayer = mockk<INotificationDisplayer>()
+        val mockNotificationRepository = mockk<INotificationRepository>()
+        coEvery { mockNotificationRepository.doesNotificationExist(any()) } returns false
+        coEvery { mockNotificationRepository.createNotification(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } just runs
+        val mockNotificationSummaryManager = mockk<INotificationSummaryManager>()
+        val mockNotificationLifecycleService = mockk<INotificationLifecycleService>()
+        coEvery { mockNotificationLifecycleService.canReceiveNotification(any()) } returns true
+        coEvery { mockNotificationLifecycleService.notificationReceived(any()) } just runs
+        coEvery { mockNotificationLifecycleService.externalRemoteNotificationReceived(any()) } answers {
+            val receivedEvent = firstArg<INotificationReceivedEvent>()
+            receivedEvent.preventDefault(true)
+        }
+        coEvery { mockNotificationLifecycleService.externalNotificationWillShowInForeground(any()) } just runs
+
+        val notificationGenerationProcessor =
+            NotificationGenerationProcessor(
+                mockApplicationService,
+                mockNotificationDisplayer,
+                MockHelper.configModelStore(),
+                mockNotificationRepository,
+                mockNotificationSummaryManager,
+                mockNotificationLifecycleService,
+                mockTime,
+            )
+
+        val payload =
+            JSONObject()
+                .put("alert", "test message")
+                .put("title", "test title")
+                .put(
+                    "custom",
+                    JSONObject()
+                        .put("i", "UUID1"),
+                )
+
+        // If discard is set to false this should timeout waiting for display()
+        withTimeout(1_000) {
+            notificationGenerationProcessor.processNotificationData(context, 1, payload, false, 1111)
         }
     }
 })
