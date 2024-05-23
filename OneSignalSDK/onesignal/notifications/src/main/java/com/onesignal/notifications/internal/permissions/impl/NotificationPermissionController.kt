@@ -86,7 +86,7 @@ internal class NotificationPermissionController(
      */
     override suspend fun prompt(fallbackToSettings: Boolean): Boolean {
         // Calling yield() to force a suspension point because Kotlin Continuation won't work
-        // properly if a suspend function does not actually suspend
+        // properly from java caller if a suspend function does not actually suspend
         yield()
 
         if (notificationsEnabled()) {

@@ -432,12 +432,6 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
 
     private void setupAliasLayout() {
         setupAliasesRecyclerView();
-        addAliasButton.setOnClickListener(v -> {
-            OneSignal.getNotifications().requestPermission(true, Continue.with(permissionResult -> {
-                System.out.println("Inside continuation block and result is " + permissionResult + ", permissionResult is " + permissionResult.getData());
-            }));
-        });
-        /*
         addAliasButton.setOnClickListener(v -> dialog.createAddPairAlertDialog("Add Alias", ProfileUtil.FieldType.ALIAS, new AddPairAlertDialogCallback() {
             @Override
             public void onSuccess(Pair<String, Object> pair) {
@@ -458,7 +452,7 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
             public void onFailure() {
                 refreshAliasRecyclerView();
             }
-        }));*/
+        }));
     }
 
     private void setupAliasesRecyclerView() {
