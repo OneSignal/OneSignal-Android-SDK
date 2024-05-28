@@ -73,7 +73,9 @@ internal class NotificationGenerationProcessor(
                 GlobalScope.launch(Dispatchers.IO) {
                     _lifecycleService.externalRemoteNotificationReceived(notificationReceivedEvent)
 
-                    if (notificationReceivedEvent.isPreventDefault) {
+                    if (notificationReceivedEvent.discard) {
+                        wantsToDisplay = false
+                    } else if (notificationReceivedEvent.isPreventDefault) {
                         // wait on display waiter. If the caller calls `display` on the notification,
                         // we will exit `waitForWake` and set `wantsToDisplay` to true. If the callback
                         // never calls `display` we will timeout and never set `wantsToDisplay` to true.
@@ -105,7 +107,9 @@ internal class NotificationGenerationProcessor(
                         GlobalScope.launch(Dispatchers.IO) {
                             _lifecycleService.externalNotificationWillShowInForeground(notificationWillDisplayEvent)
 
-                            if (notificationWillDisplayEvent.isPreventDefault) {
+                            if (notificationWillDisplayEvent.discard) {
+                                wantsToDisplay = false
+                            } else if (notificationWillDisplayEvent.isPreventDefault) {
                                 // wait on display waiter. If the caller calls `display` on the notification,
                                 // we will exit `waitForWake` and set `wantsToDisplay` to true. If the callback
                                 // never calls `display` we will timeout and never set `wantsToDisplay` to true.

@@ -38,4 +38,11 @@ interface INotificationWillDisplayEvent {
      * caller still has the option to display the notification by calling `notification.display()`.
      */
     fun preventDefault()
+
+    /**
+     * Call this to prevent OneSignal from displaying the notification automatically.
+     * @param discard an [preventDefault] set to true to dismiss the notification with no
+     * possibility of displaying it in the future.
+     */
+    fun preventDefault(discard: Boolean)
 }
