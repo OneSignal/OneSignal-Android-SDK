@@ -31,7 +31,7 @@ internal class ParamsBackendService(
             paramsUrl += "?player_id=$subscriptionId"
         }
 
-        val response = _http.get(paramsUrl, CacheKeys.REMOTE_PARAMS)
+        val response = _http.get(paramsUrl, CacheKeys.REMOTE_PARAMS, "")
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
@@ -59,8 +59,9 @@ internal class ParamsBackendService(
         return ParamsObject(
             googleProjectNumber = responseJson.safeString("android_sender_id"),
             enterprise = responseJson.safeBool("enterp"),
-            // TODO: New
-            useIdentityVerification = responseJson.safeBool("require_ident_auth"),
+            // TODO: TESTING ONLY
+            useIdentityVerification = true,
+            // useIdentityVerification = responseJson.safeBool("require_ident_auth"),
             notificationChannels = responseJson.optJSONArray("chnl_lst"),
             firebaseAnalytics = responseJson.safeBool("fba"),
             restoreTTLFilter = responseJson.safeBool("restore_ttl_filter"),
