@@ -99,8 +99,8 @@ afterEvaluate {
         }
     }
 
-    signing {
-        required { true }
-        sign publishing.publications.release
-    }
+    // signing {
+    //     required { true }
+    //     sign publishing.publications.release
+    // }
 }
