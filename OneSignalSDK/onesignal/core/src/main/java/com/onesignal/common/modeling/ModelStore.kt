@@ -35,6 +35,7 @@ abstract class ModelStore<TModel>(
     IModelChangedHandler where TModel : Model {
     private val changeSubscription: EventProducer<IModelStoreChangeHandler<TModel>> = EventProducer()
     private val models: MutableList<TModel> = mutableListOf()
+    private var hasLoadedFromCache = false
 
     override fun add(
         model: TModel,
@@ -156,6 +157,10 @@ abstract class ModelStore<TModel>(
         changeSubscription.fire { it.onModelRemoved(model, tag) }
     }
 
+    /**
+     * When models are loaded from the cache, they are added to the front of existing models.
+     * This is primarily to address operations which can enqueue before this method is called.
+     */
     protected fun load() {
         if (name == null || _prefs == null) {
             return
@@ -164,17 +169,28 @@ abstract class ModelStore<TModel>(
         val str = _prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, "[]")
         val jsonArray = JSONArray(str)
         synchronized(models) {
-            for (index in 0 until jsonArray.length()) {
+            val shouldRePersist = models.isNotEmpty()
+            for (index in jsonArray.length() - 1 downTo 0) {
                 val newModel = create(jsonArray.getJSONObject(index)) ?: continue
-                models.add(newModel)
+                models.add(0, newModel)
                 // listen for changes to this model
                 newModel.subscribe(this)
+            }
+            hasLoadedFromCache = true
+            // optimization only: to avoid unnecessary writes
+            if (shouldRePersist) {
+                persist()
             }
         }
     }
 
+    /**
+     * Any models added or changed before load is called are not persisted, to avoid overwriting the cache.
+     * The time between any changes and loading from cache should be minuscule so lack of persistence is safe.
+     * This is primarily to address operations which can enqueue before load() is called.
+     */
     fun persist() {
-        if (name == null || _prefs == null) {
+        if (name == null || _prefs == null || !hasLoadedFromCache) {
             return
         }
 
