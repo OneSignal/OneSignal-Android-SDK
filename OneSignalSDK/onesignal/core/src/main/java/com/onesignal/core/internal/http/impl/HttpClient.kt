@@ -151,7 +151,7 @@ internal class HttpClient(
                     con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignalUtils.SDK_VERSION)
 
                     if (!jwt.isNullOrEmpty()) {
-                        con.setRequestProperty("Authentication", "Bearer $jwt")
+                        con.setRequestProperty("Authorization", "Bearer $jwt")
                     }
 
                     if (OneSignalWrapper.sdkType != null && OneSignalWrapper.sdkVersion != null) {

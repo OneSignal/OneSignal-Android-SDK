@@ -87,7 +87,9 @@ class UpdateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.UP
     var jwt: String?
         get() = getStringProperty(::jwt.name)
         private set(value) {
-            setStringProperty(::jwt.name, value!!)
+            if (value != null) {
+                setStringProperty(::jwt.name, value!!)
+            }
         }
 
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"

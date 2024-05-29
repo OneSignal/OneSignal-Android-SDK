@@ -438,9 +438,11 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         token: String,
     ) {
         if (!identityModelStore!!.model.externalId.equals(externalId)) {
+            Logging.log(LogLevel.DEBUG, "JWT $token is NOT updated for externalId $externalId")
             return
         }
 
+        Logging.log(LogLevel.DEBUG, "JWT $token is updated for externalId $externalId")
         identityModelStore!!.model.jwtToken = token
     }
 
