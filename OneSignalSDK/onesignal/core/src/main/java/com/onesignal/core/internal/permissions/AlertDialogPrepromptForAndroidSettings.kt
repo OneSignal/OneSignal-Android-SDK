@@ -29,7 +29,7 @@ package com.onesignal.core.internal.permissions
 
 import android.app.Activity
 import android.app.AlertDialog
-import com.onesignal.common.AndroidUtils
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.R
 import com.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
@@ -54,7 +54,8 @@ object AlertDialogPrepromptForAndroidSettings {
         application.addActivityLifecycleHandler(
             object : IActivityLifecycleHandler {
                 override fun onActivityAvailable(activity: Activity) {
-                    if (AndroidUtils.isActivityFullyReady(activity)) {
+                    suspendifyOnThread {
+                        application.waitUntilActivityReady()
                         val titleTemplate =
                             activity.getString(R.string.permission_not_available_title)
                         val title = titleTemplate.format(titlePrefix)
