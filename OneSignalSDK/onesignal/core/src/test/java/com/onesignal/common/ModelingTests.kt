@@ -4,12 +4,19 @@ import com.onesignal.common.events.EventProducer
 import com.onesignal.common.modeling.IModelChangedHandler
 import com.onesignal.common.modeling.IModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
+import com.onesignal.core.internal.operations.impl.OperationModelStore
+import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
+import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
+import com.onesignal.user.internal.operations.SetPropertyOperation
+import com.onesignal.user.internal.operations.SetTagOperation
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import org.json.JSONArray
+import java.util.UUID
 
 class ModelingTests : FunSpec({
 
@@ -135,5 +142,32 @@ class ModelingTests : FunSpec({
 
         // ensure no concurrent modification exception is thrown and "subcribers" is clear
         model.hasSubscribers shouldBe false
+    }
+
+    test("ensure Model Store load pulls cached operations and doesn't duplicate models") {
+        // Given
+        val prefs = MockPreferencesService()
+        val operationModelStore = OperationModelStore(prefs)
+        val jsonArray = JSONArray()
+
+        val cachedOperation = SetTagOperation()
+        cachedOperation.id = UUID.randomUUID().toString()
+        // Add duplicate operations to the cache
+        jsonArray.put(cachedOperation.toJSON())
+        jsonArray.put(cachedOperation.toJSON())
+        prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + "operations", jsonArray.toString())
+
+        // When - adding an operation first and then loading from cache
+        val newOperation = SetPropertyOperation()
+        newOperation.id = UUID.randomUUID().toString()
+        operationModelStore.add(newOperation)
+        operationModelStore.loadOperations()
+
+        // Then
+        operationModelStore.list().count() shouldBe 2
+        // The cached operation will not be the same instance
+        operationModelStore.get(cachedOperation.id)!!.name shouldBe cachedOperation.name
+        // The new operation added directly to the store should be the same instance
+        operationModelStore.get(newOperation.id) shouldBe newOperation
     }
 })
