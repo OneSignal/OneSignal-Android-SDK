@@ -77,7 +77,7 @@ dependencies {
     // firebase-messaging:23.0.0 incoporates fix for SecurityException: Not allowed to bind to service
     api('com.google.firebase:firebase-messaging') {
         version {
-            require '[19.0.0, 23.4.99]'
+            require '[21.0.0, 23.4.99]'
             prefer '23.4.0'
         }
     }
