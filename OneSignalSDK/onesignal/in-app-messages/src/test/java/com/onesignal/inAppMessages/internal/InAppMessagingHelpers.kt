@@ -1,6 +1,7 @@
 package com.onesignal.inAppMessages.internal
 
 import com.onesignal.core.internal.time.ITime
+import io.mockk.mockk
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -11,6 +12,43 @@ class InAppMessagingHelpers {
         const val TEST_ENGLISH_ANDROID_VARIANT_ID = "11e4-bed1-df8f05be55ba-a4b3gj7f-d8cc"
         const val IAM_CLICK_ID = "12345678-1234-1234-1234-123456789012"
         const val IAM_PAGE_ID = "12345678-1234-ABCD-1234-123456789012"
+        const val IAM_HAS_LIQUID = "has_liquid"
+
+        internal fun evaluateMessage(message: InAppMessage) {
+            // TODO
+        }
+
+        internal fun onMessageWasDisplayed(message: InAppMessage) {
+            val mockInAppMessageManager = mockk<InAppMessagesManager>()
+            mockInAppMessageManager.onMessageWasDisplayed(message)
+        }
+
+        internal fun onMessageActionOccurredOnMessage(
+            message: InAppMessage,
+            clickResult: InAppMessageClickResult
+        ) {
+            val mockInAppMessageManager = mockk<InAppMessagesManager>()
+            mockInAppMessageManager.onMessageActionOccurredOnMessage(message, clickResult)
+        }
+
+        fun buildTestMessageWithLiquid(triggerJson: JSONArray?): OSTestInAppMessageInternal {
+            val json = basicIAMJSONObject(triggerJson)
+            json.put(IAM_HAS_LIQUID, true)
+            return OSTestInAppMessageInternal(json)
+        }
+
+        internal fun buildTestMessageWithSingleTriggerAndLiquid(
+            kind: Trigger.OSTriggerKind,
+            key: String?,
+            operator: String?,
+            value: Any?
+        ): OSTestInAppMessageInternal {
+            val triggersJson = basicTrigger(
+                kind, key,
+                operator!!, value!!
+            )
+            return buildTestMessageWithLiquid(triggersJson)
+        }
 
         // Most tests build a test message using only one trigger.
         // This convenience method makes it easy to build such a message
@@ -115,6 +153,30 @@ class InAppMessagingHelpers {
         }
     }
 
+    // WIP
+    /** IAM Lifecycle  */
+    internal fun onMessageWillDisplay(message: InAppMessage) {
+        val mockInAppMessageManager = mockk<InAppMessagesManager>()
+        mockInAppMessageManager.onMessageWillDisplay(message)
+    }
+
+    internal fun onMessageDidDisplay(message: InAppMessage) {
+        val mockInAppMessageManager = mockk<InAppMessagesManager>()
+        mockInAppMessageManager.onMessageWasDisplayed(message)
+    }
+
+    internal fun onMessageWillDismiss(message: InAppMessage) {
+        val mockInAppMessageManager = mockk<InAppMessagesManager>()
+        mockInAppMessageManager.onMessageWillDismiss(message)
+    }
+
+    internal fun onMessageDidDismiss(message: InAppMessage) {
+        val mockInAppMessageManager = mockk<InAppMessagesManager>()
+        mockInAppMessageManager.onMessageWasDismissed(message)
+    }
+
+    // End IAM Lifecycle
+
     class OSTestInAppMessageInternal(
         private val jsonObject: JSONObject
     ) {
@@ -173,4 +235,3 @@ class InAppMessagingHelpers {
         }
     }
 }
-
