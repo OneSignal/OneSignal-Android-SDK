@@ -5,6 +5,7 @@ import com.onesignal.common.events.IEventNotifier
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.debug.internal.logging.Logging
 import org.json.JSONArray
 
 /**
@@ -172,6 +173,20 @@ abstract class ModelStore<TModel>(
         synchronized(models) {
             for (index in jsonArray.length() - 1 downTo 0) {
                 val newModel = create(jsonArray.getJSONObject(index)) ?: continue
+
+                /*
+                 * NOTE: Migration fix for bug introduced in 5.1.12
+                 * The following check is intended for the operation model store.
+                 * When the call to this method moved out of the operation model store's initializer,
+                 * duplicate operations could be cached.
+                 * See https://github.com/OneSignal/OneSignal-Android-SDK/pull/2099
+                 */
+                val hasExisting = models.any { it.id == newModel.id }
+                if (hasExisting) {
+                    Logging.debug("ModelStore<$name>: load - operation.id: ${newModel.id} already exists in the store.")
+                    continue
+                }
+
                 models.add(0, newModel)
                 // listen for changes to this model
                 newModel.subscribe(this)
