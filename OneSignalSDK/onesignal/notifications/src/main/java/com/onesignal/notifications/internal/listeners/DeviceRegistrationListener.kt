@@ -37,8 +37,6 @@ internal class DeviceRegistrationListener(
         _configModelStore.subscribe(this)
         _notificationsManager.addPermissionObserver(this)
         _subscriptionManager.subscribe(this)
-
-        retrievePushTokenAndUpdateSubscription()
     }
 
     override fun onModelReplaced(
