@@ -67,8 +67,12 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     override var consentGiven: Boolean
         get() = configModel?.consentGiven ?: (_consentGiven == true)
         set(value) {
+            val oldValue = _consentGiven
             _consentGiven = value
             configModel?.consentGiven = value
+            if (oldValue != value && value) {
+                operationRepo?.forceProcessDeltas()
+            }
         }
 
     override var disableGMSMissingPrompt: Boolean

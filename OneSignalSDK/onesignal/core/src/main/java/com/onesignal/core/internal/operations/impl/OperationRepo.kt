@@ -1,5 +1,6 @@
 package com.onesignal.core.internal.operations.impl
 
+import android.os.Looper
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -183,6 +184,10 @@ internal class OperationRepo(
         }
     }
 
+    override fun forceProcessDeltas() {
+        waiter.wake(LoopWaiterMessage(true, 0))
+    }
+
     /**
      *  Waits until a new operation is enqueued, then wait an additional
      *  amount of time afterwards, so operations can be grouped/batched.
@@ -334,7 +339,14 @@ internal class OperationRepo(
         val delayFor = max(delayForOnRetries, retryAfterSecondsNonNull * 1_000)
         if (delayFor < 1) return
         Logging.error("Operations being delay for: $delayFor ms")
-        delay(delayFor)
+        var wakeMessage = LoopWaiterMessage(false, 0)
+        while (!wakeMessage.force) {
+            val waitedTheFullTime =
+                    withTimeoutOrNull(delayFor) {
+                        wakeMessage = waiter.waitForWake()
+                    } == null
+            if (waitedTheFullTime) break
+        }
     }
 
     internal fun getNextOps(bucketFilter: Int): List<OperationQueueItem>? {
