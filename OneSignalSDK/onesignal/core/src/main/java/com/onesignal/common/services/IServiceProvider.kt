@@ -21,6 +21,8 @@ interface IServiceProvider {
      */
     fun <T> getService(c: Class<T>): T
 
+    suspend fun <T> getSuspendService(c: Class<T>): T
+
     /**
      * Retrieve the service that is a [T].  If multiple services
      * exist, the last one registered will be returned. If no service exists, null will

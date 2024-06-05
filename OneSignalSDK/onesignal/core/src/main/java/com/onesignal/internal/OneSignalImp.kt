@@ -51,6 +51,8 @@ import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 internal class OneSignalImp : IOneSignal, IServiceProvider {
@@ -231,11 +233,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             }
 
             // "Inject" the services required by this main class
-            _location = services.getService()
-            _user = services.getService()
-            _session = services.getService()
-            iam = services.getService()
-            _notifications = services.getService()
+            getSuspendServices()
+
             operationRepo = services.getService()
             propertiesModelStore = services.getService()
             identityModelStore = services.getService()
@@ -294,8 +293,12 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
                         pushSubscriptionModel.sdk = OneSignalUtils.SDK_VERSION
                         pushSubscriptionModel.deviceOS = Build.VERSION.RELEASE
-                        pushSubscriptionModel.carrier = DeviceUtils.getCarrierName(services.getService<IApplicationService>().appContext) ?: ""
-                        pushSubscriptionModel.appVersion = AndroidUtils.getAppVersion(services.getService<IApplicationService>().appContext) ?: ""
+                        pushSubscriptionModel.carrier = DeviceUtils.getCarrierName(
+                            services.getService<IApplicationService>().appContext,
+                        ) ?: ""
+                        pushSubscriptionModel.appVersion = AndroidUtils.getAppVersion(
+                            services.getService<IApplicationService>().appContext,
+                        ) ?: ""
 
                         configModel!!.pushSubscriptionId = legacyPlayerId
                         subscriptionModelStore!!.add(
@@ -478,9 +481,21 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         }
     }
 
+    private fun getSuspendServices() {
+        GlobalScope.launch {
+            _location = services.getSuspendService()
+            _user = services.getSuspendService()
+            _session = services.getSuspendService()
+            iam = services.getSuspendService()
+            _notifications = services.getSuspendService()
+        }
+    }
+
     override fun <T> hasService(c: Class<T>): Boolean = services.hasService(c)
 
     override fun <T> getService(c: Class<T>): T = services.getService(c)
+
+    override suspend fun <T> getSuspendService(c: Class<T>): T = services.getSuspendService(c)
 
     override fun <T> getServiceOrNull(c: Class<T>): T? = services.getServiceOrNull(c)
 

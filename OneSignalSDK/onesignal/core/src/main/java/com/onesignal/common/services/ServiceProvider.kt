@@ -1,6 +1,11 @@
 package com.onesignal.common.services
 
 import com.onesignal.debug.internal.logging.Logging
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A service provider gives access to the implementations of a service.
@@ -8,7 +13,7 @@ import com.onesignal.debug.internal.logging.Logging
 class ServiceProvider(
     registrations: List<ServiceRegistration<*>>,
 ) : IServiceProvider {
-    private val serviceMap = mutableMapOf<Class<*>, MutableList<ServiceRegistration<*>>>()
+    private val serviceMap = ConcurrentHashMap<Class<*>, MutableList<ServiceRegistration<*>>>()
 
     init {
         // go through the registrations to create the service map for easier lookup post-build
@@ -33,6 +38,10 @@ class ServiceProvider(
 
     internal inline fun <reified T : Any> getService(): T {
         return getService(T::class.java)
+    }
+
+    internal suspend inline fun <reified T : Any> getSuspendService(): T {
+        return getSuspendService(T::class.java)
     }
 
     internal inline fun <reified T : Any> getServiceOrNull(): T? {
@@ -71,6 +80,20 @@ class ServiceProvider(
         }
 
         return service
+    }
+
+    override suspend fun <T> getSuspendService(c: Class<T>): T {
+        val provider = this
+        CoroutineScope(Dispatchers.IO).launch {
+        }
+        return withContext(Dispatchers.IO) {
+            val service = serviceMap[c]?.last()?.resolve(provider) as T?
+            if (service == null) {
+                Logging.warn("Service not found: $c")
+                throw Exception("Service $c could not be instantiated")
+            }
+            service
+        }
     }
 
     override fun <T> getServiceOrNull(c: Class<T>): T? {
