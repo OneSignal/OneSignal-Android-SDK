@@ -43,6 +43,10 @@ import com.onesignal.notifications.R
 import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.permissions.INotificationPermissionChangedHandler
 import com.onesignal.notifications.internal.permissions.INotificationPermissionController
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.yield
 
 internal class NotificationPermissionController(
@@ -54,6 +58,8 @@ internal class NotificationPermissionController(
     INotificationPermissionController {
     private val waiter = WaiterWithValue<Boolean>()
     private val events = EventProducer<INotificationPermissionChangedHandler>()
+    private var _enabled = false // Should be a cached value
+    private val coroutineScope = CoroutineScope(newSingleThreadContext(name = "NotificationPermissionController"))
 
     override val canRequestPermission: Boolean
         get() =
@@ -65,12 +71,32 @@ internal class NotificationPermissionController(
 
     init {
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)
+        coroutineScope.launch {
+            pollForPermission()
+        }
+    }
+
+     private suspend fun pollForPermission() {
+        while (true) {
+            val enabled = this.notificationsEnabled()
+            if (_enabled != enabled) { // The permission has changed without prompting through OneSignal
+                _enabled = enabled
+                events.fire { it.onNotificationPermissionChanged(enabled) }
+            }
+            delay(1_000) // should be a configurable value for unit tests
+        }
     }
 
     @ChecksSdkIntAtLeast(api = 33)
     val supportsNativePrompt =
         Build.VERSION.SDK_INT > 32 &&
             AndroidUtils.getTargetSdkVersion(_application.appContext) > 32
+
+    private fun permissionPromptCompleted(enabled: Boolean) {
+        _enabled = enabled
+        waiter.wake(enabled)
+        events.fire { it.onNotificationPermissionChanged(enabled) }
+    }
 
     /**
      * Prompt the user for notification permission.  Note it is possible the application
@@ -119,8 +145,7 @@ internal class NotificationPermissionController(
         get() = events.hasSubscribers
 
     override fun onAccept() {
-        waiter.wake(true)
-        events.fire { it.onNotificationPermissionChanged(true) }
+        permissionPromptCompleted(true)
     }
 
     override fun onReject(fallbackToSettings: Boolean) {
@@ -132,8 +157,7 @@ internal class NotificationPermissionController(
             }
 
         if (!fallbackShown) {
-            waiter.wake(false)
-            events.fire { it.onNotificationPermissionChanged(false) }
+            permissionPromptCompleted(false)
         }
     }
 
@@ -154,8 +178,7 @@ internal class NotificationPermissionController(
                                 super.onFocus()
                                 _applicationService.removeApplicationLifecycleHandler(this)
                                 val hasPermission = AndroidUtils.hasPermission(ANDROID_PERMISSION_STRING, true, _applicationService)
-                                waiter.wake(hasPermission)
-                                events.fire { it.onNotificationPermissionChanged(hasPermission) }
+                                permissionPromptCompleted(hasPermission)
                             }
                         },
                     )
@@ -163,8 +186,7 @@ internal class NotificationPermissionController(
                 }
 
                 override fun onDecline() {
-                    waiter.wake(false)
-                    events.fire { it.onNotificationPermissionChanged(false) }
+                    permissionPromptCompleted(false)
                 }
             },
         )
