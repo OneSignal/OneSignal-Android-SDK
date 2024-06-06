@@ -19,13 +19,14 @@ class SessionModel : Model() {
      * Whether the session is valid.
      */
     var isValid: Boolean
-        get() = getBooleanProperty(::isValid.name) { true }
+        get() = getBooleanProperty(::isValid.name) { false }
         set(value) {
             setBooleanProperty(::isValid.name, value)
         }
 
     /**
      * When this session started, in Unix time milliseconds.
+     * This is used by In-App Message triggers, and not used in detecting session time.
      */
     var startTime: Long
         get() = getLongProperty(::startTime.name) { System.currentTimeMillis() }
