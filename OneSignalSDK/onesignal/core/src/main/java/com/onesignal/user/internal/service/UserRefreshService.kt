@@ -1,28 +1,32 @@
 package com.onesignal.user.internal.service
 
 import com.onesignal.common.IDManager
-import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.startup.IStartableService
+import com.onesignal.session.internal.session.ISessionLifecycleHandler
+import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.RefreshUserOperation
 
-// Ensure cache for the user is refreshed once per cold start when app
+// Ensure user is refreshed only when app
 // is in the foreground. This saves resources as there are a number of
 // events (such as push received or non-OneSignal events) that start
 // the app in the background but will never read/write any user
 // properties.
 class UserRefreshService(
     private val _applicationService: IApplicationService,
+    private val _sessionService: ISessionService,
     private val _operationRepo: IOperationRepo,
     private val _configModelStore: ConfigModelStore,
     private val _identityModelStore: IdentityModelStore,
 ) : IStartableService,
-    IApplicationLifecycleHandler {
+    ISessionLifecycleHandler {
     private fun refreshUser() {
-        if (IDManager.isLocalId(_identityModelStore.model.onesignalId)) return
+        if (IDManager.isLocalId(_identityModelStore.model.onesignalId) || !_applicationService.isInForeground) {
+            return
+        }
 
         _operationRepo.enqueue(
             RefreshUserOperation(
@@ -32,21 +36,11 @@ class UserRefreshService(
         )
     }
 
-    override fun start() {
-        if (_applicationService.isInForeground) {
-            refreshUser()
-        } else {
-            _applicationService.addApplicationLifecycleHandler(this)
-        }
-    }
+    override fun start() = _sessionService.subscribe(this)
 
-    private var onFocusCalled: Boolean = false
+    override fun onSessionStarted() = refreshUser()
 
-    override fun onFocus() {
-        if (onFocusCalled) return
-        onFocusCalled = true
-        refreshUser()
-    }
+    override fun onSessionActive() { }
 
-    override fun onUnfocused() { }
+    override fun onSessionEnded(duration: Long) { }
 }
