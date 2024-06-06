@@ -49,6 +49,7 @@ internal class OperationRepo(
     private val executorsMap: Map<String, IOperationExecutor>
     internal val queue = mutableListOf<OperationQueueItem>()
     private val waiter = WaiterWithValue<LoopWaiterMessage>()
+    private val retryWaiter = WaiterWithValue<LoopWaiterMessage>()
     private var paused = false
     private var coroutineScope = CoroutineScope(newSingleThreadContext(name = "OpRepo"))
     private val initialized = CompletableDeferred<Unit>()
@@ -184,8 +185,8 @@ internal class OperationRepo(
         }
     }
 
-    override fun forceProcessDeltas() {
-        waiter.wake(LoopWaiterMessage(true, 0))
+    override fun forceExecuteOperations() {
+        retryWaiter.wake(LoopWaiterMessage(true, 0))
     }
 
     /**
@@ -339,14 +340,10 @@ internal class OperationRepo(
         val delayFor = max(delayForOnRetries, retryAfterSecondsNonNull * 1_000)
         if (delayFor < 1) return
         Logging.error("Operations being delay for: $delayFor ms")
-        var wakeMessage = LoopWaiterMessage(false, 0)
-        while (!wakeMessage.force) {
-            val waitedTheFullTime =
-                    withTimeoutOrNull(delayFor) {
-                        wakeMessage = waiter.waitForWake()
-                    } == null
-            if (waitedTheFullTime) break
+        withTimeoutOrNull(delayFor) {
+            retryWaiter.waitForWake()
         }
+        waiter.wake(LoopWaiterMessage(false, 0))
     }
 
     internal fun getNextOps(bucketFilter: Int): List<OperationQueueItem>? {
