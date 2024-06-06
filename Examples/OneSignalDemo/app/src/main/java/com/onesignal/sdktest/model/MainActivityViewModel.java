@@ -811,10 +811,10 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
 
     private void setupPromptPushButton() {
         promptPushButton.setOnClickListener(v -> {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                getActivity().requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1);
-            }
-            //OneSignal.getUser().getPushSubscription().optIn();
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+//                getActivity().requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1);
+//            }
+            OneSignal.getUser().getPushSubscription().optIn();
         });
     }
 

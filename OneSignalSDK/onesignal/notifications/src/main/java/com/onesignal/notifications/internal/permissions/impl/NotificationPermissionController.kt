@@ -86,6 +86,7 @@ internal class NotificationPermissionController(
                 this.enabled = enabled
                 events.fire { it.onNotificationPermissionChanged(enabled) }
             }
+            // change to use waiter and account for background/foreground
             delay(_configModelStore.model.fetchNotificationPermissionInterval)
         }
     }
