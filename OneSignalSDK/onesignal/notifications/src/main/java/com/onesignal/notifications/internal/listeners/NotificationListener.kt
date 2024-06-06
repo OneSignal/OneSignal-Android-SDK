@@ -75,23 +75,21 @@ internal class NotificationListener(
         val deviceType = _deviceService.deviceType
 
         for (i in 0 until data.length()) {
-            val notificationId = NotificationFormatHelper.getOSNotificationIdFromJson(data[i] as JSONObject?)
+            val notificationId = NotificationFormatHelper.getOSNotificationIdFromJson(data[i] as JSONObject?) ?: continue
+
             if (postedOpenedNotifIds.contains(notificationId)) {
                 continue
             }
-            if (notificationId != null) {
-                postedOpenedNotifIds.add(notificationId)
-            }
+
+            postedOpenedNotifIds.add(notificationId)
 
             try {
-                if (notificationId != null) {
-                    _backend.updateNotificationAsOpened(
-                        appId,
-                        notificationId,
-                        subscriptionId,
-                        deviceType,
-                    )
-                }
+                _backend.updateNotificationAsOpened(
+                    appId,
+                    notificationId,
+                    subscriptionId,
+                    deviceType,
+                )
             } catch (ex: BackendException) {
                 Logging.error("Notification opened confirmation failed with statusCode: ${ex.statusCode} response: ${ex.response}")
             }
@@ -104,8 +102,7 @@ internal class NotificationListener(
         )
 
         // Handle the first element in the data array as the latest notification
-        val latestNotification = if (data.length() > 0) data[0] as JSONObject else null
-        val latestNotificationId = NotificationFormatHelper.getOSNotificationIdFromJson(latestNotification)
+        val latestNotificationId = getLatestNotificationId(data)
 
         if (shouldInitDirectSessionFromNotificationOpen(activity)) {
             // We want to set the app entry state to NOTIFICATION_CLICK when coming from background
@@ -129,5 +126,10 @@ internal class NotificationListener(
             e.printStackTrace()
         }
         return true
+    }
+
+    private fun getLatestNotificationId(data: JSONArray): String? {
+        val latestNotification = if (data.length() > 0) data[0] as JSONObject else null
+        return NotificationFormatHelper.getOSNotificationIdFromJson(latestNotification)
     }
 }
