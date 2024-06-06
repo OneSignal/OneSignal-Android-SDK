@@ -193,9 +193,18 @@ class ConfigModel : Model() {
      * The minimum number of milliseconds required to pass to allow the fetching of IAM to occur.
      */
     var fetchIAMMinInterval: Long
-        get() = getLongProperty(::fetchIAMMinInterval.name) { 30000 }
+        get() = getLongProperty(::fetchIAMMinInterval.name) { 30_000 }
         set(value) {
             setLongProperty(::fetchIAMMinInterval.name, value)
+        }
+
+    /**
+     * The number of milliseconds between fetching the current notification permission value
+     */
+    var fetchNotificationPermissionInterval: Long
+        get() = getLongProperty(::fetchNotificationPermissionInterval.name) { 1_000 }
+        set(value) {
+            setLongProperty(::fetchNotificationPermissionInterval.name, value)
         }
 
     /**
