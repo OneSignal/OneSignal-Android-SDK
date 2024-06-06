@@ -58,7 +58,7 @@ internal class NotificationPermissionController(
     INotificationPermissionController {
     private val waiter = WaiterWithValue<Boolean>()
     private val events = EventProducer<INotificationPermissionChangedHandler>()
-    private var _enabled = false // Should be a cached value
+    private var enabled: Boolean
     private val coroutineScope = CoroutineScope(newSingleThreadContext(name = "NotificationPermissionController"))
 
     override val canRequestPermission: Boolean
@@ -70,17 +70,18 @@ internal class NotificationPermissionController(
             )!!
 
     init {
+        this.enabled = notificationsEnabled()
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)
         coroutineScope.launch {
             pollForPermission()
         }
     }
 
-     private suspend fun pollForPermission() {
+    private suspend fun pollForPermission() {
         while (true) {
             val enabled = this.notificationsEnabled()
-            if (_enabled != enabled) { // The permission has changed without prompting through OneSignal
-                _enabled = enabled
+            if (this.enabled != enabled) { // If the permission has changed without prompting through OneSignal
+                this.enabled = enabled
                 events.fire { it.onNotificationPermissionChanged(enabled) }
             }
             delay(1_000) // should be a configurable value for unit tests
@@ -93,7 +94,7 @@ internal class NotificationPermissionController(
             AndroidUtils.getTargetSdkVersion(_application.appContext) > 32
 
     private fun permissionPromptCompleted(enabled: Boolean) {
-        _enabled = enabled
+        this.enabled = enabled
         waiter.wake(enabled)
         events.fire { it.onNotificationPermissionChanged(enabled) }
     }
