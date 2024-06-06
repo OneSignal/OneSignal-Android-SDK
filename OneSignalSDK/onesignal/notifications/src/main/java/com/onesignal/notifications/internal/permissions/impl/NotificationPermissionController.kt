@@ -34,6 +34,7 @@ import com.onesignal.common.events.EventProducer
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.application.ApplicationLifecycleHandlerBase
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.permissions.AlertDialogPrepromptForAndroidSettings
 import com.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
@@ -54,6 +55,7 @@ internal class NotificationPermissionController(
     private val _requestPermission: IRequestPermissionService,
     private val _applicationService: IApplicationService,
     private val _preferenceService: IPreferencesService,
+    private val _configModelStore: ConfigModelStore,
 ) : IRequestPermissionService.PermissionCallback,
     INotificationPermissionController {
     private val waiter = WaiterWithValue<Boolean>()
@@ -84,7 +86,7 @@ internal class NotificationPermissionController(
                 this.enabled = enabled
                 events.fire { it.onNotificationPermissionChanged(enabled) }
             }
-            delay(1_000) // should be a configurable value for unit tests
+            delay(_configModelStore.model.fetchNotificationPermissionInterval)
         }
     }
 
