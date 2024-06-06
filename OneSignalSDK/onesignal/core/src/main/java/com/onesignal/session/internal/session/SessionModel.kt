@@ -38,7 +38,7 @@ class SessionModel : Model() {
      * When this app was last focused, in Unix time milliseconds.
      */
     var focusTime: Long
-        get() = getLongProperty(::focusTime.name) { 0 }
+        get() = getLongProperty(::focusTime.name) { System.currentTimeMillis() }
         set(value) {
             setLongProperty(::focusTime.name, value)
         }
