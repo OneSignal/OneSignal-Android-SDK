@@ -657,6 +657,34 @@ class OperationRepoTests : FunSpec({
         mocks.operationRepo.queue[0].operation shouldBe op1
         mocks.operationRepo.queue[1].operation shouldBe op2
     }
+
+    test("ensure forceExecuteOperations immediately wakes retry waiters") {
+        // Given
+        val mocks = Mocks()
+        val opRepo = mocks.operationRepo
+        coEvery {
+            mocks.executor.execute(any())
+        } returns ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = 5) andThen ExecutionResponse(ExecutionResult.SUCCESS)
+
+        // When
+        opRepo.start()
+        opRepo.enqueue(mockOperation())
+        val response1 =
+            withTimeoutOrNull(999) {
+                opRepo.enqueueAndWait(mockOperation())
+            }
+        // Forcing execution to bypass 5 second retry period
+        opRepo.forceExecuteOperations()
+        val response2 =
+            withTimeoutOrNull(100) {
+                opRepo.enqueueAndWait(mockOperation())
+            }
+
+        // Then
+        response1 shouldBe null
+        response2 shouldBe true
+        opRepo.forceExecuteOperations()
+    }
 }) {
     companion object {
         private fun mockOperation(

@@ -40,6 +40,8 @@ interface IOperationRepo {
     fun <T : Operation> containsInstanceOf(type: KClass<T>): Boolean
 
     suspend fun awaitInitialized()
+
+    fun forceExecuteOperations()
 }
 
 // Extension function so the syntax containsInstanceOf<Operation>() can be used over
