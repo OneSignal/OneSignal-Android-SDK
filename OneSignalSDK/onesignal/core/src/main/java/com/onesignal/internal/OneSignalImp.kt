@@ -19,6 +19,9 @@ import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.CoreModule
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
+import com.onesignal.core.internal.backend.IParamsBackendService
+import com.onesignal.core.internal.backend.IParamsBackendServiceObserver
+import com.onesignal.core.internal.backend.ParamsObject
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
@@ -130,6 +133,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     private var subscriptionModelStore: SubscriptionModelStore? = null
     private var startupService: StartupService? = null
     private var preferencesService: IPreferencesService? = null
+    private var paramsBackendService: IParamsBackendService? = null
 
     // Other State
     private val services: ServiceProvider
@@ -201,7 +205,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             Logging.applicationService = applicationService
 
             // get the current config model, if there is one
-            configModel = services.getService<ConfigModelStore>().model
+            val configModelStore = services.getService<ConfigModelStore>()
+            configModel = configModelStore.model
             sessionModel = services.getService<SessionModelStore>().model
 
             // initWithContext is called by our internal services/receivers/activites but they do not provide
@@ -257,16 +262,11 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                         PreferenceStores.ONESIGNAL,
                         PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID,
                     )
+                paramsBackendService = services.getService()
                 if (legacyPlayerId == null) {
                     Logging.debug("initWithContext: creating new device-scoped user")
-                    createAndSwitchToNewUser()
-                    operationRepo!!.enqueue(
-                        LoginUserOperation(
-                            configModel!!.appId,
-                            identityModelStore!!.model.onesignalId,
-                            identityModelStore!!.model.externalId,
-                        ),
-                    )
+
+                    identityModelStore!!.model.externalId?.let { addFetchParamsObserverAndLoginUser(true, it) }
                 } else {
                     Logging.debug("initWithContext: creating user linked to subscription $legacyPlayerId")
 
@@ -315,15 +315,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                         suppressBackendOperation = true
                     }
 
-                    createAndSwitchToNewUser(suppressBackendOperation = suppressBackendOperation)
+                    addFetchParamsObserverAndLoginUser(suppressBackendOperation, legacyPlayerId)
 
-                    operationRepo!!.enqueue(
-                        LoginUserFromSubscriptionOperation(
-                            configModel!!.appId,
-                            identityModelStore!!.model.onesignalId,
-                            legacyPlayerId,
-                        ),
-                    )
                     preferencesService!!.saveString(
                         PreferenceStores.ONESIGNAL,
                         PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID,
@@ -517,6 +510,35 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         } else {
             subscriptionModelStore!!.replaceAll(subscriptions)
         }
+    }
+
+    private fun addFetchParamsObserverAndLoginUser(
+        suppressBackendOperation: Boolean,
+        externalId: String,
+    ) {
+        createAndSwitchToNewUser(suppressBackendOperation = suppressBackendOperation)
+        paramsBackendService!!.addParamsBackendServiceObserver(
+            object : IParamsBackendServiceObserver {
+                override fun onParamsFetched(params: ParamsObject) {
+                    if (params.useIdentityVerification == true) {
+                        // remove identification required operations in the queue
+                        operationRepo!!.removeIdentificationRequiredOperations()
+                    } else {
+                        // login anonymous user if identity verification is OFF
+                        operationRepo!!.enqueue(
+                            LoginUserFromSubscriptionOperation(
+                                configModel!!.appId,
+                                identityModelStore!!.model.onesignalId,
+                                externalId,
+                            ),
+                        )
+                    }
+
+                    // observe the first params fetch only
+                    paramsBackendService!!.removeParamsBackendServiceObserver(this)
+                }
+            },
+        )
     }
 
     override fun <T> hasService(c: Class<T>): Boolean = services.hasService(c)

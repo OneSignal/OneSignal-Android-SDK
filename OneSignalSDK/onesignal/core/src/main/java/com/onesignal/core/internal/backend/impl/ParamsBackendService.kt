@@ -1,6 +1,7 @@
 package com.onesignal.core.internal.backend.impl
 
 import com.onesignal.common.IDManager
+import com.onesignal.common.events.EventProducer
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.expandJSONObject
 import com.onesignal.common.safeBool
@@ -9,6 +10,7 @@ import com.onesignal.common.safeLong
 import com.onesignal.common.safeString
 import com.onesignal.core.internal.backend.FCMParamsObject
 import com.onesignal.core.internal.backend.IParamsBackendService
+import com.onesignal.core.internal.backend.IParamsBackendServiceObserver
 import com.onesignal.core.internal.backend.InfluenceParamsObject
 import com.onesignal.core.internal.backend.ParamsObject
 import com.onesignal.core.internal.http.CacheKeys
@@ -56,26 +58,41 @@ internal class ParamsBackendService(
                 )
         }
 
-        return ParamsObject(
-            googleProjectNumber = responseJson.safeString("android_sender_id"),
-            enterprise = responseJson.safeBool("enterp"),
-            // TODO: TESTING ONLY
-            useIdentityVerification = true,
-            // useIdentityVerification = responseJson.safeBool("require_ident_auth"),
-            notificationChannels = responseJson.optJSONArray("chnl_lst"),
-            firebaseAnalytics = responseJson.safeBool("fba"),
-            restoreTTLFilter = responseJson.safeBool("restore_ttl_filter"),
-            clearGroupOnSummaryClick = responseJson.safeBool("clear_group_on_summary_click"),
-            receiveReceiptEnabled = responseJson.safeBool("receive_receipts_enable"),
-            disableGMSMissingPrompt = responseJson.safeBool("disable_gms_missing_prompt"),
-            unsubscribeWhenNotificationsDisabled = responseJson.safeBool("unsubscribe_on_notifications_disabled"),
-            locationShared = responseJson.safeBool("location_shared"),
-            requiresUserPrivacyConsent = responseJson.safeBool("requires_user_privacy_consent"),
-            // TODO: New
-            opRepoExecutionInterval = responseJson.safeLong("oprepo_execution_interval"),
-            influenceParams = influenceParams ?: InfluenceParamsObject(),
-            fcmParams = fcmParams ?: FCMParamsObject(),
-        )
+        val paramsObject =
+            ParamsObject(
+                googleProjectNumber = responseJson.safeString("android_sender_id"),
+                enterprise = responseJson.safeBool("enterp"),
+                // TODO: TESTING ONLY
+                useIdentityVerification = true,
+                // useIdentityVerification = responseJson.safeBool("require_ident_auth"),
+                notificationChannels = responseJson.optJSONArray("chnl_lst"),
+                firebaseAnalytics = responseJson.safeBool("fba"),
+                restoreTTLFilter = responseJson.safeBool("restore_ttl_filter"),
+                clearGroupOnSummaryClick = responseJson.safeBool("clear_group_on_summary_click"),
+                receiveReceiptEnabled = responseJson.safeBool("receive_receipts_enable"),
+                disableGMSMissingPrompt = responseJson.safeBool("disable_gms_missing_prompt"),
+                unsubscribeWhenNotificationsDisabled = responseJson.safeBool("unsubscribe_on_notifications_disabled"),
+                locationShared = responseJson.safeBool("location_shared"),
+                requiresUserPrivacyConsent = responseJson.safeBool("requires_user_privacy_consent"),
+                // TODO: New
+                opRepoExecutionInterval = responseJson.safeLong("oprepo_execution_interval"),
+                influenceParams = influenceParams ?: InfluenceParamsObject(),
+                fcmParams = fcmParams ?: FCMParamsObject(),
+            )
+
+        fetchParamsNotifier.fire { it.onParamsFetched(paramsObject) }
+
+        return paramsObject
+    }
+
+    private val fetchParamsNotifier = EventProducer<IParamsBackendServiceObserver>()
+
+    override fun addParamsBackendServiceObserver(observer: IParamsBackendServiceObserver) {
+        fetchParamsNotifier.subscribe(observer)
+    }
+
+    override fun removeParamsBackendServiceObserver(observer: IParamsBackendServiceObserver) {
+        fetchParamsNotifier.unsubscribe(observer)
     }
 
     private fun processOutcomeJson(outcomeJson: JSONObject): InfluenceParamsObject {

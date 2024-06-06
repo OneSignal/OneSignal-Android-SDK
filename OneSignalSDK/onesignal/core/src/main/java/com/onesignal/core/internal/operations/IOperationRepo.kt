@@ -39,6 +39,14 @@ interface IOperationRepo {
      */
     fun <T : Operation> containsInstanceOf(type: KClass<T>): Boolean
 
+    /**
+     * Remove all identification required operations in the queue
+     *
+     * Identification Required Operation: we classify an operation as an Identification Required Operation
+     * if the operation's executor requires an identity model to process the operation.
+     */
+    fun removeIdentificationRequiredOperations()
+
     suspend fun awaitInitialized()
 }
 

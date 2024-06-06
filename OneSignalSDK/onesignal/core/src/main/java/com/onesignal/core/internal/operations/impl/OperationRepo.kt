@@ -11,6 +11,7 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -21,6 +22,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import kotlin.math.max
 import kotlin.reflect.KClass
+import kotlin.reflect.full.declaredMemberProperties
 
 internal class OperationRepo(
     executors: List<IOperationExecutor>,
@@ -99,6 +101,13 @@ internal class OperationRepo(
             loadSavedOperations()
             processQueueForever()
         }
+    }
+
+    fun <T : Any> containsParameterOfType(
+        obj: T,
+        clazz: KClass<*>,
+    ): Boolean {
+        return obj::class.declaredMemberProperties.any { it.returnType.classifier == clazz }
     }
 
     override fun enqueue(
@@ -417,5 +426,20 @@ internal class OperationRepo(
             )
         }
         initialized.complete(Unit)
+    }
+
+    override fun removeIdentificationRequiredOperations() {
+        synchronized(queue) {
+            val iterator = queue.listIterator()
+            while (iterator.hasNext()) {
+                val item = iterator.next()
+                val executor = executorsMap[item.operation.name] ?: continue
+                // remove the operation if its executor requires an identity model store
+                if (executor::class.declaredMemberProperties.any { it.returnType.classifier == IdentityModelStore::class }) {
+                    iterator.remove()
+                }
+            }
+        }
+        Logging.log(LogLevel.DEBUG, "All identification-required operations have been removed from the queue.")
     }
 }

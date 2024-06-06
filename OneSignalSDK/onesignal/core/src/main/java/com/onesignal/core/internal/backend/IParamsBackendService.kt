@@ -18,6 +18,10 @@ interface IParamsBackendService {
         appId: String,
         subscriptionId: String?,
     ): ParamsObject
+
+    fun addParamsBackendServiceObserver(observer: IParamsBackendServiceObserver)
+
+    fun removeParamsBackendServiceObserver(observer: IParamsBackendServiceObserver)
 }
 
 class ParamsObject(
