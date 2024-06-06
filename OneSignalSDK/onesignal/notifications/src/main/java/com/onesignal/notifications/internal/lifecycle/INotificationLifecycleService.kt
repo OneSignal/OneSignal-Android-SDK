@@ -69,6 +69,5 @@ interface INotificationLifecycleService {
     suspend fun notificationOpened(
         activity: Activity,
         data: JSONArray,
-        notificationId: String,
     )
 }

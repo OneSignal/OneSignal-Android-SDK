@@ -131,7 +131,6 @@ internal class NotificationOpenedProcessor(
                 _lifecycleService.notificationOpened(
                     context,
                     intentExtras!!.dataArray,
-                    NotificationFormatHelper.getOSNotificationIdFromJson(intentExtras.jsonData)!!,
                 )
             }
         }

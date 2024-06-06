@@ -66,7 +66,6 @@ internal class NotificationOpenedProcessorHMS(
         _lifecycleService.notificationOpened(
             activity,
             JSONUtils.wrapInJsonArray(jsonData),
-            NotificationFormatHelper.getOSNotificationIdFromJson(jsonData)!!,
         )
     }
 }

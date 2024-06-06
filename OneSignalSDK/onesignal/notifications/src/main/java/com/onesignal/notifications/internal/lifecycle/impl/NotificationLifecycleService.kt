@@ -95,7 +95,6 @@ internal class NotificationLifecycleService(
     override suspend fun notificationOpened(
         activity: Activity,
         data: JSONArray,
-        notificationId: String,
     ) {
         intLifecycleHandler.suspendingFire { it.onNotificationOpened(activity, data) }
 
