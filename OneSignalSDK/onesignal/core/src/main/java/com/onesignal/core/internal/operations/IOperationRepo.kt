@@ -41,7 +41,7 @@ interface IOperationRepo {
 
     suspend fun awaitInitialized()
 
-    fun forceProcessDeltas()
+    fun forceExecuteOperations()
 }
 
 // Extension function so the syntax containsInstanceOf<Operation>() can be used over

@@ -71,7 +71,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             _consentGiven = value
             configModel?.consentGiven = value
             if (oldValue != value && value) {
-                operationRepo?.forceProcessDeltas()
+                operationRepo?.forceExecuteOperations()
             }
         }
 
