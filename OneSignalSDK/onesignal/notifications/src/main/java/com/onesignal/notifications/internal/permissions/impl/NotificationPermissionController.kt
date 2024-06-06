@@ -43,6 +43,10 @@ import com.onesignal.notifications.R
 import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.permissions.INotificationPermissionChangedHandler
 import com.onesignal.notifications.internal.permissions.INotificationPermissionController
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.yield
 
 internal class NotificationPermissionController(
@@ -54,6 +58,8 @@ internal class NotificationPermissionController(
     INotificationPermissionController {
     private val waiter = WaiterWithValue<Boolean>()
     private val events = EventProducer<INotificationPermissionChangedHandler>()
+    private var _enabled = false // Should be a cached value
+    private val coroutineScope = CoroutineScope(newSingleThreadContext(name = "NotificationPermissionController"))
 
     override val canRequestPermission: Boolean
         get() =
@@ -65,6 +71,20 @@ internal class NotificationPermissionController(
 
     init {
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)
+        coroutineScope.launch {// Should this be Android version restricted?
+            pollForPermission()
+        }
+    }
+
+     private suspend fun pollForPermission() {
+        while (true) {
+            val enabled = this.notificationsEnabled()
+            if (_enabled != enabled) { // The permission has changed without prompting through OneSignal
+                _enabled = enabled
+                events.fire { it.onNotificationPermissionChanged(enabled) }
+            }
+            delay(1_000) // should be a configurable value for unit tests
+        }
     }
 
     @ChecksSdkIntAtLeast(api = 33)
@@ -119,6 +139,7 @@ internal class NotificationPermissionController(
         get() = events.hasSubscribers
 
     override fun onAccept() {
+        _enabled = true
         waiter.wake(true)
         events.fire { it.onNotificationPermissionChanged(true) }
     }
@@ -132,6 +153,7 @@ internal class NotificationPermissionController(
             }
 
         if (!fallbackShown) {
+            _enabled = false
             waiter.wake(false)
             events.fire { it.onNotificationPermissionChanged(false) }
         }
@@ -154,6 +176,7 @@ internal class NotificationPermissionController(
                                 super.onFocus()
                                 _applicationService.removeApplicationLifecycleHandler(this)
                                 val hasPermission = AndroidUtils.hasPermission(ANDROID_PERMISSION_STRING, true, _applicationService)
+                                _enabled = hasPermission
                                 waiter.wake(hasPermission)
                                 events.fire { it.onNotificationPermissionChanged(hasPermission) }
                             }
@@ -163,6 +186,7 @@ internal class NotificationPermissionController(
                 }
 
                 override fun onDecline() {
+                    _enabled = false
                     waiter.wake(false)
                     events.fire { it.onNotificationPermissionChanged(false) }
                 }
