@@ -95,9 +95,8 @@ internal class NotificationLifecycleService(
     override suspend fun notificationOpened(
         activity: Activity,
         data: JSONArray,
-        notificationId: String,
     ) {
-        intLifecycleHandler.suspendingFire { it.onNotificationOpened(activity, data, notificationId) }
+        intLifecycleHandler.suspendingFire { it.onNotificationOpened(activity, data) }
 
         // queue up the opened notification in case the handler hasn't been set yet. Once set,
         // we will immediately fire the handler.

@@ -38,7 +38,6 @@ import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.database.impl.OneSignalDbContract
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.common.NotificationConstants
-import com.onesignal.notifications.internal.common.NotificationFormatHelper
 import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleService
@@ -131,7 +130,6 @@ internal class NotificationOpenedProcessor(
                 _lifecycleService.notificationOpened(
                     context,
                     intentExtras!!.dataArray,
-                    NotificationFormatHelper.getOSNotificationIdFromJson(intentExtras.jsonData)!!,
                 )
             }
         }

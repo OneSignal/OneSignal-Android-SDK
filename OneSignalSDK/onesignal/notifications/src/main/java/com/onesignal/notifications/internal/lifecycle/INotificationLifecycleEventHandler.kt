@@ -13,6 +13,5 @@ interface INotificationLifecycleEventHandler {
     suspend fun onNotificationOpened(
         activity: Activity,
         data: JSONArray,
-        notificationId: String,
     )
 }

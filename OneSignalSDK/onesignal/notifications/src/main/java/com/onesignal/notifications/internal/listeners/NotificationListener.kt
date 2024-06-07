@@ -14,6 +14,7 @@ import com.onesignal.notifications.internal.INotificationActivityOpener
 import com.onesignal.notifications.internal.analytics.IAnalyticsTracker
 import com.onesignal.notifications.internal.backend.INotificationBackendService
 import com.onesignal.notifications.internal.common.NotificationConstants
+import com.onesignal.notifications.internal.common.NotificationFormatHelper
 import com.onesignal.notifications.internal.common.NotificationGenerationJob
 import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.common.OSNotificationOpenAppSettings
@@ -67,7 +68,6 @@ internal class NotificationListener(
     override suspend fun onNotificationOpened(
         activity: Activity,
         data: JSONArray,
-        notificationId: String,
     ) {
         val config = _configModelStore.model
         val appId: String = config.appId ?: ""
@@ -75,9 +75,12 @@ internal class NotificationListener(
         val deviceType = _deviceService.deviceType
 
         for (i in 0 until data.length()) {
+            val notificationId = NotificationFormatHelper.getOSNotificationIdFromJson(data[i] as JSONObject?) ?: continue
+
             if (postedOpenedNotifIds.contains(notificationId)) {
                 continue
             }
+
             postedOpenedNotifIds.add(notificationId)
 
             try {
@@ -98,10 +101,15 @@ internal class NotificationListener(
             NotificationHelper.getCampaignNameFromNotification(openResult.notification),
         )
 
+        // Handle the first element in the data array as the latest notification
+        val latestNotificationId = getLatestNotificationId(data)
+
         if (shouldInitDirectSessionFromNotificationOpen(activity)) {
             // We want to set the app entry state to NOTIFICATION_CLICK when coming from background
             _applicationService.entryState = AppEntryAction.NOTIFICATION_CLICK
-            _influenceManager.onDirectInfluenceFromNotification(notificationId)
+            if (latestNotificationId != null) {
+                _influenceManager.onDirectInfluenceFromNotification(latestNotificationId)
+            }
         }
 
         _activityOpener.openDestinationActivity(activity, data)
@@ -118,5 +126,10 @@ internal class NotificationListener(
             e.printStackTrace()
         }
         return true
+    }
+
+    private fun getLatestNotificationId(data: JSONArray): String? {
+        val latestNotification = if (data.length() > 0) data[0] as JSONObject else null
+        return NotificationFormatHelper.getOSNotificationIdFromJson(latestNotification)
     }
 }
