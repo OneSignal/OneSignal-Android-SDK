@@ -175,7 +175,27 @@ class ApplicationServiceTests : FunSpec({
         // Then
         currentActivity shouldBe activity2
         verify(exactly = 1) { mockApplicationLifecycleHandler.onUnfocused() }
-        verify(exactly = 1) { mockApplicationLifecycleHandler.onFocus() }
+        verify(exactly = 1) { mockApplicationLifecycleHandler.onFocus(false) }
+    }
+
+    test("focus will occur on subscribe when activity is already started") {
+        // Given
+        val activity: Activity
+
+        Robolectric.buildActivity(Activity::class.java).use { controller ->
+            controller.setup() // Moves Activity to RESUMED state
+            activity = controller.get()
+        }
+
+        val applicationService = ApplicationService()
+        val mockApplicationLifecycleHandler = spyk<IApplicationLifecycleHandler>()
+
+        // When
+        applicationService.start(activity)
+        applicationService.addApplicationLifecycleHandler(mockApplicationLifecycleHandler)
+
+        // Then
+        verify(exactly = 1) { mockApplicationLifecycleHandler.onFocus(true) }
     }
 
     test("wait until system condition returns false when there is no activity") {
