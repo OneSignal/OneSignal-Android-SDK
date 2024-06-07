@@ -69,21 +69,13 @@ internal class DeviceRegistrationListener(
     private fun retrievePushTokenAndUpdateSubscription() {
         val pushSubscription = _subscriptionManager.subscriptions.push
 
-        if (pushSubscription.token.isNotEmpty()) {
+        suspendifyOnThread {
+            val pushTokenAndStatus = _pushTokenManager.retrievePushToken()
             val permission = _notificationsManager.permission
             _subscriptionManager.addOrUpdatePushSubscriptionToken(
-                null,
-                if (permission) SubscriptionStatus.SUBSCRIBED else SubscriptionStatus.NO_PERMISSION,
+                pushTokenAndStatus.token,
+                if (permission) pushTokenAndStatus.status else SubscriptionStatus.NO_PERMISSION,
             )
-        } else {
-            suspendifyOnThread {
-                val pushTokenAndStatus = _pushTokenManager.retrievePushToken()
-                val permission = _notificationsManager.permission
-                _subscriptionManager.addOrUpdatePushSubscriptionToken(
-                    pushTokenAndStatus.token,
-                    if (permission) pushTokenAndStatus.status else SubscriptionStatus.NO_PERMISSION,
-                )
-            }
         }
     }
 
