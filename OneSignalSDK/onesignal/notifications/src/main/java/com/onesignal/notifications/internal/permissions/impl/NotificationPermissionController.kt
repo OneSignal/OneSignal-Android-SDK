@@ -45,9 +45,9 @@ import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.permissions.INotificationPermissionChangedHandler
 import com.onesignal.notifications.internal.permissions.INotificationPermissionController
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.yield
 
 internal class NotificationPermissionController(
@@ -59,6 +59,8 @@ internal class NotificationPermissionController(
 ) : IRequestPermissionService.PermissionCallback,
     INotificationPermissionController {
     private val waiter = WaiterWithValue<Boolean>()
+    private val pollingWaiter = WaiterWithValue<Boolean>()
+    private var pollingWaitInterval: Long
     private val events = EventProducer<INotificationPermissionChangedHandler>()
     private var enabled: Boolean
     private val coroutineScope = CoroutineScope(newSingleThreadContext(name = "NotificationPermissionController"))
@@ -74,9 +76,28 @@ internal class NotificationPermissionController(
     init {
         this.enabled = notificationsEnabled()
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)
+        pollingWaitInterval = _configModelStore.model.foregroundFetchNotificationPermissionInterval
+        registerPollingLifecycleListener()
         coroutineScope.launch {
             pollForPermission()
         }
+    }
+
+    private fun registerPollingLifecycleListener() {
+        _applicationService.addApplicationLifecycleHandler(
+            object : ApplicationLifecycleHandlerBase() {
+                override fun onFocus() {
+                    super.onFocus()
+                    pollingWaitInterval = _configModelStore.model.foregroundFetchNotificationPermissionInterval
+                    pollingWaiter.wake(true)
+                }
+
+                override fun onUnfocused() {
+                    super.onUnfocused()
+                    pollingWaitInterval = _configModelStore.model.backgroundFetchNotificationPermissionInterval
+                }
+            },
+        )
     }
 
     private suspend fun pollForPermission() {
@@ -86,8 +107,9 @@ internal class NotificationPermissionController(
                 this.enabled = enabled
                 events.fire { it.onNotificationPermissionChanged(enabled) }
             }
-            // change to use waiter and account for background/foreground
-            delay(_configModelStore.model.fetchNotificationPermissionInterval)
+            withTimeoutOrNull(pollingWaitInterval) {
+                pollingWaiter.waitForWake()
+            }
         }
     }
 
