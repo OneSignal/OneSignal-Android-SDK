@@ -199,12 +199,21 @@ class ConfigModel : Model() {
         }
 
     /**
-     * The number of milliseconds between fetching the current notification permission value
+     * The number of milliseconds between fetching the current notification permission value when the app is in focus
      */
-    var fetchNotificationPermissionInterval: Long
-        get() = getLongProperty(::fetchNotificationPermissionInterval.name) { 1_000 }
+    var foregroundFetchNotificationPermissionInterval: Long
+        get() = getLongProperty(::foregroundFetchNotificationPermissionInterval.name) { 1_000 }
         set(value) {
-            setLongProperty(::fetchNotificationPermissionInterval.name, value)
+            setLongProperty(::foregroundFetchNotificationPermissionInterval.name, value)
+        }
+
+    /**
+     * The number of milliseconds between fetching the current notification permission value when the app is out of focus
+     */
+    var backgroundFetchNotificationPermissionInterval: Long
+        get() = getLongProperty(::backgroundFetchNotificationPermissionInterval.name) { 1_800_000 }
+        set(value) {
+            setLongProperty(::backgroundFetchNotificationPermissionInterval.name, value)
         }
 
     /**
