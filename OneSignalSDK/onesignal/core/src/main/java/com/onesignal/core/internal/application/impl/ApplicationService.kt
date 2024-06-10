@@ -67,6 +67,9 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     private var activityReferences = 0
     private var isActivityChangingConfigurations = false
 
+    private val wasInBackground: Boolean
+        get() = !isInForeground || nextResumeIsFirstActivity
+
     /**
      * Call to "start" this service, expected to be called during initialization of the SDK.
      *
@@ -150,7 +153,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
 
         current = activity
 
-        if ((!isInForeground || nextResumeIsFirstActivity) && !isActivityChangingConfigurations) {
+        if (wasInBackground && !isActivityChangingConfigurations) {
             activityReferences = 1
             handleFocus()
         } else {
@@ -170,7 +173,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
             current = activity
         }
 
-        if ((!isInForeground || nextResumeIsFirstActivity) && !isActivityChangingConfigurations) {
+        if (wasInBackground && !isActivityChangingConfigurations) {
             activityReferences = 1
             handleFocus()
         }
@@ -373,7 +376,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     }
 
     private fun handleFocus() {
-        if (!isInForeground || nextResumeIsFirstActivity) {
+        if (wasInBackground) {
             Logging.debug(
                 "ApplicationService.handleFocus: application is now in focus, nextResumeIsFirstActivity=$nextResumeIsFirstActivity",
             )
