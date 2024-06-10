@@ -150,8 +150,12 @@ internal class NotificationPermissionController(
                     // wait for focus to be regained, and check the current permission status.
                     _applicationService.addApplicationLifecycleHandler(
                         object : ApplicationLifecycleHandlerBase() {
-                            override fun onFocus() {
-                                super.onFocus()
+                            override fun onFocus(firedOnSubscribe: Boolean) {
+                                // Triggered by subscribing, wait for lifecycle callback
+                                if (firedOnSubscribe) {
+                                    return
+                                }
+                                super.onFocus(false)
                                 _applicationService.removeApplicationLifecycleHandler(this)
                                 val hasPermission = AndroidUtils.hasPermission(ANDROID_PERMISSION_STRING, true, _applicationService)
                                 waiter.wake(hasPermission)

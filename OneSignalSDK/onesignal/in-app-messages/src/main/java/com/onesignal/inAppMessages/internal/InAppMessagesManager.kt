@@ -883,7 +883,7 @@ internal class InAppMessagesManager(
 
     private var onFocusCalled: Boolean = false
 
-    override fun onFocus() {
+    override fun onFocus(firedOnSubscribe: Boolean) {
         if (onFocusCalled) return
         onFocusCalled = true
         suspendifyOnThread {

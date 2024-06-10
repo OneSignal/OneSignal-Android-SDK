@@ -10,8 +10,13 @@ import android.app.Application.ActivityLifecycleCallbacks
 interface IApplicationLifecycleHandler {
     /**
      * Called when the application is brought into the foreground.
+     * This callback can be fired immediately on subscribing to the IApplicationService (when the
+     * IApplicationService itself is started too late to capture the application's early lifecycle events),
+     * or through natural application lifecycle callbacks.
+     *
+     * @param firedOnSubscribe Method is fired from subscribing or from application lifecycle callbacks
      */
-    fun onFocus()
+    fun onFocus(firedOnSubscribe: Boolean)
 
     /**
      * Called when the application has been brought out of the foreground, to the background.
@@ -24,7 +29,7 @@ interface IApplicationLifecycleHandler {
  * can use this if they only want to override a subset of the callbacks that make up this interface.
  */
 open class ApplicationLifecycleHandlerBase : IApplicationLifecycleHandler {
-    override fun onFocus() {}
+    override fun onFocus(firedOnSubscribe: Boolean) {}
 
     override fun onUnfocused() {}
 }

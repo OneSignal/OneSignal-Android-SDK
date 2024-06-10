@@ -98,7 +98,7 @@ internal class TrackGooglePurchase(
         trackIAP()
     }
 
-    override fun onFocus() {
+    override fun onFocus(firedOnSubscribe: Boolean) {
         trackIAP()
     }
 
