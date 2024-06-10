@@ -47,6 +47,12 @@ internal class SessionListener(
 
     override fun onSessionEnded(duration: Long) {
         val durationInSeconds = duration / 1000
+
+        // Time is invalid if below 1 second or over a day
+        if (durationInSeconds < 1L || durationInSeconds > SECONDS_IN_A_DAY) {
+            return
+        }
+
         _operationRepo.enqueue(
             TrackSessionEndOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, durationInSeconds),
         )
@@ -54,5 +60,9 @@ internal class SessionListener(
         suspendifyOnThread {
             _outcomeEventsController.sendSessionEndOutcomeEvent(durationInSeconds)
         }
+    }
+
+    companion object {
+        const val SECONDS_IN_A_DAY = 86_400L
     }
 }
