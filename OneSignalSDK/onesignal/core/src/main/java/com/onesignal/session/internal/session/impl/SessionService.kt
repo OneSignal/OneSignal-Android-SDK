@@ -45,10 +45,13 @@ internal class SessionService(
     private val sessionLifeCycleNotifier: EventProducer<ISessionLifecycleHandler> = EventProducer()
     private var session: SessionModel? = null
     private var config: ConfigModel? = null
+    private var shouldFireOnSubscribe = false
 
     override fun start() {
         session = _sessionModelStore.model
         config = _configModelStore.model
+        // Reset the session validity property to drive a new session
+        session!!.isValid = false
         _applicationService.addApplicationLifecycleHandler(this)
     }
 
@@ -65,11 +68,20 @@ internal class SessionService(
         sessionLifeCycleNotifier.fire { it.onSessionEnded(session!!.activeDuration) }
     }
 
-    override fun onFocus() {
-        Logging.log(LogLevel.DEBUG, "SessionService.onFocus()")
-
+    /**
+     * NOTE: When `firedOnSubscribe = true`
+     *
+     * Typically, the app foregrounding will trigger this callback via the IApplicationService.
+     * However, it is possible for OneSignal to initialize too late to capture the Android lifecycle callbacks.
+     * In this case, the app is already foregrounded, so this method is fired immediately on subscribing
+     * to the IApplicationService. Listeners of this service will not subscribe in time to capture
+     * the `onSessionStarted()` callback here, so fire it when they themselves subscribe.
+     */
+    override fun onFocus(firedOnSubscribe: Boolean) {
+        Logging.log(LogLevel.DEBUG, "SessionService.onFocus() - fired from start: $firedOnSubscribe")
         if (!session!!.isValid) {
             // As the old session was made inactive, we need to create a new session
+            shouldFireOnSubscribe = firedOnSubscribe
             session!!.sessionId = UUID.randomUUID().toString()
             session!!.startTime = _time.currentTimeMillis
             session!!.focusTime = session!!.startTime
@@ -87,14 +99,17 @@ internal class SessionService(
     }
 
     override fun onUnfocused() {
-        Logging.log(LogLevel.DEBUG, "SessionService.onUnfocused()")
-
         // capture the amount of time the app was focused
         val dt = _time.currentTimeMillis - session!!.focusTime
         session!!.activeDuration += dt
+        Logging.log(LogLevel.DEBUG, "SessionService.onUnfocused adding time $dt for total: ${session!!.activeDuration}")
     }
 
-    override fun subscribe(handler: ISessionLifecycleHandler) = sessionLifeCycleNotifier.subscribe(handler)
+    override fun subscribe(handler: ISessionLifecycleHandler) {
+        sessionLifeCycleNotifier.subscribe(handler)
+        // If a handler subscribes too late to capture the initial onSessionStarted.
+        if (shouldFireOnSubscribe) handler.onSessionStarted()
+    }
 
     override fun unsubscribe(handler: ISessionLifecycleHandler) = sessionLifeCycleNotifier.unsubscribe(handler)
 
