@@ -30,7 +30,6 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     private val activityLifecycleNotifier = EventProducer<IActivityLifecycleHandler>()
     private val applicationLifecycleNotifier = EventProducer<IApplicationLifecycleHandler>()
     private val systemConditionNotifier = EventProducer<ISystemConditionHandler>()
-    private var shouldFireOnFocusOnSubscribing = false
 
     override val isInForeground: Boolean
         get() = entryState.isAppOpen || entryState.isNotificationClick
@@ -73,7 +72,6 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
 
     /**
      * Call to "start" this service, expected to be called during initialization of the SDK.
-     * Detects if this service should fire subscribers' onFocus() callbacks immediately on subscribing.
      *
      * @param context The context the SDK has been initialized under.
      */
@@ -112,8 +110,6 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
                 activityReferences = 1
                 nextResumeIsFirstActivity = false
             }
-            // Once listeners subscribe, fire their callbacks
-            shouldFireOnFocusOnSubscribing = true
         } else {
             nextResumeIsFirstActivity = true
             entryState = AppEntryAction.APP_CLOSE
@@ -124,7 +120,9 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
 
     override fun addApplicationLifecycleHandler(handler: IApplicationLifecycleHandler) {
         applicationLifecycleNotifier.subscribe(handler)
-        if (shouldFireOnFocusOnSubscribing) {
+        if (current != null) {
+            // When a listener subscribes, fire its callback
+            // The listener is too late to receive the earlier onFocus call
             handler.onFocus(true)
         }
     }
