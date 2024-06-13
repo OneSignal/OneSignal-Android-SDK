@@ -209,9 +209,10 @@ class ConfigModel : Model() {
 
     /**
      * The number of milliseconds between fetching the current notification permission value when the app is out of focus
+     * We want this value to be very large to effectively stop polling in the background
      */
     var backgroundFetchNotificationPermissionInterval: Long
-        get() = getLongProperty(::backgroundFetchNotificationPermissionInterval.name) { 1_800_000 }
+        get() = getLongProperty(::backgroundFetchNotificationPermissionInterval.name) { 86_400_000 }
         set(value) {
             setLongProperty(::backgroundFetchNotificationPermissionInterval.name, value)
         }
