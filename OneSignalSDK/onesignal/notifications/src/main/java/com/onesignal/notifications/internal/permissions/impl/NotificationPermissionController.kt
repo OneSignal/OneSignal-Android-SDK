@@ -31,6 +31,7 @@ import android.os.Build
 import androidx.annotation.ChecksSdkIntAtLeast
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.events.EventProducer
+import com.onesignal.common.threading.Waiter
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.application.ApplicationLifecycleHandlerBase
 import com.onesignal.core.internal.application.IApplicationService
@@ -59,7 +60,7 @@ internal class NotificationPermissionController(
 ) : IRequestPermissionService.PermissionCallback,
     INotificationPermissionController {
     private val waiter = WaiterWithValue<Boolean>()
-    private val pollingWaiter = WaiterWithValue<Boolean>()
+    private val pollingWaiter = Waiter()
     private var pollingWaitInterval: Long
     private val events = EventProducer<INotificationPermissionChangedHandler>()
     private var enabled: Boolean
@@ -89,11 +90,12 @@ internal class NotificationPermissionController(
                 override fun onFocus() {
                     super.onFocus()
                     pollingWaitInterval = _configModelStore.model.foregroundFetchNotificationPermissionInterval
-                    pollingWaiter.wake(true)
+                    pollingWaiter.wake()
                 }
 
                 override fun onUnfocused() {
                     super.onUnfocused()
+                    // Changing the polling interval to 1 day to effectively pause polling
                     pollingWaitInterval = _configModelStore.model.backgroundFetchNotificationPermissionInterval
                 }
             },
