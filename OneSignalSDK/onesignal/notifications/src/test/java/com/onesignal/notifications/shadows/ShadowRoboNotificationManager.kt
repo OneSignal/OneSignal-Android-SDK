@@ -117,6 +117,10 @@ class ShadowRoboNotificationManager : ShadowNotificationManager() {
             return notifications
         }
 
+        fun setNotificationsEnabled(enabled: Boolean) {
+            mInstance.setNotificationsEnabled(enabled)
+        }
+
         var lastChannel: NotificationChannel? = null
         var lastChannelGroup: NotificationChannelGroup? = null
     }
