@@ -117,9 +117,17 @@ internal class RefreshUserOperationExecutor(
                 subscriptionModel.carrier = subscription.carrier ?: ""
                 subscriptionModel.appVersion = subscription.appVersion ?: ""
 
-                // We only add a push subscription if it is this device's push subscription.
-                if (subscriptionModel.type != SubscriptionType.PUSH || subscriptionModel.id == _configModelStore.model.pushSubscriptionId) {
+                // We only add a non-push subscriptions
+                if (subscriptionModel.type != SubscriptionType.PUSH) {
                     subscriptionModels.add(subscriptionModel)
+                }
+            }
+            var currentPushSubscriptionId = _configModelStore.model.pushSubscriptionId
+
+            if (currentPushSubscriptionId != null) {
+                var myPushSubscription = _subscriptionsModelStore.get(currentPushSubscriptionId)
+                if (myPushSubscription != null) {
+                    subscriptionModels.add(myPushSubscription)
                 }
             }
 
