@@ -1,6 +1,9 @@
 package com.onesignal.notifications.internal.permission
 
+import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.core.internal.application.IApplicationLifecycleHandler
+import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.debug.LogLevel
@@ -51,6 +54,87 @@ class NotificationPermissionControllerTests : FunSpec({
         // When
         // permission changes
         ShadowRoboNotificationManager.setNotificationsEnabled(false)
+        delay(5)
+
+        // Then
+        // permissionChanged Event should fire
+        handlerFired shouldBe true
+    }
+
+    test("NotificationPermissionController permission polling pauses when app loses") {
+        // Given
+        val mockRequestPermissionService = mockk<IRequestPermissionService>()
+        every { mockRequestPermissionService.registerAsCallback(any(), any()) } just runs
+        val mockPreferenceService = mockk<IPreferencesService>()
+        val handlerList = mutableListOf<IApplicationLifecycleHandler>()
+        val mockAppService = mockk<IApplicationService>()
+        every { mockAppService.addApplicationLifecycleHandler(any()) } answers {
+            handlerList.add(firstArg<IApplicationLifecycleHandler>())
+        }
+        every { mockAppService.appContext } returns ApplicationProvider.getApplicationContext()
+
+        var handlerFired = false
+        val notificationPermissionController = NotificationPermissionController(mockAppService, mockRequestPermissionService, mockAppService, mockPreferenceService, MockHelper.configModelStore())
+
+        notificationPermissionController.subscribe(
+            object : INotificationPermissionChangedHandler {
+                override fun onNotificationPermissionChanged(enabled: Boolean) {
+                    handlerFired = true
+                }
+            },
+        )
+
+        // When
+        // the app has loses focus
+        for (handler in handlerList) {
+            handler.onUnfocused()
+        }
+        delay(5)
+        // the permission changes
+        ShadowRoboNotificationManager.setNotificationsEnabled(false)
+        delay(5)
+
+        // Then
+        // permissionChanged Event should not fire
+        handlerFired shouldBe false
+    }
+
+    test("NotificationPermissionController permission polling resumes when app gains focus") {
+        // Given
+        val mockRequestPermissionService = mockk<IRequestPermissionService>()
+        every { mockRequestPermissionService.registerAsCallback(any(), any()) } just runs
+        val mockPreferenceService = mockk<IPreferencesService>()
+        val handlerList = mutableListOf<IApplicationLifecycleHandler>()
+        val mockAppService = mockk<IApplicationService>()
+        every { mockAppService.addApplicationLifecycleHandler(any()) } answers {
+            handlerList.add(firstArg<IApplicationLifecycleHandler>())
+        }
+        every { mockAppService.appContext } returns ApplicationProvider.getApplicationContext()
+
+        var handlerFired = false
+        val notificationPermissionController = NotificationPermissionController(mockAppService, mockRequestPermissionService, mockAppService, mockPreferenceService, MockHelper.configModelStore())
+
+        notificationPermissionController.subscribe(
+            object : INotificationPermissionChangedHandler {
+                override fun onNotificationPermissionChanged(enabled: Boolean) {
+                    handlerFired = true
+                }
+            },
+        )
+
+        // When
+        // the app loses focus
+        for (handler in handlerList) {
+            handler.onUnfocused()
+        }
+        delay(5)
+        // the permission changes
+        ShadowRoboNotificationManager.setNotificationsEnabled(false)
+        delay(5)
+        // the app regains focus
+        for (handler in handlerList) {
+            handler.onFocus()
+        }
         delay(5)
 
         // Then
