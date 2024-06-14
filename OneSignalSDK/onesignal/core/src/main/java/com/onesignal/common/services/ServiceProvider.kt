@@ -1,6 +1,10 @@
 package com.onesignal.common.services
 
+import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.newSingleThreadContext
 
 /**
  * A service provider gives access to the implementations of a service.
@@ -9,6 +13,7 @@ class ServiceProvider(
     registrations: List<ServiceRegistration<*>>,
 ) : IServiceProvider {
     private val serviceMap = mutableMapOf<Class<*>, MutableList<ServiceRegistration<*>>>()
+    private var coroutineScope = CoroutineScope(newSingleThreadContext(name = "ServiceProvider"))
 
     init {
         // go through the registrations to create the service map for easier lookup post-build
@@ -77,6 +82,26 @@ class ServiceProvider(
         synchronized(serviceMap) {
             Logging.debug("${indent}Retrieving service $c")
             return serviceMap[c]?.last()?.resolve(this) as T?
+        }
+    }
+
+    fun scheduleStartServices() {
+        synchronized(serviceMap) {
+            for (serviceReg in serviceMap!![IStartableService::class.java]!!) {
+                // we can directly start services that were previously resolved
+                if (serviceReg.isResolved()) {
+                    val service = serviceReg.resolve(this) as IStartableService
+                    service.start()
+                } else {
+                    val provider = this
+                    // resolve and schedule to start the startable services that were not used during
+                    // the initialization process
+                    coroutineScope.launch {
+                        val service = serviceReg.resolve(provider) as IStartableService
+                        service.start()
+                    }
+                }
+            }
         }
     }
 

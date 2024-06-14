@@ -25,6 +25,7 @@ import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStoreFix
 import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.core.internal.startup.IBootstrapService
 import com.onesignal.core.internal.startup.StartupService
 import com.onesignal.debug.IDebugManager
 import com.onesignal.debug.LogLevel
@@ -120,16 +121,27 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
     // Services required by this class
     private var _user: IUserManager? = null
+        get() = services.getService()
     private var _session: ISessionManager? = null
+        get() = services.getService()
     private var iam: IInAppMessagesManager? = null
+        get() = services.getService()
     private var _location: ILocationManager? = null
+        get() = services.getService()
     private var _notifications: INotificationsManager? = null
+        get() = services.getService()
     private var operationRepo: IOperationRepo? = null
+        get() = services.getService()
     private var identityModelStore: IdentityModelStore? = null
+        get() = services.getService()
     private var propertiesModelStore: PropertiesModelStore? = null
+        get() = services.getService()
     private var subscriptionModelStore: SubscriptionModelStore? = null
+        get() = services.getService()
     private var startupService: StartupService? = null
+        get() = services.getService()
     private var preferencesService: IPreferencesService? = null
+        get() = services.getService()
 
     // Other State
     private val services: ServiceProvider
@@ -234,21 +246,10 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 configModel!!.disableGMSMissingPrompt = _disableGMSMissingPrompt!!
             }
 
-            // "Inject" the services required by this main class
-            _location = services.getService()
-            _user = services.getService()
-            _session = services.getService()
-            iam = services.getService()
-            _notifications = services.getService()
-            operationRepo = services.getService()
-            propertiesModelStore = services.getService()
-            identityModelStore = services.getService()
-            subscriptionModelStore = services.getService()
-            preferencesService = services.getService()
-
-            // Instantiate and call the IStartableServices
-            startupService = services.getService()
-            startupService!!.bootstrap()
+            // bootstrap services
+            for (bootstrapService in services.getAllServices<IBootstrapService>()) {
+                bootstrapService.bootstrap()
+            }
 
             if (forceCreateUser || !identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)) {
                 val legacyPlayerId =
@@ -298,8 +299,12 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
                         pushSubscriptionModel.sdk = OneSignalUtils.SDK_VERSION
                         pushSubscriptionModel.deviceOS = Build.VERSION.RELEASE
-                        pushSubscriptionModel.carrier = DeviceUtils.getCarrierName(services.getService<IApplicationService>().appContext) ?: ""
-                        pushSubscriptionModel.appVersion = AndroidUtils.getAppVersion(services.getService<IApplicationService>().appContext) ?: ""
+                        pushSubscriptionModel.carrier = DeviceUtils.getCarrierName(
+                            services.getService<IApplicationService>().appContext,
+                        ) ?: ""
+                        pushSubscriptionModel.appVersion = AndroidUtils.getAppVersion(
+                            services.getService<IApplicationService>().appContext,
+                        ) ?: ""
 
                         configModel!!.pushSubscriptionId = legacyPlayerId
                         subscriptionModelStore!!.add(
@@ -328,10 +333,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 Logging.debug("initWithContext: using cached user ${identityModelStore!!.model.onesignalId}")
             }
 
-            startupService!!.start()
-
+            services.scheduleStartServices()
             isInitialized = true
-
             return true
         }
     }
