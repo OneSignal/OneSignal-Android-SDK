@@ -8,7 +8,6 @@ import com.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.notifications.internal.permissions.INotificationPermissionChangedHandler
 import com.onesignal.notifications.internal.permissions.impl.NotificationPermissionController
@@ -39,9 +38,14 @@ class NotificationPermissionControllerTests : FunSpec({
         val mockRequestPermissionService = mockk<IRequestPermissionService>()
         every { mockRequestPermissionService.registerAsCallback(any(), any()) } just runs
         val mockPreferenceService = mockk<IPreferencesService>()
-
+        val focusHandlerList = mutableListOf<IApplicationLifecycleHandler>()
+        val mockAppService = mockk<IApplicationService>()
+        every { mockAppService.addApplicationLifecycleHandler(any()) } answers {
+            focusHandlerList.add(firstArg<IApplicationLifecycleHandler>())
+        }
+        every { mockAppService.appContext } returns ApplicationProvider.getApplicationContext()
         var handlerFired = false
-        val notificationPermissionController = NotificationPermissionController(AndroidMockHelper.applicationService(), mockRequestPermissionService, AndroidMockHelper.applicationService(), mockPreferenceService, MockHelper.configModelStore())
+        val notificationPermissionController = NotificationPermissionController(mockAppService, mockRequestPermissionService, mockAppService, mockPreferenceService, MockHelper.configModelStore())
 
         notificationPermissionController.subscribe(
             object : INotificationPermissionChangedHandler {
@@ -50,6 +54,11 @@ class NotificationPermissionControllerTests : FunSpec({
                 }
             },
         )
+        // call onFocus to set the proper polling interval.
+        // This happens when registering the lifecycle handler
+        for (focusHandler in focusHandlerList) {
+            focusHandler.onFocus()
+        }
 
         // When
         // permission changes
@@ -83,6 +92,11 @@ class NotificationPermissionControllerTests : FunSpec({
                 }
             },
         )
+        // call onFocus to set the proper polling interval.
+        // This happens when registering the lifecycle handler
+        for (focusHandler in handlerList) {
+            focusHandler.onFocus()
+        }
 
         // When
         // the app has loses focus
@@ -121,6 +135,11 @@ class NotificationPermissionControllerTests : FunSpec({
                 }
             },
         )
+        // call onFocus to set the proper polling interval.
+        // This happens when registering the lifecycle handler
+        for (focusHandler in handlerList) {
+            focusHandler.onFocus()
+        }
 
         // When
         // the app loses focus

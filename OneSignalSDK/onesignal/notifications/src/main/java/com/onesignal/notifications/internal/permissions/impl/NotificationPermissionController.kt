@@ -77,7 +77,7 @@ internal class NotificationPermissionController(
     init {
         this.enabled = notificationsEnabled()
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)
-        pollingWaitInterval = _configModelStore.model.foregroundFetchNotificationPermissionInterval
+        pollingWaitInterval = _configModelStore.model.backgroundFetchNotificationPermissionInterval
         registerPollingLifecycleListener()
         coroutineScope.launch {
             pollForPermission()
