@@ -79,6 +79,14 @@ class ShadowRoboNotificationManager : ShadowNotificationManager() {
         super.notify(tag, id, notification)
     }
 
+    override fun setNotificationsEnabled(areNotificationsEnabled: Boolean) {
+        notificationsEnabled = areNotificationsEnabled
+    }
+
+    override fun areNotificationsEnabled(): Boolean {
+        return notificationsEnabled
+    }
+
     fun createNotificationChannel(channel: NotificationChannel?) {
         lastChannel = channel
         super.createNotificationChannel(channel as Any?)
@@ -97,12 +105,14 @@ class ShadowRoboNotificationManager : ShadowNotificationManager() {
         var lastNotifId = 0
         val notifications = LinkedHashMap<Int, PostedNotification>()
         val cancelledNotifications = mutableListOf<Int>()
+        var notificationsEnabled = true
 
         fun reset() {
             notifications.clear()
             cancelledNotifications.clear()
             lastNotif = null
             lastNotifId = 0
+            notificationsEnabled = true
         }
 
         private lateinit var mInstance: ShadowRoboNotificationManager
@@ -115,6 +125,10 @@ class ShadowRoboNotificationManager : ShadowNotificationManager() {
                 notifications.add(notification)
             }
             return notifications
+        }
+
+        fun setShadowNotificationsEnabled(enabled: Boolean) {
+            mInstance.setNotificationsEnabled(enabled)
         }
 
         var lastChannel: NotificationChannel? = null

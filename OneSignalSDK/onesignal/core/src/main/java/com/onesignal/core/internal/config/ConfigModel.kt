@@ -193,9 +193,28 @@ class ConfigModel : Model() {
      * The minimum number of milliseconds required to pass to allow the fetching of IAM to occur.
      */
     var fetchIAMMinInterval: Long
-        get() = getLongProperty(::fetchIAMMinInterval.name) { 30000 }
+        get() = getLongProperty(::fetchIAMMinInterval.name) { 30_000 }
         set(value) {
             setLongProperty(::fetchIAMMinInterval.name, value)
+        }
+
+    /**
+     * The number of milliseconds between fetching the current notification permission value when the app is in focus
+     */
+    var foregroundFetchNotificationPermissionInterval: Long
+        get() = getLongProperty(::foregroundFetchNotificationPermissionInterval.name) { 1_000 }
+        set(value) {
+            setLongProperty(::foregroundFetchNotificationPermissionInterval.name, value)
+        }
+
+    /**
+     * The number of milliseconds between fetching the current notification permission value when the app is out of focus
+     * We want this value to be very large to effectively stop polling in the background
+     */
+    var backgroundFetchNotificationPermissionInterval: Long
+        get() = getLongProperty(::backgroundFetchNotificationPermissionInterval.name) { 86_400_000 }
+        set(value) {
+            setLongProperty(::backgroundFetchNotificationPermissionInterval.name, value)
         }
 
     /**
