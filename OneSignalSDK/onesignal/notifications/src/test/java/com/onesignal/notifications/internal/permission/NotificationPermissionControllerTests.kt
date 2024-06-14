@@ -33,6 +33,10 @@ class NotificationPermissionControllerTests : FunSpec({
         ShadowRoboNotificationManager.reset()
     }
 
+    beforeEach {
+        ShadowRoboNotificationManager.reset()
+    }
+
     test("NotificationPermissionController permission polling fires permission changed event") {
         // Given
         val mockRequestPermissionService = mockk<IRequestPermissionService>()
@@ -62,8 +66,8 @@ class NotificationPermissionControllerTests : FunSpec({
 
         // When
         // permission changes
-        ShadowRoboNotificationManager.setNotificationsEnabled(false)
-        delay(5)
+        ShadowRoboNotificationManager.setShadowNotificationsEnabled(false)
+        delay(100)
 
         // Then
         // permissionChanged Event should fire
@@ -103,10 +107,10 @@ class NotificationPermissionControllerTests : FunSpec({
         for (handler in handlerList) {
             handler.onUnfocused()
         }
-        delay(5)
+        delay(100)
         // the permission changes
-        ShadowRoboNotificationManager.setNotificationsEnabled(false)
-        delay(5)
+        ShadowRoboNotificationManager.setShadowNotificationsEnabled(false)
+        delay(100)
 
         // Then
         // permissionChanged Event should not fire
@@ -146,10 +150,10 @@ class NotificationPermissionControllerTests : FunSpec({
         for (handler in handlerList) {
             handler.onUnfocused()
         }
-        delay(5)
+        delay(100)
         // the permission changes
-        ShadowRoboNotificationManager.setNotificationsEnabled(false)
-        delay(5)
+        ShadowRoboNotificationManager.setShadowNotificationsEnabled(false)
+        delay(100)
         // the app regains focus
         for (handler in handlerList) {
             handler.onFocus()
