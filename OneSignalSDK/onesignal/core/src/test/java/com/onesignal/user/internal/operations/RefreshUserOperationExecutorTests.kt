@@ -16,7 +16,9 @@ import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.impl.executors.RefreshUserOperationExecutor
 import com.onesignal.user.internal.properties.PropertiesModel
+import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -30,6 +32,7 @@ import io.mockk.runs
 class RefreshUserOperationExecutorTests : FunSpec({
     val appId = "appId"
     val existingSubscriptionId1 = "existing-subscriptionId1"
+    val onDevicePushToken = "on-device-push-token"
     val remoteOneSignalId = "remote-onesignalId"
     val remoteSubscriptionId1 = "remote-subscriptionId1"
     val remoteSubscriptionId2 = "remote-subscriptionId2"
@@ -42,7 +45,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId, "aliasLabel1" to "aliasValue1"),
                 PropertiesObject(country = "US"),
                 listOf(
-                    SubscriptionObject(existingSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "pushToken1"),
+                    SubscriptionObject(existingSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "on-backend-push-token"),
                     SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "pushToken2"),
                     SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL, token = "name@company.com"),
                 ),
@@ -65,6 +68,14 @@ class RefreshUserOperationExecutorTests : FunSpec({
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         every { mockSubscriptionsModelStore.replaceAll(any(), any()) } just runs
+
+        val mockPushSubscriptionModel = SubscriptionModel()
+        mockPushSubscriptionModel.id = existingSubscriptionId1
+        mockPushSubscriptionModel.type = SubscriptionType.PUSH
+        mockPushSubscriptionModel.address = onDevicePushToken
+        mockPushSubscriptionModel.status = SubscriptionStatus.SUBSCRIBED
+        mockPushSubscriptionModel.optedIn = true
+        every { mockSubscriptionsModelStore.get(existingSubscriptionId1) } returns mockPushSubscriptionModel
 
         val mockConfigModelStore =
             MockHelper.configModelStore {
@@ -109,14 +120,14 @@ class RefreshUserOperationExecutorTests : FunSpec({
             mockSubscriptionsModelStore.replaceAll(
                 withArg {
                     it.count() shouldBe 2
-                    it[0].id shouldBe existingSubscriptionId1
-                    it[0].type shouldBe SubscriptionType.PUSH
+                    it[0].id shouldBe remoteSubscriptionId2
+                    it[0].type shouldBe SubscriptionType.EMAIL
                     it[0].optedIn shouldBe true
-                    it[0].address shouldBe "pushToken1"
-                    it[1].id shouldBe remoteSubscriptionId2
-                    it[1].type shouldBe SubscriptionType.EMAIL
+                    it[0].address shouldBe "name@company.com"
+                    it[1].id shouldBe existingSubscriptionId1
+                    it[1].type shouldBe SubscriptionType.PUSH
                     it[1].optedIn shouldBe true
-                    it[1].address shouldBe "name@company.com"
+                    it[1].address shouldBe onDevicePushToken
                 },
                 ModelChangeTags.HYDRATE,
             )
