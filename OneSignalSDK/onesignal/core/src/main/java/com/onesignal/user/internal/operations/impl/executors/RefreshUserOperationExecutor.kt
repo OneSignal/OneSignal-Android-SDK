@@ -117,9 +117,22 @@ internal class RefreshUserOperationExecutor(
                 subscriptionModel.carrier = subscription.carrier ?: ""
                 subscriptionModel.appVersion = subscription.appVersion ?: ""
 
-                // We only add a push subscription if it is this device's push subscription.
-                if (subscriptionModel.type != SubscriptionType.PUSH || subscriptionModel.id == _configModelStore.model.pushSubscriptionId) {
+                // We only add a non-push subscriptions. For push, the device is the source of truth
+                // so we don't want to cache these subscriptions from the backend.
+                if (subscriptionModel.type != SubscriptionType.PUSH) {
                     subscriptionModels.add(subscriptionModel)
+                }
+            }
+            // Retrieve the push subscription ID from the backend configuration model store
+            val pushSubscriptionIdFromConfig = _configModelStore.model.pushSubscriptionId
+
+            if (pushSubscriptionIdFromConfig != null) {
+                // Retrieve the push subscription model from the model store
+                val cachedPushSubscriptionModel = _subscriptionsModelStore.get(pushSubscriptionIdFromConfig)
+
+                // If non-null, the cached push subscription matches the ID coming from backend config
+                if (cachedPushSubscriptionModel != null) {
+                    subscriptionModels.add(cachedPushSubscriptionModel)
                 }
             }
 
