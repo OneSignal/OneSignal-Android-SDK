@@ -115,7 +115,7 @@ internal class TrackAmazonPurchase(
         e.printStackTrace()
     }
 
-    override fun onFocus() { }
+    override fun onFocus(firedOnSubscribe: Boolean) { }
 
     override fun onUnfocused() {
         if (!canTrack) return

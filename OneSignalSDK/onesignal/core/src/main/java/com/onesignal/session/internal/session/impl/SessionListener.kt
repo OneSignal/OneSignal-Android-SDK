@@ -4,6 +4,7 @@ import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.startup.IStartableService
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.session.internal.outcomes.IOutcomeEventsController
 import com.onesignal.session.internal.session.ISessionLifecycleHandler
 import com.onesignal.session.internal.session.ISessionService
@@ -47,6 +48,12 @@ internal class SessionListener(
 
     override fun onSessionEnded(duration: Long) {
         val durationInSeconds = duration / 1000
+
+        // Time is erroneous if below 1 second or over a day
+        if (durationInSeconds < 1L || durationInSeconds > SECONDS_IN_A_DAY) {
+            Logging.error("SessionListener.onSessionEnded sending duration of $durationInSeconds seconds")
+        }
+
         _operationRepo.enqueue(
             TrackSessionEndOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, durationInSeconds),
         )
@@ -54,5 +61,9 @@ internal class SessionListener(
         suspendifyOnThread {
             _outcomeEventsController.sendSessionEndOutcomeEvent(durationInSeconds)
         }
+    }
+
+    companion object {
+        const val SECONDS_IN_A_DAY = 86_400L
     }
 }

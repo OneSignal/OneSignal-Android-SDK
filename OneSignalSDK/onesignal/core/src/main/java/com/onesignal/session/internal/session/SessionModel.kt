@@ -19,13 +19,14 @@ class SessionModel : Model() {
      * Whether the session is valid.
      */
     var isValid: Boolean
-        get() = getBooleanProperty(::isValid.name) { true }
+        get() = getBooleanProperty(::isValid.name) { false }
         set(value) {
             setBooleanProperty(::isValid.name, value)
         }
 
     /**
      * When this session started, in Unix time milliseconds.
+     * This is used by In-App Message triggers, and not used in detecting session time.
      */
     var startTime: Long
         get() = getLongProperty(::startTime.name) { System.currentTimeMillis() }
@@ -37,7 +38,7 @@ class SessionModel : Model() {
      * When this app was last focused, in Unix time milliseconds.
      */
     var focusTime: Long
-        get() = getLongProperty(::focusTime.name) { 0 }
+        get() = getLongProperty(::focusTime.name) { System.currentTimeMillis() }
         set(value) {
             setLongProperty(::focusTime.name, value)
         }

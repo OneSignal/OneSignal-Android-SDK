@@ -67,6 +67,9 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     private var activityReferences = 0
     private var isActivityChangingConfigurations = false
 
+    private val wasInBackground: Boolean
+        get() = !isInForeground || nextResumeIsFirstActivity
+
     /**
      * Call to "start" this service, expected to be called during initialization of the SDK.
      *
@@ -117,6 +120,11 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
 
     override fun addApplicationLifecycleHandler(handler: IApplicationLifecycleHandler) {
         applicationLifecycleNotifier.subscribe(handler)
+        if (current != null) {
+            // When a listener subscribes, fire its callback
+            // The listener is too late to receive the earlier onFocus call
+            handler.onFocus(true)
+        }
     }
 
     override fun removeApplicationLifecycleHandler(handler: IApplicationLifecycleHandler) {
@@ -150,7 +158,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
 
         current = activity
 
-        if ((!isInForeground || nextResumeIsFirstActivity) && !isActivityChangingConfigurations) {
+        if (wasInBackground && !isActivityChangingConfigurations) {
             activityReferences = 1
             handleFocus()
         } else {
@@ -170,7 +178,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
             current = activity
         }
 
-        if ((!isInForeground || nextResumeIsFirstActivity) && !isActivityChangingConfigurations) {
+        if (wasInBackground && !isActivityChangingConfigurations) {
             activityReferences = 1
             handleFocus()
         }
@@ -373,7 +381,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
     }
 
     private fun handleFocus() {
-        if (!isInForeground || nextResumeIsFirstActivity) {
+        if (wasInBackground) {
             Logging.debug(
                 "ApplicationService.handleFocus: application is now in focus, nextResumeIsFirstActivity=$nextResumeIsFirstActivity",
             )
@@ -384,7 +392,7 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
                 entryState = AppEntryAction.APP_OPEN
             }
 
-            applicationLifecycleNotifier.fire { it.onFocus() }
+            applicationLifecycleNotifier.fire { it.onFocus(false) }
         } else {
             Logging.debug("ApplicationService.handleFocus: application never lost focus")
         }

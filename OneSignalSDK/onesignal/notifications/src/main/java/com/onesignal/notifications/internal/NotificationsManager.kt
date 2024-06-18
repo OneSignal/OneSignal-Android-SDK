@@ -61,7 +61,7 @@ internal class NotificationsManager(
         }
     }
 
-    override fun onFocus() {
+    override fun onFocus(firedOnSubscribe: Boolean) {
         refreshNotificationState()
     }
 

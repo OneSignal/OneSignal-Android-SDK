@@ -881,15 +881,7 @@ internal class InAppMessagesManager(
             .show()
     }
 
-    private var onFocusCalled: Boolean = false
-
-    override fun onFocus() {
-        if (onFocusCalled) return
-        onFocusCalled = true
-        suspendifyOnThread {
-            fetchMessages()
-        }
-    }
+    override fun onFocus(firedOnSubscribe: Boolean) { }
 
     override fun onUnfocused() { }
 }

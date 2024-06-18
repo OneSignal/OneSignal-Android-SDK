@@ -79,7 +79,7 @@ internal class BackgroundManager(
         _applicationService.addApplicationLifecycleHandler(this)
     }
 
-    override fun onFocus() {
+    override fun onFocus(firedOnSubscribe: Boolean) {
         cancelSyncTask()
     }
 

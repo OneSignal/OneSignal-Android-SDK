@@ -175,7 +175,7 @@ internal class GmsLocationController(
             refreshRequest()
         }
 
-        override fun onFocus() {
+        override fun onFocus(firedOnSubscribe: Boolean) {
             Logging.log(LogLevel.DEBUG, "LocationUpdateListener.onFocus()")
             refreshRequest()
         }
