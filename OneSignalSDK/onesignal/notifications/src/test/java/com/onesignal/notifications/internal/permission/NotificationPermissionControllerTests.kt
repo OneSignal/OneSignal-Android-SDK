@@ -61,7 +61,7 @@ class NotificationPermissionControllerTests : FunSpec({
         // call onFocus to set the proper polling interval.
         // This happens when registering the lifecycle handler
         for (focusHandler in focusHandlerList) {
-            focusHandler.onFocus()
+            focusHandler.onFocus(false)
         }
 
         // When
@@ -99,7 +99,7 @@ class NotificationPermissionControllerTests : FunSpec({
         // call onFocus to set the proper polling interval.
         // This happens when registering the lifecycle handler
         for (focusHandler in handlerList) {
-            focusHandler.onFocus()
+            focusHandler.onFocus(false)
         }
 
         // When
@@ -142,7 +142,7 @@ class NotificationPermissionControllerTests : FunSpec({
         // call onFocus to set the proper polling interval.
         // This happens when registering the lifecycle handler
         for (focusHandler in handlerList) {
-            focusHandler.onFocus()
+            focusHandler.onFocus(false)
         }
 
         // When
@@ -156,7 +156,7 @@ class NotificationPermissionControllerTests : FunSpec({
         delay(100)
         // the app regains focus
         for (handler in handlerList) {
-            handler.onFocus()
+            handler.onFocus(false)
         }
         delay(5)
 
