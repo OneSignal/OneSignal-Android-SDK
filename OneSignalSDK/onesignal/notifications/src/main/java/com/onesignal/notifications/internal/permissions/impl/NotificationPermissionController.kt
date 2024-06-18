@@ -87,8 +87,8 @@ internal class NotificationPermissionController(
     private fun registerPollingLifecycleListener() {
         _applicationService.addApplicationLifecycleHandler(
             object : ApplicationLifecycleHandlerBase() {
-                override fun onFocus() {
-                    super.onFocus()
+                override fun onFocus(firedOnSubscribe: Boolean) {
+                    super.onFocus(firedOnSubscribe)
                     pollingWaitInterval = _configModelStore.model.foregroundFetchNotificationPermissionInterval
                     pollingWaiter.wake()
                 }
