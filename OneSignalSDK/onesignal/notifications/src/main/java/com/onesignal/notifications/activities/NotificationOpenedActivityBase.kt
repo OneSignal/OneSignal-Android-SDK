@@ -36,32 +36,26 @@ import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
 abstract class NotificationOpenedActivityBase : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (!OneSignal.initWithContext(applicationContext)) {
-            return
-        }
-
-        var self = this
-
-        suspendifyOnThread {
-            var openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
-            openedProcessor.processFromContext(self, intent)
-        }
-
-        finish()
+        processIntent()
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        processIntent()
+    }
+
+    private fun processIntent() {
         if (!OneSignal.initWithContext(applicationContext)) {
             return
         }
-
-        var self = this
         suspendifyOnThread {
-            var openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
-            openedProcessor.processFromContext(self, getIntent())
+            val openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
+            openedProcessor.processFromContext(this, intent)
+            // KEEP: Xiaomi Compatibility:
+            // Must keep this Activity alive while trampolining, that is
+            // startActivity() must be called BEFORE finish(), otherwise
+            // the app is never foregrounded.
+            finish()
         }
-
-        finish()
     }
 }
