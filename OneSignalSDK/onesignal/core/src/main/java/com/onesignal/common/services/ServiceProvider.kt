@@ -85,21 +85,14 @@ class ServiceProvider(
         }
     }
 
+    // schedule to start all startable services separate threads
     fun scheduleStartServices() {
         synchronized(serviceMap) {
+            val provider = this
             for (serviceReg in serviceMap!![IStartableService::class.java]!!) {
-                // we can directly start services that were previously resolved
-                if (serviceReg.isResolved()) {
-                    val service = serviceReg.resolve(this) as IStartableService
+                coroutineScope.launch {
+                    val service = serviceReg.resolve(provider) as IStartableService
                     service.start()
-                } else {
-                    val provider = this
-                    // resolve and schedule to start the startable services that were not used during
-                    // the initialization process
-                    coroutineScope.launch {
-                        val service = serviceReg.resolve(provider) as IStartableService
-                        service.start()
-                    }
                 }
             }
         }
