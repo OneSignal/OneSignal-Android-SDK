@@ -30,8 +30,6 @@ abstract class ServiceRegistration<T> {
     }
 
     abstract fun resolve(provider: IServiceProvider): Any?
-
-    abstract fun isResolved(): Boolean
 }
 
 /**
@@ -95,10 +93,6 @@ class ServiceRegistrationReflection<T>(
         return obj
     }
 
-    override fun isResolved(): Boolean {
-        return obj != null
-    }
-
     private fun doesHaveAllParameters(
         constructor: Constructor<*>,
         provider: IServiceProvider,
@@ -147,10 +141,6 @@ class ServiceRegistrationSingleton<T>(
     private var obj: T,
 ) : ServiceRegistration<T>() {
     override fun resolve(provider: IServiceProvider): Any? = obj
-
-    override fun isResolved(): Boolean {
-        return obj != null
-    }
 }
 
 /**
@@ -173,9 +163,5 @@ class ServiceRegistrationLambda<T>(
         obj = create(provider)
 
         return obj
-    }
-
-    override fun isResolved(): Boolean {
-        return obj != null
     }
 }

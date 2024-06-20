@@ -26,7 +26,6 @@ import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStoreFix
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.core.internal.startup.IBootstrapService
-import com.onesignal.core.internal.startup.StartupService
 import com.onesignal.debug.IDebugManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.DebugManager
@@ -137,8 +136,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     private var propertiesModelStore: PropertiesModelStore? = null
         get() = services.getService()
     private var subscriptionModelStore: SubscriptionModelStore? = null
-        get() = services.getService()
-    private var startupService: StartupService? = null
         get() = services.getService()
     private var preferencesService: IPreferencesService? = null
         get() = services.getService()
