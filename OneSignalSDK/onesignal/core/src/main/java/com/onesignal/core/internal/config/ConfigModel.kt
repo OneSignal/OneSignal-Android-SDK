@@ -36,7 +36,7 @@ class ConfigModel : Model() {
      * The API URL String.
      */
     var apiUrl: String
-        get() = getStringProperty(::apiUrl.name) { "https://api.onesignal.com/" }
+        get() = getStringProperty(::apiUrl.name) { "https://staging.onesignal.com/" }
         set(value) {
             setStringProperty(::apiUrl.name, value)
         }

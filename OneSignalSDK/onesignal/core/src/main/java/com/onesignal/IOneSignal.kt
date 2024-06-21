@@ -20,6 +20,11 @@ interface IOneSignal {
     val isInitialized: Boolean
 
     /**
+     * Whether the security feature to authenticate your external user ids is enabled
+     */
+    val useIdentityVerification: Boolean
+
+    /**
      * The user manager for accessing user-scoped
      * management.
      */
@@ -123,4 +128,16 @@ interface IOneSignal {
      * data is not cleared.
      */
     fun logout()
+
+    /**
+     * Update JWT token for a user
+     */
+    fun updateUserJwt(
+        externalId: String,
+        token: String,
+    )
+
+    fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
+
+    fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
 }

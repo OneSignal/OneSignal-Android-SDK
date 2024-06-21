@@ -13,6 +13,7 @@ public class ProfileUtil {
         ALIAS("Alias"),
         EMAIL("Email"),
         SMS("SMS"),
+        JWT("JWT"),
         EXTERNAL_USER_ID("External User Id"),
 
         TAG("Tags"),
@@ -97,6 +98,10 @@ public class ProfileUtil {
         return true;
     }
 
+    private static boolean isJWTValid(TextInputLayout jwtTextInputLayout) {
+        return !jwtTextInputLayout.getEditText().toString().isEmpty();
+    }
+
     private static boolean isExternalUserIdValid(TextInputLayout externalUserIdTextInputLayout) {
         externalUserIdTextInputLayout.setErrorEnabled(false);
         if (externalUserIdTextInputLayout.getEditText() != null) {
@@ -137,6 +142,8 @@ public class ProfileUtil {
                 return isEmailValid(alertDialogTextInputLayout);
             case SMS:
                 return isSMSValid(alertDialogTextInputLayout);
+            case JWT:
+                return isJWTValid(alertDialogTextInputLayout);
             case EXTERNAL_USER_ID:
                 return isExternalUserIdValid(alertDialogTextInputLayout);
             case TAG:
