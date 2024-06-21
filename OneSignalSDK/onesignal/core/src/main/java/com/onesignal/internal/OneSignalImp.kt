@@ -86,7 +86,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val debug: IDebugManager = DebugManager()
     override val session: ISessionManager get() =
         if (isInitialized) {
-            _session!!
+            services.getService()
         } else {
             throw Exception(
                 "Must call 'initWithContext' before use",
@@ -94,7 +94,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         }
     override val notifications: INotificationsManager get() =
         if (isInitialized) {
-            _notifications!!
+            services.getService()
         } else {
             throw Exception(
                 "Must call 'initWithContext' before use",
@@ -102,7 +102,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         }
     override val location: ILocationManager get() =
         if (isInitialized) {
-            _location!!
+            services.getService()
         } else {
             throw Exception(
                 "Must call 'initWithContext' before use",
@@ -110,34 +110,31 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         }
     override val inAppMessages: IInAppMessagesManager get() =
         if (isInitialized) {
-            iam!!
+            services.getService()
         } else {
             throw Exception(
                 "Must call 'initWithContext' before use",
             )
         }
-    override val user: IUserManager get() = if (isInitialized) _user!! else throw Exception("Must call 'initWithContext' before use")
+    override val user: IUserManager get() =
+        if (isInitialized) {
+            services.getService()
+        } else {
+            throw Exception(
+                "Must call 'initWithContext' before use",
+            )
+        }
 
     // Services required by this class
-    private var _user: IUserManager? = null
+    private val operationRepo: IOperationRepo
         get() = services.getService()
-    private var _session: ISessionManager? = null
+    private val identityModelStore: IdentityModelStore
         get() = services.getService()
-    private var iam: IInAppMessagesManager? = null
+    private val propertiesModelStore: PropertiesModelStore
         get() = services.getService()
-    private var _location: ILocationManager? = null
+    private val subscriptionModelStore: SubscriptionModelStore
         get() = services.getService()
-    private var _notifications: INotificationsManager? = null
-        get() = services.getService()
-    private var operationRepo: IOperationRepo? = null
-        get() = services.getService()
-    private var identityModelStore: IdentityModelStore? = null
-        get() = services.getService()
-    private var propertiesModelStore: PropertiesModelStore? = null
-        get() = services.getService()
-    private var subscriptionModelStore: SubscriptionModelStore? = null
-        get() = services.getService()
-    private var preferencesService: IPreferencesService? = null
+    private val preferencesService: IPreferencesService
         get() = services.getService()
 
     // Other State
