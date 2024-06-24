@@ -85,13 +85,11 @@ class ServiceProvider(
         }
     }
 
-    // schedule to start all startable services separate threads
+    // schedule to start all startable services in a separate thread
     fun scheduleStartServices() {
-        val provider = this
         coroutineScope.launch {
             synchronized(serviceMap) {
-                for (serviceReg in serviceMap!![IStartableService::class.java]!!) {
-                    val service = serviceReg.resolve(provider) as IStartableService
+                for (service in getAllServices<IStartableService>()) {
                     service.start()
                 }
             }
