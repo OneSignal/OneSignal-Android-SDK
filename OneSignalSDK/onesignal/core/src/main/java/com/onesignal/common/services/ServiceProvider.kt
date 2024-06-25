@@ -88,10 +88,8 @@ class ServiceProvider(
     // schedule to start all startable services in a separate thread
     fun scheduleStartServices() {
         coroutineScope.launch {
-            synchronized(serviceMap) {
-                for (service in getAllServices<IStartableService>()) {
-                    service.start()
-                }
+            for (service in getAllServices<IStartableService>()) {
+                service.start()
             }
         }
     }
