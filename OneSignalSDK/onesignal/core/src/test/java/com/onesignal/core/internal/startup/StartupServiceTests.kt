@@ -77,7 +77,7 @@ class StartupServiceTests : FunSpec({
         verify(exactly = 0) { mockBootstrapService2.bootstrap() }
     }
 
-    test("startup will call all IStartableService dependencies successfully") {
+    test("startup will call all IStartableService dependencies successfully after a short delay") {
         // Given
         val mockStartupService1 = spyk<IStartableService>()
         val mockStartupService2 = spyk<IStartableService>()
@@ -88,6 +88,7 @@ class StartupServiceTests : FunSpec({
         startupService.scheduleStart()
 
         // Then
+        Thread.sleep(10)
         verify(exactly = 1) { mockStartupService1.start() }
         verify(exactly = 1) { mockStartupService2.start() }
     }
@@ -105,6 +106,7 @@ class StartupServiceTests : FunSpec({
         mockStartableService3.start()
 
         // Then
+        Thread.sleep(10)
         coVerifyOrder {
             // service3 will call start() first even though service1 and service2 are scheduled first
             mockStartableService3.start()
