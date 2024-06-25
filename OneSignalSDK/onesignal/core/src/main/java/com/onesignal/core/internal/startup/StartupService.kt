@@ -1,18 +1,27 @@
 package com.onesignal.core.internal.startup
 
+import com.onesignal.common.services.ServiceProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.newSingleThreadContext
+
 internal class StartupService(
-    private val _bootstrapServices: List<IBootstrapService>,
-    private val _startableServices: List<IStartableService>,
+    private val services: ServiceProvider,
 ) {
+    private var coroutineScope = CoroutineScope(newSingleThreadContext(name = "ServiceProvider"))
+
     fun bootstrap() {
-        // now that we have the params initialized, start everything else up
-        for (bootstrapService in _bootstrapServices)
+        for (bootstrapService in services.getAllServices<IBootstrapService>()) {
             bootstrapService.bootstrap()
+        }
     }
 
-    fun start() {
-        // now that we have the params initialized, start everything else up
-        for (startableService in _startableServices)
-            startableService.start()
+    // schedule to start all startable services in a separate thread
+    fun scheduleStart() {
+        coroutineScope.launch {
+            for (service in services.getAllServices<IStartableService>()) {
+                service.start()
+            }
+        }
     }
 }

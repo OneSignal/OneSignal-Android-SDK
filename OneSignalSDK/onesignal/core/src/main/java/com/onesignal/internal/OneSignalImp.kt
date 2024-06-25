@@ -25,7 +25,7 @@ import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStoreFix
 import com.onesignal.core.internal.preferences.PreferenceStores
-import com.onesignal.core.internal.startup.IBootstrapService
+import com.onesignal.core.internal.startup.StartupService
 import com.onesignal.debug.IDebugManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.DebugManager
@@ -240,10 +240,10 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 configModel!!.disableGMSMissingPrompt = _disableGMSMissingPrompt!!
             }
 
+            val startupService = StartupService(services)
+
             // bootstrap services
-            for (bootstrapService in services.getAllServices<IBootstrapService>()) {
-                bootstrapService.bootstrap()
-            }
+            startupService.bootstrap()
 
             if (forceCreateUser || !identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)) {
                 val legacyPlayerId =
@@ -327,7 +327,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 Logging.debug("initWithContext: using cached user ${identityModelStore!!.model.onesignalId}")
             }
 
-            services.scheduleStartServices()
+            // schedule service starts out of main thread
+            startupService.scheduleStart()
             isInitialized = true
             return true
         }
