@@ -1,14 +1,17 @@
 package com.onesignal.notifications.internal
 
+import com.onesignal.core.internal.minification.KeepStub
 import com.onesignal.notifications.INotificationClickListener
 import com.onesignal.notifications.INotificationLifecycleListener
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.notifications.IPermissionObserver
 
 /**
- * The misconfigured NotificationsManager is an implementation of [INotificationsManager] that warns the user they
- * have not included the appropriate notifications module.
+ * The misconfigured NotificationsManager is an implementation of
+ * [INotificationsManager] that warns the dev they have not included the
+ * appropriate notifications module.
  */
+@KeepStub
 internal class MisconfiguredNotificationsManager : INotificationsManager {
     override val permission: Boolean
         get() = throw EXCEPTION

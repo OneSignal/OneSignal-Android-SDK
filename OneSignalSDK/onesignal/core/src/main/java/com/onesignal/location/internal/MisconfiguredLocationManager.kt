@@ -1,11 +1,13 @@
 package com.onesignal.location.internal
 
+import com.onesignal.core.internal.minification.KeepStub
 import com.onesignal.location.ILocationManager
 
 /**
- * The misconfigured IAMManager is an implementation of [ILocationManager] that warns the user they
+ * The misconfigured IAMManager is an implementation of [ILocationManager] that warns the dev they
  * have not included the appropriate location module.
  */
+@KeepStub
 internal class MisconfiguredLocationManager : ILocationManager {
     override var isShared: Boolean
         get() = throw EXCEPTION

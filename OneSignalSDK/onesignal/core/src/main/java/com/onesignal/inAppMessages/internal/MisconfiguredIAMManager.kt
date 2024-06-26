@@ -1,13 +1,15 @@
 package com.onesignal.inAppMessages.internal
 
+import com.onesignal.core.internal.minification.KeepStub
 import com.onesignal.inAppMessages.IInAppMessageClickListener
 import com.onesignal.inAppMessages.IInAppMessageLifecycleListener
 import com.onesignal.inAppMessages.IInAppMessagesManager
 
 /**
- * The misconfigured IAMManager is an implementation of [IInAppMessagesManager] that warns the user they
- * have not included the appropriate IAM module.
+ * The misconfigured IAMManager is an implementation of [IInAppMessagesManager]
+ * that warns the dev they have not included the appropriate IAM module.
  */
+@KeepStub
 internal class MisconfiguredIAMManager : IInAppMessagesManager {
     override var paused: Boolean
         get() = throw EXCEPTION
