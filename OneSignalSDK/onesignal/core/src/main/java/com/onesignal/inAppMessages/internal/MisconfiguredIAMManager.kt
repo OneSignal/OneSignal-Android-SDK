@@ -37,7 +37,7 @@ internal class MisconfiguredIAMManager : IInAppMessagesManager {
     override fun removeClickListener(listener: IInAppMessageClickListener) = throw EXCEPTION
 
     companion object {
-        private val EXCEPTION: Throwable get() =
+        private val EXCEPTION get() =
             Exception(
                 "Must include gradle module com.onesignal:InAppMessages in order to use this functionality!",
             )

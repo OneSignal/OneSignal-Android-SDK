@@ -13,12 +13,12 @@ import com.onesignal.notifications.IPermissionObserver
  */
 @KeepStub
 internal class MisconfiguredNotificationsManager : INotificationsManager {
-    override val permission: Boolean
+    override val permission
         get() = throw EXCEPTION
-    override val canRequestPermission: Boolean
+    override val canRequestPermission
         get() = throw EXCEPTION
 
-    override suspend fun requestPermission(fallbackToSettings: Boolean): Boolean = throw EXCEPTION
+    override suspend fun requestPermission(fallbackToSettings: Boolean) = throw EXCEPTION
 
     override fun removeNotification(id: Int) = throw EXCEPTION
 
