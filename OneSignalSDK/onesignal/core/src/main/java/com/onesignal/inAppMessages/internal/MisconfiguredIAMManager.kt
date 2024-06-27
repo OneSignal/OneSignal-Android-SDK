@@ -1,13 +1,15 @@
 package com.onesignal.inAppMessages.internal
 
+import com.onesignal.core.internal.minification.KeepStub
 import com.onesignal.inAppMessages.IInAppMessageClickListener
 import com.onesignal.inAppMessages.IInAppMessageLifecycleListener
 import com.onesignal.inAppMessages.IInAppMessagesManager
 
 /**
- * The misconfigured IAMManager is an implementation of [IInAppMessagesManager] that warns the user they
- * have not included the appropriate IAM module.
+ * The misconfigured IAMManager is an implementation of [IInAppMessagesManager]
+ * that warns the dev they have not included the appropriate IAM module.
  */
+@KeepStub
 internal class MisconfiguredIAMManager : IInAppMessagesManager {
     override var paused: Boolean
         get() = throw EXCEPTION
@@ -35,7 +37,7 @@ internal class MisconfiguredIAMManager : IInAppMessagesManager {
     override fun removeClickListener(listener: IInAppMessageClickListener) = throw EXCEPTION
 
     companion object {
-        private val EXCEPTION: Throwable get() =
+        private val EXCEPTION get() =
             Exception(
                 "Must include gradle module com.onesignal:InAppMessages in order to use this functionality!",
             )

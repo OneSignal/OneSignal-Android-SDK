@@ -14,4 +14,6 @@
 
 -keepclassmembers class com.onesignal.common.** { *; }
 
+-keepclassmembers @com.onesignal.core.internal.minification.KeepStub class * { <init>(...); }
+
 -keep class ** implements com.onesignal.common.modules.IModule { *; }
