@@ -19,8 +19,10 @@ import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.CoreModule
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
+import com.onesignal.core.internal.backend.ParamsObject
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.config.FetchParamsObserver
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
@@ -74,7 +76,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             val oldValue = _consentGiven
             _consentGiven = value
             configModel?.consentGiven = value
-            if (oldValue != value && value) {
+            if (oldValue != value && value && !useIdentityVerification) {
                 operationRepo?.forceExecuteOperations()
             }
         }
@@ -141,7 +143,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     private var sessionModel: SessionModel? = null
     private var _consentRequired: Boolean? = null
     private var _consentGiven: Boolean? = null
-    private var _useIdentityVerification: Boolean? = false
     private var _disableGMSMissingPrompt: Boolean? = null
     private val initLock: Any = Any()
     private val loginLock: Any = Any()
@@ -255,6 +256,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             startupService = services.getService()
             startupService!!.bootstrap()
 
+            resumeOperationRepoAfterFetchParams(configModel!!)
             if (forceCreateUser || !identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)) {
                 val legacyPlayerId =
                     preferencesService!!.getString(
@@ -437,13 +439,18 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         externalId: String,
         token: String,
     ) {
-        if (!identityModelStore!!.model.externalId.equals(externalId)) {
-            Logging.log(LogLevel.DEBUG, "JWT $token is NOT updated for externalId $externalId")
-            return
+        // update the model with the given externalId
+        for (model in identityModelStore!!.store.list()) {
+            if (externalId == model.externalId) {
+                identityModelStore!!.model.jwtToken = token
+                operationRepo!!.setPaused(false)
+                operationRepo!!.forceExecuteOperations()
+                Logging.log(LogLevel.DEBUG, "JWT $token is updated for externalId $externalId")
+                return
+            }
         }
 
-        Logging.log(LogLevel.DEBUG, "JWT $token is updated for externalId $externalId")
-        identityModelStore!!.model.jwtToken = token
+        Logging.log(LogLevel.DEBUG, "No identity found for externalId $externalId")
     }
 
     override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
@@ -517,6 +524,23 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         } else {
             subscriptionModelStore!!.replaceAll(subscriptions)
         }
+    }
+
+    private fun resumeOperationRepoAfterFetchParams(configModel: ConfigModel) {
+        // pause operation repo until useIdentityVerification is determined
+        operationRepo!!.setPaused(true)
+        configModel.addFetchParamsObserver(
+            object : FetchParamsObserver {
+                override fun onParamsFetched(params: ParamsObject) {
+                    // resume operations if identity verification is turned off or a jwt is cached
+                    if (params.useIdentityVerification == false || identityModelStore!!.model.jwtToken != null) {
+                        operationRepo!!.setPaused(false)
+                    } else {
+                        Logging.log(LogLevel.ERROR, "A valid JWT is required for user ${identityModelStore!!.model.externalId}.")
+                    }
+                }
+            },
+        )
     }
 
     override fun <T> hasService(c: Class<T>): Boolean = services.hasService(c)

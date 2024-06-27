@@ -1,6 +1,7 @@
 package com.onesignal.user.internal.identity
 
 import com.onesignal.common.modeling.MapModel
+import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.user.internal.backend.IdentityConstants
 
 /**
@@ -37,6 +38,6 @@ class IdentityModel : MapModel<String>() {
     var jwtToken: String?
         get() = getOptStringProperty(IdentityConstants.JWT_TOKEN)
         set(value) {
-            setOptStringProperty(IdentityConstants.JWT_TOKEN, value)
+            setOptStringProperty(IdentityConstants.JWT_TOKEN, value, ModelChangeTags.NO_PROPOGATE)
         }
 }
