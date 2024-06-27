@@ -450,13 +450,14 @@ internal class InAppMessagesManager(
      *
      *
      * Make all messages with redisplay available if:
-     * - Already displayed
+     * - Already displayed in a different session
      * - At least one Trigger has changed
      */
     private fun makeRedisplayMessagesAvailableWithTriggers(newTriggersKeys: Collection<String>) {
         for (message in messages) {
             if (!message.isTriggerChanged && redisplayedInAppMessages.contains(message) &&
-                _triggerController.isTriggerOnMessage(message, newTriggersKeys)
+                _triggerController.isTriggerOnMessage(message, newTriggersKeys) &&
+                !message.isDisplayedInSession
             ) {
                 Logging.debug("InAppMessagesManager.makeRedisplayMessagesAvailableWithTriggers: Trigger changed for message: $message")
                 message.isTriggerChanged = true
