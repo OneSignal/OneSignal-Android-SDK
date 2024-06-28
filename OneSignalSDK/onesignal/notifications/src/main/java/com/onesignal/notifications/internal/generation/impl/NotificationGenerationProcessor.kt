@@ -76,12 +76,11 @@ internal class NotificationGenerationProcessor(
                     if (notificationReceivedEvent.discard) {
                         wantsToDisplay = false
                     } else if (notificationReceivedEvent.isPreventDefault) {
-                        // wait on display waiter. If the caller calls `display` on the notification,
-                        // we will exit `waitForWake` and set `wantsToDisplay` to true. If the callback
-                        // never calls `display` we will timeout and never set `wantsToDisplay` to true.
                         wantsToDisplay = false
-                        notification.displayWaiter.waitForWake()
-                        wantsToDisplay = true
+                        // wait on display waiter. If the caller calls `display` or `preventDefault(true)` on the notification,
+                        // we will exit `waitForWake` and set `wantsToDisplay` to true or false respectively. If the callback
+                        // never calls `display` or `preventDefault(true)`, we will timeout and never update `wantsToDisplay`.
+                        wantsToDisplay = notification.displayWaiter.waitForWake()
                     }
                 }.join()
             }
@@ -110,12 +109,11 @@ internal class NotificationGenerationProcessor(
                             if (notificationWillDisplayEvent.discard) {
                                 wantsToDisplay = false
                             } else if (notificationWillDisplayEvent.isPreventDefault) {
-                                // wait on display waiter. If the caller calls `display` on the notification,
-                                // we will exit `waitForWake` and set `wantsToDisplay` to true. If the callback
-                                // never calls `display` we will timeout and never set `wantsToDisplay` to true.
                                 wantsToDisplay = false
-                                notification.displayWaiter.waitForWake()
-                                wantsToDisplay = true
+                                // wait on display waiter. If the caller calls `display` or `preventDefault(true)` on the notification,
+                                // we will exit `waitForWake` and set `wantsToDisplay` to true or false respectively. If the callback
+                                // never calls `display` or `preventDefault(true)`, we will timeout and never update `wantsToDisplay`.
+                                wantsToDisplay = notification.displayWaiter.waitForWake()
                             }
                         }.join()
                     }
