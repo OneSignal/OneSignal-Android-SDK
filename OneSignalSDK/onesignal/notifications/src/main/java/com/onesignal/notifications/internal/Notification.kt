@@ -3,7 +3,7 @@ package com.onesignal.notifications.internal
 import androidx.core.app.NotificationCompat
 import com.onesignal.common.safeJSONObject
 import com.onesignal.common.safeString
-import com.onesignal.common.threading.Waiter
+import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.BackgroundImageLayout
@@ -24,7 +24,11 @@ import org.json.JSONObject
  */
 class Notification : IDisplayableMutableNotification {
     var notificationExtender: NotificationCompat.Extender? = null
-    val displayWaiter: Waiter = Waiter()
+
+    /**
+     * Wake with true to display the notification, or false to discard it permanently.
+     */
+    val displayWaiter = WaiterWithValue<Boolean>()
 
     override var groupedNotifications: List<Notification>? = null
     override var androidNotificationId = 0
@@ -251,7 +255,7 @@ class Notification : IDisplayableMutableNotification {
     }
 
     override fun display() {
-        displayWaiter.wake()
+        displayWaiter.wake(true)
     }
 
     /**
