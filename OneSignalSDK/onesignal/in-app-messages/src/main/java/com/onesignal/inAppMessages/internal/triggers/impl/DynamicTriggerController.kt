@@ -44,16 +44,16 @@ internal class DynamicTriggerController(
             }
 
             var currentTimeInterval: Long = 0
-            val lastTimeAppDismissed = _state.lastTimeInAppDismissed
+            val lastTimeInAppDismissed = _state.lastTimeInAppDismissed
             when (trigger.kind) {
                 Trigger.OSTriggerKind.SESSION_TIME -> {
                     currentTimeInterval = _time.currentTimeMillis - _session.startTime
                     // if last time IAM dismissed also satisfied this trigger, do not fire it again
                     val lastTimeDismissedInterval =
-                        if (lastTimeAppDismissed == null) {
+                        if (lastTimeInAppDismissed == null) {
                             0
                         } else {
-                            _time.currentTimeMillis - lastTimeAppDismissed
+                            _time.currentTimeMillis - lastTimeInAppDismissed
                         }
                     if (evaluateTimeIntervalWithOperator(
                             lastTimeDismissedInterval.toDouble(),
@@ -70,10 +70,10 @@ internal class DynamicTriggerController(
                     }
 
                     currentTimeInterval =
-                        if (lastTimeAppDismissed == null) {
+                        if (lastTimeInAppDismissed == null) {
                             DEFAULT_LAST_IN_APP_TIME_AGO
                         } else {
-                            _time.currentTimeMillis - lastTimeAppDismissed
+                            _time.currentTimeMillis - lastTimeInAppDismissed
                         }
                 }
                 else -> {}
