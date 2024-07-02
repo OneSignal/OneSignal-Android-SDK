@@ -17,6 +17,7 @@ internal class TriggerController(
     private var _dynamicTriggerController: DynamicTriggerController,
 ) : ITriggerController, IModelStoreChangeHandler<TriggerModel> {
     val triggers: ConcurrentHashMap<String?, Any?> = ConcurrentHashMap()
+    val evaluatedCombinations = mutableSetOf<String>()
 
     init {
         triggerModelStore.subscribe(this)
@@ -45,7 +46,9 @@ internal class TriggerController(
             }
         }
 
-        return true
+        // Combination of triggers can not be evaluated to true the second time. This is to prevent
+        //  IAM with dynamic triggers and other in-app triggers from showing up repeatedly.
+        return checkAndAddTriggerCombination(andConditions)
     }
 
     private fun evaluateTrigger(trigger: Trigger): Boolean {
@@ -174,6 +177,20 @@ internal class TriggerController(
         }
     }
 
+    // Memorize trigger combination that was previously evaluated to true and prevent the evaluation
+    // to true again.
+    // Return true if the trigger condition is never checked before
+    private fun checkAndAddTriggerCombination(conditions: List<Trigger>): Boolean {
+        val triggerComboId =
+            conditions.sortedBy { it.triggerId }
+                .joinToString(separator = ",") { it.triggerId }
+        if (evaluatedCombinations.contains(triggerComboId)) {
+            return false
+        }
+        evaluatedCombinations.add(triggerComboId)
+        return true
+    }
+
     override fun isTriggerOnMessage(
         message: InAppMessage,
         triggersKeys: Collection<String>,
@@ -240,11 +257,15 @@ internal class TriggerController(
     ) {
         synchronized(triggers) {
             triggers[key] = value
+            evaluatedCombinations.clear()
         }
     }
 
     private fun removeTriggersForKeys(key: String) {
-        synchronized(triggers) { triggers.remove(key) }
+        synchronized(triggers) {
+            triggers.remove(key)
+            evaluatedCombinations.clear()
+        }
     }
 
     override fun subscribe(handler: ITriggerHandler) = _dynamicTriggerController.subscribe(handler)
