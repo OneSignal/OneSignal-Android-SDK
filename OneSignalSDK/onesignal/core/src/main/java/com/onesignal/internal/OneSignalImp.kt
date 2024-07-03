@@ -86,7 +86,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val debug: IDebugManager = DebugManager()
     override val session: ISessionManager get() =
         if (isInitialized) {
-            services.getService()
+            _session!!
         } else {
             throw Exception(
                 "Must call 'initWithContext' before use",
@@ -94,7 +94,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         }
     override val notifications: INotificationsManager get() =
         if (isInitialized) {
-            services.getService()
+            _notifications!!
         } else {
             throw Exception(
                 "Must call 'initWithContext' before use",
@@ -102,7 +102,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         }
     override val location: ILocationManager get() =
         if (isInitialized) {
-            services.getService()
+            _location!!
         } else {
             throw Exception(
                 "Must call 'initWithContext' before use",
@@ -110,32 +110,26 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         }
     override val inAppMessages: IInAppMessagesManager get() =
         if (isInitialized) {
-            services.getService()
+            iam!!
         } else {
             throw Exception(
                 "Must call 'initWithContext' before use",
             )
         }
-    override val user: IUserManager get() =
-        if (isInitialized) {
-            services.getService()
-        } else {
-            throw Exception(
-                "Must call 'initWithContext' before use",
-            )
-        }
+    override val user: IUserManager get() = if (isInitialized) _user!! else throw Exception("Must call 'initWithContext' before use")
 
     // Services required by this class
-    private val operationRepo: IOperationRepo
-        get() = services.getService()
-    private val identityModelStore: IdentityModelStore
-        get() = services.getService()
-    private val propertiesModelStore: PropertiesModelStore
-        get() = services.getService()
-    private val subscriptionModelStore: SubscriptionModelStore
-        get() = services.getService()
-    private val preferencesService: IPreferencesService
-        get() = services.getService()
+    private var _user: IUserManager? = null
+    private var _session: ISessionManager? = null
+    private var iam: IInAppMessagesManager? = null
+    private var _location: ILocationManager? = null
+    private var _notifications: INotificationsManager? = null
+    private var operationRepo: IOperationRepo? = null
+    private var identityModelStore: IdentityModelStore? = null
+    private var propertiesModelStore: PropertiesModelStore? = null
+    private var subscriptionModelStore: SubscriptionModelStore? = null
+    private var startupService: StartupService? = null
+    private var preferencesService: IPreferencesService? = null
 
     // Other State
     private val services: ServiceProvider
@@ -240,10 +234,21 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 configModel!!.disableGMSMissingPrompt = _disableGMSMissingPrompt!!
             }
 
-            val startupService = StartupService(services)
+            // "Inject" the services required by this main class
+            _location = services.getService()
+            _user = services.getService()
+            _session = services.getService()
+            iam = services.getService()
+            _notifications = services.getService()
+            operationRepo = services.getService()
+            propertiesModelStore = services.getService()
+            identityModelStore = services.getService()
+            subscriptionModelStore = services.getService()
+            preferencesService = services.getService()
 
-            // bootstrap services
-            startupService.bootstrap()
+            // Instantiate and call the IStartableServices
+            startupService = services.getService()
+            startupService!!.bootstrap()
 
             if (forceCreateUser || !identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)) {
                 val legacyPlayerId =
@@ -293,12 +298,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
                         pushSubscriptionModel.sdk = OneSignalUtils.SDK_VERSION
                         pushSubscriptionModel.deviceOS = Build.VERSION.RELEASE
-                        pushSubscriptionModel.carrier = DeviceUtils.getCarrierName(
-                            services.getService<IApplicationService>().appContext,
-                        ) ?: ""
-                        pushSubscriptionModel.appVersion = AndroidUtils.getAppVersion(
-                            services.getService<IApplicationService>().appContext,
-                        ) ?: ""
+                        pushSubscriptionModel.carrier = DeviceUtils.getCarrierName(services.getService<IApplicationService>().appContext) ?: ""
+                        pushSubscriptionModel.appVersion = AndroidUtils.getAppVersion(services.getService<IApplicationService>().appContext) ?: ""
 
                         configModel!!.pushSubscriptionId = legacyPlayerId
                         subscriptionModelStore!!.add(
@@ -327,9 +328,10 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 Logging.debug("initWithContext: using cached user ${identityModelStore!!.model.onesignalId}")
             }
 
-            // schedule service starts out of main thread
-            startupService.scheduleStart()
+            startupService!!.start()
+
             isInitialized = true
+
             return true
         }
     }

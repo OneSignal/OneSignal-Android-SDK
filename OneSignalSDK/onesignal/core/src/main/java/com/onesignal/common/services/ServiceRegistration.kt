@@ -56,6 +56,7 @@ class ServiceRegistrationReflection<T>(
             Logging.debug("${ServiceProvider.indent}Already instantiated: $obj")
             return obj
         }
+
         // use reflection to try to instantiate the thing
         for (constructor in clazz.constructors) {
             if (doesHaveAllParameters(constructor, provider)) {
