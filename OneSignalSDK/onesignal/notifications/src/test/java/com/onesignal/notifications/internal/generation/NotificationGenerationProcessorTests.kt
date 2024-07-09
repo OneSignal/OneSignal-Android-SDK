@@ -21,7 +21,9 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import org.robolectric.annotation.Config
@@ -66,15 +68,16 @@ private class Mocks {
             mockNotificationRepository
         }
 
-    val notificationGenerationProcessor = NotificationGenerationProcessor(
-        applicationService,
-        notificationDisplayer,
-        MockHelper.configModelStore(),
-        notificationRepository,
-        mockk(),
-        notificationLifecycleService,
-        MockHelper.time(1111),
-    )
+    val notificationGenerationProcessor =
+        NotificationGenerationProcessor(
+            applicationService,
+            notificationDisplayer,
+            MockHelper.configModelStore(),
+            notificationRepository,
+            mockk(),
+            notificationLifecycleService,
+            MockHelper.time(1111),
+        )
 
     val notificationPayload: JSONObject =
         JSONObject()
@@ -267,6 +270,57 @@ class NotificationGenerationProcessorTests : FunSpec({
         // If discard is set to false this should timeout waiting for display()
         withTimeout(1_000) {
             mocks.notificationGenerationProcessor.processNotificationData(context, 1, mocks.notificationPayload, false, 1111)
+        }
+    }
+
+    test("processNotificationData allows the will display callback to prevent default behavior twice") {
+        // Given
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val mocks = Mocks()
+        coEvery { mocks.notificationDisplayer.displayNotification(any()) } returns true
+        coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } just runs
+        coEvery { mocks.notificationLifecycleService.externalNotificationWillShowInForeground(any()) } coAnswers {
+            val willDisplayEvent = firstArg<INotificationWillDisplayEvent>()
+            willDisplayEvent.preventDefault(false)
+            GlobalScope.launch {
+                delay(100)
+                willDisplayEvent.preventDefault(true)
+                delay(100)
+                willDisplayEvent.notification.display()
+            }
+        }
+
+        // When
+        mocks.notificationGenerationProcessor.processNotificationData(context, 1, mocks.notificationPayload, false, 1111)
+
+        // Then
+        coVerify(exactly = 0) {
+            mocks.notificationDisplayer.displayNotification(any())
+        }
+    }
+
+    test("processNotificationData allows the received event callback to prevent default behavior twice") {
+        // Given
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val mocks = Mocks()
+        coEvery { mocks.notificationDisplayer.displayNotification(any()) } returns true
+        coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } coAnswers {
+            val receivedEvent = firstArg<INotificationReceivedEvent>()
+            receivedEvent.preventDefault(false)
+            GlobalScope.launch {
+                delay(100)
+                receivedEvent.preventDefault(true)
+                delay(100)
+                receivedEvent.notification.display()
+            }
+        }
+
+        // When
+        mocks.notificationGenerationProcessor.processNotificationData(context, 1, mocks.notificationPayload, true, 1111)
+
+        // Then
+        coVerify(exactly = 0) {
+            mocks.notificationDisplayer.displayNotification(any())
         }
     }
 })
