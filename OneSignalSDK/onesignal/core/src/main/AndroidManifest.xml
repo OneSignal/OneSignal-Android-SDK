@@ -6,11 +6,6 @@
 
     <application>
         <service
-          android:name="com.onesignal.core.services.SyncService"
-          android:stopWithTask="true"
-          android:exported="false" />
-
-        <service
           android:name="com.onesignal.core.services.SyncJobService"
           android:permission="android.permission.BIND_JOB_SERVICE"
           android:exported="false" />

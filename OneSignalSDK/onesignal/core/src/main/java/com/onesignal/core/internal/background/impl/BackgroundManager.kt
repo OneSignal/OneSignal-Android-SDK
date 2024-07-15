@@ -26,17 +26,11 @@
  */
 package com.onesignal.core.internal.background.impl
 
-import android.annotation.SuppressLint
-import android.app.AlarmManager
-import android.app.PendingIntent
 import android.app.job.JobInfo
 import android.app.job.JobScheduler
 import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
@@ -45,7 +39,6 @@ import com.onesignal.core.internal.background.IBackgroundService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.core.services.SyncJobService
-import com.onesignal.core.services.SyncService
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -71,9 +64,7 @@ internal class BackgroundManager(
     private var nextScheduledSyncTimeMs = 0L
     private var backgroundSyncJob: Job? = null
 
-    @SuppressLint("NewApi") // can suppress because we are only retrieving the class, not necessarily using it
     private val syncServiceJobClass: Class<*> = SyncJobService::class.java
-    private val syncServicePendingIntentClass: Class<*> = SyncService::class.java
 
     override fun start() {
         _applicationService.addApplicationLifecycleHandler(this)
@@ -153,11 +144,7 @@ internal class BackgroundManager(
 
     private fun scheduleBackgroundSyncTask(delayMs: Long) {
         synchronized(lock) {
-            if (useJob()) {
-                scheduleSyncServiceAsJob(delayMs)
-            } else {
-                scheduleSyncServiceAsAlarm(delayMs)
-            }
+            scheduleSyncServiceAsJob(delayMs)
         }
     }
 
@@ -168,7 +155,6 @@ internal class BackgroundManager(
         ) == PackageManager.PERMISSION_GRANTED
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     private fun isJobIdRunning(): Boolean {
         val jobScheduler = _applicationService.appContext.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
         for (jobInfo in jobScheduler.allPendingJobs) {
@@ -179,7 +165,6 @@ internal class BackgroundManager(
         return false
     }
 
-    @RequiresApi(21)
     private fun scheduleSyncServiceAsJob(delayMs: Long) {
         Logging.debug("OSBackgroundSync scheduleSyncServiceAsJob:atTime: $delayMs")
         if (isJobIdRunning()) {
@@ -209,42 +194,13 @@ internal class BackgroundManager(
         }
     }
 
-    private fun scheduleSyncServiceAsAlarm(delayMs: Long) {
-        Logging.verbose(this.javaClass.simpleName + " scheduleServiceSyncTask:atTime: " + delayMs)
-        val pendingIntent = syncServicePendingIntent()
-        val alarm = _applicationService.appContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val triggerAtMs = _time.currentTimeMillis + delayMs
-        alarm[AlarmManager.RTC_WAKEUP, triggerAtMs] = pendingIntent
-    }
-
     private fun cancelBackgroundSyncTask() {
         Logging.debug(this.javaClass.simpleName + " cancel background sync")
 
         synchronized(lock) {
-            if (useJob()) {
-                val jobScheduler = _applicationService.appContext.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
-                jobScheduler.cancel(SYNC_TASK_ID)
-            } else {
-                val alarmManager = _applicationService.appContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-                alarmManager.cancel(syncServicePendingIntent())
-            }
+            val jobScheduler = _applicationService.appContext.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
+            jobScheduler.cancel(SYNC_TASK_ID)
         }
-    }
-
-    private fun syncServicePendingIntent(): PendingIntent {
-        // KEEP - PendingIntent.FLAG_UPDATE_CURRENT
-        //          Some Samsung devices will throw the below exception otherwise.
-        //          "java.lang.SecurityException: !@Too many alarms (500) registered"
-        return PendingIntent.getService(
-            _applicationService.appContext,
-            SYNC_TASK_ID,
-            Intent(_applicationService.appContext, syncServicePendingIntentClass),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-    }
-
-    private fun useJob(): Boolean {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
     }
 
     companion object {
