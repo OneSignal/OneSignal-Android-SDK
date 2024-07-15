@@ -89,7 +89,6 @@ object NotificationHelper {
         return grouplessStatusBarNotifications
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     fun isGroupSummary(notif: StatusBarNotification): Boolean {
         return notif.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0
     }

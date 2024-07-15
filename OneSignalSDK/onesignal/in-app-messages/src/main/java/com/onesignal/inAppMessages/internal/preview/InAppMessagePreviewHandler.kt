@@ -1,8 +1,6 @@
 package com.onesignal.inAppMessages.internal.preview
 
 import android.app.Activity
-import android.os.Build
-import androidx.annotation.ChecksSdkIntAtLeast
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
@@ -43,7 +41,7 @@ internal class InAppMessagePreviewHandler(
             if (!result) {
                 _state.inAppMessageIdShowing = null
             }
-        } else if (shouldDisplayNotification()) {
+        } else {
             val generationJob = NotificationGenerationJob(jsonPayload, _time)
             _notificationDisplayer.displayNotification(generationJob)
         }
@@ -87,8 +85,4 @@ internal class InAppMessagePreviewHandler(
             }
         }
     }
-
-    // Validate that the current Android device is Android 4.4 or higher
-    @ChecksSdkIntAtLeast(api = Build.VERSION_CODES.KITKAT)
-    private fun shouldDisplayNotification(): Boolean = Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR2
 }

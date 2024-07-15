@@ -21,12 +21,8 @@ object ViewUtils {
     fun getWindowHeight(activity: Activity): Int {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             getWindowHeightAPI23Plus(activity)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            getWindowHeightLollipop(
-                activity,
-            )
         } else {
-            getDisplaySizeY(activity)
+            getWindowHeightLollipop(activity)
         }
     }
 
