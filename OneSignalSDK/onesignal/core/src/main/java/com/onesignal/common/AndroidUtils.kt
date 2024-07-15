@@ -146,7 +146,8 @@ object AndroidUtils {
         } catch (e: PackageManager.NameNotFoundException) {
             e.printStackTrace()
         }
-        return Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1
+        // Default to minSDK version if we can't find the target version
+        return Build.VERSION_CODES.LOLLIPOP
     }
 
     fun hasNotificationManagerCompat(): Boolean {
