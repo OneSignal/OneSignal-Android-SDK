@@ -18,12 +18,12 @@ internal class PushTokenManager(
     override suspend fun retrievePushToken(): PushTokenResponse {
         when (_deviceService.jetpackLibraryStatus) {
             IDeviceService.JetpackLibraryStatus.MISSING -> {
-                Logging.fatal("Could not find the Android Support Library. Please make sure it has been correctly added to your project.")
+                Logging.fatal("Could not find the Jetpack/AndroidX. Please make sure it has been correctly added to your project.")
                 pushTokenStatus = SubscriptionStatus.MISSING_ANDROID_SUPPORT_LIBRARY
             }
             IDeviceService.JetpackLibraryStatus.OUTDATED -> {
                 Logging.fatal(
-                    "The included Android Support Library is too old or incomplete. Please update to the 26.0.0 revision or newer.",
+                    "The included Jetpack/AndroidX Library is too old or incomplete.",
                 )
                 pushTokenStatus = SubscriptionStatus.OUTDATED_ANDROID_SUPPORT_LIBRARY
             }
