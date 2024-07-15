@@ -13,7 +13,7 @@ import android.view.View
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import com.onesignal.common.AndroidSupportV4Compat
+import androidx.core.content.ContextCompat
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.exceptions.MainThreadException
 import com.onesignal.common.safeString
@@ -332,10 +332,7 @@ internal class NotificationDisplayer(
             if (colorId != 0) {
                 customView.setTextColor(
                     viewId,
-                    AndroidSupportV4Compat.ContextCompat.getColor(
-                        currentContext!!,
-                        colorId,
-                    ),
+                    ContextCompat.getColor(currentContext, colorId),
                 )
             }
         }
