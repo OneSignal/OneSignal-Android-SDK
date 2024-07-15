@@ -20,7 +20,7 @@ class PushTokenManagerTests : FunSpec({
         ShadowRoboNotificationManager.reset()
     }
 
-    test("retrievePushToken should fail with missing library when android support libraries are missing") {
+    test("retrievePushToken should fail with missing library when Jetpack libraries are missing") {
         // Given
         val mockPushRegistrator = mockk<IPushRegistrator>()
         val mockDeviceService = MockHelper.deviceService()
@@ -35,12 +35,12 @@ class PushTokenManagerTests : FunSpec({
 
         // Then
         response.token shouldBe null
-        response.status shouldBe SubscriptionStatus.MISSING_ANDROID_SUPPORT_LIBRARY
+        response.status shouldBe SubscriptionStatus.MISSING_JETPACK_LIBRARY
         pushToken shouldBe null
-        pushTokenStatus shouldBe SubscriptionStatus.MISSING_ANDROID_SUPPORT_LIBRARY
+        pushTokenStatus shouldBe SubscriptionStatus.MISSING_JETPACK_LIBRARY
     }
 
-    test("retrievePushToken should fail with outdated library when android support libraries are missing") {
+    test("retrievePushToken should fail with outdated library when Jetpack libraries are missing") {
         // Given
         val mockPushRegistrator = mockk<IPushRegistrator>()
         val mockDeviceService = MockHelper.deviceService()
@@ -55,9 +55,9 @@ class PushTokenManagerTests : FunSpec({
 
         // Then
         response.token shouldBe null
-        response.status shouldBe SubscriptionStatus.OUTDATED_ANDROID_SUPPORT_LIBRARY
+        response.status shouldBe SubscriptionStatus.OUTDATED_JETPACK_LIBRARY
         pushToken shouldBe null
-        pushTokenStatus shouldBe SubscriptionStatus.OUTDATED_ANDROID_SUPPORT_LIBRARY
+        pushTokenStatus shouldBe SubscriptionStatus.OUTDATED_JETPACK_LIBRARY
     }
 
     test("retrievePushToken should succeed when registration is successful") {
