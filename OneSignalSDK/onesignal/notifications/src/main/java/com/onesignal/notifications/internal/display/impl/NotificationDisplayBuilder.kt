@@ -82,16 +82,8 @@ internal class NotificationDisplayBuilder(
     override fun getBaseOneSignalNotificationBuilder(notificationJob: NotificationGenerationJob): OneSignalNotificationBuilder {
         val fcmJson: JSONObject = notificationJob.jsonPayload!!
         val oneSignalNotificationBuilder = OneSignalNotificationBuilder()
-        val notificationBuilder: NotificationCompat.Builder
-        notificationBuilder =
-            try {
-                val channelId: String =
-                    _notificationChannelManager.createNotificationChannel(notificationJob)
-                // Will throw if app is using 26.0.0-beta1 or older of the support library.
-                NotificationCompat.Builder(currentContext!!, channelId)
-            } catch (t: Throwable) {
-                NotificationCompat.Builder(currentContext!!)
-            }
+        val channelId = _notificationChannelManager.createNotificationChannel(notificationJob)
+        val notificationBuilder = NotificationCompat.Builder(currentContext, channelId)
         val message = fcmJson.optString("alert", null)
         notificationBuilder
             .setAutoCancel(true)
