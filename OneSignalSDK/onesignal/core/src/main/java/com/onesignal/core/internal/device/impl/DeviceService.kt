@@ -55,14 +55,9 @@ internal class DeviceService(private val _applicationService: IApplicationServic
 
     override val androidSupportLibraryStatus: IDeviceService.AndroidSupportLibraryStatus
         get() {
-            val hasWakefulBroadcastReceiver: Boolean = AndroidUtils.hasWakefulBroadcastReceiver()
             val hasNotificationManagerCompat: Boolean = AndroidUtils.hasNotificationManagerCompat()
-            if (!hasWakefulBroadcastReceiver && !hasNotificationManagerCompat) {
+            if (!hasNotificationManagerCompat) {
                 return IDeviceService.AndroidSupportLibraryStatus.MISSING
-            }
-
-            if (!hasWakefulBroadcastReceiver || !hasNotificationManagerCompat) {
-                return IDeviceService.AndroidSupportLibraryStatus.OUTDATED
             }
 
             // If running on Android O and targeting O we need version 26.0.0 for

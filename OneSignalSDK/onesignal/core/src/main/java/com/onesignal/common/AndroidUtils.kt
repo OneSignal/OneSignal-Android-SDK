@@ -14,7 +14,6 @@ import android.text.TextUtils
 import androidx.annotation.Keep
 import androidx.core.app.JobIntentService
 import androidx.core.app.NotificationManagerCompat
-import androidx.legacy.content.WakefulBroadcastReceiver
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.internal.logging.Logging
 import java.util.Random
@@ -154,15 +153,6 @@ object AndroidUtils {
         return try {
             // noinspection ConstantConditions
             JobIntentService::class.java != null
-        } catch (e: Throwable) {
-            false
-        }
-    }
-
-    fun hasWakefulBroadcastReceiver(): Boolean {
-        return try {
-            // noinspection ConstantConditions
-            WakefulBroadcastReceiver::class.java != null
         } catch (e: Throwable) {
             false
         }
