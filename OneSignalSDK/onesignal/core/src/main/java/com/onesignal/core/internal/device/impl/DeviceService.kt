@@ -1,7 +1,6 @@
 package com.onesignal.core.internal.device.impl
 
 import android.content.pm.PackageManager
-import android.os.Build
 import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.device.IDeviceService
@@ -58,17 +57,6 @@ internal class DeviceService(private val _applicationService: IApplicationServic
             val hasNotificationManagerCompat: Boolean = AndroidUtils.hasNotificationManagerCompat()
             if (!hasNotificationManagerCompat) {
                 return IDeviceService.JetpackLibraryStatus.MISSING
-            }
-
-            // If running on Android O and targeting O we need version 26.0.0 for
-            //   the new compat NotificationCompat.Builder constructor.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
-                AndroidUtils.getTargetSdkVersion(_applicationService.appContext) >= Build.VERSION_CODES.O
-            ) {
-                // Class was added in 26.0.0-beta2
-                if (!AndroidUtils.hasJobIntentService()) {
-                    return IDeviceService.JetpackLibraryStatus.OUTDATED
-                }
             }
 
             return IDeviceService.JetpackLibraryStatus.OK
