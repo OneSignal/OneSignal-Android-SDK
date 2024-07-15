@@ -24,7 +24,7 @@ class PushTokenManagerTests : FunSpec({
         // Given
         val mockPushRegistrator = mockk<IPushRegistrator>()
         val mockDeviceService = MockHelper.deviceService()
-        every { mockDeviceService.androidSupportLibraryStatus } returns IDeviceService.AndroidSupportLibraryStatus.MISSING
+        every { mockDeviceService.jetpackLibraryStatus } returns IDeviceService.JetpackLibraryStatus.MISSING
 
         val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
 
@@ -44,7 +44,7 @@ class PushTokenManagerTests : FunSpec({
         // Given
         val mockPushRegistrator = mockk<IPushRegistrator>()
         val mockDeviceService = MockHelper.deviceService()
-        every { mockDeviceService.androidSupportLibraryStatus } returns IDeviceService.AndroidSupportLibraryStatus.OUTDATED
+        every { mockDeviceService.jetpackLibraryStatus } returns IDeviceService.JetpackLibraryStatus.OUTDATED
 
         val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
 
@@ -65,7 +65,7 @@ class PushTokenManagerTests : FunSpec({
         val mockPushRegistrator = mockk<IPushRegistrator>()
         coEvery { mockPushRegistrator.registerForPush() } returns IPushRegistrator.RegisterResult("pushToken", SubscriptionStatus.SUBSCRIBED)
         val mockDeviceService = MockHelper.deviceService()
-        every { mockDeviceService.androidSupportLibraryStatus } returns IDeviceService.AndroidSupportLibraryStatus.OK
+        every { mockDeviceService.jetpackLibraryStatus } returns IDeviceService.JetpackLibraryStatus.OK
 
         val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
 
@@ -89,7 +89,7 @@ class PushTokenManagerTests : FunSpec({
             mockPushRegistrator.registerForPush()
         } returns IPushRegistrator.RegisterResult(null, SubscriptionStatus.MISSING_FIREBASE_FCM_LIBRARY)
         val mockDeviceService = MockHelper.deviceService()
-        every { mockDeviceService.androidSupportLibraryStatus } returns IDeviceService.AndroidSupportLibraryStatus.OK
+        every { mockDeviceService.jetpackLibraryStatus } returns IDeviceService.JetpackLibraryStatus.OK
 
         val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
 
@@ -113,7 +113,7 @@ class PushTokenManagerTests : FunSpec({
             mockPushRegistrator.registerForPush()
         } returns IPushRegistrator.RegisterResult(null, SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION)
         val mockDeviceService = MockHelper.deviceService()
-        every { mockDeviceService.androidSupportLibraryStatus } returns IDeviceService.AndroidSupportLibraryStatus.OK
+        every { mockDeviceService.jetpackLibraryStatus } returns IDeviceService.JetpackLibraryStatus.OK
 
         val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
 
@@ -138,7 +138,7 @@ class PushTokenManagerTests : FunSpec({
             IPushRegistrator.RegisterResult(null, SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION)
 
         val mockDeviceService = MockHelper.deviceService()
-        every { mockDeviceService.androidSupportLibraryStatus } returns IDeviceService.AndroidSupportLibraryStatus.OK
+        every { mockDeviceService.jetpackLibraryStatus } returns IDeviceService.JetpackLibraryStatus.OK
 
         val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
 
@@ -170,7 +170,7 @@ class PushTokenManagerTests : FunSpec({
             IPushRegistrator.RegisterResult(null, SubscriptionStatus.MISSING_FIREBASE_FCM_LIBRARY)
 
         val mockDeviceService = MockHelper.deviceService()
-        every { mockDeviceService.androidSupportLibraryStatus } returns IDeviceService.AndroidSupportLibraryStatus.OK
+        every { mockDeviceService.jetpackLibraryStatus } returns IDeviceService.JetpackLibraryStatus.OK
 
         val pushTokenManager = PushTokenManager(mockPushRegistrator, mockDeviceService)
 

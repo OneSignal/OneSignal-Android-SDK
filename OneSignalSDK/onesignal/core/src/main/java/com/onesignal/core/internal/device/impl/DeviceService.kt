@@ -53,11 +53,11 @@ internal class DeviceService(private val _applicationService: IApplicationServic
             // Fallback to device_type 1 (Android) if there are no supported push channels on the device
         }
 
-    override val androidSupportLibraryStatus: IDeviceService.AndroidSupportLibraryStatus
+    override val jetpackLibraryStatus: IDeviceService.JetpackLibraryStatus
         get() {
             val hasNotificationManagerCompat: Boolean = AndroidUtils.hasNotificationManagerCompat()
             if (!hasNotificationManagerCompat) {
-                return IDeviceService.AndroidSupportLibraryStatus.MISSING
+                return IDeviceService.JetpackLibraryStatus.MISSING
             }
 
             // If running on Android O and targeting O we need version 26.0.0 for
@@ -67,11 +67,11 @@ internal class DeviceService(private val _applicationService: IApplicationServic
             ) {
                 // Class was added in 26.0.0-beta2
                 if (!AndroidUtils.hasJobIntentService()) {
-                    return IDeviceService.AndroidSupportLibraryStatus.OUTDATED
+                    return IDeviceService.JetpackLibraryStatus.OUTDATED
                 }
             }
 
-            return IDeviceService.AndroidSupportLibraryStatus.OK
+            return IDeviceService.JetpackLibraryStatus.OK
         }
 
     private fun supportsGooglePush(): Boolean {
