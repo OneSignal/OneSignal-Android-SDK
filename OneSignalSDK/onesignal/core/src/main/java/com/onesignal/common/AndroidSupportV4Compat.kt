@@ -28,31 +28,12 @@
  */
 package com.onesignal.common
 
-import android.annotation.TargetApi
-import android.app.Activity
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
-import android.os.Process
-import android.util.Log
 
 // Designed as a compat for use of Android Support v4 revision 23.+ methods when an older revision of the library is included with the app developer's project.
 class AndroidSupportV4Compat {
     object ContextCompat {
-        fun checkSelfPermission(
-            context: Context,
-            permission: String,
-        ): Int {
-            // Catch for rare "Unknown exception code: 1 msg null" exception
-            // See https://github.com/one-signal/OneSignal-Android-SDK/issues/48 for more details.
-            return try {
-                context.checkPermission(permission, Process.myPid(), Process.myUid())
-            } catch (t: Throwable) {
-                Log.e("OneSignal", "checkSelfPermission failed, returning PERMISSION_DENIED")
-                PackageManager.PERMISSION_DENIED
-            }
-        }
-
         fun getColor(
             context: Context,
             id: Int,
@@ -64,54 +45,6 @@ class AndroidSupportV4Compat {
                     id,
                 )
             }
-        }
-    }
-
-    internal interface RequestPermissionsRequestCodeValidator {
-        fun validateRequestPermissionsRequestCode(requestCode: Int)
-    }
-
-    internal object ActivityCompat {
-        fun requestPermissions(
-            activity: Activity,
-            permissions: Array<String?>,
-            requestCode: Int,
-        ) {
-            // OneSignal SDK code already checks that device is Android M, omit else code from the support library.
-            ActivityCompatApi23.requestPermissions(activity, permissions, requestCode)
-        }
-
-        fun shouldShowRequestPermissionRationale(
-            activity: Activity?,
-            permission: String?,
-        ): Boolean {
-            return ActivityCompatApi23.shouldShowRequestPermissionRationale(activity, permission)
-        }
-    }
-
-    @TargetApi(23)
-    internal object ActivityCompatApi23 {
-        fun requestPermissions(
-            activity: Activity,
-            permissions: Array<String?>?,
-            requestCode: Int,
-        ) {
-            if (activity is RequestPermissionsRequestCodeValidator) {
-                (activity as RequestPermissionsRequestCodeValidator).validateRequestPermissionsRequestCode(
-                    requestCode,
-                )
-            }
-            activity.requestPermissions(permissions!!, requestCode)
-        }
-
-        fun shouldShowRequestPermissionRationale(
-            activity: Activity?,
-            permission: String?,
-        ): Boolean {
-            return androidx.core.app.ActivityCompat.shouldShowRequestPermissionRationale(
-                activity!!,
-                permission!!,
-            )
         }
     }
 }

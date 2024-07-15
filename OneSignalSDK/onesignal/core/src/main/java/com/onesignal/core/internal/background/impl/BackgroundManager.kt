@@ -37,7 +37,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.annotation.RequiresApi
-import com.onesignal.common.AndroidSupportV4Compat
+import androidx.core.content.ContextCompat
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.background.IBackgroundManager
@@ -162,7 +162,7 @@ internal class BackgroundManager(
     }
 
     private fun hasBootPermission(): Boolean {
-        return AndroidSupportV4Compat.ContextCompat.checkSelfPermission(
+        return ContextCompat.checkSelfPermission(
             _applicationService.appContext,
             "android.permission.RECEIVE_BOOT_COMPLETED",
         ) == PackageManager.PERMISSION_GRANTED

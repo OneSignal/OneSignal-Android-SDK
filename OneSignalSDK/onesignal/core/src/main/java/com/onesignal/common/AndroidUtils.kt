@@ -13,6 +13,7 @@ import android.os.Looper
 import android.text.TextUtils
 import androidx.annotation.Keep
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.internal.logging.Logging
 import java.util.Random
@@ -228,7 +229,7 @@ object AndroidUtils {
                 true
             } else {
                 val permissionGrant =
-                    AndroidSupportV4Compat.ContextCompat.checkSelfPermission(
+                    ContextCompat.checkSelfPermission(
                         applicationService.appContext,
                         permission,
                     )

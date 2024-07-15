@@ -6,8 +6,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import androidx.core.app.ActivityCompat
 import com.onesignal.OneSignal
-import com.onesignal.common.AndroidSupportV4Compat
 import com.onesignal.core.R
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
@@ -18,7 +18,6 @@ class PermissionsActivity : Activity() {
     private var requestPermissionService: RequestPermissionService? = null
     private var preferenceService: IPreferencesService? = null
     private var permissionRequestType: String? = null
-    private var androidPermissionString: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,9 +48,9 @@ class PermissionsActivity : Activity() {
 
         reregisterCallbackHandlers(extras)
         permissionRequestType = extras!!.getString(INTENT_EXTRA_PERMISSION_TYPE)
-        androidPermissionString = extras.getString(INTENT_EXTRA_ANDROID_PERMISSION_STRING)
+        val androidPermissionString = extras.getString(INTENT_EXTRA_ANDROID_PERMISSION_STRING)
 
-        requestPermission(androidPermissionString)
+        requestPermission(androidPermissionString!!)
     }
 
     // Required if the app was killed while this prompt was showing
@@ -67,15 +66,15 @@ class PermissionsActivity : Activity() {
         }
     }
 
-    private fun requestPermission(androidPermissionString: String?) {
+    private fun requestPermission(androidPermissionString: String) {
         if (!requestPermissionService!!.waiting) {
             requestPermissionService!!.waiting = true
             requestPermissionService!!.shouldShowRequestPermissionRationaleBeforeRequest =
-                AndroidSupportV4Compat.ActivityCompat.shouldShowRequestPermissionRationale(
+                ActivityCompat.shouldShowRequestPermissionRationale(
                     this@PermissionsActivity,
                     androidPermissionString,
                 )
-            AndroidSupportV4Compat.ActivityCompat.requestPermissions(
+            ActivityCompat.requestPermissions(
                 this,
                 arrayOf(androidPermissionString),
                 ONESIGNAL_PERMISSION_REQUEST_CODE,
@@ -83,6 +82,7 @@ class PermissionsActivity : Activity() {
         }
     }
 
+    // NOTE: This code assumes only one permission was prompted for
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -98,6 +98,7 @@ class PermissionsActivity : Activity() {
         // We need to wait for other activity to show
         if (requestCode == ONESIGNAL_PERMISSION_REQUEST_CODE) {
             Handler().postDelayed({
+                val permission = permissions[0]
                 val granted =
                     grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED
                 val callback =
@@ -107,11 +108,11 @@ class PermissionsActivity : Activity() {
                     callback.onAccept()
                     preferenceService!!.saveBool(
                         PreferenceStores.ONESIGNAL,
-                        "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$androidPermissionString",
+                        "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$permission",
                         true,
                     )
                 } else {
-                    callback.onReject(shouldShowSettings())
+                    callback.onReject(shouldShowSettings(permission))
                 }
             }, DELAY_TIME_CALLBACK_CALL.toLong())
         }
@@ -120,7 +121,7 @@ class PermissionsActivity : Activity() {
         overridePendingTransition(R.anim.onesignal_fade_in, R.anim.onesignal_fade_out)
     }
 
-    private fun shouldShowSettings(): Boolean {
+    private fun shouldShowSettings(permission: String): Boolean {
         if (!requestPermissionService!!.fallbackToSettings) {
             return false
         }
@@ -131,14 +132,14 @@ class PermissionsActivity : Activity() {
         // look for the change from `true` -> `false`. When this happens we remember this
         // rejection, as the user will never be prompted again.
         if (requestPermissionService!!.shouldShowRequestPermissionRationaleBeforeRequest) {
-            if (!AndroidSupportV4Compat.ActivityCompat.shouldShowRequestPermissionRationale(
+            if (!ActivityCompat.shouldShowRequestPermissionRationale(
                     this@PermissionsActivity,
-                    androidPermissionString,
+                    permission,
                 )
             ) {
                 preferenceService!!.saveBool(
                     PreferenceStores.ONESIGNAL,
-                    "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$androidPermissionString",
+                    "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$permission",
                     true,
                 )
                 return false
@@ -147,7 +148,7 @@ class PermissionsActivity : Activity() {
 
         return preferenceService!!.getBool(
             PreferenceStores.ONESIGNAL,
-            "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$androidPermissionString",
+            "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$permission",
             false,
         )!!
     }
