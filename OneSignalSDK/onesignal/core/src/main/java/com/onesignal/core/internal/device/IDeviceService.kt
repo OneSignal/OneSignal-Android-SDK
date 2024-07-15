@@ -18,7 +18,9 @@ interface IDeviceService {
         OK,
     }
 
-    enum class DeviceType(val value: Int) {
+    enum class DeviceType(
+        val value: Int,
+    ) {
         Fire(2),
         Android(1),
         Huawei(13),
