@@ -41,14 +41,6 @@ object AndroidUtils {
         return hasToken && insetsAttached
     }
 
-    fun sleep(ms: Int) {
-        try {
-            Thread.sleep(ms.toLong())
-        } catch (e: InterruptedException) {
-            e.printStackTrace()
-        }
-    }
-
     fun hasConfigChangeFlag(
         activity: Activity,
         configChangeFlag: Int,
