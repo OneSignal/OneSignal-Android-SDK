@@ -32,7 +32,6 @@ import com.onesignal.core.internal.preferences.impl.PreferencesService
 import com.onesignal.core.internal.purchases.impl.TrackAmazonPurchase
 import com.onesignal.core.internal.purchases.impl.TrackGooglePurchase
 import com.onesignal.core.internal.startup.IStartableService
-import com.onesignal.core.internal.startup.StartupService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.inAppMessages.IInAppMessagesManager
@@ -54,7 +53,6 @@ internal class CoreModule : IModule {
         builder.register<DeviceService>().provides<IDeviceService>()
         builder.register<Time>().provides<ITime>()
         builder.register<DatabaseProvider>().provides<IDatabaseProvider>()
-        builder.register<StartupService>().provides<StartupService>()
         builder.register<InstallIdService>().provides<IInstallIdService>()
 
         // Params (Config)
