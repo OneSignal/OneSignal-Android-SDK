@@ -12,9 +12,8 @@ import android.os.Bundle
 import android.os.Looper
 import android.text.TextUtils
 import androidx.annotation.Keep
-import androidx.core.app.JobIntentService
 import androidx.core.app.NotificationManagerCompat
-import androidx.legacy.content.WakefulBroadcastReceiver
+import androidx.core.content.ContextCompat
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.internal.logging.Logging
 import java.util.Random
@@ -40,14 +39,6 @@ object AndroidUtils {
         val decorView = activity.window.decorView
         val insetsAttached = decorView.rootWindowInsets != null
         return hasToken && insetsAttached
-    }
-
-    fun sleep(ms: Int) {
-        try {
-            Thread.sleep(ms.toLong())
-        } catch (e: InterruptedException) {
-            e.printStackTrace()
-        }
     }
 
     fun hasConfigChangeFlag(
@@ -147,25 +138,8 @@ object AndroidUtils {
         } catch (e: PackageManager.NameNotFoundException) {
             e.printStackTrace()
         }
-        return Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1
-    }
-
-    fun hasJobIntentService(): Boolean {
-        return try {
-            // noinspection ConstantConditions
-            JobIntentService::class.java != null
-        } catch (e: Throwable) {
-            false
-        }
-    }
-
-    fun hasWakefulBroadcastReceiver(): Boolean {
-        return try {
-            // noinspection ConstantConditions
-            WakefulBroadcastReceiver::class.java != null
-        } catch (e: Throwable) {
-            false
-        }
+        // Default to minSDK version if we can't find the target version
+        return Build.VERSION_CODES.LOLLIPOP
     }
 
     fun hasNotificationManagerCompat(): Boolean {
@@ -248,7 +222,7 @@ object AndroidUtils {
                 true
             } else {
                 val permissionGrant =
-                    AndroidSupportV4Compat.ContextCompat.checkSelfPermission(
+                    ContextCompat.checkSelfPermission(
                         applicationService.appContext,
                         permission,
                     )

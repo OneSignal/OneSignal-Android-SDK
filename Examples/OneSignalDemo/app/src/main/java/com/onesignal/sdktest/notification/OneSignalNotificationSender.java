@@ -52,42 +52,40 @@ public class OneSignalNotificationSender {
                         "'android_accent_color': 'FFE9444E'," +
                         "'android_sound': 'nil'}");
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                    HttpURLConnection con = (HttpURLConnection) new URL("https://onesignal.com/api/v1/notifications").openConnection();
+                HttpURLConnection con = (HttpURLConnection) new URL("https://onesignal.com/api/v1/notifications").openConnection();
 
-                    con.setUseCaches(false);
-                    con.setConnectTimeout(30000);
-                    con.setReadTimeout(30000);
-                    con.setRequestProperty("Accept", "application/vnd.onesignal.v1+json");
-                    con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-                    con.setRequestMethod("POST");
-                    con.setDoOutput(true);
-                    con.setDoInput(true);
+                con.setUseCaches(false);
+                con.setConnectTimeout(30000);
+                con.setReadTimeout(30000);
+                con.setRequestProperty("Accept", "application/vnd.onesignal.v1+json");
+                con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+                con.setRequestMethod("POST");
+                con.setDoOutput(true);
+                con.setDoInput(true);
 
-                    byte[] outputBytes = notificationContent.toString().getBytes(StandardCharsets.UTF_8);
-                    con.setFixedLengthStreamingMode(outputBytes.length);
-                    con.getOutputStream().write(outputBytes);
+                byte[] outputBytes = notificationContent.toString().getBytes(StandardCharsets.UTF_8);
+                con.setFixedLengthStreamingMode(outputBytes.length);
+                con.getOutputStream().write(outputBytes);
 
-                    int httpResponse = con.getResponseCode();
+                int httpResponse = con.getResponseCode();
 
-                    if(httpResponse == HttpURLConnection.HTTP_ACCEPTED || httpResponse == HttpURLConnection.HTTP_OK) {
-                        InputStream inputStream = con.getInputStream();
-                        Scanner scanner = new Scanner(inputStream, "UTF-8");
-                        String responseStr = "";
-                        if (scanner.useDelimiter("\\A").hasNext())
-                            responseStr = scanner.next();
-                        scanner.close();
-                        Log.d(Tag.LOG_TAG, "Success sending notification: " + responseStr);
-                    }
-                    else {
-                        InputStream inputStream = con.getErrorStream();
-                        Scanner scanner = new Scanner(inputStream, "UTF-8");
-                        String responseStr = "";
-                        if (scanner.useDelimiter("\\A").hasNext())
-                            responseStr = scanner.next();
-                        scanner.close();
-                        Log.d(Tag.LOG_TAG, "Failure sending notification: " + responseStr);
-                    }
+                if(httpResponse == HttpURLConnection.HTTP_ACCEPTED || httpResponse == HttpURLConnection.HTTP_OK) {
+                    InputStream inputStream = con.getInputStream();
+                    Scanner scanner = new Scanner(inputStream, "UTF-8");
+                    String responseStr = "";
+                    if (scanner.useDelimiter("\\A").hasNext())
+                        responseStr = scanner.next();
+                    scanner.close();
+                    Log.d(Tag.LOG_TAG, "Success sending notification: " + responseStr);
+                }
+                else {
+                    InputStream inputStream = con.getErrorStream();
+                    Scanner scanner = new Scanner(inputStream, "UTF-8");
+                    String responseStr = "";
+                    if (scanner.useDelimiter("\\A").hasNext())
+                        responseStr = scanner.next();
+                    scanner.close();
+                    Log.d(Tag.LOG_TAG, "Failure sending notification: " + responseStr);
                 }
             } catch (Exception e) {
                 e.printStackTrace();

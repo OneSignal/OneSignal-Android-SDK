@@ -13,7 +13,7 @@ import android.view.View
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import com.onesignal.common.AndroidSupportV4Compat
+import androidx.core.content.ContextCompat
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.exceptions.MainThreadException
 import com.onesignal.common.safeString
@@ -53,10 +53,6 @@ internal class NotificationDisplayer(
         isRunningOnMainThreadCheck
         return showNotification(notificationJob)
     }
-
-    suspend fun displayIAMPreviewNotification(notificationJob: NotificationGenerationJob): Boolean {
-        return showNotification(notificationJob)
-    } // Runtime check against showing the notification from the main thread
 
     /**
      * For shadow test purpose
@@ -157,16 +153,12 @@ internal class NotificationDisplayer(
                 )
         }
 
-        // NotificationManagerCompat does not auto omit the individual notification on the device when using
-        //   stacked notifications on Android 4.2 and older
         // The benefits of calling notify for individual notifications in-addition to the summary above it is shows
         //   each notification in a stack on Android Wear and each one is actionable just like the Gmail app does per email.
         //   Note that on Android 7.0 this is the opposite. Only individual notifications will show and mBundle / group is
         //     created by Android itself.
-        if (group == null || Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            _notificationDisplayBuilder.addXiaomiSettings(oneSignalNotificationBuilder, notification)
-            NotificationManagerCompat.from(currentContext!!).notify(notificationId, notification)
-        }
+        _notificationDisplayBuilder.addXiaomiSettings(oneSignalNotificationBuilder, notification)
+        NotificationManagerCompat.from(currentContext!!).notify(notificationId, notification)
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationHelper.areNotificationsEnabled(currentContext!!, notification.channelId)
@@ -238,10 +230,8 @@ internal class NotificationDisplayer(
         fcmJson: JSONObject,
         notifBuilder: NotificationCompat.Builder?,
     ) {
-        // Not adding Background Images to API Versions < 16 or >= 31
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN ||
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-        ) {
+        // Not adding Background Images to API Versions >= 31
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             Logging.verbose("Cannot use background images in notifications for device on version: " + Build.VERSION.SDK_INT)
             return
         }
@@ -332,10 +322,7 @@ internal class NotificationDisplayer(
             if (colorId != 0) {
                 customView.setTextColor(
                     viewId,
-                    AndroidSupportV4Compat.ContextCompat.getColor(
-                        currentContext!!,
-                        colorId,
-                    ),
+                    ContextCompat.getColor(currentContext, colorId),
                 )
             }
         }

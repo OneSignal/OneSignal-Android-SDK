@@ -10,15 +10,17 @@ interface IDeviceService {
     val isGMSInstalledAndEnabled: Boolean
     val hasAllHMSLibrariesForPushKit: Boolean
     val hasFCMLibrary: Boolean
-    val androidSupportLibraryStatus: AndroidSupportLibraryStatus
+    val jetpackLibraryStatus: JetpackLibraryStatus
 
-    enum class AndroidSupportLibraryStatus {
+    enum class JetpackLibraryStatus {
         MISSING,
         OUTDATED,
         OK,
     }
 
-    enum class DeviceType(val value: Int) {
+    enum class DeviceType(
+        val value: Int,
+    ) {
         Fire(2),
         Android(1),
         Huawei(13),

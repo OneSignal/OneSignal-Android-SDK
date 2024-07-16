@@ -1,7 +1,6 @@
 package com.onesignal.inAppMessages.internal.display.impl
 
 import android.annotation.SuppressLint
-import android.annotation.TargetApi
 import android.app.Activity
 import android.os.Build
 import android.view.View
@@ -38,7 +37,6 @@ import java.util.Locale
 // 3. This calls showActivity which starts a new WebView
 // 4. WebViewActivity will call WebViewManager.instanceFromIam(...) to get this instance and
 //       add it's prepared WebView add add it to the Activity.
-@TargetApi(Build.VERSION_CODES.KITKAT)
 internal class WebViewManager(
     private val message: InAppMessage,
     private var activity: Activity,
@@ -324,25 +322,11 @@ internal class WebViewManager(
                 webView!!.fitsSystemWindows = false
             }
         }
-        blurryRenderingWebViewForKitKatWorkAround(webView!!)
 
         _lifecycle.messageWillDisplay(message)
         _applicationService.waitUntilActivityReady()
         setWebViewToMaxSize(currentActivity)
         webView!!.loadData(base64Message, "text/html; charset=utf-8", "base64")
-    }
-
-    private fun blurryRenderingWebViewForKitKatWorkAround(webView: WebView) {
-        // Android 4.4 has a rendering bug that cause the whole WebView to by extremely blurry
-        // This is due to a bug with hardware rending so ensure it is disabled.
-        // Tested on other version of Android and it is specific to only Android 4.4
-        //    On both the emulator and real devices.
-        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.KITKAT) {
-            webView.setLayerType(
-                View.LAYER_TYPE_SOFTWARE,
-                null,
-            )
-        }
     }
 
     // This sets the WebView view port sizes to the max screen sizes so the initialize
@@ -444,8 +428,7 @@ internal class WebViewManager(
 
     // Allow Chrome Remote Debugging if OneSignal.LOG_LEVEL.DEBUG or higher
     private fun enableWebViewRemoteDebugging() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT && Logging.atLogLevel(LogLevel.DEBUG)
-        ) {
+        if (Logging.atLogLevel(LogLevel.DEBUG)) {
             WebView.setWebContentsDebuggingEnabled(true)
         }
     }

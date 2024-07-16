@@ -18,14 +18,14 @@ enum class SubscriptionStatus(val value: Int) {
     /** The subscription is not enabled because the app has disabled the subscription */
     UNSUBSCRIBE(-2),
 
-    /** The subscription is not enabled due to a missing android support library */
-    MISSING_ANDROID_SUPPORT_LIBRARY(-3),
+    /** The subscription is not enabled due to a missing Jetpack/AndroidX library */
+    MISSING_JETPACK_LIBRARY(-3),
 
     /** The subscription is not enabled due to a missing firebase library */
     MISSING_FIREBASE_FCM_LIBRARY(-4),
 
-    /** The subscription is not enabled due to an outdated android support library */
-    OUTDATED_ANDROID_SUPPORT_LIBRARY(-5),
+    /** The subscription is not enabled due to an outdated Jetpack/AndroidX library */
+    OUTDATED_JETPACK_LIBRARY(-5),
 
     /** The subscription is not enabled due to the FCM sender being invalid */
     INVALID_FCM_SENDER_ID(-6),
