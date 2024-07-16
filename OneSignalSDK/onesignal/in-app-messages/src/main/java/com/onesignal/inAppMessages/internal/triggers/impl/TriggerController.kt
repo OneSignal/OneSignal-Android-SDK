@@ -46,8 +46,9 @@ internal class TriggerController(
             }
         }
 
-        // Combination of triggers can not be evaluated to true the second time. This is to prevent
-        //  IAM with dynamic triggers and other in-app triggers from showing up repeatedly.
+        // Combination of triggers can not be evaluated to true multiple time unless addTrigger is
+        // called. This is to prevent IAM with dynamic triggers and other in-app triggers from
+        // showing up repeatedly.
         return checkAndAddTriggerCombination(andConditions)
     }
 
@@ -257,6 +258,7 @@ internal class TriggerController(
     ) {
         synchronized(triggers) {
             triggers[key] = value
+            // allow shown IAM to show up again if condition is met after addTriggers
             evaluatedCombinations.clear()
         }
     }
@@ -264,6 +266,7 @@ internal class TriggerController(
     private fun removeTriggersForKeys(key: String) {
         synchronized(triggers) {
             triggers.remove(key)
+            // allow shown IAM to show up again if condition is met after removeTriggers
             evaluatedCombinations.clear()
         }
     }
