@@ -1,12 +1,13 @@
 package com.onesignal.sdktest.application;
 
+import android.annotation.SuppressLint;
 import android.os.StrictMode;
 import android.util.Log;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.multidex.MultiDexApplication;
 
+import com.onesignal.Continue;
 import com.onesignal.OneSignal;
 import com.onesignal.inAppMessages.IInAppMessageClickListener;
 import com.onesignal.inAppMessages.IInAppMessageClickEvent;
@@ -28,8 +29,10 @@ import com.onesignal.sdktest.util.SharedPreferenceUtil;
 import com.onesignal.user.state.IUserStateObserver;
 import com.onesignal.user.state.UserChangedState;
 import com.onesignal.user.state.UserState;
-
 import org.json.JSONObject;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainApplication extends MultiDexApplication {
     private static final int SLEEP_TIME_TO_MIMIC_ASYNC_OPERATION = 2000;
@@ -40,6 +43,7 @@ public class MainApplication extends MultiDexApplication {
             StrictMode.enableDefaults();
     }
 
+    @SuppressLint("NewApi")
     @Override
     public void onCreate() {
         super.onCreate();
@@ -54,7 +58,16 @@ public class MainApplication extends MultiDexApplication {
         }
 
         OneSignalNotificationSender.setAppId(appId);
+
         OneSignal.initWithContext(this, appId);
+
+        // ensure calling requestPermission in a thread right after initWithContext does not crash
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        @SuppressLint({"NewApi", "LocalSuppress"}) CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+            OneSignal.getNotifications().requestPermission(true, Continue.none());
+        }, executor);
+        future.join(); // Waits for the task to complete
+        executor.shutdown();
 
         OneSignal.getInAppMessages().addLifecycleListener(new IInAppMessageLifecycleListener() {
             @Override
