@@ -14,7 +14,14 @@ internal class NotificationWillDisplayEvent(
     }
 
     override fun preventDefault(discard: Boolean) {
-        Logging.debug("NotificationWillDisplayEvent.preventDefault()")
+        Logging.debug("NotificationWillDisplayEvent.preventDefault($discard)")
+
+        // If preventDefault(false) has already been called and it is now called again with
+        // preventDefault(true), the waiter is fired to discard this notification.
+        // This is necessary for wrapper SDKs that can call preventDefault(discard) twice.
+        if (isPreventDefault && discard) {
+            notification.displayWaiter.wake(false)
+        }
         isPreventDefault = true
         this.discard = discard
     }
