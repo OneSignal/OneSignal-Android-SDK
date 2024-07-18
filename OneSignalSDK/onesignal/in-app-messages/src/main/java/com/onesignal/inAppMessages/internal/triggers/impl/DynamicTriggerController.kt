@@ -89,7 +89,7 @@ internal class DynamicTriggerController(
                 object : TimerTask() {
                     override fun run() {
                         scheduledMessages.remove(triggerId)
-                        events.fire { it.onTriggerConditionChanged() }
+                        events.fire { it.onTriggerConditionChanged(triggerId) }
                     }
                 },
                 triggerId,

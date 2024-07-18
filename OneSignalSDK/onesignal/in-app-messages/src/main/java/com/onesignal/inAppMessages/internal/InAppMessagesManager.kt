@@ -451,12 +451,16 @@ internal class InAppMessagesManager(
      *
      * Make all messages with redisplay available if:
      * - Already displayed
-     * - At least one Trigger has changed
+     * - At least one existing Trigger has changed OR a new trigger is added
      */
-    private fun makeRedisplayMessagesAvailableWithTriggers(newTriggersKeys: Collection<String>) {
+    private fun makeRedisplayMessagesAvailableWithTriggers(
+        newTriggersKeys: Collection<String>,
+        isNewTriggerAdded: Boolean,
+    ) {
         for (message in messages) {
-            if (!message.isTriggerChanged && redisplayedInAppMessages.contains(message) &&
-                _triggerController.isTriggerOnMessage(message, newTriggersKeys)
+            if (!message.isTriggerChanged &&
+                redisplayedInAppMessages.contains(message) &&
+                (_triggerController.isTriggerOnMessage(message, newTriggersKeys) || isNewTriggerAdded)
             ) {
                 Logging.debug("InAppMessagesManager.makeRedisplayMessagesAvailableWithTriggers: Trigger changed for message: $message")
                 message.isTriggerChanged = true
@@ -643,7 +647,6 @@ internal class InAppMessagesManager(
         Logging.debug("InAppMessagesManager.onTriggerCompleted: called with triggerId: $triggerId")
         val triggerIds: MutableSet<String> = HashSet()
         triggerIds.add(triggerId)
-        makeRedisplayMessagesAvailableWithTriggers(triggerIds)
     }
 
     /**
@@ -653,8 +656,10 @@ internal class InAppMessagesManager(
      *
      * @see OSInAppMessageController.setDataForRedisplay
      */
-    override fun onTriggerConditionChanged() {
+    override fun onTriggerConditionChanged(triggerId: String) {
         Logging.debug("InAppMessagesManager.onTriggerConditionChanged()")
+
+        makeRedisplayMessagesAvailableWithTriggers(listOf(triggerId), false)
 
         suspendifyOnThread {
             // This method is called when a time-based trigger timer fires, meaning the message can
@@ -666,7 +671,7 @@ internal class InAppMessagesManager(
     override fun onTriggerChanged(newTriggerKey: String) {
         Logging.debug("InAppMessagesManager.onTriggerChanged(newTriggerKey: $newTriggerKey)")
 
-        makeRedisplayMessagesAvailableWithTriggers(listOf(newTriggerKey))
+        makeRedisplayMessagesAvailableWithTriggers(listOf(newTriggerKey), true)
 
         suspendifyOnThread {
             // This method is called when a time-based trigger timer fires, meaning the message can
