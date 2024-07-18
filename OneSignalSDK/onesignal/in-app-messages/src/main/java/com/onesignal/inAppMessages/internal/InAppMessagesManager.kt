@@ -451,7 +451,7 @@ internal class InAppMessagesManager(
      *
      * Make all messages with redisplay available if:
      * - Already displayed
-     * - At least one existing Trigger has changed OR a new trigger is added
+     * - At least one existing Trigger has changed OR a new trigger is added when there is only dynamic trigger
      */
     private fun makeRedisplayMessagesAvailableWithTriggers(
         newTriggersKeys: Collection<String>,
@@ -460,7 +460,10 @@ internal class InAppMessagesManager(
         for (message in messages) {
             if (!message.isTriggerChanged &&
                 redisplayedInAppMessages.contains(message) &&
-                (_triggerController.isTriggerOnMessage(message, newTriggersKeys) || isNewTriggerAdded)
+                (
+                    _triggerController.isTriggerOnMessage(message, newTriggersKeys) ||
+                        isNewTriggerAdded && _triggerController.messageHasOnlyDynamicTriggers(message)
+                )
             ) {
                 Logging.debug("InAppMessagesManager.makeRedisplayMessagesAvailableWithTriggers: Trigger changed for message: $message")
                 message.isTriggerChanged = true
