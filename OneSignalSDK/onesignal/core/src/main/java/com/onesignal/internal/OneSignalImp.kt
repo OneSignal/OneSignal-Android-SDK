@@ -21,6 +21,7 @@ import com.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
+import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStoreFix
@@ -326,6 +327,9 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             } else {
                 Logging.debug("initWithContext: using cached user ${identityModelStore!!.model.onesignalId}")
             }
+
+            // initialize service that can only be instantiated in the main thread
+            services.getService<RequestPermissionService>()
 
             // schedule service starts out of main thread
             startupService.scheduleStart()
