@@ -25,7 +25,7 @@ class InAppMessagingHelpers {
 
         internal fun onMessageActionOccurredOnMessage(
             message: InAppMessage,
-            clickResult: InAppMessageClickResult
+            clickResult: InAppMessageClickResult,
         ) {
             val mockInAppMessageManager = mockk<InAppMessagesManager>()
             mockInAppMessageManager.onMessageActionOccurredOnMessage(message, clickResult)
@@ -41,18 +41,26 @@ class InAppMessagingHelpers {
             kind: Trigger.OSTriggerKind,
             key: String?,
             operator: String?,
-            value: Any?
+            value: Any?,
         ): OSTestInAppMessageInternal {
-            val triggersJson = basicTrigger(
-                kind, key,
-                operator!!, value!!
-            )
+            val triggersJson =
+                basicTrigger(
+                    kind,
+                    key,
+                    operator!!,
+                    value!!,
+                )
             return buildTestMessageWithLiquid(triggersJson)
         }
 
         // Most tests build a test message using only one trigger.
         // This convenience method makes it easy to build such a message
-        internal fun buildTestMessageWithSingleTrigger(kind: Trigger.OSTriggerKind, key: String?, operator: String, value: Any): OSTestInAppMessageInternal {
+        internal fun buildTestMessageWithSingleTrigger(
+            kind: Trigger.OSTriggerKind,
+            key: String?,
+            operator: String,
+            value: Any,
+        ): OSTestInAppMessageInternal {
             val triggersJson = basicTrigger(kind, key, operator, value)
             return buildTestMessage(triggersJson)
         }
@@ -65,17 +73,18 @@ class InAppMessagingHelpers {
             kind: Trigger.OSTriggerKind,
             key: String?,
             operator: String,
-            value: Any
+            value: Any,
         ): JSONArray {
-            val triggerJson: JSONObject = object : JSONObject() {
-                init {
-                    put("id", UUID.randomUUID().toString())
-                    put("kind", kind.toString())
-                    put("property", key)
-                    put("operator", operator)
-                    put("value", value)
+            val triggerJson: JSONObject =
+                object : JSONObject() {
+                    init {
+                        put("id", UUID.randomUUID().toString())
+                        put("kind", kind.toString())
+                        put("property", key)
+                        put("operator", operator)
+                        put("value", value)
+                    }
                 }
-            }
 
             return wrap(wrap(triggerJson))
         }
@@ -88,22 +97,28 @@ class InAppMessagingHelpers {
             }
         }
 
-        fun buildTestMessageWithRedisplay(limit: Int, delay: Long): OSTestInAppMessageInternal {
+        fun buildTestMessageWithRedisplay(
+            limit: Int,
+            delay: Long,
+        ): OSTestInAppMessageInternal {
             return buildTestMessageWithMultipleDisplays(null, limit, delay)
         }
 
         private fun buildTestMessageWithMultipleDisplays(
             triggerJson: JSONArray?,
             limit: Int,
-            delay: Long
+            delay: Long,
         ): OSTestInAppMessageInternal {
             val json = basicIAMJSONObject(triggerJson)
-            json.put("redisplay", object : JSONObject() {
-                init {
-                    put("limit", limit)
-                    put("delay", delay) //in seconds
-                }
-            })
+            json.put(
+                "redisplay",
+                object : JSONObject() {
+                    init {
+                        put("limit", limit)
+                        put("delay", delay) // in seconds
+                    }
+                },
+            )
 
             return OSTestInAppMessageInternal(json)
         }
@@ -114,21 +129,30 @@ class InAppMessagingHelpers {
             jsonObject.put("clickIds", JSONArray(listOf("clickId1", "clickId2", "clickId3")))
             // shouldn't hard-code?
             jsonObject.put("displayedInSession", true)
-            jsonObject.put("variants", JSONObject().apply {
-                put("android", JSONObject().apply {
-                    put("es", TEST_SPANISH_ANDROID_VARIANT_ID)
-                    put("en", TEST_ENGLISH_ANDROID_VARIANT_ID)
-                })
-            })
+            jsonObject.put(
+                "variants",
+                JSONObject().apply {
+                    put(
+                        "android",
+                        JSONObject().apply {
+                            put("es", TEST_SPANISH_ANDROID_VARIANT_ID)
+                            put("en", TEST_ENGLISH_ANDROID_VARIANT_ID)
+                        },
+                    )
+                },
+            )
             jsonObject.put("max_display_time", 30)
             if (triggerJson != null) {
                 jsonObject.put("triggers", triggerJson)
             } else {
                 jsonObject.put("triggers", JSONArray())
             }
-            jsonObject.put("actions", JSONArray().apply {
-                put(buildTestActionJson())
-            })
+            jsonObject.put(
+                "actions",
+                JSONArray().apply {
+                    put(buildTestActionJson())
+                },
+            )
 
             return jsonObject
         }
@@ -143,17 +167,21 @@ class InAppMessagingHelpers {
                     put("url_target", "webview")
                     put("close", true)
                     put("pageId", IAM_PAGE_ID)
-                    put("data", object : JSONObject() {
-                        init {
-                            put("test", "value")
-                        }
-                    })
+                    put(
+                        "data",
+                        object : JSONObject() {
+                            init {
+                                put("test", "value")
+                            }
+                        },
+                    )
                 }
             }
         }
     }
 
     // WIP
+
     /** IAM Lifecycle  */
     internal fun onMessageWillDisplay(message: InAppMessage) {
         val mockInAppMessageManager = mockk<InAppMessagesManager>()
@@ -178,17 +206,18 @@ class InAppMessagingHelpers {
     // End IAM Lifecycle
 
     class OSTestInAppMessageInternal(
-        private val jsonObject: JSONObject
+        private val jsonObject: JSONObject,
     ) {
         private val inAppMessage: InAppMessage by lazy {
             initializeInAppMessage()
         }
 
         private fun initializeInAppMessage(): InAppMessage {
-            val time = object : ITime {
-                override val currentTimeMillis: Long
-                    get() = System.currentTimeMillis()
-            }
+            val time =
+                object : ITime {
+                    override val currentTimeMillis: Long
+                        get() = System.currentTimeMillis()
+                }
 
             return InAppMessage(jsonObject, time)
         }

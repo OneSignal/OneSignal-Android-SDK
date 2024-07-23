@@ -3,34 +3,35 @@ package com.onesignal.inAppMessages.internal
 import com.onesignal.OneSignal
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.inAppMessages.IInAppMessageDidDismissEvent
-import com.onesignal.inAppMessages.IInAppMessageDidDisplayEvent
-import com.onesignal.inAppMessages.IInAppMessageLifecycleListener
-import com.onesignal.inAppMessages.IInAppMessageWillDismissEvent
-import com.onesignal.inAppMessages.IInAppMessageWillDisplayEvent
 import com.onesignal.inAppMessages.internal.InAppMessagingHelpers.Companion.buildTestMessageWithRedisplay
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import java.util.UUID
 
-
 class InAppMessagesTests : FunSpec({
-    val IAM_CLICK_ID = "button_id_123"
-    val LIMIT = 5
-    val DELAY: Long = 60
+    val iamClickId = "button_id_123"
+    val limit = 5
+    val delay: Long = 60
 
-    fun setLocalTriggerValue(key: String, localValue: String) {
-        if (localValue != null) OneSignal.InAppMessages.addTrigger(
-            key,
-            localValue
-        ) else OneSignal.InAppMessages.removeTrigger(key)
+    fun setLocalTriggerValue(
+        key: String,
+        localValue: String,
+    ) {
+        if (localValue != null) {
+            OneSignal.InAppMessages.addTrigger(
+                key,
+                localValue,
+            )
+        } else {
+            OneSignal.InAppMessages.removeTrigger(key)
+        }
     }
 
     fun comparativeOperatorTest(
         operator: Trigger.OSTriggerOperator,
         triggerValue: String,
-        localValue: String
+        localValue: String,
     ): Boolean {
 //        TODO
 //        setLocalTriggerValue("test_property", localValue)
@@ -52,7 +53,7 @@ class InAppMessagesTests : FunSpec({
             Trigger.OSTriggerKind.SESSION_TIME,
             null,
             Trigger.OSTriggerOperator.GREATER_THAN_OR_EQUAL_TO.toString(),
-            3
+            3,
         )
     }
 
@@ -87,12 +88,12 @@ class InAppMessagesTests : FunSpec({
 
     test("testBuiltMessageReDisplay") {
         // Given
-        val message = buildTestMessageWithRedisplay(LIMIT, DELAY)
+        val message = buildTestMessageWithRedisplay(limit, delay)
 
         // Then
         message.redisplayStats.isRedisplayEnabled shouldBe true
-        message.redisplayStats.displayLimit shouldBe LIMIT
-        message.redisplayStats.displayDelay shouldBe DELAY
+        message.redisplayStats.displayLimit shouldBe limit
+        message.redisplayStats.displayDelay shouldBe delay
         message.redisplayStats.lastDisplayTime shouldBe -1
         message.redisplayStats.displayQuantity shouldBe 0
 
@@ -102,7 +103,7 @@ class InAppMessagesTests : FunSpec({
                 Trigger.OSTriggerKind.SESSION_TIME,
                 null,
                 Trigger.OSTriggerOperator.GREATER_THAN_OR_EQUAL_TO.toString(),
-                3
+                3,
             )
 
         // Then
@@ -116,17 +117,16 @@ class InAppMessagesTests : FunSpec({
     test("testBuiltMessageRedisplayLimit") {
         val message: InAppMessagingHelpers.OSTestInAppMessageInternal =
             buildTestMessageWithRedisplay(
-                LIMIT,
-                DELAY
+                limit,
+                delay,
             )
-        for (i in 0 until LIMIT) {
+        for (i in 0 until limit) {
             message.redisplayStats.shouldDisplayAgain() shouldBe true
             message.redisplayStats.incrementDisplayQuantity()
         }
         message.redisplayStats.incrementDisplayQuantity()
         message.redisplayStats.shouldDisplayAgain() shouldBe false
     }
-
 
     test("testBuiltMessageRedisplayDelay") {
         // TODO
@@ -135,37 +135,37 @@ class InAppMessagesTests : FunSpec({
     test("testBuiltMessageRedisplayCLickId") {
         val message: InAppMessagingHelpers.OSTestInAppMessageInternal =
             buildTestMessageWithRedisplay(
-                LIMIT,
-                DELAY
+                limit,
+                delay,
             )
 
         message.clickedClickIds.isEmpty() shouldBe true
-        message.isClickAvailable(IAM_CLICK_ID)
+        message.isClickAvailable(iamClickId)
 
-        message.addClickId(IAM_CLICK_ID)
+        message.addClickId(iamClickId)
         message.clearClickIds()
 
         message.clickedClickIds.isEmpty() shouldBe true
 
-        message.addClickId(IAM_CLICK_ID)
-        message.addClickId(IAM_CLICK_ID)
+        message.addClickId(iamClickId)
+        message.addClickId(iamClickId)
         message.clickedClickIds.size shouldBe 1
 
-        message.isClickAvailable(IAM_CLICK_ID) shouldBe false
+        message.isClickAvailable(iamClickId) shouldBe false
 
         val messageWithoutDisplay2: InAppMessagingHelpers.OSTestInAppMessageInternal =
             InAppMessagingHelpers.buildTestMessageWithSingleTrigger(
                 Trigger.OSTriggerKind.SESSION_TIME,
                 null,
                 Trigger.OSTriggerOperator.GREATER_THAN_OR_EQUAL_TO.toString(),
-                3
+                3,
             )
 
-        messageWithoutDisplay2.addClickId(IAM_CLICK_ID)
-        messageWithoutDisplay2.isClickAvailable(IAM_CLICK_ID) shouldBe false
+        messageWithoutDisplay2.addClickId(iamClickId)
+        messageWithoutDisplay2.isClickAvailable(iamClickId) shouldBe false
     }
 
-    test ("testBuiltMessageTrigger") {
+    test("testBuiltMessageTrigger") {
         // TODO
     }
 
@@ -233,14 +233,12 @@ class InAppMessagesTests : FunSpec({
         // }
         // OneSignal.InAppMessages.addClickListener(clickListener)
 
-
-        //assertMainThread()
-        //threadAndTaskWait()
+        // assertMainThread()
+        // threadAndTaskWait()
 
         // call onMessageActionOccurredOnMessage
 
         // Ensure we make REST call to OneSignal to report click.
-
 
         // Ensure we fire public callback that In-App was clicked.
     }
@@ -257,11 +255,11 @@ class InAppMessagesTests : FunSpec({
         // TODO
     }
 
-
-    /* Tests for IAM Lifecycle */
+    // Tests for IAM Lifecycle
 //    var iamLifecycleCounter = 0
 
     test("testIAMLifecycleEventsFlow") {
+
         // TODO
         // add listener and incremenet counter
 //        val lifecycleListener = object : IInAppMessageLifecycleListener {
