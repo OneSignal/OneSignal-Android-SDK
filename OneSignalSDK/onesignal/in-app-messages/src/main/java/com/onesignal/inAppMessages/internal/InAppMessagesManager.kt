@@ -458,13 +458,10 @@ internal class InAppMessagesManager(
         isNewTriggerAdded: Boolean,
     ) {
         for (message in messages) {
-            if (!message.isTriggerChanged &&
-                redisplayedInAppMessages.contains(message) &&
-                (
-                    _triggerController.isTriggerOnMessage(message, newTriggersKeys) ||
-                        isNewTriggerAdded && _triggerController.messageHasOnlyDynamicTriggers(message)
-                )
-            ) {
+            val isMessageDisplayed = redisplayedInAppMessages.contains(message)
+            val isTriggerOnMessage = _triggerController.isTriggerOnMessage(message, newTriggersKeys)
+            val isOnlyDynamicTriggers = _triggerController.messageHasOnlyDynamicTriggers(message)
+            if (!message.isTriggerChanged && isMessageDisplayed && (isTriggerOnMessage || isNewTriggerAdded && isOnlyDynamicTriggers)) {
                 Logging.debug("InAppMessagesManager.makeRedisplayMessagesAvailableWithTriggers: Trigger changed for message: $message")
                 message.isTriggerChanged = true
             }
