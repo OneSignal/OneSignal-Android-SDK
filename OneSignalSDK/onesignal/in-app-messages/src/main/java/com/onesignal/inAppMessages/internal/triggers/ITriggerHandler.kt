@@ -16,7 +16,7 @@ internal interface ITriggerHandler {
     /**
      * Called when a time-based trigger (dynamic trigger) will now evaluate to true.
      */
-    fun onTriggerConditionChanged()
+    fun onTriggerConditionChanged(triggerId: String)
 
     /**
      * Called when a new trigger has been added, or an existing trigger's value has been
