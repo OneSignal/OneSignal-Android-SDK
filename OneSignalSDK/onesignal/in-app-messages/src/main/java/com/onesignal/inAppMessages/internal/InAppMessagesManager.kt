@@ -106,6 +106,8 @@ internal class InAppMessagesManager(
     private val fetchIAMMutex = Mutex()
     private var lastTimeFetchedIAMs: Long? = null
 
+    private val lock = Any()
+
     override var paused: Boolean
         get() = _state.paused
         set(value) {
@@ -265,15 +267,21 @@ internal class InAppMessagesManager(
      */
     private suspend fun evaluateInAppMessages() {
         Logging.debug("InAppMessagesManager.evaluateInAppMessages()")
+        val messagesToQueue = mutableListOf<InAppMessage>()
 
-        for (message in messages) {
-            // Make trigger evaluation first, dynamic trigger might change "trigger changed" flag value for redisplay messages
-            if (_triggerController.evaluateMessageTriggers(message)) {
-                setDataForRedisplay(message)
-                if (!dismissedMessages.contains(message.messageId) && !message.isFinished) {
-                    queueMessageForDisplay(message)
+        synchronized(lock) {
+            for (message in messages) {
+                if (_triggerController.evaluateMessageTriggers(message)) {
+                    setDataForRedisplay(message)
+                    if (!dismissedMessages.contains(message.messageId) && !message.isFinished) {
+                        messagesToQueue.add(message)
+                    }
                 }
             }
+        }
+
+        for (message in messagesToQueue) {
+            queueMessageForDisplay(message)
         }
     }
 
@@ -458,13 +466,17 @@ internal class InAppMessagesManager(
         newTriggersKeys: Collection<String>,
         isNewTriggerAdded: Boolean,
     ) {
-        for (message in messages) {
-            val isMessageDisplayed = redisplayedInAppMessages.contains(message)
-            val isTriggerOnMessage = _triggerController.isTriggerOnMessage(message, newTriggersKeys)
-            val isOnlyDynamicTriggers = _triggerController.messageHasOnlyDynamicTriggers(message)
-            if (!message.isTriggerChanged && isMessageDisplayed && (isTriggerOnMessage || isNewTriggerAdded && isOnlyDynamicTriggers)) {
-                Logging.debug("InAppMessagesManager.makeRedisplayMessagesAvailableWithTriggers: Trigger changed for message: $message")
-                message.isTriggerChanged = true
+        synchronized(lock) {
+            for (message in messages) {
+                val isMessageDisplayed = redisplayedInAppMessages.contains(message)
+                val isTriggerOnMessage =
+                    _triggerController.isTriggerOnMessage(message, newTriggersKeys)
+                val isOnlyDynamicTriggers =
+                    _triggerController.messageHasOnlyDynamicTriggers(message)
+                if (!message.isTriggerChanged && isMessageDisplayed && (isTriggerOnMessage || isNewTriggerAdded && isOnlyDynamicTriggers)) {
+                    Logging.debug("InAppMessagesManager.makeRedisplayMessagesAvailableWithTriggers: Trigger changed for message: $message")
+                    message.isTriggerChanged = true
+                }
             }
         }
     }
