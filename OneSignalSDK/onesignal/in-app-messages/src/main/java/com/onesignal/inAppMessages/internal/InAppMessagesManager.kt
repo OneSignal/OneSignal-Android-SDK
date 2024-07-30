@@ -79,7 +79,7 @@ internal class InAppMessagesManager(
 
     // IAMs loaded remotely from on_session
     //   If on_session won't be called this will be loaded from cache
-    private var messages: List<InAppMessage> = listOf()
+    private var messages: MutableList<InAppMessage> = mutableListOf()
 
     // IAMs that have been dismissed by the user
     //   This mean they have already displayed to the user
@@ -255,7 +255,7 @@ internal class InAppMessagesManager(
         val newMessages = _backend.listInAppMessages(appId, subscriptionId)
 
         if (newMessages != null) {
-            this.messages = newMessages
+            this.messages = newMessages as MutableList<InAppMessage>
             evaluateInAppMessages()
         }
     }
@@ -390,6 +390,7 @@ internal class InAppMessagesManager(
                 queueMessageForDisplay(messageToDisplay!!)
             } else if (result == false) {
                 _state.inAppMessageIdShowing = null
+                messages.remove(messageToDisplay)
                 messageWasDismissed(messageToDisplay!!, true)
             }
         }
