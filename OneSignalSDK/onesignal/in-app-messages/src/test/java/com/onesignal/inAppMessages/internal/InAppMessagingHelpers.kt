@@ -228,6 +228,9 @@ class InAppMessagingHelpers {
         val variants: Map<String, Map<String, String>>
             get() = inAppMessage.variants
 
+        internal val triggers: List<List<Trigger>>
+            get() = inAppMessage.triggers
+
         val clickedClickIds: MutableSet<String>
             get() = inAppMessage.clickedClickIds
 

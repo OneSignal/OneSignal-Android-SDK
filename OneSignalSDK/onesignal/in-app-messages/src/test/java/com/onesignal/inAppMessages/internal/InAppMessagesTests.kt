@@ -1,5 +1,6 @@
 package com.onesignal.inAppMessages.internal
 
+import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.OneSignal
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -9,6 +10,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import java.util.UUID
 
+@RobolectricTest
 class InAppMessagesTests : FunSpec({
     val iamClickId = "button_id_123"
     val limit = 5
@@ -58,7 +60,7 @@ class InAppMessagesTests : FunSpec({
     }
 
     beforeAny {
-        Logging.logLevel = LogLevel.NONE
+        Logging.logLevel = LogLevel.VERBOSE
         // TODO: add more from Player Model @BeforeClass in InAppMessagingUnitTests.java
     }
 
@@ -166,7 +168,12 @@ class InAppMessagesTests : FunSpec({
     }
 
     test("testBuiltMessageTrigger") {
-        // TODO
+        val trigger = message.triggers[0][0]
+
+        trigger.kind shouldBe Trigger.OSTriggerKind.SESSION_TIME
+        trigger.operatorType shouldBe Trigger.OSTriggerOperator.GREATER_THAN_OR_EQUAL_TO
+        trigger.property shouldBe null
+        trigger.value shouldBe 3
     }
 
     test("testParsesMessageActions") {
