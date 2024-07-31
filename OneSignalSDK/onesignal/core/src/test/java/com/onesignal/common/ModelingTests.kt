@@ -9,8 +9,8 @@ import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
-import com.onesignal.user.internal.operations.SetPropertyOperation
-import com.onesignal.user.internal.operations.SetTagOperation
+import com.onesignal.user.internal.operations.LoginUserFromSubscriptionOperation
+import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import io.kotest.core.spec.style.FunSpec
@@ -150,7 +150,7 @@ class ModelingTests : FunSpec({
         val operationModelStore = OperationModelStore(prefs)
         val jsonArray = JSONArray()
 
-        val cachedOperation = SetTagOperation()
+        val cachedOperation = LoginUserFromSubscriptionOperation()
         cachedOperation.id = UUID.randomUUID().toString()
         // Add duplicate operations to the cache
         jsonArray.put(cachedOperation.toJSON())
@@ -158,7 +158,7 @@ class ModelingTests : FunSpec({
         prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + "operations", jsonArray.toString())
 
         // When - adding an operation first and then loading from cache
-        val newOperation = SetPropertyOperation()
+        val newOperation = LoginUserOperation()
         newOperation.id = UUID.randomUUID().toString()
         operationModelStore.add(newOperation)
         operationModelStore.loadOperations()
