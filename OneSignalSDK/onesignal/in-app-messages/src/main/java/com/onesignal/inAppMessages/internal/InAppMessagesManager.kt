@@ -106,8 +106,6 @@ internal class InAppMessagesManager(
     private val fetchIAMMutex = Mutex()
     private var lastTimeFetchedIAMs: Long? = null
 
-    private val lock = Any()
-
     override var paused: Boolean
         get() = _state.paused
         set(value) {
@@ -269,7 +267,7 @@ internal class InAppMessagesManager(
         Logging.debug("InAppMessagesManager.evaluateInAppMessages()")
         val messagesToQueue = mutableListOf<InAppMessage>()
 
-        synchronized(lock) {
+        synchronized(messages) {
             for (message in messages) {
                 if (_triggerController.evaluateMessageTriggers(message)) {
                     setDataForRedisplay(message)
@@ -466,7 +464,7 @@ internal class InAppMessagesManager(
         newTriggersKeys: Collection<String>,
         isNewTriggerAdded: Boolean,
     ) {
-        synchronized(lock) {
+        synchronized(messages) {
             for (message in messages) {
                 val isMessageDisplayed = redisplayedInAppMessages.contains(message)
                 val isTriggerOnMessage =
