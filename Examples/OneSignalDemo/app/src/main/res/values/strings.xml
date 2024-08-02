@@ -9,6 +9,11 @@
     <string name="login_user">Login User</string>
     <string name="logout_user">Logout User</string>
 
+    <string name="JWT">JWT</string>
+    <string name="invalidate_JWT">Invalidate JWT</string>
+    <string name="update_JWT">Update JWT</string>
+    <string name="no_jwt_added">No JWT Added</string>
+
     <string name="aliases">Aliases</string>
     <string name="external_user_id_colon">EUID:</string>
     <string name="no_aliases_added">No Aliases Added</string>
