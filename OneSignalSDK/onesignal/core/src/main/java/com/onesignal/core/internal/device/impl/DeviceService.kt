@@ -74,7 +74,7 @@ internal class DeviceService(private val _applicationService: IApplicationServic
             return IDeviceService.JetpackLibraryStatus.OK
         }
 
-    private fun supportsGooglePush(): Boolean {
+    override fun supportsGooglePush(): Boolean {
         // 1. If app does not have the FCM library it won't support Google push
         return if (!hasFCMLibrary) false else isGMSInstalledAndEnabled
 
@@ -116,7 +116,7 @@ internal class DeviceService(private val _applicationService: IApplicationServic
             }
         }
 
-    private val supportsHMS: Boolean
+    override val supportsHMS: Boolean
         get() {
             // 1. App should have the HMSAvailability for best detection and must have PushKit libraries
             return if (!hasHMSAvailabilityLibrary() || !hasAllHMSLibrariesForPushKit) false else isHMSCoreInstalledAndEnabled()
