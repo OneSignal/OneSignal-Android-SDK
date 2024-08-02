@@ -11,6 +11,9 @@ interface IDeviceService {
     val hasAllHMSLibrariesForPushKit: Boolean
     val hasFCMLibrary: Boolean
     val jetpackLibraryStatus: JetpackLibraryStatus
+    val supportsHMS: Boolean
+
+    fun supportsGooglePush(): Boolean
 
     enum class JetpackLibraryStatus {
         MISSING,

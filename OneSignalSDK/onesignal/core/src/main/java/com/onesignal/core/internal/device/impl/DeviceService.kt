@@ -1,5 +1,6 @@
 package com.onesignal.core.internal.device.impl
 
+import android.content.Context
 import android.content.pm.PackageManager
 import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.application.IApplicationService
@@ -10,6 +11,7 @@ internal class DeviceService(private val _applicationService: IApplicationServic
     companion object {
         private const val HMS_CORE_SERVICES_PACKAGE = "com.huawei.hwid" // = HuaweiApiAvailability.SERVICES_PACKAGE
         private const val GOOGLE_PLAY_SERVICES_PACKAGE = "com.google.android.gms" // = GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE
+        private const val PREFER_HMS_METADATA_NAME = "com.onesignal.preferHMS"
         private const val HMS_AVAILABLE_SUCCESSFUL = 0
     }
 
@@ -37,7 +39,17 @@ internal class DeviceService(private val _applicationService: IApplicationServic
     override val deviceType: IDeviceService.DeviceType
         get() {
             if (supportsADM()) return IDeviceService.DeviceType.Fire
-            if (supportsGooglePush()) return IDeviceService.DeviceType.Android
+
+            val supportsHMS = supportsHMS
+            val supportsFCM = supportsGooglePush()
+
+            if (supportsFCM && supportsHMS) {
+                val context = _applicationService.appContext
+                val preferHMS = AndroidUtils.getManifestMetaBoolean(context, PREFER_HMS_METADATA_NAME)
+                return if (preferHMS) IDeviceService.DeviceType.Huawei else IDeviceService.DeviceType.Android
+            }
+
+            if (supportsFCM) return IDeviceService.DeviceType.Android
 
             // Some Huawei devices have both FCM & HMS support, but prefer FCM (Google push) over HMS
             if (supportsHMS) return IDeviceService.DeviceType.Huawei
@@ -62,7 +74,7 @@ internal class DeviceService(private val _applicationService: IApplicationServic
             return IDeviceService.JetpackLibraryStatus.OK
         }
 
-    private fun supportsGooglePush(): Boolean {
+    override fun supportsGooglePush(): Boolean {
         // 1. If app does not have the FCM library it won't support Google push
         return if (!hasFCMLibrary) false else isGMSInstalledAndEnabled
 
@@ -104,7 +116,7 @@ internal class DeviceService(private val _applicationService: IApplicationServic
             }
         }
 
-    private val supportsHMS: Boolean
+    override val supportsHMS: Boolean
         get() {
             // 1. App should have the HMSAvailability for best detection and must have PushKit libraries
             return if (!hasHMSAvailabilityLibrary() || !hasAllHMSLibrariesForPushKit) false else isHMSCoreInstalledAndEnabled()
