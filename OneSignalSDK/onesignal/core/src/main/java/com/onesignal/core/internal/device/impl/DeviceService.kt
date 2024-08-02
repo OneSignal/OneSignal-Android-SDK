@@ -40,11 +40,11 @@ internal class DeviceService(private val _applicationService: IApplicationServic
         get() {
             if (supportsADM()) return IDeviceService.DeviceType.Fire
 
-            val supportsHMS: Boolean = supportsHMS
+            val supportsHMS = supportsHMS
             val supportsFCM = supportsGooglePush()
 
             if (supportsFCM && supportsHMS) {
-                val context: Context = _applicationService.appContext
+                val context = _applicationService.appContext
                 val preferHMS = AndroidUtils.getManifestMetaBoolean(context, PREFER_HMS_METADATA_NAME)
                 return if (preferHMS) IDeviceService.DeviceType.Huawei else IDeviceService.DeviceType.Android
             }
