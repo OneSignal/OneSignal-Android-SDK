@@ -15,15 +15,7 @@ import io.mockk.spyk
 class DeviceServiceTests : FunSpec({
     test("devicetype is Huawei when preferHMS manifest value is true when a device supports HMS and FCM") {
         // Given
-        val mockApplicationService = MockHelper.applicationService()
-        every { mockApplicationService.appContext } returns ApplicationProvider.getApplicationContext()
-
-        val mockDeviceService =
-            spyk(
-                DeviceService(
-                    mockApplicationService,
-                ),
-            )
+        val mockDeviceService = Mocks().deviceService
         every { mockDeviceService.supportsHMS } returns true
         every { mockDeviceService.supportsGooglePush() } returns true
         mockkObject(AndroidUtils)
@@ -38,15 +30,7 @@ class DeviceServiceTests : FunSpec({
 
     test("devicetype is FCM when preferHMS manifest value is false when a device supports HMS and FCM") {
         // Given
-        val mockApplicationService = MockHelper.applicationService()
-        every { mockApplicationService.appContext } returns ApplicationProvider.getApplicationContext()
-
-        val mockDeviceService =
-            spyk(
-                DeviceService(
-                    mockApplicationService,
-                ),
-            )
+        val mockDeviceService = Mocks().deviceService
         every { mockDeviceService.supportsHMS } returns true
         every { mockDeviceService.supportsGooglePush() } returns true
         mockkObject(AndroidUtils)
@@ -61,17 +45,10 @@ class DeviceServiceTests : FunSpec({
 
     test("devicetype is FCM when preferHMS manifest value is missing when a device supports HMS and FCM") {
         // Given
-        val mockApplicationService = MockHelper.applicationService()
-        every { mockApplicationService.appContext } returns ApplicationProvider.getApplicationContext()
-
-        val mockDeviceService =
-            spyk(
-                DeviceService(
-                    mockApplicationService,
-                ),
-            )
+        val mockDeviceService = Mocks().deviceService
         every { mockDeviceService.supportsHMS } returns true
         every { mockDeviceService.supportsGooglePush() } returns true
+
         // When
         val deviceType = mockDeviceService.deviceType
 
@@ -79,3 +56,20 @@ class DeviceServiceTests : FunSpec({
         deviceType shouldBe IDeviceService.DeviceType.Android
     }
 })
+
+private class Mocks {
+    val applicationService =
+        run {
+            val mockApplicationService = MockHelper.applicationService()
+            every { mockApplicationService.appContext } returns ApplicationProvider.getApplicationContext()
+            mockApplicationService
+        }
+
+    val deviceService: DeviceService by lazy {
+        spyk(
+            DeviceService(
+                applicationService,
+            ),
+        )
+    }
+}
