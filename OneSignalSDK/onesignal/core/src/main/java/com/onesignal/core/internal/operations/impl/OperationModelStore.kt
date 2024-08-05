@@ -38,8 +38,7 @@ internal class OperationModelStore(prefs: IPreferencesService) : ModelStore<Oper
             return null
         }
 
-        if (!jsonObject.has(Operation::name.name)) {
-            Logging.error("jsonObject must have '${Operation::name.name}' attribute")
+        if (!isValidOperation(jsonObject)) {
             return null
         }
 
@@ -68,5 +67,35 @@ internal class OperationModelStore(prefs: IPreferencesService) : ModelStore<Oper
         operation.initializeFromJson(jsonObject)
 
         return operation
+    }
+
+    /**
+     * Checks if a JSONObject is a valid Operation. Contains a check for onesignalId.
+     * This is a rare case that a cached Operation is missing the onesignalId,
+     * which would continuously cause crashes when the Operation is processed.
+     *
+     * @param jsonObject The [JSONObject] that represents an Operation
+     */
+    private fun isValidOperation(jsonObject: JSONObject): Boolean {
+        if (!jsonObject.has(Operation::name.name)) {
+            Logging.error("jsonObject must have '${Operation::name.name}' attribute")
+            return false
+        }
+
+        val operationName = jsonObject.getString(Operation::name.name)
+
+        val excluded =
+            setOf(
+                LoginUserOperationExecutor.LOGIN_USER,
+                LoginUserFromSubscriptionOperationExecutor.LOGIN_USER_FROM_SUBSCRIPTION_USER,
+            )
+
+        // Must have onesignalId if it is not one of the excluded operations above
+        if (!jsonObject.has("onesignalId") && !excluded.contains(operationName)) {
+            Logging.error("$operationName jsonObject must have 'onesignalId' attribute")
+            return false
+        }
+
+        return true
     }
 }
