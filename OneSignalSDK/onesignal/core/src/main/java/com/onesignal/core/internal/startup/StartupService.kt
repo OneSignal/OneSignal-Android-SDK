@@ -1,18 +1,18 @@
 package com.onesignal.core.internal.startup
 
+import com.onesignal.common.services.ServiceProvider
+
 internal class StartupService(
-    private val _bootstrapServices: List<IBootstrapService>,
-    private val _startableServices: List<IStartableService>,
+    private val services: ServiceProvider,
 ) {
     fun bootstrap() {
-        // now that we have the params initialized, start everything else up
-        for (bootstrapService in _bootstrapServices)
-            bootstrapService.bootstrap()
+        services.getAllServices<IBootstrapService>().forEach { it.bootstrap() }
     }
 
-    fun start() {
-        // now that we have the params initialized, start everything else up
-        for (startableService in _startableServices)
-            startableService.start()
+    // schedule to start all startable services in a separate thread
+    fun scheduleStart() {
+        Thread {
+            services.getAllServices<IStartableService>().forEach { it.start() }
+        }.start()
     }
 }

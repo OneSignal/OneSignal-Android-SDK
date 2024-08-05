@@ -10,7 +10,7 @@ import com.onesignal.core.internal.permissions.IRequestPermissionService
 
 internal class RequestPermissionService(
     private val _application: IApplicationService,
-) : Activity(), IRequestPermissionService {
+) : IRequestPermissionService {
     var waiting = false
     var fallbackToSettings = false
     var shouldShowRequestPermissionRationaleBeforeRequest = false
