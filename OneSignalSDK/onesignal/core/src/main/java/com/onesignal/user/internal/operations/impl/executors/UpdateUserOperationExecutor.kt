@@ -136,7 +136,7 @@ internal class UpdateUserOperationExecutor(
                 )
 
                 // deltas includes property that may impact IAM fetch
-                if (deltasObject.sessionCount !== null || deltasObject.sessionTime !== null) {
+                if (deltasObject.hasAtLeastOnePropertySet) {
                     _consistencyManager.setOffset(onesignalId, OffsetKey.USER_UPDATE, offset)
                 }
 

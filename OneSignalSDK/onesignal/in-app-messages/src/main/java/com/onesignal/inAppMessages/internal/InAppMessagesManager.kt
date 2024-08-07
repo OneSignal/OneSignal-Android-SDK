@@ -5,7 +5,7 @@ import com.onesignal.common.AndroidUtils
 import com.onesignal.common.IDManager
 import com.onesignal.common.JSONUtils
 import com.onesignal.common.ConsistencyManager
-import com.onesignal.common.consistency.IamFetchReady
+import com.onesignal.common.consistency.IamFetchReadyCondition
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
@@ -153,7 +153,7 @@ internal class InAppMessagesManager(
 
             // attempt to fetch messages from the backend (if we have the pre-requisite data already)
             val onesignalId = _userManager.onesignalId
-            val updateConditionDeferred = _consistencyManager.registerCondition(IamFetchReady(onesignalId))
+            val updateConditionDeferred = _consistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
             val offset = updateConditionDeferred.await()
             fetchMessages(offset)
         }
@@ -226,7 +226,7 @@ internal class InAppMessagesManager(
 
         suspendifyOnThread {
             val onesignalId = _userManager.onesignalId
-            val iamFetchCondition = _consistencyManager.registerCondition(IamFetchReady(onesignalId))
+            val iamFetchCondition = _consistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
             val offset = iamFetchCondition.await()
             fetchMessages(offset)
         }

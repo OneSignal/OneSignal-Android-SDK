@@ -7,10 +7,10 @@ package com.onesignal.common.consistency
  * Params:
  *  id : String - the index of the offset map
  */
-class IamFetchReady(private val id: String) : ICondition {
+class IamFetchReadyCondition(private val id: String) : ICondition {
     override fun isMet(indexedOffsets: Map<String, Map<OffsetKey, Long?>>): Boolean {
         val offsetMap = indexedOffsets[id] ?: return false
-        return offsetMap[OffsetKey.USER_UPDATE] != null || offsetMap[OffsetKey.SUBSCRIPTION_UPDATE] != null
+        return offsetMap[OffsetKey.USER_UPDATE] != null && offsetMap[OffsetKey.SUBSCRIPTION_UPDATE] != null
     }
 
     override fun getNewestOffset(indexedOffsets: Map<String, Map<OffsetKey, Long?>>): Long? {
