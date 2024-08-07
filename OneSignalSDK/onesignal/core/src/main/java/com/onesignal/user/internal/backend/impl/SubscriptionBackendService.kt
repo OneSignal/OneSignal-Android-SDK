@@ -16,7 +16,7 @@ internal class SubscriptionBackendService(
         aliasLabel: String,
         aliasValue: String,
         subscription: SubscriptionObject,
-    ): String? {
+    ): Pair<String, Long?>? {
         val jsonSubscription = JSONConverter.convertToJSON(subscription)
         jsonSubscription.remove("id")
         val requestJSON = JSONObject().put("subscription", jsonSubscription)
@@ -33,14 +33,16 @@ internal class SubscriptionBackendService(
             return null
         }
 
-        return subscriptionJSON.getString("id")
+        val responseBody = JSONObject(response.payload)
+        val offset = responseBody.getLong("offset")
+        return Pair(subscriptionJSON.getString("id"), offset)
     }
 
     override suspend fun updateSubscription(
         appId: String,
         subscriptionId: String,
         subscription: SubscriptionObject,
-    ) {
+    ) : Long {
         val requestJSON =
             JSONObject()
                 .put("subscription", JSONConverter.convertToJSON(subscription))
@@ -50,6 +52,9 @@ internal class SubscriptionBackendService(
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
+
+        val responseBody = JSONObject(response.payload)
+        return responseBody.getLong("offset")
     }
 
     override suspend fun deleteSubscription(
