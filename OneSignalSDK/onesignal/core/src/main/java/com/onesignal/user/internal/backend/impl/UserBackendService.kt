@@ -52,7 +52,7 @@ internal class UserBackendService(
         properties: PropertiesObject,
         refreshDeviceMetadata: Boolean,
         propertyiesDelta: PropertiesDeltasObject,
-    ) {
+    ): Long {
         val jsonObject =
             JSONObject()
                 .put("refresh_device_metadata", refreshDeviceMetadata)
@@ -70,7 +70,11 @@ internal class UserBackendService(
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
+
+        val responseBody = JSONObject(response.payload)
+        return responseBody.getLong("offset")
     }
+
 
     override suspend fun getUser(
         appId: String,
