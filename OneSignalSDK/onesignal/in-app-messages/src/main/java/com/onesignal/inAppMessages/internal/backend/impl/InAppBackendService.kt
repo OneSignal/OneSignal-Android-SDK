@@ -22,9 +22,18 @@ internal class InAppBackendService(
     override suspend fun listInAppMessages(
         appId: String,
         subscriptionId: String,
+        offset: Long?,
     ): List<InAppMessage>? {
+        // Construct the URL with or without the Kafka offset parameter
+        val url = buildString {
+            append("apps/$appId/subscriptions/$subscriptionId/iams")
+            offset?.let {
+                append("?offset=$it")
+            }
+        }
+
         // Retrieve any in app messages that might exist
-        val response = _httpClient.get("apps/$appId/subscriptions/$subscriptionId/iams")
+        val response = _httpClient.get(url)
 
         if (response.isSuccess) {
             val jsonResponse = JSONObject(response.payload)
@@ -34,7 +43,7 @@ internal class InAppBackendService(
                 // TODO: Outstanding question on whether we still want to cache this.  Only used when
                 //       hard start of the app, but within 30 seconds of it being killed (i.e. same session startup).
                 // Cache copy for quick cold starts
-//                _prefs.savedIAMs = iamMessagesAsJSON.toString()
+//            _prefs.savedIAMs = iamMessagesAsJSON.toString()
                 return _hydrator.hydrateIAMMessages(iamMessagesAsJSON)
             }
         }

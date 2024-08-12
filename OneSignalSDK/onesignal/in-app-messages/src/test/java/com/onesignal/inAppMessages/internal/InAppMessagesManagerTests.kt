@@ -1,5 +1,6 @@
 package com.onesignal.inAppMessages.internal
 
+import com.onesignal.common.IConsistencyManager
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.inAppMessages.internal.backend.IInAppBackendService
 import com.onesignal.inAppMessages.internal.display.IInAppDisplayer
@@ -52,6 +53,7 @@ class InAppMessagesManagerTests : FunSpec({
                 mockk<IInAppLifecycleService>(),
                 MockHelper.languageContext(),
                 MockHelper.time(1000),
+                mockk<IConsistencyManager>(),
             )
 
         // When
