@@ -42,7 +42,7 @@ class SubscriptionBackendServiceTests : FunSpec({
         val response = subscriptionBackendService.createSubscription("appId", aliasLabel, aliasValue, subscription)
 
         // Then
-        response shouldBe "subscriptionId"
+        response shouldBe Pair("subscriptionId", null)
         coVerify {
             spyHttpClient.post(
                 "apps/appId/users/by/$aliasLabel/$aliasValue/subscriptions",
