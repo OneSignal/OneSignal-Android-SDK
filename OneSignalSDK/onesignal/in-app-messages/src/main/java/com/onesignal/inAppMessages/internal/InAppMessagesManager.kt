@@ -2,8 +2,10 @@ package com.onesignal.inAppMessages.internal
 
 import android.app.AlertDialog
 import com.onesignal.common.AndroidUtils
+import com.onesignal.common.IConsistencyManager
 import com.onesignal.common.IDManager
 import com.onesignal.common.JSONUtils
+import com.onesignal.common.consistency.IamFetchReadyCondition
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
@@ -66,6 +68,7 @@ internal class InAppMessagesManager(
     private val _lifecycle: IInAppLifecycleService,
     private val _languageContext: ILanguageContext,
     private val _time: ITime,
+    private val _consistencyManager: IConsistencyManager,
 ) : IInAppMessagesManager,
     IStartableService,
     ISubscriptionChangedHandler,
@@ -149,7 +152,10 @@ internal class InAppMessagesManager(
             }
 
             // attempt to fetch messages from the backend (if we have the pre-requisite data already)
-            fetchMessages()
+            val onesignalId = _userManager.onesignalId
+            val updateConditionDeferred = _consistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
+            val offset = updateConditionDeferred.await()
+            fetchMessages(offset)
         }
     }
 
@@ -182,7 +188,7 @@ internal class InAppMessagesManager(
         }
 
         suspendifyOnThread {
-            fetchMessages()
+            fetchMessages(null)
         }
     }
 
@@ -191,7 +197,7 @@ internal class InAppMessagesManager(
         tag: String,
     ) {
         suspendifyOnThread {
-            fetchMessages()
+            fetchMessages(null)
         }
     }
 
@@ -208,7 +214,7 @@ internal class InAppMessagesManager(
         }
 
         suspendifyOnThread {
-            fetchMessages()
+            fetchMessages(null)
         }
     }
 
@@ -218,7 +224,10 @@ internal class InAppMessagesManager(
         }
 
         suspendifyOnThread {
-            fetchMessages()
+            val onesignalId = _userManager.onesignalId
+            val iamFetchCondition = _consistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
+            val offset = iamFetchCondition.await()
+            fetchMessages(offset)
         }
     }
 
@@ -227,7 +236,7 @@ internal class InAppMessagesManager(
     override fun onSessionEnded(duration: Long) { }
 
     // called when a new push subscription is added, or the app id is updated, or a new session starts
-    private suspend fun fetchMessages() {
+    private suspend fun fetchMessages(offset: Long?) {
         // We only want to fetch IAMs if we know the app is in the
         // foreground, as we don't want to do this for background
         // events (such as push received), wasting resources for
@@ -252,7 +261,7 @@ internal class InAppMessagesManager(
             lastTimeFetchedIAMs = now
         }
 
-        val newMessages = _backend.listInAppMessages(appId, subscriptionId)
+        val newMessages = _backend.listInAppMessages(appId, subscriptionId, offset)
 
         if (newMessages != null) {
             this.messages = newMessages as MutableList<InAppMessage>
