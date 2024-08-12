@@ -1,6 +1,7 @@
 package com.onesignal.user.internal.operations
 
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.common.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.Operation
@@ -32,11 +33,17 @@ class SubscriptionOperationExecutorTests : FunSpec({
     val remoteOneSignalId = "remote-onesignalId"
     val localSubscriptionId = "local-subscriptionId1"
     val remoteSubscriptionId = "remote-subscriptionId1"
+    val offset: Long = 1L // read your write token
+    val mockConsistencyManager = mockk<IConsistencyManager>()
+
+    beforeTest {
+        coEvery { mockConsistencyManager.setOffset(any(), any(), any()) } just runs
+    }
 
     test("create subscription successfully creates subscription") {
         // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-        coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } returns remoteSubscriptionId
+        coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } returns Pair(remoteSubscriptionId, offset)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val subscriptionModel1 = SubscriptionModel()
@@ -54,6 +61,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 getNewRecordState(),
+                mockConsistencyManager
             )
 
         val operations =
@@ -107,6 +115,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 getNewRecordState(),
+                mockConsistencyManager
             )
 
         val operations =
@@ -161,6 +170,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 getNewRecordState(),
+                mockConsistencyManager
             )
 
         val operations =
@@ -215,6 +225,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 newRecordState,
+                mockConsistencyManager
             )
 
         val operations =
@@ -257,6 +268,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 getNewRecordState(),
+                mockConsistencyManager
             )
 
         val operations =
@@ -283,7 +295,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
     test("create subscription then update subscription successfully creates subscription") {
         // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-        coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } returns remoteSubscriptionId
+        coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } returns Pair(remoteSubscriptionId, offset)
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
         val subscriptionModel1 = SubscriptionModel()
@@ -301,6 +313,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 getNewRecordState(),
+                mockConsistencyManager
             )
 
         val operations =
@@ -349,12 +362,13 @@ class SubscriptionOperationExecutorTests : FunSpec({
     test("update subscription successfully updates subscription") {
         // Given
         val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-        coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } just runs
+        coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } returns offset
 
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
-        val subscriptionModel1 = SubscriptionModel()
-        subscriptionModel1.id = remoteSubscriptionId
-        subscriptionModel1.address = "pushToken1"
+        val subscriptionModel1 = SubscriptionModel().apply {
+            id = remoteSubscriptionId
+            address = "pushToken1"
+        }
         every { mockSubscriptionsModelStore.get(remoteSubscriptionId) } returns subscriptionModel1
 
         val mockBuildUserService = mockk<IRebuildUserService>()
@@ -368,10 +382,11 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 getNewRecordState(),
+                mockConsistencyManager
             )
 
         val operations =
-            listOf<Operation>(
+            listOf(
                 UpdateSubscriptionOperation(
                     appId,
                     remoteOneSignalId,
@@ -428,6 +443,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 getNewRecordState(),
+                mockConsistencyManager
             )
 
         val operations =
@@ -479,6 +495,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 getNewRecordState(),
+                mockConsistencyManager
             )
 
         val operations =
@@ -532,6 +549,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 newRecordState,
+                mockConsistencyManager
             )
 
         val operations =
@@ -573,6 +591,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 getNewRecordState(),
+                mockConsistencyManager
             )
 
         val operations =
@@ -606,6 +625,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 getNewRecordState(),
+                mockConsistencyManager
             )
 
         val operations =
@@ -640,6 +660,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 getNewRecordState(),
+                mockConsistencyManager
             )
 
         val operations =
@@ -674,6 +695,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 mockBuildUserService,
                 newRecordState,
+                mockConsistencyManager
             )
 
         val operations =
