@@ -1,5 +1,6 @@
 package com.onesignal.user.internal.operations
 
+import com.onesignal.common.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.Operation
@@ -25,11 +26,17 @@ class UpdateUserOperationExecutorTests : FunSpec({
     val appId = "appId"
     val localOneSignalId = "local-onesignalId"
     val remoteOneSignalId = "remote-onesignalId"
+    val offset = 1L
+    val mockConsistencyManager = mockk<IConsistencyManager>()
+
+    beforeTest {
+        coEvery { mockConsistencyManager.setOffset(any(), any(), any()) } just runs
+    }
 
     test("update user single operation is successful") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } just runs
+        coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } returns offset
 
         // Given
         val mockIdentityModelStore = MockHelper.identityModelStore()
@@ -43,6 +50,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 mockPropertiesModelStore,
                 mockBuildUserService,
                 getNewRecordState(),
+                mockConsistencyManager
             )
         val operations = listOf<Operation>(SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1"))
 
@@ -68,7 +76,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
     test("update user multiple property operations are successful") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } just runs
+        coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } returns offset
 
         // Given
         val mockIdentityModelStore = MockHelper.identityModelStore()
@@ -82,6 +90,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 mockPropertiesModelStore,
                 mockBuildUserService,
                 getNewRecordState(),
+                mockConsistencyManager
             )
         val operations =
             listOf<Operation>(
@@ -129,7 +138,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
     test("update user single property delta operations is successful") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } just runs
+        coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } returns offset
 
         // Given
         val mockIdentityModelStore = MockHelper.identityModelStore()
@@ -143,6 +152,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 mockPropertiesModelStore,
                 mockBuildUserService,
                 getNewRecordState(),
+                mockConsistencyManager
             )
         val operations =
             listOf<Operation>(
@@ -173,7 +183,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
     test("update user multiple property delta operations are successful") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } just runs
+        coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } returns offset
 
         // Given
         val mockIdentityModelStore = MockHelper.identityModelStore()
@@ -187,6 +197,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 mockPropertiesModelStore,
                 mockBuildUserService,
                 getNewRecordState(),
+                mockConsistencyManager
             )
         val operations =
             listOf<Operation>(
@@ -237,7 +248,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
     test("update user with both property and property delta operations are successful") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } just runs
+        coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } returns offset
 
         // Given
         val mockIdentityModelStore = MockHelper.identityModelStore()
@@ -251,6 +262,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 mockPropertiesModelStore,
                 mockBuildUserService,
                 getNewRecordState(),
+                mockConsistencyManager
             )
         val operations =
             listOf<Operation>(
@@ -298,6 +310,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 mockPropertiesModelStore,
                 mockBuildUserService,
                 getNewRecordState(),
+                mockConsistencyManager
             )
         val operations = listOf(SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1"))
 
@@ -329,6 +342,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
                 mockPropertiesModelStore,
                 mockBuildUserService,
                 newRecordState,
+                mockConsistencyManager
             )
         val operations = listOf(SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1"))
 

@@ -1,6 +1,8 @@
 package com.onesignal.user.internal.operations.impl.executors
 
+import com.onesignal.common.IConsistencyManager
 import com.onesignal.common.NetworkUtils
+import com.onesignal.common.consistency.OffsetKey
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.operations.ExecutionResponse
@@ -31,10 +33,12 @@ internal class UpdateUserOperationExecutor(
     private val _propertiesModelStore: PropertiesModelStore,
     private val _buildUserService: IRebuildUserService,
     private val _newRecordState: NewRecordsState,
+    private val _consistencyManager: IConsistencyManager
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(SET_TAG, DELETE_TAG, SET_PROPERTY, TRACK_SESSION_START, TRACK_SESSION_END, TRACK_PURCHASE)
 
+    // by this point, operations have already been deemed executable since we don't check for that here
     override suspend fun execute(ops: List<Operation>): ExecutionResponse {
         Logging.log(LogLevel.DEBUG, "UpdateUserOperationExecutor(operation: $ops)")
 
@@ -122,7 +126,7 @@ internal class UpdateUserOperationExecutor(
 
         if (appId != null && onesignalId != null) {
             try {
-                _userBackend.updateUser(
+                val offset = _userBackend.updateUser(
                     appId,
                     IdentityConstants.ONESIGNAL_ID,
                     onesignalId,
@@ -130,6 +134,11 @@ internal class UpdateUserOperationExecutor(
                     refreshDeviceMetadata,
                     deltasObject,
                 )
+
+                // deltas includes property that may impact IAM fetch
+                if (deltasObject.hasAtLeastOnePropertySet) {
+                    _consistencyManager.setOffset(onesignalId, OffsetKey.USER_UPDATE, offset)
+                }
 
                 if (_identityModelStore.model.onesignalId == onesignalId) {
                     // go through and make sure any properties are in the correct model state
