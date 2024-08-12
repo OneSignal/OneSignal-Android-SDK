@@ -1,6 +1,7 @@
 package com.onesignal.core.internal.startup
 
 import com.onesignal.common.services.ServiceProvider
+import com.onesignal.debug.internal.logging.Logging
 
 internal class StartupService(
     private val services: ServiceProvider,
@@ -13,6 +14,7 @@ internal class StartupService(
     fun scheduleStart() {
         Thread {
             services.getAllServices<IStartableService>().forEach { it.start() }
+            Logging.debug("Crash data: scheduleStart finished")
         }.start()
     }
 }

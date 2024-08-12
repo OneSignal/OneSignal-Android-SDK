@@ -816,7 +816,7 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
     }
 
     private void refreshSubscriptionState() {
-        boolean isPermissionEnabled = OneSignal.getNotifications().getPermission();
+        boolean isPermissionEnabled = false;
         IPushSubscription pushSubscription = OneSignal.getUser().getPushSubscription();
 
         pushSubscriptionIdTextView.setText(pushSubscription.getId());

@@ -21,7 +21,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.main_activity_layout);
 
         viewModel = new MainActivityViewModel();
-        OneSignal.getNotifications().addPermissionObserver(viewModel);
+        //OneSignal.getNotifications().addPermissionObserver(viewModel);
 // TODO("STILL SUPPORT?")
 //        OneSignal.addSubscriptionObserver(viewModel);
 //        OneSignal.addEmailSubscriptionObserver(viewModel);

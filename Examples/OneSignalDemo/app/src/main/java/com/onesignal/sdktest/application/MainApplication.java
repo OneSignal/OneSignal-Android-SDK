@@ -65,12 +65,12 @@ public class MainApplication extends MultiDexApplication {
         // This will reproduce result similar to Kotlin CouroutineScope.launch{}, which may potentially crash the app
         ExecutorService executor = Executors.newSingleThreadExecutor();
         @SuppressLint({"NewApi", "LocalSuppress"}) CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-            OneSignal.getNotifications().requestPermission(true, Continue.none());
+            //OneSignal.getNotifications().requestPermission(true, Continue.none());
         }, executor);
         future.join(); // Waits for the task to complete
         executor.shutdown();
 
-        OneSignal.getInAppMessages().addLifecycleListener(new IInAppMessageLifecycleListener() {
+        /*OneSignal.getInAppMessages().addLifecycleListener(new IInAppMessageLifecycleListener() {
             @Override
             public void onWillDisplay(@NonNull IInAppMessageWillDisplayEvent event) {
                 Log.v(Tag.LOG_TAG, "onWillDisplayInAppMessage");
@@ -130,7 +130,7 @@ public class MainApplication extends MultiDexApplication {
                 Thread t = new Thread(r);
                 t.start();
             }
-        });
+        });*/
 
         OneSignal.getUser().addObserver(new IUserStateObserver() {
             @Override
@@ -140,8 +140,9 @@ public class MainApplication extends MultiDexApplication {
             }
         });
 
+        /*
         OneSignal.getInAppMessages().setPaused(true);
-        OneSignal.getLocation().setShared(false);
+        OneSignal.getLocation().setShared(false);*/
 
         Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT);
     }
