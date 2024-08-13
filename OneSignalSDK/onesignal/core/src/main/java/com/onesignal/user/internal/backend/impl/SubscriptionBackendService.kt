@@ -1,5 +1,6 @@
 package com.onesignal.user.internal.backend.impl
 
+import android.util.Base64
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.safeJSONObject
 import com.onesignal.common.toMap
@@ -16,12 +17,23 @@ internal class SubscriptionBackendService(
         aliasLabel: String,
         aliasValue: String,
         subscription: SubscriptionObject,
+        jwt: String?,
     ): Pair<String, String?>? {
         val jsonSubscription = JSONConverter.convertToJSON(subscription)
         jsonSubscription.remove("id")
         val requestJSON = JSONObject().put("subscription", jsonSubscription)
 
-        val response = _httpClient.post("apps/$appId/users/by/$aliasLabel/$aliasValue/subscriptions", requestJSON)
+        val base64Token =
+            Base64.encodeToString(
+                subscription.token?.toByteArray(charset("UTF-8")),
+                Base64.NO_WRAP,
+            )
+        val response =
+            _httpClient.post(
+                "apps/$appId/users/by/$aliasLabel/$aliasValue/subscriptions",
+                requestJSON,
+                OptionalHeaders(jwt = jwt, deviceAuthPushToken = base64Token),
+            )
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
@@ -50,7 +62,17 @@ internal class SubscriptionBackendService(
             JSONObject()
                 .put("subscription", JSONConverter.convertToJSON(subscription))
 
-        val response = _httpClient.patch("apps/$appId/subscriptions/$subscriptionId", requestJSON)
+        val base64Token =
+            Base64.encodeToString(
+                subscription.token?.toByteArray(charset("UTF-8")),
+                Base64.NO_WRAP,
+            )
+        val response =
+            _httpClient.patch(
+                "apps/$appId/subscriptions/$subscriptionId",
+                requestJSON,
+                OptionalHeaders(deviceAuthPushToken = base64Token),
+            )
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
@@ -67,8 +89,9 @@ internal class SubscriptionBackendService(
     override suspend fun deleteSubscription(
         appId: String,
         subscriptionId: String,
+        jwt: String?,
     ) {
-        val response = _httpClient.delete("apps/$appId/subscriptions/$subscriptionId")
+        val response = _httpClient.delete("apps/$appId/subscriptions/$subscriptionId", jwt)
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
@@ -80,12 +103,13 @@ internal class SubscriptionBackendService(
         subscriptionId: String,
         aliasLabel: String,
         aliasValue: String,
+        jwt: String?,
     ) {
         val requestJSON =
             JSONObject()
                 .put("identity", JSONObject().put(aliasLabel, aliasValue))
 
-        val response = _httpClient.patch("apps/$appId/subscriptions/$subscriptionId/owner", requestJSON)
+        val response = _httpClient.patch("apps/$appId/subscriptions/$subscriptionId/owner", requestJSON, jwt)
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
@@ -95,8 +119,9 @@ internal class SubscriptionBackendService(
     override suspend fun getIdentityFromSubscription(
         appId: String,
         subscriptionId: String,
+        jwt: String?,
     ): Map<String, String> {
-        val response = _httpClient.get("apps/$appId/subscriptions/$subscriptionId/user/identity")
+        val response = _httpClient.get("apps/$appId/subscriptions/$subscriptionId/user/identity", jwt)
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)

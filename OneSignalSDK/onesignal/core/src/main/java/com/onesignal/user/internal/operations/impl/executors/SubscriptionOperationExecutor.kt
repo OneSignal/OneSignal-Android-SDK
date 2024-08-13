@@ -158,7 +158,11 @@ internal class SubscriptionOperationExecutor(
                     if (operations == null) {
                         return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
                     } else {
-                        return ExecutionResponse(ExecutionResult.FAIL_RETRY, operations = operations, retryAfterSeconds = ex.retryAfterSeconds)
+                        return ExecutionResponse(
+                            ExecutionResult.FAIL_RETRY,
+                            operations = operations,
+                            retryAfterSeconds = ex.retryAfterSeconds,
+                        )
                     }
                 }
             }
@@ -188,7 +192,12 @@ internal class SubscriptionOperationExecutor(
                     AndroidUtils.getAppVersion(_applicationService.appContext),
                 )
 
-            val rywToken = _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription)
+            val rywToken =
+                _subscriptionBackend.updateSubscription(
+                    lastOperation.appId,
+                    lastOperation.subscriptionId,
+                    subscription,
+                )
 
             if (rywToken != null) {
                 _consistencyManager.setRywToken(startingOperation.onesignalId, IamFetchRywTokenKey.SUBSCRIPTION, rywToken)
