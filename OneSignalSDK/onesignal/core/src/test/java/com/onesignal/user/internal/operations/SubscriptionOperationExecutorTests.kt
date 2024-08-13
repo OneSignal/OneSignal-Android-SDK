@@ -52,6 +52,7 @@ class SubscriptionOperationExecutorTests :
                 Pair(remoteSubscriptionId, rywData)
 
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+            val mockIdentityModelStore = MockHelper.identityModelStore()
             val subscriptionModel1 = SubscriptionModel()
             subscriptionModel1.id = localSubscriptionId
             every { mockSubscriptionsModelStore.get(localSubscriptionId) } returns subscriptionModel1
@@ -63,6 +64,7 @@ class SubscriptionOperationExecutorTests :
                     mockSubscriptionBackendService,
                     MockHelper.deviceService(),
                     AndroidMockHelper.applicationService(),
+                    mockIdentityModelStore,
                     mockSubscriptionsModelStore,
                     MockHelper.configModelStore(),
                     mockBuildUserService,
@@ -110,6 +112,7 @@ class SubscriptionOperationExecutorTests :
             coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } throws
                 BackendException(408, retryAfterSeconds = 10)
 
+            val mockIdentityModelStore = MockHelper.identityModelStore()
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
             val mockBuildUserService = mockk<IRebuildUserService>()
 
@@ -118,6 +121,7 @@ class SubscriptionOperationExecutorTests :
                     mockSubscriptionBackendService,
                     MockHelper.deviceService(),
                     AndroidMockHelper.applicationService(),
+                    mockIdentityModelStore,
                     mockSubscriptionsModelStore,
                     MockHelper.configModelStore(),
                     mockBuildUserService,
@@ -173,6 +177,7 @@ class SubscriptionOperationExecutorTests :
                     mockSubscriptionBackendService,
                     MockHelper.deviceService(),
                     AndroidMockHelper.applicationService(),
+                    MockHelper.identityModelStore(),
                     mockSubscriptionsModelStore,
                     MockHelper.configModelStore(),
                     mockBuildUserService,
@@ -220,14 +225,20 @@ class SubscriptionOperationExecutorTests :
 
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
             val mockBuildUserService = mockk<IRebuildUserService>()
+            val mockIdentityModelStore = MockHelper.identityModelStore()
             val mockConfigModelStore = MockHelper.configModelStore().also { it.model.opRepoPostCreateRetryUpTo = 1_000 }
             val newRecordState = getNewRecordState(mockConfigModelStore).also { it.add(remoteOneSignalId) }
+            val subscriptionModel1 = SubscriptionModel()
+            subscriptionModel1.id = remoteSubscriptionId
+            subscriptionModel1.address = "pushToken1"
+            every { mockSubscriptionsModelStore.get(remoteSubscriptionId) } returns subscriptionModel1
 
             val subscriptionOperationExecutor =
                 SubscriptionOperationExecutor(
                     mockSubscriptionBackendService,
                     MockHelper.deviceService(),
                     AndroidMockHelper.applicationService(),
+                    mockIdentityModelStore,
                     mockSubscriptionsModelStore,
                     MockHelper.configModelStore(),
                     mockBuildUserService,
@@ -258,7 +269,7 @@ class SubscriptionOperationExecutorTests :
         test("create subscription then delete subscription is a successful no-op") {
             // Given
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-
+            val mockIdentityModelStore = MockHelper.identityModelStore()
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
             val subscriptionModel1 = SubscriptionModel()
             subscriptionModel1.id = localSubscriptionId
@@ -271,6 +282,7 @@ class SubscriptionOperationExecutorTests :
                     mockSubscriptionBackendService,
                     MockHelper.deviceService(),
                     AndroidMockHelper.applicationService(),
+                    mockIdentityModelStore,
                     mockSubscriptionsModelStore,
                     MockHelper.configModelStore(),
                     mockBuildUserService,
@@ -301,6 +313,7 @@ class SubscriptionOperationExecutorTests :
 
         test("create subscription then update subscription successfully creates subscription") {
             // Given
+            val mockIdentityModelStore = MockHelper.identityModelStore()
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
             coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } returns
                 Pair(remoteSubscriptionId, rywData)
@@ -317,6 +330,7 @@ class SubscriptionOperationExecutorTests :
                     mockSubscriptionBackendService,
                     MockHelper.deviceService(),
                     AndroidMockHelper.applicationService(),
+                    mockIdentityModelStore,
                     mockSubscriptionsModelStore,
                     MockHelper.configModelStore(),
                     mockBuildUserService,
@@ -369,6 +383,7 @@ class SubscriptionOperationExecutorTests :
 
         test("update subscription successfully updates subscription") {
             // Given
+            val mockIdentityModelStore = MockHelper.identityModelStore()
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
             coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } returns rywData
 
@@ -387,6 +402,7 @@ class SubscriptionOperationExecutorTests :
                     mockSubscriptionBackendService,
                     MockHelper.deviceService(),
                     AndroidMockHelper.applicationService(),
+                    mockIdentityModelStore,
                     mockSubscriptionsModelStore,
                     MockHelper.configModelStore(),
                     mockBuildUserService,
@@ -437,6 +453,7 @@ class SubscriptionOperationExecutorTests :
 
         test("update subscription fails with retry when there is a network condition") {
             // Given
+            val mockIdentityModelStore = MockHelper.identityModelStore()
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
             coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(408)
 
@@ -448,6 +465,7 @@ class SubscriptionOperationExecutorTests :
                     mockSubscriptionBackendService,
                     MockHelper.deviceService(),
                     AndroidMockHelper.applicationService(),
+                    mockIdentityModelStore,
                     mockSubscriptionsModelStore,
                     MockHelper.configModelStore(),
                     mockBuildUserService,
@@ -492,6 +510,7 @@ class SubscriptionOperationExecutorTests :
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
             coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(404)
 
+            val mockIdentityModelStore = MockHelper.identityModelStore()
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
             val mockBuildUserService = mockk<IRebuildUserService>()
 
@@ -500,6 +519,7 @@ class SubscriptionOperationExecutorTests :
                     mockSubscriptionBackendService,
                     MockHelper.deviceService(),
                     AndroidMockHelper.applicationService(),
+                    mockIdentityModelStore,
                     mockSubscriptionsModelStore,
                     MockHelper.configModelStore(),
                     mockBuildUserService,
@@ -544,6 +564,7 @@ class SubscriptionOperationExecutorTests :
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
             coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(404)
 
+            val mockIdentityModelStore = MockHelper.identityModelStore()
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
             val mockBuildUserService = mockk<IRebuildUserService>()
             val mockConfigModelStore = MockHelper.configModelStore().also { it.model.opRepoPostCreateRetryUpTo = 1_000 }
@@ -554,6 +575,7 @@ class SubscriptionOperationExecutorTests :
                     mockSubscriptionBackendService,
                     MockHelper.deviceService(),
                     AndroidMockHelper.applicationService(),
+                    mockIdentityModelStore,
                     mockSubscriptionsModelStore,
                     MockHelper.configModelStore(),
                     mockBuildUserService,
@@ -586,6 +608,7 @@ class SubscriptionOperationExecutorTests :
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
             coEvery { mockSubscriptionBackendService.deleteSubscription(any(), any()) } just runs
 
+            val mockIdentityModelStore = MockHelper.identityModelStore()
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
             every { mockSubscriptionsModelStore.remove(any(), any()) } just runs
 
@@ -596,6 +619,7 @@ class SubscriptionOperationExecutorTests :
                     mockSubscriptionBackendService,
                     MockHelper.deviceService(),
                     AndroidMockHelper.applicationService(),
+                    mockIdentityModelStore,
                     mockSubscriptionsModelStore,
                     MockHelper.configModelStore(),
                     mockBuildUserService,
@@ -622,6 +646,7 @@ class SubscriptionOperationExecutorTests :
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
             coEvery { mockSubscriptionBackendService.deleteSubscription(any(), any()) } throws BackendException(408)
 
+            val mockIdentityModelStore = MockHelper.identityModelStore()
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
             val mockBuildUserService = mockk<IRebuildUserService>()
 
@@ -630,6 +655,7 @@ class SubscriptionOperationExecutorTests :
                     mockSubscriptionBackendService,
                     MockHelper.deviceService(),
                     AndroidMockHelper.applicationService(),
+                    mockIdentityModelStore,
                     mockSubscriptionsModelStore,
                     MockHelper.configModelStore(),
                     mockBuildUserService,
@@ -657,6 +683,7 @@ class SubscriptionOperationExecutorTests :
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
             coEvery { mockSubscriptionBackendService.deleteSubscription(any(), any()) } throws BackendException(404)
 
+            val mockIdentityModelStore = MockHelper.identityModelStore()
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
             val mockBuildUserService = mockk<IRebuildUserService>()
 
@@ -665,6 +692,7 @@ class SubscriptionOperationExecutorTests :
                     mockSubscriptionBackendService,
                     MockHelper.deviceService(),
                     AndroidMockHelper.applicationService(),
+                    mockIdentityModelStore,
                     mockSubscriptionsModelStore,
                     MockHelper.configModelStore(),
                     mockBuildUserService,
@@ -700,6 +728,7 @@ class SubscriptionOperationExecutorTests :
                     mockSubscriptionBackendService,
                     MockHelper.deviceService(),
                     AndroidMockHelper.applicationService(),
+                    MockHelper.identityModelStore(),
                     mockSubscriptionsModelStore,
                     MockHelper.configModelStore(),
                     mockBuildUserService,
@@ -741,6 +770,7 @@ class SubscriptionOperationExecutorTests :
                     mockSubscriptionBackendService,
                     MockHelper.deviceService(),
                     AndroidMockHelper.applicationService(),
+                    MockHelper.identityModelStore(),
                     mockSubscriptionsModelStore,
                     MockHelper.configModelStore(),
                     mockBuildUserService,
