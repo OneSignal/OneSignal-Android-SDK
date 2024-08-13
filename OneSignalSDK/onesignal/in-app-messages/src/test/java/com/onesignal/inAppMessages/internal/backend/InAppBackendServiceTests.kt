@@ -40,7 +40,14 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", RywData("123", 500L), mockSessionDurationProvider)
+            val response =
+                inAppBackendService.listInAppMessages(
+                    "appId",
+                    "subscriptionId",
+                    rywData = RywData("123", 500L),
+                    mockSessionDurationProvider,
+                    alias = Pair<String, String>("onesignal_id", "onesignal_id"),
+                )
 
             // Then
             response shouldNotBe null
@@ -63,7 +70,14 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", RywData("123", 500L), mockSessionDurationProvider)
+            val response =
+                inAppBackendService.listInAppMessages(
+                    "appId",
+                    "subscriptionId",
+                    rywData = RywData("123", 0),
+                    mockSessionDurationProvider,
+                    alias = Pair<String, String>("onesignal_id", "onesignal_id"),
+                )
 
             // Then
             response shouldNotBe null
@@ -96,7 +110,14 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", RywData("123", 500L), mockSessionDurationProvider)
+            val response =
+                inAppBackendService.listInAppMessages(
+                    "appId",
+                    "subscriptionId",
+                    rywData = RywData("123", 0),
+                    mockSessionDurationProvider,
+                    alias = Pair<String, String>("onesignal_id", "onesignal_id"),
+                )
 
             // Then
             response shouldBe null
@@ -125,7 +146,14 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", RywData("1234", 500L), mockSessionDurationProvider)
+            val response =
+                inAppBackendService.listInAppMessages(
+                    "appId",
+                    "subscriptionId",
+                    rywData = RywData("1234", 0),
+                    mockSessionDurationProvider,
+                    alias = Pair<String, String>("onesignal_id", "onesignal_id"),
+                )
 
             // Then
             response shouldNotBe null
