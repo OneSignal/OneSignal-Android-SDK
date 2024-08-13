@@ -39,7 +39,14 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", "123", mockSessionDurationProvider)
+            val response =
+                inAppBackendService.listInAppMessages(
+                    "appId",
+                    "subscriptionId",
+                    "123",
+                    mockSessionDurationProvider,
+                    alias = Pair<String, String>("onesignal_id", "onesignal_id"),
+                )
 
             // Then
             response shouldNotBe null
@@ -62,7 +69,14 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", "123", mockSessionDurationProvider)
+            val response =
+                inAppBackendService.listInAppMessages(
+                    "appId",
+                    "subscriptionId",
+                    "123",
+                    mockSessionDurationProvider,
+                    alias = Pair<String, String>("onesignal_id", "onesignal_id"),
+                )
 
             // Then
             response shouldNotBe null
@@ -95,7 +109,14 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", "123", mockSessionDurationProvider)
+            val response =
+                inAppBackendService.listInAppMessages(
+                    "appId",
+                    "subscriptionId",
+                    "123",
+                    mockSessionDurationProvider,
+                    alias = Pair<String, String>("onesignal_id", "onesignal_id"),
+                )
 
             // Then
             response shouldBe null
@@ -124,7 +145,14 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", "1234", mockSessionDurationProvider)
+            val response =
+                inAppBackendService.listInAppMessages(
+                    "appId",
+                    "subscriptionId",
+                    "1234",
+                    mockSessionDurationProvider,
+                    alias = Pair<String, String>("onesignal_id", "onesignal_id"),
+                )
 
             // Then
             response shouldNotBe null
