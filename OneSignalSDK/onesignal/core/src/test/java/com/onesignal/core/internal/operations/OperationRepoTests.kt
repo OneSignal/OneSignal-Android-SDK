@@ -39,6 +39,12 @@ import java.util.UUID
 private class Mocks {
     val configModelStore = MockHelper.configModelStore()
 
+    val identityModelStore =
+        MockHelper.identityModelStore {
+            it.jwtToken = ""
+            it.externalId = "externalId1"
+        }
+
     val operationModelStore: OperationModelStore =
         run {
             val operationStoreList = mutableListOf<Operation>()
@@ -68,6 +74,7 @@ private class Mocks {
                 listOf(executor),
                 operationModelStore,
                 configModelStore,
+                identityModelStore,
                 Time(),
                 getNewRecordState(configModelStore),
             ),
@@ -774,6 +781,48 @@ class OperationRepoTests : FunSpec({
         response1 shouldBe null
         response2 shouldBe true
         opRepo.forceExecuteOperations()
+    }
+
+    test("operations that need to be identity verified cannot execute until JWT is provided") {
+        // Given
+        val mocks = Mocks()
+        val waiter = Waiter()
+
+        every { mocks.configModelStore.model.useIdentityVerification } returns true // set identity verification on
+        every { mocks.identityModelStore.model.jwtToken } returns null // jwt is initially unset
+        every { mocks.operationModelStore.remove(any()) } answers {} andThenAnswer { waiter.wake() }
+
+        val operation1 = mockOperation("operationId1")
+        val operation2 = mockOperation("operationId2")
+
+        operation1.setStringProperty("externalId", "externalId1")
+        operation2.setStringProperty("externalId", "externalId1")
+
+        // When
+        mocks.operationRepo.enqueue(operation1)
+        mocks.operationRepo.enqueue(operation2)
+        mocks.operationRepo.start()
+
+        waiter.waitForWake()
+
+        // Then
+        coVerifyOrder {
+            mocks.operationModelStore.add(operation1)
+            mocks.operationModelStore.add(operation2)
+        }
+
+        //
+        coVerify(exactly = 0) {
+            mocks.executor.execute(
+                withArg {
+                    it.count() shouldBe 2
+                    it[0] shouldBe operation1
+                    it[1] shouldBe operation2
+                },
+            )
+            mocks.operationModelStore.remove("operationId1")
+            mocks.operationModelStore.remove("operationId2")
+        }
     }
 }) {
     companion object {
