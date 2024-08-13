@@ -25,6 +25,7 @@ import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.builduser.IRebuildUserService
+import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
 import com.onesignal.user.internal.operations.TransferSubscriptionOperation
@@ -38,6 +39,7 @@ internal class SubscriptionOperationExecutor(
     private val _subscriptionBackend: ISubscriptionBackendService,
     private val _deviceService: IDeviceService,
     private val _applicationService: IApplicationService,
+    private val _identityModelStore: IdentityModelStore,
     private val _subscriptionModelStore: SubscriptionModelStore,
     private val _configModelStore: ConfigModelStore,
     private val _buildUserService: IRebuildUserService,
@@ -105,12 +107,14 @@ internal class SubscriptionOperationExecutor(
                     AndroidUtils.getAppVersion(_applicationService.appContext),
                 )
 
+            val identityAlias = _identityModelStore.getIdentityAlias()
             val result =
                 _subscriptionBackend.createSubscription(
                     createOperation.appId,
-                    IdentityConstants.ONESIGNAL_ID,
-                    createOperation.onesignalId,
+                    identityAlias.first,
+                    identityAlias.second,
                     subscription,
+                    _identityModelStore.model.jwtToken,
                 ) ?: return ExecutionResponse(ExecutionResult.SUCCESS)
 
             val backendSubscriptionId = result.first
@@ -148,8 +152,10 @@ internal class SubscriptionOperationExecutor(
                 NetworkUtils.ResponseStatusType.INVALID,
                 ->
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)
-                NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
+                    _identityModelStore.invalidateJwt()
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
+                }
                 NetworkUtils.ResponseStatusType.MISSING -> {
                     if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(createOperation.onesignalId)) {
                         return ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
@@ -252,6 +258,7 @@ internal class SubscriptionOperationExecutor(
                 startingOperation.subscriptionId,
                 IdentityConstants.ONESIGNAL_ID,
                 startingOperation.onesignalId,
+                _identityModelStore.model.jwtToken,
             )
         } catch (ex: BackendException) {
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
@@ -283,7 +290,7 @@ internal class SubscriptionOperationExecutor(
 
     private suspend fun deleteSubscription(op: DeleteSubscriptionOperation): ExecutionResponse {
         try {
-            _subscriptionBackend.deleteSubscription(op.appId, op.subscriptionId)
+            _subscriptionBackend.deleteSubscription(op.appId, op.subscriptionId, _identityModelStore.model.jwtToken)
 
             // remove the subscription model as a HYDRATE in case for some reason it still exists.
             _subscriptionModelStore.remove(op.subscriptionId, ModelChangeTags.HYDRATE)
