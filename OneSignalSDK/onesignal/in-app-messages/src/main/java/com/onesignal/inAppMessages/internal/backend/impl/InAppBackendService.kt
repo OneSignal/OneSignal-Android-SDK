@@ -10,6 +10,7 @@ import com.onesignal.inAppMessages.internal.InAppMessageContent
 import com.onesignal.inAppMessages.internal.backend.GetIAMDataResponse
 import com.onesignal.inAppMessages.internal.backend.IInAppBackendService
 import com.onesignal.inAppMessages.internal.hydrators.InAppHydrator
+import kotlinx.coroutines.delay
 import org.json.JSONObject
 
 internal class InAppBackendService(
@@ -24,31 +25,13 @@ internal class InAppBackendService(
         subscriptionId: String,
         offset: Long?,
     ): List<InAppMessage>? {
-        // Construct the URL with or without the Kafka offset parameter
-        val url = buildString {
-            append("apps/$appId/subscriptions/$subscriptionId/iams")
-            offset?.let {
-                append("?offset=$it")
-            }
+        val baseUrl = "apps/$appId/subscriptions/$subscriptionId/iams"
+
+        return if (offset != null) {
+            attemptFetchWithRetries(baseUrl, offset)
+        } else {
+            fetchInAppMessages(baseUrl)
         }
-
-        // Retrieve any in app messages that might exist
-        val response = _httpClient.get(url)
-
-        if (response.isSuccess) {
-            val jsonResponse = JSONObject(response.payload)
-
-            if (jsonResponse.has("in_app_messages")) {
-                val iamMessagesAsJSON = jsonResponse.getJSONArray("in_app_messages")
-                // TODO: Outstanding question on whether we still want to cache this.  Only used when
-                //       hard start of the app, but within 30 seconds of it being killed (i.e. same session startup).
-                // Cache copy for quick cold starts
-//            _prefs.savedIAMs = iamMessagesAsJSON.toString()
-                return _hydrator.hydrateIAMMessages(iamMessagesAsJSON)
-            }
-        }
-
-        return null
     }
 
     override suspend fun getIAMData(
@@ -217,5 +200,60 @@ internal class InAppBackendService(
         response: String?,
     ) {
         Logging.error("Encountered a $statusCode error while attempting in-app message $requestType request: $response")
+    }
+
+    private suspend fun attemptFetchWithRetries(baseUrl: String, offset: Long): List<InAppMessage>? {
+        var attempts = 1
+
+        while (true) {
+            val urlWithOffset = "$baseUrl?offset=$offset"
+            val response = _httpClient.get(urlWithOffset)
+
+            if (response.isSuccess) {
+                val jsonResponse = response.payload?.let { JSONObject(it) }
+                return jsonResponse?.let { hydrateInAppMessages(it) }
+            } else if (response.statusCode == 429) { // 429 Too Many Requests
+                val retryLimit = response.retryLimit ?: 3
+                val retryAfter = response.retryAfterSeconds ?: 1
+
+                if (attempts >= retryLimit) {
+                    break
+                }
+
+                delay(retryAfter * 1000L) // Convert seconds to milliseconds
+            } else {
+                return null
+            }
+
+            attempts++
+        }
+
+        // If all retries fail, make a final attempt without the offset. This will tell the server,
+        // we give up, just give me the IAMs without first ensuring data consistency
+        return fetchInAppMessages(baseUrl)
+    }
+
+    private suspend fun fetchInAppMessages(url: String): List<InAppMessage>? {
+        val response = _httpClient.get(url)
+
+        if (response.isSuccess) {
+            val jsonResponse = response.payload?.let { JSONObject(it) }
+            return jsonResponse?.let { hydrateInAppMessages(it) }
+        } else {
+            return null
+        }
+    }
+
+    private fun hydrateInAppMessages(jsonResponse: JSONObject): List<InAppMessage>? {
+        return if (jsonResponse.has("in_app_messages")) {
+            val iamMessagesAsJSON = jsonResponse.getJSONArray("in_app_messages")
+            // TODO: Outstanding question on whether we still want to cache this.  Only used when
+            //       hard start of the app, but within 30 seconds of it being killed (i.e. same session startup).
+            // Cache copy for quick cold starts
+            // _prefs.savedIAMs = iamMessagesAsJSON.toString()
+            _hydrator.hydrateIAMMessages(iamMessagesAsJSON)
+        } else {
+            null
+        }
     }
 }
