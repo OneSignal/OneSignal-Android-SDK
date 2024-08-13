@@ -14,6 +14,7 @@ import com.onesignal.session.internal.influence.IInfluenceManager
 import com.onesignal.session.internal.outcomes.IOutcomeEventsController
 import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.IUserManager
+import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -41,6 +42,7 @@ class InAppMessagesManagerTests : FunSpec({
                 mockk<IInfluenceManager>(),
                 mockk<ConfigModelStore>(),
                 mockk<IUserManager>(),
+                mockk<IdentityModelStore>(),
                 mockk<ISubscriptionManager>(),
                 mockk<IOutcomeEventsController>(),
                 mockk<InAppStateService>(),
