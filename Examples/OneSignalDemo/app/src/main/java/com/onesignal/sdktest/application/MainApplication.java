@@ -6,9 +6,10 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.multidex.MultiDexApplication;
-
 import com.onesignal.Continue;
+import com.onesignal.IUserJwtInvalidatedListener;
 import com.onesignal.OneSignal;
+import com.onesignal.UserJwtInvalidatedEvent;
 import com.onesignal.inAppMessages.IInAppMessageClickListener;
 import com.onesignal.inAppMessages.IInAppMessageClickEvent;
 import com.onesignal.inAppMessages.IInAppMessageDidDismissEvent;
@@ -137,6 +138,16 @@ public class MainApplication extends MultiDexApplication {
             public void onUserStateChange(@NonNull UserChangedState state) {
                 UserState currentUserState = state.getCurrent();
                 Log.v(Tag.LOG_TAG, "onUserStateChange fired " + currentUserState.toJSONObject());
+            }
+        });
+
+        OneSignal.addUserJwtInvalidatedListner(new IUserJwtInvalidatedListener() {
+            @Override
+            public void onUserJwtInvalidated(@NonNull UserJwtInvalidatedEvent event) {
+                // !!! For manual testing only
+                String jwt = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIxNjg4ZDhmMi1kYTdmLTQ4MTUtOGVlMy05ZDEzNzg4NDgyYzgiLCJpYXQiOjE3MTgzMDk5NzIsImlkZW50aXR5Ijp7ImV4dGVybmFsX2lkIjoiYWxleC0wNjE0Iiwib25lc2lnbmFsX2lkIjoiYTViYjc4NDYtYzExNC00YzdkLTkzMWYtNGQ0NjhiMGE5OWJhIn0sInN1YnNjcmlwdGlvbnMiOlt7InR5cGUiOiJFbWFpbCIsInRva2VuIjoidGVzdEBkb21haW4uY29tIn0seyJpZCI6ImE2YzQxNmY3LTMxMGUtNDgzNi05Yjc4LWZiZmQ5NTgyNWNjNCJ9XX0.HsjsA2qNPwd9qov_8Px01km-dzRug-YKNNG85cMrGYI9Pdb2uoPQSdAN3Uqu7_o4pL8FRxXliYJrC52-9wH3FQ";
+                OneSignal.updateUserJwt(event.getExternalId(), jwt);
+                Log.v(Tag.LOG_TAG, "onUserJwtInvalidated fired with ID:" + event.getExternalId());
             }
         });
 
