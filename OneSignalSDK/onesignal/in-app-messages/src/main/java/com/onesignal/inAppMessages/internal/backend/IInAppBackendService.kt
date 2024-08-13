@@ -16,6 +16,8 @@ internal interface IInAppBackendService {
      * @param subscriptionId The specific subscription within the [appId] the IAM will be delivered to.
      * @param rywToken Used for read your write consistency
      * @param sessionDurationProvider Lambda to calculate the session duration at the time of the request
+     * @param jwt The JWT token for the current logged in user. Not used if identity verification is off.
+     * @param externalId the external ID of current user. Not used if identity verification is off.
      *
      * @return The list of IAMs associated to the subscription, or null if the IAMs could not be retrieved.
      */
@@ -24,6 +26,8 @@ internal interface IInAppBackendService {
         subscriptionId: String,
         rywData: RywData,
         sessionDurationProvider: () -> Long,
+        jwt: String? = null,
+        alias: Pair<String, String>,
     ): List<InAppMessage>?
 
     /**
