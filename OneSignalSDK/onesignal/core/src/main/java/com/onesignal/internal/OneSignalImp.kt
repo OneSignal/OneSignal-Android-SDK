@@ -3,6 +3,7 @@ package com.onesignal.internal
 import android.content.Context
 import android.os.Build
 import com.onesignal.IOneSignal
+import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.IDManager
@@ -18,8 +19,10 @@ import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.CoreModule
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
+import com.onesignal.core.internal.backend.ParamsObject
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.config.FetchParamsObserver
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
@@ -56,6 +59,8 @@ import org.json.JSONObject
 internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val sdkVersion: String = OneSignalUtils.SDK_VERSION
     override var isInitialized: Boolean = false
+    override val useIdentityVerification: Boolean
+        get() = configModel?.useIdentityVerification ?: true
 
     override var consentRequired: Boolean
         get() = configModel?.consentRequired ?: (_consentRequired == true)
@@ -247,6 +252,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             // bootstrap services
             startupService.bootstrap()
 
+            resumeOperationRepoAfterFetchParams(configModel!!)
             if (forceCreateUser || !identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)) {
                 val legacyPlayerId =
                     preferencesService!!.getString(
@@ -284,7 +290,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                         pushSubscriptionModel.id = legacyPlayerId
                         pushSubscriptionModel.type = SubscriptionType.PUSH
                         pushSubscriptionModel.optedIn =
-                            notificationTypes != SubscriptionStatus.NO_PERMISSION.value && notificationTypes != SubscriptionStatus.UNSUBSCRIBE.value
+                            notificationTypes != SubscriptionStatus.NO_PERMISSION.value &&
+                            notificationTypes != SubscriptionStatus.UNSUBSCRIBE.value
                         pushSubscriptionModel.address =
                             legacyUserSyncJSON.safeString("identifier") ?: ""
                         if (notificationTypes != null) {
@@ -357,12 +364,16 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             currentIdentityOneSignalId = identityModelStore!!.model.onesignalId
 
             if (currentIdentityExternalId == externalId) {
+                // login is for same user that is already logged in, fetch (refresh)
+                // the current user.
+                identityModelStore!!.model.jwtToken = jwtBearerToken
                 return
             }
 
             // TODO: Set JWT Token for all future requests.
             createAndSwitchToNewUser { identityModel, _ ->
                 identityModel.externalId = externalId
+                identityModel.jwtToken = jwtBearerToken
             }
 
             newIdentityOneSignalId = identityModelStore!!.model.onesignalId
@@ -405,6 +416,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 return
             }
 
+            // calling createAndSwitchToNewUser() replaces model with a default empty jwt
             createAndSwitchToNewUser()
             operationRepo!!.enqueue(
                 LoginUserOperation(
@@ -413,9 +425,33 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                     identityModelStore!!.model.externalId,
                 ),
             )
-
-            // TODO: remove JWT Token for all future requests.
         }
+    }
+
+    override fun updateUserJwt(
+        externalId: String,
+        token: String,
+    ) {
+        // update the model with the given externalId
+        for (model in identityModelStore!!.store.list()) {
+            if (externalId == model.externalId) {
+                identityModelStore!!.model.jwtToken = token
+                operationRepo!!.setPaused(false)
+                operationRepo!!.forceExecuteOperations()
+                Logging.log(LogLevel.DEBUG, "JWT $token is updated for externalId $externalId")
+                return
+            }
+        }
+
+        Logging.log(LogLevel.DEBUG, "No identity found for externalId $externalId")
+    }
+
+    override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
+        user.addUserJwtInvalidatedListener(listener)
+    }
+
+    override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
+        user.removeUserJwtInvalidatedListener(listener)
     }
 
     private fun createAndSwitchToNewUser(
@@ -481,6 +517,23 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         } else {
             subscriptionModelStore!!.replaceAll(subscriptions)
         }
+    }
+
+    private fun resumeOperationRepoAfterFetchParams(configModel: ConfigModel) {
+        // pause operation repo until useIdentityVerification is determined
+        operationRepo!!.setPaused(true)
+        configModel.addFetchParamsObserver(
+            object : FetchParamsObserver {
+                override fun onParamsFetched(params: ParamsObject) {
+                    // resume operations if identity verification is turned off or a jwt is cached
+                    if (params.useIdentityVerification == false || identityModelStore!!.model.jwtToken != null) {
+                        operationRepo!!.setPaused(false)
+                    } else {
+                        Logging.log(LogLevel.ERROR, "A valid JWT is required for user ${identityModelStore!!.model.externalId}.")
+                    }
+                }
+            },
+        )
     }
 
     override fun <T> hasService(c: Class<T>): Boolean = services.hasService(c)
