@@ -158,7 +158,11 @@ internal class SubscriptionOperationExecutor(
                     if (operations == null) {
                         return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
                     } else {
-                        return ExecutionResponse(ExecutionResult.FAIL_RETRY, operations = operations, retryAfterSeconds = ex.retryAfterSeconds)
+                        return ExecutionResponse(
+                            ExecutionResult.FAIL_RETRY,
+                            operations = operations,
+                            retryAfterSeconds = ex.retryAfterSeconds,
+                        )
                     }
                 }
             }

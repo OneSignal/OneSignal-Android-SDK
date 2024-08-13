@@ -43,6 +43,7 @@ import com.onesignal.session.internal.outcomes.IOutcomeEventsController
 import com.onesignal.session.internal.session.ISessionLifecycleHandler
 import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.IUserManager
+import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionChangedHandler
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -60,6 +61,7 @@ internal class InAppMessagesManager(
     private val _influenceManager: IInfluenceManager,
     private val _configModelStore: ConfigModelStore,
     private val _userManager: IUserManager,
+    private val _identityModelStore: IdentityModelStore,
     private val _subscriptionManager: ISubscriptionManager,
     private val _outcomeEventsController: IOutcomeEventsController,
     private val _state: InAppStateService,
@@ -279,7 +281,15 @@ internal class InAppMessagesManager(
 
         // lambda so that it is updated on each potential retry
         val sessionDurationProvider = { _time.currentTimeMillis - _sessionService.startTime }
-        val newMessages = _backend.listInAppMessages(appId, subscriptionId, rywData, sessionDurationProvider)
+        val newMessages =
+            _backend.listInAppMessages(
+                appId,
+                subscriptionId,
+                rywData,
+                sessionDurationProvider,
+                _identityModelStore.model.jwtToken,
+                _identityModelStore.getIdentityAlias(),
+            )
 
         if (newMessages != null) {
             this.messages = newMessages as MutableList<InAppMessage>
