@@ -46,29 +46,39 @@ internal class HttpClient(
         url: String,
         body: JSONObject,
         headers: OptionalHeaders?,
-    ): HttpResponse = makeRequest(url, "POST", body, _configModelStore.model.httpTimeout, headers)
+    ): HttpResponse {
+        return makeRequest(url, "POST", body, _configModelStore.model.httpTimeout, headers)
+    }
 
     override suspend fun get(
         url: String,
         headers: OptionalHeaders?,
-    ): HttpResponse = makeRequest(url, null, null, _configModelStore.model.httpGetTimeout, headers)
+    ): HttpResponse {
+        return makeRequest(url, null, null, _configModelStore.model.httpGetTimeout, headers)
+    }
 
     override suspend fun put(
         url: String,
         body: JSONObject,
         headers: OptionalHeaders?,
-    ): HttpResponse = makeRequest(url, "PUT", body, _configModelStore.model.httpTimeout, headers)
+    ): HttpResponse {
+        return makeRequest(url, "PUT", body, _configModelStore.model.httpTimeout, headers)
+    }
 
     override suspend fun patch(
         url: String,
         body: JSONObject,
         headers: OptionalHeaders?,
-    ): HttpResponse = makeRequest(url, "PATCH", body, _configModelStore.model.httpTimeout, headers)
+    ): HttpResponse {
+        return makeRequest(url, "PATCH", body, _configModelStore.model.httpTimeout, headers)
+    }
 
     override suspend fun delete(
         url: String,
         headers: OptionalHeaders?,
-    ): HttpResponse = makeRequest(url, "DELETE", null, _configModelStore.model.httpTimeout, headers)
+    ): HttpResponse {
+        return makeRequest(url, "DELETE", null, _configModelStore.model.httpTimeout, headers)
+    }
 
     private suspend fun makeRequest(
         url: String,
@@ -136,6 +146,10 @@ internal class HttpClient(
                     con.connectTimeout = timeout
                     con.readTimeout = timeout
                     con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignalUtils.SDK_VERSION)
+
+                    if (headers != null && !headers.jwt.isNullOrEmpty()) {
+                        con.setRequestProperty("Authorization", "Bearer ${headers.jwt}")
+                    }
 
                     if (OneSignalWrapper.sdkType != null && OneSignalWrapper.sdkVersion != null) {
                         con.setRequestProperty("SDK-Wrapper", "onesignal/${OneSignalWrapper.sdkType}/${OneSignalWrapper.sdkVersion}")
