@@ -21,6 +21,7 @@ import io.kotest.matchers.string.shouldStartWith
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.delay
 
 class InAppBackendServiceTests : FunSpec({
     beforeAny {
@@ -93,6 +94,34 @@ class InAppBackendServiceTests : FunSpec({
         // Then
         response shouldBe null
         coVerify(exactly = 1) { mockHttpClient.get("apps/appId/subscriptions/subscriptionId/iams", any()) }
+    }
+
+    test("listInAppMessages retries according to retry limit and retryAfterSeconds" +
+        "and makes final request without offset after retries exhausted") {
+        // Given
+        val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
+        val mockHttpClient = mockk<IHttpClient>()
+
+        // Mock the first two attempts to return a 429 Too Many Requests response with retry limits
+        coEvery { mockHttpClient.get(any()) } returnsMany listOf(
+            HttpResponse(429, null, retryAfterSeconds = 1, retryLimit = 3),
+            HttpResponse(429, null, retryAfterSeconds = 1, retryLimit = 3),
+            HttpResponse(429, null, retryAfterSeconds = 1, retryLimit = 3),
+            HttpResponse(200, "{ in_app_messages: [] }") // Final successful attempt
+        )
+
+        val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
+
+        // When
+        val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", 1234L)
+
+        // Then
+        response shouldNotBe null
+        response!!.count() shouldBe 0
+
+        // Verify that the get method was called three times with the offset, plus one final time without it
+        coVerify(exactly = 3) { mockHttpClient.get("apps/appId/subscriptions/subscriptionId/iams?offset=1234") }
+        coVerify(exactly = 1) { mockHttpClient.get("apps/appId/subscriptions/subscriptionId/iams") }
     }
 
     test("getIAMData successfully hydrates successful response") {
