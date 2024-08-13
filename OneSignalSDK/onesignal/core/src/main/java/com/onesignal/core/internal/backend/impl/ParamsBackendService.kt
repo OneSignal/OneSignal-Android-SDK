@@ -31,7 +31,7 @@ internal class ParamsBackendService(
             paramsUrl += "?player_id=$subscriptionId"
         }
 
-        val response = _http.get(paramsUrl, CacheKeys.REMOTE_PARAMS)
+        val response = _http.get(paramsUrl, CacheKeys.REMOTE_PARAMS, "")
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
