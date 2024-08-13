@@ -199,6 +199,10 @@ internal class OperationRepo(
         waiter.wake(LoopWaiterMessage(false))
     }
 
+    override fun setPaused(paused: Boolean) {
+        this.paused = paused
+    }
+
     /**
      *  Waits until a new operation is enqueued, then wait an additional
      *  amount of time afterwards, so operations can be grouped/batched.
@@ -260,7 +264,15 @@ internal class OperationRepo(
                     ops.forEach { _operationModelStore.remove(it.operation.id) }
                     ops.forEach { it.waiter?.wake(true) }
                 }
-                ExecutionResult.FAIL_UNAUTHORIZED, // TODO: Need to provide callback for app to reset JWT. For now, fail with no retry.
+                ExecutionResult.FAIL_UNAUTHORIZED -> {
+                    Logging.error("Operation execution failed with invalid jwt, pausing the operation repo: $operations")
+                    // keep the failed operation and pause the operation repo from executing
+                    paused = true
+                    // add back all operations to the front of the queue to be re-executed.
+                    synchronized(queue) {
+                        ops.reversed().forEach { queue.add(0, it) }
+                    }
+                }
                 ExecutionResult.FAIL_NORETRY,
                 ExecutionResult.FAIL_CONFLICT,
                 -> {

@@ -53,12 +53,12 @@ internal class RefreshUserOperationExecutor(
 
     private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse {
         try {
-            val alias = _identityModelStore.getIdentityAlias()
+            val identityAlias = _identityModelStore.getIdentityAlias()
             val response =
                 _userBackend.getUser(
                     op.appId,
-                    alias.first,
-                    alias.second,
+                    identityAlias.first,
+                    identityAlias.second,
                     _identityModelStore.model.jwtToken,
                 )
 
@@ -70,6 +70,7 @@ internal class RefreshUserOperationExecutor(
             for (aliasKVP in response.identities) {
                 identityModel[aliasKVP.key] = aliasKVP.value
             }
+            identityModel.jwtToken = _identityModelStore.model.jwtToken
 
             val propertiesModel = PropertiesModel()
             propertiesModel.onesignalId = op.onesignalId
