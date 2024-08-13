@@ -1,6 +1,8 @@
 package com.onesignal.core.internal.config
 
+import com.onesignal.common.events.EventProducer
 import com.onesignal.common.modeling.Model
+import com.onesignal.core.internal.backend.ParamsObject
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -319,6 +321,20 @@ class ConfigModel : Model() {
 
         return null
     }
+
+    var fetchParamsNotifier = EventProducer<FetchParamsObserver>()
+
+    fun addFetchParamsObserver(observer: FetchParamsObserver) {
+        fetchParamsNotifier.subscribe(observer)
+    }
+
+    fun removeFetchParamsObserver(observer: FetchParamsObserver) {
+        fetchParamsNotifier.unsubscribe(observer)
+    }
+
+    fun notifyFetchParams(params: ParamsObject) {
+        fetchParamsNotifier.fire { it.onParamsFetched(params) }
+    }
 }
 
 /**
@@ -424,4 +440,8 @@ class FCMConfigModel(parentModel: Model, parentProperty: String) : Model(parentM
         set(value) {
             setOptStringProperty(::apiKey.name, value)
         }
+}
+
+interface FetchParamsObserver {
+    fun onParamsFetched(params: ParamsObject)
 }
