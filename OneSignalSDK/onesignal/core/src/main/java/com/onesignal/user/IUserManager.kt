@@ -1,5 +1,6 @@
 package com.onesignal.user
 
+import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.OneSignal
 import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.subscriptions.IPushSubscription
@@ -166,4 +167,11 @@ interface IUserManager {
      * Remove an observer from the user state.
      */
     fun removeObserver(observer: IUserStateObserver)
+
+    /**
+     * Add an event listener allowing user to be notified when the JWT is invalidated.
+     */
+    fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
+
+    fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
 }
