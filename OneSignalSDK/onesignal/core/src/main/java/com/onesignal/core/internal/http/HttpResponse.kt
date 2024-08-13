@@ -23,6 +23,11 @@ class HttpResponse(
      * The module handing this should delay any future requests by this time.
      */
     val retryAfterSeconds: Int? = null,
+    /**
+     * Optional Integer value may be returned from the backend.
+     * The module handling this should not retry more than this number.
+     */
+    val retryLimit: Int? = null,
 ) {
     /**
      * Whether the response is a successful one.
