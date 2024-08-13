@@ -196,6 +196,15 @@ internal class InAppMessagesManager(
             for (redisplayInAppMessage in redisplayedInAppMessages) {
                 redisplayInAppMessage.isDisplayedInSession = false
             }
+
+            // attempt to fetch messages from the backend (if we have the pre-requisite data already)
+            val onesignalId = _userManager.onesignalId
+            val updateConditionDeferred =
+                _consistencyManager.getRywDataFromAwaitableCondition(IamFetchReadyCondition(onesignalId))
+            val rywToken = updateConditionDeferred.await()
+            if (rywToken != null) {
+                fetchMessages(rywToken)
+            }
         }
     }
 
@@ -305,7 +314,15 @@ internal class InAppMessagesManager(
 
         // lambda so that it is updated on each potential retry
         val sessionDurationProvider = { _time.currentTimeMillis - _sessionService.startTime }
-        val newMessages = _backend.listInAppMessages(appId, subscriptionId, rywData, sessionDurationProvider)
+        val newMessages =
+            _backend.listInAppMessages(
+                appId,
+                subscriptionId,
+                rywData,
+                sessionDurationProvider,
+                _identityModelStore.model.jwtToken,
+                _identityModelStore.getIdentityAlias(),
+            )
 
         if (newMessages != null) {
             this.messages = newMessages as MutableList<InAppMessage>
