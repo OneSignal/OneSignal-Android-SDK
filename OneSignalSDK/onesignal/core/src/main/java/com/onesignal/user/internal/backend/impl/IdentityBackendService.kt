@@ -15,12 +15,13 @@ internal class IdentityBackendService(
         aliasLabel: String,
         aliasValue: String,
         identities: Map<String, String>,
+        jwt: String?,
     ): Map<String, String> {
         val requestJSONObject =
             JSONObject()
                 .put("identity", JSONObject().putMap(identities))
 
-        val response = _httpClient.patch("apps/$appId/users/by/$aliasLabel/$aliasValue/identity", requestJSONObject)
+        val response = _httpClient.patch("apps/$appId/users/by/$aliasLabel/$aliasValue/identity", requestJSONObject, jwt)
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
@@ -36,8 +37,9 @@ internal class IdentityBackendService(
         aliasLabel: String,
         aliasValue: String,
         aliasLabelToDelete: String,
+        jwt: String?,
     ) {
-        val response = _httpClient.delete("apps/$appId/users/by/$aliasLabel/$aliasValue/identity/$aliasLabelToDelete")
+        val response = _httpClient.delete("apps/$appId/users/by/$aliasLabel/$aliasValue/identity/$aliasLabelToDelete", jwt)
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)

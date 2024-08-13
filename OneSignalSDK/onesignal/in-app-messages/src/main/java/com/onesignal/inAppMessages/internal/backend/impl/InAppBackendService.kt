@@ -29,12 +29,14 @@ internal class InAppBackendService(
         subscriptionId: String,
         rywData: RywData,
         sessionDurationProvider: () -> Long,
+        jwt: String?,
+        alias: Pair<String, String>,
     ): List<InAppMessage>? {
         val rywDelay = rywData.rywDelay ?: DEFAULT_RYW_DELAY_MS
         delay(rywDelay) // Delay by the specified amount
 
-        val baseUrl = "apps/$appId/subscriptions/$subscriptionId/iams"
-        return attemptFetchWithRetries(baseUrl, rywData, sessionDurationProvider)
+        val baseUrl = "apps/$appId/users/by/${alias.first}/${alias.second}/subscriptions/$subscriptionId/iams"
+        return attemptFetchWithRetries(baseUrl, rywData, sessionDurationProvider, OptionalHeaders(jwt = jwt))
     }
 
     override suspend fun getIAMData(
@@ -209,6 +211,7 @@ internal class InAppBackendService(
         baseUrl: String,
         rywData: RywData,
         sessionDurationProvider: () -> Long,
+        optionalHeaders: OptionalHeaders,
     ): List<InAppMessage>? {
         var attempts = 0
         var retryLimit: Int = 0 // retry limit is remote defined & set dynamically below
@@ -220,8 +223,13 @@ internal class InAppBackendService(
                     rywToken = rywData.rywToken,
                     sessionDuration = sessionDurationProvider(),
                     retryCount = retryCount,
+                    jwt = optionalHeaders.jwt,
                 )
-            val response = _httpClient.get(baseUrl, values)
+            val response =
+                _httpClient.get(
+                    baseUrl,
+                    values,
+                )
 
             if (response.isSuccess) {
                 val jsonResponse = response.payload?.let { JSONObject(it) }
@@ -244,26 +252,27 @@ internal class InAppBackendService(
         } while (attempts <= retryLimit)
 
         // Final attempt without the RYW token if retries fail
-        return fetchInAppMessagesWithoutRywToken(baseUrl, sessionDurationProvider)
+        return fetchInAppMessagesWithoutRywToken(
+            baseUrl,
+            OptionalHeaders(sessionDuration = optionalHeaders.sessionDuration, jwt = optionalHeaders.jwt),
+        )
     }
 
     private suspend fun fetchInAppMessagesWithoutRywToken(
         url: String,
-        sessionDurationProvider: () -> Long,
+        optionalHeaders: OptionalHeaders,
     ): List<InAppMessage>? {
         val response =
             _httpClient.get(
                 url,
-                OptionalHeaders(
-                    sessionDuration = sessionDurationProvider(),
-                ),
+                optionalHeaders,
             )
 
-        if (response.isSuccess) {
+        return if (response.isSuccess) {
             val jsonResponse = response.payload?.let { JSONObject(it) }
-            return jsonResponse?.let { hydrateInAppMessages(it) }
+            jsonResponse?.let { hydrateInAppMessages(it) }
         } else {
-            return null
+            null
         }
     }
 
