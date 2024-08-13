@@ -30,6 +30,13 @@ object OneSignal {
         get() = oneSignal.isInitialized
 
     /**
+     * Whether the security feature to authenticate your external user ids is enabled
+     */
+    @JvmStatic
+    val useIdentityVerification: Boolean
+        get() = oneSignal.useIdentityVerification
+
+    /**
      * The current SDK version as a string.
      */
     @JvmStatic
@@ -191,6 +198,24 @@ object OneSignal {
      */
     @JvmStatic
     fun logout() = oneSignal.logout()
+
+    @JvmStatic
+    fun updateUserJwt(
+        externalId: String,
+        token: String,
+    ) {
+        oneSignal.updateUserJwt(externalId, token)
+    }
+
+    @JvmStatic
+    fun addUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
+        oneSignal.addUserJwtInvalidatedListener(listener)
+    }
+
+    @JvmStatic
+    fun removeUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
+        oneSignal.removeUserJwtInvalidatedListener(listener)
+    }
 
     private val oneSignal: IOneSignal by lazy {
         OneSignalImp()
