@@ -6,4 +6,8 @@ import com.onesignal.core.internal.preferences.IPreferencesService
 
 open class IdentityModelStore(prefs: IPreferencesService) : SingletonModelStore<IdentityModel>(
     SimpleModelStore({ IdentityModel() }, "identity", prefs),
-)
+) {
+    fun invalidateJwt() {
+        model.jwtToken = ""
+    }
+}
