@@ -1,6 +1,7 @@
 package com.onesignal.user.internal.operations
 
 import com.onesignal.common.IConsistencyManager
+import com.onesignal.common.consistency.OffsetKey
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.Operation
@@ -14,6 +15,7 @@ import com.onesignal.user.internal.properties.PropertiesModel
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -30,6 +32,7 @@ class UpdateUserOperationExecutorTests : FunSpec({
     val mockConsistencyManager = mockk<IConsistencyManager>()
 
     beforeTest {
+        clearMocks(mockConsistencyManager)
         coEvery { mockConsistencyManager.setOffset(any(), any(), any()) } just runs
     }
 
@@ -352,5 +355,39 @@ class UpdateUserOperationExecutorTests : FunSpec({
         // Then
         response.result shouldBe ExecutionResult.FAIL_RETRY
         response.retryAfterSeconds shouldBe 10
+    }
+
+    test("setOffset is called after successful user update of session count") {
+        // Given
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery {
+            mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any())
+        } returns offset
+
+        val mockIdentityModelStore = MockHelper.identityModelStore()
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
+        val loginUserOperationExecutor =
+            UpdateUserOperationExecutor(
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockBuildUserService,
+                getNewRecordState(),
+                mockConsistencyManager
+            )
+
+        val operations = listOf<Operation>(
+            TrackSessionStartOperation(appId, onesignalId = remoteOneSignalId)
+        )
+
+        // When
+        loginUserOperationExecutor.execute(operations)
+
+        // Then
+        coVerify(exactly = 1) {
+            mockConsistencyManager.setOffset(remoteOneSignalId, OffsetKey.USER_UPDATE, offset)
+        }
     }
 })
