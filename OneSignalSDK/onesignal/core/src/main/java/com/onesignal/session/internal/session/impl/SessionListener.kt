@@ -40,7 +40,7 @@ internal class SessionListener(
     }
 
     override fun onSessionStarted() {
-        _operationRepo.enqueue(TrackSessionStartOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId))
+        _operationRepo.enqueue(TrackSessionStartOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId), true)
     }
 
     override fun onSessionActive() {
