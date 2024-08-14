@@ -2,23 +2,27 @@ package com.onesignal.user.internal.operations
 
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.IConsistencyManager
+import com.onesignal.common.consistency.OffsetKey
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.backend.ISubscriptionBackendService
+import com.onesignal.user.internal.backend.IUserBackendService
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
+import com.onesignal.user.internal.operations.impl.executors.UpdateUserOperationExecutor
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -37,6 +41,7 @@ class SubscriptionOperationExecutorTests : FunSpec({
     val mockConsistencyManager = mockk<IConsistencyManager>()
 
     beforeTest {
+        clearMocks(mockConsistencyManager)
         coEvery { mockConsistencyManager.setOffset(any(), any(), any()) } just runs
     }
 
@@ -708,5 +713,55 @@ class SubscriptionOperationExecutorTests : FunSpec({
 
         // Then
         response.result shouldBe ExecutionResult.FAIL_RETRY
+    }
+
+    test("setOffset is called after successful subscription update") {
+        // Given
+        val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
+        coEvery {
+            mockSubscriptionBackendService.updateSubscription(any(), any(), any())
+        } returns offset
+
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        val subscriptionModel1 = SubscriptionModel().apply {
+            id = remoteSubscriptionId
+            address = "pushToken1"
+        }
+        every { mockSubscriptionsModelStore.get(remoteSubscriptionId) } returns subscriptionModel1
+
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
+        val subscriptionOperationExecutor =
+            SubscriptionOperationExecutor(
+                mockSubscriptionBackendService,
+                MockHelper.deviceService(),
+                AndroidMockHelper.applicationService(),
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+                getNewRecordState(),
+                mockConsistencyManager
+            )
+
+        val operations =
+            listOf(
+                UpdateSubscriptionOperation(
+                    appId,
+                    remoteOneSignalId,
+                    remoteSubscriptionId,
+                    SubscriptionType.PUSH,
+                    true,
+                    "pushToken2",
+                    SubscriptionStatus.SUBSCRIBED,
+                ),
+            )
+
+        // When
+        val response = subscriptionOperationExecutor.execute(operations)
+
+        // Then
+        coVerify(exactly = 1) {
+            mockConsistencyManager.setOffset(remoteOneSignalId, OffsetKey.SUBSCRIPTION_UPDATE, offset)
+        }
     }
 })
