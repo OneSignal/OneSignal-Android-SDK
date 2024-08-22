@@ -11,6 +11,8 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.user.internal.backend.IdentityConstants
+import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -26,6 +28,7 @@ internal class OperationRepo(
     executors: List<IOperationExecutor>,
     private val _operationModelStore: OperationModelStore,
     private val _configModelStore: ConfigModelStore,
+    private val _identityModelStore: IdentityModelStore,
     private val _time: ITime,
     private val _newRecordState: NewRecordsState,
 ) : IOperationRepo, IStartableService {
@@ -367,12 +370,31 @@ internal class OperationRepo(
 
     internal fun getNextOps(bucketFilter: Int): List<OperationQueueItem>? {
         return synchronized(queue) {
-            val startingOp =
-                queue.firstOrNull {
-                    it.operation.canStartExecute &&
-                        _newRecordState.canAccess(it.operation.applyToRecordId) &&
-                        it.bucket <= bucketFilter
+            var startingOp: OperationQueueItem? = null
+            // Search for the first operation that is qualified to execute
+            for (queueItem in queue) {
+                val operation = queueItem.operation
+
+                // Ensure the operation is in an executable state
+                if (!operation.canStartExecute ||
+                    !_newRecordState.canAccess(
+                        operation.applyToRecordId,
+                    ) || queueItem.bucket > bucketFilter
+                ) {
+                    continue
                 }
+
+                // Ensure the operation does not have empty JWT if identity verification is on
+                if (_configModelStore.model.useIdentityVerification &&
+                    operation.hasProperty(IdentityConstants.EXTERNAL_ID) &&
+                    _identityModelStore.model.jwtToken.isNullOrEmpty()
+                ) {
+                    continue
+                }
+
+                startingOp = queueItem
+                break
+            }
 
             if (startingOp != null) {
                 queue.remove(startingOp)
