@@ -47,7 +47,7 @@ interface IUserBackendService {
         properties: PropertiesObject,
         refreshDeviceMetadata: Boolean,
         propertyiesDelta: PropertiesDeltasObject,
-    ) : Long?
+    ): Long?
 
     /**
      * Retrieve a user from the backend.
