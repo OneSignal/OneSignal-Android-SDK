@@ -33,10 +33,9 @@ internal class SubscriptionBackendService(
             return null
         }
 
-        val responseBody = JSONObject(response.payload)
         var offset: Long? = null
-        if (responseBody.has("offset")) {
-            offset = responseBody.getLong("offset")
+        if (responseJSON.has("offset")) {
+            offset = responseJSON.getLong("offset")
         }
 
         return Pair(subscriptionJSON.getString("id"), offset)
@@ -46,7 +45,7 @@ internal class SubscriptionBackendService(
         appId: String,
         subscriptionId: String,
         subscription: SubscriptionObject,
-    ) : Long? {
+    ): Long? {
         val requestJSON =
             JSONObject()
                 .put("subscription", JSONConverter.convertToJSON(subscription))

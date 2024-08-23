@@ -34,7 +34,7 @@ interface ISubscriptionBackendService {
         appId: String,
         subscriptionId: String,
         subscription: SubscriptionObject,
-    ) : Long?
+    ): Long?
 
     /**
      * Delete an existing subscription.
