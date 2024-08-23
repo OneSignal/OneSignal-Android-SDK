@@ -4,6 +4,7 @@ import com.onesignal.common.NetworkUtils
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.http.IHttpClient
+import com.onesignal.core.internal.http.impl.OptionalHeaderValues
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.inAppMessages.internal.InAppMessage
 import com.onesignal.inAppMessages.internal.InAppMessageContent
@@ -23,15 +24,11 @@ internal class InAppBackendService(
     override suspend fun listInAppMessages(
         appId: String,
         subscriptionId: String,
-        offset: Long?,
+        offset: Long,
+        sessionTime: Long,
     ): List<InAppMessage>? {
         val baseUrl = "apps/$appId/subscriptions/$subscriptionId/iams"
-
-        return if (offset != null) {
-            attemptFetchWithRetries(baseUrl, offset)
-        } else {
-            fetchInAppMessages(baseUrl)
-        }
+        return attemptFetchWithRetries(baseUrl, offset, sessionTime)
     }
 
     override suspend fun getIAMData(
@@ -43,7 +40,7 @@ internal class InAppBackendService(
             htmlPathForMessage(messageId, variantId, appId)
                 ?: return GetIAMDataResponse(null, false)
 
-        val response = _httpClient.get(htmlPath, null)
+        val response = _httpClient.get(htmlPath)
 
         if (response.isSuccess) {
             // Successful request, reset count
@@ -73,7 +70,7 @@ internal class InAppBackendService(
     ): InAppMessageContent? {
         val htmlPath = "in_app_messages/device_preview?preview_id=$previewUUID&app_id=$appId"
 
-        val response = _httpClient.get(htmlPath, null)
+        val response = _httpClient.get(htmlPath)
 
         return if (response.isSuccess) {
             val jsonResponse = JSONObject(response.payload!!)
@@ -202,25 +199,44 @@ internal class InAppBackendService(
         Logging.error("Encountered a $statusCode error while attempting in-app message $requestType request: $response")
     }
 
-    private suspend fun attemptFetchWithRetries(baseUrl: String, offset: Long): List<InAppMessage>? {
+    private suspend fun attemptFetchWithRetries(
+        baseUrl: String,
+        offset: Long,
+        sessionTime: Long,
+    ): List<InAppMessage>? {
         var attempts = 1
+        var delayTime = 1 // Start with a 1-second delay for exponential backoff
 
         while (true) {
-            val urlWithOffset = "$baseUrl?offset=$offset"
-            val response = _httpClient.get(urlWithOffset)
+            val headerValues = OptionalHeaderValues()
+            if (attempts > 1) {
+                headerValues.retryCount = attempts - 1
+            }
+            headerValues.offset = offset
+            headerValues.secondsSinceAppOpen = sessionTime
+            val response = _httpClient.get(baseUrl, headerValues)
 
             if (response.isSuccess) {
                 val jsonResponse = response.payload?.let { JSONObject(it) }
                 return jsonResponse?.let { hydrateInAppMessages(it) }
-            } else if (response.statusCode == 429) { // 429 Too Many Requests
+            } else if (response.statusCode == 425) { // 425 Too Early
                 val retryLimit = response.retryLimit ?: 3
                 val retryAfter = response.retryAfterSeconds ?: 1
 
-                if (attempts >= retryLimit) {
+                if (attempts > retryLimit) {
                     break
                 }
 
                 delay(retryAfter * 1000L) // Convert seconds to milliseconds
+            } else if (response.statusCode == 429) { // 429 Too Many Requests
+                val retryAfter = response.retryAfterSeconds ?: delayTime
+
+                if (attempts > (response.retryLimit ?: 3)) {
+                    break
+                }
+
+                delay(retryAfter * 1000L) // Convert seconds to milliseconds
+                delayTime *= 2 // Exponential backoff
             } else {
                 return null
             }
@@ -230,11 +246,16 @@ internal class InAppBackendService(
 
         // If all retries fail, make a final attempt without the offset. This will tell the server,
         // we give up, just give me the IAMs without first ensuring data consistency
-        return fetchInAppMessages(baseUrl)
+        return fetchInAppMessagesWithoutOffset(baseUrl, sessionTime)
     }
 
-    private suspend fun fetchInAppMessages(url: String): List<InAppMessage>? {
-        val response = _httpClient.get(url)
+    private suspend fun fetchInAppMessagesWithoutOffset(
+        url: String,
+        sessionTime: Long,
+    ): List<InAppMessage>? {
+        val headersValues = OptionalHeaderValues()
+        headersValues.secondsSinceAppOpen = sessionTime
+        val response = _httpClient.get(url, headersValues)
 
         if (response.isSuccess) {
             val jsonResponse = response.payload?.let { JSONObject(it) }
@@ -244,8 +265,8 @@ internal class InAppBackendService(
         }
     }
 
-    private fun hydrateInAppMessages(jsonResponse: JSONObject): List<InAppMessage>? {
-        return if (jsonResponse.has("in_app_messages")) {
+    private fun hydrateInAppMessages(jsonResponse: JSONObject): List<InAppMessage>? =
+        if (jsonResponse.has("in_app_messages")) {
             val iamMessagesAsJSON = jsonResponse.getJSONArray("in_app_messages")
             // TODO: Outstanding question on whether we still want to cache this.  Only used when
             //       hard start of the app, but within 30 seconds of it being killed (i.e. same session startup).
@@ -255,5 +276,4 @@ internal class InAppBackendService(
         } else {
             null
         }
-    }
 }
