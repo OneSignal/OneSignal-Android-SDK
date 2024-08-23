@@ -20,7 +20,8 @@ internal interface IInAppBackendService {
     suspend fun listInAppMessages(
         appId: String,
         subscriptionId: String,
-        offset: Long? = null,
+        offset: Long,
+        sessionTime: Long,
     ): List<InAppMessage>?
 
     /**

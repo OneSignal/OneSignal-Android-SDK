@@ -2,10 +2,11 @@ package com.onesignal.inAppMessages.internal
 
 import android.app.AlertDialog
 import com.onesignal.common.AndroidUtils
-import com.onesignal.common.IConsistencyManager
 import com.onesignal.common.IDManager
 import com.onesignal.common.JSONUtils
-import com.onesignal.common.consistency.IamFetchReadyCondition
+import com.onesignal.common.consistency.conditions.IamFetchReadyCondition
+import com.onesignal.common.consistency.enums.IamFetchOffsetKey
+import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
@@ -68,7 +69,7 @@ internal class InAppMessagesManager(
     private val _lifecycle: IInAppLifecycleService,
     private val _languageContext: ILanguageContext,
     private val _time: ITime,
-    private val _consistencyManager: IConsistencyManager,
+    private val _iamFetchConsistencyManager: IConsistencyManager<IamFetchOffsetKey>,
 ) : IInAppMessagesManager,
     IStartableService,
     ISubscriptionChangedHandler,
@@ -153,9 +154,13 @@ internal class InAppMessagesManager(
 
             // attempt to fetch messages from the backend (if we have the pre-requisite data already)
             val onesignalId = _userManager.onesignalId
-            val updateConditionDeferred = _consistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
+            val updateConditionDeferred =
+                _iamFetchConsistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
             val offset = updateConditionDeferred.await()
-            fetchMessages(offset)
+            val sessionTime = _time.currentTimeMillis - _sessionService.startTime
+            if (offset != null) {
+                fetchMessages(offset, sessionTime)
+            }
         }
     }
 
@@ -187,18 +192,14 @@ internal class InAppMessagesManager(
             return
         }
 
-        suspendifyOnThread {
-            fetchMessages(null)
-        }
+        fetchMessagesWhenConditionIsMet()
     }
 
     override fun onModelReplaced(
         model: ConfigModel,
         tag: String,
     ) {
-        suspendifyOnThread {
-            fetchMessages(null)
-        }
+        fetchMessagesWhenConditionIsMet()
     }
 
     override fun onSubscriptionAdded(subscription: ISubscription) { }
@@ -213,9 +214,7 @@ internal class InAppMessagesManager(
             return
         }
 
-        suspendifyOnThread {
-            fetchMessages(null)
-        }
+        fetchMessagesWhenConditionIsMet()
     }
 
     override fun onSessionStarted() {
@@ -223,20 +222,30 @@ internal class InAppMessagesManager(
             redisplayInAppMessage.isDisplayedInSession = false
         }
 
-        suspendifyOnThread {
-            val onesignalId = _userManager.onesignalId
-            val iamFetchCondition = _consistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
-            val offset = iamFetchCondition.await()
-            fetchMessages(offset)
-        }
+        fetchMessagesWhenConditionIsMet()
     }
 
     override fun onSessionActive() { }
 
     override fun onSessionEnded(duration: Long) { }
 
+    private fun fetchMessagesWhenConditionIsMet() {
+        suspendifyOnThread {
+            val onesignalId = _userManager.onesignalId
+            val iamFetchCondition = _iamFetchConsistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
+            val offset = iamFetchCondition.await()
+            val sessionTime = _time.currentTimeMillis - _sessionService.startTime
+            if (offset != null) {
+                fetchMessages(offset, sessionTime)
+            }
+        }
+    }
+
     // called when a new push subscription is added, or the app id is updated, or a new session starts
-    private suspend fun fetchMessages(offset: Long?) {
+    private suspend fun fetchMessages(
+        offset: Long,
+        sessionTime: Long,
+    ) {
         // We only want to fetch IAMs if we know the app is in the
         // foreground, as we don't want to do this for background
         // events (such as push received), wasting resources for
@@ -261,7 +270,7 @@ internal class InAppMessagesManager(
             lastTimeFetchedIAMs = now
         }
 
-        val newMessages = _backend.listInAppMessages(appId, subscriptionId, offset)
+        val newMessages = _backend.listInAppMessages(appId, subscriptionId, offset, sessionTime)
 
         if (newMessages != null) {
             this.messages = newMessages as MutableList<InAppMessage>
@@ -526,7 +535,9 @@ internal class InAppMessagesManager(
         if (triggerModel != null) {
             triggerModel.value = value
         } else {
-            triggerModel = com.onesignal.inAppMessages.internal.triggers.TriggerModel()
+            triggerModel =
+                com.onesignal.inAppMessages.internal.triggers
+                    .TriggerModel()
             triggerModel.id = key
             triggerModel.key = key
             triggerModel.value = value
@@ -791,13 +802,15 @@ internal class InAppMessagesManager(
     private fun logInAppMessagePreviewActions(action: InAppMessageClickResult) {
         if (action.tags != null) {
             Logging.debug(
-                "InAppMessagesManager.logInAppMessagePreviewActions: Tags detected inside of the action click payload, ignoring because action came from IAM preview:: " + action.tags.toString(),
+                "InAppMessagesManager.logInAppMessagePreviewActions: Tags detected inside of the action click payload, ignoring because action came from IAM preview:: " +
+                    action.tags.toString(),
             )
         }
 
         if (action.outcomes.size > 0) {
             Logging.debug(
-                "InAppMessagesManager.logInAppMessagePreviewActions: Outcomes detected inside of the action click payload, ignoring because action came from IAM preview: " + action.outcomes.toString(),
+                "InAppMessagesManager.logInAppMessagePreviewActions: Outcomes detected inside of the action click payload, ignoring because action came from IAM preview: " +
+                    action.outcomes.toString(),
             )
         }
 
@@ -899,7 +912,8 @@ internal class InAppMessagesManager(
     ) {
         val messageTitle = _applicationService.appContext.getString(R.string.location_permission_missing_title)
         val message = _applicationService.appContext.getString(R.string.location_permission_missing_message)
-        AlertDialog.Builder(_applicationService.current)
+        AlertDialog
+            .Builder(_applicationService.current)
             .setTitle(messageTitle)
             .setMessage(message)
             .setPositiveButton(android.R.string.ok) { _, _ -> suspendifyOnThread { showMultiplePrompts(inAppMessage, prompts) } }
