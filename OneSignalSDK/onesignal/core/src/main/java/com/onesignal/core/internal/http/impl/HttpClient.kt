@@ -45,41 +45,37 @@ internal class HttpClient(
     override suspend fun post(
         url: String,
         body: JSONObject,
-    ): HttpResponse {
-        return makeRequest(url, "POST", body, _configModelStore.model.httpTimeout, null)
-    }
+        headerValues: OptionalHeaderValues?,
+    ): HttpResponse = makeRequest(url, "POST", body, _configModelStore.model.httpTimeout, headerValues)
 
     override suspend fun get(
         url: String,
-        cacheKey: String?,
-    ): HttpResponse {
-        return makeRequest(url, null, null, _configModelStore.model.httpGetTimeout, cacheKey)
-    }
+        headerValues: OptionalHeaderValues?,
+    ): HttpResponse = makeRequest(url, null, null, _configModelStore.model.httpGetTimeout, headerValues)
 
     override suspend fun put(
         url: String,
         body: JSONObject,
-    ): HttpResponse {
-        return makeRequest(url, "PUT", body, _configModelStore.model.httpTimeout, null)
-    }
+        headerValues: OptionalHeaderValues?,
+    ): HttpResponse = makeRequest(url, "PUT", body, _configModelStore.model.httpTimeout, headerValues)
 
     override suspend fun patch(
         url: String,
         body: JSONObject,
-    ): HttpResponse {
-        return makeRequest(url, "PATCH", body, _configModelStore.model.httpTimeout, null)
-    }
+        headerValues: OptionalHeaderValues?,
+    ): HttpResponse = makeRequest(url, "PATCH", body, _configModelStore.model.httpTimeout, headerValues)
 
-    override suspend fun delete(url: String): HttpResponse {
-        return makeRequest(url, "DELETE", null, _configModelStore.model.httpTimeout, null)
-    }
+    override suspend fun delete(
+        url: String,
+        headerValues: OptionalHeaderValues?,
+    ): HttpResponse = makeRequest(url, "DELETE", null, _configModelStore.model.httpTimeout, headerValues)
 
     private suspend fun makeRequest(
         url: String,
         method: String?,
         jsonBody: JSONObject?,
         timeout: Int,
-        cacheKey: String?,
+        headerValues: OptionalHeaderValues?,
     ): HttpResponse {
         // If privacy consent is required but not yet given, any non-GET request should be blocked.
         if (method != null && _configModelStore.model.consentRequired == true && _configModelStore.model.consentGiven != true) {
@@ -94,7 +90,7 @@ internal class HttpClient(
 
         try {
             return withTimeout(getThreadTimeout(timeout).toLong()) {
-                return@withTimeout makeRequestIODispatcher(url, method, jsonBody, timeout, cacheKey)
+                return@withTimeout makeRequestIODispatcher(url, method, jsonBody, timeout, headerValues)
             }
         } catch (e: TimeoutCancellationException) {
             Logging.error("HttpClient: Request timed out: $url", e)
@@ -110,7 +106,7 @@ internal class HttpClient(
         method: String?,
         jsonBody: JSONObject?,
         timeout: Int,
-        cacheKey: String?,
+        headerValues: OptionalHeaderValues?,
     ): HttpResponse {
         var retVal: HttpResponse? = null
 
@@ -174,11 +170,16 @@ internal class HttpClient(
                         outputStream.write(sendBytes)
                     }
 
-                    if (cacheKey != null) {
-                        val eTag = _prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_ETAG_PREFIX + cacheKey)
+                    // H E A D E R S
 
+                    if (headerValues?.cacheKey != null) {
+                        val eTag =
+                            _prefs.getString(
+                                PreferenceStores.ONESIGNAL,
+                                PreferenceOneSignalKeys.PREFS_OS_ETAG_PREFIX + headerValues.cacheKey,
+                            )
                         if (eTag != null) {
-                            con.setRequestProperty("if-none-match", eTag)
+                            con.setRequestProperty("If-None-Match", eTag)
                             Logging.debug("HttpClient: Adding header if-none-match: $eTag")
                         }
                     }
@@ -195,9 +196,12 @@ internal class HttpClient(
                             val cachedResponse =
                                 _prefs.getString(
                                     PreferenceStores.ONESIGNAL,
-                                    PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + cacheKey,
+                                    PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + headerValues?.cacheKey,
                                 )
-                            Logging.debug("HttpClient: Got Response = ${method ?: "GET"} ${con.url} - Using Cached response due to 304: " + cachedResponse)
+                            Logging.debug(
+                                "HttpClient: Got Response = ${method ?: "GET"} ${con.url} - Using Cached response due to 304: " +
+                                    cachedResponse,
+                            )
 
                             // TODO: SHOULD RETURN OK INSTEAD OF NOT_MODIFIED TO MAKE TRANSPARENT?
                             retVal = HttpResponse(httpResponse, cachedResponse, retryAfterSeconds = retryAfter)
@@ -207,21 +211,23 @@ internal class HttpClient(
                             val scanner = Scanner(inputStream, "UTF-8")
                             val json = if (scanner.useDelimiter("\\A").hasNext()) scanner.next() else ""
                             scanner.close()
-                            Logging.debug("HttpClient: Got Response = ${method ?: "GET"} ${con.url} - STATUS: $httpResponse - Body: " + json)
+                            Logging.debug(
+                                "HttpClient: Got Response = ${method ?: "GET"} ${con.url} - STATUS: $httpResponse - Body: " + json,
+                            )
 
-                            if (cacheKey != null) {
+                            if (headerValues?.cacheKey != null) {
                                 val eTag = con.getHeaderField("etag")
                                 if (eTag != null) {
                                     Logging.debug("HttpClient: Got Response = Response has etag of $eTag so caching the response.")
 
                                     _prefs.saveString(
                                         PreferenceStores.ONESIGNAL,
-                                        PreferenceOneSignalKeys.PREFS_OS_ETAG_PREFIX + cacheKey,
+                                        PreferenceOneSignalKeys.PREFS_OS_ETAG_PREFIX + headerValues.cacheKey,
                                         eTag,
                                     )
                                     _prefs.saveString(
                                         PreferenceStores.ONESIGNAL,
-                                        PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + cacheKey,
+                                        PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + headerValues.cacheKey,
                                         json,
                                     )
                                 }
