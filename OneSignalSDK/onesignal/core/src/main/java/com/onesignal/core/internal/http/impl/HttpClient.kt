@@ -188,6 +188,7 @@ internal class HttpClient(
                     httpResponse = con.responseCode
 
                     val retryAfter = retryAfterFromResponse(con)
+                    val retryLimit = retryLimitFromResponse(con)
                     val newDelayUntil = _time.currentTimeMillis + (retryAfter ?: 0) * 1_000
                     if (newDelayUntil > delayNewRequestsUntil) delayNewRequestsUntil = newDelayUntil
 
@@ -204,7 +205,7 @@ internal class HttpClient(
                             )
 
                             // TODO: SHOULD RETURN OK INSTEAD OF NOT_MODIFIED TO MAKE TRANSPARENT?
-                            retVal = HttpResponse(httpResponse, cachedResponse, retryAfterSeconds = retryAfter)
+                            retVal = HttpResponse(httpResponse, cachedResponse, retryAfterSeconds = retryAfter, retryLimit = retryLimit)
                         }
                         HttpURLConnection.HTTP_ACCEPTED, HttpURLConnection.HTTP_CREATED, HttpURLConnection.HTTP_OK -> {
                             val inputStream = con.inputStream
@@ -233,7 +234,7 @@ internal class HttpClient(
                                 }
                             }
 
-                            retVal = HttpResponse(httpResponse, json, retryAfterSeconds = retryAfter)
+                            retVal = HttpResponse(httpResponse, json, retryAfterSeconds = retryAfter, retryLimit = retryLimit)
                         }
                         else -> {
                             Logging.debug("HttpClient: Got Response = ${method ?: "GET"} ${con.url} - FAILED STATUS: $httpResponse")
@@ -254,7 +255,7 @@ internal class HttpClient(
                                 Logging.warn("HttpClient: Got Response = $method - STATUS: $httpResponse - No response body!")
                             }
 
-                            retVal = HttpResponse(httpResponse, jsonResponse, retryAfterSeconds = retryAfter)
+                            retVal = HttpResponse(httpResponse, jsonResponse, retryAfterSeconds = retryAfter, retryLimit = retryLimit)
                         }
                     }
                 } catch (t: Throwable) {
@@ -289,6 +290,19 @@ internal class HttpClient(
             retryAfterStr.toIntOrNull() ?: _configModelStore.model.httpRetryAfterParseFailFallback
         } else if (con.responseCode == 429) {
             _configModelStore.model.httpRetryAfterParseFailFallback
+        } else {
+            null
+        }
+    }
+
+    /**
+     * Reads the HTTP Retry-Limit from the response.
+     */
+    private fun retryLimitFromResponse(con: HttpURLConnection): Int? {
+        val retryLimitStr = con.getHeaderField("Retry-Limit")
+        return if (retryLimitStr != null) {
+            Logging.debug("HttpClient: Response Retry-After: $retryLimitStr")
+            retryLimitStr.toIntOrNull()
         } else {
             null
         }
