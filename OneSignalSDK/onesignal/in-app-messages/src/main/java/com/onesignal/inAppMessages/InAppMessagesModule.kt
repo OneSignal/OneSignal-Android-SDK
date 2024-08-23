@@ -1,7 +1,6 @@
 package com.onesignal.inAppMessages
 
 import android.os.Build
-import com.onesignal.common.IConsistencyManager
 import com.onesignal.common.modules.IModule
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.core.internal.startup.IStartableService
@@ -55,9 +54,6 @@ internal class InAppMessagesModule : IModule {
 
             // Prompts
             builder.register<InAppMessagePromptFactory>().provides<IInAppMessagePromptFactory>()
-
-            // Consistency
-            builder.register<IConsistencyManager>().provides<IConsistencyManager>()
 
             builder.register<InAppMessagesManager>()
                 .provides<IInAppMessagesManager>()
