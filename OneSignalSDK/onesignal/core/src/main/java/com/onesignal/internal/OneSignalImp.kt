@@ -319,6 +319,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
                     createAndSwitchToNewUser(suppressBackendOperation = suppressBackendOperation)
 
+                    // ** No longer allowed when identity verification is on
                     operationRepo!!.enqueue(
                         LoginUserFromSubscriptionOperation(
                             configModel!!.appId,
