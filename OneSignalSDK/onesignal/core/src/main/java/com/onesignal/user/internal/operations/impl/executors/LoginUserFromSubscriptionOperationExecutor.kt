@@ -42,6 +42,7 @@ internal class LoginUserFromSubscriptionOperationExecutor(
 
     private suspend fun loginUser(loginUserOp: LoginUserFromSubscriptionOperation): ExecutionResponse {
         try {
+            // Not allowed when identity verification is on
             val identities =
                 _subscriptionBackend.getIdentityFromSubscription(
                     loginUserOp.appId,
