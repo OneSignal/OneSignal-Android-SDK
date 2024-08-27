@@ -35,6 +35,10 @@ internal class LocationBackgroundService(
             return scheduleTime
         }
 
+    /** NOTE: This triggers more often than scheduleBackgroundRunIn defined above,
+     * as it runs on the lowest IBackgroundService.scheduleBackgroundRunIn across
+     * the SDK.
+     */
     override suspend fun backgroundRun() {
         _capturer.captureLastLocation()
     }
