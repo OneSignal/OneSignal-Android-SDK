@@ -13,7 +13,7 @@ import com.onesignal.core.internal.backend.InfluenceParamsObject
 import com.onesignal.core.internal.backend.ParamsObject
 import com.onesignal.core.internal.http.CacheKeys
 import com.onesignal.core.internal.http.IHttpClient
-import com.onesignal.core.internal.http.impl.OptionalHeaderValues
+import com.onesignal.core.internal.http.impl.OptionalHeaders
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import org.json.JSONObject
@@ -32,9 +32,7 @@ internal class ParamsBackendService(
             paramsUrl += "?player_id=$subscriptionId"
         }
 
-        val headers = OptionalHeaderValues()
-        headers.cacheKey = CacheKeys.REMOTE_PARAMS
-        val response = _http.get(paramsUrl, headers)
+        val response = _http.get(paramsUrl, OptionalHeaders(cacheKey = CacheKeys.REMOTE_PARAMS))
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
