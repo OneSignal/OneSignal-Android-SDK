@@ -8,6 +8,7 @@ import com.onesignal.session.internal.influence.Influence
 import com.onesignal.session.internal.influence.InfluenceChannel
 import com.onesignal.session.internal.influence.InfluenceType
 import com.onesignal.session.internal.influence.InfluenceType.Companion.fromString
+import com.onesignal.session.internal.outcomes.migrations.RemoveZeroSessionTimeRecords
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -101,6 +102,7 @@ internal class OutcomeEventsRepository(
     override suspend fun getAllEventsToSend(): List<OutcomeEventParams> {
         val events: MutableList<OutcomeEventParams> = ArrayList()
         withContext(Dispatchers.IO) {
+            RemoveZeroSessionTimeRecords.run(_databaseProvider)
             _databaseProvider.os.query(OutcomeEventsTable.TABLE_NAME) { cursor ->
                 if (cursor.moveToFirst()) {
                     do {
