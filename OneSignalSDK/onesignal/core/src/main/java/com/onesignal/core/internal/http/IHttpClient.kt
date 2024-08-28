@@ -1,6 +1,6 @@
 package com.onesignal.core.internal.http
 
-import com.onesignal.core.internal.http.impl.OptionalHeaderValues
+import com.onesignal.core.internal.http.impl.OptionalHeaders
 import org.json.JSONObject
 
 /**
@@ -19,7 +19,7 @@ interface IHttpClient {
     suspend fun post(
         url: String,
         body: JSONObject,
-        headerValues: OptionalHeaderValues? = null,
+        headers: OptionalHeaders? = null,
     ): HttpResponse
 
     /**
@@ -35,7 +35,7 @@ interface IHttpClient {
      */
     suspend fun get(
         url: String,
-        headerValues: OptionalHeaderValues? = null,
+        headers: OptionalHeaders? = null,
     ): HttpResponse
 
     /**
@@ -49,7 +49,7 @@ interface IHttpClient {
     suspend fun put(
         url: String,
         body: JSONObject,
-        headerValues: OptionalHeaderValues? = null,
+        headers: OptionalHeaders? = null,
     ): HttpResponse
 
     /**
@@ -63,7 +63,7 @@ interface IHttpClient {
     suspend fun patch(
         url: String,
         body: JSONObject,
-        headerValues: OptionalHeaderValues? = null,
+        headers: OptionalHeaders? = null,
     ): HttpResponse
 
     /**
@@ -75,7 +75,7 @@ interface IHttpClient {
      */
     suspend fun delete(
         url: String,
-        headerValues: OptionalHeaderValues? = null,
+        headers: OptionalHeaders? = null,
     ): HttpResponse
 }
 

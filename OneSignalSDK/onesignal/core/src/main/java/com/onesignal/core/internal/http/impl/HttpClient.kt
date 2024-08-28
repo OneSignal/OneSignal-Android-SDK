@@ -45,37 +45,37 @@ internal class HttpClient(
     override suspend fun post(
         url: String,
         body: JSONObject,
-        headerValues: OptionalHeaderValues?,
-    ): HttpResponse = makeRequest(url, "POST", body, _configModelStore.model.httpTimeout, headerValues)
+        headers: OptionalHeaders?,
+    ): HttpResponse = makeRequest(url, "POST", body, _configModelStore.model.httpTimeout, headers)
 
     override suspend fun get(
         url: String,
-        headerValues: OptionalHeaderValues?,
-    ): HttpResponse = makeRequest(url, null, null, _configModelStore.model.httpGetTimeout, headerValues)
+        headers: OptionalHeaders?,
+    ): HttpResponse = makeRequest(url, null, null, _configModelStore.model.httpGetTimeout, headers)
 
     override suspend fun put(
         url: String,
         body: JSONObject,
-        headerValues: OptionalHeaderValues?,
-    ): HttpResponse = makeRequest(url, "PUT", body, _configModelStore.model.httpTimeout, headerValues)
+        headers: OptionalHeaders?,
+    ): HttpResponse = makeRequest(url, "PUT", body, _configModelStore.model.httpTimeout, headers)
 
     override suspend fun patch(
         url: String,
         body: JSONObject,
-        headerValues: OptionalHeaderValues?,
-    ): HttpResponse = makeRequest(url, "PATCH", body, _configModelStore.model.httpTimeout, headerValues)
+        headers: OptionalHeaders?,
+    ): HttpResponse = makeRequest(url, "PATCH", body, _configModelStore.model.httpTimeout, headers)
 
     override suspend fun delete(
         url: String,
-        headerValues: OptionalHeaderValues?,
-    ): HttpResponse = makeRequest(url, "DELETE", null, _configModelStore.model.httpTimeout, headerValues)
+        headers: OptionalHeaders?,
+    ): HttpResponse = makeRequest(url, "DELETE", null, _configModelStore.model.httpTimeout, headers)
 
     private suspend fun makeRequest(
         url: String,
         method: String?,
         jsonBody: JSONObject?,
         timeout: Int,
-        headerValues: OptionalHeaderValues?,
+        headers: OptionalHeaders?,
     ): HttpResponse {
         // If privacy consent is required but not yet given, any non-GET request should be blocked.
         if (method != null && _configModelStore.model.consentRequired == true && _configModelStore.model.consentGiven != true) {
@@ -90,7 +90,7 @@ internal class HttpClient(
 
         try {
             return withTimeout(getThreadTimeout(timeout).toLong()) {
-                return@withTimeout makeRequestIODispatcher(url, method, jsonBody, timeout, headerValues)
+                return@withTimeout makeRequestIODispatcher(url, method, jsonBody, timeout, headers)
             }
         } catch (e: TimeoutCancellationException) {
             Logging.error("HttpClient: Request timed out: $url", e)
@@ -106,7 +106,7 @@ internal class HttpClient(
         method: String?,
         jsonBody: JSONObject?,
         timeout: Int,
-        headerValues: OptionalHeaderValues?,
+        headers: OptionalHeaders?,
     ): HttpResponse {
         var retVal: HttpResponse? = null
 
@@ -172,11 +172,11 @@ internal class HttpClient(
 
                     // H E A D E R S
 
-                    if (headerValues?.cacheKey != null) {
+                    if (headers?.cacheKey != null) {
                         val eTag =
                             _prefs.getString(
                                 PreferenceStores.ONESIGNAL,
-                                PreferenceOneSignalKeys.PREFS_OS_ETAG_PREFIX + headerValues.cacheKey,
+                                PreferenceOneSignalKeys.PREFS_OS_ETAG_PREFIX + headers.cacheKey,
                             )
                         if (eTag != null) {
                             con.setRequestProperty("If-None-Match", eTag)
@@ -197,7 +197,7 @@ internal class HttpClient(
                             val cachedResponse =
                                 _prefs.getString(
                                     PreferenceStores.ONESIGNAL,
-                                    PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + headerValues?.cacheKey,
+                                    PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + headers?.cacheKey,
                                 )
                             Logging.debug(
                                 "HttpClient: Got Response = ${method ?: "GET"} ${con.url} - Using Cached response due to 304: " +
@@ -216,19 +216,19 @@ internal class HttpClient(
                                 "HttpClient: Got Response = ${method ?: "GET"} ${con.url} - STATUS: $httpResponse - Body: " + json,
                             )
 
-                            if (headerValues?.cacheKey != null) {
+                            if (headers?.cacheKey != null) {
                                 val eTag = con.getHeaderField("etag")
                                 if (eTag != null) {
                                     Logging.debug("HttpClient: Got Response = Response has etag of $eTag so caching the response.")
 
                                     _prefs.saveString(
                                         PreferenceStores.ONESIGNAL,
-                                        PreferenceOneSignalKeys.PREFS_OS_ETAG_PREFIX + headerValues.cacheKey,
+                                        PreferenceOneSignalKeys.PREFS_OS_ETAG_PREFIX + headers.cacheKey,
                                         eTag,
                                     )
                                     _prefs.saveString(
                                         PreferenceStores.ONESIGNAL,
-                                        PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + headerValues.cacheKey,
+                                        PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + headers.cacheKey,
                                         json,
                                     )
                                 }
