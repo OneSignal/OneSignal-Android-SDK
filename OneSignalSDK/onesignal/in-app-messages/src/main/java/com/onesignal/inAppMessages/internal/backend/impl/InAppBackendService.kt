@@ -4,13 +4,18 @@ import com.onesignal.common.NetworkUtils
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.http.IHttpClient
+import com.onesignal.core.internal.http.impl.OptionalHeaders
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.inAppMessages.internal.InAppMessage
 import com.onesignal.inAppMessages.internal.InAppMessageContent
 import com.onesignal.inAppMessages.internal.backend.GetIAMDataResponse
 import com.onesignal.inAppMessages.internal.backend.IInAppBackendService
 import com.onesignal.inAppMessages.internal.hydrators.InAppHydrator
+import kotlinx.coroutines.delay
 import org.json.JSONObject
+
+private const val DEFAULT_RETRY_LIMIT = 3
+private const val DEFAULT_RETRY_AFTER_SECONDS = 1
 
 internal class InAppBackendService(
     private val _httpClient: IHttpClient,
@@ -22,24 +27,11 @@ internal class InAppBackendService(
     override suspend fun listInAppMessages(
         appId: String,
         subscriptionId: String,
+        offset: Long,
+        sessionDurationProvider: () -> Long,
     ): List<InAppMessage>? {
-        // Retrieve any in app messages that might exist
-        val response = _httpClient.get("apps/$appId/subscriptions/$subscriptionId/iams")
-
-        if (response.isSuccess) {
-            val jsonResponse = JSONObject(response.payload)
-
-            if (jsonResponse.has("in_app_messages")) {
-                val iamMessagesAsJSON = jsonResponse.getJSONArray("in_app_messages")
-                // TODO: Outstanding question on whether we still want to cache this.  Only used when
-                //       hard start of the app, but within 30 seconds of it being killed (i.e. same session startup).
-                // Cache copy for quick cold starts
-//                _prefs.savedIAMs = iamMessagesAsJSON.toString()
-                return _hydrator.hydrateIAMMessages(iamMessagesAsJSON)
-            }
-        }
-
-        return null
+        val baseUrl = "apps/$appId/subscriptions/$subscriptionId/iams"
+        return attemptFetchWithRetries(baseUrl, offset, sessionDurationProvider)
     }
 
     override suspend fun getIAMData(
@@ -51,7 +43,7 @@ internal class InAppBackendService(
             htmlPathForMessage(messageId, variantId, appId)
                 ?: return GetIAMDataResponse(null, false)
 
-        val response = _httpClient.get(htmlPath, null)
+        val response = _httpClient.get(htmlPath)
 
         if (response.isSuccess) {
             // Successful request, reset count
@@ -81,7 +73,7 @@ internal class InAppBackendService(
     ): InAppMessageContent? {
         val htmlPath = "in_app_messages/device_preview?preview_id=$previewUUID&app_id=$appId"
 
-        val response = _httpClient.get(htmlPath, null)
+        val response = _httpClient.get(htmlPath)
 
         return if (response.isSuccess) {
             val jsonResponse = JSONObject(response.payload!!)
@@ -209,4 +201,81 @@ internal class InAppBackendService(
     ) {
         Logging.error("Encountered a $statusCode error while attempting in-app message $requestType request: $response")
     }
+
+    private suspend fun attemptFetchWithRetries(
+        baseUrl: String,
+        offset: Long,
+        sessionDurationProvider: () -> Long,
+    ): List<InAppMessage>? {
+        var attempts = 1
+        var delayTime = 1 // Start with a 1-second delay for exponential backoff
+        var retryLimit = DEFAULT_RETRY_LIMIT
+
+        while (attempts <= retryLimit + 1) {
+            val retryCount = if (attempts > 1) attempts - 1 else null
+            val values =
+                OptionalHeaders(
+                    offset = offset,
+                    sessionDuration = sessionDurationProvider(),
+                    retryCount = retryCount,
+                )
+            val response = _httpClient.get(baseUrl, values)
+
+            if (response.isSuccess) {
+                val jsonResponse = response.payload?.let { JSONObject(it) }
+                return jsonResponse?.let { hydrateInAppMessages(it) }
+            } else if (response.statusCode == 425) { // 425 Too Early
+                if (response.retryLimit != null) {
+                    retryLimit = response.retryLimit!!
+                }
+                val retryAfter = response.retryAfterSeconds ?: DEFAULT_RETRY_AFTER_SECONDS
+                delay(retryAfter * 1_000L)
+            } else if (response.statusCode == 429) { // 429 Too Many Requests
+                val retryAfter = response.retryAfterSeconds ?: delayTime
+
+                delay(retryAfter * 1_000L)
+                delayTime *= 2 // Exponential backoff
+            } else if (response.statusCode >= 500) {
+                delay(delayTime * 1_000L)
+                delayTime *= 2 // Exponential backoff
+            } else {
+                return null
+            }
+
+            attempts++
+        }
+
+        // If all retries fail, make a final attempt without the offset. This will tell the server,
+        // we give up, just give me the IAMs without first ensuring data consistency
+        return fetchInAppMessagesWithoutOffset(baseUrl, sessionDurationProvider)
+    }
+
+    private suspend fun fetchInAppMessagesWithoutOffset(
+        url: String,
+        sessionDurationProvider: () -> Long,
+    ): List<InAppMessage>? {
+        val response =
+            _httpClient.get(
+                url,
+                OptionalHeaders(
+                    sessionDuration = sessionDurationProvider(),
+                    offset = 0,
+                ),
+            )
+
+        if (response.isSuccess) {
+            val jsonResponse = response.payload?.let { JSONObject(it) }
+            return jsonResponse?.let { hydrateInAppMessages(it) }
+        } else {
+            return null
+        }
+    }
+
+    private fun hydrateInAppMessages(jsonResponse: JSONObject): List<InAppMessage>? =
+        if (jsonResponse.has("in_app_messages")) {
+            val iamMessagesAsJSON = jsonResponse.getJSONArray("in_app_messages")
+            _hydrator.hydrateIAMMessages(iamMessagesAsJSON)
+        } else {
+            null
+        }
 }
