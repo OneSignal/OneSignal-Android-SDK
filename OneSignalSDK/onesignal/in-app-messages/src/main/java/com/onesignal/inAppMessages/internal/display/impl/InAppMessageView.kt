@@ -104,7 +104,7 @@ internal class InAppMessageView(
 
     fun setWebView(webView: WebView) {
         this.webView = webView
-        this.webView!!.setBackgroundColor(Color.TRANSPARENT)
+        this.webView?.setBackgroundColor(Color.TRANSPARENT)
     }
 
     fun setMessageController(messageController: InAppMessageViewListener?) {
@@ -277,10 +277,11 @@ internal class InAppMessageView(
                 if (hasBackground) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT,
                 false,
             )
-        popupWindow!!.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        popupWindow!!.isTouchable = true
+        popupWindow?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        popupWindow?.isTouchable = true
+        popupWindow?.isFocusable = true
         // NOTE: This is required for getting fullscreen under notches working in portrait mode
-        popupWindow!!.isClippingEnabled = false
+        popupWindow?.isClippingEnabled = false
         var gravity = 0
         if (!hasBackground) {
             gravity =
@@ -299,7 +300,7 @@ internal class InAppMessageView(
             popupWindow!!,
             displayType,
         )
-        popupWindow!!.showAtLocation(
+        popupWindow?.showAtLocation(
             currentActivity!!.window.decorView.rootView,
             gravity,
             0,
