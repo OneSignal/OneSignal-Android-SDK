@@ -279,7 +279,9 @@ internal class InAppMessageView(
             )
         popupWindow?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         popupWindow?.isTouchable = true
-        popupWindow?.isFocusable = true
+        // Focusable allows keyboard input for HTML IAMs, but also prevents interacting under banners
+        popupWindow?.isFocusable = !displayPosition.isBanner
+
         // NOTE: This is required for getting fullscreen under notches working in portrait mode
         popupWindow?.isClippingEnabled = false
         var gravity = 0
