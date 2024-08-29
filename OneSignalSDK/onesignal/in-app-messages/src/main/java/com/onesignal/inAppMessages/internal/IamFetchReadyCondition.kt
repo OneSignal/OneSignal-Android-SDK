@@ -1,4 +1,4 @@
-package com.onesignal.common.consistency.conditions
+package com.onesignal.inAppMessages.internal
 
 import com.onesignal.common.consistency.enums.IamFetchOffsetKey
 import com.onesignal.common.consistency.models.ICondition

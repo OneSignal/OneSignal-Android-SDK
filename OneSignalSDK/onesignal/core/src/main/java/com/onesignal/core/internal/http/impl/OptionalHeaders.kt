@@ -8,13 +8,13 @@ data class OptionalHeaders(
     /**
      * Used for read your write consistency
      */
-    var offset: Long? = null,
+    val offset: Long? = null,
     /**
      * Current retry count
      */
-    var retryCount: Int? = null,
+    val retryCount: Int? = null,
     /**
      * Used to track delay between session start and request
      */
-    var secondsSinceAppOpen: Long? = null,
+    val secondsSinceAppOpen: Long? = null,
 )

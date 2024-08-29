@@ -4,7 +4,6 @@ import android.app.AlertDialog
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.IDManager
 import com.onesignal.common.JSONUtils
-import com.onesignal.common.consistency.conditions.IamFetchReadyCondition
 import com.onesignal.common.consistency.enums.IamFetchOffsetKey
 import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.events.EventProducer
@@ -232,7 +231,8 @@ internal class InAppMessagesManager(
     private fun fetchMessagesWhenConditionIsMet() {
         suspendifyOnThread {
             val onesignalId = _userManager.onesignalId
-            val iamFetchCondition = _iamFetchConsistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
+            val iamFetchCondition =
+                _iamFetchConsistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
             val offset = iamFetchCondition.await()
             val sessionTime = _time.currentTimeMillis - _sessionService.startTime
             if (offset != null) {

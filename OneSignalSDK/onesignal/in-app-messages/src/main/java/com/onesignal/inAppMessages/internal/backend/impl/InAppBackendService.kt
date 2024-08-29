@@ -4,7 +4,7 @@ import com.onesignal.common.NetworkUtils
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.http.IHttpClient
-import com.onesignal.core.internal.http.impl.OptionalHeaderValues
+import com.onesignal.core.internal.http.impl.OptionalHeaders
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.inAppMessages.internal.InAppMessage
 import com.onesignal.inAppMessages.internal.InAppMessageContent
@@ -13,6 +13,9 @@ import com.onesignal.inAppMessages.internal.backend.IInAppBackendService
 import com.onesignal.inAppMessages.internal.hydrators.InAppHydrator
 import kotlinx.coroutines.delay
 import org.json.JSONObject
+
+private const val DEFAULT_RETRY_LIMIT = 3
+private const val DEFAULT_RETRY_AFTER_SECONDS = 1
 
 internal class InAppBackendService(
     private val _httpClient: IHttpClient,
@@ -208,34 +211,42 @@ internal class InAppBackendService(
         var delayTime = 1 // Start with a 1-second delay for exponential backoff
 
         while (true) {
-            val headerValues = OptionalHeaderValues()
-            if (attempts > 1) {
-                headerValues.retryCount = attempts - 1
-            }
-            headerValues.offset = offset
-            headerValues.secondsSinceAppOpen = sessionTime
-            val response = _httpClient.get(baseUrl, headerValues)
+            val retryCount = if (attempts > 1) attempts - 1 else null
+            val values =
+                OptionalHeaders(
+                    offset = offset,
+                    secondsSinceAppOpen = sessionTime,
+                    retryCount = retryCount,
+                )
+            val response = _httpClient.get(baseUrl, values)
 
             if (response.isSuccess) {
                 val jsonResponse = response.payload?.let { JSONObject(it) }
                 return jsonResponse?.let { hydrateInAppMessages(it) }
             } else if (response.statusCode == 425) { // 425 Too Early
-                val retryLimit = response.retryLimit ?: 3
-                val retryAfter = response.retryAfterSeconds ?: 1
+                val retryLimit = response.retryLimit ?: DEFAULT_RETRY_LIMIT
+                val retryAfter = response.retryAfterSeconds ?: DEFAULT_RETRY_AFTER_SECONDS
 
                 if (attempts > retryLimit) {
                     break
                 }
 
-                delay(retryAfter * 1000L) // Convert seconds to milliseconds
+                delay(retryAfter * 1_000L)
             } else if (response.statusCode == 429) { // 429 Too Many Requests
                 val retryAfter = response.retryAfterSeconds ?: delayTime
 
-                if (attempts > (response.retryLimit ?: 3)) {
+                if (attempts > (response.retryLimit ?: DEFAULT_RETRY_LIMIT)) {
                     break
                 }
 
-                delay(retryAfter * 1000L) // Convert seconds to milliseconds
+                delay(retryAfter * 1_000L)
+                delayTime *= 2 // Exponential backoff
+            } else if (response.statusCode == 444 || response.statusCode >= 500) {
+                if (attempts > DEFAULT_RETRY_LIMIT) {
+                    break
+                }
+
+                delay(delayTime * 1_000L)
                 delayTime *= 2 // Exponential backoff
             } else {
                 return null
@@ -253,9 +264,7 @@ internal class InAppBackendService(
         url: String,
         sessionTime: Long,
     ): List<InAppMessage>? {
-        val headersValues = OptionalHeaderValues()
-        headersValues.secondsSinceAppOpen = sessionTime
-        val response = _httpClient.get(url, headersValues)
+        val response = _httpClient.get(url, OptionalHeaders(secondsSinceAppOpen = sessionTime))
 
         if (response.isSuccess) {
             val jsonResponse = response.payload?.let { JSONObject(it) }

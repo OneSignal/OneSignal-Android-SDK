@@ -53,6 +53,9 @@ class ConsistencyManager<K : Enum<K>> : IConsistencyManager<K> {
         }
     }
 
+    /**
+     * IMPORTANT: calling code should be protected by mutex to avoid potential inconsistencies
+     */
     private fun checkConditionsAndComplete() {
         val completedConditions = mutableListOf<Pair<ICondition<K>, CompletableDeferred<Long?>>>()
 

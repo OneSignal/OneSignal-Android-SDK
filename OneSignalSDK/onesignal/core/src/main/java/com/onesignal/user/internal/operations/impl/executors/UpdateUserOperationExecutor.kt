@@ -99,9 +99,7 @@ internal class UpdateUserOperationExecutor(
                     // The session time we pass up is the total session time across all `TrackSessionEndOperation`
                     // operations that exist in this group.
                     val sessionTime =
-                        if (deltasObject.sessionTime !=
-                            null
-                        ) {
+                        if (deltasObject.sessionTime != null) {
                             deltasObject.sessionTime!! + operation.sessionTime
                         } else {
                             operation.sessionTime
@@ -120,9 +118,7 @@ internal class UpdateUserOperationExecutor(
                     // operations that exist in this group, while the purchases is the union of all
                     // `TrackPurchaseOperation` operations that exist in this group.
                     val amountSpent =
-                        if (deltasObject.amountSpent !=
-                            null
-                        ) {
+                        if (deltasObject.amountSpent != null) {
                             deltasObject.amountSpent!! + operation.amountSpent
                         } else {
                             operation.amountSpent

@@ -184,6 +184,18 @@ internal class HttpClient(
                         }
                     }
 
+                    if (headers?.offset != null) {
+                        con.setRequestProperty("Offset", headers.offset.toString());
+                    }
+
+                    if (headers?.retryCount != null) {
+                        con.setRequestProperty("Retry-Count", headers.retryCount.toString())
+                    }
+
+                    if (headers?.secondsSinceAppOpen != null) {
+                        con.setRequestProperty("Seconds-Since-App-Open", headers.secondsSinceAppOpen.toString())
+                    }
+
                     // Network request is made from getResponseCode()
                     httpResponse = con.responseCode
 
