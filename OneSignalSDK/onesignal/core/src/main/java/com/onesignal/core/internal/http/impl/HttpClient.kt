@@ -184,6 +184,18 @@ internal class HttpClient(
                         }
                     }
 
+                    if (headers?.offset != null) {
+                        con.setRequestProperty("Onesignal-Offset", headers.offset.toString())
+                    }
+
+                    if (headers?.retryCount != null) {
+                        con.setRequestProperty("Onesignal-Retry-Count", headers.retryCount.toString())
+                    }
+
+                    if (headers?.sessionDuration != null) {
+                        con.setRequestProperty("OneSignal-Session-Duration", headers.sessionDuration.toString())
+                    }
+
                     // Network request is made from getResponseCode()
                     httpResponse = con.responseCode
 
@@ -299,9 +311,9 @@ internal class HttpClient(
      * Reads the HTTP Retry-Limit from the response.
      */
     private fun retryLimitFromResponse(con: HttpURLConnection): Int? {
-        val retryLimitStr = con.getHeaderField("Retry-Limit")
+        val retryLimitStr = con.getHeaderField("OneSignal-Retry-Limit")
         return if (retryLimitStr != null) {
-            Logging.debug("HttpClient: Response Retry-After: $retryLimitStr")
+            Logging.debug("HttpClient: Response OneSignal-Retry-Limit: $retryLimitStr")
             retryLimitStr.toIntOrNull()
         } else {
             null
