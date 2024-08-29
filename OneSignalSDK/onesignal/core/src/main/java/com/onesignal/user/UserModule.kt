@@ -1,5 +1,8 @@
 package com.onesignal.user
 
+import com.onesignal.common.consistency.enums.IamFetchOffsetKey
+import com.onesignal.common.consistency.impl.ConsistencyManager
+import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.modules.IModule
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.core.internal.operations.IOperationExecutor
@@ -34,6 +37,9 @@ import com.onesignal.user.internal.subscriptions.impl.SubscriptionManager
 
 internal class UserModule : IModule {
     override fun register(builder: ServiceBuilder) {
+        // Consistency
+        builder.register<ConsistencyManager<IamFetchOffsetKey>>().provides<IConsistencyManager<IamFetchOffsetKey>>()
+
         // Properties
         builder.register<PropertiesModelStore>().provides<PropertiesModelStore>()
         builder.register<PropertiesModelStoreListener>().provides<IBootstrapService>()
