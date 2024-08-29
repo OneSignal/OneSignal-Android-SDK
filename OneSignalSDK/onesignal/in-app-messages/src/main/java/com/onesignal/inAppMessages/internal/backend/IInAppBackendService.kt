@@ -13,12 +13,15 @@ internal interface IInAppBackendService {
      *
      * @param appId The ID of the application that the IAM will be retrieved from.
      * @param subscriptionId The specific subscription within the [appId] the IAM will be delivered to.
+     * @param offset OPTIONAL - used for read your write consistency
      *
      * @return The list of IAMs associated to the subscription, or null if the IAMs could not be retrieved.
      */
     suspend fun listInAppMessages(
         appId: String,
         subscriptionId: String,
+        offset: Long,
+        sessionDurationProvider: () -> Long,
     ): List<InAppMessage>?
 
     /**
