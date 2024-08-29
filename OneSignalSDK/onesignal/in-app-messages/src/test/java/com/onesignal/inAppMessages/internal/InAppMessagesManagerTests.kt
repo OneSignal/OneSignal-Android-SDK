@@ -1,5 +1,7 @@
 package com.onesignal.inAppMessages.internal
 
+import com.onesignal.common.consistency.enums.IamFetchOffsetKey
+import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.inAppMessages.internal.backend.IInAppBackendService
 import com.onesignal.inAppMessages.internal.display.IInAppDisplayer
@@ -52,6 +54,7 @@ class InAppMessagesManagerTests : FunSpec({
                 mockk<IInAppLifecycleService>(),
                 MockHelper.languageContext(),
                 MockHelper.time(1000),
+                mockk<IConsistencyManager<IamFetchOffsetKey>>(),
             )
 
         // When
