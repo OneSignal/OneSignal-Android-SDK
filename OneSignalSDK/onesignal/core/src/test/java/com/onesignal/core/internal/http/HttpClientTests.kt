@@ -3,6 +3,7 @@ package com.onesignal.core.internal.http
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.core.internal.device.impl.InstallIdService
 import com.onesignal.core.internal.http.impl.HttpClient
+import com.onesignal.core.internal.http.impl.OptionalHeaders
 import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -88,9 +89,10 @@ class HttpClientTests : FunSpec({
         val httpClient = mocks.httpClient
 
         // When
-        val response1 = httpClient.get("URL", "CACHE_KEY")
+        val headers = OptionalHeaders(cacheKey = "CACHE_KEY")
+        val response1 = httpClient.get("URL", headers)
         factory.mockResponse = mockResponse2
-        val response2 = httpClient.get("URL", "CACHE_KEY")
+        val response2 = httpClient.get("URL", headers)
 
         // Then
         response1.statusCode shouldBe 200
@@ -123,13 +125,14 @@ class HttpClientTests : FunSpec({
         val httpClient = mocks.httpClient
 
         // When
-        val response1 = httpClient.get("URL", "CACHE_KEY")
+        val headers = OptionalHeaders(cacheKey = "CACHE_KEY")
+        val response1 = httpClient.get("URL", headers)
 
         factory.mockResponse = mockResponse2
-        val response2 = httpClient.get("URL", "CACHE_KEY")
+        val response2 = httpClient.get("URL", headers)
 
         factory.mockResponse = mockResponse3
-        val response3 = httpClient.get("URL", "CACHE_KEY")
+        val response3 = httpClient.get("URL", headers)
 
         // Then
         response1.statusCode shouldBe 200

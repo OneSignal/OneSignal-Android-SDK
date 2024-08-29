@@ -45,41 +45,37 @@ internal class HttpClient(
     override suspend fun post(
         url: String,
         body: JSONObject,
-    ): HttpResponse {
-        return makeRequest(url, "POST", body, _configModelStore.model.httpTimeout, null)
-    }
+        headers: OptionalHeaders?,
+    ): HttpResponse = makeRequest(url, "POST", body, _configModelStore.model.httpTimeout, headers)
 
     override suspend fun get(
         url: String,
-        cacheKey: String?,
-    ): HttpResponse {
-        return makeRequest(url, null, null, _configModelStore.model.httpGetTimeout, cacheKey)
-    }
+        headers: OptionalHeaders?,
+    ): HttpResponse = makeRequest(url, null, null, _configModelStore.model.httpGetTimeout, headers)
 
     override suspend fun put(
         url: String,
         body: JSONObject,
-    ): HttpResponse {
-        return makeRequest(url, "PUT", body, _configModelStore.model.httpTimeout, null)
-    }
+        headers: OptionalHeaders?,
+    ): HttpResponse = makeRequest(url, "PUT", body, _configModelStore.model.httpTimeout, headers)
 
     override suspend fun patch(
         url: String,
         body: JSONObject,
-    ): HttpResponse {
-        return makeRequest(url, "PATCH", body, _configModelStore.model.httpTimeout, null)
-    }
+        headers: OptionalHeaders?,
+    ): HttpResponse = makeRequest(url, "PATCH", body, _configModelStore.model.httpTimeout, headers)
 
-    override suspend fun delete(url: String): HttpResponse {
-        return makeRequest(url, "DELETE", null, _configModelStore.model.httpTimeout, null)
-    }
+    override suspend fun delete(
+        url: String,
+        headers: OptionalHeaders?,
+    ): HttpResponse = makeRequest(url, "DELETE", null, _configModelStore.model.httpTimeout, headers)
 
     private suspend fun makeRequest(
         url: String,
         method: String?,
         jsonBody: JSONObject?,
         timeout: Int,
-        cacheKey: String?,
+        headers: OptionalHeaders?,
     ): HttpResponse {
         // If privacy consent is required but not yet given, any non-GET request should be blocked.
         if (method != null && _configModelStore.model.consentRequired == true && _configModelStore.model.consentGiven != true) {
@@ -94,7 +90,7 @@ internal class HttpClient(
 
         try {
             return withTimeout(getThreadTimeout(timeout).toLong()) {
-                return@withTimeout makeRequestIODispatcher(url, method, jsonBody, timeout, cacheKey)
+                return@withTimeout makeRequestIODispatcher(url, method, jsonBody, timeout, headers)
             }
         } catch (e: TimeoutCancellationException) {
             Logging.error("HttpClient: Request timed out: $url", e)
@@ -110,7 +106,7 @@ internal class HttpClient(
         method: String?,
         jsonBody: JSONObject?,
         timeout: Int,
-        cacheKey: String?,
+        headers: OptionalHeaders?,
     ): HttpResponse {
         var retVal: HttpResponse? = null
 
@@ -174,11 +170,16 @@ internal class HttpClient(
                         outputStream.write(sendBytes)
                     }
 
-                    if (cacheKey != null) {
-                        val eTag = _prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_ETAG_PREFIX + cacheKey)
+                    // H E A D E R S
 
+                    if (headers?.cacheKey != null) {
+                        val eTag =
+                            _prefs.getString(
+                                PreferenceStores.ONESIGNAL,
+                                PreferenceOneSignalKeys.PREFS_OS_ETAG_PREFIX + headers.cacheKey,
+                            )
                         if (eTag != null) {
-                            con.setRequestProperty("if-none-match", eTag)
+                            con.setRequestProperty("If-None-Match", eTag)
                             Logging.debug("HttpClient: Adding header if-none-match: $eTag")
                         }
                     }
@@ -187,6 +188,7 @@ internal class HttpClient(
                     httpResponse = con.responseCode
 
                     val retryAfter = retryAfterFromResponse(con)
+                    val retryLimit = retryLimitFromResponse(con)
                     val newDelayUntil = _time.currentTimeMillis + (retryAfter ?: 0) * 1_000
                     if (newDelayUntil > delayNewRequestsUntil) delayNewRequestsUntil = newDelayUntil
 
@@ -195,39 +197,44 @@ internal class HttpClient(
                             val cachedResponse =
                                 _prefs.getString(
                                     PreferenceStores.ONESIGNAL,
-                                    PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + cacheKey,
+                                    PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + headers?.cacheKey,
                                 )
-                            Logging.debug("HttpClient: Got Response = ${method ?: "GET"} ${con.url} - Using Cached response due to 304: " + cachedResponse)
+                            Logging.debug(
+                                "HttpClient: Got Response = ${method ?: "GET"} ${con.url} - Using Cached response due to 304: " +
+                                    cachedResponse,
+                            )
 
                             // TODO: SHOULD RETURN OK INSTEAD OF NOT_MODIFIED TO MAKE TRANSPARENT?
-                            retVal = HttpResponse(httpResponse, cachedResponse, retryAfterSeconds = retryAfter)
+                            retVal = HttpResponse(httpResponse, cachedResponse, retryAfterSeconds = retryAfter, retryLimit = retryLimit)
                         }
                         HttpURLConnection.HTTP_ACCEPTED, HttpURLConnection.HTTP_CREATED, HttpURLConnection.HTTP_OK -> {
                             val inputStream = con.inputStream
                             val scanner = Scanner(inputStream, "UTF-8")
                             val json = if (scanner.useDelimiter("\\A").hasNext()) scanner.next() else ""
                             scanner.close()
-                            Logging.debug("HttpClient: Got Response = ${method ?: "GET"} ${con.url} - STATUS: $httpResponse - Body: " + json)
+                            Logging.debug(
+                                "HttpClient: Got Response = ${method ?: "GET"} ${con.url} - STATUS: $httpResponse - Body: " + json,
+                            )
 
-                            if (cacheKey != null) {
+                            if (headers?.cacheKey != null) {
                                 val eTag = con.getHeaderField("etag")
                                 if (eTag != null) {
                                     Logging.debug("HttpClient: Got Response = Response has etag of $eTag so caching the response.")
 
                                     _prefs.saveString(
                                         PreferenceStores.ONESIGNAL,
-                                        PreferenceOneSignalKeys.PREFS_OS_ETAG_PREFIX + cacheKey,
+                                        PreferenceOneSignalKeys.PREFS_OS_ETAG_PREFIX + headers.cacheKey,
                                         eTag,
                                     )
                                     _prefs.saveString(
                                         PreferenceStores.ONESIGNAL,
-                                        PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + cacheKey,
+                                        PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + headers.cacheKey,
                                         json,
                                     )
                                 }
                             }
 
-                            retVal = HttpResponse(httpResponse, json, retryAfterSeconds = retryAfter)
+                            retVal = HttpResponse(httpResponse, json, retryAfterSeconds = retryAfter, retryLimit = retryLimit)
                         }
                         else -> {
                             Logging.debug("HttpClient: Got Response = ${method ?: "GET"} ${con.url} - FAILED STATUS: $httpResponse")
@@ -248,7 +255,7 @@ internal class HttpClient(
                                 Logging.warn("HttpClient: Got Response = $method - STATUS: $httpResponse - No response body!")
                             }
 
-                            retVal = HttpResponse(httpResponse, jsonResponse, retryAfterSeconds = retryAfter)
+                            retVal = HttpResponse(httpResponse, jsonResponse, retryAfterSeconds = retryAfter, retryLimit = retryLimit)
                         }
                     }
                 } catch (t: Throwable) {
@@ -283,6 +290,19 @@ internal class HttpClient(
             retryAfterStr.toIntOrNull() ?: _configModelStore.model.httpRetryAfterParseFailFallback
         } else if (con.responseCode == 429) {
             _configModelStore.model.httpRetryAfterParseFailFallback
+        } else {
+            null
+        }
+    }
+
+    /**
+     * Reads the HTTP Retry-Limit from the response.
+     */
+    private fun retryLimitFromResponse(con: HttpURLConnection): Int? {
+        val retryLimitStr = con.getHeaderField("Retry-Limit")
+        return if (retryLimitStr != null) {
+            Logging.debug("HttpClient: Response Retry-After: $retryLimitStr")
+            retryLimitStr.toIntOrNull()
         } else {
             null
         }
