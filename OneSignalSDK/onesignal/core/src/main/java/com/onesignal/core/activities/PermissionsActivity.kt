@@ -98,21 +98,31 @@ class PermissionsActivity : Activity() {
         // We need to wait for other activity to show
         if (requestCode == ONESIGNAL_PERMISSION_REQUEST_CODE) {
             Handler().postDelayed({
-                val permission = permissions[0]
-                val granted =
-                    grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED
                 val callback =
                     requestPermissionService!!.getCallback(permissionRequestType!!)
                         ?: throw RuntimeException("Missing handler for permissionRequestType: $permissionRequestType")
-                if (granted) {
-                    callback.onAccept()
-                    preferenceService!!.saveBool(
-                        PreferenceStores.ONESIGNAL,
-                        "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$permission",
-                        true,
-                    )
+
+                // It is possible that the permissions request interaction with the user is interrupted. In this case
+                // we will receive empty permissions which should be treated as a cancellation and will not prompt
+                // for the permission setting
+                val defaultFallbackSetting = false
+                if (permissions.isEmpty()) {
+                    callback.onReject(defaultFallbackSetting)
                 } else {
-                    callback.onReject(shouldShowSettings(permission))
+                    val permission = permissions[0]
+                    val granted =
+                        grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED
+
+                    if (granted) {
+                        callback.onAccept()
+                        preferenceService!!.saveBool(
+                            PreferenceStores.ONESIGNAL,
+                            "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$permission",
+                            true,
+                        )
+                    } else {
+                        callback.onReject(shouldShowSettings(permission))
+                    }
                 }
             }, DELAY_TIME_CALLBACK_CALL.toLong())
         }
