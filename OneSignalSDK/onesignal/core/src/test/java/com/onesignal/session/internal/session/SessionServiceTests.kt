@@ -86,10 +86,10 @@ class SessionServiceTests : FunSpec({
 
         // Then
         sessionModelStore.model.isValid shouldBe true
-        sessionModelStore.model.startTime shouldBe startTime
+        sessionModelStore.model.startTime shouldBe mocks.currentTime
         sessionModelStore.model.focusTime shouldBe mocks.currentTime
-        verify(exactly = 1) { mocks.spyCallback.onSessionActive() }
-        verify(exactly = 0) { mocks.spyCallback.onSessionStarted() }
+        verify(exactly = 0) { mocks.spyCallback.onSessionActive() }
+        verify(exactly = 1) { mocks.spyCallback.onSessionStarted() }
     }
 
     test("session active duration updated when unfocused") {
@@ -139,5 +139,20 @@ class SessionServiceTests : FunSpec({
         // Then
         sessionModelStore.model.isValid shouldBe false
         verify(exactly = 1) { mocks.spyCallback.onSessionEnded(activeDuration) }
+    }
+
+    test("do not trigger onSessionEnd if session is not active") {
+        // Given
+        val mocks = Mocks()
+        mocks.sessionModelStore { it.isValid = false }
+        val sessionService = mocks.sessionService
+        sessionService.subscribe(mocks.spyCallback)
+        sessionService.start()
+
+        // When
+        sessionService.backgroundRun()
+
+        // Then
+        verify(exactly = 0) { mocks.spyCallback.onSessionEnded(any()) }
     }
 })

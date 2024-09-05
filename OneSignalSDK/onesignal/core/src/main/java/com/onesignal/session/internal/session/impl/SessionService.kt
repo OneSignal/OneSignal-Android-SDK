@@ -47,18 +47,28 @@ internal class SessionService(
     private var config: ConfigModel? = null
     private var shouldFireOnSubscribe = false
 
+    // True if app has been foregrounded at least once since the app started
+    private var hasFocused = false
+
     override fun start() {
         session = _sessionModelStore.model
         config = _configModelStore.model
-        // Reset the session validity property to drive a new session
-        session!!.isValid = false
         _applicationService.addApplicationLifecycleHandler(this)
     }
 
+    /** NOTE: This triggers more often than scheduleBackgroundRunIn defined above,
+     * as it runs on the lowest IBackgroundService.scheduleBackgroundRunIn across
+     * the SDK.
+     */
     override suspend fun backgroundRun() {
+        endSession()
+    }
+
+    private fun endSession() {
+        if (!session!!.isValid) return
         val activeDuration = session!!.activeDuration
-        // end the session
         Logging.debug("SessionService.backgroundRun: Session ended. activeDuration: $activeDuration")
+
         session!!.isValid = false
         sessionLifeCycleNotifier.fire { it.onSessionEnded(activeDuration) }
         session!!.activeDuration = 0L
@@ -75,6 +85,13 @@ internal class SessionService(
      */
     override fun onFocus(firedOnSubscribe: Boolean) {
         Logging.log(LogLevel.DEBUG, "SessionService.onFocus() - fired from start: $firedOnSubscribe")
+
+        // Treat app cold starts as a new session, we attempt to end any previous session to do this.
+        if (!hasFocused) {
+            hasFocused = true
+            endSession()
+        }
+
         if (!session!!.isValid) {
             // As the old session was made inactive, we need to create a new session
             shouldFireOnSubscribe = firedOnSubscribe
@@ -82,7 +99,6 @@ internal class SessionService(
             session!!.startTime = _time.currentTimeMillis
             session!!.focusTime = session!!.startTime
             session!!.isValid = true
-
             Logging.debug("SessionService: New session started at ${session!!.startTime}")
             sessionLifeCycleNotifier.fire { it.onSessionStarted() }
         } else {

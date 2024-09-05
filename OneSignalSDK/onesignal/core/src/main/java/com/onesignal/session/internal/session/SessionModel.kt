@@ -16,7 +16,10 @@ class SessionModel : Model() {
         }
 
     /**
-     * Whether the session is valid.
+     * Indicates if there is an active session.
+     * True when app is in the foreground.
+     * Also true in the background for a short period of time (default 30s)
+     * as a debouncing mechanism.
      */
     var isValid: Boolean
         get() = getBooleanProperty(::isValid.name) { false }
