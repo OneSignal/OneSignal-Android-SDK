@@ -1,7 +1,7 @@
 package com.onesignal.common.consistency.models
 
-interface ICondition<K : Enum<K>> {
-    fun isMet(indexedOffsets: Map<String, Map<K, Long?>>): Boolean
+interface ICondition {
+    fun isMet(indexedOffsets: Map<String, Map<IConsistencyKeyEnum, Long?>>): Boolean
 
-    fun getNewestOffset(offsets: Map<String, Map<K, Long?>>): Long?
+    fun getNewestOffset(offsets: Map<String, Map<IConsistencyKeyEnum, Long?>>): Long?
 }

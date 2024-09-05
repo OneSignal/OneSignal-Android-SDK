@@ -37,7 +37,7 @@ class SubscriptionOperationExecutorTests :
         val localSubscriptionId = "local-subscriptionId1"
         val remoteSubscriptionId = "remote-subscriptionId1"
         val offset = 1L // read your write token
-        val mockConsistencyManager = mockk<IConsistencyManager<IamFetchOffsetKey>>()
+        val mockConsistencyManager = mockk<IConsistencyManager>()
 
         beforeTest {
             clearMocks(mockConsistencyManager)

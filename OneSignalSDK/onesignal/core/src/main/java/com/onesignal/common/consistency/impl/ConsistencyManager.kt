@@ -1,6 +1,7 @@
 package com.onesignal.common.consistency.impl
 
 import com.onesignal.common.consistency.models.ICondition
+import com.onesignal.common.consistency.models.IConsistencyKeyEnum
 import com.onesignal.common.consistency.models.IConsistencyManager
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.sync.Mutex
@@ -15,10 +16,10 @@ import kotlinx.coroutines.sync.withLock
  *  val updateConditionDeferred = consistencyManager.registerCondition(MyCustomCondition())
  *  val newestUpdateOffset = updateConditionDeferred.await()
  */
-class ConsistencyManager<K : Enum<K>> : IConsistencyManager<K> {
+class ConsistencyManager : IConsistencyManager {
     private val mutex = Mutex()
-    private val indexedOffsets: MutableMap<String, MutableMap<K, Long?>> = mutableMapOf()
-    private val conditions: MutableList<Pair<ICondition<K>, CompletableDeferred<Long?>>> =
+    private val indexedOffsets: MutableMap<String, MutableMap<IConsistencyKeyEnum, Long?>> = mutableMapOf()
+    private val conditions: MutableList<Pair<ICondition, CompletableDeferred<Long?>>> =
         mutableListOf()
 
     /**
@@ -30,7 +31,7 @@ class ConsistencyManager<K : Enum<K>> : IConsistencyManager<K> {
      */
     override suspend fun setOffset(
         id: String,
-        key: K,
+        key: IConsistencyKeyEnum,
         value: Long?,
     ) {
         mutex.withLock {
@@ -43,7 +44,7 @@ class ConsistencyManager<K : Enum<K>> : IConsistencyManager<K> {
     /**
      * Register a condition with its corresponding deferred action. Returns a deferred condition.
      */
-    override suspend fun registerCondition(condition: ICondition<K>): CompletableDeferred<Long?> {
+    override suspend fun registerCondition(condition: ICondition): CompletableDeferred<Long?> {
         mutex.withLock {
             val deferred = CompletableDeferred<Long?>()
             val pair = Pair(condition, deferred)
@@ -57,7 +58,7 @@ class ConsistencyManager<K : Enum<K>> : IConsistencyManager<K> {
      * IMPORTANT: calling code should be protected by mutex to avoid potential inconsistencies
      */
     private fun checkConditionsAndComplete() {
-        val completedConditions = mutableListOf<Pair<ICondition<K>, CompletableDeferred<Long?>>>()
+        val completedConditions = mutableListOf<Pair<ICondition, CompletableDeferred<Long?>>>()
 
         for ((condition, deferred) in conditions) {
             if (condition.isMet(indexedOffsets)) {

@@ -41,7 +41,7 @@ internal class SubscriptionOperationExecutor(
     private val _configModelStore: ConfigModelStore,
     private val _buildUserService: IRebuildUserService,
     private val _newRecordState: NewRecordsState,
-    private val _iamFetchConsistencyManager: IConsistencyManager<IamFetchOffsetKey>,
+    private val _consistencyManager: IConsistencyManager,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(CREATE_SUBSCRIPTION, UPDATE_SUBSCRIPTION, DELETE_SUBSCRIPTION, TRANSFER_SUBSCRIPTION)
@@ -115,7 +115,7 @@ internal class SubscriptionOperationExecutor(
             val backendSubscriptionId = result.first
             val offset = result.second
 
-            _iamFetchConsistencyManager.setOffset(createOperation.onesignalId, IamFetchOffsetKey.SUBSCRIPTION_UPDATE, offset)
+            _consistencyManager.setOffset(createOperation.onesignalId, IamFetchOffsetKey.SUBSCRIPTION_UPDATE, offset)
 
             // update the subscription model with the new ID, if it's still active.
             val subscriptionModel = _subscriptionModelStore.get(createOperation.subscriptionId)
@@ -184,7 +184,7 @@ internal class SubscriptionOperationExecutor(
                 )
 
             val offset = _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription)
-            _iamFetchConsistencyManager.setOffset(startingOperation.onesignalId, IamFetchOffsetKey.SUBSCRIPTION_UPDATE, offset)
+            _consistencyManager.setOffset(startingOperation.onesignalId, IamFetchOffsetKey.SUBSCRIPTION_UPDATE, offset)
         } catch (ex: BackendException) {
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
 

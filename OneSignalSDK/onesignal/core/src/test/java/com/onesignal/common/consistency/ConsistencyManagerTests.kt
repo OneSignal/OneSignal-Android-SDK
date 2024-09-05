@@ -2,13 +2,14 @@ package com.onesignal.common.consistency.impl
 
 import com.onesignal.common.consistency.enums.IamFetchOffsetKey
 import com.onesignal.common.consistency.models.ICondition
+import com.onesignal.common.consistency.models.IConsistencyKeyEnum
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.test.runTest
 
 class ConsistencyManagerTests : FunSpec({
 
-    lateinit var consistencyManager: ConsistencyManager<IamFetchOffsetKey>
+    lateinit var consistencyManager: ConsistencyManager
 
     beforeAny {
         consistencyManager = ConsistencyManager()
@@ -60,25 +61,25 @@ class ConsistencyManagerTests : FunSpec({
     }
 }) {
     // Mock implementation of ICondition that simulates a condition that isn't met
-    private class TestUnmetCondition : ICondition<IamFetchOffsetKey> {
-        override fun isMet(offsets: Map<String, Map<IamFetchOffsetKey, Long?>>): Boolean {
+    private class TestUnmetCondition : ICondition {
+        override fun isMet(offsets: Map<String, Map<IConsistencyKeyEnum, Long?>>): Boolean {
             return false // Always returns false to simulate an unmet condition
         }
 
-        override fun getNewestOffset(offsets: Map<String, Map<IamFetchOffsetKey, Long?>>): Long? {
+        override fun getNewestOffset(offsets: Map<String, Map<IConsistencyKeyEnum, Long?>>): Long? {
             return null
         }
     }
 
     // Mock implementation of ICondition for cases where the condition is met
     private class TestMetCondition(
-        private val expectedOffsets: Map<String, Map<IamFetchOffsetKey, Long?>>,
-    ) : ICondition<IamFetchOffsetKey> {
-        override fun isMet(offsets: Map<String, Map<IamFetchOffsetKey, Long?>>): Boolean {
+        private val expectedOffsets: Map<String, Map<IConsistencyKeyEnum, Long?>>,
+    ) : ICondition {
+        override fun isMet(offsets: Map<String, Map<IConsistencyKeyEnum, Long?>>): Boolean {
             return offsets == expectedOffsets
         }
 
-        override fun getNewestOffset(offsets: Map<String, Map<IamFetchOffsetKey, Long?>>): Long? {
+        override fun getNewestOffset(offsets: Map<String, Map<IConsistencyKeyEnum, Long?>>): Long? {
             return expectedOffsets.values.firstOrNull()?.values?.firstOrNull()
         }
     }

@@ -2,7 +2,7 @@ package com.onesignal.common.consistency.models
 
 import kotlinx.coroutines.CompletableDeferred
 
-interface IConsistencyManager<K : Enum<K>> {
+interface IConsistencyManager {
     /**
      * Set method to update the offset based on the key.
      * Params:
@@ -12,7 +12,7 @@ interface IConsistencyManager<K : Enum<K>> {
      */
     suspend fun setOffset(
         id: String,
-        key: K,
+        key: IConsistencyKeyEnum,
         value: Long?,
     )
 
@@ -22,5 +22,5 @@ interface IConsistencyManager<K : Enum<K>> {
      *  condition: ICondition - the condition to be registered
      * Returns: CompletableDeferred<Long?> - a deferred action that completes when the condition is met
      */
-    suspend fun registerCondition(condition: ICondition<K>): CompletableDeferred<Long?>
+    suspend fun registerCondition(condition: ICondition): CompletableDeferred<Long?>
 }

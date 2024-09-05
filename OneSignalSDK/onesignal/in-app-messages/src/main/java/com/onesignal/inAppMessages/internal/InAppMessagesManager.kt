@@ -4,7 +4,6 @@ import android.app.AlertDialog
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.IDManager
 import com.onesignal.common.JSONUtils
-import com.onesignal.common.consistency.enums.IamFetchOffsetKey
 import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.exceptions.BackendException
@@ -68,7 +67,7 @@ internal class InAppMessagesManager(
     private val _lifecycle: IInAppLifecycleService,
     private val _languageContext: ILanguageContext,
     private val _time: ITime,
-    private val _iamFetchConsistencyManager: IConsistencyManager<IamFetchOffsetKey>,
+    private val _consistencyManager: IConsistencyManager,
 ) : IInAppMessagesManager,
     IStartableService,
     ISubscriptionChangedHandler,
@@ -154,7 +153,7 @@ internal class InAppMessagesManager(
             // attempt to fetch messages from the backend (if we have the pre-requisite data already)
             val onesignalId = _userManager.onesignalId
             val updateConditionDeferred =
-                _iamFetchConsistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
+                _consistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
             val offset = updateConditionDeferred.await()
             val sessionTime = _time.currentTimeMillis - _sessionService.startTime
             if (offset != null) {
@@ -232,7 +231,7 @@ internal class InAppMessagesManager(
         suspendifyOnThread {
             val onesignalId = _userManager.onesignalId
             val iamFetchCondition =
-                _iamFetchConsistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
+                _consistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
             val offset = iamFetchCondition.await()
             val sessionTime = _time.currentTimeMillis - _sessionService.startTime
             if (offset != null) {

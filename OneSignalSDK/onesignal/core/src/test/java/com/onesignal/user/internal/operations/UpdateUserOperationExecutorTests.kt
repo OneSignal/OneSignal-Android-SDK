@@ -30,7 +30,7 @@ class UpdateUserOperationExecutorTests :
         val localOneSignalId = "local-onesignalId"
         val remoteOneSignalId = "remote-onesignalId"
         val offset = 1L
-        val mockConsistencyManager = mockk<IConsistencyManager<IamFetchOffsetKey>>()
+        val mockConsistencyManager = mockk<IConsistencyManager>()
 
         beforeTest {
             clearMocks(mockConsistencyManager)

@@ -33,7 +33,7 @@ internal class UpdateUserOperationExecutor(
     private val _propertiesModelStore: PropertiesModelStore,
     private val _buildUserService: IRebuildUserService,
     private val _newRecordState: NewRecordsState,
-    private val _iamFetchConsistencyManager: IConsistencyManager<IamFetchOffsetKey>,
+    private val _consistencyManager: IConsistencyManager,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(SET_TAG, DELETE_TAG, SET_PROPERTY, TRACK_SESSION_START, TRACK_SESSION_END, TRACK_PURCHASE)
@@ -147,7 +147,7 @@ internal class UpdateUserOperationExecutor(
                         deltasObject,
                     )
 
-                _iamFetchConsistencyManager.setOffset(onesignalId, IamFetchOffsetKey.USER_UPDATE, offset)
+                _consistencyManager.setOffset(onesignalId, IamFetchOffsetKey.USER_UPDATE, offset)
 
                 if (_identityModelStore.model.onesignalId == onesignalId) {
                     // go through and make sure any properties are in the correct model state
