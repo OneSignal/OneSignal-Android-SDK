@@ -12,7 +12,6 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import kotlinx.coroutines.CompletableDeferred
@@ -98,10 +97,10 @@ internal class OperationRepo(
     }
 
     override fun start() {
-        paused = false
         coroutineScope.launch {
             // load saved operations first then start processing the queue to ensure correct operation order
             loadSavedOperations()
+            paused = false
             processQueueForever()
         }
     }
@@ -268,9 +267,7 @@ internal class OperationRepo(
                     ops.forEach { it.waiter?.wake(true) }
                 }
                 ExecutionResult.FAIL_UNAUTHORIZED -> {
-                    Logging.error("Operation execution failed with invalid jwt, pausing the operation repo: $operations")
-                    // keep the failed operation and pause the operation repo from executing
-                    paused = true
+                    Logging.error("Operation execution failed with invalid jwt")
                     // add back all operations to the front of the queue to be re-executed.
                     synchronized(queue) {
                         ops.reversed().forEach { queue.add(0, it) }
@@ -396,7 +393,6 @@ internal class OperationRepo(
 
                 // Ensure the operation does not have empty JWT if identity verification is on
                 if (_configModelStore.model.useIdentityVerification &&
-                    operation.hasProperty(IdentityConstants.EXTERNAL_ID) &&
                     _identityModelStore.model.jwtToken.isNullOrEmpty()
                 ) {
                     continue
