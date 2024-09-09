@@ -261,13 +261,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 if (legacyPlayerId == null) {
                     Logging.debug("initWithContext: creating new device-scoped user")
                     createAndSwitchToNewUser()
-                    operationRepo!!.enqueue(
-                        LoginUserOperation(
-                            configModel!!.appId,
-                            identityModelStore!!.model.onesignalId,
-                            identityModelStore!!.model.externalId,
-                        ),
-                    )
                 } else {
                     Logging.debug("initWithContext: creating user linked to subscription $legacyPlayerId")
 
@@ -394,17 +387,31 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             // time if network conditions prevent the operation to succeed.  This allows us to
             // provide a callback to the caller when we can absolutely say the user is logged
             // in, so they may take action on their own backend.
-            val result =
-                operationRepo!!.enqueueAndWait(
-                    LoginUserOperation(
-                        configModel!!.appId,
-                        newIdentityOneSignalId,
-                        externalId,
-                        if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
-                    ),
-                )
 
-            if (!result) {
+            val result =
+                when (useIdentityVerification) {
+                    true -> {
+                        operationRepo!!.enqueue(
+                            LoginUserOperation(
+                                configModel!!.appId,
+                                identityModelStore!!.model.onesignalId,
+                                identityModelStore!!.model.externalId,
+                            ),
+                        )
+                    }
+                    else -> {
+                        operationRepo!!.enqueueAndWait(
+                            LoginUserOperation(
+                                configModel!!.appId,
+                                newIdentityOneSignalId,
+                                externalId,
+                                if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
+                            ),
+                        )
+                    }
+                }
+
+            if (result == false) {
                 Logging.log(LogLevel.ERROR, "Could not login user")
             }
         }
@@ -443,7 +450,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         for (model in identityModelStore!!.store.list()) {
             if (externalId == model.externalId) {
                 identityModelStore!!.model.jwtToken = token
-                operationRepo!!.setPaused(false)
                 operationRepo!!.forceExecuteOperations()
                 Logging.log(LogLevel.DEBUG, "JWT $token is updated for externalId $externalId")
                 return
@@ -527,14 +533,18 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     }
 
     private fun resumeOperationRepoAfterFetchParams(configModel: ConfigModel) {
-        // pause operation repo until useIdentityVerification is determined
-        operationRepo!!.setPaused(true)
         configModel.addFetchParamsObserver(
             object : FetchParamsObserver {
                 override fun onParamsFetched(params: ParamsObject) {
                     // resume operations if identity verification is turned off or a jwt is cached
                     if (params.useIdentityVerification == false || identityModelStore!!.model.jwtToken != null) {
-                        operationRepo!!.setPaused(false)
+                        operationRepo!!.enqueue(
+                            LoginUserOperation(
+                                configModel!!.appId,
+                                identityModelStore!!.model.onesignalId,
+                                identityModelStore!!.model.externalId,
+                            ),
+                        )
                     } else {
                         Logging.log(LogLevel.ERROR, "A valid JWT is required for user ${identityModelStore!!.model.externalId}.")
                     }

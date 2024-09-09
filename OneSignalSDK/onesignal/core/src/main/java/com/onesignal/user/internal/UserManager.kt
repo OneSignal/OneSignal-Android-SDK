@@ -281,7 +281,7 @@ internal open class UserManager(
                 val newJwt = args.newValue.toString()
                 if (OneSignal.useIdentityVerification && oldJwt != newJwt && newJwt.isEmpty()) {
                     jwtInvalidatedCallback.fire {
-                        it.onUserJwtInvalidated(UserJwtInvalidatedEvent((externalId)))
+                        it.onUserJwtInvalidated(UserJwtInvalidatedEvent(externalId))
                     }
                 }
             }
