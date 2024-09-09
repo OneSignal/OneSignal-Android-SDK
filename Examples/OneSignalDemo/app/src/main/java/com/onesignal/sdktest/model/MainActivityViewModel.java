@@ -411,7 +411,7 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
                 @Override
                 public void onSuccess(String update) {
                     if (update != null && !update.isEmpty()) {
-                        String jwt = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIxNjg4ZDhmMi1kYTdmLTQ4MTUtOGVlMy05ZDEzNzg4NDgyYzgiLCJpYXQiOjE3MTU5NzMwNzAsImlkZW50aXR5Ijp7ImV4dGVybmFsX2lkIjoiYWxleC0wNTE3Iiwib25lc2lnbmFsX2lkIjoiMGIzYWMyN2EtYWQ4Yi00MWVjLWJhYTYtMzI0NmNkODIyMjJkIn0sInN1YnNjcmlwdGlvbnMiOlt7InR5cGUiOiJFbWFpbCIsInRva2VuIjoiYWxleHRzYXktMDUxN0BvbmVzaWduYWwuY29tIn0seyJ0eXBlIjoiQW5kcm9pZFB1c2giLCJpZCI6ImFkMTAxY2FjLTA5MWItNDkyYy04OGJiLTgxNmZkNTNjYTBmMSJ9XX0._tlD2X8J16gDkP7__FJ8CwpqCLDwb8T14m2ugJwQvuQqbIn4b8o75cKbffbjVGcKP3YaudLCebit53aR9LTQCw";
+                        String jwt = "InitialJWT";
                         OneSignal.login(update, jwt);
                         refreshState();
                     }

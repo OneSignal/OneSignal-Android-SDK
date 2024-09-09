@@ -66,7 +66,7 @@ public class MainApplication extends MultiDexApplication {
         // This will reproduce result similar to Kotlin CouroutineScope.launch{}, which may potentially crash the app
         ExecutorService executor = Executors.newSingleThreadExecutor();
         @SuppressLint({"NewApi", "LocalSuppress"}) CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-            OneSignal.getNotifications().requestPermission(true, Continue.none());
+            //OneSignal.getNotifications().requestPermission(true, Continue.none());
         }, executor);
         future.join(); // Waits for the task to complete
         executor.shutdown();
@@ -145,7 +145,7 @@ public class MainApplication extends MultiDexApplication {
             @Override
             public void onUserJwtInvalidated(@NonNull UserJwtInvalidatedEvent event) {
                 // !!! For manual testing only
-                String jwt = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIxNjg4ZDhmMi1kYTdmLTQ4MTUtOGVlMy05ZDEzNzg4NDgyYzgiLCJpYXQiOjE3MTgzMDk5NzIsImlkZW50aXR5Ijp7ImV4dGVybmFsX2lkIjoiYWxleC0wNjE0Iiwib25lc2lnbmFsX2lkIjoiYTViYjc4NDYtYzExNC00YzdkLTkzMWYtNGQ0NjhiMGE5OWJhIn0sInN1YnNjcmlwdGlvbnMiOlt7InR5cGUiOiJFbWFpbCIsInRva2VuIjoidGVzdEBkb21haW4uY29tIn0seyJpZCI6ImE2YzQxNmY3LTMxMGUtNDgzNi05Yjc4LWZiZmQ5NTgyNWNjNCJ9XX0.HsjsA2qNPwd9qov_8Px01km-dzRug-YKNNG85cMrGYI9Pdb2uoPQSdAN3Uqu7_o4pL8FRxXliYJrC52-9wH3FQ";
+                String jwt = "SecondJWT";
                 OneSignal.updateUserJwt(event.getExternalId(), jwt);
                 Log.v(Tag.LOG_TAG, "onUserJwtInvalidated fired with ID:" + event.getExternalId());
             }

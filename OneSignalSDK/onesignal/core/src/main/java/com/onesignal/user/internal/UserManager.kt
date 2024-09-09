@@ -285,7 +285,7 @@ internal open class UserManager(
                 // prevent same JWT from being invalidated twice in a row
                 if (OneSignal.useIdentityVerification && jwtTokenInvalidated != oldJwt && newJwt.isEmpty()) {
                     jwtInvalidatedCallback.fire {
-                        it.onUserJwtInvalidated(UserJwtInvalidatedEvent((externalId)))
+                        it.onUserJwtInvalidated(UserJwtInvalidatedEvent(externalId))
                     }
                 }
 
