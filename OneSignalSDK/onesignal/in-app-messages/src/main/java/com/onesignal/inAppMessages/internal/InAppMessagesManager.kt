@@ -112,6 +112,11 @@ internal class InAppMessagesManager(
             Logging.debug("InAppMessagesManager.setPaused(value: $value)")
             _state.paused = value
 
+            // If paused is true and an In-App Message is showing, dismiss it
+            if (value && _state.inAppMessageIdShowing != null) {
+                _displayer.dismissCurrentInAppMessage()
+            }
+
             if (!value) {
                 suspendifyOnThread {
                     evaluateInAppMessages()
