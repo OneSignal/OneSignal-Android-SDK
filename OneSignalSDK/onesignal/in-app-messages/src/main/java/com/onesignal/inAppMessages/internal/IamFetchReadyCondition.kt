@@ -18,7 +18,7 @@ class IamFetchReadyCondition(
         val offsetMap = indexedOffsets[id] ?: return false
         val userUpdateOffsetSet = offsetMap[IamFetchOffsetKey.USER_UPDATE] != null
         val subscriptionUpdateOffsetSet = offsetMap[IamFetchOffsetKey.SUBSCRIPTION_UPDATE] != null
-        return (userUpdateOffsetSet && subscriptionUpdateOffsetSet) || userUpdateOffsetSet
+        return (userUpdateOffsetSet && subscriptionUpdateOffsetSet) || subscriptionUpdateOffsetSet
     }
 
     override fun getNewestOffset(offsets: Map<String, Map<IConsistencyKeyEnum, Long?>>): Long? {

@@ -187,6 +187,24 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
     public ActivityViewModel onActivityCreated(Context context) {
         this.context = context;
 
+        // TEMP: DON'T COMMIT
+        String sessionCountTag = OneSignal.getUser().getTags().get("sessionCount");
+        if (sessionCountTag != null) {
+            // increment session count: string -> number -> string
+            try {
+                int sessionCount = Integer.parseInt(sessionCountTag);
+                sessionCount++;  // Increment session count
+                OneSignal.getUser().addTag("sessionCount", String.valueOf(sessionCount));  // Convert back to string and update tag
+            } catch (NumberFormatException e) {
+                // Handle the case where the value is not a valid number
+                OneSignal.getUser().addTag("sessionCount", "1");  // Reset to 1 in case of invalid format
+            }
+        } else {
+            // set to 1
+            OneSignal.getUser().addTag("sessionCount", "1");
+        }
+
+
         animate = new Animate();
         dialog = new Dialog(context);
         font = new Font(context);
