@@ -22,7 +22,7 @@ internal class SubscriptionBackendService(
         jsonSubscription.remove("id")
         val requestJSON = JSONObject().put("subscription", jsonSubscription)
 
-        val response = _httpClient.post("apps/$appId/users/by/$aliasLabel/$aliasValue/subscriptions", requestJSON, jwt)
+        val response = _httpClient.post("apps/$appId/users/by/$aliasLabel/$aliasValue/subscriptions", requestJSON, jwt, subscription.token)
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
@@ -47,7 +47,7 @@ internal class SubscriptionBackendService(
             JSONObject()
                 .put("subscription", JSONConverter.convertToJSON(subscription))
 
-        val response = _httpClient.patch("apps/$appId/subscriptions/$subscriptionId", requestJSON, jwt)
+        val response = _httpClient.patch("apps/$appId/subscriptions/$subscriptionId", requestJSON, jwt, subscription.token)
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)

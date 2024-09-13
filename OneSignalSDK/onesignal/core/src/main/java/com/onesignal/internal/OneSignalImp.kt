@@ -260,7 +260,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                     )
                 if (legacyPlayerId == null) {
                     Logging.debug("initWithContext: creating new device-scoped user")
-                    createAndSwitchToNewUser()
+                    createAndSwitchToNewUser(suppressBackendOperation = useIdentityVerification)
                 } else {
                     Logging.debug("initWithContext: creating user linked to subscription $legacyPlayerId")
 
@@ -488,6 +488,20 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             modify(identityModel, propertiesModel)
         }
 
+        if (!identityModel.jwtToken.isNullOrEmpty()) {
+            setupNewSubscription(identityModel, propertiesModel, suppressBackendOperation, sdkId)
+        }
+
+        identityModelStore!!.replace(identityModel)
+        propertiesModelStore!!.replace(propertiesModel)
+    }
+
+    private fun setupNewSubscription(
+        identityModel: IdentityModel,
+        propertiesModel: PropertiesModel,
+        suppressBackendOperation: Boolean,
+        sdkId: String,
+    ) {
         val subscriptions = mutableListOf<SubscriptionModel>()
 
         // Create the push subscription for this device under the new user, copying the current

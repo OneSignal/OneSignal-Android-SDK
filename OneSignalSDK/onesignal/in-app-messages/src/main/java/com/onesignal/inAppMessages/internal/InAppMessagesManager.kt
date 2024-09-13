@@ -40,6 +40,7 @@ import com.onesignal.session.internal.outcomes.IOutcomeEventsController
 import com.onesignal.session.internal.session.ISessionLifecycleHandler
 import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.IUserManager
+import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionChangedHandler
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -54,6 +55,7 @@ internal class InAppMessagesManager(
     private val _influenceManager: IInfluenceManager,
     private val _configModelStore: ConfigModelStore,
     private val _userManager: IUserManager,
+    private val _identityModelStore: IdentityModelStore,
     private val _subscriptionManager: ISubscriptionManager,
     private val _outcomeEventsController: IOutcomeEventsController,
     private val _state: InAppStateService,
@@ -252,7 +254,7 @@ internal class InAppMessagesManager(
             lastTimeFetchedIAMs = now
         }
 
-        val newMessages = _backend.listInAppMessages(appId, subscriptionId)
+        val newMessages = _backend.listInAppMessages(appId, subscriptionId, _identityModelStore.model.jwtToken)
 
         if (newMessages != null) {
             this.messages = newMessages as MutableList<InAppMessage>

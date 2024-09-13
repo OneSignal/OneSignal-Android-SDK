@@ -46,39 +46,44 @@ internal class HttpClient(
         url: String,
         body: JSONObject,
         jwt: String?,
+        deviceAuthPushToken: String?,
     ): HttpResponse {
-        return makeRequest(url, "POST", body, _configModelStore.model.httpTimeout, null, jwt)
+        return makeRequest(url, "POST", body, _configModelStore.model.httpTimeout, null, jwt, deviceAuthPushToken)
     }
 
     override suspend fun get(
         url: String,
         cacheKey: String?,
         jwt: String?,
+        deviceAuthPushToken: String?,
     ): HttpResponse {
-        return makeRequest(url, null, null, _configModelStore.model.httpGetTimeout, cacheKey, jwt)
+        return makeRequest(url, null, null, _configModelStore.model.httpGetTimeout, cacheKey, jwt, deviceAuthPushToken)
     }
 
     override suspend fun put(
         url: String,
         body: JSONObject,
         jwt: String?,
+        deviceAuthPushToken: String?,
     ): HttpResponse {
-        return makeRequest(url, "PUT", body, _configModelStore.model.httpTimeout, null, jwt)
+        return makeRequest(url, "PUT", body, _configModelStore.model.httpTimeout, null, jwt, deviceAuthPushToken)
     }
 
     override suspend fun patch(
         url: String,
         body: JSONObject,
         jwt: String?,
+        deviceAuthPushToken: String?,
     ): HttpResponse {
-        return makeRequest(url, "PATCH", body, _configModelStore.model.httpTimeout, null, jwt)
+        return makeRequest(url, "PATCH", body, _configModelStore.model.httpTimeout, null, jwt, deviceAuthPushToken)
     }
 
     override suspend fun delete(
         url: String,
         jwt: String?,
+        deviceAuthPushToken: String?,
     ): HttpResponse {
-        return makeRequest(url, "DELETE", null, _configModelStore.model.httpTimeout, null, jwt)
+        return makeRequest(url, "DELETE", null, _configModelStore.model.httpTimeout, null, jwt, deviceAuthPushToken)
     }
 
     private suspend fun makeRequest(
@@ -88,6 +93,7 @@ internal class HttpClient(
         timeout: Int,
         cacheKey: String?,
         jwt: String? = null,
+        deviceAuthPushToken: String? = null,
     ): HttpResponse {
         // If privacy consent is required but not yet given, any non-GET request should be blocked.
         if (method != null && _configModelStore.model.consentRequired == true && _configModelStore.model.consentGiven != true) {
@@ -102,7 +108,7 @@ internal class HttpClient(
 
         try {
             return withTimeout(getThreadTimeout(timeout).toLong()) {
-                return@withTimeout makeRequestIODispatcher(url, method, jsonBody, timeout, cacheKey, jwt)
+                return@withTimeout makeRequestIODispatcher(url, method, jsonBody, timeout, cacheKey, jwt, deviceAuthPushToken)
             }
         } catch (e: TimeoutCancellationException) {
             Logging.error("HttpClient: Request timed out: $url", e)
@@ -120,6 +126,7 @@ internal class HttpClient(
         timeout: Int,
         cacheKey: String?,
         jwt: String? = null,
+        deviceAuthPushToken: String?,
     ): HttpResponse {
         var retVal: HttpResponse? = null
 
@@ -152,6 +159,10 @@ internal class HttpClient(
 
                     if (!jwt.isNullOrEmpty()) {
                         con.setRequestProperty("Authorization", "Bearer $jwt")
+                    }
+
+                    if (_configModelStore.model.useIdentityVerification && !deviceAuthPushToken.isNullOrEmpty()) {
+                        con.setRequestProperty("Device-Auth-Push-Token", "Basic $deviceAuthPushToken")
                     }
 
                     if (OneSignalWrapper.sdkType != null && OneSignalWrapper.sdkVersion != null) {

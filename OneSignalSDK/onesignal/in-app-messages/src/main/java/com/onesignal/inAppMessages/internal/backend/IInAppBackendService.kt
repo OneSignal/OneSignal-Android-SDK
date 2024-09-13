@@ -13,12 +13,14 @@ internal interface IInAppBackendService {
      *
      * @param appId The ID of the application that the IAM will be retrieved from.
      * @param subscriptionId The specific subscription within the [appId] the IAM will be delivered to.
+     * @param jwt The JWT token for the current logged in user. Not used if identity verification is off.
      *
      * @return The list of IAMs associated to the subscription, or null if the IAMs could not be retrieved.
      */
     suspend fun listInAppMessages(
         appId: String,
         subscriptionId: String,
+        jwt: String? = null,
     ): List<InAppMessage>?
 
     /**

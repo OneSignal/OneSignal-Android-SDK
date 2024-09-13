@@ -19,6 +19,7 @@ interface IHttpClient {
         url: String,
         body: JSONObject,
         jwt: String? = null,
+        deviceAuthPushToken: String? = null,
     ): HttpResponse
 
     /**
@@ -36,6 +37,7 @@ interface IHttpClient {
         url: String,
         cacheKey: String? = null,
         jwt: String? = null,
+        deviceAuthPushToken: String? = null,
     ): HttpResponse
 
     /**
@@ -50,6 +52,7 @@ interface IHttpClient {
         url: String,
         body: JSONObject,
         jwt: String? = null,
+        deviceAuthPushToken: String? = null,
     ): HttpResponse
 
     /**
@@ -64,6 +67,7 @@ interface IHttpClient {
         url: String,
         body: JSONObject,
         jwt: String? = null,
+        deviceAuthPushToken: String? = null,
     ): HttpResponse
 
     /**
@@ -76,6 +80,7 @@ interface IHttpClient {
     suspend fun delete(
         url: String,
         jwt: String? = null,
+        deviceAuthPushToken: String? = null,
     ): HttpResponse
 }
 

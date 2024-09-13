@@ -145,7 +145,7 @@ public class MainApplication extends MultiDexApplication {
             @Override
             public void onUserJwtInvalidated(@NonNull UserJwtInvalidatedEvent event) {
                 // !!! For manual testing only
-                String jwt = "SecondJWT";
+                String jwt = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIwMTM5YmQ2Zi00NTFmLTQzOGMtODg4Ni00ZTBmMGZlM2EwODUiLCJleHAiOjE3MjY3Njk1MDYsImlkZW50aXR5Ijp7ImV4dGVybmFsX2lkIjoiamluIn0sInN1YnNjcmlwdGlvbnMiOlt7InR5cGUiOiJFbWFpbCIsInRva2VuIjoidGVzdEBkb21haW4uY29tIn0seyJ0eXBlIjoiU01TIiwidG9rZW4iOiIrMTIzNDU2NzgifSx7InR5cGUiOiJBbmRyb2lkUHVzaCIsImlkIjoiMTIzZTQ1NjctZTg5Yi0xMmQzLWE0NTYtNDI2NjE0MTc0MDAwIn1dfQ.g48KD-3GPjjbFOotpWcC3Xxc2Rou_ne4Zbumy2XkQLS0VEF_hbZ01q1jLGdL_hlbSzYzhjo8kWpL2bKb0ZE0yw";
                 OneSignal.updateUserJwt(event.getExternalId(), jwt);
                 Log.v(Tag.LOG_TAG, "onUserJwtInvalidated fired with ID:" + event.getExternalId());
             }

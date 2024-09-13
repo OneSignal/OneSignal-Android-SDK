@@ -22,9 +22,10 @@ internal class InAppBackendService(
     override suspend fun listInAppMessages(
         appId: String,
         subscriptionId: String,
+        jwt: String?,
     ): List<InAppMessage>? {
         // Retrieve any in app messages that might exist
-        val response = _httpClient.get("apps/$appId/subscriptions/$subscriptionId/iams")
+        val response = _httpClient.get("apps/$appId/subscriptions/$subscriptionId/iams", jwt)
 
         if (response.isSuccess) {
             val jsonResponse = JSONObject(response.payload)
