@@ -209,8 +209,9 @@ internal class InAppBackendService(
     ): List<InAppMessage>? {
         var attempts = 1
         var delayTime = 1 // Start with a 1-second delay for exponential backoff
+        var retryLimit = DEFAULT_RETRY_LIMIT
 
-        while (true) {
+        while (attempts <= retryLimit + 1) {
             val retryCount = if (attempts > 1) attempts - 1 else null
             val values =
                 OptionalHeaders(
@@ -224,28 +225,17 @@ internal class InAppBackendService(
                 val jsonResponse = response.payload?.let { JSONObject(it) }
                 return jsonResponse?.let { hydrateInAppMessages(it) }
             } else if (response.statusCode == 425) { // 425 Too Early
-                val retryLimit = response.retryLimit ?: DEFAULT_RETRY_LIMIT
-                val retryAfter = response.retryAfterSeconds ?: DEFAULT_RETRY_AFTER_SECONDS
-
-                if (attempts == retryLimit) {
-                    break
+                if (response.retryLimit != null) {
+                    retryLimit = response.retryLimit!!
                 }
-
+                val retryAfter = response.retryAfterSeconds ?: DEFAULT_RETRY_AFTER_SECONDS
                 delay(retryAfter * 1_000L)
             } else if (response.statusCode == 429) { // 429 Too Many Requests
                 val retryAfter = response.retryAfterSeconds ?: delayTime
 
-                if (attempts == (response.retryLimit ?: DEFAULT_RETRY_LIMIT)) {
-                    break
-                }
-
                 delay(retryAfter * 1_000L)
                 delayTime *= 2 // Exponential backoff
             } else if (response.statusCode >= 500) {
-                if (attempts == DEFAULT_RETRY_LIMIT) {
-                    break
-                }
-
                 delay(delayTime * 1_000L)
                 delayTime *= 2 // Exponential backoff
             } else {
@@ -257,20 +247,18 @@ internal class InAppBackendService(
 
         // If all retries fail, make a final attempt without the offset. This will tell the server,
         // we give up, just give me the IAMs without first ensuring data consistency
-        return fetchInAppMessagesWithoutOffset(baseUrl, sessionDurationProvider, attempts)
+        return fetchInAppMessagesWithoutOffset(baseUrl, sessionDurationProvider)
     }
 
     private suspend fun fetchInAppMessagesWithoutOffset(
         url: String,
         sessionDurationProvider: () -> Long,
-        retryCount: Int,
     ): List<InAppMessage>? {
         val response =
             _httpClient.get(
                 url,
                 OptionalHeaders(
                     sessionDuration = sessionDurationProvider(),
-                    retryCount = retryCount,
                     offset = 0,
                 ),
             )

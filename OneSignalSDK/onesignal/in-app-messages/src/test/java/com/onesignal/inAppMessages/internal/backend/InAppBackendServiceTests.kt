@@ -117,6 +117,7 @@ class InAppBackendServiceTests :
                     HttpResponse(425, null, retryAfterSeconds = 1, retryLimit = 3),
                     HttpResponse(425, null, retryAfterSeconds = 1, retryLimit = 3),
                     HttpResponse(425, null, retryAfterSeconds = 1, retryLimit = 3),
+                    HttpResponse(425, null, retryAfterSeconds = 1, retryLimit = 3),
                     HttpResponse(200, "{ in_app_messages: [] }"),
                 )
 
@@ -133,13 +134,13 @@ class InAppBackendServiceTests :
                 mockHttpClient.get(
                     "apps/appId/subscriptions/subscriptionId/iams",
                     match {
-                        it.offset != null && it.retryCount == null && it.sessionDuration == mockSessionDurationProvider()
+                        it.offset == 1234L && it.retryCount == null && it.sessionDuration == mockSessionDurationProvider()
                     },
                 )
             }
 
             // Verify that the get method retried twice with the offset
-            coVerify(exactly = 2) {
+            coVerify(exactly = 3) {
                 mockHttpClient.get(
                     "apps/appId/subscriptions/subscriptionId/iams",
                     match {
@@ -153,7 +154,7 @@ class InAppBackendServiceTests :
                 mockHttpClient.get(
                     "apps/appId/subscriptions/subscriptionId/iams",
                     match {
-                        it.offset == 0L && it.retryCount == 3 && it.sessionDuration == mockSessionDurationProvider()
+                        it.offset == 0L && it.sessionDuration == mockSessionDurationProvider() && it.retryCount == null
                     },
                 )
             }
