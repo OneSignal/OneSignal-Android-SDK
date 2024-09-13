@@ -90,7 +90,10 @@ internal class HttpClient(
         // If privacy consent is required but not yet given, any non-GET request should be blocked.
         if (method != null && _configModelStore.model.consentRequired == true && _configModelStore.model.consentGiven != true) {
             Logging.warn(
-                "$method `$url` was called before the user provided privacy consent. Your application is set to require the user's privacy consent before the OneSignal SDK can be initialized. Please ensure the user has provided consent before calling this method. You can check the latest OneSignal consent status by calling OneSignal.privacyConsent",
+                "$method `$url` was called before the user provided privacy consent. " +
+                    "Your application is set to require the user's privacy consent before the OneSignal SDK can be initialized. " +
+                    "Please ensure the user has provided consent before calling this method. You can check the latest OneSignal " +
+                    "consent status by calling OneSignal.privacyConsent",
             )
             return HttpResponse(0, null, null)
         }
@@ -147,8 +150,14 @@ internal class HttpClient(
                     con.readTimeout = timeout
                     con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignalUtils.SDK_VERSION)
 
-                    if (headers != null && !headers.jwt.isNullOrEmpty()) {
-                        con.setRequestProperty("Authorization", "Bearer ${headers.jwt}")
+                    val jwt = headers?.jwt
+                    if (!jwt.isNullOrEmpty()) {
+                        con.setRequestProperty("Authorization", "Bearer $jwt")
+                    }
+
+                    val deviceAuthPushToken = headers?.deviceAuthPushToken
+                    if (_configModelStore.model.useIdentityVerification && !deviceAuthPushToken.isNullOrEmpty()) {
+                        con.setRequestProperty("Device-Auth-Push-Token", "Basic $deviceAuthPushToken")
                     }
 
                     if (OneSignalWrapper.sdkType != null && OneSignalWrapper.sdkVersion != null) {

@@ -23,6 +23,7 @@ internal class UserBackendService(
         subscriptions: List<SubscriptionObject>,
         properties: Map<String, String>,
         jwt: String?,
+        deviceAuthPushToken: String?,
     ): CreateUserResponse {
         val requestJSON = JSONObject()
 
@@ -41,7 +42,12 @@ internal class UserBackendService(
 
         requestJSON.put("refresh_device_metadata", true)
 
-        val response = _httpClient.post("apps/$appId/users", requestJSON, OptionalHeaders(jwt = jwt))
+        val response =
+            _httpClient.post(
+                "apps/$appId/users",
+                requestJSON,
+                OptionalHeaders(jwt = jwt, deviceAuthPushToken = deviceAuthPushToken),
+            )
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
@@ -71,7 +77,7 @@ internal class UserBackendService(
             jsonObject.put("deltas", JSONConverter.convertToJSON(propertyiesDelta))
         }
 
-        val response = _httpClient.patch("apps/$appId/users/by/$aliasLabel/$aliasValue", jsonObject, jwt)
+        val response = _httpClient.patch("apps/$appId/users/by/$aliasLabel/$aliasValue", jsonObject, OptionalHeaders(jwt = jwt))
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
@@ -95,7 +101,7 @@ internal class UserBackendService(
         aliasValue: String,
         jwt: String?,
     ): CreateUserResponse {
-        val response = _httpClient.get("apps/$appId/users/by/$aliasLabel/$aliasValue", jwt)
+        val response = _httpClient.get("apps/$appId/users/by/$aliasLabel/$aliasValue", OptionalHeaders(jwt = jwt))
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)

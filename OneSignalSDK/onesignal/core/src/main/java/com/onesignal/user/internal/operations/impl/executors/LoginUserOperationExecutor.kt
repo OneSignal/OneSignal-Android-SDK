@@ -171,7 +171,18 @@ internal class LoginUserOperationExecutor(
 
         try {
             val subscriptionList = subscriptions.toList()
-            val response = _userBackend.createUser(createUserOperation.appId, identities, subscriptionList.map { it.second }, properties)
+            val pushSubscription = subscriptions.values.find { it.type == SubscriptionObjectType.ANDROID_PUSH }
+            val response =
+                _userBackend.createUser(
+                    createUserOperation.appId,
+                    identities,
+                    subscriptionList.map {
+                        it.second
+                    },
+                    properties,
+                    _identityModelStore.model.jwtToken,
+                    pushSubscription?.token,
+                )
             val idTranslations = mutableMapOf<String, String>()
             // Add the "local-to-backend" ID translation to the IdentifierTranslator for any operations that were
             // *not* executed but still reference the locally-generated IDs.
