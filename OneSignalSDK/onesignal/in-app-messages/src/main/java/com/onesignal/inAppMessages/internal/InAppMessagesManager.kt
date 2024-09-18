@@ -154,9 +154,9 @@ internal class InAppMessagesManager(
             val onesignalId = _userManager.onesignalId
             val updateConditionDeferred =
                 _consistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
-            val offset = updateConditionDeferred.await()
-            if (offset != null) {
-                fetchMessages(offset)
+            val rywToken = updateConditionDeferred.await()
+            if (rywToken != null) {
+                fetchMessages(rywToken)
             }
         }
     }
@@ -231,16 +231,16 @@ internal class InAppMessagesManager(
             val onesignalId = _userManager.onesignalId
             val iamFetchCondition =
                 _consistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
-            val offset = iamFetchCondition.await()
+            val rywToken = iamFetchCondition.await()
 
-            if (offset != null) {
-                fetchMessages(offset)
+            if (rywToken != null) {
+                fetchMessages(rywToken)
             }
         }
     }
 
     // called when a new push subscription is added, or the app id is updated, or a new session starts
-    private suspend fun fetchMessages(offset: Long) {
+    private suspend fun fetchMessages(rywToken: Long) {
         // We only want to fetch IAMs if we know the app is in the
         // foreground, as we don't want to do this for background
         // events (such as push received), wasting resources for
@@ -267,7 +267,7 @@ internal class InAppMessagesManager(
 
         // lambda so that it is updated on each potential retry
         val sessionDurationProvider = { _time.currentTimeMillis - _sessionService.startTime }
-        val newMessages = _backend.listInAppMessages(appId, subscriptionId, offset, sessionDurationProvider)
+        val newMessages = _backend.listInAppMessages(appId, subscriptionId, rywToken, sessionDurationProvider)
 
         if (newMessages != null) {
             this.messages = newMessages as MutableList<InAppMessage>

@@ -1,7 +1,7 @@
 package com.onesignal.user.internal.operations
 
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
-import com.onesignal.common.consistency.enums.IamFetchOffsetKey
+import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
 import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -36,19 +36,19 @@ class SubscriptionOperationExecutorTests :
         val remoteOneSignalId = "remote-onesignalId"
         val localSubscriptionId = "local-subscriptionId1"
         val remoteSubscriptionId = "remote-subscriptionId1"
-        val offset = 1L // read your write token
+        val rywToken = 1L // read your write token
         val mockConsistencyManager = mockk<IConsistencyManager>()
 
         beforeTest {
             clearMocks(mockConsistencyManager)
-            coEvery { mockConsistencyManager.setOffset(any(), any(), any()) } just runs
+            coEvery { mockConsistencyManager.setRywToken(any(), any(), any()) } just runs
         }
 
         test("create subscription successfully creates subscription") {
             // Given
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
             coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } returns
-                Pair(remoteSubscriptionId, offset)
+                Pair(remoteSubscriptionId, rywToken)
 
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
             val subscriptionModel1 = SubscriptionModel()
@@ -302,7 +302,7 @@ class SubscriptionOperationExecutorTests :
             // Given
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
             coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } returns
-                Pair(remoteSubscriptionId, offset)
+                Pair(remoteSubscriptionId, rywToken)
 
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
             val subscriptionModel1 = SubscriptionModel()
@@ -369,7 +369,7 @@ class SubscriptionOperationExecutorTests :
         test("update subscription successfully updates subscription") {
             // Given
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-            coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } returns offset
+            coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } returns rywToken
 
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
             val subscriptionModel1 =
@@ -718,12 +718,12 @@ class SubscriptionOperationExecutorTests :
             response.result shouldBe ExecutionResult.FAIL_RETRY
         }
 
-        test("setOffset is called after successful subscription update") {
+        test("setRywToken is called after successful subscription update") {
             // Given
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
             coEvery {
                 mockSubscriptionBackendService.updateSubscription(any(), any(), any())
-            } returns offset
+            } returns rywToken
 
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
             val subscriptionModel1 =
@@ -764,7 +764,7 @@ class SubscriptionOperationExecutorTests :
 
             // Then
             coVerify(exactly = 1) {
-                mockConsistencyManager.setOffset(remoteOneSignalId, IamFetchOffsetKey.SUBSCRIPTION_UPDATE, offset)
+                mockConsistencyManager.setRywToken(remoteOneSignalId, IamFetchRywTokenKey.SUBSCRIPTION_UPDATE, rywToken)
             }
         }
     })

@@ -33,12 +33,12 @@ internal class SubscriptionBackendService(
             return null
         }
 
-        var offset: Long? = null
-        if (responseJSON.has("offset")) {
-            offset = responseJSON.getLong("offset")
+        var rywToken: Long? = null
+        if (responseJSON.has("ryw_token")) {
+            rywToken = responseJSON.getLong("ryw_token")
         }
 
-        return Pair(subscriptionJSON.getString("id"), offset)
+        return Pair(subscriptionJSON.getString("id"), rywToken)
     }
 
     override suspend fun updateSubscription(
@@ -57,8 +57,8 @@ internal class SubscriptionBackendService(
         }
 
         val responseBody = JSONObject(response.payload)
-        return if (responseBody.has("offset")) {
-            responseBody.getLong("offset")
+        return if (responseBody.has("ryw_token")) {
+            responseBody.getLong("ryw_token")
         } else {
             null
         }

@@ -184,8 +184,8 @@ internal class HttpClient(
                         }
                     }
 
-                    if (headers?.offset != null) {
-                        con.setRequestProperty("Onesignal-Offset", headers.offset.toString())
+                    if (headers?.rywToken != null) {
+                        con.setRequestProperty("OneSignal-RYW-Token", headers.rywToken.toString())
                     }
 
                     if (headers?.retryCount != null) {

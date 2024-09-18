@@ -8,35 +8,35 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * Manages offsets that function as read-your-write tokens for more accurate segment membership
- * calculation. Uses customizable conditions that block retrieval of the newest offset until met.
+ * Manages read-your-write tokens for more accurate segment membership
+ * calculation. Uses customizable conditions that block retrieval of the newest token until met.
  *
  * Usage:
  *  val consistencyManager = ConsistencyManager<MyEnum>()
  *  val updateConditionDeferred = consistencyManager.registerCondition(MyCustomCondition())
- *  val newestUpdateOffset = updateConditionDeferred.await()
+ *  val rywToken = updateConditionDeferred.await()
  */
 class ConsistencyManager : IConsistencyManager {
     private val mutex = Mutex()
-    private val indexedOffsets: MutableMap<String, MutableMap<IConsistencyKeyEnum, Long?>> = mutableMapOf()
+    private val indexedTokens: MutableMap<String, MutableMap<IConsistencyKeyEnum, Long?>> = mutableMapOf()
     private val conditions: MutableList<Pair<ICondition, CompletableDeferred<Long?>>> =
         mutableListOf()
 
     /**
-     * Set method to update the offset based on the key.
+     * Set method to update the token based on the key.
      *  Params:
-     *      id: String - the index of the offset map (e.g. onesignalId)
+     *      id: String - the index of the token map (e.g. onesignalId)
      *      key: K - corresponds to the operation for which we have a read-your-write token
-     *      value: Long? - the offset (read-your-write token)
+     *      value: Long? - the token (read-your-write token)
      */
-    override suspend fun setOffset(
+    override suspend fun setRywToken(
         id: String,
         key: IConsistencyKeyEnum,
         value: Long?,
     ) {
         mutex.withLock {
-            val offsets = indexedOffsets.getOrPut(id) { mutableMapOf() }
-            offsets[key] = value
+            val rywTokens = indexedTokens.getOrPut(id) { mutableMapOf() }
+            rywTokens[key] = value
             checkConditionsAndComplete()
         }
     }
@@ -61,10 +61,10 @@ class ConsistencyManager : IConsistencyManager {
         val completedConditions = mutableListOf<Pair<ICondition, CompletableDeferred<Long?>>>()
 
         for ((condition, deferred) in conditions) {
-            if (condition.isMet(indexedOffsets)) {
-                val newestOffset = condition.getNewestOffset(indexedOffsets)
+            if (condition.isMet(indexedTokens)) {
+                val newestToken = condition.getNewestToken(indexedTokens)
                 if (!deferred.isCompleted) {
-                    deferred.complete(newestOffset)
+                    deferred.complete(newestToken)
                 }
                 completedConditions.add(Pair(condition, deferred))
             }

@@ -27,11 +27,11 @@ internal class InAppBackendService(
     override suspend fun listInAppMessages(
         appId: String,
         subscriptionId: String,
-        offset: Long,
+        rywToken: Long,
         sessionDurationProvider: () -> Long,
     ): List<InAppMessage>? {
         val baseUrl = "apps/$appId/subscriptions/$subscriptionId/iams"
-        return attemptFetchWithRetries(baseUrl, offset, sessionDurationProvider)
+        return attemptFetchWithRetries(baseUrl, rywToken, sessionDurationProvider)
     }
 
     override suspend fun getIAMData(
@@ -204,7 +204,7 @@ internal class InAppBackendService(
 
     private suspend fun attemptFetchWithRetries(
         baseUrl: String,
-        offset: Long,
+        rywToken: Long,
         sessionDurationProvider: () -> Long,
     ): List<InAppMessage>? {
         var attempts = 1
@@ -215,7 +215,7 @@ internal class InAppBackendService(
             val retryCount = if (attempts > 1) attempts - 1 else null
             val values =
                 OptionalHeaders(
-                    offset = offset,
+                    rywToken = rywToken,
                     sessionDuration = sessionDurationProvider(),
                     retryCount = retryCount,
                 )
@@ -245,12 +245,12 @@ internal class InAppBackendService(
             attempts++
         }
 
-        // If all retries fail, make a final attempt without the offset. This will tell the server,
+        // If all retries fail, make a final attempt without the RYW token. This will tell the server,
         // we give up, just give me the IAMs without first ensuring data consistency
-        return fetchInAppMessagesWithoutOffset(baseUrl, sessionDurationProvider)
+        return fetchInAppMessagesWithoutRywToken(baseUrl, sessionDurationProvider)
     }
 
-    private suspend fun fetchInAppMessagesWithoutOffset(
+    private suspend fun fetchInAppMessagesWithoutRywToken(
         url: String,
         sessionDurationProvider: () -> Long,
     ): List<InAppMessage>? {
@@ -259,7 +259,7 @@ internal class InAppBackendService(
                 url,
                 OptionalHeaders(
                     sessionDuration = sessionDurationProvider(),
-                    offset = 0,
+                    rywToken = 0,
                 ),
             )
 
