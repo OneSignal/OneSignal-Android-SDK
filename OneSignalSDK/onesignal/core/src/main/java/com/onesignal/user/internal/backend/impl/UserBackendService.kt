@@ -52,7 +52,7 @@ internal class UserBackendService(
         properties: PropertiesObject,
         refreshDeviceMetadata: Boolean,
         propertyiesDelta: PropertiesDeltasObject,
-    ): Long? {
+    ): String? {
         val jsonObject =
             JSONObject()
                 .put("refresh_device_metadata", refreshDeviceMetadata)
@@ -73,7 +73,7 @@ internal class UserBackendService(
 
         val responseBody = JSONObject(response.payload)
         return if (responseBody.has("ryw_token")) {
-            responseBody.getLong("ryw_token")
+            responseBody.getString("ryw_token")
         } else {
             null
         }

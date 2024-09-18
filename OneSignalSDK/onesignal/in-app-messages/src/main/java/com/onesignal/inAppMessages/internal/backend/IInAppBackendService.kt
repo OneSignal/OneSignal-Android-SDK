@@ -21,7 +21,7 @@ internal interface IInAppBackendService {
     suspend fun listInAppMessages(
         appId: String,
         subscriptionId: String,
-        rywToken: Long,
+        rywToken: String,
         sessionDurationProvider: () -> Long,
     ): List<InAppMessage>?
 

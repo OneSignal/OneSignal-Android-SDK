@@ -39,7 +39,7 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", 123L, mockSessionDurationProvider)
+            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", "123", mockSessionDurationProvider)
 
             // Then
             response shouldNotBe null
@@ -62,7 +62,7 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", 123L, mockSessionDurationProvider)
+            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", "123", mockSessionDurationProvider)
 
             // Then
             response shouldNotBe null
@@ -95,7 +95,7 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", 123L, mockSessionDurationProvider)
+            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", "123", mockSessionDurationProvider)
 
             // Then
             response shouldBe null
@@ -124,7 +124,7 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", 1234L, mockSessionDurationProvider)
+            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", "1234", mockSessionDurationProvider)
 
             // Then
             response shouldNotBe null
@@ -134,7 +134,7 @@ class InAppBackendServiceTests :
                 mockHttpClient.get(
                     "apps/appId/subscriptions/subscriptionId/iams",
                     match {
-                        it.rywToken == 1234L && it.retryCount == null && it.sessionDuration == mockSessionDurationProvider()
+                        it.rywToken == "1234" && it.retryCount == null && it.sessionDuration == mockSessionDurationProvider()
                     },
                 )
             }
@@ -144,7 +144,7 @@ class InAppBackendServiceTests :
                 mockHttpClient.get(
                     "apps/appId/subscriptions/subscriptionId/iams",
                     match {
-                        it.rywToken == 1234L && it.sessionDuration == mockSessionDurationProvider() && it.retryCount != null
+                        it.rywToken == "1234" && it.sessionDuration == mockSessionDurationProvider() && it.retryCount != null
                     },
                 )
             }
@@ -154,7 +154,7 @@ class InAppBackendServiceTests :
                 mockHttpClient.get(
                     "apps/appId/subscriptions/subscriptionId/iams",
                     match {
-                        it.rywToken == 0L && it.sessionDuration == mockSessionDurationProvider() && it.retryCount == null
+                        it.rywToken == "0" && it.sessionDuration == mockSessionDurationProvider() && it.retryCount == null
                     },
                 )
             }

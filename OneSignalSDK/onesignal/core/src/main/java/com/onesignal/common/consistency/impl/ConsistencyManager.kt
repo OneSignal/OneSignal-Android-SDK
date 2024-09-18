@@ -18,8 +18,8 @@ import kotlinx.coroutines.sync.withLock
  */
 class ConsistencyManager : IConsistencyManager {
     private val mutex = Mutex()
-    private val indexedTokens: MutableMap<String, MutableMap<IConsistencyKeyEnum, Long?>> = mutableMapOf()
-    private val conditions: MutableList<Pair<ICondition, CompletableDeferred<Long?>>> =
+    private val indexedTokens: MutableMap<String, MutableMap<IConsistencyKeyEnum, String?>> = mutableMapOf()
+    private val conditions: MutableList<Pair<ICondition, CompletableDeferred<String?>>> =
         mutableListOf()
 
     /**
@@ -27,12 +27,12 @@ class ConsistencyManager : IConsistencyManager {
      *  Params:
      *      id: String - the index of the token map (e.g. onesignalId)
      *      key: K - corresponds to the operation for which we have a read-your-write token
-     *      value: Long? - the token (read-your-write token)
+     *      value: String? - the token (read-your-write token)
      */
     override suspend fun setRywToken(
         id: String,
         key: IConsistencyKeyEnum,
-        value: Long?,
+        value: String?,
     ) {
         mutex.withLock {
             val rywTokens = indexedTokens.getOrPut(id) { mutableMapOf() }
@@ -44,9 +44,9 @@ class ConsistencyManager : IConsistencyManager {
     /**
      * Register a condition with its corresponding deferred action. Returns a deferred condition.
      */
-    override suspend fun registerCondition(condition: ICondition): CompletableDeferred<Long?> {
+    override suspend fun registerCondition(condition: ICondition): CompletableDeferred<String?> {
         mutex.withLock {
-            val deferred = CompletableDeferred<Long?>()
+            val deferred = CompletableDeferred<String?>()
             val pair = Pair(condition, deferred)
             conditions.add(pair)
             checkConditionsAndComplete()
@@ -58,7 +58,7 @@ class ConsistencyManager : IConsistencyManager {
      * IMPORTANT: calling code should be protected by mutex to avoid potential inconsistencies
      */
     private fun checkConditionsAndComplete() {
-        val completedConditions = mutableListOf<Pair<ICondition, CompletableDeferred<Long?>>>()
+        val completedConditions = mutableListOf<Pair<ICondition, CompletableDeferred<String?>>>()
 
         for ((condition, deferred) in conditions) {
             if (condition.isMet(indexedTokens)) {

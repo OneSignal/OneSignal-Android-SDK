@@ -1,7 +1,15 @@
 package com.onesignal.common.consistency.models
 
 interface ICondition {
-    fun isMet(indexedTokens: Map<String, Map<IConsistencyKeyEnum, Long?>>): Boolean
+    /**
+     * Define a condition that "unblocks" execution
+     * e.g. we have token (A && B) || A
+     */
+    fun isMet(indexedTokens: Map<String, Map<IConsistencyKeyEnum, String?>>): Boolean
 
-    fun getNewestToken(indexedTokens: Map<String, Map<IConsistencyKeyEnum, Long?>>): Long?
+    /**
+     * Used to process tokens according to their format & return the newest token.
+     * e.g. numeric strings would be compared differently from JWT tokens
+     */
+    fun getNewestToken(indexedTokens: Map<String, Map<IConsistencyKeyEnum, String?>>): String?
 }

@@ -29,7 +29,7 @@ class UpdateUserOperationExecutorTests :
         val appId = "appId"
         val localOneSignalId = "local-onesignalId"
         val remoteOneSignalId = "remote-onesignalId"
-        val rywToken = 1L
+        val rywToken = "1"
         val mockConsistencyManager = mockk<IConsistencyManager>()
 
         beforeTest {
