@@ -1,28 +1,27 @@
 package com.onesignal.inAppMessages.internal
 
-import com.onesignal.common.consistency.enums.IamFetchOffsetKey
+import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
 import com.onesignal.common.consistency.models.ICondition
 import com.onesignal.common.consistency.models.IConsistencyKeyEnum
 
 /**
- * Used for read your write consistency when fetching In-App Messages. We have both offsets
- * in memory.
+ * Used for read your write consistency when fetching In-App Messages.
  *
  * Params:
- *  id : String - the index of the offset map
+ *  id : String - the index of the RYW token map
  */
 class IamFetchReadyCondition(
     private val id: String,
 ) : ICondition {
-    override fun isMet(indexedOffsets: Map<String, Map<IConsistencyKeyEnum, Long?>>): Boolean {
-        val offsetMap = indexedOffsets[id] ?: return false
-        val userUpdateOffsetSet = offsetMap[IamFetchOffsetKey.USER_UPDATE] != null
-        val subscriptionUpdateOffsetSet = offsetMap[IamFetchOffsetKey.SUBSCRIPTION_UPDATE] != null
-        return (userUpdateOffsetSet && subscriptionUpdateOffsetSet) || userUpdateOffsetSet
+    override fun isMet(indexedTokens: Map<String, Map<IConsistencyKeyEnum, Long?>>): Boolean {
+        val tokenMap = indexedTokens[id] ?: return false
+        val userUpdateTokenSet = tokenMap[IamFetchRywTokenKey.USER_UPDATE] != null
+        val subscriptionUpdateTokenSet = tokenMap[IamFetchRywTokenKey.SUBSCRIPTION_UPDATE] != null
+        return (userUpdateTokenSet && subscriptionUpdateTokenSet) || userUpdateTokenSet
     }
 
-    override fun getNewestOffset(offsets: Map<String, Map<IConsistencyKeyEnum, Long?>>): Long? {
-        val offsetMap = offsets[id] ?: return null
-        return listOfNotNull(offsetMap[IamFetchOffsetKey.USER_UPDATE], offsetMap[IamFetchOffsetKey.SUBSCRIPTION_UPDATE]).maxOrNull()
+    override fun getNewestToken(indexedTokens: Map<String, Map<IConsistencyKeyEnum, Long?>>): Long? {
+        val tokenMap = indexedTokens[id] ?: return null
+        return listOfNotNull(tokenMap[IamFetchRywTokenKey.USER_UPDATE], tokenMap[IamFetchRywTokenKey.SUBSCRIPTION_UPDATE]).maxOrNull()
     }
 }

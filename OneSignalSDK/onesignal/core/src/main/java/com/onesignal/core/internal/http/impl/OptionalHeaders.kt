@@ -8,7 +8,7 @@ data class OptionalHeaders(
     /**
      * Used for read your write consistency
      */
-    val offset: Long? = null,
+    val rywToken: Long? = null,
     /**
      * Current retry count
      */

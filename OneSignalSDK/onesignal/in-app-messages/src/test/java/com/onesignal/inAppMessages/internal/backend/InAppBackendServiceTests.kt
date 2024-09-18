@@ -103,7 +103,7 @@ class InAppBackendServiceTests :
         }
 
         test(
-            "retries according to retry limit and retryAfterSeconds and makes final request without offset after retries exhausted",
+            "retries according to retry limit and retryAfterSeconds and makes final request without RYW token after retries exhausted",
         ) {
             // Given
             val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
@@ -134,27 +134,27 @@ class InAppBackendServiceTests :
                 mockHttpClient.get(
                     "apps/appId/subscriptions/subscriptionId/iams",
                     match {
-                        it.offset == 1234L && it.retryCount == null && it.sessionDuration == mockSessionDurationProvider()
+                        it.rywToken == 1234L && it.retryCount == null && it.sessionDuration == mockSessionDurationProvider()
                     },
                 )
             }
 
-            // Verify that the get method retried twice with the offset
+            // Verify that the get method retried twice with the RYW token
             coVerify(exactly = 3) {
                 mockHttpClient.get(
                     "apps/appId/subscriptions/subscriptionId/iams",
                     match {
-                        it.offset == 1234L && it.sessionDuration == mockSessionDurationProvider() && it.retryCount != null
+                        it.rywToken == 1234L && it.sessionDuration == mockSessionDurationProvider() && it.retryCount != null
                     },
                 )
             }
 
-            // Verify that the get method was retried the final time without the offset
+            // Verify that the get method was retried the final time without the RYW token
             coVerify(exactly = 1) {
                 mockHttpClient.get(
                     "apps/appId/subscriptions/subscriptionId/iams",
                     match {
-                        it.offset == 0L && it.sessionDuration == mockSessionDurationProvider() && it.retryCount == null
+                        it.rywToken == 0L && it.sessionDuration == mockSessionDurationProvider() && it.retryCount == null
                     },
                 )
             }

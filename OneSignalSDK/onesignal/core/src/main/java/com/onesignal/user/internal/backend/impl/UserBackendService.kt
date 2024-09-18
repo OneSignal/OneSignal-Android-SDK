@@ -72,8 +72,8 @@ internal class UserBackendService(
         }
 
         val responseBody = JSONObject(response.payload)
-        return if (responseBody.has("offset")) {
-            responseBody.getLong("offset")
+        return if (responseBody.has("ryw_token")) {
+            responseBody.getLong("ryw_token")
         } else {
             null
         }

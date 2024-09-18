@@ -4,13 +4,13 @@ import kotlinx.coroutines.CompletableDeferred
 
 interface IConsistencyManager {
     /**
-     * Set method to update the offset based on the key.
+     * Set method to update the RYW token based on the key.
      * Params:
-     *  id: String - the index of the offset map (e.g., onesignalId)
-     *  key: OffsetKey - corresponds to the operation for which we have a read-your-write token
-     *  value: Long? - the offset (read-your-write token)
+     *  id: String - the index of the RYW token map (e.g., onesignalId)
+     *  key: IConsistencyKeyEnum - corresponds to the operation for which we have a read-your-write token
+     *  value: Long? - the read-your-write token
      */
-    suspend fun setOffset(
+    suspend fun setRywToken(
         id: String,
         key: IConsistencyKeyEnum,
         value: Long?,

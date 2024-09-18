@@ -1,7 +1,7 @@
 package com.onesignal.user.internal.operations.impl.executors
 
 import com.onesignal.common.NetworkUtils
-import com.onesignal.common.consistency.enums.IamFetchOffsetKey
+import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
 import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
@@ -137,7 +137,7 @@ internal class UpdateUserOperationExecutor(
 
         if (appId != null && onesignalId != null) {
             try {
-                val offset =
+                val rywToken =
                     _userBackend.updateUser(
                         appId,
                         IdentityConstants.ONESIGNAL_ID,
@@ -147,7 +147,7 @@ internal class UpdateUserOperationExecutor(
                         deltasObject,
                     )
 
-                _consistencyManager.setOffset(onesignalId, IamFetchOffsetKey.USER_UPDATE, offset)
+                _consistencyManager.setRywToken(onesignalId, IamFetchRywTokenKey.USER_UPDATE, rywToken)
 
                 if (_identityModelStore.model.onesignalId == onesignalId) {
                     // go through and make sure any properties are in the correct model state
