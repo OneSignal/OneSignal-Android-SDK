@@ -27,7 +27,7 @@ internal class InAppBackendService(
     override suspend fun listInAppMessages(
         appId: String,
         subscriptionId: String,
-        rywToken: Long,
+        rywToken: String,
         sessionDurationProvider: () -> Long,
     ): List<InAppMessage>? {
         val baseUrl = "apps/$appId/subscriptions/$subscriptionId/iams"
@@ -204,7 +204,7 @@ internal class InAppBackendService(
 
     private suspend fun attemptFetchWithRetries(
         baseUrl: String,
-        rywToken: Long,
+        rywToken: String,
         sessionDurationProvider: () -> Long,
     ): List<InAppMessage>? {
         var attempts = 1
@@ -259,7 +259,7 @@ internal class InAppBackendService(
                 url,
                 OptionalHeaders(
                     sessionDuration = sessionDurationProvider(),
-                    rywToken = 0,
+                    rywToken = "0",
                 ),
             )
 

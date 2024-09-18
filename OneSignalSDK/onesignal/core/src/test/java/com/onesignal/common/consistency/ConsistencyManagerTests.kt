@@ -20,7 +20,7 @@ class ConsistencyManagerTests : FunSpec({
             // Given
             val id = "test_id"
             val key = IamFetchRywTokenKey.USER_UPDATE
-            val value = 123L
+            val value = "123"
 
             consistencyManager.setRywToken(id, key, value)
 
@@ -37,7 +37,7 @@ class ConsistencyManagerTests : FunSpec({
             // Given
             val id = "test_id"
             val key = IamFetchRywTokenKey.USER_UPDATE
-            val value = 123L
+            val value = "123"
 
             // Set a token to meet the condition
             consistencyManager.setRywToken(id, key, value)
@@ -55,31 +55,31 @@ class ConsistencyManagerTests : FunSpec({
             val condition = TestUnmetCondition()
             val deferred = consistencyManager.registerCondition(condition)
 
-            consistencyManager.setRywToken("id", IamFetchRywTokenKey.USER_UPDATE, 123L)
+            consistencyManager.setRywToken("id", IamFetchRywTokenKey.USER_UPDATE, "123")
             deferred.isCompleted shouldBe false
         }
     }
 }) {
     // Mock implementation of ICondition that simulates a condition that isn't met
     private class TestUnmetCondition : ICondition {
-        override fun isMet(rywTokens: Map<String, Map<IConsistencyKeyEnum, Long?>>): Boolean {
+        override fun isMet(rywTokens: Map<String, Map<IConsistencyKeyEnum, String?>>): Boolean {
             return false // Always returns false to simulate an unmet condition
         }
 
-        override fun getNewestToken(indexedTokens: Map<String, Map<IConsistencyKeyEnum, Long?>>): Long? {
+        override fun getNewestToken(indexedTokens: Map<String, Map<IConsistencyKeyEnum, String?>>): String? {
             return null
         }
     }
 
     // Mock implementation of ICondition for cases where the condition is met
     private class TestMetCondition(
-        private val expectedRywTokens: Map<String, Map<IConsistencyKeyEnum, Long?>>,
+        private val expectedRywTokens: Map<String, Map<IConsistencyKeyEnum, String?>>,
     ) : ICondition {
-        override fun isMet(rywTokens: Map<String, Map<IConsistencyKeyEnum, Long?>>): Boolean {
+        override fun isMet(rywTokens: Map<String, Map<IConsistencyKeyEnum, String?>>): Boolean {
             return rywTokens == expectedRywTokens
         }
 
-        override fun getNewestToken(indexedTokens: Map<String, Map<IConsistencyKeyEnum, Long?>>): Long? {
+        override fun getNewestToken(indexedTokens: Map<String, Map<IConsistencyKeyEnum, String?>>): String? {
             return expectedRywTokens.values.firstOrNull()?.values?.firstOrNull()
         }
     }

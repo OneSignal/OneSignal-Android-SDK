@@ -36,7 +36,7 @@ class SubscriptionOperationExecutorTests :
         val remoteOneSignalId = "remote-onesignalId"
         val localSubscriptionId = "local-subscriptionId1"
         val remoteSubscriptionId = "remote-subscriptionId1"
-        val rywToken = 1L // read your write token
+        val rywToken = "1"
         val mockConsistencyManager = mockk<IConsistencyManager>()
 
         beforeTest {

@@ -240,7 +240,7 @@ internal class InAppMessagesManager(
     }
 
     // called when a new push subscription is added, or the app id is updated, or a new session starts
-    private suspend fun fetchMessages(rywToken: Long) {
+    private suspend fun fetchMessages(rywToken: String) {
         // We only want to fetch IAMs if we know the app is in the
         // foreground, as we don't want to do this for background
         // events (such as push received), wasting resources for

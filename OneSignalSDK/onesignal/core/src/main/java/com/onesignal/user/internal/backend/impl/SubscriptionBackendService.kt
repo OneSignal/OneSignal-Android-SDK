@@ -16,7 +16,7 @@ internal class SubscriptionBackendService(
         aliasLabel: String,
         aliasValue: String,
         subscription: SubscriptionObject,
-    ): Pair<String, Long?>? {
+    ): Pair<String, String?>? {
         val jsonSubscription = JSONConverter.convertToJSON(subscription)
         jsonSubscription.remove("id")
         val requestJSON = JSONObject().put("subscription", jsonSubscription)
@@ -33,9 +33,9 @@ internal class SubscriptionBackendService(
             return null
         }
 
-        var rywToken: Long? = null
+        var rywToken: String? = null
         if (responseJSON.has("ryw_token")) {
-            rywToken = responseJSON.getLong("ryw_token")
+            rywToken = responseJSON.getString("ryw_token")
         }
 
         return Pair(subscriptionJSON.getString("id"), rywToken)
@@ -45,7 +45,7 @@ internal class SubscriptionBackendService(
         appId: String,
         subscriptionId: String,
         subscription: SubscriptionObject,
-    ): Long? {
+    ): String? {
         val requestJSON =
             JSONObject()
                 .put("subscription", JSONConverter.convertToJSON(subscription))
@@ -58,7 +58,7 @@ internal class SubscriptionBackendService(
 
         val responseBody = JSONObject(response.payload)
         return if (responseBody.has("ryw_token")) {
-            responseBody.getLong("ryw_token")
+            responseBody.getString("ryw_token")
         } else {
             null
         }

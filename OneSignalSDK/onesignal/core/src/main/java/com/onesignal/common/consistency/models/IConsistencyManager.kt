@@ -8,19 +8,19 @@ interface IConsistencyManager {
      * Params:
      *  id: String - the index of the RYW token map (e.g., onesignalId)
      *  key: IConsistencyKeyEnum - corresponds to the operation for which we have a read-your-write token
-     *  value: Long? - the read-your-write token
+     *  value: String? - the read-your-write token
      */
     suspend fun setRywToken(
         id: String,
         key: IConsistencyKeyEnum,
-        value: Long?,
+        value: String?,
     )
 
     /**
      * Register a condition with its corresponding deferred action. Returns a deferred condition.
      * Params:
      *  condition: ICondition - the condition to be registered
-     * Returns: CompletableDeferred<Long?> - a deferred action that completes when the condition is met
+     * Returns: CompletableDeferred<String?> - a deferred action that completes when the condition is met
      */
-    suspend fun registerCondition(condition: ICondition): CompletableDeferred<Long?>
+    suspend fun registerCondition(condition: ICondition): CompletableDeferred<String?>
 }

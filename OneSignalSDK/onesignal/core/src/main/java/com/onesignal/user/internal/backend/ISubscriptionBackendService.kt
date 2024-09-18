@@ -21,7 +21,7 @@ interface ISubscriptionBackendService {
         aliasLabel: String,
         aliasValue: String,
         subscription: SubscriptionObject,
-    ): Pair<String, Long?>?
+    ): Pair<String, String?>?
 
     /**
      * Update an existing subscription with the properties provided.
@@ -34,7 +34,7 @@ interface ISubscriptionBackendService {
         appId: String,
         subscriptionId: String,
         subscription: SubscriptionObject,
-    ): Long?
+    ): String?
 
     /**
      * Delete an existing subscription.
