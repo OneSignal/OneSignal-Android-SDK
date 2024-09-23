@@ -22,6 +22,15 @@ class ConsistencyManager : IConsistencyManager {
     private val conditions: MutableList<Pair<ICondition, CompletableDeferred<String?>>> =
         mutableListOf()
 
+    companion object {
+        /**
+         * To account for the possibility the backend does not provide a token, we can use this
+         * constant to set a value and resolve a condition. This is applicable say, when we don't
+         * want to block execution if a RYW token is omitted from the backend response
+         */
+        const val RYW_TOKEN_NOT_PROVIDED = "0"
+    }
+
     /**
      * Set method to update the token based on the key.
      *  Params:
@@ -36,7 +45,7 @@ class ConsistencyManager : IConsistencyManager {
     ) {
         mutex.withLock {
             val rywTokens = indexedTokens.getOrPut(id) { mutableMapOf() }
-            rywTokens[key] = value
+            rywTokens[key] = value ?: RYW_TOKEN_NOT_PROVIDED
             checkConditionsAndComplete()
         }
     }

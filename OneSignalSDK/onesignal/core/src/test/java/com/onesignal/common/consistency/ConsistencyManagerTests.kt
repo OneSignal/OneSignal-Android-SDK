@@ -32,6 +32,23 @@ class ConsistencyManagerTests : FunSpec({
         }
     }
 
+    test("setRywToken with null token value sets the value to RYW_TOKEN_NOT_PROVIDED") {
+        runTest {
+            // Given
+            val id = "test_id"
+            val key = IamFetchRywTokenKey.USER_UPDATE
+            val value = null
+
+            consistencyManager.setRywToken(id, key, value)
+
+            val condition = TestMetCondition(mapOf(id to mapOf(key to ConsistencyManager.RYW_TOKEN_NOT_PROVIDED)))
+            val deferred = consistencyManager.registerCondition(condition)
+            val result = deferred.await()
+
+            result shouldBe ConsistencyManager.RYW_TOKEN_NOT_PROVIDED
+        }
+    }
+
     test("registerCondition completes when condition is met") {
         runTest {
             // Given
