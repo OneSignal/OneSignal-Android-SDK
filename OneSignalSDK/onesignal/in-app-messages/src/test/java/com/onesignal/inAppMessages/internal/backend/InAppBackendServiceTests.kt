@@ -154,7 +154,7 @@ class InAppBackendServiceTests :
                 mockHttpClient.get(
                     "apps/appId/subscriptions/subscriptionId/iams",
                     match {
-                        it.rywToken == "0" && it.sessionDuration == mockSessionDurationProvider() && it.retryCount == null
+                        it.rywToken == null && it.sessionDuration == mockSessionDurationProvider() && it.retryCount == null
                     },
                 )
             }

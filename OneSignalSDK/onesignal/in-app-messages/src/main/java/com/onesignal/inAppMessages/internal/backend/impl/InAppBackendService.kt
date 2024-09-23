@@ -1,6 +1,7 @@
 package com.onesignal.inAppMessages.internal.backend.impl
 
 import com.onesignal.common.NetworkUtils
+import com.onesignal.common.consistency.impl.ConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.http.IHttpClient
@@ -211,38 +212,42 @@ internal class InAppBackendService(
         var delayTime = 1 // Start with a 1-second delay for exponential backoff
         var retryLimit = DEFAULT_RETRY_LIMIT
 
-        while (attempts <= retryLimit + 1) {
-            val retryCount = if (attempts > 1) attempts - 1 else null
-            val values =
-                OptionalHeaders(
-                    rywToken = rywToken,
-                    sessionDuration = sessionDurationProvider(),
-                    retryCount = retryCount,
-                )
-            val response = _httpClient.get(baseUrl, values)
+        // We use RYW_TOKEN_NOT_PROVIDED to designate the backend not returning a RYW token -- due
+        // to a potential regression or feature flag
+        if (rywToken != ConsistencyManager.RYW_TOKEN_NOT_PROVIDED) {
+            while (attempts <= retryLimit + 1) {
+                val retryCount = if (attempts > 1) attempts - 1 else null
+                val values =
+                    OptionalHeaders(
+                        rywToken = rywToken,
+                        sessionDuration = sessionDurationProvider(),
+                        retryCount = retryCount,
+                    )
+                val response = _httpClient.get(baseUrl, values)
 
-            if (response.isSuccess) {
-                val jsonResponse = response.payload?.let { JSONObject(it) }
-                return jsonResponse?.let { hydrateInAppMessages(it) }
-            } else if (response.statusCode == 425) { // 425 Too Early
-                if (response.retryLimit != null) {
-                    retryLimit = response.retryLimit!!
+                if (response.isSuccess) {
+                    val jsonResponse = response.payload?.let { JSONObject(it) }
+                    return jsonResponse?.let { hydrateInAppMessages(it) }
+                } else if (response.statusCode == 425) { // 425 Too Early
+                    if (response.retryLimit != null) {
+                        retryLimit = response.retryLimit!!
+                    }
+                    val retryAfter = response.retryAfterSeconds ?: DEFAULT_RETRY_AFTER_SECONDS
+                    delay(retryAfter * 1_000L)
+                } else if (response.statusCode == 429) { // 429 Too Many Requests
+                    val retryAfter = response.retryAfterSeconds ?: delayTime
+
+                    delay(retryAfter * 1_000L)
+                    delayTime *= 2 // Exponential backoff
+                } else if (response.statusCode >= 500) {
+                    delay(delayTime * 1_000L)
+                    delayTime *= 2 // Exponential backoff
+                } else {
+                    return null
                 }
-                val retryAfter = response.retryAfterSeconds ?: DEFAULT_RETRY_AFTER_SECONDS
-                delay(retryAfter * 1_000L)
-            } else if (response.statusCode == 429) { // 429 Too Many Requests
-                val retryAfter = response.retryAfterSeconds ?: delayTime
 
-                delay(retryAfter * 1_000L)
-                delayTime *= 2 // Exponential backoff
-            } else if (response.statusCode >= 500) {
-                delay(delayTime * 1_000L)
-                delayTime *= 2 // Exponential backoff
-            } else {
-                return null
+                attempts++
             }
-
-            attempts++
         }
 
         // If all retries fail, make a final attempt without the RYW token. This will tell the server,
@@ -259,7 +264,6 @@ internal class InAppBackendService(
                 url,
                 OptionalHeaders(
                     sessionDuration = sessionDurationProvider(),
-                    rywToken = "0",
                 ),
             )
 
