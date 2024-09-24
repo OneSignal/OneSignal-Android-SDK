@@ -1,6 +1,7 @@
 package com.onesignal.inAppMessages.internal.backend.impl
 
 import com.onesignal.common.NetworkUtils
+import com.onesignal.common.consistency.impl.ConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.http.IHttpClient
@@ -13,9 +14,6 @@ import com.onesignal.inAppMessages.internal.backend.IInAppBackendService
 import com.onesignal.inAppMessages.internal.hydrators.InAppHydrator
 import kotlinx.coroutines.delay
 import org.json.JSONObject
-
-private const val DEFAULT_RETRY_LIMIT = 3
-private const val DEFAULT_RETRY_AFTER_SECONDS = 1
 
 internal class InAppBackendService(
     private val _httpClient: IHttpClient,
@@ -208,45 +206,42 @@ internal class InAppBackendService(
         sessionDurationProvider: () -> Long,
     ): List<InAppMessage>? {
         var attempts = 1
-        var delayTime = 1 // Start with a 1-second delay for exponential backoff
-        var retryLimit = DEFAULT_RETRY_LIMIT
+        var retryLimit: Int? = null // Retry limit will be determined dynamically
 
         while (attempts <= retryLimit + 1) {
             val retryCount = if (attempts > 1) attempts - 1 else null
-            val values =
-                OptionalHeaders(
-                    rywToken = rywToken,
-                    sessionDuration = sessionDurationProvider(),
-                    retryCount = retryCount,
-                )
-            val response = _httpClient.get(baseUrl, values)
+            while (retryLimit == null || attempts <= retryLimit + 1) {
+                val retryCount = if (attempts > 1) attempts - 1 else null
+                val values =
+                    OptionalHeaders(
+                        rywToken = rywToken,
+                        sessionDuration = sessionDurationProvider(),
+                        retryCount = retryCount,
+                    )
+                val response = _httpClient.get(baseUrl, values)
 
-            if (response.isSuccess) {
-                val jsonResponse = response.payload?.let { JSONObject(it) }
-                return jsonResponse?.let { hydrateInAppMessages(it) }
-            } else if (response.statusCode == 425) { // 425 Too Early
-                if (response.retryLimit != null) {
-                    retryLimit = response.retryLimit!!
+                if (response.isSuccess) {
+                    val jsonResponse = response.payload?.let { JSONObject(it) }
+                    return jsonResponse?.let { hydrateInAppMessages(it) }
+                } else if (response.statusCode == 425 || response.statusCode == 429) {
+                    // Dynamically update the retry limit from response
+                    retryLimit = response.retryLimit ?: retryLimit
+
+                    // Apply the Retry-After delay if present, otherwise proceed without delay
+                    val retryAfter = response.retryAfterSeconds
+                    if (retryAfter != null) {
+                        delay(retryAfter * 1_000L)
+                    }
+                } else if (response.statusCode in 500..599) {
+                    return null
+                } else {
+                    return null
                 }
-                val retryAfter = response.retryAfterSeconds ?: DEFAULT_RETRY_AFTER_SECONDS
-                delay(retryAfter * 1_000L)
-            } else if (response.statusCode == 429) { // 429 Too Many Requests
-                val retryAfter = response.retryAfterSeconds ?: delayTime
 
-                delay(retryAfter * 1_000L)
-                delayTime *= 2 // Exponential backoff
-            } else if (response.statusCode >= 500) {
-                delay(delayTime * 1_000L)
-                delayTime *= 2 // Exponential backoff
-            } else {
-                return null
-            }
-
-            attempts++
+                attempts++
         }
 
-        // If all retries fail, make a final attempt without the RYW token. This will tell the server,
-        // we give up, just give me the IAMs without first ensuring data consistency
+        // Final attempt without the RYW token if retries fail
         return fetchInAppMessagesWithoutRywToken(baseUrl, sessionDurationProvider)
     }
 
@@ -259,7 +254,6 @@ internal class InAppBackendService(
                 url,
                 OptionalHeaders(
                     sessionDuration = sessionDurationProvider(),
-                    rywToken = "0",
                 ),
             )
 
