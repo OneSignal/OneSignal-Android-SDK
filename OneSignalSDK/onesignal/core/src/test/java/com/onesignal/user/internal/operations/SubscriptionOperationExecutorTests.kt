@@ -764,7 +764,7 @@ class SubscriptionOperationExecutorTests :
 
             // Then
             coVerify(exactly = 1) {
-                mockConsistencyManager.setRywToken(remoteOneSignalId, IamFetchRywTokenKey.SUBSCRIPTION_UPDATE, rywToken)
+                mockConsistencyManager.setRywToken(remoteOneSignalId, IamFetchRywTokenKey.SUBSCRIPTION, rywToken)
             }
         }
     })

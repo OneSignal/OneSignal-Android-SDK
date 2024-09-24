@@ -390,7 +390,7 @@ class UpdateUserOperationExecutorTests :
 
             // Then
             coVerify(exactly = 1) {
-                mockConsistencyManager.setRywToken(remoteOneSignalId, IamFetchRywTokenKey.USER_UPDATE, rywToken)
+                mockConsistencyManager.setRywToken(remoteOneSignalId, IamFetchRywTokenKey.USER, rywToken)
             }
         }
     })

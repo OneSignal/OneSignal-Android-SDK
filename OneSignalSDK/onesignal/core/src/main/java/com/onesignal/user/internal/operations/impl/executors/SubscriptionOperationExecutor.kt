@@ -115,7 +115,7 @@ internal class SubscriptionOperationExecutor(
             val backendSubscriptionId = result.first
             val rywToken = result.second
 
-            _consistencyManager.setRywToken(createOperation.onesignalId, IamFetchRywTokenKey.SUBSCRIPTION_UPDATE, rywToken)
+            _consistencyManager.setRywToken(createOperation.onesignalId, IamFetchRywTokenKey.SUBSCRIPTION, rywToken)
 
             // update the subscription model with the new ID, if it's still active.
             val subscriptionModel = _subscriptionModelStore.get(createOperation.subscriptionId)
@@ -184,7 +184,7 @@ internal class SubscriptionOperationExecutor(
                 )
 
             val rywToken = _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription)
-            _consistencyManager.setRywToken(startingOperation.onesignalId, IamFetchRywTokenKey.SUBSCRIPTION_UPDATE, rywToken)
+            _consistencyManager.setRywToken(startingOperation.onesignalId, IamFetchRywTokenKey.SUBSCRIPTION, rywToken)
         } catch (ex: BackendException) {
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
 

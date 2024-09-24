@@ -16,8 +16,8 @@ class IamFetchReadyCondition(
 ) : ICondition {
     override fun isMet(indexedTokens: Map<String, Map<IConsistencyKeyEnum, String?>>): Boolean {
         val tokenMap = indexedTokens[id] ?: return false
-        val userUpdateTokenSet = tokenMap[IamFetchRywTokenKey.USER_UPDATE] != null
-        val subscriptionUpdateTokenSet = tokenMap[IamFetchRywTokenKey.SUBSCRIPTION_UPDATE] != null
+        val userUpdateTokenSet = tokenMap[IamFetchRywTokenKey.USER] != null
+        val subscriptionUpdateTokenSet = tokenMap[IamFetchRywTokenKey.SUBSCRIPTION] != null
 
         /**
          * If the RYW token was not included in one of the 4 endpoints (PATCH & POST * user,
@@ -26,8 +26,8 @@ class IamFetchReadyCondition(
          * body or we turn off the feature temporarily
          */
         val subscriptionOrUserTokenWasNotSet =
-            tokenMap[IamFetchRywTokenKey.SUBSCRIPTION_UPDATE] == ConsistencyManager.RYW_TOKEN_NOT_PROVIDED ||
-                tokenMap[IamFetchRywTokenKey.USER_UPDATE] == ConsistencyManager.RYW_TOKEN_NOT_PROVIDED
+            tokenMap[IamFetchRywTokenKey.SUBSCRIPTION] == ConsistencyManager.RYW_TOKEN_NOT_PROVIDED ||
+                tokenMap[IamFetchRywTokenKey.USER] == ConsistencyManager.RYW_TOKEN_NOT_PROVIDED
 
         if (subscriptionOrUserTokenWasNotSet) {
             return true
@@ -47,6 +47,6 @@ class IamFetchReadyCondition(
     override fun getNewestToken(indexedTokens: Map<String, Map<IConsistencyKeyEnum, String?>>): String? {
         val tokenMap = indexedTokens[id] ?: return null
         // maxOrNull compares lexicographically
-        return listOfNotNull(tokenMap[IamFetchRywTokenKey.USER_UPDATE], tokenMap[IamFetchRywTokenKey.SUBSCRIPTION_UPDATE]).maxOrNull()
+        return listOfNotNull(tokenMap[IamFetchRywTokenKey.USER], tokenMap[IamFetchRywTokenKey.SUBSCRIPTION]).maxOrNull()
     }
 }

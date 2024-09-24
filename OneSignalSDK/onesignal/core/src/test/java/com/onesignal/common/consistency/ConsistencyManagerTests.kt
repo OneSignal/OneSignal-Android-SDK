@@ -19,7 +19,7 @@ class ConsistencyManagerTests : FunSpec({
         runTest {
             // Given
             val id = "test_id"
-            val key = IamFetchRywTokenKey.USER_UPDATE
+            val key = IamFetchRywTokenKey.USER
             val value = "123"
 
             consistencyManager.setRywToken(id, key, value)
@@ -36,7 +36,7 @@ class ConsistencyManagerTests : FunSpec({
         runTest {
             // Given
             val id = "test_id"
-            val key = IamFetchRywTokenKey.USER_UPDATE
+            val key = IamFetchRywTokenKey.USER
             val value = null
 
             consistencyManager.setRywToken(id, key, value)
@@ -53,7 +53,7 @@ class ConsistencyManagerTests : FunSpec({
         runTest {
             // Given
             val id = "test_id"
-            val key = IamFetchRywTokenKey.USER_UPDATE
+            val key = IamFetchRywTokenKey.USER
             val value = "123"
 
             // Set a token to meet the condition
@@ -72,7 +72,7 @@ class ConsistencyManagerTests : FunSpec({
             val condition = TestUnmetCondition()
             val deferred = consistencyManager.registerCondition(condition)
 
-            consistencyManager.setRywToken("id", IamFetchRywTokenKey.USER_UPDATE, "123")
+            consistencyManager.setRywToken("id", IamFetchRywTokenKey.USER, "123")
             deferred.isCompleted shouldBe false
         }
     }

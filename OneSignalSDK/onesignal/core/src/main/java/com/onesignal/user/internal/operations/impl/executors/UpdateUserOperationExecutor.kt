@@ -147,7 +147,7 @@ internal class UpdateUserOperationExecutor(
                         deltasObject,
                     )
 
-                _consistencyManager.setRywToken(onesignalId, IamFetchRywTokenKey.USER_UPDATE, rywToken)
+                _consistencyManager.setRywToken(onesignalId, IamFetchRywTokenKey.USER, rywToken)
 
                 if (_identityModelStore.model.onesignalId == onesignalId) {
                     // go through and make sure any properties are in the correct model state

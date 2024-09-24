@@ -7,6 +7,6 @@ import com.onesignal.common.consistency.models.IConsistencyKeyEnum
  * Although the enums are named with "UPDATE", they serve as keys for tokens from both PATCH & POST
  */
 enum class IamFetchRywTokenKey : IConsistencyKeyEnum {
-    USER_UPDATE,
-    SUBSCRIPTION_UPDATE,
+    USER,
+    SUBSCRIPTION,
 }
