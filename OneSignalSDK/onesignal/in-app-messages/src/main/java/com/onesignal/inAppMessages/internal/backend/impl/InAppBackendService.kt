@@ -208,8 +208,8 @@ internal class InAppBackendService(
         var attempts = 1
         var retryLimit: Int? = null // Retry limit will be determined dynamically
 
-        while (attempts <= retryLimit + 1) {
-            val retryCount = if (attempts > 1) attempts - 1 else null
+        // We use RYW_TOKEN_NOT_PROVIDED to designate the backend not returning a RYW token
+        if (rywToken != ConsistencyManager.RYW_TOKEN_NOT_PROVIDED) {
             while (retryLimit == null || attempts <= retryLimit + 1) {
                 val retryCount = if (attempts > 1) attempts - 1 else null
                 val values =
@@ -239,6 +239,7 @@ internal class InAppBackendService(
                 }
 
                 attempts++
+            }
         }
 
         // Final attempt without the RYW token if retries fail
