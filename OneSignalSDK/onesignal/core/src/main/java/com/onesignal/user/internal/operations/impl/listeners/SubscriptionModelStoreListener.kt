@@ -19,7 +19,7 @@ internal class SubscriptionModelStoreListener(
     private val _configModelStore: ConfigModelStore,
 ) : ModelStoreListener<SubscriptionModel>(store, opRepo) {
     override fun getAddOperation(model: SubscriptionModel): Operation {
-        val enabledAndStatus = getSubscriptionEnabledAndStatus(model)
+        val enabledAndStatus = getSubscriptionEnabledAndStatus(model, _identityModelStore, _configModelStore)
         return CreateSubscriptionOperation(
             _configModelStore.model.appId,
             _identityModelStore.model.onesignalId,
@@ -42,7 +42,7 @@ internal class SubscriptionModelStoreListener(
         oldValue: Any?,
         newValue: Any?,
     ): Operation {
-        val enabledAndStatus = getSubscriptionEnabledAndStatus(model)
+        val enabledAndStatus = getSubscriptionEnabledAndStatus(model, _identityModelStore, _configModelStore)
         return UpdateSubscriptionOperation(
             _configModelStore.model.appId,
             _identityModelStore.model.onesignalId,
@@ -55,11 +55,20 @@ internal class SubscriptionModelStoreListener(
     }
 
     companion object {
-        fun getSubscriptionEnabledAndStatus(model: SubscriptionModel): Pair<Boolean, SubscriptionStatus> {
+        fun getSubscriptionEnabledAndStatus(
+            model: SubscriptionModel,
+            identityModelStore: IdentityModelStore,
+            configModelStore: ConfigModelStore,
+        ): Pair<Boolean, SubscriptionStatus> {
             val status: SubscriptionStatus
             val enabled: Boolean
 
-            if (model.optedIn && model.status == SubscriptionStatus.SUBSCRIBED && model.address.isNotEmpty()) {
+            /*
+                When identity verification is off, we can enable the subscription regardless of the login status.
+                When identity verification is on, the subscription is enabled only when a user is currently logged in.
+             */
+            val isUserLoggedInWhenIdentityRequired = !configModelStore.model.useIdentityVerification || !identityModelStore.model.externalId.isNullOrEmpty()
+            if (isUserLoggedInWhenIdentityRequired && model.optedIn && model.status == SubscriptionStatus.SUBSCRIBED && model.address.isNotEmpty()) {
                 enabled = true
                 status = SubscriptionStatus.SUBSCRIBED
             } else {
