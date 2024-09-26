@@ -433,6 +433,11 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                     identityModelStore!!.model.externalId,
                 ),
             )
+
+            // disable push subscription when user calls logout while identity verification is on
+            if (useIdentityVerification) {
+                user.pushSubscription.optOut()
+            }
         }
     }
 
