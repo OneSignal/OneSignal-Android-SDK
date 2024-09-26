@@ -48,6 +48,7 @@ import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.LoginUserFromSubscriptionOperation
 import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.operations.TransferSubscriptionOperation
+import com.onesignal.user.internal.operations.UpdateSubscriptionOperation
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -434,13 +435,22 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
             // calling createAndSwitchToNewUser() replaces model with a default empty jwt
             createAndSwitchToNewUser()
-            operationRepo!!.enqueue(
-                LoginUserOperation(
-                    configModel!!.appId,
-                    identityModelStore!!.model.onesignalId,
-                    identityModelStore!!.model.externalId,
-                ),
-            )
+
+            if (useIdentityVerification) {
+                // disable subscription if identity verification is on
+                operationRepo!!.enqueue(
+                    UpdateSubscriptionOperation(),
+                )
+            } else {
+                // login to the anonymous user if identity verification is off
+                operationRepo!!.enqueue(
+                    LoginUserOperation(
+                        configModel!!.appId,
+                        identityModelStore!!.model.onesignalId,
+                        identityModelStore!!.model.externalId,
+                    ),
+                )
+            }
         }
     }
 
