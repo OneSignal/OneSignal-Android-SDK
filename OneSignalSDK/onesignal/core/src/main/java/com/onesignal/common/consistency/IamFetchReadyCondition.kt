@@ -23,17 +23,14 @@ class IamFetchReadyCondition(
     override fun isMet(indexedTokens: Map<String, Map<IConsistencyKeyEnum, String>>): Boolean {
         val tokenMap = indexedTokens[key] ?: return false
         val userUpdateTokenSet = tokenMap[IamFetchRywTokenKey.USER] != null
-        val subscriptionUpdateTokenSet = tokenMap[IamFetchRywTokenKey.SUBSCRIPTION] != null
 
         /**
          * We always update the session count so we know we will have a userUpdateToken. We don't
          * necessarily make a subscriptionUpdate call on every session. The following logic
-         * is written in a way so that if somehow the subscriptionUpdateToken is set *before* the
-         * userUpdateToken, we will wait for the userUpdateToken to also be set. This is because
-         * we know that a userUpdate call was made and both user & subscription properties are
-         * considered during segment calculations.
+         * doesn't consider tokenMap[IamFetchRywTokenKey.SUBSCRIPTION] for this reason. This doesn't
+         * mean it isn't considered if present when doing the token comparison.
          */
-        return (userUpdateTokenSet && subscriptionUpdateTokenSet) || userUpdateTokenSet
+        return userUpdateTokenSet
     }
 
     override fun getNewestToken(indexedTokens: Map<String, Map<IConsistencyKeyEnum, String?>>): String? {
