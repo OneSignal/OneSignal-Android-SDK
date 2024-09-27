@@ -83,12 +83,12 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:4.12.0'
 
     /** START - Google Play Builds **/
-    gmsImplementation('com.onesignal:OneSignal:5.1.21')
+    gmsImplementation('com.onesignal:OneSignal:5.1.22')
     /** END - Google Play Builds **/
 
     /** START - Huawei Builds **/
     // Omit Google / Firebase libraries for Huawei builds.
-    huaweiImplementation('com.onesignal:OneSignal:5.1.21') {
+    huaweiImplementation('com.onesignal:OneSignal:5.1.22') {
         exclude group: 'com.google.android.gms', module: 'play-services-gcm'
         exclude group: 'com.google.android.gms', module: 'play-services-analytics'
         exclude group: 'com.google.android.gms', module: 'play-services-location'
