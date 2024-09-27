@@ -204,11 +204,11 @@ internal class InAppBackendService(
         rywToken: String?,
         sessionDurationProvider: () -> Long,
     ): List<InAppMessage>? {
-        var attempts = 1
-        var retryLimit: Int? = null // Retry limit will be determined dynamically
+        var attempts = 0
+        var retryLimit: Int = 0 // retry limit is remote defined & set dynamically below
 
-        while (retryLimit == null || attempts <= retryLimit + 1) {
-            val retryCount = if (attempts > 1) attempts - 1 else null
+        do {
+            val retryCount = if (attempts > 0) attempts else null
             val values =
                 OptionalHeaders(
                     rywToken = rywToken,
@@ -221,13 +221,12 @@ internal class InAppBackendService(
                 val jsonResponse = response.payload?.let { JSONObject(it) }
                 return jsonResponse?.let { hydrateInAppMessages(it) }
             } else if (response.statusCode == 425 || response.statusCode == 429) {
-                // Dynamically update the retry limit from response
+                // update the retry limit from response
                 retryLimit = response.retryLimit ?: retryLimit
 
-                // Apply the Retry-After delay if present, otherwise proceed without delay
-                val retryAfter = response.retryAfterSeconds
-                if (retryAfter != null) {
-                    delay(retryAfter * 1_000L)
+                // apply the Retry-After delay if present
+                response.retryAfterSeconds?.let {
+                    delay(it * 1_000L)
                 }
             } else if (response.statusCode in 500..599) {
                 return null
@@ -236,7 +235,7 @@ internal class InAppBackendService(
             }
 
             attempts++
-        }
+        } while (attempts <= retryLimit)
 
         // Final attempt without the RYW token if retries fail
         return fetchInAppMessagesWithoutRywToken(baseUrl, sessionDurationProvider)
