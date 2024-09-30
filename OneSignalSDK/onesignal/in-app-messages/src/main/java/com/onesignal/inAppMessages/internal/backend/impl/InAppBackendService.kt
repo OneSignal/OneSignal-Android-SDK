@@ -4,12 +4,14 @@ import com.onesignal.common.NetworkUtils
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.http.IHttpClient
+import com.onesignal.core.internal.http.impl.OptionalHeaders
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.inAppMessages.internal.InAppMessage
 import com.onesignal.inAppMessages.internal.InAppMessageContent
 import com.onesignal.inAppMessages.internal.backend.GetIAMDataResponse
 import com.onesignal.inAppMessages.internal.backend.IInAppBackendService
 import com.onesignal.inAppMessages.internal.hydrators.InAppHydrator
+import kotlinx.coroutines.delay
 import org.json.JSONObject
 
 internal class InAppBackendService(
@@ -22,24 +24,11 @@ internal class InAppBackendService(
     override suspend fun listInAppMessages(
         appId: String,
         subscriptionId: String,
+        rywToken: String?,
+        sessionDurationProvider: () -> Long,
     ): List<InAppMessage>? {
-        // Retrieve any in app messages that might exist
-        val response = _httpClient.get("apps/$appId/subscriptions/$subscriptionId/iams")
-
-        if (response.isSuccess) {
-            val jsonResponse = JSONObject(response.payload)
-
-            if (jsonResponse.has("in_app_messages")) {
-                val iamMessagesAsJSON = jsonResponse.getJSONArray("in_app_messages")
-                // TODO: Outstanding question on whether we still want to cache this.  Only used when
-                //       hard start of the app, but within 30 seconds of it being killed (i.e. same session startup).
-                // Cache copy for quick cold starts
-//                _prefs.savedIAMs = iamMessagesAsJSON.toString()
-                return _hydrator.hydrateIAMMessages(iamMessagesAsJSON)
-            }
-        }
-
-        return null
+        val baseUrl = "apps/$appId/subscriptions/$subscriptionId/iams"
+        return attemptFetchWithRetries(baseUrl, rywToken, sessionDurationProvider)
     }
 
     override suspend fun getIAMData(
@@ -51,7 +40,7 @@ internal class InAppBackendService(
             htmlPathForMessage(messageId, variantId, appId)
                 ?: return GetIAMDataResponse(null, false)
 
-        val response = _httpClient.get(htmlPath, null)
+        val response = _httpClient.get(htmlPath)
 
         if (response.isSuccess) {
             // Successful request, reset count
@@ -81,7 +70,7 @@ internal class InAppBackendService(
     ): InAppMessageContent? {
         val htmlPath = "in_app_messages/device_preview?preview_id=$previewUUID&app_id=$appId"
 
-        val response = _httpClient.get(htmlPath, null)
+        val response = _httpClient.get(htmlPath)
 
         return if (response.isSuccess) {
             val jsonResponse = JSONObject(response.payload!!)
@@ -209,4 +198,74 @@ internal class InAppBackendService(
     ) {
         Logging.error("Encountered a $statusCode error while attempting in-app message $requestType request: $response")
     }
+
+    private suspend fun attemptFetchWithRetries(
+        baseUrl: String,
+        rywToken: String?,
+        sessionDurationProvider: () -> Long,
+    ): List<InAppMessage>? {
+        var attempts = 0
+        var retryLimit: Int = 0 // retry limit is remote defined & set dynamically below
+
+        do {
+            val retryCount = if (attempts > 0) attempts else null
+            val values =
+                OptionalHeaders(
+                    rywToken = rywToken,
+                    sessionDuration = sessionDurationProvider(),
+                    retryCount = retryCount,
+                )
+            val response = _httpClient.get(baseUrl, values)
+
+            if (response.isSuccess) {
+                val jsonResponse = response.payload?.let { JSONObject(it) }
+                return jsonResponse?.let { hydrateInAppMessages(it) }
+            } else if (response.statusCode == 425 || response.statusCode == 429) {
+                // update the retry limit from response
+                retryLimit = response.retryLimit ?: retryLimit
+
+                // apply the Retry-After delay if present
+                response.retryAfterSeconds?.let {
+                    delay(it * 1_000L)
+                }
+            } else if (response.statusCode in 500..599) {
+                return null
+            } else {
+                return null
+            }
+
+            attempts++
+        } while (attempts <= retryLimit)
+
+        // Final attempt without the RYW token if retries fail
+        return fetchInAppMessagesWithoutRywToken(baseUrl, sessionDurationProvider)
+    }
+
+    private suspend fun fetchInAppMessagesWithoutRywToken(
+        url: String,
+        sessionDurationProvider: () -> Long,
+    ): List<InAppMessage>? {
+        val response =
+            _httpClient.get(
+                url,
+                OptionalHeaders(
+                    sessionDuration = sessionDurationProvider(),
+                ),
+            )
+
+        if (response.isSuccess) {
+            val jsonResponse = response.payload?.let { JSONObject(it) }
+            return jsonResponse?.let { hydrateInAppMessages(it) }
+        } else {
+            return null
+        }
+    }
+
+    private fun hydrateInAppMessages(jsonResponse: JSONObject): List<InAppMessage>? =
+        if (jsonResponse.has("in_app_messages")) {
+            val iamMessagesAsJSON = jsonResponse.getJSONArray("in_app_messages")
+            _hydrator.hydrateIAMMessages(iamMessagesAsJSON)
+        } else {
+            null
+        }
 }

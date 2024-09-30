@@ -6,6 +6,9 @@ import com.onesignal.common.DeviceUtils
 import com.onesignal.common.NetworkUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.RootToolsInternalMethods
+import com.onesignal.common.consistency.IamFetchReadyCondition
+import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
+import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.application.IApplicationService
@@ -39,6 +42,7 @@ internal class SubscriptionOperationExecutor(
     private val _configModelStore: ConfigModelStore,
     private val _buildUserService: IRebuildUserService,
     private val _newRecordState: NewRecordsState,
+    private val _consistencyManager: IConsistencyManager,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(CREATE_SUBSCRIPTION, UPDATE_SUBSCRIPTION, DELETE_SUBSCRIPTION, TRANSFER_SUBSCRIPTION)
@@ -101,13 +105,22 @@ internal class SubscriptionOperationExecutor(
                     AndroidUtils.getAppVersion(_applicationService.appContext),
                 )
 
-            val backendSubscriptionId =
+            val result =
                 _subscriptionBackend.createSubscription(
                     createOperation.appId,
                     IdentityConstants.ONESIGNAL_ID,
                     createOperation.onesignalId,
                     subscription,
                 ) ?: return ExecutionResponse(ExecutionResult.SUCCESS)
+
+            val backendSubscriptionId = result.first
+            val rywToken = result.second
+
+            if (rywToken != null) {
+                _consistencyManager.setRywToken(createOperation.onesignalId, IamFetchRywTokenKey.SUBSCRIPTION, rywToken)
+            } else {
+                _consistencyManager.resolveConditionsWithID(IamFetchReadyCondition.ID)
+            }
 
             // update the subscription model with the new ID, if it's still active.
             val subscriptionModel = _subscriptionModelStore.get(createOperation.subscriptionId)
@@ -175,7 +188,13 @@ internal class SubscriptionOperationExecutor(
                     AndroidUtils.getAppVersion(_applicationService.appContext),
                 )
 
-            _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription)
+            val rywToken = _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription)
+
+            if (rywToken != null) {
+                _consistencyManager.setRywToken(startingOperation.onesignalId, IamFetchRywTokenKey.SUBSCRIPTION, rywToken)
+            } else {
+                _consistencyManager.resolveConditionsWithID(IamFetchReadyCondition.ID)
+            }
         } catch (ex: BackendException) {
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
 
@@ -216,6 +235,7 @@ internal class SubscriptionOperationExecutor(
         return ExecutionResponse(ExecutionResult.SUCCESS)
     }
 
+    // TODO: whenever the end-user changes users, we need to add the read-your-write token here, currently no code to handle the re-fetch IAMs
     private suspend fun transferSubscription(startingOperation: TransferSubscriptionOperation): ExecutionResponse {
         try {
             _subscriptionBackend.transferSubscription(

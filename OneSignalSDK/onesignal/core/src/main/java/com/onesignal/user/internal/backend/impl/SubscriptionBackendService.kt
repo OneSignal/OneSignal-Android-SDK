@@ -16,7 +16,7 @@ internal class SubscriptionBackendService(
         aliasLabel: String,
         aliasValue: String,
         subscription: SubscriptionObject,
-    ): String? {
+    ): Pair<String, String?>? {
         val jsonSubscription = JSONConverter.convertToJSON(subscription)
         jsonSubscription.remove("id")
         val requestJSON = JSONObject().put("subscription", jsonSubscription)
@@ -33,14 +33,19 @@ internal class SubscriptionBackendService(
             return null
         }
 
-        return subscriptionJSON.getString("id")
+        var rywToken: String? = null
+        if (responseJSON.has("ryw_token")) {
+            rywToken = responseJSON.getString("ryw_token")
+        }
+
+        return Pair(subscriptionJSON.getString("id"), rywToken)
     }
 
     override suspend fun updateSubscription(
         appId: String,
         subscriptionId: String,
         subscription: SubscriptionObject,
-    ) {
+    ): String? {
         val requestJSON =
             JSONObject()
                 .put("subscription", JSONConverter.convertToJSON(subscription))
@@ -49,6 +54,13 @@ internal class SubscriptionBackendService(
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
+        }
+
+        val responseBody = JSONObject(response.payload)
+        return if (responseBody.has("ryw_token")) {
+            responseBody.getString("ryw_token")
+        } else {
+            null
         }
     }
 

@@ -1,6 +1,9 @@
 package com.onesignal.user.internal.operations.impl.executors
 
 import com.onesignal.common.NetworkUtils
+import com.onesignal.common.consistency.IamFetchReadyCondition
+import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
+import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.operations.ExecutionResponse
@@ -31,12 +34,13 @@ internal class UpdateUserOperationExecutor(
     private val _propertiesModelStore: PropertiesModelStore,
     private val _buildUserService: IRebuildUserService,
     private val _newRecordState: NewRecordsState,
+    private val _consistencyManager: IConsistencyManager,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(SET_TAG, DELETE_TAG, SET_PROPERTY, TRACK_SESSION_START, TRACK_SESSION_END, TRACK_PURCHASE)
 
-    override suspend fun execute(ops: List<Operation>): ExecutionResponse {
-        Logging.log(LogLevel.DEBUG, "UpdateUserOperationExecutor(operation: $ops)")
+    override suspend fun execute(operations: List<Operation>): ExecutionResponse {
+        Logging.log(LogLevel.DEBUG, "UpdateUserOperationExecutor(operation: $operations)")
 
         var appId: String? = null
         var onesignalId: String? = null
@@ -45,7 +49,7 @@ internal class UpdateUserOperationExecutor(
         var deltasObject = PropertiesDeltasObject()
         var refreshDeviceMetadata = false
 
-        for (operation in ops) {
+        for (operation in operations) {
             when (operation) {
                 is SetTagOperation -> {
                     if (appId == null) {
@@ -83,7 +87,8 @@ internal class UpdateUserOperationExecutor(
                     // that exist in this group.
                     val sessionCount = if (deltasObject.sessionCount != null) deltasObject.sessionCount!! + 1 else 1
 
-                    deltasObject = PropertiesDeltasObject(deltasObject.sessionTime, sessionCount, deltasObject.amountSpent, deltasObject.purchases)
+                    deltasObject =
+                        PropertiesDeltasObject(deltasObject.sessionTime, sessionCount, deltasObject.amountSpent, deltasObject.purchases)
                     refreshDeviceMetadata = true
                 }
                 is TrackSessionEndOperation -> {
@@ -94,9 +99,15 @@ internal class UpdateUserOperationExecutor(
 
                     // The session time we pass up is the total session time across all `TrackSessionEndOperation`
                     // operations that exist in this group.
-                    val sessionTime = if (deltasObject.sessionTime != null) deltasObject.sessionTime!! + operation.sessionTime else operation.sessionTime
+                    val sessionTime =
+                        if (deltasObject.sessionTime != null) {
+                            deltasObject.sessionTime!! + operation.sessionTime
+                        } else {
+                            operation.sessionTime
+                        }
 
-                    deltasObject = PropertiesDeltasObject(sessionTime, deltasObject.sessionCount, deltasObject.amountSpent, deltasObject.purchases)
+                    deltasObject =
+                        PropertiesDeltasObject(sessionTime, deltasObject.sessionCount, deltasObject.amountSpent, deltasObject.purchases)
                 }
                 is TrackPurchaseOperation -> {
                     if (appId == null) {
@@ -107,7 +118,12 @@ internal class UpdateUserOperationExecutor(
                     // The amount spent we pass up is the total amount spent across all `TrackPurchaseOperation`
                     // operations that exist in this group, while the purchases is the union of all
                     // `TrackPurchaseOperation` operations that exist in this group.
-                    val amountSpent = if (deltasObject.amountSpent != null) deltasObject.amountSpent!! + operation.amountSpent else operation.amountSpent
+                    val amountSpent =
+                        if (deltasObject.amountSpent != null) {
+                            deltasObject.amountSpent!! + operation.amountSpent
+                        } else {
+                            operation.amountSpent
+                        }
                     val purchasesArray = if (deltasObject.purchases != null) deltasObject.purchases!!.toMutableList() else mutableListOf()
 
                     for (purchase in operation.purchases) {
@@ -122,18 +138,25 @@ internal class UpdateUserOperationExecutor(
 
         if (appId != null && onesignalId != null) {
             try {
-                _userBackend.updateUser(
-                    appId,
-                    IdentityConstants.ONESIGNAL_ID,
-                    onesignalId,
-                    propertiesObject,
-                    refreshDeviceMetadata,
-                    deltasObject,
-                )
+                val rywToken =
+                    _userBackend.updateUser(
+                        appId,
+                        IdentityConstants.ONESIGNAL_ID,
+                        onesignalId,
+                        propertiesObject,
+                        refreshDeviceMetadata,
+                        deltasObject,
+                    )
+
+                if (rywToken != null) {
+                    _consistencyManager.setRywToken(onesignalId, IamFetchRywTokenKey.USER, rywToken)
+                } else {
+                    _consistencyManager.resolveConditionsWithID(IamFetchReadyCondition.ID)
+                }
 
                 if (_identityModelStore.model.onesignalId == onesignalId) {
                     // go through and make sure any properties are in the correct model state
-                    for (operation in ops) {
+                    for (operation in operations) {
                         when (operation) {
                             is SetTagOperation ->
                                 _propertiesModelStore.model.tags.setStringProperty(
