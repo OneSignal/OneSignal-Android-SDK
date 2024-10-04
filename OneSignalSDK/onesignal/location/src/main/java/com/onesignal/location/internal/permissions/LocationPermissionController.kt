@@ -99,7 +99,7 @@ internal class LocationPermissionController(
     private fun showFallbackAlertDialog(): Boolean {
         val activity = _applicationService.current ?: return false
         AlertDialogPrepromptForAndroidSettings.show(
-            activity,
+            _applicationService,
             activity.getString(R.string.location_permission_name_for_title),
             activity.getString(R.string.location_permission_settings_message),
             object : AlertDialogPrepromptForAndroidSettings.Callback {
