@@ -38,4 +38,52 @@ class OneSignalImpTests : FunSpec({
         // Then
         exception.message shouldBe "Must call 'initWithContext' before 'logout'"
     }
+
+    // consentRequired probably should have thrown like the other OneSignal methods in 5.0.0,
+    // but we can't make a breaking change to an existing API.
+    context("consentRequired") {
+        context("before initWithContext") {
+            test("set should not throw") {
+                // Given
+                val os = OneSignalImp()
+                // When
+                os.consentRequired = false
+                os.consentRequired = true
+                // Then
+                // Test fails if the above throws
+            }
+            test("get should not throw") {
+                // Given
+                val os = OneSignalImp()
+                // When
+                println(os.consentRequired)
+                // Then
+                // Test fails if the above throws
+            }
+        }
+    }
+
+    // consentGiven probably should have thrown like the other OneSignal methods in 5.0.0,
+    // but we can't make a breaking change to an existing API.
+    context("consentGiven") {
+        context("before initWithContext") {
+            test("set should not throw") {
+                // Given
+                val os = OneSignalImp()
+                // When
+                os.consentGiven = true
+                os.consentGiven = false
+                // Then
+                // Test fails if the above throws
+            }
+            test("get should not throw") {
+                // Given
+                val os = OneSignalImp()
+                // When
+                println(os.consentGiven)
+                // Then
+                // Test fails if the above throws
+            }
+        }
+    }
 })

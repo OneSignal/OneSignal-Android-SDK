@@ -126,8 +126,9 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         }
 
     // Services required by this class
-    private val operationRepo: IOperationRepo
-        get() = services.getService()
+    // WARNING: OperationRepo depends on OperationModelStore which in-turn depends
+    // on ApplicationService.appContext being non-null.
+    private var operationRepo: IOperationRepo? = null
     private val identityModelStore: IdentityModelStore
         get() = services.getService()
     private val propertiesModelStore: PropertiesModelStore
@@ -208,6 +209,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             // get the current config model, if there is one
             configModel = services.getService<ConfigModelStore>().model
             sessionModel = services.getService<SessionModelStore>().model
+            operationRepo = services.getService<IOperationRepo>()
 
             // initWithContext is called by our internal services/receivers/activites but they do not provide
             // an appId (they don't know it).  If the app has never called the external initWithContext
