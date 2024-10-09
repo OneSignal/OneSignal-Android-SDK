@@ -17,4 +17,6 @@ data class OptionalHeaders(
      * Used to track delay between session start and request
      */
     val sessionDuration: Long? = null,
+    val jwt: String? = null,
+    val deviceAuthPushToken: String? = null,
 )
