@@ -23,6 +23,8 @@ interface IUserBackendService {
         identities: Map<String, String>,
         subscriptions: List<SubscriptionObject>,
         properties: Map<String, String>,
+        jwt: String? = null,
+        deviceAuthPushToken: String? = null,
     ): CreateUserResponse
     // TODO: Change to send only the push subscription, optimally
 
@@ -47,6 +49,7 @@ interface IUserBackendService {
         properties: PropertiesObject,
         refreshDeviceMetadata: Boolean,
         propertyiesDelta: PropertiesDeltasObject,
+        jwt: String? = null,
     ): String?
 
     /**
@@ -64,6 +67,7 @@ interface IUserBackendService {
         appId: String,
         aliasLabel: String,
         aliasValue: String,
+        jwt: String? = null,
     ): CreateUserResponse
 }
 

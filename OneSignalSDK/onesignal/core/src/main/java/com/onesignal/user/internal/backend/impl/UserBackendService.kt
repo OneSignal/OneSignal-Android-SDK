@@ -3,6 +3,7 @@ package com.onesignal.user.internal.backend.impl
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.putMap
 import com.onesignal.core.internal.http.IHttpClient
+import com.onesignal.core.internal.http.impl.OptionalHeaders
 import com.onesignal.user.internal.backend.CreateUserResponse
 import com.onesignal.user.internal.backend.IUserBackendService
 import com.onesignal.user.internal.backend.PropertiesDeltasObject
@@ -18,6 +19,8 @@ internal class UserBackendService(
         identities: Map<String, String>,
         subscriptions: List<SubscriptionObject>,
         properties: Map<String, String>,
+        jwt: String?,
+        deviceAuthPushToken: String?,
     ): CreateUserResponse {
         val requestJSON = JSONObject()
 
@@ -36,7 +39,12 @@ internal class UserBackendService(
 
         requestJSON.put("refresh_device_metadata", true)
 
-        val response = _httpClient.post("apps/$appId/users", requestJSON)
+        val response =
+            _httpClient.post(
+                "apps/$appId/users",
+                requestJSON,
+                OptionalHeaders(jwt = jwt, deviceAuthPushToken = deviceAuthPushToken),
+            )
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
@@ -52,6 +60,7 @@ internal class UserBackendService(
         properties: PropertiesObject,
         refreshDeviceMetadata: Boolean,
         propertyiesDelta: PropertiesDeltasObject,
+        jwt: String?,
     ): String? {
         val jsonObject =
             JSONObject()
@@ -65,7 +74,7 @@ internal class UserBackendService(
             jsonObject.put("deltas", JSONConverter.convertToJSON(propertyiesDelta))
         }
 
-        val response = _httpClient.patch("apps/$appId/users/by/$aliasLabel/$aliasValue", jsonObject)
+        val response = _httpClient.patch("apps/$appId/users/by/$aliasLabel/$aliasValue", jsonObject, OptionalHeaders(jwt = jwt))
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
@@ -83,8 +92,9 @@ internal class UserBackendService(
         appId: String,
         aliasLabel: String,
         aliasValue: String,
+        jwt: String?,
     ): CreateUserResponse {
-        val response = _httpClient.get("apps/$appId/users/by/$aliasLabel/$aliasValue")
+        val response = _httpClient.get("apps/$appId/users/by/$aliasLabel/$aliasValue", OptionalHeaders(jwt = jwt))
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)

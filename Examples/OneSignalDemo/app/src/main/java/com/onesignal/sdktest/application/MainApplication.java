@@ -6,9 +6,10 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.multidex.MultiDexApplication;
-
 import com.onesignal.Continue;
+import com.onesignal.IUserJwtInvalidatedListener;
 import com.onesignal.OneSignal;
+import com.onesignal.UserJwtInvalidatedEvent;
 import com.onesignal.inAppMessages.IInAppMessageClickListener;
 import com.onesignal.inAppMessages.IInAppMessageClickEvent;
 import com.onesignal.inAppMessages.IInAppMessageDidDismissEvent;
@@ -65,7 +66,7 @@ public class MainApplication extends MultiDexApplication {
         // This will reproduce result similar to Kotlin CouroutineScope.launch{}, which may potentially crash the app
         ExecutorService executor = Executors.newSingleThreadExecutor();
         @SuppressLint({"NewApi", "LocalSuppress"}) CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-            OneSignal.getNotifications().requestPermission(true, Continue.none());
+            //OneSignal.getNotifications().requestPermission(true, Continue.none());
         }, executor);
         future.join(); // Waits for the task to complete
         executor.shutdown();
@@ -137,6 +138,16 @@ public class MainApplication extends MultiDexApplication {
             public void onUserStateChange(@NonNull UserChangedState state) {
                 UserState currentUserState = state.getCurrent();
                 Log.v(Tag.LOG_TAG, "onUserStateChange fired " + currentUserState.toJSONObject());
+            }
+        });
+
+        OneSignal.addUserJwtInvalidatedListner(new IUserJwtInvalidatedListener() {
+            @Override
+            public void onUserJwtInvalidated(@NonNull UserJwtInvalidatedEvent event) {
+                // !!! For manual testing only
+                String jwt = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIwMTM5YmQ2Zi00NTFmLTQzOGMtODg4Ni00ZTBmMGZlM2EwODUiLCJleHAiOjE3MjczNjkyMjIsImlkZW50aXR5Ijp7ImV4dGVybmFsX2lkIjoiamluIn0sInN1YnNjcmlwdGlvbnMiOlt7InR5cGUiOiJFbWFpbCIsInRva2VuIjoidGVzdEBkb21haW4uY29tIn0seyJ0eXBlIjoiU01TIiwidG9rZW4iOiIrMTIzNDU2NzgifSx7InR5cGUiOiJBbmRyb2lkUHVzaCIsImlkIjoiMTIzZTQ1NjctZTg5Yi0xMmQzLWE0NTYtNDI2NjE0MTc0MDAwIn1dfQ.6XF7wRF4lLOvKr5Gd3MHv9j7U151hcBjmqSyk6nI6JVYUgt6q0YRp2j1aSJcg8VmaejzP1DouN1DpWUT_JTRXA";
+                OneSignal.updateUserJwt(event.getExternalId(), jwt);
+                Log.v(Tag.LOG_TAG, "onUserJwtInvalidated fired with ID:" + event.getExternalId());
             }
         });
 

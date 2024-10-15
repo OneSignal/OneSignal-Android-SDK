@@ -46,29 +46,39 @@ internal class HttpClient(
         url: String,
         body: JSONObject,
         headers: OptionalHeaders?,
-    ): HttpResponse = makeRequest(url, "POST", body, _configModelStore.model.httpTimeout, headers)
+    ): HttpResponse {
+        return makeRequest(url, "POST", body, _configModelStore.model.httpTimeout, headers)
+    }
 
     override suspend fun get(
         url: String,
         headers: OptionalHeaders?,
-    ): HttpResponse = makeRequest(url, null, null, _configModelStore.model.httpGetTimeout, headers)
+    ): HttpResponse {
+        return makeRequest(url, null, null, _configModelStore.model.httpGetTimeout, headers)
+    }
 
     override suspend fun put(
         url: String,
         body: JSONObject,
         headers: OptionalHeaders?,
-    ): HttpResponse = makeRequest(url, "PUT", body, _configModelStore.model.httpTimeout, headers)
+    ): HttpResponse {
+        return makeRequest(url, "PUT", body, _configModelStore.model.httpTimeout, headers)
+    }
 
     override suspend fun patch(
         url: String,
         body: JSONObject,
         headers: OptionalHeaders?,
-    ): HttpResponse = makeRequest(url, "PATCH", body, _configModelStore.model.httpTimeout, headers)
+    ): HttpResponse {
+        return makeRequest(url, "PATCH", body, _configModelStore.model.httpTimeout, headers)
+    }
 
     override suspend fun delete(
         url: String,
         headers: OptionalHeaders?,
-    ): HttpResponse = makeRequest(url, "DELETE", null, _configModelStore.model.httpTimeout, headers)
+    ): HttpResponse {
+        return makeRequest(url, "DELETE", null, _configModelStore.model.httpTimeout, headers)
+    }
 
     private suspend fun makeRequest(
         url: String,
@@ -80,7 +90,10 @@ internal class HttpClient(
         // If privacy consent is required but not yet given, any non-GET request should be blocked.
         if (method != null && _configModelStore.model.consentRequired == true && _configModelStore.model.consentGiven != true) {
             Logging.warn(
-                "$method `$url` was called before the user provided privacy consent. Your application is set to require the user's privacy consent before the OneSignal SDK can be initialized. Please ensure the user has provided consent before calling this method. You can check the latest OneSignal consent status by calling OneSignal.privacyConsent",
+                "$method `$url` was called before the user provided privacy consent. " +
+                    "Your application is set to require the user's privacy consent before the OneSignal SDK can be initialized. " +
+                    "Please ensure the user has provided consent before calling this method. You can check the latest OneSignal " +
+                    "consent status by calling OneSignal.privacyConsent",
             )
             return HttpResponse(0, null, null)
         }
@@ -136,6 +149,16 @@ internal class HttpClient(
                     con.connectTimeout = timeout
                     con.readTimeout = timeout
                     con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignalUtils.SDK_VERSION)
+
+                    val jwt = headers?.jwt
+                    if (!jwt.isNullOrEmpty()) {
+                        con.setRequestProperty("Authorization", "Bearer $jwt")
+                    }
+
+                    val deviceAuthPushToken = headers?.deviceAuthPushToken
+                    if (_configModelStore.model.useIdentityVerification && !deviceAuthPushToken.isNullOrEmpty()) {
+                        con.setRequestProperty("Device-Auth-Push-Token", "Basic $deviceAuthPushToken")
+                    }
 
                     if (OneSignalWrapper.sdkType != null && OneSignalWrapper.sdkVersion != null) {
                         con.setRequestProperty("SDK-Wrapper", "onesignal/${OneSignalWrapper.sdkType}/${OneSignalWrapper.sdkVersion}")

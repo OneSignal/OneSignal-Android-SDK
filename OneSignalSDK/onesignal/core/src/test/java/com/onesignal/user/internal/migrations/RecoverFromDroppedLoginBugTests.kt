@@ -36,6 +36,7 @@ private class Mocks {
                 listOf(),
                 operationModelStore,
                 configModelStore,
+                MockHelper.identityModelStore(),
                 Time(),
                 ExecutorMocks.getNewRecordState(configModelStore),
             ),

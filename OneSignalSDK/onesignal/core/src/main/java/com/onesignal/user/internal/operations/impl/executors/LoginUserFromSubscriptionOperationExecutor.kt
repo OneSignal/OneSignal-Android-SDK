@@ -42,10 +42,12 @@ internal class LoginUserFromSubscriptionOperationExecutor(
 
     private suspend fun loginUser(loginUserOp: LoginUserFromSubscriptionOperation): ExecutionResponse {
         try {
+            // Not allowed when identity verification is on
             val identities =
                 _subscriptionBackend.getIdentityFromSubscription(
                     loginUserOp.appId,
                     loginUserOp.subscriptionId,
+                    _identityModelStore.model.jwtToken,
                 )
             val backendOneSignalId = identities.getOrDefault(IdentityConstants.ONESIGNAL_ID, null)
 
@@ -82,8 +84,10 @@ internal class LoginUserFromSubscriptionOperationExecutor(
             return when (responseType) {
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
                     ExecutionResponse(ExecutionResult.FAIL_RETRY)
-                NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
+                    _identityModelStore.invalidateJwt()
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                }
                 else ->
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)
             }
