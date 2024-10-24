@@ -164,7 +164,7 @@ internal class InAppMessagesManager(
             // attempt to fetch messages from the backend (if we have the pre-requisite data already)
             val onesignalId = _userManager.onesignalId
             val updateConditionDeferred =
-                _consistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
+                _consistencyManager.getRywDataFromAwaitableCondition(IamFetchReadyCondition(onesignalId))
             val rywToken = updateConditionDeferred.await()
             if (rywToken != null) {
                 fetchMessages(rywToken)
@@ -241,7 +241,7 @@ internal class InAppMessagesManager(
         suspendifyOnThread {
             val onesignalId = _userManager.onesignalId
             val iamFetchCondition =
-                _consistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
+                _consistencyManager.getRywDataFromAwaitableCondition(IamFetchReadyCondition(onesignalId))
             val rywToken = iamFetchCondition.await()
 
             if (rywToken != null) {

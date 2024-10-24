@@ -22,7 +22,7 @@ interface IConsistencyManager {
      *  condition: ICondition - the condition to be registered
      * Returns: CompletableDeferred<String?> - a deferred action that completes when the condition is met
      */
-    suspend fun registerCondition(condition: ICondition): CompletableDeferred<String?>
+    suspend fun getRywDataFromAwaitableCondition(condition: ICondition): CompletableDeferred<String?>
 
     /**
      * Resolve all conditions with a specific ID
