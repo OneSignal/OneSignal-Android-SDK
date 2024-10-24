@@ -25,7 +25,7 @@ class ConsistencyManagerTests : FunSpec({
             consistencyManager.setRywToken(id, key, value)
 
             val condition = TestMetCondition(mapOf(id to mapOf(key to value)))
-            val deferred = consistencyManager.registerCondition(condition)
+            val deferred = consistencyManager.getRywDataFromAwaitableCondition(condition)
             val result = deferred.await()
 
             result shouldBe value
@@ -43,7 +43,7 @@ class ConsistencyManagerTests : FunSpec({
             consistencyManager.setRywToken(id, key, value)
 
             val condition = TestMetCondition(mapOf(id to mapOf(key to value)))
-            val deferred = consistencyManager.registerCondition(condition)
+            val deferred = consistencyManager.getRywDataFromAwaitableCondition(condition)
 
             deferred.await()
             deferred.isCompleted shouldBe true
@@ -53,7 +53,7 @@ class ConsistencyManagerTests : FunSpec({
     test("registerCondition does not complete when condition is not met") {
         runTest {
             val condition = TestUnmetCondition()
-            val deferred = consistencyManager.registerCondition(condition)
+            val deferred = consistencyManager.getRywDataFromAwaitableCondition(condition)
 
             consistencyManager.setRywToken("id", IamFetchRywTokenKey.USER, "123")
             deferred.isCompleted shouldBe false
@@ -63,7 +63,7 @@ class ConsistencyManagerTests : FunSpec({
     test("resolveConditionsWithID resolves conditions based on ID") {
         runTest {
             val condition = TestUnmetCondition()
-            val deferred = consistencyManager.registerCondition(condition)
+            val deferred = consistencyManager.getRywDataFromAwaitableCondition(condition)
             consistencyManager.resolveConditionsWithID(TestUnmetCondition.ID)
             deferred.await()
 

@@ -44,7 +44,7 @@ class ConsistencyManager : IConsistencyManager {
     /**
      * Register a condition with its corresponding deferred action. Returns a deferred condition.
      */
-    override suspend fun registerCondition(condition: ICondition): CompletableDeferred<String?> {
+    override suspend fun getRywDataFromAwaitableCondition(condition: ICondition): CompletableDeferred<RywData?> {
         mutex.withLock {
             val deferred = CompletableDeferred<String?>()
             val pair = Pair(condition, deferred)
