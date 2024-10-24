@@ -1,5 +1,6 @@
 package com.onesignal.common.consistency.models
 
+import com.onesignal.common.consistency.RywData
 import kotlinx.coroutines.CompletableDeferred
 
 interface IConsistencyManager {
@@ -10,10 +11,10 @@ interface IConsistencyManager {
      *  key: IConsistencyKeyEnum - corresponds to the operation for which we have a read-your-write token
      *  value: String? - the read-your-write token
      */
-    suspend fun setRywToken(
+    suspend fun setRywData(
         id: String,
         key: IConsistencyKeyEnum,
-        value: String,
+        value: RywData,
     )
 
     /**
@@ -22,7 +23,7 @@ interface IConsistencyManager {
      *  condition: ICondition - the condition to be registered
      * Returns: CompletableDeferred<String?> - a deferred action that completes when the condition is met
      */
-    suspend fun registerCondition(condition: ICondition): CompletableDeferred<String?>
+    suspend fun getRywDataFromAwaitableCondition(condition: ICondition): CompletableDeferred<RywData?>
 
     /**
      * Resolve all conditions with a specific ID

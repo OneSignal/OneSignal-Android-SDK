@@ -1,5 +1,6 @@
 package com.onesignal.user.internal.backend
 
+import com.onesignal.common.consistency.RywData
 import com.onesignal.common.exceptions.BackendException
 
 interface ISubscriptionBackendService {
@@ -21,7 +22,7 @@ interface ISubscriptionBackendService {
         aliasLabel: String,
         aliasValue: String,
         subscription: SubscriptionObject,
-    ): Pair<String, String?>?
+    ): Pair<String, RywData>?
 
     /**
      * Update an existing subscription with the properties provided.
@@ -34,7 +35,7 @@ interface ISubscriptionBackendService {
         appId: String,
         subscriptionId: String,
         subscription: SubscriptionObject,
-    ): String?
+    ): RywData
 
     /**
      * Delete an existing subscription.
