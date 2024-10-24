@@ -14,6 +14,8 @@ import com.onesignal.inAppMessages.internal.hydrators.InAppHydrator
 import kotlinx.coroutines.delay
 import org.json.JSONObject
 
+private const val DEFAULT_RYW_DELAY_MS = 500L
+
 internal class InAppBackendService(
     private val _httpClient: IHttpClient,
     private val _deviceService: IDeviceService,
@@ -27,6 +29,9 @@ internal class InAppBackendService(
         rywToken: String?,
         sessionDurationProvider: () -> Long,
     ): List<InAppMessage>? {
+        val rywDelay = rywData.rywDelay ?: DEFAULT_RYW_DELAY_MS
+        delay(rywDelay) // Delay by the specified amount
+
         val baseUrl = "apps/$appId/subscriptions/$subscriptionId/iams"
         return attemptFetchWithRetries(baseUrl, rywToken, sessionDurationProvider)
     }
