@@ -1,5 +1,6 @@
 package com.onesignal.user.internal.operations
 
+import com.onesignal.common.consistency.RywData
 import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
 import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
@@ -29,18 +30,18 @@ class UpdateUserOperationExecutorTests :
         val appId = "appId"
         val localOneSignalId = "local-onesignalId"
         val remoteOneSignalId = "remote-onesignalId"
-        val rywToken = "1"
+        val rywData = RywData("1", 500L)
         val mockConsistencyManager = mockk<IConsistencyManager>()
 
         beforeTest {
             clearMocks(mockConsistencyManager)
-            coEvery { mockConsistencyManager.setRywToken(any(), any(), any()) } just runs
+            coEvery { mockConsistencyManager.setRywData(any(), any(), any()) } just runs
         }
 
         test("update user single operation is successful") {
             // Given
             val mockUserBackendService = mockk<IUserBackendService>()
-            coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } returns rywToken
+            coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } returns rywData
 
             // Given
             val mockIdentityModelStore = MockHelper.identityModelStore()
@@ -80,7 +81,7 @@ class UpdateUserOperationExecutorTests :
         test("update user multiple property operations are successful") {
             // Given
             val mockUserBackendService = mockk<IUserBackendService>()
-            coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } returns rywToken
+            coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } returns rywData
 
             // Given
             val mockIdentityModelStore = MockHelper.identityModelStore()
@@ -142,7 +143,7 @@ class UpdateUserOperationExecutorTests :
         test("update user single property delta operations is successful") {
             // Given
             val mockUserBackendService = mockk<IUserBackendService>()
-            coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } returns rywToken
+            coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } returns rywData
 
             // Given
             val mockIdentityModelStore = MockHelper.identityModelStore()
@@ -187,7 +188,7 @@ class UpdateUserOperationExecutorTests :
         test("update user multiple property delta operations are successful") {
             // Given
             val mockUserBackendService = mockk<IUserBackendService>()
-            coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } returns rywToken
+            coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } returns rywData
 
             // Given
             val mockIdentityModelStore = MockHelper.identityModelStore()
@@ -252,7 +253,7 @@ class UpdateUserOperationExecutorTests :
         test("update user with both property and property delta operations are successful") {
             // Given
             val mockUserBackendService = mockk<IUserBackendService>()
-            coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } returns rywToken
+            coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } returns rywData
 
             // Given
             val mockIdentityModelStore = MockHelper.identityModelStore()
@@ -364,7 +365,7 @@ class UpdateUserOperationExecutorTests :
             val mockUserBackendService = mockk<IUserBackendService>()
             coEvery {
                 mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any())
-            } returns rywToken
+            } returns rywData
 
             val mockIdentityModelStore = MockHelper.identityModelStore()
             val mockPropertiesModelStore = MockHelper.propertiesModelStore()
@@ -390,7 +391,7 @@ class UpdateUserOperationExecutorTests :
 
             // Then
             coVerify(exactly = 1) {
-                mockConsistencyManager.setRywToken(remoteOneSignalId, IamFetchRywTokenKey.USER, rywToken)
+                mockConsistencyManager.setRywData(remoteOneSignalId, IamFetchRywTokenKey.USER, rywData)
             }
         }
     })

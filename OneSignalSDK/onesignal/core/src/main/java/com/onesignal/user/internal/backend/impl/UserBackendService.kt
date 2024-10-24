@@ -1,5 +1,6 @@
 package com.onesignal.user.internal.backend.impl
 
+import com.onesignal.common.consistency.RywData
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.putMap
 import com.onesignal.core.internal.http.IHttpClient
@@ -52,7 +53,7 @@ internal class UserBackendService(
         properties: PropertiesObject,
         refreshDeviceMetadata: Boolean,
         propertyiesDelta: PropertiesDeltasObject,
-    ): String? {
+    ): RywData {
         val jsonObject =
             JSONObject()
                 .put("refresh_device_metadata", refreshDeviceMetadata)
@@ -71,12 +72,18 @@ internal class UserBackendService(
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
 
-        val responseBody = JSONObject(response.payload)
-        return if (responseBody.has("ryw_token")) {
-            responseBody.getString("ryw_token")
-        } else {
-            null
+        val responseJSON = JSONObject(response.payload)
+        var rywToken: String? = null
+        if (responseJSON.has("ryw_token")) {
+            rywToken = responseJSON.getString("ryw_token")
         }
+
+        var rywDelay: Long? = null
+        if (responseJSON.has("ryw_delay")) {
+            rywDelay = responseJSON.getLong("ryw_delay")
+        }
+
+        return RywData(rywToken, rywDelay)
     }
 
     override suspend fun getUser(

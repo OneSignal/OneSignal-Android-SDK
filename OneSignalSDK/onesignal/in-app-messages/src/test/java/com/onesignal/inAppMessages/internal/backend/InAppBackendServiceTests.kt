@@ -1,5 +1,6 @@
 package com.onesignal.inAppMessages.internal.backend
 
+import com.onesignal.common.consistency.RywData
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.safeBool
 import com.onesignal.common.safeInt
@@ -39,7 +40,7 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", "123", mockSessionDurationProvider)
+            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", RywData("123", 500L), mockSessionDurationProvider)
 
             // Then
             response shouldNotBe null
@@ -62,7 +63,7 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", "123", mockSessionDurationProvider)
+            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", RywData("123", 500L), mockSessionDurationProvider)
 
             // Then
             response shouldNotBe null
@@ -95,7 +96,7 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", "123", mockSessionDurationProvider)
+            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", RywData("123", 500L), mockSessionDurationProvider)
 
             // Then
             response shouldBe null
@@ -124,7 +125,7 @@ class InAppBackendServiceTests :
             val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
 
             // When
-            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", "1234", mockSessionDurationProvider)
+            val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", RywData("1234", 500L), mockSessionDurationProvider)
 
             // Then
             response shouldNotBe null

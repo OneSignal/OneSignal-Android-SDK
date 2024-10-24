@@ -1,5 +1,6 @@
 package com.onesignal.user.internal.backend.impl
 
+import com.onesignal.common.consistency.RywData
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.safeJSONObject
 import com.onesignal.common.toMap
@@ -16,7 +17,7 @@ internal class SubscriptionBackendService(
         aliasLabel: String,
         aliasValue: String,
         subscription: SubscriptionObject,
-    ): Pair<String, String?>? {
+    ): Pair<String, RywData>? {
         val jsonSubscription = JSONConverter.convertToJSON(subscription)
         jsonSubscription.remove("id")
         val requestJSON = JSONObject().put("subscription", jsonSubscription)
@@ -38,14 +39,21 @@ internal class SubscriptionBackendService(
             rywToken = responseJSON.getString("ryw_token")
         }
 
-        return Pair(subscriptionJSON.getString("id"), rywToken)
+        var rywDelay: Long? = null
+        if (responseJSON.has("ryw_delay")) {
+            rywDelay = responseJSON.getLong("ryw_delay")
+        }
+
+        var rywData = RywData(rywToken, rywDelay)
+
+        return Pair(subscriptionJSON.getString("id"), rywData)
     }
 
     override suspend fun updateSubscription(
         appId: String,
         subscriptionId: String,
         subscription: SubscriptionObject,
-    ): String? {
+    ): RywData {
         val requestJSON =
             JSONObject()
                 .put("subscription", JSONConverter.convertToJSON(subscription))
@@ -56,12 +64,18 @@ internal class SubscriptionBackendService(
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
 
-        val responseBody = JSONObject(response.payload)
-        return if (responseBody.has("ryw_token")) {
-            responseBody.getString("ryw_token")
-        } else {
-            null
+        val responseJSON = JSONObject(response.payload)
+        var rywToken: String? = null
+        if (responseJSON.has("ryw_token")) {
+            rywToken = responseJSON.getString("ryw_token")
         }
+
+        var rywDelay: Long? = null
+        if (responseJSON.has("ryw_delay")) {
+            rywDelay = responseJSON.getLong("ryw_delay")
+        }
+
+        return RywData(rywToken, rywDelay)
     }
 
     override suspend fun deleteSubscription(

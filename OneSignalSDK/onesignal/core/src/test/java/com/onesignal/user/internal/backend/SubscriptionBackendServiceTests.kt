@@ -1,5 +1,6 @@
 package com.onesignal.user.internal.backend
 
+import com.onesignal.common.consistency.RywData
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.http.HttpResponse
 import com.onesignal.core.internal.http.IHttpClient
@@ -42,7 +43,7 @@ class SubscriptionBackendServiceTests : FunSpec({
         val response = subscriptionBackendService.createSubscription("appId", aliasLabel, aliasValue, subscription)
 
         // Then
-        response shouldBe Pair("subscriptionId", null)
+        response shouldBe Pair("subscriptionId", RywData(null, null))
         coVerify {
             spyHttpClient.post(
                 "apps/appId/users/by/$aliasLabel/$aliasValue/subscriptions",
