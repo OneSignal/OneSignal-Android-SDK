@@ -1,6 +1,7 @@
 package com.onesignal.inAppMessages.internal.backend.impl
 
 import com.onesignal.common.NetworkUtils
+import com.onesignal.common.consistency.RywData
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.http.IHttpClient
@@ -26,14 +27,14 @@ internal class InAppBackendService(
     override suspend fun listInAppMessages(
         appId: String,
         subscriptionId: String,
-        rywToken: String?,
+        rywData: RywData,
         sessionDurationProvider: () -> Long,
     ): List<InAppMessage>? {
         val rywDelay = rywData.rywDelay ?: DEFAULT_RYW_DELAY_MS
         delay(rywDelay) // Delay by the specified amount
 
         val baseUrl = "apps/$appId/subscriptions/$subscriptionId/iams"
-        return attemptFetchWithRetries(baseUrl, rywToken, sessionDurationProvider)
+        return attemptFetchWithRetries(baseUrl, rywData, sessionDurationProvider)
     }
 
     override suspend fun getIAMData(
@@ -206,7 +207,7 @@ internal class InAppBackendService(
 
     private suspend fun attemptFetchWithRetries(
         baseUrl: String,
-        rywToken: String?,
+        rywData: RywData,
         sessionDurationProvider: () -> Long,
     ): List<InAppMessage>? {
         var attempts = 0
@@ -216,7 +217,7 @@ internal class InAppBackendService(
             val retryCount = if (attempts > 0) attempts else null
             val values =
                 OptionalHeaders(
-                    rywToken = rywToken,
+                    rywToken = rywData.rywToken,
                     sessionDuration = sessionDurationProvider(),
                     retryCount = retryCount,
                 )

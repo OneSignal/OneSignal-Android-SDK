@@ -1,5 +1,6 @@
 package com.onesignal.inAppMessages.internal.backend
 
+import com.onesignal.common.consistency.RywData
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.inAppMessages.internal.InAppMessage
 import com.onesignal.inAppMessages.internal.InAppMessageContent
@@ -21,7 +22,7 @@ internal interface IInAppBackendService {
     suspend fun listInAppMessages(
         appId: String,
         subscriptionId: String,
-        rywToken: String?,
+        rywData: RywData,
         sessionDurationProvider: () -> Long,
     ): List<InAppMessage>?
 

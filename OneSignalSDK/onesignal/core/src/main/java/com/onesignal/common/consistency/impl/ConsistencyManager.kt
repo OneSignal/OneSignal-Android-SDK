@@ -1,5 +1,6 @@
 package com.onesignal.common.consistency.impl
 
+import com.onesignal.common.consistency.RywData
 import com.onesignal.common.consistency.models.ICondition
 import com.onesignal.common.consistency.models.IConsistencyKeyEnum
 import com.onesignal.common.consistency.models.IConsistencyManager
@@ -18,8 +19,8 @@ import kotlinx.coroutines.sync.withLock
  */
 class ConsistencyManager : IConsistencyManager {
     private val mutex = Mutex()
-    private val indexedTokens: MutableMap<String, MutableMap<IConsistencyKeyEnum, String>> = mutableMapOf()
-    private val conditions: MutableList<Pair<ICondition, CompletableDeferred<String?>>> =
+    private val indexedTokens: MutableMap<String, MutableMap<IConsistencyKeyEnum, RywData>> = mutableMapOf()
+    private val conditions: MutableList<Pair<ICondition, CompletableDeferred<RywData?>>> =
         mutableListOf()
 
     /**
@@ -29,10 +30,10 @@ class ConsistencyManager : IConsistencyManager {
      *      key: K - corresponds to the operation for which we have a read-your-write token
      *      value: String? - the token (read-your-write token)
      */
-    override suspend fun setRywToken(
+    override suspend fun setRywData(
         id: String,
         key: IConsistencyKeyEnum,
-        value: String,
+        value: RywData,
     ) {
         mutex.withLock {
             val rywTokens = indexedTokens.getOrPut(id) { mutableMapOf() }
@@ -46,7 +47,7 @@ class ConsistencyManager : IConsistencyManager {
      */
     override suspend fun getRywDataFromAwaitableCondition(condition: ICondition): CompletableDeferred<RywData?> {
         mutex.withLock {
-            val deferred = CompletableDeferred<String?>()
+            val deferred = CompletableDeferred<RywData?>()
             val pair = Pair(condition, deferred)
             conditions.add(pair)
             checkConditionsAndComplete()
@@ -55,7 +56,7 @@ class ConsistencyManager : IConsistencyManager {
     }
 
     override suspend fun resolveConditionsWithID(id: String) {
-        val completedConditions = mutableListOf<Pair<ICondition, CompletableDeferred<String?>>>()
+        val completedConditions = mutableListOf<Pair<ICondition, CompletableDeferred<RywData?>>>()
 
         for ((condition, deferred) in conditions) {
             if (condition.id == id) {
@@ -74,13 +75,13 @@ class ConsistencyManager : IConsistencyManager {
      * IMPORTANT: calling code should be protected by mutex to avoid potential inconsistencies
      */
     private fun checkConditionsAndComplete() {
-        val completedConditions = mutableListOf<Pair<ICondition, CompletableDeferred<String?>>>()
+        val completedConditions = mutableListOf<Pair<ICondition, CompletableDeferred<RywData?>>>()
 
         for ((condition, deferred) in conditions) {
             if (condition.isMet(indexedTokens)) {
-                val newestToken = condition.getNewestToken(indexedTokens)
+                val rywDataForNewestToken = condition.getNewestToken(indexedTokens)
                 if (!deferred.isCompleted) {
-                    deferred.complete(newestToken)
+                    deferred.complete(rywDataForNewestToken)
                 }
                 completedConditions.add(Pair(condition, deferred))
             }
