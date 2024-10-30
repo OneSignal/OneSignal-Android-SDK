@@ -33,7 +33,7 @@ class IamFetchReadyCondition(
         return userUpdateTokenSet
     }
 
-    override fun getNewestToken(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData?>>): RywData? {
+    override fun getRywData(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData?>>): RywData? {
         val tokenMap = indexedTokens[key] ?: return null
 
         // Collect non-null RywData objects and find the one with the largest rywToken lexicographically

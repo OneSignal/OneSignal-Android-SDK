@@ -89,7 +89,7 @@ class ConsistencyManagerTests : FunSpec({
             return false // Always returns false to simulate an unmet condition
         }
 
-        override fun getNewestToken(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData?>>): RywData? {
+        override fun getRywData(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData?>>): RywData? {
             return null
         }
     }
@@ -109,7 +109,7 @@ class ConsistencyManagerTests : FunSpec({
             return indexedTokens == expectedRywTokens
         }
 
-        override fun getNewestToken(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData?>>): RywData? {
+        override fun getRywData(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData?>>): RywData? {
             return expectedRywTokens.values.firstOrNull()?.values?.firstOrNull()
         }
     }
