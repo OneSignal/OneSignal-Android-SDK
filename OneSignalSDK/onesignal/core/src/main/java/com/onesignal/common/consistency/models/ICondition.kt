@@ -19,5 +19,5 @@ interface ICondition {
      * Used to process tokens according to their format & return the newest token.
      * e.g. numeric strings would be compared differently from JWT tokens
      */
-    fun getNewestToken(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData?>>): RywData?
+    fun getRywData(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData?>>): RywData?
 }

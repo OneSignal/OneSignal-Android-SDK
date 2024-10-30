@@ -79,7 +79,7 @@ class ConsistencyManager : IConsistencyManager {
 
         for ((condition, deferred) in conditions) {
             if (condition.isMet(indexedTokens)) {
-                val rywDataForNewestToken = condition.getNewestToken(indexedTokens)
+                val rywDataForNewestToken = condition.getRywData(indexedTokens)
                 if (!deferred.isCompleted) {
                     deferred.complete(rywDataForNewestToken)
                 }
