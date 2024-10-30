@@ -27,7 +27,7 @@ class SubscriptionBackendServiceTests : FunSpec({
         val aliasLabel = "onesignal_id"
         val aliasValue = "11111111-1111-1111-1111-111111111111"
         val spyHttpClient = mockk<IHttpClient>()
-        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{ \"subscription\": { id: \"subscriptionId\" } }")
+        coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{ \"subscription\": { id: \"subscriptionId\" }, \"ryw_token\": \"123\"}")
         val subscriptionBackendService = SubscriptionBackendService(spyHttpClient)
 
         // When
@@ -43,7 +43,7 @@ class SubscriptionBackendServiceTests : FunSpec({
         val response = subscriptionBackendService.createSubscription("appId", aliasLabel, aliasValue, subscription)
 
         // Then
-        response shouldBe Pair("subscriptionId", RywData(null, null))
+        response shouldBe Pair("subscriptionId", RywData("123", null))
         coVerify {
             spyHttpClient.post(
                 "apps/appId/users/by/$aliasLabel/$aliasValue/subscriptions",

@@ -148,7 +148,7 @@ internal class UpdateUserOperationExecutor(
                         deltasObject,
                     )
 
-                if (rywData.rywToken != null) {
+                if (rywData != null) {
                     _consistencyManager.setRywData(onesignalId, IamFetchRywTokenKey.USER, rywData)
                 } else {
                     _consistencyManager.resolveConditionsWithID(IamFetchReadyCondition.ID)
