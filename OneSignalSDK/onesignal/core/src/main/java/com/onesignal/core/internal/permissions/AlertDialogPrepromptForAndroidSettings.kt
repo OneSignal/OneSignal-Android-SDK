@@ -53,6 +53,9 @@ object AlertDialogPrepromptForAndroidSettings {
         val messageTemplate = activity.getString(R.string.permission_not_available_message)
         val message = messageTemplate.format(previouslyDeniedPostfix)
 
+        // simulate showing a dialog in a finishing activity
+        activity.finish()
+
         AlertDialog.Builder(activity)
             .setTitle(title)
             .setMessage(message)
