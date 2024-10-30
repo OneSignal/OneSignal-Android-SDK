@@ -55,9 +55,6 @@ object AlertDialogPrepromptForAndroidSettings {
         val messageTemplate = activity.getString(R.string.permission_not_available_message)
         val message = messageTemplate.format(previouslyDeniedPostfix)
 
-        // simulate showing a dialog in a finishing activity
-        activity.finish()
-
         // ensure the activity that will be showing the dialog is available
         if (activity == null || activity.isDestroyed || activity.isFinishing) {
             Logging.log(LogLevel.ERROR, "Alert dialog for Android settings was skipped because the activity was unavailable to display it.")
