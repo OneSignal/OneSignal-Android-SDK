@@ -17,7 +17,7 @@ internal class SubscriptionBackendService(
         aliasLabel: String,
         aliasValue: String,
         subscription: SubscriptionObject,
-    ): Pair<String, RywData>? {
+    ): Pair<String, RywData?>? {
         val jsonSubscription = JSONConverter.convertToJSON(subscription)
         jsonSubscription.remove("id")
         val requestJSON = JSONObject().put("subscription", jsonSubscription)
@@ -28,23 +28,23 @@ internal class SubscriptionBackendService(
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
 
-        val responseJSON = JSONObject(response.payload!!)
-        val subscriptionJSON = responseJSON.safeJSONObject("subscription")
+        val responseJSON = response.payload?.let { JSONObject(it) }
+        val subscriptionJSON = responseJSON?.safeJSONObject("subscription")
+
         if (subscriptionJSON == null || !subscriptionJSON.has("id")) {
             return null
         }
 
-        var rywToken: String? = null
-        if (responseJSON.has("ryw_token")) {
-            rywToken = responseJSON.getString("ryw_token")
-        }
+        fun JSONObject.safeString(key: String): String? = if (this.has(key)) this.getString(key) else null
 
-        var rywDelay: Long? = null
-        if (responseJSON.has("ryw_delay")) {
-            rywDelay = responseJSON.getLong("ryw_delay")
-        }
+        fun JSONObject.safeLong(key: String): Long? = if (this.has(key)) this.getLong(key) else null
+        val rywToken = responseJSON.safeString("ryw_token")
+        val rywDelay = responseJSON.safeLong("ryw_delay")
+        var rywData: RywData? = null
 
-        var rywData = RywData(rywToken, rywDelay)
+        if (rywToken != null) {
+            rywData = RywData(rywToken, rywDelay)
+        }
 
         return Pair(subscriptionJSON.getString("id"), rywData)
     }
@@ -53,7 +53,7 @@ internal class SubscriptionBackendService(
         appId: String,
         subscriptionId: String,
         subscription: SubscriptionObject,
-    ): RywData {
+    ): RywData? {
         val requestJSON =
             JSONObject()
                 .put("subscription", JSONConverter.convertToJSON(subscription))
@@ -64,18 +64,20 @@ internal class SubscriptionBackendService(
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
 
-        val responseJSON = JSONObject(response.payload)
-        var rywToken: String? = null
-        if (responseJSON.has("ryw_token")) {
-            rywToken = responseJSON.getString("ryw_token")
-        }
+        fun JSONObject.safeString(key: String): String? = if (this.has(key)) this.getString(key) else null
 
-        var rywDelay: Long? = null
-        if (responseJSON.has("ryw_delay")) {
-            rywDelay = responseJSON.getLong("ryw_delay")
-        }
+        fun JSONObject.safeLong(key: String): Long? = if (this.has(key)) this.getLong(key) else null
 
-        return RywData(rywToken, rywDelay)
+        val responseJSON = response.payload?.let { JSONObject(it) }
+
+        val rywToken = responseJSON?.safeString("ryw_token")
+        val rywDelay = responseJSON?.safeLong("ryw_delay")
+
+        return if (rywToken !== null) {
+            RywData(rywToken, rywDelay)
+        } else {
+            null
+        }
     }
 
     override suspend fun deleteSubscription(

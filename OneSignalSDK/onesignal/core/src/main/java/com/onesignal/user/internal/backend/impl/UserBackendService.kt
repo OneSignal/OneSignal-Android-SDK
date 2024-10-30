@@ -53,7 +53,7 @@ internal class UserBackendService(
         properties: PropertiesObject,
         refreshDeviceMetadata: Boolean,
         propertyiesDelta: PropertiesDeltasObject,
-    ): RywData {
+    ): RywData? {
         val jsonObject =
             JSONObject()
                 .put("refresh_device_metadata", refreshDeviceMetadata)
@@ -72,18 +72,20 @@ internal class UserBackendService(
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
 
-        val responseJSON = JSONObject(response.payload)
-        var rywToken: String? = null
-        if (responseJSON.has("ryw_token")) {
-            rywToken = responseJSON.getString("ryw_token")
-        }
+        fun JSONObject.safeString(key: String): String? = if (this.has(key)) this.getString(key) else null
 
-        var rywDelay: Long? = null
-        if (responseJSON.has("ryw_delay")) {
-            rywDelay = responseJSON.getLong("ryw_delay")
-        }
+        fun JSONObject.safeLong(key: String): Long? = if (this.has(key)) this.getLong(key) else null
 
-        return RywData(rywToken, rywDelay)
+        val responseJSON = response.payload?.let { JSONObject(it) }
+
+        val rywToken = responseJSON?.safeString("ryw_token")
+        val rywDelay = responseJSON?.safeLong("ryw_delay")
+
+        return if (rywToken != null) {
+            RywData(rywToken, rywDelay)
+        } else {
+            null
+        }
     }
 
     override suspend fun getUser(

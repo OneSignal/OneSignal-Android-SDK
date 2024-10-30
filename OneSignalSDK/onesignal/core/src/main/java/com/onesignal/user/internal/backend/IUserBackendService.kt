@@ -48,7 +48,7 @@ interface IUserBackendService {
         properties: PropertiesObject,
         refreshDeviceMetadata: Boolean,
         propertyiesDelta: PropertiesDeltasObject,
-    ): RywData
+    ): RywData?
 
     /**
      * Retrieve a user from the backend.
