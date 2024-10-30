@@ -30,6 +30,8 @@ package com.onesignal.core.internal.permissions
 import android.app.Activity
 import android.app.AlertDialog
 import com.onesignal.core.R
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.internal.logging.Logging
 
 /**
  * A singleton helper which will display the fallback-to-settings alert dialog.
@@ -56,18 +58,26 @@ object AlertDialogPrepromptForAndroidSettings {
         // simulate showing a dialog in a finishing activity
         activity.finish()
 
-        AlertDialog.Builder(activity)
-            .setTitle(title)
-            .setMessage(message)
-            .setPositiveButton(R.string.permission_not_available_open_settings_option) { dialog, which ->
-                callback.onAccept()
-            }
-            .setNegativeButton(android.R.string.no) { dialog, which ->
-                callback.onDecline()
-            }
-            .setOnCancelListener {
-                callback.onDecline()
-            }
-            .show()
+        // ensure the activity that will be showing the dialog is available
+        if (activity == null || activity.isDestroyed || activity.isFinishing) {
+            Logging.log(LogLevel.ERROR, "Alert dialog for Android settings was skipped because the activity was unavailable to display it.")
+            return
+        }
+
+        if (activity != null && !activity.isFinishing) {
+            AlertDialog.Builder(activity)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(R.string.permission_not_available_open_settings_option) { dialog, which ->
+                    callback.onAccept()
+                }
+                .setNegativeButton(android.R.string.no) { dialog, which ->
+                    callback.onDecline()
+                }
+                .setOnCancelListener {
+                    callback.onDecline()
+                }
+                .show()
+        }
     }
 }
