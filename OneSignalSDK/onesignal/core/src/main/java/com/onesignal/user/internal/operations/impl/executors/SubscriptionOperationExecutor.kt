@@ -114,10 +114,10 @@ internal class SubscriptionOperationExecutor(
                 ) ?: return ExecutionResponse(ExecutionResult.SUCCESS)
 
             val backendSubscriptionId = result.first
-            val rywToken = result.second
+            val rywData = result.second
 
-            if (rywToken != null) {
-                _consistencyManager.setRywToken(createOperation.onesignalId, IamFetchRywTokenKey.SUBSCRIPTION, rywToken)
+            if (rywData != null) {
+                _consistencyManager.setRywData(createOperation.onesignalId, IamFetchRywTokenKey.SUBSCRIPTION, rywData)
             } else {
                 _consistencyManager.resolveConditionsWithID(IamFetchReadyCondition.ID)
             }
@@ -188,10 +188,10 @@ internal class SubscriptionOperationExecutor(
                     AndroidUtils.getAppVersion(_applicationService.appContext),
                 )
 
-            val rywToken = _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription)
+            val rywData = _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription)
 
-            if (rywToken != null) {
-                _consistencyManager.setRywToken(startingOperation.onesignalId, IamFetchRywTokenKey.SUBSCRIPTION, rywToken)
+            if (rywData != null) {
+                _consistencyManager.setRywData(startingOperation.onesignalId, IamFetchRywTokenKey.SUBSCRIPTION, rywData)
             } else {
                 _consistencyManager.resolveConditionsWithID(IamFetchReadyCondition.ID)
             }

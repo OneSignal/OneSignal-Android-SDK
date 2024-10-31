@@ -5,6 +5,7 @@ import com.onesignal.common.AndroidUtils
 import com.onesignal.common.IDManager
 import com.onesignal.common.JSONUtils
 import com.onesignal.common.consistency.IamFetchReadyCondition
+import com.onesignal.common.consistency.RywData
 import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.exceptions.BackendException
@@ -164,7 +165,7 @@ internal class InAppMessagesManager(
             // attempt to fetch messages from the backend (if we have the pre-requisite data already)
             val onesignalId = _userManager.onesignalId
             val updateConditionDeferred =
-                _consistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
+                _consistencyManager.getRywDataFromAwaitableCondition(IamFetchReadyCondition(onesignalId))
             val rywToken = updateConditionDeferred.await()
             if (rywToken != null) {
                 fetchMessages(rywToken)
@@ -241,17 +242,17 @@ internal class InAppMessagesManager(
         suspendifyOnThread {
             val onesignalId = _userManager.onesignalId
             val iamFetchCondition =
-                _consistencyManager.registerCondition(IamFetchReadyCondition(onesignalId))
-            val rywToken = iamFetchCondition.await()
+                _consistencyManager.getRywDataFromAwaitableCondition(IamFetchReadyCondition(onesignalId))
+            val rywData = iamFetchCondition.await()
 
-            if (rywToken != null) {
-                fetchMessages(rywToken)
+            if (rywData != null) {
+                fetchMessages(rywData)
             }
         }
     }
 
     // called when a new push subscription is added, or the app id is updated, or a new session starts
-    private suspend fun fetchMessages(rywToken: String?) {
+    private suspend fun fetchMessages(rywData: RywData) {
         // We only want to fetch IAMs if we know the app is in the
         // foreground, as we don't want to do this for background
         // events (such as push received), wasting resources for
@@ -278,7 +279,7 @@ internal class InAppMessagesManager(
 
         // lambda so that it is updated on each potential retry
         val sessionDurationProvider = { _time.currentTimeMillis - _sessionService.startTime }
-        val newMessages = _backend.listInAppMessages(appId, subscriptionId, rywToken, sessionDurationProvider)
+        val newMessages = _backend.listInAppMessages(appId, subscriptionId, rywData, sessionDurationProvider)
 
         if (newMessages != null) {
             this.messages = newMessages as MutableList<InAppMessage>

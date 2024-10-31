@@ -1,5 +1,6 @@
 package com.onesignal.user.internal.backend
 
+import com.onesignal.common.consistency.RywData
 import com.onesignal.common.exceptions.BackendException
 
 interface IUserBackendService {
@@ -47,7 +48,7 @@ interface IUserBackendService {
         properties: PropertiesObject,
         refreshDeviceMetadata: Boolean,
         propertyiesDelta: PropertiesDeltasObject,
-    ): String?
+    ): RywData?
 
     /**
      * Retrieve a user from the backend.

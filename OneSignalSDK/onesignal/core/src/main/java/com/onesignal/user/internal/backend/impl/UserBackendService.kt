@@ -1,7 +1,10 @@
 package com.onesignal.user.internal.backend.impl
 
+import com.onesignal.common.consistency.RywData
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.putMap
+import com.onesignal.common.safeLong
+import com.onesignal.common.safeString
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.user.internal.backend.CreateUserResponse
 import com.onesignal.user.internal.backend.IUserBackendService
@@ -52,7 +55,7 @@ internal class UserBackendService(
         properties: PropertiesObject,
         refreshDeviceMetadata: Boolean,
         propertyiesDelta: PropertiesDeltasObject,
-    ): String? {
+    ): RywData? {
         val jsonObject =
             JSONObject()
                 .put("refresh_device_metadata", refreshDeviceMetadata)
@@ -71,9 +74,13 @@ internal class UserBackendService(
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
 
-        val responseBody = JSONObject(response.payload)
-        return if (responseBody.has("ryw_token")) {
-            responseBody.getString("ryw_token")
+        val responseJSON = response.payload?.let { JSONObject(it) }
+
+        val rywToken = responseJSON?.safeString("ryw_token")
+        val rywDelay = responseJSON?.safeLong("ryw_delay")
+
+        return if (rywToken != null) {
+            RywData(rywToken, rywDelay)
         } else {
             null
         }

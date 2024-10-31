@@ -1,6 +1,7 @@
-package com.onesignal.common.consistency.impl
+package com.onesignal.common.consistency
 
 import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
+import com.onesignal.common.consistency.impl.ConsistencyManager
 import com.onesignal.common.consistency.models.ICondition
 import com.onesignal.common.consistency.models.IConsistencyKeyEnum
 import io.kotest.core.spec.style.FunSpec
@@ -20,15 +21,17 @@ class ConsistencyManagerTests : FunSpec({
             // Given
             val id = "test_id"
             val key = IamFetchRywTokenKey.USER
-            val value = "123"
+            val token = "123"
+            val delay = 500L
+            val rywData = RywData(token, delay)
 
-            consistencyManager.setRywToken(id, key, value)
+            consistencyManager.setRywData(id, key, rywData)
 
-            val condition = TestMetCondition(mapOf(id to mapOf(key to value)))
-            val deferred = consistencyManager.registerCondition(condition)
+            val condition = TestMetCondition(mapOf(id to mapOf(key to rywData)))
+            val deferred = consistencyManager.getRywDataFromAwaitableCondition(condition)
             val result = deferred.await()
 
-            result shouldBe value
+            result shouldBe rywData
         }
     }
 
@@ -37,13 +40,15 @@ class ConsistencyManagerTests : FunSpec({
             // Given
             val id = "test_id"
             val key = IamFetchRywTokenKey.USER
-            val value = "123"
+            val token = "123"
+            val delay = 500L
+            val rywData = RywData(token, delay)
 
             // Set a token to meet the condition
-            consistencyManager.setRywToken(id, key, value)
+            consistencyManager.setRywData(id, key, rywData)
 
-            val condition = TestMetCondition(mapOf(id to mapOf(key to value)))
-            val deferred = consistencyManager.registerCondition(condition)
+            val condition = TestMetCondition(mapOf(id to mapOf(key to rywData)))
+            val deferred = consistencyManager.getRywDataFromAwaitableCondition(condition)
 
             deferred.await()
             deferred.isCompleted shouldBe true
@@ -53,9 +58,9 @@ class ConsistencyManagerTests : FunSpec({
     test("registerCondition does not complete when condition is not met") {
         runTest {
             val condition = TestUnmetCondition()
-            val deferred = consistencyManager.registerCondition(condition)
+            val deferred = consistencyManager.getRywDataFromAwaitableCondition(condition)
 
-            consistencyManager.setRywToken("id", IamFetchRywTokenKey.USER, "123")
+            consistencyManager.setRywData("id", IamFetchRywTokenKey.USER, RywData("123", 500L))
             deferred.isCompleted shouldBe false
         }
     }
@@ -63,7 +68,7 @@ class ConsistencyManagerTests : FunSpec({
     test("resolveConditionsWithID resolves conditions based on ID") {
         runTest {
             val condition = TestUnmetCondition()
-            val deferred = consistencyManager.registerCondition(condition)
+            val deferred = consistencyManager.getRywDataFromAwaitableCondition(condition)
             consistencyManager.resolveConditionsWithID(TestUnmetCondition.ID)
             deferred.await()
 
@@ -80,18 +85,18 @@ class ConsistencyManagerTests : FunSpec({
         override val id: String
             get() = ID
 
-        override fun isMet(indexedTokens: Map<String, Map<IConsistencyKeyEnum, String>>): Boolean {
+        override fun isMet(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData>>): Boolean {
             return false // Always returns false to simulate an unmet condition
         }
 
-        override fun getNewestToken(indexedTokens: Map<String, Map<IConsistencyKeyEnum, String?>>): String? {
+        override fun getRywData(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData?>>): RywData? {
             return null
         }
     }
 
     // Mock implementation of ICondition for cases where the condition is met
     private class TestMetCondition(
-        private val expectedRywTokens: Map<String, Map<IConsistencyKeyEnum, String?>>,
+        private val expectedRywTokens: Map<String, Map<IConsistencyKeyEnum, RywData?>>,
     ) : ICondition {
         companion object {
             const val ID = "TestMetCondition"
@@ -100,11 +105,11 @@ class ConsistencyManagerTests : FunSpec({
         override val id: String
             get() = ID
 
-        override fun isMet(indexedTokens: Map<String, Map<IConsistencyKeyEnum, String>>): Boolean {
+        override fun isMet(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData>>): Boolean {
             return indexedTokens == expectedRywTokens
         }
 
-        override fun getNewestToken(indexedTokens: Map<String, Map<IConsistencyKeyEnum, String?>>): String? {
+        override fun getRywData(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData?>>): RywData? {
             return expectedRywTokens.values.firstOrNull()?.values?.firstOrNull()
         }
     }

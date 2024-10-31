@@ -20,7 +20,7 @@ class IamFetchReadyCondition(
     override val id: String
         get() = ID
 
-    override fun isMet(indexedTokens: Map<String, Map<IConsistencyKeyEnum, String>>): Boolean {
+    override fun isMet(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData>>): Boolean {
         val tokenMap = indexedTokens[key] ?: return false
         val userUpdateTokenSet = tokenMap[IamFetchRywTokenKey.USER] != null
 
@@ -33,9 +33,16 @@ class IamFetchReadyCondition(
         return userUpdateTokenSet
     }
 
-    override fun getNewestToken(indexedTokens: Map<String, Map<IConsistencyKeyEnum, String?>>): String? {
+    override fun getRywData(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData?>>): RywData? {
         val tokenMap = indexedTokens[key] ?: return null
-        // maxOrNull compares lexicographically
-        return listOfNotNull(tokenMap[IamFetchRywTokenKey.USER], tokenMap[IamFetchRywTokenKey.SUBSCRIPTION]).maxOrNull()
+
+        /**
+         * Collect non-null RywData objects and find the one with the largest rywToken lexicographically
+         * Note: this works because RYW tokens are always the same length
+         */
+        return listOfNotNull(
+            tokenMap[IamFetchRywTokenKey.USER],
+            tokenMap[IamFetchRywTokenKey.SUBSCRIPTION],
+        ).maxByOrNull { it.rywToken ?: "" }
     }
 }

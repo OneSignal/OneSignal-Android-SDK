@@ -138,7 +138,7 @@ internal class UpdateUserOperationExecutor(
 
         if (appId != null && onesignalId != null) {
             try {
-                val rywToken =
+                val rywData =
                     _userBackend.updateUser(
                         appId,
                         IdentityConstants.ONESIGNAL_ID,
@@ -148,8 +148,8 @@ internal class UpdateUserOperationExecutor(
                         deltasObject,
                     )
 
-                if (rywToken != null) {
-                    _consistencyManager.setRywToken(onesignalId, IamFetchRywTokenKey.USER, rywToken)
+                if (rywData != null) {
+                    _consistencyManager.setRywData(onesignalId, IamFetchRywTokenKey.USER, rywData)
                 } else {
                     _consistencyManager.resolveConditionsWithID(IamFetchReadyCondition.ID)
                 }
