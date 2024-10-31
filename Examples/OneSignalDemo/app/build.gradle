@@ -3,6 +3,7 @@ plugins {
 }
 
 android {
+    namespace 'com.onesignal.sdktest'
     compileSdkVersion 34
     defaultConfig {
         minSdkVersion 21
@@ -52,21 +53,28 @@ android {
 
     // Forced downgrade to Java 1.8 for compiling the application due to Android N error when building
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
 
     packagingOptions {
         exclude 'androidsupportmultidexversion.txt'
     }
 
-    task flavorSelection() {
-        if (getGradle().getStartParameter().getTaskRequests().toString().contains("Gms")) {
-            apply plugin: 'com.google.gms.google-services'
-            googleServices { disableVersionCheck = true }
-        } else {
-            apply plugin: 'com.huawei.agconnect'
-        }
+    androidComponents {
+        onVariants(selector().all(), { variant ->
+            println("HERE onVariants")
+            println(variant.name)
+            switch (variant.name) {
+                case "gms":
+                     apply plugin: 'com.google.gms.google-services'
+                     googleServices { disableVersionCheck = true }
+                    break
+                case "huawei":
+                    apply plugin: 'com.huawei.agconnect'
+                    break
+            }
+        })
     }
 }
 

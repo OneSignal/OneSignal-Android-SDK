@@ -231,9 +231,9 @@ internal class NotificationDisplayBuilder(
         if (bitmap == null) return null
         try {
             val systemLargeIconHeight =
-                contextResources!!.getDimension(R.dimen.notification_large_icon_height).toInt()
+                contextResources!!.getDimension(android.R.dimen.notification_large_icon_height).toInt()
             val systemLargeIconWidth =
-                contextResources!!.getDimension(R.dimen.notification_large_icon_width).toInt()
+                contextResources!!.getDimension(android.R.dimen.notification_large_icon_width).toInt()
             val bitmapHeight = bitmap.height
             val bitmapWidth = bitmap.width
             if (bitmapWidth > systemLargeIconWidth || bitmapHeight > systemLargeIconHeight) {
