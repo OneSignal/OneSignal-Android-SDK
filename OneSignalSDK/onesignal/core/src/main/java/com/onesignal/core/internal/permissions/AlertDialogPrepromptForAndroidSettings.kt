@@ -29,7 +29,10 @@ package com.onesignal.core.internal.permissions
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.view.WindowManager.BadTokenException
 import com.onesignal.core.R
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.internal.logging.Logging
 
 /**
  * A singleton helper which will display the fallback-to-settings alert dialog.
@@ -53,18 +56,26 @@ object AlertDialogPrepromptForAndroidSettings {
         val messageTemplate = activity.getString(R.string.permission_not_available_message)
         val message = messageTemplate.format(previouslyDeniedPostfix)
 
-        AlertDialog.Builder(activity)
-            .setTitle(title)
-            .setMessage(message)
-            .setPositiveButton(R.string.permission_not_available_open_settings_option) { dialog, which ->
-                callback.onAccept()
-            }
-            .setNegativeButton(android.R.string.no) { dialog, which ->
-                callback.onDecline()
-            }
-            .setOnCancelListener {
-                callback.onDecline()
-            }
-            .show()
+        // Try displaying the dialog while handling cases where execution is not possible.
+        try {
+            AlertDialog.Builder(activity)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(R.string.permission_not_available_open_settings_option) { dialog, which ->
+                    callback.onAccept()
+                }
+                .setNegativeButton(android.R.string.no) { dialog, which ->
+                    callback.onDecline()
+                }
+                .setOnCancelListener {
+                    callback.onDecline()
+                }
+                .show()
+        } catch (ex: BadTokenException) {
+            // If Android is unable to display the dialog, trigger the onDecline callback to maintain
+            // consistency with the behavior when the dialog is canceled or dismissed without a response.
+            Logging.log(LogLevel.ERROR, "Alert dialog for Android settings was skipped because the activity was unavailable to display it.")
+            callback.onDecline()
+        }
     }
 }
