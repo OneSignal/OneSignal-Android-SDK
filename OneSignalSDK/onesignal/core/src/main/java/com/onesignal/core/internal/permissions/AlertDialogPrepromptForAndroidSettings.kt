@@ -29,6 +29,7 @@ package com.onesignal.core.internal.permissions
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.view.WindowManager.BadTokenException
 import com.onesignal.core.R
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -55,13 +56,8 @@ object AlertDialogPrepromptForAndroidSettings {
         val messageTemplate = activity.getString(R.string.permission_not_available_message)
         val message = messageTemplate.format(previouslyDeniedPostfix)
 
-        // ensure the activity that will be showing the dialog is available
-        if (activity == null || activity.isDestroyed || activity.isFinishing) {
-            Logging.log(LogLevel.ERROR, "Alert dialog for Android settings was skipped because the activity was unavailable to display it.")
-            return
-        }
-
-        if (activity != null && !activity.isFinishing) {
+        // Try displaying the dialog while handling cases where execution is not possible.
+        try {
             AlertDialog.Builder(activity)
                 .setTitle(title)
                 .setMessage(message)
@@ -75,6 +71,11 @@ object AlertDialogPrepromptForAndroidSettings {
                     callback.onDecline()
                 }
                 .show()
+        } catch (ex: BadTokenException) {
+            // If Android is unable to display the dialog, trigger the onDecline callback to maintain
+            // consistency with the behavior when the dialog is canceled or dismissed without a response.
+            Logging.log(LogLevel.ERROR, "Alert dialog for Android settings was skipped because the activity was unavailable to display it.")
+            callback.onDecline()
         }
     }
 }
