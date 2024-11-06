@@ -18,7 +18,8 @@ private class Mocks {
         return mockSessionModelStore
     }
 
-    val sessionService = SessionService(MockHelper.applicationService(), MockHelper.configModelStore(), mockSessionModelStore, MockHelper.time(currentTime))
+    val sessionService =
+        SessionService(MockHelper.applicationService(), MockHelper.configModelStore(), mockSessionModelStore, MockHelper.time(currentTime))
 
     val spyCallback = spyk<ISessionLifecycleHandler>()
 }
@@ -29,6 +30,7 @@ class SessionServiceTests : FunSpec({
         val mocks = Mocks()
         val sessionService = mocks.sessionService
 
+        sessionService.bootstrap()
         sessionService.start()
         val sessionModelStore = mocks.sessionModelStore { it.isValid = false }
         sessionService.subscribe(mocks.spyCallback)
@@ -50,6 +52,7 @@ class SessionServiceTests : FunSpec({
         val sessionModelStore = mocks.sessionModelStore()
 
         // When
+        sessionService.bootstrap()
         sessionService.start()
         sessionService.onFocus(true)
         sessionService.subscribe(mocks.spyCallback)
@@ -73,6 +76,7 @@ class SessionServiceTests : FunSpec({
         val mocks = Mocks()
         val sessionService = mocks.sessionService
 
+        sessionService.bootstrap()
         sessionService.start()
         val sessionModelStore =
             mocks.sessionModelStore {
@@ -101,6 +105,7 @@ class SessionServiceTests : FunSpec({
         val mocks = Mocks()
         val sessionService = mocks.sessionService
 
+        sessionService.bootstrap()
         sessionService.start()
         val sessionModelStore =
             mocks.sessionModelStore {
@@ -125,6 +130,7 @@ class SessionServiceTests : FunSpec({
         val mocks = Mocks()
         val sessionService = mocks.sessionService
 
+        sessionService.bootstrap()
         sessionService.start()
         val sessionModelStore =
             mocks.sessionModelStore {
@@ -147,6 +153,7 @@ class SessionServiceTests : FunSpec({
         mocks.sessionModelStore { it.isValid = false }
         val sessionService = mocks.sessionService
         sessionService.subscribe(mocks.spyCallback)
+        sessionService.bootstrap()
         sessionService.start()
 
         // When

@@ -3,6 +3,7 @@ package com.onesignal.session
 import com.onesignal.common.modules.IModule
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.core.internal.background.IBackgroundService
+import com.onesignal.core.internal.startup.IBootstrapService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.session.internal.SessionManager
 import com.onesignal.session.internal.influence.IInfluenceManager
@@ -39,6 +40,7 @@ internal class SessionModule : IModule {
             .provides<ISessionService>()
             .provides<IStartableService>()
             .provides<IBackgroundService>()
+            .provides<IBootstrapService>()
         builder.register<SessionListener>().provides<IStartableService>()
         builder.register<SessionManager>().provides<ISessionManager>()
     }
