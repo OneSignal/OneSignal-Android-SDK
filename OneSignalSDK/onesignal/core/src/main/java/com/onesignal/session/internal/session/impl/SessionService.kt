@@ -6,6 +6,7 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.background.IBackgroundService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.startup.IBootstrapService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
@@ -32,7 +33,7 @@ internal class SessionService(
     private val _configModelStore: ConfigModelStore,
     private val _sessionModelStore: SessionModelStore,
     private val _time: ITime,
-) : ISessionService, IStartableService, IBackgroundService, IApplicationLifecycleHandler {
+) : ISessionService, IBootstrapService, IStartableService, IBackgroundService, IApplicationLifecycleHandler {
     override val startTime: Long
         get() = session!!.startTime
 
@@ -50,9 +51,12 @@ internal class SessionService(
     // True if app has been foregrounded at least once since the app started
     private var hasFocused = false
 
-    override fun start() {
+    override fun bootstrap() {
         session = _sessionModelStore.model
         config = _configModelStore.model
+    }
+
+    override fun start() {
         _applicationService.addApplicationLifecycleHandler(this)
     }
 
