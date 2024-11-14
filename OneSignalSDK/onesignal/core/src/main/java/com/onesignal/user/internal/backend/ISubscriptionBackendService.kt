@@ -77,6 +77,5 @@ interface ISubscriptionBackendService {
     suspend fun getIdentityFromSubscription(
         appId: String,
         subscriptionId: String,
-        jwt: String? = null,
     ): Map<String, String>
 }

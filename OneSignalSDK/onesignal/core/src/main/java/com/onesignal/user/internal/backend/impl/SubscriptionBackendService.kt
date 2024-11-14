@@ -27,16 +27,11 @@ internal class SubscriptionBackendService(
         jsonSubscription.remove("id")
         val requestJSON = JSONObject().put("subscription", jsonSubscription)
 
-        val base64Token =
-            Base64.encodeToString(
-                subscription.token?.toByteArray(charset("UTF-8")),
-                Base64.NO_WRAP,
-            )
         val response =
             _httpClient.post(
                 "apps/$appId/users/by/$aliasLabel/$aliasValue/subscriptions",
                 requestJSON,
-                OptionalHeaders(jwt = jwt, deviceAuthPushToken = base64Token),
+                OptionalHeaders(jwt = jwt),
             )
 
         if (!response.isSuccess) {
@@ -78,7 +73,6 @@ internal class SubscriptionBackendService(
             _httpClient.patch(
                 "apps/$appId/subscriptions/$subscriptionId",
                 requestJSON,
-                OptionalHeaders(deviceAuthPushToken = base64Token),
             )
 
         if (!response.isSuccess) {
@@ -130,9 +124,8 @@ internal class SubscriptionBackendService(
     override suspend fun getIdentityFromSubscription(
         appId: String,
         subscriptionId: String,
-        jwt: String?,
     ): Map<String, String> {
-        val response = _httpClient.get("apps/$appId/subscriptions/$subscriptionId/user/identity", OptionalHeaders(jwt = jwt))
+        val response = _httpClient.get("apps/$appId/subscriptions/$subscriptionId/user/identity")
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
