@@ -411,8 +411,7 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
                 @Override
                 public void onSuccess(String update) {
                     if (update != null && !update.isEmpty()) {
-                        String jwt = "InitialJWT";
-                        OneSignal.login(update, jwt);
+                        OneSignal.login(update);
                         refreshState();
                     }
                 }

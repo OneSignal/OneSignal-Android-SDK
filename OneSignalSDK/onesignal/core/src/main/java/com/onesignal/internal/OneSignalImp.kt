@@ -60,8 +60,6 @@ import org.json.JSONObject
 internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val sdkVersion: String = OneSignalUtils.SDK_VERSION
     override var isInitialized: Boolean = false
-    override val useIdentityVerification: Boolean
-        get() = configModel?.useIdentityVerification ?: true
 
     override var consentRequired: Boolean
         get() = configModel?.consentRequired ?: (_consentRequired == true)
@@ -153,6 +151,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     private var _disableGMSMissingPrompt: Boolean? = null
     private val initLock: Any = Any()
     private val loginLock: Any = Any()
+    private val useIdentityVerification: Boolean
+        get() = configModel?.useIdentityVerification ?: true
 
     private val listOfModules =
         listOf(
@@ -313,7 +313,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
                     createAndSwitchToNewUser(suppressBackendOperation = true)
 
-                    // ** No longer allowed when identity verification is on
+                    // This operation will be dropped if identity verification is on at the time the operation
+                    // is being processed
                     operationRepo!!.enqueue(
                         LoginUserFromSubscriptionOperation(
                             configModel!!.appId,
@@ -365,7 +366,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 return
             }
 
-            // TODO: Set JWT Token for all future requests.
             createAndSwitchToNewUser(suppressBackendOperation = false) { identityModel, _ ->
                 identityModel.externalId = externalId
                 identityModel.jwtToken = jwtBearerToken
@@ -383,30 +383,16 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             // provide a callback to the caller when we can absolutely say the user is logged
             // in, so they may take action on their own backend.
 
-            val result =
-                when (useIdentityVerification) {
-                    true -> {
-                        operationRepo!!.enqueue(
-                            LoginUserOperation(
-                                configModel!!.appId,
-                                identityModelStore!!.model.onesignalId,
-                                identityModelStore!!.model.externalId,
-                            ),
-                        )
-                    }
-                    else -> {
-                        operationRepo!!.enqueueAndWait(
-                            LoginUserOperation(
-                                configModel!!.appId,
-                                newIdentityOneSignalId,
-                                externalId,
-                                if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
-                            ),
-                        )
-                    }
-                }
+            val operation =
+                LoginUserOperation(
+                    configModel!!.appId,
+                    identityModelStore?.model?.onesignalId ?: newIdentityOneSignalId,
+                    identityModelStore?.model?.externalId ?: externalId,
+                    if (!useIdentityVerification && currentIdentityExternalId == null) currentIdentityOneSignalId else null,
+                )
 
-            if (result == false) {
+            val result = operationRepo!!.enqueueAndWait(operation)
+            if (!result) {
                 Logging.log(LogLevel.ERROR, "Could not login user")
             }
         }
@@ -492,7 +478,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             modify(identityModel, propertiesModel)
         }
 
-        if (!identityModel.jwtToken.isNullOrEmpty()) {
+        if (identityModel.jwtToken != null) {
             setupNewSubscription(identityModel, propertiesModel, suppressBackendOperation, sdkId)
         }
 
@@ -542,13 +528,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
         if (suppressBackendOperation) {
             subscriptionModelStore!!.replaceAll(subscriptions, ModelChangeTags.NO_PROPOGATE)
-        } else if (currentPushSubscription != null && (
-                !useIdentityVerification || useIdentityVerification &&
-                    !IDManager.isLocalId(
-                        currentPushSubscription.id,
-                    )
-            )
-        ) {
+        } else if (currentPushSubscription != null && (!useIdentityVerification || !IDManager.isLocalId(currentPushSubscription.id))) {
+            //
             operationRepo!!.enqueue(TransferSubscriptionOperation(configModel!!.appId, currentPushSubscription.id, sdkId))
             subscriptionModelStore!!.replaceAll(subscriptions, ModelChangeTags.NO_PROPOGATE)
         } else {
@@ -560,18 +541,19 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         configModel.addFetchParamsObserver(
             object : FetchParamsObserver {
                 override fun onParamsFetched(params: ParamsObject) {
-                    // resume operations if identity verification is turned off or a jwt is cached
-                    if (params.useIdentityVerification == false || identityModelStore!!.model.jwtToken != null) {
-                        operationRepo!!.enqueue(
-                            LoginUserOperation(
-                                configModel!!.appId,
-                                identityModelStore!!.model.onesignalId,
-                                identityModelStore!!.model.externalId,
-                            ),
-                        )
-                    } else {
-                        Logging.log(LogLevel.ERROR, "A valid JWT is required for user ${identityModelStore!!.model.externalId}.")
+                    if (params.useIdentityVerification == true && identityModelStore.model.jwtToken == null) {
+                        Logging.log(LogLevel.INFO, "A valid JWT is required for user ${identityModelStore!!.model.externalId}.")
+                        return
                     }
+
+                    // resume operations either identity verification is turned off or a jwt is cached
+                    operationRepo!!.enqueue(
+                        LoginUserOperation(
+                            configModel!!.appId,
+                            identityModelStore!!.model.onesignalId,
+                            identityModelStore!!.model.externalId,
+                        ),
+                    )
                 }
             },
         )

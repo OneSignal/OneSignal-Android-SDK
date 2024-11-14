@@ -1,7 +1,6 @@
 package com.onesignal.user.internal
 
 import com.onesignal.IUserJwtInvalidatedListener
-import com.onesignal.OneSignal
 import com.onesignal.UserJwtInvalidatedEvent
 import com.onesignal.common.IDManager
 import com.onesignal.common.OneSignalUtils
@@ -252,12 +251,12 @@ internal open class UserManager(
     }
 
     override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        Logging.debug("OneSignal.addClickListener(listener: $listener)")
+        Logging.debug("OneSignal.addUserJwtInvalidatedListener(listener: $listener)")
         jwtInvalidatedCallback.subscribe(listener)
     }
 
     override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        Logging.debug("OneSignal.removeClickListener(listener: $listener)")
+        Logging.debug("OneSignal.removeUserJwtInvalidatedListener(listener: $listener)")
         jwtInvalidatedCallback.unsubscribe(listener)
     }
 
@@ -282,8 +281,9 @@ internal open class UserManager(
                 val oldJwt = args.oldValue.toString()
                 val newJwt = args.newValue.toString()
 
-                // prevent same JWT from being invalidated twice in a row
-                if (OneSignal.useIdentityVerification && jwtTokenInvalidated != oldJwt && newJwt.isEmpty()) {
+                // When newJwt is equals to null, we are invalidating JWT for the current user.
+                // We need to prevent same JWT from being invalidated twice in a row.
+                if (jwtTokenInvalidated != oldJwt && newJwt == null) {
                     jwtInvalidatedCallback.fire {
                         it.onUserJwtInvalidated(UserJwtInvalidatedEvent(externalId))
                     }

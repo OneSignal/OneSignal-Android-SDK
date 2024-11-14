@@ -153,7 +153,6 @@ internal class SubscriptionOperationExecutor(
                 ->
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
-                    _identityModelStore.invalidateJwt()
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
                 }
                 NetworkUtils.ResponseStatusType.MISSING -> {
