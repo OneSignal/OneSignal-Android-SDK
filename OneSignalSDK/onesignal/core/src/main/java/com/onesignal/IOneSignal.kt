@@ -20,11 +20,6 @@ interface IOneSignal {
     val isInitialized: Boolean
 
     /**
-     * Whether the security feature to authenticate your external user ids is enabled
-     */
-    val useIdentityVerification: Boolean
-
-    /**
      * The user manager for accessing user-scoped
      * management.
      */

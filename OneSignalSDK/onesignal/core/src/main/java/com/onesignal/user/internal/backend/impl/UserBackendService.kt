@@ -23,7 +23,6 @@ internal class UserBackendService(
         subscriptions: List<SubscriptionObject>,
         properties: Map<String, String>,
         jwt: String?,
-        deviceAuthPushToken: String?,
     ): CreateUserResponse {
         val requestJSON = JSONObject()
 
@@ -46,7 +45,7 @@ internal class UserBackendService(
             _httpClient.post(
                 "apps/$appId/users",
                 requestJSON,
-                OptionalHeaders(jwt = jwt, deviceAuthPushToken = deviceAuthPushToken),
+                OptionalHeaders(jwt = jwt),
             )
 
         if (!response.isSuccess) {

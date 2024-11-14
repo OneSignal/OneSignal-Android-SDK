@@ -31,6 +31,7 @@ import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.impl.PreferencesService
 import com.onesignal.core.internal.purchases.impl.TrackAmazonPurchase
 import com.onesignal.core.internal.purchases.impl.TrackGooglePurchase
+import com.onesignal.core.internal.startup.IBootstrapService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.core.internal.time.impl.Time
@@ -40,6 +41,7 @@ import com.onesignal.location.ILocationManager
 import com.onesignal.location.internal.MisconfiguredLocationManager
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.notifications.internal.MisconfiguredNotificationsManager
+import com.onesignal.user.internal.service.IdentityVerificationService
 
 internal class CoreModule : IModule {
     override fun register(builder: ServiceBuilder) {
@@ -59,6 +61,7 @@ internal class CoreModule : IModule {
         builder.register<ConfigModelStore>().provides<ConfigModelStore>()
         builder.register<ParamsBackendService>().provides<IParamsBackendService>()
         builder.register<ConfigModelStoreListener>().provides<IStartableService>()
+        builder.register<IdentityVerificationService>().provides<IBootstrapService>()
 
         // Operations
         builder.register<OperationModelStore>().provides<OperationModelStore>()
