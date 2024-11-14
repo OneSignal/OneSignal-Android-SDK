@@ -69,7 +69,6 @@ internal class IdentityOperationExecutor(
                     NetworkUtils.ResponseStatusType.CONFLICT ->
                         ExecutionResponse(ExecutionResult.FAIL_CONFLICT, retryAfterSeconds = ex.retryAfterSeconds)
                     NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
-                        _identityModelStore.invalidateJwt()
                         return ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
                     }
                     NetworkUtils.ResponseStatusType.MISSING -> {
@@ -116,7 +115,6 @@ internal class IdentityOperationExecutor(
                     NetworkUtils.ResponseStatusType.INVALID ->
                         ExecutionResponse(ExecutionResult.FAIL_NORETRY)
                     NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
-                        _identityModelStore.invalidateJwt()
                         return ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
                     }
                     NetworkUtils.ResponseStatusType.MISSING -> {

@@ -18,5 +18,4 @@ data class OptionalHeaders(
      */
     val sessionDuration: Long? = null,
     val jwt: String? = null,
-    val deviceAuthPushToken: String? = null,
 )

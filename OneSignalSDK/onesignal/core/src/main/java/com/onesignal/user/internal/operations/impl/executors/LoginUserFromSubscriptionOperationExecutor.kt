@@ -3,6 +3,7 @@ package com.onesignal.user.internal.operations.impl.executors
 import com.onesignal.common.NetworkUtils
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
+import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.IOperationExecutor
@@ -20,6 +21,7 @@ internal class LoginUserFromSubscriptionOperationExecutor(
     private val _subscriptionBackend: ISubscriptionBackendService,
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
+    private val _configModelStore: ConfigModelStore,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(LOGIN_USER_FROM_SUBSCRIPTION_USER)
@@ -43,11 +45,14 @@ internal class LoginUserFromSubscriptionOperationExecutor(
     private suspend fun loginUser(loginUserOp: LoginUserFromSubscriptionOperation): ExecutionResponse {
         try {
             // Not allowed when identity verification is on
+            if (_configModelStore.model.useIdentityVerification) {
+                return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+            }
+
             val identities =
                 _subscriptionBackend.getIdentityFromSubscription(
                     loginUserOp.appId,
                     loginUserOp.subscriptionId,
-                    _identityModelStore.model.jwtToken,
                 )
             val backendOneSignalId = identities.getOrDefault(IdentityConstants.ONESIGNAL_ID, null)
 
@@ -85,7 +90,6 @@ internal class LoginUserFromSubscriptionOperationExecutor(
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
                     ExecutionResponse(ExecutionResult.FAIL_RETRY)
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
-                    _identityModelStore.invalidateJwt()
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
                 }
                 else ->

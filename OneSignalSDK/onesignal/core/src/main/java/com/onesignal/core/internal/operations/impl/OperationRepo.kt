@@ -99,7 +99,6 @@ internal class OperationRepo(
         coroutineScope.launch {
             // load saved operations first then start processing the queue to ensure correct operation order
             loadSavedOperations()
-            paused = false
             processQueueForever()
         }
     }
@@ -191,10 +190,6 @@ internal class OperationRepo(
         waiter.wake(LoopWaiterMessage(false))
     }
 
-    override fun setPaused(paused: Boolean) {
-        this.paused = paused
-    }
-
     /**
      *  Waits until a new operation is enqueued, then wait an additional
      *  amount of time afterwards, so operations can be grouped/batched.
@@ -258,6 +253,8 @@ internal class OperationRepo(
                 }
                 ExecutionResult.FAIL_UNAUTHORIZED -> {
                     Logging.error("Operation execution failed with invalid jwt")
+                    _identityModelStore.invalidateJwt()
+
                     // add back all operations to the front of the queue to be re-executed.
                     synchronized(queue) {
                         ops.reversed().forEach { queue.add(0, it) }
@@ -367,30 +364,19 @@ internal class OperationRepo(
 
     internal fun getNextOps(bucketFilter: Int): List<OperationQueueItem>? {
         return synchronized(queue) {
-            var startingOp: OperationQueueItem? = null
-            // Search for the first operation that is qualified to execute
-            for (queueItem in queue) {
-                val operation = queueItem.operation
-
-                // Ensure the operation is in an executable state
-                if (!operation.canStartExecute ||
-                    !_newRecordState.canAccess(
-                        operation.applyToRecordId,
-                    ) || queueItem.bucket > bucketFilter
-                ) {
-                    continue
-                }
-
-                // Ensure the operation does not have empty JWT if identity verification is on
-                if (_configModelStore.model.useIdentityVerification &&
-                    _identityModelStore.model.jwtToken.isNullOrEmpty()
-                ) {
-                    continue
-                }
-
-                startingOp = queueItem
-                break
+            // Ensure the operation does not have empty JWT if identity verification is on
+            if (_configModelStore.model.useIdentityVerification &&
+                _identityModelStore.model.jwtToken == null
+            ) {
+                return null
             }
+
+            val startingOp =
+                queue.firstOrNull {
+                    it.operation.canStartExecute &&
+                        _newRecordState.canAccess(it.operation.applyToRecordId) &&
+                        it.bucket <= bucketFilter
+                }
 
             if (startingOp != null) {
                 queue.remove(startingOp)

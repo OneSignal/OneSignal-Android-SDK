@@ -52,7 +52,9 @@ class InAppBackendServiceTests :
             // Then
             response shouldNotBe null
             response!!.count() shouldBe 0
-            coVerify(exactly = 1) { mockHttpClient.get("apps/appId/subscriptions/subscriptionId/iams", any()) }
+            coVerify(
+                exactly = 1,
+            ) { mockHttpClient.get("apps/appId/users/by/onesignal_id/onesignal_id/subscriptions/subscriptionId/iams", any()) }
         }
 
         test("listInAppMessages with 1 message returns one-lengthed array") {
@@ -98,7 +100,9 @@ class InAppBackendServiceTests :
             response[0].redisplayStats.displayLimit shouldBe 11111
             response[0].redisplayStats.displayDelay shouldBe 22222
 
-            coVerify(exactly = 1) { mockHttpClient.get("apps/appId/subscriptions/subscriptionId/iams", any()) }
+            coVerify(
+                exactly = 1,
+            ) { mockHttpClient.get("apps/appId/users/by/onesignal_id/onesignal_id/subscriptions/subscriptionId/iams", any()) }
         }
 
         test("listInAppMessages returns null when non-success response") {
@@ -121,7 +125,9 @@ class InAppBackendServiceTests :
 
             // Then
             response shouldBe null
-            coVerify(exactly = 1) { mockHttpClient.get("apps/appId/subscriptions/subscriptionId/iams", any()) }
+            coVerify(
+                exactly = 1,
+            ) { mockHttpClient.get("apps/appId/users/by/onesignal_id/onesignal_id/subscriptions/subscriptionId/iams", any()) }
         }
 
         test(
@@ -161,7 +167,7 @@ class InAppBackendServiceTests :
 
             coVerify(exactly = 1) {
                 mockHttpClient.get(
-                    "apps/appId/subscriptions/subscriptionId/iams",
+                    "apps/appId/users/by/onesignal_id/onesignal_id/subscriptions/subscriptionId/iams",
                     match {
                         it.rywToken == "1234" && it.retryCount == null && it.sessionDuration == mockSessionDurationProvider()
                     },
@@ -171,7 +177,7 @@ class InAppBackendServiceTests :
             // Verify that the get method retried twice with the RYW token
             coVerify(exactly = 3) {
                 mockHttpClient.get(
-                    "apps/appId/subscriptions/subscriptionId/iams",
+                    "apps/appId/users/by/onesignal_id/onesignal_id/subscriptions/subscriptionId/iams",
                     match {
                         it.rywToken == "1234" && it.sessionDuration == mockSessionDurationProvider() && it.retryCount != null
                     },
@@ -181,9 +187,9 @@ class InAppBackendServiceTests :
             // Verify that the get method was retried the final time without the RYW token
             coVerify(exactly = 1) {
                 mockHttpClient.get(
-                    "apps/appId/subscriptions/subscriptionId/iams",
+                    any(),
                     match {
-                        it.rywToken == null && it.sessionDuration == mockSessionDurationProvider() && it.retryCount == null
+                        it.rywToken == null && it.sessionDuration == null && it.retryCount == null
                     },
                 )
             }
