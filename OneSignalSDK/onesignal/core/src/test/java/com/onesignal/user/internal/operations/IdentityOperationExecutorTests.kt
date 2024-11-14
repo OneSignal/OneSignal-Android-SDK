@@ -32,9 +32,11 @@ class IdentityOperationExecutorTests : FunSpec({
         val mockIdentityModel = mockk<IdentityModel>()
         every { mockIdentityModel.onesignalId } returns "onesignalId"
         every { mockIdentityModel.setStringProperty(any(), any(), any()) } just runs
+        every { mockIdentityModel.jwtToken } returns null
 
         val mockIdentityModelStore = mockk<IdentityModelStore>()
         every { mockIdentityModelStore.model } returns mockIdentityModel
+        every { mockIdentityModelStore.getIdentityAlias() } returns Pair<String, String>(IdentityConstants.ONESIGNAL_ID, "onesignalId")
 
         val mockBuildUserService = mockk<IRebuildUserService>()
 
@@ -48,7 +50,13 @@ class IdentityOperationExecutorTests : FunSpec({
         // Then
         response.result shouldBe ExecutionResult.SUCCESS
         coVerify(exactly = 1) {
-            mockIdentityBackendService.setAlias("appId", IdentityConstants.ONESIGNAL_ID, "onesignalId", mapOf("aliasKey1" to "aliasValue1"))
+            mockIdentityBackendService.setAlias(
+                "appId",
+                IdentityConstants.ONESIGNAL_ID,
+                "onesignalId",
+                mapOf("aliasKey1" to "aliasValue1"),
+                null,
+            )
         }
         verify(exactly = 1) { mockIdentityModel.setStringProperty("aliasKey1", "aliasValue1", ModelChangeTags.HYDRATE) }
     }
@@ -153,6 +161,7 @@ class IdentityOperationExecutorTests : FunSpec({
         val mockIdentityModel = mockk<IdentityModel>()
         every { mockIdentityModel.onesignalId } returns "onesignalId"
         every { mockIdentityModel.setOptStringProperty(any(), any(), any()) } just runs
+        every { mockIdentityModel.jwtToken } returns null
 
         val mockIdentityModelStore = mockk<IdentityModelStore>()
         every { mockIdentityModelStore.model } returns mockIdentityModel

@@ -42,8 +42,6 @@ interface IOperationRepo {
     suspend fun awaitInitialized()
 
     fun forceExecuteOperations()
-
-    fun setPaused(paused: Boolean)
 }
 
 // Extension function so the syntax containsInstanceOf<Operation>() can be used over
