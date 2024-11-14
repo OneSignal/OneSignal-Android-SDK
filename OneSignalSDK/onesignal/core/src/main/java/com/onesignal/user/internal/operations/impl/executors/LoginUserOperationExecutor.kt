@@ -127,7 +127,6 @@ internal class LoginUserOperationExecutor(
                     createUser(loginUserOp, operations)
                 }
                 ExecutionResult.FAIL_UNAUTHORIZED -> {
-                    _identityModelStore.invalidateJwt()
                     ExecutionResponse(result.result)
                 }
                 else -> ExecutionResponse(result.result)
@@ -164,7 +163,6 @@ internal class LoginUserOperationExecutor(
 
         try {
             val subscriptionList = subscriptions.toList()
-            val pushSubscription = subscriptions.values.find { it.type == SubscriptionObjectType.ANDROID_PUSH }
             val response =
                 _userBackend.createUser(
                     createUserOperation.appId,
@@ -174,7 +172,6 @@ internal class LoginUserOperationExecutor(
                     },
                     properties,
                     _identityModelStore.model.jwtToken,
-                    pushSubscription?.token,
                 )
             val idTranslations = mutableMapOf<String, String>()
             // Add the "local-to-backend" ID translation to the IdentifierTranslator for any operations that were
@@ -228,7 +225,6 @@ internal class LoginUserOperationExecutor(
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
                     ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
-                    _identityModelStore.invalidateJwt()
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
                 }
                 else ->

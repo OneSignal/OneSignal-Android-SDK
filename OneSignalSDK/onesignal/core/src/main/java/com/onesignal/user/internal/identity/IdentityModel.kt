@@ -38,6 +38,6 @@ class IdentityModel : MapModel<String>() {
     var jwtToken: String?
         get() = getOptStringProperty(IdentityConstants.JWT_TOKEN)
         set(value) {
-            setOptStringProperty(IdentityConstants.JWT_TOKEN, value, ModelChangeTags.NO_PROPOGATE)
+            setOptStringProperty(IdentityConstants.JWT_TOKEN, value, ModelChangeTags.NO_PROPOGATE, true)
         }
 }

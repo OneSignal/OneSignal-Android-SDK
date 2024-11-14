@@ -72,7 +72,6 @@ internal class ConfigModelStoreListener(
                     // copy current model into new model, then override with what comes down.
                     val config = ConfigModel()
                     config.initializeFromModel(null, _configModelStore.model)
-                    config.fetchParamsNotifier = _configModelStore.model.fetchParamsNotifier
                     config.isInitializedWithRemote = true
 
                     // these are always copied from the backend params
@@ -105,7 +104,6 @@ internal class ConfigModelStoreListener(
 
                     _configModelStore.replace(config, ModelChangeTags.HYDRATE)
                     success = true
-                    config.notifyFetchParams(params)
                 } catch (ex: BackendException) {
                     if (ex.statusCode == HttpURLConnection.HTTP_FORBIDDEN) {
                         Logging.fatal("403 error getting OneSignal params, omitting further retries!")

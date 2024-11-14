@@ -9,12 +9,12 @@ open class IdentityModelStore(prefs: IPreferencesService) : SingletonModelStore<
     SimpleModelStore({ IdentityModel() }, "identity", prefs),
 ) {
     fun invalidateJwt() {
-        model.jwtToken = ""
+        model.jwtToken = null
     }
 
     // Use externalId instead of onesignalId when a jwt is present
     fun getIdentityAlias(): Pair<String, String> {
-        if (model.jwtToken.isNullOrEmpty()) {
+        if (model.jwtToken == null) {
             return Pair(IdentityConstants.ONESIGNAL_ID, model.onesignalId)
         }
 

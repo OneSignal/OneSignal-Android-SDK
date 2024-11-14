@@ -411,8 +411,7 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
                 @Override
                 public void onSuccess(String update) {
                     if (update != null && !update.isEmpty()) {
-                        String jwt = "InitialJWT";
-                        OneSignal.login(update, jwt);
+                        OneSignal.login(update);
                         refreshState();
                     }
                 }
@@ -450,8 +449,6 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
                 public void onSuccess(String update) {
                     if (update != null && !update.isEmpty()) {
                         OneSignal.updateUserJwt(OneSignal.getUser().getExternalId(), update);
-                        //String jwt = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIxNjg4ZDhmMi1kYTdmLTQ4MTUtOGVlMy05ZDEzNzg4NDgyYzgiLCJpYXQiOjE3MTQwODA4MTMsImlkZW50aXR5Ijp7ImV4dGVybmFsX2lkIjoiMjAyNDA0MjUtYWxleDQyIn0sInN1YnNjcmlwdGlvbiI6W3sidHlwZSI6IiIsImlkIjoiMmRlZGU3MzItMTEyNi00MTlkLTk5M2UtNDIzYWQyYTZiZGU5In1dfQ.rzZ-HaDm1EwxbMxd8937bWzPhPSQDDSqSzaASgZZc5A5v8g6ZQHizN9CljOmoQ4lTLm7noD6rOmR07tlZdrI5w";
-                        //OneSignal.login(update, jwt);
                         refreshState();
                     }
                 }

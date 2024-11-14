@@ -78,6 +78,7 @@ object MockHelper {
         val mockIdentityStore = mockk<IdentityModelStore>(relaxed = true)
 
         every { mockIdentityStore.model } returns identityModel
+        every { mockIdentityStore.getIdentityAlias() } returns Pair<String, String>("onesignal_id", "remote-onesignalId")
 
         return mockIdentityStore
     }
