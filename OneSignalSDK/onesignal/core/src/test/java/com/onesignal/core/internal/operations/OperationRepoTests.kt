@@ -16,6 +16,7 @@ import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewReco
 import com.onesignal.user.internal.operations.LoginUserOperation
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.mockk.CapturingSlot
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -41,7 +42,7 @@ private class Mocks {
 
     val identityModelStore =
         MockHelper.identityModelStore {
-            it.jwtToken = ""
+            it.jwtToken = null
             it.externalId = "externalId1"
         }
 
@@ -784,44 +785,50 @@ class OperationRepoTests : FunSpec({
     }
 
     test("operations that need to be identity verified cannot execute until JWT is provided") {
+        val mocks = Mocks()
+        mocks.configModelStore.model.useIdentityVerification = true
+        val operation = mockOperation()
+        val opRepo = mocks.operationRepo
+
+        // When JWT is not supplied
+        opRepo.start()
+        opRepo.enqueue(operation)
+        opRepo.forceExecuteOperations()
+        val responseBeforeJWT =
+            withTimeoutOrNull(100) {
+                opRepo.enqueueAndWait(mockOperation())
+            }
+
+        // Then response should be null
+        responseBeforeJWT shouldBe null
+
+        // When JWT is updated
+        mocks.identityModelStore.model.jwtToken = "123"
+        val opToExecute = opRepo.getNextOps(0)
+
+        // Operation is ready to execute
+        opToExecute shouldNotBe null
+    }
+
+    test("JWT will be invalidated when a FAIL_UNAUTHORIZED response is returned") {
         // Given
         val mocks = Mocks()
-        val waiter = Waiter()
-
-        every { mocks.configModelStore.model.useIdentityVerification } returns true // set identity verification on
-        every { mocks.identityModelStore.model.jwtToken } returns null // jwt is initially unset
-        every { mocks.operationModelStore.remove(any()) } answers {} andThenAnswer { waiter.wake() }
-
-        val operation1 = mockOperation("operationId1")
-        val operation2 = mockOperation("operationId2")
-
-        operation1.setStringProperty("externalId", "externalId1")
-        operation2.setStringProperty("externalId", "externalId1")
+        val opRepo = mocks.operationRepo
+        val identityModelStore = mocks.identityModelStore
+        coEvery { opRepo.delayBeforeNextExecution(any(), any()) } just runs
+        coEvery {
+            mocks.executor.execute(any())
+        } returns ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED) andThen ExecutionResponse(ExecutionResult.SUCCESS)
+        val operation = mockOperation()
 
         // When
-        mocks.operationRepo.enqueue(operation1)
-        mocks.operationRepo.enqueue(operation2)
         mocks.operationRepo.start()
-
-        waiter.waitForWake()
+        mocks.operationRepo.enqueueAndWait(operation)
 
         // Then
         coVerifyOrder {
-            mocks.operationModelStore.add(operation1)
-            mocks.operationModelStore.add(operation2)
-        }
-
-        //
-        coVerify(exactly = 0) {
-            mocks.executor.execute(
-                withArg {
-                    it.count() shouldBe 2
-                    it[0] shouldBe operation1
-                    it[1] shouldBe operation2
-                },
-            )
-            mocks.operationModelStore.remove("operationId1")
-            mocks.operationModelStore.remove("operationId2")
+            mocks.executor.execute(listOf(operation))
+            identityModelStore.invalidateJwt()
         }
     }
 }) {
