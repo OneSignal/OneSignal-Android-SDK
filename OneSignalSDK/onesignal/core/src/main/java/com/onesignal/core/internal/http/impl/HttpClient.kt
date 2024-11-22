@@ -80,7 +80,10 @@ internal class HttpClient(
         // If privacy consent is required but not yet given, any non-GET request should be blocked.
         if (method != null && _configModelStore.model.consentRequired == true && _configModelStore.model.consentGiven != true) {
             Logging.warn(
-                "$method `$url` was called before the user provided privacy consent. Your application is set to require the user's privacy consent before the OneSignal SDK can be initialized. Please ensure the user has provided consent before calling this method. You can check the latest OneSignal consent status by calling OneSignal.privacyConsent",
+                "$method `$url` was called before the user provided privacy consent. " +
+                    "Your application is set to require the user's privacy consent before the OneSignal SDK can be initialized. " +
+                    "Please ensure the user has provided consent before calling this method. You can check the latest OneSignal " +
+                    "consent status by calling OneSignal.privacyConsent",
             )
             return HttpResponse(0, null, null)
         }
@@ -136,6 +139,11 @@ internal class HttpClient(
                     con.connectTimeout = timeout
                     con.readTimeout = timeout
                     con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignalUtils.SDK_VERSION)
+
+                    val jwt = headers?.jwt
+                    if (jwt != null) {
+                        con.setRequestProperty("Authorization", "Bearer $jwt")
+                    }
 
                     if (OneSignalWrapper.sdkType != null && OneSignalWrapper.sdkVersion != null) {
                         con.setRequestProperty("SDK-Wrapper", "onesignal/${OneSignalWrapper.sdkType}/${OneSignalWrapper.sdkVersion}")

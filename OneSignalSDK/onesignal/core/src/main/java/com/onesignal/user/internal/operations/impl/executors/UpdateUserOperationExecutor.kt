@@ -13,7 +13,6 @@ import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.IUserBackendService
-import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.PropertiesDeltasObject
 import com.onesignal.user.internal.backend.PropertiesObject
 import com.onesignal.user.internal.backend.PurchaseObject
@@ -88,7 +87,12 @@ internal class UpdateUserOperationExecutor(
                     val sessionCount = if (deltasObject.sessionCount != null) deltasObject.sessionCount!! + 1 else 1
 
                     deltasObject =
-                        PropertiesDeltasObject(deltasObject.sessionTime, sessionCount, deltasObject.amountSpent, deltasObject.purchases)
+                        PropertiesDeltasObject(
+                            deltasObject.sessionTime,
+                            sessionCount,
+                            deltasObject.amountSpent,
+                            deltasObject.purchases,
+                        )
                     refreshDeviceMetadata = true
                 }
                 is TrackSessionEndOperation -> {
@@ -107,7 +111,12 @@ internal class UpdateUserOperationExecutor(
                         }
 
                     deltasObject =
-                        PropertiesDeltasObject(sessionTime, deltasObject.sessionCount, deltasObject.amountSpent, deltasObject.purchases)
+                        PropertiesDeltasObject(
+                            sessionTime,
+                            deltasObject.sessionCount,
+                            deltasObject.amountSpent,
+                            deltasObject.purchases,
+                        )
                 }
                 is TrackPurchaseOperation -> {
                     if (appId == null) {
@@ -138,14 +147,16 @@ internal class UpdateUserOperationExecutor(
 
         if (appId != null && onesignalId != null) {
             try {
+                val identityAlias = _identityModelStore.getIdentityAlias()
                 val rywData =
                     _userBackend.updateUser(
                         appId,
-                        IdentityConstants.ONESIGNAL_ID,
-                        onesignalId,
+                        identityAlias.first,
+                        identityAlias.second,
                         propertiesObject,
                         refreshDeviceMetadata,
                         deltasObject,
+                        _identityModelStore.model.jwtToken,
                     )
 
                 if (rywData != null) {
@@ -185,8 +196,9 @@ internal class UpdateUserOperationExecutor(
                 return when (responseType) {
                     NetworkUtils.ResponseStatusType.RETRYABLE ->
                         ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
-                    NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                    NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
                         ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
+                    }
                     NetworkUtils.ResponseStatusType.MISSING -> {
                         if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(onesignalId)) {
                             return ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)

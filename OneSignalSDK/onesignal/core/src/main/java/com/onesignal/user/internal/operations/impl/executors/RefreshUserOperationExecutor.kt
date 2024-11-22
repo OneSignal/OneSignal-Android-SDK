@@ -11,7 +11,6 @@ import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.IUserBackendService
-import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.identity.IdentityModel
@@ -54,11 +53,13 @@ internal class RefreshUserOperationExecutor(
 
     private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse {
         try {
+            val identityAlias = _identityModelStore.getIdentityAlias()
             val response =
                 _userBackend.getUser(
                     op.appId,
-                    IdentityConstants.ONESIGNAL_ID,
-                    op.onesignalId,
+                    identityAlias.first,
+                    identityAlias.second,
+                    _identityModelStore.model.jwtToken,
                 )
 
             if (op.onesignalId != _identityModelStore.model.onesignalId) {
@@ -69,6 +70,7 @@ internal class RefreshUserOperationExecutor(
             for (aliasKVP in response.identities) {
                 identityModel[aliasKVP.key] = aliasKVP.value
             }
+            identityModel.jwtToken = _identityModelStore.model.jwtToken
 
             val propertiesModel = PropertiesModel()
             propertiesModel.onesignalId = op.onesignalId
@@ -98,7 +100,9 @@ internal class RefreshUserOperationExecutor(
                 val subscriptionModel = SubscriptionModel()
                 subscriptionModel.id = subscription.id!!
                 subscriptionModel.address = subscription.token ?: ""
-                subscriptionModel.status = SubscriptionStatus.fromInt(subscription.notificationTypes ?: SubscriptionStatus.SUBSCRIBED.value) ?: SubscriptionStatus.SUBSCRIBED
+                subscriptionModel.status = SubscriptionStatus.fromInt(
+                    subscription.notificationTypes ?: SubscriptionStatus.SUBSCRIBED.value,
+                ) ?: SubscriptionStatus.SUBSCRIBED
                 subscriptionModel.type =
                     when (subscription.type!!) {
                         SubscriptionObjectType.EMAIL -> {
@@ -147,8 +151,9 @@ internal class RefreshUserOperationExecutor(
             return when (responseType) {
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
                     ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
-                NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
-                    ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
+                NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
+                    ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                }
                 NetworkUtils.ResponseStatusType.MISSING -> {
                     if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(op.onesignalId)) {
                         return ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)

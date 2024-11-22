@@ -152,20 +152,20 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="start|center_vertical"
-                    android:gravity="start|center_vertical"
-                    android:layout_marginBottom="4dp"
                     android:layout_marginStart="12dp"
                     android:layout_marginLeft="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:gravity="start|center_vertical"
                     android:text="@string/app"
                     android:textColor="@color/colorDarkText" />
 
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="12dp"
                     android:layout_marginStart="12dp"
+                    android:layout_marginTop="4dp"
                     android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="12dp"
                     app:cardCornerRadius="6dp"
                     app:cardElevation="4dp">
 
@@ -226,23 +226,23 @@
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:layout_gravity="center"
-                    android:gravity="center"
                     android:layout_marginStart="12dp"
                     android:layout_marginTop="4dp"
                     android:layout_marginEnd="12dp"
                     android:layout_marginBottom="12dp"
-                    android:orientation="vertical"
-                    android:background="@color/colorPrimary">
+                    android:background="@color/colorPrimary"
+                    android:gravity="center"
+                    android:orientation="vertical">
 
                     <Button
                         android:id="@+id/main_activity_app_revoke_consent_button"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:text="@string/revoke_consent"
-                        android:textSize="19sp"
-                        android:textColor="@android:color/white"
                         android:background="@drawable/ripple_selector_white_red"
-                        android:visibility="visible"/>
+                        android:text="@string/revoke_consent"
+                        android:textColor="@android:color/white"
+                        android:textSize="19sp"
+                        android:visibility="visible" />
 
                 </LinearLayout>
 
@@ -263,11 +263,11 @@
                         android:id="@+id/main_activity_login_user_button"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:text="@string/login_user"
-                        android:textSize="19sp"
-                        android:textColor="@android:color/white"
                         android:background="@drawable/ripple_selector_white_red"
-                        android:visibility="visible"/>
+                        android:text="@string/login_user"
+                        android:textColor="@android:color/white"
+                        android:textSize="19sp"
+                        android:visibility="visible" />
 
                 </LinearLayout>
 
@@ -288,12 +288,95 @@
                         android:id="@+id/main_activity_logout_user_button"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:text="@string/logout_user"
-                        android:textSize="19sp"
-                        android:textColor="@android:color/white"
                         android:background="@drawable/ripple_selector_white_red"
-                        android:visibility="visible"/>
+                        android:text="@string/logout_user"
+                        android:textColor="@android:color/white"
+                        android:textSize="19sp"
+                        android:visibility="visible" />
                 </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/main_activity_jwt_linear_layout"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/main_activity_jwt_title_text_view"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|center_vertical"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginLeft="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:gravity="start|center_vertical"
+                    android:text="@string/JWT"
+                    android:textColor="@color/colorDarkText" />
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="12dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:id="@+id/main_activity_jwt_details_linear_layout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:layout_gravity="center"
+                            android:layout_marginTop="4dp"
+                            android:background="@color/colorPrimary"
+                            android:gravity="center"
+                            android:orientation="vertical">
+
+                            <Button
+                                android:id="@+id/main_activity_invalidate_jwt_button"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@drawable/ripple_selector_white_red"
+                                android:text="@string/invalidate_JWT"
+                                android:textColor="@android:color/white"
+                                android:textSize="19sp"
+                                android:visibility="visible" />
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:layout_gravity="center"
+                            android:layout_marginTop="4dp"
+                            android:background="@color/colorPrimary"
+                            android:gravity="center"
+                            android:orientation="vertical">
+
+                            <Button
+                                android:id="@+id/main_activity_update_jwt_button"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@drawable/ripple_selector_white_red"
+                                android:text="@string/update_JWT"
+                                android:textColor="@android:color/white"
+                                android:textSize="19sp"
+                                android:visibility="visible" />
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </androidx.cardview.widget.CardView>
+
             </LinearLayout>
 
             <!-- Aliases -->

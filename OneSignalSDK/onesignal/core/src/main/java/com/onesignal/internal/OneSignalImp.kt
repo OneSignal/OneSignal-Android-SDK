@@ -3,6 +3,7 @@ package com.onesignal.internal
 import android.content.Context
 import android.os.Build
 import com.onesignal.IOneSignal
+import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.IDManager
@@ -147,6 +148,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     private var _disableGMSMissingPrompt: Boolean? = null
     private val initLock: Any = Any()
     private val loginLock: Any = Any()
+    private val useIdentityVerification: Boolean
+        get() = configModel?.useIdentityVerification ?: true
 
     private val listOfModules =
         listOf(
@@ -205,7 +208,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
             // Give the logging singleton access to the application service to support visual logging.
             Logging.applicationService = applicationService
-
             // get the current config model, if there is one
             configModel = services.getService<ConfigModelStore>().model
             sessionModel = services.getService<SessionModelStore>().model
@@ -255,14 +257,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                     )
                 if (legacyPlayerId == null) {
                     Logging.debug("initWithContext: creating new device-scoped user")
-                    createAndSwitchToNewUser()
-                    operationRepo!!.enqueue(
-                        LoginUserOperation(
-                            configModel!!.appId,
-                            identityModelStore!!.model.onesignalId,
-                            identityModelStore!!.model.externalId,
-                        ),
-                    )
+                    createAndSwitchToNewUser(suppressBackendOperation = true)
                 } else {
                     Logging.debug("initWithContext: creating user linked to subscription $legacyPlayerId")
 
@@ -284,7 +279,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                         pushSubscriptionModel.id = legacyPlayerId
                         pushSubscriptionModel.type = SubscriptionType.PUSH
                         pushSubscriptionModel.optedIn =
-                            notificationTypes != SubscriptionStatus.NO_PERMISSION.value && notificationTypes != SubscriptionStatus.UNSUBSCRIBE.value
+                            notificationTypes != SubscriptionStatus.NO_PERMISSION.value &&
+                            notificationTypes != SubscriptionStatus.UNSUBSCRIBE.value
                         pushSubscriptionModel.address =
                             legacyUserSyncJSON.safeString("identifier") ?: ""
                         if (notificationTypes != null) {
@@ -310,8 +306,10 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                         suppressBackendOperation = true
                     }
 
-                    createAndSwitchToNewUser(suppressBackendOperation = suppressBackendOperation)
+                    createAndSwitchToNewUser(suppressBackendOperation = true)
 
+                    // This operation will be dropped if identity verification is on at the time the operation
+                    // is being processed
                     operationRepo!!.enqueue(
                         LoginUserFromSubscriptionOperation(
                             configModel!!.appId,
@@ -357,12 +355,15 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             currentIdentityOneSignalId = identityModelStore!!.model.onesignalId
 
             if (currentIdentityExternalId == externalId) {
+                // login is for same user that is already logged in, fetch (refresh)
+                // the current user.
+                identityModelStore!!.model.jwtToken = jwtBearerToken
                 return
             }
 
-            // TODO: Set JWT Token for all future requests.
-            createAndSwitchToNewUser { identityModel, _ ->
+            createAndSwitchToNewUser(suppressBackendOperation = false) { identityModel, _ ->
                 identityModel.externalId = externalId
+                identityModel.jwtToken = jwtBearerToken
             }
 
             newIdentityOneSignalId = identityModelStore!!.model.onesignalId
@@ -376,16 +377,16 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             // time if network conditions prevent the operation to succeed.  This allows us to
             // provide a callback to the caller when we can absolutely say the user is logged
             // in, so they may take action on their own backend.
-            val result =
-                operationRepo!!.enqueueAndWait(
-                    LoginUserOperation(
-                        configModel!!.appId,
-                        newIdentityOneSignalId,
-                        externalId,
-                        if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
-                    ),
+
+            val operation =
+                LoginUserOperation(
+                    configModel!!.appId,
+                    identityModelStore?.model?.onesignalId ?: newIdentityOneSignalId,
+                    identityModelStore?.model?.externalId ?: externalId,
+                    if (!useIdentityVerification && currentIdentityExternalId == null) currentIdentityOneSignalId else null,
                 )
 
+            val result = operationRepo!!.enqueueAndWait(operation)
             if (!result) {
                 Logging.log(LogLevel.ERROR, "Could not login user")
             }
@@ -405,17 +406,48 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 return
             }
 
+            // calling createAndSwitchToNewUser() replaces model with a default empty jwt
             createAndSwitchToNewUser()
-            operationRepo!!.enqueue(
-                LoginUserOperation(
-                    configModel!!.appId,
-                    identityModelStore!!.model.onesignalId,
-                    identityModelStore!!.model.externalId,
-                ),
-            )
 
-            // TODO: remove JWT Token for all future requests.
+            if (useIdentityVerification) {
+                // disable subscription if identity verification is on
+                user.pushSubscription.optOut()
+            } else {
+                // login to the anonymous user if identity verification is off
+                operationRepo!!.enqueue(
+                    LoginUserOperation(
+                        configModel!!.appId,
+                        identityModelStore!!.model.onesignalId,
+                        identityModelStore!!.model.externalId,
+                    ),
+                )
+            }
         }
+    }
+
+    override fun updateUserJwt(
+        externalId: String,
+        token: String,
+    ) {
+        // update the model with the given externalId
+        for (model in identityModelStore!!.store.list()) {
+            if (externalId == model.externalId) {
+                identityModelStore!!.model.jwtToken = token
+                operationRepo!!.forceExecuteOperations()
+                Logging.log(LogLevel.DEBUG, "JWT $token is updated for externalId $externalId")
+                return
+            }
+        }
+
+        Logging.log(LogLevel.DEBUG, "No identity found for externalId $externalId")
+    }
+
+    override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
+        user.addUserJwtInvalidatedListener(listener)
+    }
+
+    override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
+        user.removeUserJwtInvalidatedListener(listener)
     }
 
     private fun createAndSwitchToNewUser(
@@ -439,6 +471,20 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             modify(identityModel, propertiesModel)
         }
 
+        if (identityModel.jwtToken != null) {
+            setupNewSubscription(identityModel, propertiesModel, suppressBackendOperation, sdkId)
+        }
+
+        identityModelStore!!.replace(identityModel)
+        propertiesModelStore!!.replace(propertiesModel)
+    }
+
+    private fun setupNewSubscription(
+        identityModel: IdentityModel,
+        propertiesModel: PropertiesModel,
+        suppressBackendOperation: Boolean,
+        sdkId: String,
+    ) {
         val subscriptions = mutableListOf<SubscriptionModel>()
 
         // Create the push subscription for this device under the new user, copying the current
@@ -447,7 +493,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         // will be automatically transferred over to this new user being created.  If there is no
         // current push subscription we do a "normal" replace which will drive adding a CreateSubscriptionOperation
         // to the queue.
-        val currentPushSubscription = subscriptionModelStore!!.list().firstOrNull { it.id == configModel!!.pushSubscriptionId }
+        val currentPushSubscription = subscriptionModelStore!!.list().firstOrNull { it.type == SubscriptionType.PUSH }
         val newPushSubscription = SubscriptionModel()
 
         newPushSubscription.id = currentPushSubscription?.id ?: IDManager.createLocalId()
@@ -475,7 +521,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
         if (suppressBackendOperation) {
             subscriptionModelStore!!.replaceAll(subscriptions, ModelChangeTags.NO_PROPOGATE)
-        } else if (currentPushSubscription != null) {
+        } else if (currentPushSubscription != null && (!useIdentityVerification || !IDManager.isLocalId(currentPushSubscription.id))) {
+            //
             operationRepo!!.enqueue(TransferSubscriptionOperation(configModel!!.appId, currentPushSubscription.id, sdkId))
             subscriptionModelStore!!.replaceAll(subscriptions, ModelChangeTags.NO_PROPOGATE)
         } else {

@@ -12,6 +12,7 @@ import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.mockk.CapturingSlot
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -33,6 +34,12 @@ import java.util.UUID
 // Mocks used by every test in this file
 private class Mocks {
     val configModelStore = MockHelper.configModelStore()
+
+    val identityModelStore =
+        MockHelper.identityModelStore {
+            it.jwtToken = null
+            it.externalId = "externalId1"
+        }
 
     val operationModelStore: OperationModelStore =
         run {
@@ -63,6 +70,7 @@ private class Mocks {
                 listOf(executor),
                 operationModelStore,
                 configModelStore,
+                identityModelStore,
                 Time(),
                 getNewRecordState(configModelStore),
             ),
@@ -684,6 +692,54 @@ class OperationRepoTests : FunSpec({
         response1 shouldBe null
         response2 shouldBe true
         opRepo.forceExecuteOperations()
+    }
+
+    test("operations that need to be identity verified cannot execute until JWT is provided") {
+        val mocks = Mocks()
+        mocks.configModelStore.model.useIdentityVerification = true
+        val operation = mockOperation()
+        val opRepo = mocks.operationRepo
+
+        // When JWT is not supplied
+        opRepo.start()
+        opRepo.enqueue(operation)
+        opRepo.forceExecuteOperations()
+        val responseBeforeJWT =
+            withTimeoutOrNull(100) {
+                opRepo.enqueueAndWait(mockOperation())
+            }
+
+        // Then response should be null
+        responseBeforeJWT shouldBe null
+
+        // When JWT is updated
+        mocks.identityModelStore.model.jwtToken = "123"
+        val opToExecute = opRepo.getNextOps(0)
+
+        // Operation is ready to execute
+        opToExecute shouldNotBe null
+    }
+
+    test("JWT will be invalidated when a FAIL_UNAUTHORIZED response is returned") {
+        // Given
+        val mocks = Mocks()
+        val opRepo = mocks.operationRepo
+        val identityModelStore = mocks.identityModelStore
+        coEvery { opRepo.delayBeforeNextExecution(any(), any()) } just runs
+        coEvery {
+            mocks.executor.execute(any())
+        } returns ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED) andThen ExecutionResponse(ExecutionResult.SUCCESS)
+        val operation = mockOperation()
+
+        // When
+        mocks.operationRepo.start()
+        mocks.operationRepo.enqueueAndWait(operation)
+
+        // Then
+        coVerifyOrder {
+            mocks.executor.execute(listOf(operation))
+            identityModelStore.invalidateJwt()
+        }
     }
 }) {
     companion object {

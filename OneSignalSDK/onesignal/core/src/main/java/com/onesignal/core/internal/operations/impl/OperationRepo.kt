@@ -11,6 +11,7 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -26,6 +27,7 @@ internal class OperationRepo(
     executors: List<IOperationExecutor>,
     private val _operationModelStore: OperationModelStore,
     private val _configModelStore: ConfigModelStore,
+    private val _identityModelStore: IdentityModelStore,
     private val _time: ITime,
     private val _newRecordState: NewRecordsState,
 ) : IOperationRepo, IStartableService {
@@ -94,7 +96,6 @@ internal class OperationRepo(
     }
 
     override fun start() {
-        paused = false
         coroutineScope.launch {
             // load saved operations first then start processing the queue to ensure correct operation order
             loadSavedOperations()
@@ -262,7 +263,15 @@ internal class OperationRepo(
                     ops.forEach { _operationModelStore.remove(it.operation.id) }
                     ops.forEach { it.waiter?.wake(true) }
                 }
-                ExecutionResult.FAIL_UNAUTHORIZED, // TODO: Need to provide callback for app to reset JWT. For now, fail with no retry.
+                ExecutionResult.FAIL_UNAUTHORIZED -> {
+                    Logging.error("Operation execution failed with invalid jwt")
+                    _identityModelStore.invalidateJwt()
+
+                    // add back all operations to the front of the queue to be re-executed.
+                    synchronized(queue) {
+                        ops.reversed().forEach { queue.add(0, it) }
+                    }
+                }
                 ExecutionResult.FAIL_NORETRY,
                 ExecutionResult.FAIL_CONFLICT,
                 -> {
@@ -347,6 +356,13 @@ internal class OperationRepo(
 
     internal fun getNextOps(bucketFilter: Int): List<OperationQueueItem>? {
         return synchronized(queue) {
+            // Ensure the operation does not have empty JWT if identity verification is on
+            if (_configModelStore.model.useIdentityVerification &&
+                _identityModelStore.model.jwtToken == null
+            ) {
+                return null
+            }
+
             val startingOp =
                 queue.firstOrNull {
                     it.operation.canStartExecute &&

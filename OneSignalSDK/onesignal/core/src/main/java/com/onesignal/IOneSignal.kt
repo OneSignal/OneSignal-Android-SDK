@@ -123,4 +123,16 @@ interface IOneSignal {
      * data is not cleared.
      */
     fun logout()
+
+    /**
+     * Update JWT token for a user
+     */
+    fun updateUserJwt(
+        externalId: String,
+        token: String,
+    )
+
+    fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
+
+    fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
 }

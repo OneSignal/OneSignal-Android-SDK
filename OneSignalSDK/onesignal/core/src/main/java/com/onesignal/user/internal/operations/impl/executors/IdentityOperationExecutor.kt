@@ -45,11 +45,13 @@ internal class IdentityOperationExecutor(
 
         if (lastOperation is SetAliasOperation) {
             try {
+                val identityAlias = _identityModelStore.getIdentityAlias()
                 _identityBackend.setAlias(
                     lastOperation.appId,
-                    IdentityConstants.ONESIGNAL_ID,
-                    lastOperation.onesignalId,
+                    identityAlias.first,
+                    identityAlias.second,
                     mapOf(lastOperation.label to lastOperation.value),
+                    _identityModelStore.model.jwtToken,
                 )
 
                 // ensure the now created alias is in the model as long as the user is still current.
@@ -66,8 +68,9 @@ internal class IdentityOperationExecutor(
                         ExecutionResponse(ExecutionResult.FAIL_NORETRY)
                     NetworkUtils.ResponseStatusType.CONFLICT ->
                         ExecutionResponse(ExecutionResult.FAIL_CONFLICT, retryAfterSeconds = ex.retryAfterSeconds)
-                    NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
-                        ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
+                    NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
+                        return ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                    }
                     NetworkUtils.ResponseStatusType.MISSING -> {
                         if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(lastOperation.onesignalId)) {
                             return ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
@@ -93,6 +96,7 @@ internal class IdentityOperationExecutor(
                     IdentityConstants.ONESIGNAL_ID,
                     lastOperation.onesignalId,
                     lastOperation.label,
+                    _identityModelStore.model.jwtToken,
                 )
 
                 // ensure the now deleted alias is not in the model as long as the user is still current.
@@ -110,8 +114,9 @@ internal class IdentityOperationExecutor(
                         ExecutionResponse(ExecutionResult.SUCCESS)
                     NetworkUtils.ResponseStatusType.INVALID ->
                         ExecutionResponse(ExecutionResult.FAIL_NORETRY)
-                    NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
-                        ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
+                    NetworkUtils.ResponseStatusType.UNAUTHORIZED -> {
+                        return ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+                    }
                     NetworkUtils.ResponseStatusType.MISSING -> {
                         return if (ex.statusCode == 404 && _newRecordState.isInMissingRetryWindow(lastOperation.onesignalId)) {
                             ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)

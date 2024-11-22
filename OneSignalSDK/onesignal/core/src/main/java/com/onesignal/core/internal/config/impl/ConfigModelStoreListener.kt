@@ -72,7 +72,6 @@ internal class ConfigModelStoreListener(
                     // copy current model into new model, then override with what comes down.
                     val config = ConfigModel()
                     config.initializeFromModel(null, _configModelStore.model)
-
                     config.isInitializedWithRemote = true
 
                     // these are always copied from the backend params

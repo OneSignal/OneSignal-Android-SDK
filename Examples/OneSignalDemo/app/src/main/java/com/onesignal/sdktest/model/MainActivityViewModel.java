@@ -18,6 +18,7 @@ import android.util.Pair;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Switch;
@@ -82,6 +83,10 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
     private TextView appIdTextView;
     private Button loginUserButton;
     private Button logoutUserButton;
+
+    // JWT
+    private Button invalidateJwtButton;
+    private Button updateJwtButton;
 
     // Alias
     private TextView aliasTitleTextView;
@@ -210,6 +215,9 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
         revokeConsentButton = getActivity().findViewById(R.id.main_activity_app_revoke_consent_button);
         loginUserButton = getActivity().findViewById(R.id.main_activity_login_user_button);
         logoutUserButton = getActivity().findViewById(R.id.main_activity_logout_user_button);
+
+        invalidateJwtButton = getActivity().findViewById(R.id.main_activity_invalidate_jwt_button);
+        updateJwtButton = getActivity().findViewById(R.id.main_activity_update_jwt_button);
 
         aliasTitleTextView = getActivity().findViewById(R.id.main_activity_aliases_title_text_view);
         noAliasesTextView = getActivity().findViewById(R.id.main_activity_aliases_no_aliases_text_view);
@@ -422,12 +430,35 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
     }
 
     private void setupUserLayout() {
+        setupJWTLayout();
         setupAliasLayout();
         setupEmailLayout();
         setupSMSLayout();
         setupTagsLayout();
         setupOutcomeLayout();
         setupTriggersLayout();
+    }
+
+    private void setupJWTLayout() {
+        invalidateJwtButton.setOnClickListener(v -> {
+            OneSignal.updateUserJwt(OneSignal.getUser().getExternalId(), "");
+        });
+        updateJwtButton.setOnClickListener(v -> {
+            dialog.createUpdateAlertDialog("", Dialog.DialogAction.UPDATE, ProfileUtil.FieldType.JWT, new UpdateAlertDialogCallback() {
+                @Override
+                public void onSuccess(String update) {
+                    if (update != null && !update.isEmpty()) {
+                        OneSignal.updateUserJwt(OneSignal.getUser().getExternalId(), update);
+                        refreshState();
+                    }
+                }
+
+                @Override
+                public void onFailure() {
+
+                }
+            });
+        });
     }
 
     private void setupAliasLayout() {
