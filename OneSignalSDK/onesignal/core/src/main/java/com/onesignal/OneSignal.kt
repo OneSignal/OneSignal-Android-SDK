@@ -201,12 +201,12 @@ object OneSignal {
     }
 
     @JvmStatic
-    fun addUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
+    fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
         oneSignal.addUserJwtInvalidatedListener(listener)
     }
 
     @JvmStatic
-    fun removeUserJwtInvalidatedListner(listener: IUserJwtInvalidatedListener) {
+    fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
         oneSignal.removeUserJwtInvalidatedListener(listener)
     }
 
