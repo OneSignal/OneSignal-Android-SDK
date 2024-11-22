@@ -3,7 +3,7 @@
 gradle.rootProject {
     allprojects {
         group = 'com.onesignal'
-        version = '5.1.31'
+        version = '5.2.0'
         configurations.all {
             resolutionStrategy.dependencySubstitution {
                 substitute(module('com.onesignal:OneSignal')).using(project(':OneSignal'))
