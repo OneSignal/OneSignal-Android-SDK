@@ -41,7 +41,7 @@ class DeleteSubscriptionOperation() : Operation(SubscriptionOperationExecutor.DE
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Subscription.$subscriptionId"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.NONE
-    override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId) && !IDManager.isLocalId(onesignalId)
+    override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId) && !IDManager.isLocalId(subscriptionId)
     override val applyToRecordId: String get() = subscriptionId
 
     constructor(appId: String, onesignalId: String, subscriptionId: String) : this() {
