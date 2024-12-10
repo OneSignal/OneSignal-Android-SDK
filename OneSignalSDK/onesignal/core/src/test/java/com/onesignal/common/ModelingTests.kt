@@ -20,6 +20,41 @@ import java.util.UUID
 
 class ModelingTests : FunSpec({
 
+    test("ensure prolonged loading in the background thread does not block insertion in the main thread") {
+        // Given
+        val prefs = MockPreferencesService()
+        val operationModelStore = OperationModelStore(prefs)
+
+        // add an arbitrary operation to the cache
+        val cachedOperation = LoginUserFromSubscriptionOperation()
+        val newOperation = LoginUserOperation()
+        cachedOperation.id = UUID.randomUUID().toString()
+        val jsonArray = JSONArray()
+        jsonArray.put(cachedOperation.toJSON())
+        prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + "operations", jsonArray.toString())
+
+        // simulate a background thread to load operations
+        val backgroundThread =
+            Thread {
+                operationModelStore.loadOperations()
+            }
+
+        val mainThread =
+            Thread {
+                operationModelStore.add(newOperation)
+            }
+
+        backgroundThread.start()
+        mainThread.start()
+
+        mainThread.join(100)
+
+        // Then
+        // insertion from the main thread is done without blocking
+        operationModelStore.list().count() shouldBe 1
+        operationModelStore.list().first() shouldBe newOperation
+    }
+
     test("Deadlock related to Model.setOptAnyProperty") {
         // Given
         val modelStore = MockHelper.configModelStore()
