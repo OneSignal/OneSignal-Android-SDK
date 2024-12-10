@@ -169,33 +169,34 @@ abstract class ModelStore<TModel>(
 
         val str = _prefs.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, "[]")
         val jsonArray = JSONArray(str)
-        synchronized(models) {
-            val shouldRePersist = models.isNotEmpty()
-            for (index in jsonArray.length() - 1 downTo 0) {
-                val newModel = create(jsonArray.getJSONObject(index)) ?: continue
 
-                /*
-                 * NOTE: Migration fix for bug introduced in 5.1.12
-                 * The following check is intended for the operation model store.
-                 * When the call to this method moved out of the operation model store's initializer,
-                 * duplicate operations could be cached.
-                 * See https://github.com/OneSignal/OneSignal-Android-SDK/pull/2099
-                 */
-                val hasExisting = models.any { it.id == newModel.id }
-                if (hasExisting) {
-                    Logging.debug("ModelStore<$name>: load - operation.id: ${newModel.id} already exists in the store.")
-                    continue
-                }
+        val shouldRePersist = models.isNotEmpty()
+        for (index in jsonArray.length() - 1 downTo 0) {
+            val newModel = create(jsonArray.getJSONObject(index)) ?: continue
 
+            /*
+             * NOTE: Migration fix for bug introduced in 5.1.12
+             * The following check is intended for the operation model store.
+             * When the call to this method moved out of the operation model store's initializer,
+             * duplicate operations could be cached.
+             * See https://github.com/OneSignal/OneSignal-Android-SDK/pull/2099
+             */
+            val hasExisting = models.any { it.id == newModel.id }
+            if (hasExisting) {
+                Logging.debug("ModelStore<$name>: load - operation.id: ${newModel.id} already exists in the store.")
+                continue
+            }
+
+            synchronized(models) {
                 models.add(0, newModel)
-                // listen for changes to this model
-                newModel.subscribe(this)
             }
-            hasLoadedFromCache = true
-            // optimization only: to avoid unnecessary writes
-            if (shouldRePersist) {
-                persist()
-            }
+            // listen for changes to this model
+            newModel.subscribe(this)
+        }
+        hasLoadedFromCache = true
+        // optimization only: to avoid unnecessary writes
+        if (shouldRePersist) {
+            persist()
         }
     }
 
