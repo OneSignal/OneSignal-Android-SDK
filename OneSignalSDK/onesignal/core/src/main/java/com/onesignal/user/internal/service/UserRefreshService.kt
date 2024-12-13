@@ -1,6 +1,7 @@
 package com.onesignal.user.internal.service
 
 import com.onesignal.common.IDManager
+import com.onesignal.common.threading.OSPrimaryCoroutineScope
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
@@ -28,12 +29,14 @@ class UserRefreshService(
             return
         }
 
-        _operationRepo.enqueue(
-            RefreshUserOperation(
-                _configModelStore.model.appId,
-                _identityModelStore.model.onesignalId,
-            ),
-        )
+        OSPrimaryCoroutineScope.execute {
+            _operationRepo.enqueue(
+                RefreshUserOperation(
+                    _configModelStore.model.appId,
+                    _identityModelStore.model.onesignalId,
+                ),
+            )
+        }
     }
 
     override fun start() = _sessionService.subscribe(this)
