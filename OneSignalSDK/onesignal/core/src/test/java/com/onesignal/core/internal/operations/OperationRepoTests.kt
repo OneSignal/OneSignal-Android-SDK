@@ -5,11 +5,15 @@ import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.operations.impl.OperationModelStore
 import com.onesignal.core.internal.operations.impl.OperationRepo
 import com.onesignal.core.internal.operations.impl.OperationRepo.OperationQueueItem
+import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
+import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
+import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
+import com.onesignal.user.internal.operations.LoginUserOperation
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.CapturingSlot
@@ -28,6 +32,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.yield
+import org.json.JSONArray
 import java.util.UUID
 
 // Mocks used by every test in this file
@@ -74,6 +79,65 @@ class OperationRepoTests : FunSpec({
 
     beforeAny {
         Logging.logLevel = LogLevel.NONE
+    }
+
+    test("ensure loading in the background thread does not block enqueue") {
+        // Given
+        val prefs = MockPreferencesService()
+        val mocks = Mocks()
+        val operationModelStore: OperationModelStore = spyk(OperationModelStore(prefs))
+        val operationRepo =
+            spyk(
+                OperationRepo(
+                    listOf(mocks.executor),
+                    operationModelStore,
+                    mocks.configModelStore,
+                    Time(),
+                    getNewRecordState(mocks.configModelStore),
+                ),
+            )
+
+        val cachedOperation = LoginUserOperation()
+        val newOperation = LoginUserOperation()
+        val jsonArray = JSONArray()
+
+        // cache the operation
+        jsonArray.put(cachedOperation.toJSON())
+        prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + "operations", jsonArray.toString())
+
+        cachedOperation.id = UUID.randomUUID().toString()
+        newOperation.id = UUID.randomUUID().toString()
+        every { operationModelStore.create(any()) } answers {
+            // simulate a prolonged loading from cache
+            Thread.sleep(1000)
+            cachedOperation
+        }
+
+        // simulate a background thread to load operations
+        val backgroundThread =
+            Thread {
+                operationRepo.loadSavedOperations()
+            }
+
+        val mainThread =
+            Thread {
+                operationRepo.enqueue(newOperation)
+            }
+
+        // When
+        backgroundThread.start()
+        mainThread.start()
+
+        // Then
+        // insertion from the main thread is done without blocking
+        mainThread.join(500)
+        operationRepo.queue.size shouldBe 1
+        mainThread.state shouldBe Thread.State.TERMINATED
+
+        // after loading is completed, the cached operation should be at the beginning of the queue
+        backgroundThread.join()
+        operationRepo.queue.size shouldBe 2
+        operationRepo.queue.first().operation shouldBe cachedOperation
     }
 
     test("containsInstanceOf") {

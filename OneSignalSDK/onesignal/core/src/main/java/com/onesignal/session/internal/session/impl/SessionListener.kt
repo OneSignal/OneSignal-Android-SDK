@@ -1,5 +1,6 @@
 package com.onesignal.session.internal.session.impl
 
+import com.onesignal.common.threading.OSPrimaryCoroutineScope
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
@@ -40,7 +41,10 @@ internal class SessionListener(
     }
 
     override fun onSessionStarted() {
-        _operationRepo.enqueue(TrackSessionStartOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId), true)
+        // enqueue the operation in background
+        OSPrimaryCoroutineScope.execute {
+            _operationRepo.enqueue(TrackSessionStartOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId), true)
+        }
     }
 
     override fun onSessionActive() {
@@ -54,9 +58,12 @@ internal class SessionListener(
             Logging.error("SessionListener.onSessionEnded sending duration of $durationInSeconds seconds")
         }
 
-        _operationRepo.enqueue(
-            TrackSessionEndOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, durationInSeconds),
-        )
+        // enqueue the operation in background
+        OSPrimaryCoroutineScope.execute {
+            _operationRepo.enqueue(
+                TrackSessionEndOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, durationInSeconds),
+            )
+        }
 
         suspendifyOnThread {
             _outcomeEventsController.sendSessionEndOutcomeEvent(durationInSeconds)
