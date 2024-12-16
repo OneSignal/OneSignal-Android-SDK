@@ -30,7 +30,6 @@ import org.json.JSONObject
 internal class OperationModelStore(prefs: IPreferencesService) : ModelStore<Operation>("operations", prefs) {
     fun loadOperations() {
         load()
-        Logging.debug("OperationModelStore finished loading.")
     }
 
     override fun create(jsonObject: JSONObject?): Operation? {
@@ -64,7 +63,6 @@ internal class OperationModelStore(prefs: IPreferencesService) : ModelStore<Oper
                 else -> throw Exception("Unrecognized operation: $operationName")
             }
 
-        Thread.sleep(5000)
         // populate the operation with the data.
         operation.initializeFromJson(jsonObject)
 
