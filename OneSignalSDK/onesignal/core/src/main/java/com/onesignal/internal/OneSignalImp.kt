@@ -257,7 +257,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                     )
                 if (legacyPlayerId == null) {
                     Logging.debug("initWithContext: creating new device-scoped user")
-                    createAndSwitchToNewUser(suppressBackendOperation = true)
+                    createAndSwitchToNewUser()
                 } else {
                     Logging.debug("initWithContext: creating user linked to subscription $legacyPlayerId")
 
@@ -306,7 +306,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                         suppressBackendOperation = true
                     }
 
-                    createAndSwitchToNewUser(suppressBackendOperation = true)
+                    createAndSwitchToNewUser(suppressBackendOperation = suppressBackendOperation)
 
                     // This operation will be dropped if identity verification is on at the time the operation
                     // is being processed
@@ -471,7 +471,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             modify(identityModel, propertiesModel)
         }
 
-        if (identityModel.jwtToken != null) {
+        if (!useIdentityVerification || identityModel.jwtToken != null) {
             setupNewSubscription(identityModel, propertiesModel, suppressBackendOperation, sdkId)
         }
 
