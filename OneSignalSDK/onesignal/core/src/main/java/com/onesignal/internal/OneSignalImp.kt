@@ -211,15 +211,27 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             sessionModel = services.getService<SessionModelStore>().model
             operationRepo = services.getService<IOperationRepo>()
 
+            var forceCreateUser = false
+
             // initWithContext is called by our internal services/receivers/activites but they do not provide
             // an appId (they don't know it).  If the app has never called the external initWithContext
             // prior to our services/receivers/activities we will blow up, as no appId has been established.
             if (appId == null && !configModel!!.hasProperty(ConfigModel::appId.name)) {
-                Logging.warn("initWithContext called without providing appId, and no appId has been established!")
-                return false
+                val legacyAppId =
+                    preferencesService!!.getString(
+                        PreferenceStores.ONESIGNAL,
+                        PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID,
+                    )
+                if (legacyAppId == null) {
+                    Logging.warn("initWithContext called without providing appId, and no appId has been established!")
+                    return false
+                } else {
+                    Logging.debug("initWithContext: using cached legacy appId $legacyAppId")
+                    forceCreateUser = true
+                    configModel!!.appId = legacyAppId
+                }
             }
 
-            var forceCreateUser = false
             // if the app id was specified as input, update the config model with it
             if (appId != null) {
                 if (!configModel!!.hasProperty(ConfigModel::appId.name) || configModel!!.appId != appId) {
