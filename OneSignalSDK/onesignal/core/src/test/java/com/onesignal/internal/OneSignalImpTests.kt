@@ -1,5 +1,8 @@
 package com.onesignal.internal
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+// import com.onesignal.notifications.NotificationsModule
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import io.kotest.assertions.throwables.shouldThrowUnit
@@ -83,6 +86,24 @@ class OneSignalImpTests : FunSpec({
                 println(os.consentGiven)
                 // Then
                 // Test fails if the above throws
+            }
+        }
+    }
+
+    context("initWithContext") {
+        context("called without appId") {
+            test("has cached legacy appId should initialize") {
+                val os = OneSignalImp()
+                val context = ApplicationProvider.getApplicationContext<Context>()
+
+                os.initWithContext(context, null)
+
+
+            }
+            test("does not have cached legacy appId should return early") {
+                // Given
+                // When
+                // Then
             }
         }
     }
