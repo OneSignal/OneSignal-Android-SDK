@@ -65,8 +65,9 @@
             </intent-filter>
         </service>
 
+        <!-- CAUTION: OneSignal backend includes the activity name in the payload, modifying the name without sync may result in notification click not firing -->
         <activity
-            android:name="com.onesignal.notifications.activities.NotificationOpenedActivityHMS"
+            android:name="com.onesignal.NotificationOpenedActivityHMS"
             android:noHistory="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:exported="true">

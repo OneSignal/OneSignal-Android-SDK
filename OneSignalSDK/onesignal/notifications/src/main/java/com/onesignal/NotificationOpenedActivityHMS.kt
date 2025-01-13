@@ -24,12 +24,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package com.onesignal.notifications.activities
+package com.onesignal
+// OneSignal backend includes the activity name in the payload, modifying the namespace may result in notification click not firing
 
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import com.onesignal.OneSignal
 import com.onesignal.common.threading.suspendifyBlocking
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessorHMS
 
