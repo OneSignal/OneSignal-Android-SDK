@@ -24,12 +24,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-package com.onesignal.notifications.activities
+package com.onesignal
 
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import com.onesignal.OneSignal
 import com.onesignal.common.threading.suspendifyBlocking
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessorHMS
 
