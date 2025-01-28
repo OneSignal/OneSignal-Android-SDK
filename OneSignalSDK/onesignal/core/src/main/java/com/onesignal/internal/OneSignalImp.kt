@@ -184,6 +184,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         context: Context,
         appId: String?,
     ): Boolean {
+        println("❌ initWithContext(context: $context, appId: $appId)")
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
         synchronized(initLock) {
@@ -223,9 +224,11 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                         PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID,
                     )
                 if (legacyAppId == null) {
+                    println("❌ initWithContext called without providing appId, and no appId has been established!")
                     Logging.warn("initWithContext called without providing appId, and no appId has been established!")
                     return false
                 } else {
+                    println("❌ initWithContext: using cached legacy appId $legacyAppId")
                     Logging.debug("initWithContext: using cached legacy appId $legacyAppId")
                     forceCreateUser = true
                     configModel!!.appId = legacyAppId
