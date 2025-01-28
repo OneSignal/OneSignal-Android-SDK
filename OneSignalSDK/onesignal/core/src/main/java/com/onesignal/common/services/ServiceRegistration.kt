@@ -53,14 +53,14 @@ class ServiceRegistrationReflection<T>(
 
     override fun resolve(provider: IServiceProvider): Any? {
         if (obj != null) {
-            Logging.debug("${ServiceProvider.indent}Already instantiated: $obj")
+//            Logging.debug("${ServiceProvider.indent}Already instantiated: $obj")
             return obj
         }
 
         // use reflection to try to instantiate the thing
         for (constructor in clazz.constructors) {
             if (doesHaveAllParameters(constructor, provider)) {
-                Logging.debug("${ServiceProvider.indent}Found constructor: $constructor")
+//                Logging.debug("${ServiceProvider.indent}Found constructor: $constructor")
                 var paramList: MutableList<Any?> = mutableListOf()
 
                 for (param in constructor.genericParameterTypes) {
