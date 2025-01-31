@@ -66,6 +66,12 @@ internal class LoginUserOperationExecutor(
         loginUserOp: LoginUserOperation,
         operations: List<Operation>,
     ): ExecutionResponse {
+        // Handle a bad state that can happen in User Model 5.1.27 or earlier versions that old Login
+        // request is not removed after processing if app is force-closed within the PostCreateDelay.
+        // Login operation being processed alone will surely be rejected, so we need to drop the request
+        if (operations.isEmpty()) {
+            return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+        }
         if (loginUserOp.existingOnesignalId == null || loginUserOp.externalId == null) {
             // When there is no existing user to attempt to associate with the externalId provided, we go right to
             // createUser.  If there is no externalId provided this is an insert, if there is this will be an
