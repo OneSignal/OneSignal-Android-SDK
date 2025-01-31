@@ -178,6 +178,11 @@ object PreferenceOneSignalKeys {
     // Legacy
 
     /**
+     * (String) The legacy app ID from SDKs prior to 5.
+     */
+    const val PREFS_LEGACY_APP_ID = "GT_APP_ID"
+
+    /**
      * (String) The legacy player ID from SDKs prior to 5.
      */
     const val PREFS_LEGACY_PLAYER_ID = "GT_PLAYER_ID"
