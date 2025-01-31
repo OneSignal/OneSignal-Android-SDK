@@ -37,7 +37,7 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
      */
     var externalId: String?
         get() = getOptStringProperty(::externalId.name)
-        private set(value) {
+        set(value) {
             setOptStringProperty(::externalId.name, value)
         }
 
