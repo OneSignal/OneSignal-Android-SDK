@@ -22,7 +22,8 @@ class PermissionsActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (!OneSignal.initWithContext(this)) {
+        // unable to request for permission if initWithContext is not called or savedInstanceState is null
+        if (!OneSignal.initWithContext(this) || savedInstanceState == null) {
             return
         }
 
