@@ -39,6 +39,16 @@ class LoginUserOperationExecutorTests : FunSpec({
     val localSubscriptionId2 = "local-subscriptionId2"
     val remoteSubscriptionId1 = "remote-subscriptionId1"
     val remoteSubscriptionId2 = "remote-subscriptionId2"
+    val createSubscriptionOperation =
+        CreateSubscriptionOperation(
+            appId,
+            localOneSignalId,
+            "subscriptionId1",
+            SubscriptionType.PUSH,
+            true,
+            "pushToken1",
+            SubscriptionStatus.SUBSCRIBED,
+        )
 
     test("login anonymous user successfully creates user") {
         // Given
@@ -58,7 +68,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val loginUserOperationExecutor =
             LoginUserOperationExecutor(
                 mockIdentityOperationExecutor,
-                MockHelper.applicationService(),
+                AndroidMockHelper.applicationService(),
                 MockHelper.deviceService(),
                 mockUserBackendService,
                 mockIdentityModelStore,
@@ -67,7 +77,11 @@ class LoginUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
             )
-        val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, null, null))
+        val operations =
+            listOf<Operation>(
+                LoginUserOperation(appId, localOneSignalId, null, null),
+                createSubscriptionOperation,
+            )
 
         // When
         val response = loginUserOperationExecutor.execute(operations)
@@ -87,7 +101,14 @@ class LoginUserOperationExecutorTests : FunSpec({
     test("login anonymous user fails with retry when network condition exists") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(408, "TIMEOUT", retryAfterSeconds = 10)
+        coEvery {
+            mockUserBackendService.createUser(
+                any(),
+                any(),
+                any(),
+                any(),
+            )
+        } throws BackendException(408, "TIMEOUT", retryAfterSeconds = 10)
 
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
 
@@ -98,7 +119,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val loginUserOperationExecutor =
             LoginUserOperationExecutor(
                 mockIdentityOperationExecutor,
-                MockHelper.applicationService(),
+                AndroidMockHelper.applicationService(),
                 MockHelper.deviceService(),
                 mockUserBackendService,
                 mockIdentityModelStore,
@@ -107,7 +128,11 @@ class LoginUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
             )
-        val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, null, null))
+        val operations =
+            listOf<Operation>(
+                LoginUserOperation(appId, localOneSignalId, null, null),
+                createSubscriptionOperation,
+            )
 
         // When
         val response = loginUserOperationExecutor.execute(operations)
@@ -130,8 +155,22 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
-        val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, null, null))
+            LoginUserOperationExecutor(
+                mockIdentityOperationExecutor,
+                AndroidMockHelper.applicationService(),
+                MockHelper.deviceService(),
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                MockHelper.languageContext(),
+            )
+        val operations =
+            listOf<Operation>(
+                LoginUserOperation(appId, localOneSignalId, null, null),
+                createSubscriptionOperation,
+            )
 
         // When
         val response = loginUserOperationExecutor.execute(operations)
@@ -154,8 +193,22 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
-        val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", null))
+            LoginUserOperationExecutor(
+                mockIdentityOperationExecutor,
+                AndroidMockHelper.applicationService(),
+                MockHelper.deviceService(),
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                MockHelper.languageContext(),
+            )
+        val operations =
+            listOf<Operation>(
+                LoginUserOperation(appId, localOneSignalId, "externalId", null),
+                createSubscriptionOperation,
+            )
 
         // When
         val response = loginUserOperationExecutor.execute(operations)
@@ -184,7 +237,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val loginUserOperationExecutor =
             LoginUserOperationExecutor(
                 mockIdentityOperationExecutor,
-                MockHelper.applicationService(),
+                AndroidMockHelper.applicationService(),
                 MockHelper.deviceService(),
                 mockUserBackendService,
                 mockIdentityModelStore,
@@ -193,7 +246,11 @@ class LoginUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
             )
-        val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", null))
+        val operations =
+            listOf<Operation>(
+                LoginUserOperation(appId, localOneSignalId, "externalId", null),
+                createSubscriptionOperation,
+            )
 
         // When
         val response = loginUserOperationExecutor.execute(operations)
@@ -220,8 +277,22 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
-        val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
+            LoginUserOperationExecutor(
+                mockIdentityOperationExecutor,
+                AndroidMockHelper.applicationService(),
+                MockHelper.deviceService(),
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                MockHelper.languageContext(),
+            )
+        val operations =
+            listOf<Operation>(
+                LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"),
+                createSubscriptionOperation,
+            )
 
         // When
         val response = loginUserOperationExecutor.execute(operations)
@@ -256,8 +327,22 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
-        val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
+            LoginUserOperationExecutor(
+                mockIdentityOperationExecutor,
+                AndroidMockHelper.applicationService(),
+                MockHelper.deviceService(),
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                MockHelper.languageContext(),
+            )
+        val operations =
+            listOf<Operation>(
+                LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"),
+                createSubscriptionOperation,
+            )
 
         // When
         val response = loginUserOperationExecutor.execute(operations)
@@ -292,8 +377,22 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
-        val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
+            LoginUserOperationExecutor(
+                mockIdentityOperationExecutor,
+                AndroidMockHelper.applicationService(),
+                MockHelper.deviceService(),
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                MockHelper.languageContext(),
+            )
+        val operations =
+            listOf<Operation>(
+                LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"),
+                createSubscriptionOperation,
+            )
 
         // When
         val response = loginUserOperationExecutor.execute(operations)
@@ -330,8 +429,22 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
-        val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
+            LoginUserOperationExecutor(
+                mockIdentityOperationExecutor,
+                AndroidMockHelper.applicationService(),
+                MockHelper.deviceService(),
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                MockHelper.languageContext(),
+            )
+        val operations =
+            listOf<Operation>(
+                LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"),
+                createSubscriptionOperation,
+            )
 
         // When
         val response = loginUserOperationExecutor.execute(operations)
@@ -448,7 +561,10 @@ class LoginUserOperationExecutorTests : FunSpec({
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
-                listOf(SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH), SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL)),
+                listOf(
+                    SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH),
+                    SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL),
+                ),
             )
         // Given
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
@@ -534,7 +650,10 @@ class LoginUserOperationExecutorTests : FunSpec({
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
-                listOf(SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH), SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL)),
+                listOf(
+                    SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH),
+                    SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL),
+                ),
             )
         // Given
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
@@ -620,7 +739,10 @@ class LoginUserOperationExecutorTests : FunSpec({
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
-                listOf(SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH), SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL)),
+                listOf(
+                    SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH),
+                    SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL),
+                ),
             )
         // Given
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
@@ -669,7 +791,12 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         // Then
         response.result shouldBe ExecutionResult.SUCCESS
-        response.idTranslations shouldBe mapOf(localOneSignalId to remoteOneSignalId, localSubscriptionId1 to remoteSubscriptionId1, localSubscriptionId2 to remoteSubscriptionId2)
+        response.idTranslations shouldBe
+            mapOf(
+                localOneSignalId to remoteOneSignalId,
+                localSubscriptionId1 to remoteSubscriptionId1,
+                localSubscriptionId2 to remoteSubscriptionId2,
+            )
         coVerify(exactly = 1) {
             mockUserBackendService.createUser(
                 appId,
@@ -678,5 +805,46 @@ class LoginUserOperationExecutorTests : FunSpec({
                 any(),
             )
         }
+    }
+
+    test(
+        "ensure login with no other operations will fail with FAIL_NORETRY to release the queue from a bad state",
+    ) {
+        // Note: this test covers
+        // Given
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
+
+        val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
+
+        val mockIdentityModelStore = MockHelper.identityModelStore()
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+
+        val loginUserOperationExecutor =
+            LoginUserOperationExecutor(
+                mockIdentityOperationExecutor,
+                MockHelper.applicationService(),
+                MockHelper.deviceService(),
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                MockHelper.languageContext(),
+            )
+        // set operation externalID to null but there exists an external ID in the identity model
+        val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, null, null))
+
+        // When
+        val response = loginUserOperationExecutor.execute(operations)
+
+        // Then
+        response.result shouldBe ExecutionResult.FAIL_NORETRY
+        // ensure user is not created by the bad request
+        coVerify(
+            exactly = 0,
+        ) { mockUserBackendService.createUser(appId, any(), any(), any()) }
     }
 })
