@@ -215,7 +215,7 @@ class OperationRepoTests : FunSpec({
         // Given
         val mocks = Mocks()
         val opRepo = mocks.operationRepo
-        coEvery { opRepo.delayBeforeNextExecution(any(), any(), any()) } just runs
+        coEvery { opRepo.delayBeforeNextExecution(any(), any()) } just runs
         coEvery {
             mocks.executor.execute(any())
         } returns ExecutionResponse(ExecutionResult.FAIL_RETRY) andThen ExecutionResponse(ExecutionResult.SUCCESS)
@@ -239,7 +239,7 @@ class OperationRepoTests : FunSpec({
                     it[0] shouldBe operation
                 },
             )
-            opRepo.delayBeforeNextExecution(1, null, 0)
+            opRepo.delayBeforeNextExecution(1, null)
             mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 1
@@ -646,6 +646,32 @@ class OperationRepoTests : FunSpec({
             mocks.executor.execute(listOf(operation1))
             operation2.translateIds(mapOf("local-id1" to "id2"))
             mocks.executor.execute(listOf(operation2, operation3))
+        }
+    }
+
+    // operations not removed from the queue may get stuck in the queue if app is force closed within the delay
+    test("execution of an operation with translation IDs removes the operation from queue before delay") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoPostCreateDelay = 100
+        val operation = mockOperation(groupComparisonType = GroupComparisonType.NONE)
+        val opId = operation.id
+        val idTranslation = mapOf("local-id1" to "id1")
+        coEvery {
+            mocks.executor.execute(listOf(operation))
+        } returns ExecutionResponse(ExecutionResult.SUCCESS, idTranslation)
+
+        // When
+        mocks.operationRepo.start()
+        val response = mocks.operationRepo.enqueueAndWait(operation)
+
+        // Then
+        response shouldBe true
+        coVerifyOrder {
+            // ensure the order: IDs are translated, operation removed from the store, then delay for postCreateDelay
+            operation.translateIds(idTranslation)
+            mocks.operationModelStore.remove(opId)
+            mocks.operationRepo.delayBeforeNextExecution(any(), any())
         }
     }
 
