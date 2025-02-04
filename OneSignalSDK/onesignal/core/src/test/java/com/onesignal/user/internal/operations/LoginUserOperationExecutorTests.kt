@@ -39,6 +39,16 @@ class LoginUserOperationExecutorTests : FunSpec({
     val localSubscriptionId2 = "local-subscriptionId2"
     val remoteSubscriptionId1 = "remote-subscriptionId1"
     val remoteSubscriptionId2 = "remote-subscriptionId2"
+    val createSubscriptionOperation =
+        CreateSubscriptionOperation(
+            appId,
+            localOneSignalId,
+            "subscriptionId1",
+            SubscriptionType.PUSH,
+            true,
+            "pushToken1",
+            SubscriptionStatus.SUBSCRIBED,
+        )
 
     test("login anonymous user successfully creates user") {
         // Given
@@ -58,7 +68,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val loginUserOperationExecutor =
             LoginUserOperationExecutor(
                 mockIdentityOperationExecutor,
-                MockHelper.applicationService(),
+                AndroidMockHelper.applicationService(),
                 MockHelper.deviceService(),
                 mockUserBackendService,
                 mockIdentityModelStore,
@@ -67,7 +77,11 @@ class LoginUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
             )
-        val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, null, null))
+        val operations =
+            listOf<Operation>(
+                LoginUserOperation(appId, localOneSignalId, null, null),
+                createSubscriptionOperation,
+            )
 
         // When
         val response = loginUserOperationExecutor.execute(operations)
@@ -98,7 +112,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val loginUserOperationExecutor =
             LoginUserOperationExecutor(
                 mockIdentityOperationExecutor,
-                MockHelper.applicationService(),
+                AndroidMockHelper.applicationService(),
                 MockHelper.deviceService(),
                 mockUserBackendService,
                 mockIdentityModelStore,
@@ -107,7 +121,11 @@ class LoginUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
             )
-        val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, null, null))
+        val operations =
+            listOf<Operation>(
+                LoginUserOperation(appId, localOneSignalId, null, null),
+                createSubscriptionOperation,
+            )
 
         // When
         val response = loginUserOperationExecutor.execute(operations)
@@ -130,8 +148,12 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
-        val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, null, null))
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, AndroidMockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
+        val operations =
+            listOf<Operation>(
+                LoginUserOperation(appId, localOneSignalId, null, null),
+                createSubscriptionOperation,
+            )
 
         // When
         val response = loginUserOperationExecutor.execute(operations)
@@ -678,5 +700,43 @@ class LoginUserOperationExecutorTests : FunSpec({
                 any(),
             )
         }
+    }
+
+    test("ensure anonymous login with no other operations will fail with FAIL_NORETRY to release the queue from a bad state") {
+        // Given
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
+
+        val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
+
+        val mockIdentityModelStore = MockHelper.identityModelStore()
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+
+        val loginUserOperationExecutor =
+            LoginUserOperationExecutor(
+                mockIdentityOperationExecutor,
+                MockHelper.applicationService(),
+                MockHelper.deviceService(),
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                MockHelper.languageContext(),
+            )
+        // anonymous Login request
+        val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, null, null))
+
+        // When
+        val response = loginUserOperationExecutor.execute(operations)
+
+        // Then
+        response.result shouldBe ExecutionResult.FAIL_NORETRY
+        // ensure user is not created by the bad request
+        coVerify(
+            exactly = 0,
+        ) { mockUserBackendService.createUser(appId, any(), any(), any()) }
     }
 })
