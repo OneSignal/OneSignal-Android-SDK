@@ -702,7 +702,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         }
     }
 
-    test("ensure anonymous login with no other operations will fail with FAIL_NORETRY to release the queue from a bad state") {
+    test("ensure anonymous login with no other operations will fail with FAIL_NORETRY") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns

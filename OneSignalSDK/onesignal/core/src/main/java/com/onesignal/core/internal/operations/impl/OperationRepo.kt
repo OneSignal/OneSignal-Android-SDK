@@ -322,6 +322,12 @@ internal class OperationRepo(
      *
      * postCreateDelay: Stall processing the queue so the backend's DB has to time reflect the
      * change before we do any other operations to it.
+     *
+     * NOTE: Future: We could run this logic in a
+     *  coroutineScope.launch() block so other operations not
+     *  effecting this these id's can still be done in parallel,
+     *  however other parts of the system don't currently account
+     *  for this so this is not safe to do.
      */
     suspend fun delayBeforeNextExecution(
         retries: Int,
@@ -333,7 +339,12 @@ internal class OperationRepo(
         val delayForOnRetries = retries * _configModelStore.model.opRepoDefaultFailRetryBackoff
         val delayFor = max(delayForOnRetries, max(retryAfterSecondsNonNull * 1_000, postCreateDelay))
         if (delayFor < 1) return
-        Logging.error("Operations being delay for: $delayFor ms")
+        // do not log error if there is an expected delay for post create
+        if (delayFor == postCreateDelay) {
+            Logging.debug("Operations being delay for $delayFor ms due to PostCreateDelay")
+        } else {
+            Logging.error("Operations being delay for: $delayFor ms")
+        }
         withTimeoutOrNull(delayFor) {
             retryWaiter.waitForWake()
         }
