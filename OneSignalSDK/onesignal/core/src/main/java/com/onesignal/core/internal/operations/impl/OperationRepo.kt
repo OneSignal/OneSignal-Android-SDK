@@ -304,9 +304,9 @@ internal class OperationRepo(
                 }
             }
 
-            // set post create delay if the execution resulted in ID translations to stall processing
-            val postCreateDelay = response.idTranslations?.let { _configModelStore.model.opRepoPostCreateDelay } ?: 0
-            delayBeforeNextExecution(highestRetries, response.retryAfterSeconds, postCreateDelay)
+            // wait for retry and post create waiters to start next operation
+            delayBeforeNextExecution(highestRetries, response.retryAfterSeconds)
+            delayForPostCreate(response.idTranslations != null)
         } catch (e: Throwable) {
             Logging.log(LogLevel.ERROR, "Error attempting to execute operation: $ops", e)
 
@@ -317,36 +317,41 @@ internal class OperationRepo(
     }
 
     /**
-     * Wait which ever is longer, post create delay, retryAfterSeconds returned by the server,
+     * Wait which ever is longer, retryAfterSeconds returned by the server,
      * or based on the retry count.
-     *
-     * postCreateDelay: Stall processing the queue so the backend's DB has to time reflect the
-     * change before we do any other operations to it.
-     *
-     * NOTE: Future: We could run this logic in a
-     *  coroutineScope.launch() block so other operations not
-     *  effecting this these id's can still be done in parallel,
-     *  however other parts of the system don't currently account
-     *  for this so this is not safe to do.
      */
     suspend fun delayBeforeNextExecution(
         retries: Int,
         retryAfterSeconds: Int?,
-        postCreateDelay: Long,
     ) {
         Logging.debug("retryAfterSeconds: $retryAfterSeconds")
         val retryAfterSecondsNonNull = retryAfterSeconds?.toLong() ?: 0L
         val delayForOnRetries = retries * _configModelStore.model.opRepoDefaultFailRetryBackoff
-        val delayFor = max(delayForOnRetries, max(retryAfterSecondsNonNull * 1_000, postCreateDelay))
+        val delayFor = max(delayForOnRetries, retryAfterSecondsNonNull * 1_000)
         if (delayFor < 1) return
-        // do not log error if there is an expected delay for post create
-        if (delayFor == postCreateDelay) {
-            Logging.debug("Operations being delay for $delayFor ms due to PostCreateDelay")
-        } else {
-            Logging.error("Operations being delay for: $delayFor ms")
-        }
+        Logging.error("Operations being delay for: $delayFor ms")
         withTimeoutOrNull(delayFor) {
             retryWaiter.waitForWake()
+        }
+    }
+
+    /**
+     * Stall processing the queue so the backend's DB has to time
+     * reflect the change before we do any other operations to it.
+     * NOTE: Future: We could run this logic in a
+     * coroutineScope.launch() block so other operations not
+     * effecting this these id's can still be done in parallel,
+     * however other parts of the system don't currently account
+     * for this so this is not safe to do.
+     */
+    suspend fun delayForPostCreate(hasIDTranslation: Boolean) {
+        val postCreateDelay: Long = _configModelStore.model.opRepoPostCreateDelay
+        if (!hasIDTranslation || postCreateDelay == 0L) {
+            return
+        }
+        delay(postCreateDelay)
+        synchronized(queue) {
+            if (queue.isNotEmpty()) waiter.wake(LoopWaiterMessage(false, postCreateDelay))
         }
     }
 

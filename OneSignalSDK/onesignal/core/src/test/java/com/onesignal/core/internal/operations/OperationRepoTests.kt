@@ -215,7 +215,7 @@ class OperationRepoTests : FunSpec({
         // Given
         val mocks = Mocks()
         val opRepo = mocks.operationRepo
-        coEvery { opRepo.delayBeforeNextExecution(any(), any(), any()) } just runs
+        coEvery { opRepo.delayBeforeNextExecution(any(), any()) } just runs
         coEvery {
             mocks.executor.execute(any())
         } returns ExecutionResponse(ExecutionResult.FAIL_RETRY) andThen ExecutionResponse(ExecutionResult.SUCCESS)
@@ -239,7 +239,7 @@ class OperationRepoTests : FunSpec({
                     it[0] shouldBe operation
                 },
             )
-            opRepo.delayBeforeNextExecution(1, null, 0)
+            opRepo.delayBeforeNextExecution(1, null)
             mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 1
@@ -671,7 +671,7 @@ class OperationRepoTests : FunSpec({
             // ensure the order: IDs are translated, operation removed from the store, then delay for postCreateDelay
             operation.translateIds(idTranslation)
             mocks.operationModelStore.remove(opId)
-            mocks.operationRepo.delayBeforeNextExecution(any(), any(), 100)
+            mocks.operationRepo.delayBeforeNextExecution(any(), any())
         }
     }
 
