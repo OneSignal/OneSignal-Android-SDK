@@ -649,6 +649,32 @@ class OperationRepoTests : FunSpec({
         }
     }
 
+    // operations not removed from the queue may get stuck in the queue if app is force closed within the delay
+    test("execution of an operation with translation IDs removes the operation from queue before delay") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoPostCreateDelay = 100
+        val operation = mockOperation(groupComparisonType = GroupComparisonType.NONE)
+        val opId = operation.id
+        val idTranslation = mapOf("local-id1" to "id1")
+        coEvery {
+            mocks.executor.execute(listOf(operation))
+        } returns ExecutionResponse(ExecutionResult.SUCCESS, idTranslation)
+
+        // When
+        mocks.operationRepo.start()
+        val response = mocks.operationRepo.enqueueAndWait(operation)
+
+        // Then
+        response shouldBe true
+        coVerifyOrder {
+            // ensure the order: IDs are translated, operation removed from the store, then delay for postCreateDelay
+            operation.translateIds(idTranslation)
+            mocks.operationModelStore.remove(opId)
+            mocks.operationRepo.delayBeforeNextExecution(any(), any())
+        }
+    }
+
     // We want to prevent a misbehaving app stuck in a loop from continuously
     // sending updates every opRepoExecutionInterval (5 seconds currently).
     // By waiting for the dust to settle we ensure the app is done making
