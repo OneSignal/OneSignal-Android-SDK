@@ -79,9 +79,15 @@ internal class TrackAmazonPurchase(
                     listenerHandlerObject = listenerHandlerClass.getMethod("e").invoke(null)
                     registerListenerOnMainThread = true
                 } catch (err: NullPointerException) {
-                    // appstore v3.0.4
-                    listenerHandlerObject = listenerHandlerClass.getMethod("g").invoke(null)
-                    registerListenerOnMainThread = true
+                    try {
+                        // appstore v3.0.4
+                        listenerHandlerObject = listenerHandlerClass.getMethod("g").invoke(null)
+                        registerListenerOnMainThread = true
+                    } catch (err: NullPointerException) {
+                        // appstore v3.0.5
+                        listenerHandlerObject = listenerHandlerClass.getMethod("f").invoke(null)
+                        registerListenerOnMainThread = true
+                    }
                 }
             }
             val locListenerHandlerField = listenerHandlerClass.getDeclaredField("f")
