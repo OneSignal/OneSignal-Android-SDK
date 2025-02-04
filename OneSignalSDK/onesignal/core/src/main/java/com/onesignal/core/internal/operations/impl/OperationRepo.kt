@@ -345,8 +345,8 @@ internal class OperationRepo(
      * for this so this is not safe to do.
      */
     suspend fun delayForPostCreate(hasIDTranslation: Boolean) {
-        val postCreateDelay: Long = _configModelStore.model.opRepoPostCreateDelay
-        if (!hasIDTranslation || postCreateDelay == 0L) {
+        val postCreateDelay = _configModelStore.model.opRepoPostCreateDelay
+        if (!hasIDTranslation) {
             return
         }
         delay(postCreateDelay)
