@@ -3,6 +3,7 @@ package com.onesignal.inAppMessages
 import android.os.Build
 import com.onesignal.common.modules.IModule
 import com.onesignal.common.services.ServiceBuilder
+import com.onesignal.core.internal.startup.IBootstrapService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.inAppMessages.internal.DummyInAppMessagesManager
 import com.onesignal.inAppMessages.internal.InAppMessagesManager
@@ -50,7 +51,7 @@ internal class InAppMessagesModule : IModule {
             builder.register<InAppDisplayer>().provides<IInAppDisplayer>()
 
             // Previews
-            builder.register<InAppMessagePreviewHandler>().provides<IStartableService>()
+            builder.register<InAppMessagePreviewHandler>().provides<IBootstrapService>()
 
             // Prompts
             builder.register<InAppMessagePromptFactory>().provides<IInAppMessagePromptFactory>()
