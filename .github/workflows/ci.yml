@@ -12,7 +12,7 @@ jobs:
       - name: "[Setup] Java"
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '11'
           distribution: 'temurin'
       - name: "[Setup] Android"
         uses: android-actions/setup-android@v3
