@@ -45,6 +45,8 @@ import androidx.annotation.Nullable;
 import androidx.annotation.WorkerThread;
 import androidx.core.app.NotificationCompat;
 
+import com.onesignal.debug.OneSignalLogEvent;
+import com.onesignal.debug.OneSignalLogListener;
 import com.onesignal.influence.data.OSTrackerFactory;
 import com.onesignal.influence.domain.OSInfluence;
 import com.onesignal.language.LanguageContext;
@@ -1332,6 +1334,28 @@ public class OneSignal {
             Log.e(TAG, "Error showing logging message.", t);
          }
       }
+
+      callLogListeners(level, message, throwable);
+   }
+
+   private static void callLogListeners(@NonNull final LOG_LEVEL level, @NonNull String message, @Nullable Throwable throwable) {
+      String logEntry = message;
+      if (throwable != null) {
+         logEntry += "\n" + Log.getStackTraceString(throwable);
+      }
+      for (OneSignalLogListener listener : logListeners) {
+         listener.onLogEvent(new OneSignalLogEvent(level, logEntry));
+      }
+   }
+
+   private static final List<OneSignalLogListener> logListeners = new ArrayList<>();
+
+   public static void addLogListener(@NonNull OneSignalLogListener listener) {
+      logListeners.add(listener);
+   }
+
+   public static void removeLogListener(@NonNull OneSignalLogListener listener) {
+      logListeners.remove(listener);
    }
 
    static void logHttpError(String errorString, int statusCode, Throwable throwable, String errorResponse) {

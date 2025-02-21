@@ -8,6 +8,8 @@ import com.onesignal.OSInAppMessage;
 import com.onesignal.OSNotification;
 import com.onesignal.OSInAppMessageLifecycleHandler;
 import com.onesignal.OneSignal;
+import com.onesignal.debug.OneSignalLogEvent;
+import com.onesignal.debug.OneSignalLogListener;
 import com.onesignal.sdktest.R;
 import com.onesignal.sdktest.constant.Tag;
 import com.onesignal.sdktest.constant.Text;
@@ -72,6 +74,21 @@ public class MainApplication extends MultiDexApplication {
         OneSignal.setLocationShared(false);
 
         Log.d(Tag.DEBUG, Text.ONESIGNAL_SDK_INIT);
+    }
+
+    private void setupLogListener() {
+        OneSignalLogListener logListener = new OneSignalLogListener() {
+            @Override
+            public void onLogEvent(OneSignalLogEvent event) {
+                // App developer can send these logs to their backend, the
+                // println code here is just to show it works.
+                System.out.println(event.getEntry());
+            }
+        };
+
+        OneSignal.addLogListener(logListener);
+        // Remove can be called if you need to stop collecting logs.
+        // OneSignal.removeLogListener(logListener);
     }
 
 }
