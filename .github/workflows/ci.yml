@@ -17,7 +17,7 @@ jobs:
       - name: "[Setup] Android"
         uses: android-actions/setup-android@v3
         with:
-          cmdline-tools-version: 9477386
+          cmdline-tools-version: 8512546
           log-accepted-android-sdk-licenses: false
       - name: "[Test] Linting"
         working-directory: OneSignalSDK
