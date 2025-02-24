@@ -2,7 +2,7 @@ package com.onesignal.inAppMessages.internal.preview
 
 import android.app.Activity
 import com.onesignal.core.internal.application.IApplicationService
-import com.onesignal.core.internal.startup.IStartableService
+import com.onesignal.core.internal.startup.IBootstrapService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.inAppMessages.internal.display.IInAppDisplayer
 import com.onesignal.inAppMessages.internal.state.InAppStateService
@@ -25,8 +25,8 @@ internal class InAppMessagePreviewHandler(
     private val _notificationLifeCycle: INotificationLifecycleService,
     private val _state: InAppStateService,
     private val _time: ITime,
-) : IStartableService, INotificationLifecycleCallback {
-    override fun start() {
+) : IBootstrapService, INotificationLifecycleCallback {
+    override fun bootstrap() {
         _notificationLifeCycle.setInternalNotificationLifecycleCallback(this)
     }
 

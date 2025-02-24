@@ -15,9 +15,8 @@ import com.onesignal.core.internal.config.ConfigModelStore
  *  1) An appContext is available in [IApplicationService.appContext].
  *  2) An appId is available in [ConfigModel.appId] via [ConfigModelStore.get]
  *
- * When started there is no guarantee that any other data is available.  Typically a startable service
- * must be instantiated immediately and will add their appropriate hooks to then respond to changes
- * in the system.
+ * When started there is no guarantee that any other data is available. Typically a startable service
+ * can asynchronously start some lengthy process that doesn't require immediate use.
  */
 interface IStartableService {
     /**
@@ -25,12 +24,4 @@ interface IStartableService {
      * established.
      */
     fun start()
-}
-
-internal interface IBootstrapService {
-    /**
-     * Called when the service is to be started.  The appId and appContext have already been
-     * established.
-     */
-    fun bootstrap()
 }

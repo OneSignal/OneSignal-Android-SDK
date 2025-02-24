@@ -87,7 +87,7 @@ internal class NotificationLifecycleService(
         activity: Activity,
         data: JSONObject,
     ): Boolean {
-        var canOpen = extOpenedCallback.hasSubscribers
+        var canOpen = true
         intLifecycleCallback.suspendingFire { canOpen = it.canOpenNotification(activity, data) }
         return canOpen
     }
