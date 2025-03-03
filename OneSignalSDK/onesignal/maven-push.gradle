@@ -66,10 +66,6 @@ afterEvaluate {
 
         publications {
             release(MavenPublication) {
-                // components.getByName('release')
-                // from components.release
-                // from components.java
-
                 pom {
                     name = projectName
                     description = projectDescription
@@ -96,6 +92,9 @@ afterEvaluate {
                             name = Global.POM_DEVELOPER_NAME
                         }
                     }
+                }
+                afterEvaluate {
+                    from components.findByName('release')
                 }
             }
         }
