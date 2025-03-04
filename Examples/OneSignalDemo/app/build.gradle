@@ -3,6 +3,7 @@ plugins {
 }
 
 android {
+    namespace 'com.onesignal.sdktest'
     compileSdkVersion 34
     defaultConfig {
         minSdkVersion 21
