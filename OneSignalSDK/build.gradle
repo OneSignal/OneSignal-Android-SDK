@@ -10,7 +10,7 @@ buildscript {
         ]
         androidGradlePluginVersion = '8.8.2'
         googleServicesGradlePluginVersion = '4.3.10'
-        huaweiAgconnectVersion = '1.6.2.300'
+        huaweiAgconnectVersion = '1.9.1.304'
         huaweiHMSPushVersion = '6.3.0.304'
         huaweiHMSLocationVersion = '4.0.0.300'
         kotlinVersion = '1.7.10'
