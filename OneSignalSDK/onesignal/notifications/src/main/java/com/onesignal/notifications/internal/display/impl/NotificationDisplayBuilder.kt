@@ -12,7 +12,6 @@ import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.onesignal.common.AndroidUtils
-import com.onesignal.core.R
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.bundle.impl.NotificationBundleProcessor
@@ -231,9 +230,9 @@ internal class NotificationDisplayBuilder(
         if (bitmap == null) return null
         try {
             val systemLargeIconHeight =
-                contextResources!!.getDimension(R.dimen.notification_large_icon_height).toInt()
+                contextResources!!.getDimension(android.R.dimen.notification_large_icon_height).toInt()
             val systemLargeIconWidth =
-                contextResources!!.getDimension(R.dimen.notification_large_icon_width).toInt()
+                contextResources!!.getDimension(android.R.dimen.notification_large_icon_width).toInt()
             val bitmapHeight = bitmap.height
             val bitmapWidth = bitmap.width
             if (bitmapWidth > systemLargeIconWidth || bitmapHeight > systemLargeIconHeight) {

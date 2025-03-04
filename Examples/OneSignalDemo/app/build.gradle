@@ -3,6 +3,7 @@ plugins {
 }
 
 android {
+    namespace 'com.onesignal.sdktest'
     compileSdkVersion 34
     defaultConfig {
         minSdkVersion 21
@@ -61,10 +62,11 @@ android {
     }
 
     task flavorSelection() {
-        if (getGradle().getStartParameter().getTaskRequests().toString().contains("Gms")) {
+        def tasksList = gradle.startParameter.taskRequests.toString()
+        if (tasksList.contains('Gms')) {
             apply plugin: 'com.google.gms.google-services'
             googleServices { disableVersionCheck = true }
-        } else {
+        } else if (tasksList.contains('Huawei')) {
             apply plugin: 'com.huawei.agconnect'
         }
     }
