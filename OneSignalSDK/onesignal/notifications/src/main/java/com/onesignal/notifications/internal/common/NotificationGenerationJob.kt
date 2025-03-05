@@ -27,8 +27,10 @@ class NotificationGenerationJob(
     var overriddenTitleFromExtender: CharSequence? = null
     var overriddenSound: Uri? = null
     var overriddenFlags: Int? = null
+    var overriddenColor: Int? = null
     var orgFlags: Int? = null
     var orgSound: Uri? = null
+    var orgColor: Int? = null
 
     constructor(jsonPayload: JSONObject, time: ITime) : this(
         Notification(jsonPayload, time),
@@ -73,8 +75,10 @@ class NotificationGenerationJob(
             ", overriddenTitleFromExtender=" + overriddenTitleFromExtender +
             ", overriddenSound=" + overriddenSound +
             ", overriddenFlags=" + overriddenFlags +
+            ", overriddenColor=" + overriddenColor +
             ", orgFlags=" + orgFlags +
             ", orgSound=" + orgSound +
+            ", orgColor=" + orgColor +
             ", notification=" + notification +
             '}'
     }
