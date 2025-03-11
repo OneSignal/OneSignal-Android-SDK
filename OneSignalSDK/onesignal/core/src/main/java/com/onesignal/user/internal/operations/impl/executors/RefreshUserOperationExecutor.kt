@@ -94,6 +94,7 @@ internal class RefreshUserOperationExecutor(
             }
 
             val subscriptionModels = mutableListOf<SubscriptionModel>()
+            var backendPushSubscription: SubscriptionModel? = null
             for (subscription in response.subscriptions) {
                 val subscriptionModel = SubscriptionModel()
                 subscriptionModel.id = subscription.id!!
@@ -117,10 +118,13 @@ internal class RefreshUserOperationExecutor(
                 subscriptionModel.carrier = subscription.carrier ?: ""
                 subscriptionModel.appVersion = subscription.appVersion ?: ""
 
-                // We only add a non-push subscriptions. For push, the device is the source of truth
-                // so we don't want to cache these subscriptions from the backend.
+                // We only want to add a push subscription from the backend ONLY if there exists no
+                // local push subscription. If there exists a local push before RefreshUser is called,
+                // the device is the source of truth so we don't want to cache these subscriptions from the backend.
                 if (subscriptionModel.type != SubscriptionType.PUSH) {
                     subscriptionModels.add(subscriptionModel)
+                } else {
+                    backendPushSubscription = subscriptionModel
                 }
             }
             // Retrieve the push subscription ID from the backend configuration model store
@@ -134,6 +138,11 @@ internal class RefreshUserOperationExecutor(
                 if (cachedPushSubscriptionModel != null) {
                     subscriptionModels.add(cachedPushSubscriptionModel)
                 }
+            } else if (backendPushSubscription != null) {
+                // There can be a bad state that PUSH subscription previously created on backend but
+                // the subscription ID was not correctly cached
+                // In this case, we want to update the push subscription in the model store
+                subscriptionModels.add(backendPushSubscription)
             }
 
             _identityModelStore.replace(identityModel, ModelChangeTags.HYDRATE)
