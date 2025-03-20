@@ -17,6 +17,7 @@ import com.onesignal.user.internal.backend.impl.UserBackendService
 import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.builduser.impl.RebuildUserService
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.migrations.RecoverConfigPushSubscription
 import com.onesignal.user.internal.migrations.RecoverFromDroppedLoginBug
 import com.onesignal.user.internal.operations.impl.executors.IdentityOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.LoginUserFromSubscriptionOperationExecutor
@@ -74,6 +75,7 @@ internal class UserModule : IModule {
         builder.register<UserRefreshService>().provides<IStartableService>()
 
         builder.register<RecoverFromDroppedLoginBug>().provides<IStartableService>()
+        builder.register<RecoverConfigPushSubscription>().provides<IStartableService>()
 
         // Shared state between Executors
         builder.register<NewRecordsState>().provides<NewRecordsState>()
