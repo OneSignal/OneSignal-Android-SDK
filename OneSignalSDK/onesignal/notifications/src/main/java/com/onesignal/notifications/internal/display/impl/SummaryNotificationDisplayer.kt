@@ -217,6 +217,13 @@ internal class SummaryNotificationDisplayer(
             for (line in summaryList) inboxStyle.addLine(line)
             inboxStyle.setBigContentTitle(summaryMessage)
             summaryBuilder.setStyle(inboxStyle)
+
+            if (notificationJob.overriddenColor != null) {
+                summaryBuilder.setColor(
+                    notificationJob.overriddenColor!!,
+                )
+            }
+
             summaryNotification = summaryBuilder.build()
         } else {
             // First notification with this group key, post like a normal notification.
@@ -244,6 +251,13 @@ internal class SummaryNotificationDisplayer(
             } catch (t: Throwable) {
                 // do nothing in this case...Android support lib 26 isn't in the project
             }
+
+            if (notificationJob.overriddenColor != null) {
+                summaryBuilder.setColor(
+                    notificationJob.overriddenColor!!,
+                )
+            }
+
             summaryNotification = summaryBuilder.build()
             _notificationDisplayBuilder.addXiaomiSettings(notifBuilder, summaryNotification)
         }
@@ -280,6 +294,11 @@ internal class SummaryNotificationDisplayer(
         if (notificationJob.overriddenFlags != null) {
             summaryBuilder!!.setDefaults(
                 notificationJob.overriddenFlags!!,
+            )
+        }
+        if (notificationJob.overriddenColor != null) {
+            summaryBuilder!!.setColor(
+                notificationJob.overriddenColor!!,
             )
         }
 
