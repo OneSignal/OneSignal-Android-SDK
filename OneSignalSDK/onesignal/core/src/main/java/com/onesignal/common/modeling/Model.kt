@@ -2,6 +2,9 @@ package com.onesignal.common.modeling
 
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.events.IEventNotifier
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.user.internal.operations.LoginUserOperation
 import org.json.JSONArray
 import org.json.JSONObject
 import java.math.BigDecimal
@@ -81,6 +84,11 @@ open class Model(
     fun initializeFromJson(jsonObject: JSONObject) {
         synchronized(data) {
             data.clear()
+            if (this is LoginUserOperation) {
+                // loading operationModelStore will get stuck for 15 seconds while locking data
+                Logging.log(LogLevel.DEBUG, "initializeFromJson LoginUserOperation")
+                Thread.sleep(15000)
+            }
             for (property in jsonObject.keys()) {
                 val jsonValue = jsonObject.get(property)
                 if (jsonValue is JSONObject) {

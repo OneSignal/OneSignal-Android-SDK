@@ -1,6 +1,8 @@
 package com.onesignal.sdktest.application;
 
 import android.annotation.SuppressLint;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.StrictMode;
 import android.util.Log;
 import androidx.annotation.NonNull;
@@ -60,6 +62,17 @@ public class MainApplication extends MultiDexApplication {
         OneSignalNotificationSender.setAppId(appId);
 
         OneSignal.initWithContext(this, appId);
+
+
+        final Handler handler = new Handler(Looper.getMainLooper());
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                // addTag after 100 ms to reliably accessing the operation model store AFTER the loading
+                OneSignal.getUser().removeTag("tag");
+                OneSignal.getUser().addTag("tag", "test");
+            }
+        }, 100);
 
         // Ensure calling requestPermission in a thread right after initWithContext does not crash
         // This will reproduce result similar to Kotlin CouroutineScope.launch{}, which may potentially crash the app
