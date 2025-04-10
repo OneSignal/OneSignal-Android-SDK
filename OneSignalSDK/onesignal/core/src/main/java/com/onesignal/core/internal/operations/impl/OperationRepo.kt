@@ -1,5 +1,6 @@
 package com.onesignal.core.internal.operations.impl
 
+import com.onesignal.common.threading.OSPrimaryCoroutineScope
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -102,6 +103,13 @@ internal class OperationRepo(
         }
     }
 
+    /**
+     *  Enqueuing will be performed in a designate coroutine and may not be added instantly.
+     *  This is to prevent direct enqueuing from the main thread that may cause a deadlock if loading
+     *  is still in process.
+     *
+     *  If the enqueuing needs to be suspended, use enqueueAndWait() instead.
+     */
     override fun enqueue(
         operation: Operation,
         flush: Boolean,
@@ -109,7 +117,9 @@ internal class OperationRepo(
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueue(operation: $operation, flush: $flush)")
 
         operation.id = UUID.randomUUID().toString()
-        internalEnqueue(OperationQueueItem(operation, bucket = enqueueIntoBucket), flush, true)
+        OSPrimaryCoroutineScope.execute {
+            internalEnqueue(OperationQueueItem(operation, bucket = enqueueIntoBucket), flush, true)
+        }
     }
 
     override suspend fun enqueueAndWait(
