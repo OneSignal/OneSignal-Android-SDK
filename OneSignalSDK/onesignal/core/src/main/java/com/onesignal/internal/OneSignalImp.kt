@@ -442,7 +442,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID,
         )
     }
-    
+
     override fun updateUserJwt(
         externalId: String,
         token: String,
