@@ -4,9 +4,12 @@ import android.app.Activity
 import android.content.Context
 import android.graphics.Rect
 import android.net.ConnectivityManager
+import android.os.Build
 import android.telephony.TelephonyManager
 import android.util.DisplayMetrics
 import android.view.View
+import android.view.WindowInsets
+import androidx.core.view.WindowInsetsCompat
 import java.lang.ref.WeakReference
 
 object DeviceUtils {
@@ -28,8 +31,14 @@ object DeviceUtils {
             window.windowManager.defaultDisplay.getMetrics(metrics)
         }
         if (view != null) {
-            val heightDiff = metrics.heightPixels - visibleBounds.bottom
-            isOpen = heightDiff > MARGIN_ERROR_PX_SIZE
+            isOpen = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val imeInsets = view.rootWindowInsets.getInsets(WindowInsetsCompat.Type.ime())
+                // ensure input method size is 0
+                !(imeInsets.left == 0 && imeInsets.top == 0 && imeInsets.right == 0 && imeInsets.bottom == 0)
+            } else {
+                val heightDiff = metrics.heightPixels - visibleBounds.bottom
+                heightDiff > MARGIN_ERROR_PX_SIZE
+            }
         }
         return isOpen
     }
