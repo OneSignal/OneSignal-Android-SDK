@@ -7,6 +7,8 @@ import com.onesignal.common.NetworkUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.RootToolsInternalMethods
 import com.onesignal.common.TimeUtils
+import com.onesignal.common.consistency.IamFetchReadyCondition
+import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.application.IApplicationService
@@ -46,6 +48,7 @@ internal class LoginUserOperationExecutor(
     private val _subscriptionsModelStore: SubscriptionModelStore,
     private val _configModelStore: ConfigModelStore,
     private val _languageContext: ILanguageContext,
+    private val _consistencyManager: IConsistencyManager,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(LOGIN_USER)
@@ -187,6 +190,9 @@ internal class LoginUserOperationExecutor(
                 propertiesModel.setStringProperty(PropertiesModel::onesignalId.name, backendOneSignalId, ModelChangeTags.HYDRATE)
             }
 
+            // translate the onesignalId in all IAM fetch ready conditions
+            _consistencyManager.translateConditionKeyWithID(IamFetchReadyCondition.ID, createUserOperation.onesignalId, backendOneSignalId)
+
             for (index in subscriptionList.indices) {
                 if (index >= response.subscriptions.size) {
                     break
@@ -195,7 +201,6 @@ internal class LoginUserOperationExecutor(
                 val backendSubscription = response.subscriptions[index]
 
                 idTranslations[subscriptionList[index].first] = backendSubscription.id!!
-
                 if (_configModelStore.model.pushSubscriptionId == subscriptionList[index].first) {
                     _configModelStore.model.pushSubscriptionId = backendSubscription.id
                 }

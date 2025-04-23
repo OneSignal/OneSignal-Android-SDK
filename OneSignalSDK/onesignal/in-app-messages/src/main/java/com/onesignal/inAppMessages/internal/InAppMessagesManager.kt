@@ -43,6 +43,7 @@ import com.onesignal.session.internal.outcomes.IOutcomeEventsController
 import com.onesignal.session.internal.session.ISessionLifecycleHandler
 import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.IUserManager
+import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionChangedHandler
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -59,6 +60,7 @@ internal class InAppMessagesManager(
     private val _sessionService: ISessionService,
     private val _influenceManager: IInfluenceManager,
     private val _configModelStore: ConfigModelStore,
+    private val _identityModelStore: IdentityModelStore,
     private val _userManager: IUserManager,
     private val _subscriptionManager: ISubscriptionManager,
     private val _outcomeEventsController: IOutcomeEventsController,
@@ -163,7 +165,7 @@ internal class InAppMessagesManager(
             }
 
             // attempt to fetch messages from the backend (if we have the pre-requisite data already)
-            val onesignalId = _userManager.onesignalId
+            val onesignalId = _identityModelStore.model.onesignalId
             val updateConditionDeferred =
                 _consistencyManager.getRywDataFromAwaitableCondition(IamFetchReadyCondition(onesignalId))
             val rywToken = updateConditionDeferred.await()
@@ -240,7 +242,7 @@ internal class InAppMessagesManager(
 
     private fun fetchMessagesWhenConditionIsMet() {
         suspendifyOnThread {
-            val onesignalId = _userManager.onesignalId
+            val onesignalId = _identityModelStore.model.onesignalId
             val iamFetchCondition =
                 _consistencyManager.getRywDataFromAwaitableCondition(IamFetchReadyCondition(onesignalId))
             val rywData = iamFetchCondition.await()

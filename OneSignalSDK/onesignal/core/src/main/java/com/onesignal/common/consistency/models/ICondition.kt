@@ -20,4 +20,12 @@ interface ICondition {
      * e.g. numeric strings would be compared differently from JWT tokens
      */
     fun getRywData(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData?>>): RywData?
+
+    /**
+     * Used to update condition when the key (i.e. onesignalId) can be translated into a new key
+     */
+    fun translateKey(
+        oldKey: String,
+        newKey: String,
+    )
 }

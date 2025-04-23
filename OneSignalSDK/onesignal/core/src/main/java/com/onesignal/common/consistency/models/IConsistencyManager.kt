@@ -29,4 +29,13 @@ interface IConsistencyManager {
      * Resolve all conditions with a specific ID
      */
     suspend fun resolveConditionsWithID(id: String)
+
+    /**
+     * Update the key used by the condition
+     */
+    fun translateConditionKeyWithID(
+        id: String,
+        oldKey: String,
+        newKey: String,
+    )
 }

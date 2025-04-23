@@ -75,6 +75,24 @@ class ConsistencyManagerTests : FunSpec({
             deferred.isCompleted shouldBe true
         }
     }
+
+    test("translateConditionKeyWithID translates keys with corresponding ID") {
+        runTest {
+            // Given
+            val oldOnesignalId = "123"
+            val newOnesignalId = "456"
+            val condition = IamFetchReadyCondition(oldOnesignalId)
+            val deferred = consistencyManager.getRywDataFromAwaitableCondition(condition)
+
+            // a new onesignal ID has been received
+            consistencyManager.translateConditionKeyWithID(condition.id, oldOnesignalId, newOnesignalId)
+            consistencyManager.setRywData(newOnesignalId, IamFetchRywTokenKey.USER, RywData("token", 500L))
+
+            deferred.await()
+            // setRywData with new onesignal ID completes the condition that was created with old onesignalID
+            deferred.isCompleted shouldBe true
+        }
+    }
 }) {
     // Mock implementation of ICondition that simulates a condition that isn't met
     private class TestUnmetCondition : ICondition {
@@ -91,6 +109,13 @@ class ConsistencyManagerTests : FunSpec({
 
         override fun getRywData(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData?>>): RywData? {
             return null
+        }
+
+        override fun translateKey(
+            oldKey: String,
+            newKey: String,
+        ) {
+            // not used
         }
     }
 
@@ -111,6 +136,13 @@ class ConsistencyManagerTests : FunSpec({
 
         override fun getRywData(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData?>>): RywData? {
             return expectedRywTokens.values.firstOrNull()?.values?.firstOrNull()
+        }
+
+        override fun translateKey(
+            oldKey: String,
+            newKey: String,
+        ) {
+            // not used
         }
     }
 }

@@ -71,6 +71,18 @@ class ConsistencyManager : IConsistencyManager {
         conditions.removeAll(completedConditions)
     }
 
+    override fun translateConditionKeyWithID(
+        id: String,
+        oldKey: String,
+        newKey: String,
+    ) {
+        for ((condition, _) in conditions) {
+            if (condition.id == id) {
+                condition.translateKey(oldKey, newKey)
+            }
+        }
+    }
+
     /**
      * IMPORTANT: calling code should be protected by mutex to avoid potential inconsistencies
      */

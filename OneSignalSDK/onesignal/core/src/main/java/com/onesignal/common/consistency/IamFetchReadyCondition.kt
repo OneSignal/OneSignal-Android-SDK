@@ -20,8 +20,10 @@ class IamFetchReadyCondition(
     override val id: String
         get() = ID
 
+    private var translateKey: String = key
+
     override fun isMet(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData>>): Boolean {
-        val tokenMap = indexedTokens[key] ?: return false
+        val tokenMap = indexedTokens[key] ?: indexedTokens[translateKey] ?: return false
         val userUpdateTokenSet = tokenMap[IamFetchRywTokenKey.USER] != null
 
         /**
@@ -34,7 +36,7 @@ class IamFetchReadyCondition(
     }
 
     override fun getRywData(indexedTokens: Map<String, Map<IConsistencyKeyEnum, RywData?>>): RywData? {
-        val tokenMap = indexedTokens[key] ?: return null
+        val tokenMap = indexedTokens[key] ?: indexedTokens[translateKey] ?: return null
 
         /**
          * Collect non-null RywData objects and find the one with the largest rywToken lexicographically
@@ -44,5 +46,14 @@ class IamFetchReadyCondition(
             tokenMap[IamFetchRywTokenKey.USER],
             tokenMap[IamFetchRywTokenKey.SUBSCRIPTION],
         ).maxByOrNull { it.rywToken ?: "" }
+    }
+
+    override fun translateKey(
+        oldKey: String,
+        newKey: String,
+    ) {
+        if (key == oldKey) {
+            translateKey = newKey
+        }
     }
 }
