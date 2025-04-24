@@ -1,5 +1,7 @@
 package com.onesignal.mocks
 
+import com.onesignal.common.consistency.impl.ConsistencyManager
+import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -125,5 +127,11 @@ object MockHelper {
         val deviceService = mockk<IDeviceService>()
         every { deviceService.deviceType } returns IDeviceService.DeviceType.Android
         return deviceService
+    }
+
+    fun consistencyManager(): IConsistencyManager {
+        val consistencyManager = mockk<ConsistencyManager>()
+        every { consistencyManager.translateConditionKeyWithID(any(), any(), any()) } just runs
+        return consistencyManager
     }
 }

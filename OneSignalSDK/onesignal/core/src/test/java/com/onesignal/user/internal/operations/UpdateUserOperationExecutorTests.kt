@@ -2,7 +2,6 @@ package com.onesignal.user.internal.operations
 
 import com.onesignal.common.consistency.RywData
 import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
-import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.Operation
@@ -31,7 +30,7 @@ class UpdateUserOperationExecutorTests :
         val localOneSignalId = "local-onesignalId"
         val remoteOneSignalId = "remote-onesignalId"
         val rywData = RywData("1", 500L)
-        val mockConsistencyManager = mockk<IConsistencyManager>()
+        val mockConsistencyManager = MockHelper.consistencyManager()
 
         beforeTest {
             clearMocks(mockConsistencyManager)

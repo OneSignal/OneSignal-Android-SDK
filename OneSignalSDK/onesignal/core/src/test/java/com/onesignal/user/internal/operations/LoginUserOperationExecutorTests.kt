@@ -1,7 +1,6 @@
 package com.onesignal.user.internal.operations
 
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
-import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -77,7 +76,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
-                mockk<IConsistencyManager>(),
+                MockHelper.consistencyManager(),
             )
         val operations =
             listOf<Operation>(
@@ -122,7 +121,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
-                mockk<IConsistencyManager>(),
+                MockHelper.consistencyManager(),
             )
         val operations =
             listOf<Operation>(
@@ -151,7 +150,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, AndroidMockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<IConsistencyManager>())
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, AndroidMockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), MockHelper.consistencyManager())
         val operations =
             listOf<Operation>(
                 LoginUserOperation(appId, localOneSignalId, null, null),
@@ -179,7 +178,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<IConsistencyManager>())
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), MockHelper.consistencyManager())
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", null))
 
         // When
@@ -217,7 +216,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
-                mockk<IConsistencyManager>(),
+                MockHelper.consistencyManager(),
             )
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", null))
 
@@ -246,7 +245,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<IConsistencyManager>())
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), MockHelper.consistencyManager())
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         // When
@@ -282,7 +281,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<IConsistencyManager>())
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), MockHelper.consistencyManager())
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         // When
@@ -318,7 +317,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<IConsistencyManager>())
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), MockHelper.consistencyManager())
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         // When
@@ -356,7 +355,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<IConsistencyManager>())
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), MockHelper.consistencyManager())
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         // When
@@ -407,7 +406,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
-                mockk<IConsistencyManager>(),
+                MockHelper.consistencyManager(),
             )
         val operations =
             listOf<Operation>(
@@ -509,7 +508,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
-                mockk<IConsistencyManager>(),
+                MockHelper.consistencyManager(),
             )
         val operations =
             listOf<Operation>(
@@ -596,7 +595,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
-                mockk<IConsistencyManager>(),
+                MockHelper.consistencyManager(),
             )
         val operations =
             listOf<Operation>(
@@ -669,7 +668,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
-                mockk<IConsistencyManager>(),
+                MockHelper.consistencyManager(),
             )
         val operations =
             listOf<Operation>(
@@ -733,7 +732,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
-                mockk<IConsistencyManager>(),
+                MockHelper.consistencyManager(),
             )
         // anonymous Login request
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, null, null))
