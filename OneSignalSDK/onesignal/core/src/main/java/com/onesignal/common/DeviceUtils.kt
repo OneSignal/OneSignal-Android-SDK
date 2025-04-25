@@ -4,9 +4,11 @@ import android.app.Activity
 import android.content.Context
 import android.graphics.Rect
 import android.net.ConnectivityManager
+import android.os.Build
 import android.telephony.TelephonyManager
 import android.util.DisplayMetrics
 import android.view.View
+import androidx.core.view.WindowInsetsCompat
 import java.lang.ref.WeakReference
 
 object DeviceUtils {
@@ -14,7 +16,6 @@ object DeviceUtils {
 
     /**
      * Check if the keyboard is currently being shown.
-     * Does not work for cases when keyboard is full screen.
      */
     fun isKeyboardUp(activityWeakReference: WeakReference<Activity?>): Boolean {
         val metrics = DisplayMetrics()
@@ -28,8 +29,15 @@ object DeviceUtils {
             window.windowManager.defaultDisplay.getMetrics(metrics)
         }
         if (view != null) {
-            val heightDiff = metrics.heightPixels - visibleBounds.bottom
-            isOpen = heightDiff > MARGIN_ERROR_PX_SIZE
+            isOpen =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    val imeInsets = view.rootWindowInsets
+                    imeInsets.isVisible(WindowInsetsCompat.Type.ime())
+                } else {
+                    // Does not work for cases when keyboard is full screen for Android 9 and below
+                    val heightDiff = metrics.heightPixels - visibleBounds.bottom
+                    heightDiff > MARGIN_ERROR_PX_SIZE
+                }
         }
         return isOpen
     }
