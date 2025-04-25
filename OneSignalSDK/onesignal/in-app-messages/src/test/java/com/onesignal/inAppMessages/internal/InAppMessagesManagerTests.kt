@@ -41,6 +41,7 @@ class InAppMessagesManagerTests : FunSpec({
                 mockk<IInfluenceManager>(),
                 mockk<ConfigModelStore>(),
                 mockk<IUserManager>(),
+                MockHelper.identityModelStore(),
                 mockk<ISubscriptionManager>(),
                 mockk<IOutcomeEventsController>(),
                 mockk<InAppStateService>(),
