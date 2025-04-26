@@ -43,6 +43,9 @@ import com.onesignal.session.internal.outcomes.IOutcomeEventsController
 import com.onesignal.session.internal.session.ISessionLifecycleHandler
 import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.IUserManager
+import com.onesignal.user.internal.backend.IdentityConstants
+import com.onesignal.user.internal.identity.IdentityModel
+import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionChangedHandler
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -60,6 +63,7 @@ internal class InAppMessagesManager(
     private val _influenceManager: IInfluenceManager,
     private val _configModelStore: ConfigModelStore,
     private val _userManager: IUserManager,
+    private val _identityModelStore: IdentityModelStore,
     private val _subscriptionManager: ISubscriptionManager,
     private val _outcomeEventsController: IOutcomeEventsController,
     private val _state: InAppStateService,
@@ -113,6 +117,36 @@ internal class InAppMessagesManager(
     private val fetchIAMMutex = Mutex()
     private var lastTimeFetchedIAMs: Long? = null
 
+    private val identityModelChangeHandler =
+        object : ISingletonModelStoreChangeHandler<IdentityModel> {
+            override fun onModelReplaced(
+                model: IdentityModel,
+                tag: String,
+            ) { }
+
+            override fun onModelUpdated(
+                args: ModelChangedArgs,
+                tag: String,
+            ) {
+                if (args.property == IdentityConstants.ONESIGNAL_ID) {
+                    val oldOneSignalId = args.oldValue as String
+                    val newOneSignalId = args.newValue as String
+
+                    // Create a IAM fetch condition when a backend OneSignalID is retrieved for the first time
+                    if (IDManager.isLocalId(oldOneSignalId) && !IDManager.isLocalId(newOneSignalId)) {
+                        suspendifyOnThread {
+                            val updateConditionDeferred =
+                                _consistencyManager.getRywDataFromAwaitableCondition(IamFetchReadyCondition(newOneSignalId))
+                            val rywToken = updateConditionDeferred.await()
+                            if (rywToken != null) {
+                                fetchMessages(rywToken)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
     override var paused: Boolean
         get() = _state.paused
         set(value) {
@@ -150,6 +184,7 @@ internal class InAppMessagesManager(
         _triggerController.subscribe(this)
         _sessionService.subscribe(this)
         _applicationService.addApplicationLifecycleHandler(this)
+        _identityModelStore.subscribe(identityModelChangeHandler)
 
         suspendifyOnThread {
             _repository.cleanCachedInAppMessages()
@@ -160,15 +195,6 @@ internal class InAppMessagesManager(
             // reset all messages for redisplay to indicate not shown
             for (redisplayInAppMessage in redisplayedInAppMessages) {
                 redisplayInAppMessage.isDisplayedInSession = false
-            }
-
-            // attempt to fetch messages from the backend (if we have the pre-requisite data already)
-            val onesignalId = _userManager.onesignalId
-            val updateConditionDeferred =
-                _consistencyManager.getRywDataFromAwaitableCondition(IamFetchReadyCondition(onesignalId))
-            val rywToken = updateConditionDeferred.await()
-            if (rywToken != null) {
-                fetchMessages(rywToken)
             }
         }
     }

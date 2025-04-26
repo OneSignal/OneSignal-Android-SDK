@@ -38,7 +38,7 @@ interface IIdentityBackendService {
     )
 }
 
-internal object IdentityConstants {
+object IdentityConstants {
     /**
      * The alias label for the external ID alias.
      */
