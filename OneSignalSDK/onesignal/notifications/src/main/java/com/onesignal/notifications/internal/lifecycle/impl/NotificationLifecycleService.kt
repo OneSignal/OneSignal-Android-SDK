@@ -37,9 +37,8 @@ import org.json.JSONException
 import org.json.JSONObject
 
 internal class NotificationLifecycleService(
-    applicationService: IApplicationService,
-    private val _time: ITime,
     private val _applicationService: IApplicationService,
+    private val _time: ITime,
     private val _configModelStore: ConfigModelStore,
     private val _influenceManager: IInfluenceManager,
     private val _subscriptionManager: ISubscriptionManager,
@@ -83,7 +82,7 @@ internal class NotificationLifecycleService(
     override fun removeExternalClickListener(listener: INotificationClickListener) = extOpenedCallback.unsubscribe(listener)
 
     init {
-        setupNotificationServiceExtension(applicationService.appContext)
+        setupNotificationServiceExtension(_applicationService.appContext)
     }
 
     override suspend fun canReceiveNotification(jsonPayload: JSONObject): Boolean {
