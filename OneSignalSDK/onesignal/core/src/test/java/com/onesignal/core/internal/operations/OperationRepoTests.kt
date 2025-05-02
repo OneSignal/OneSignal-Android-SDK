@@ -157,6 +157,12 @@ class OperationRepoTests : FunSpec({
         // When
         operationRepo.start()
         operationRepo.enqueue(MyOperation())
+        // Wait for the background coroutine to complete enqueue
+        withTimeout(1000) {
+            while (operationRepo.queue.size == 0) {
+                delay(10)
+            }
+        }
 
         // Then
         operationRepo.containsInstanceOf<MyOperation>() shouldBe true
@@ -609,6 +615,12 @@ class OperationRepoTests : FunSpec({
         // When
         mocks.operationRepo.start()
         mocks.operationRepo.enqueue(operation1)
+        // Wait for the background coroutine to complete enqueue
+        withTimeout(1000) {
+            while (mocks.operationRepo.queue.size == 0) {
+                delay(10)
+            }
+        }
         val job = launch { mocks.operationRepo.enqueueAndWait(operation2) }.also { yield() }
         mocks.operationRepo.enqueueAndWait(operation3)
         job.join()
@@ -639,6 +651,12 @@ class OperationRepoTests : FunSpec({
         mocks.operationRepo.start()
         mocks.operationRepo.enqueue(operation1)
         mocks.operationRepo.enqueue(operation2)
+        // Wait for the background coroutine to complete enqueue
+        withTimeout(1000) {
+            while (mocks.operationRepo.queue.size < 2) {
+                delay(10)
+            }
+        }
         mocks.operationRepo.enqueueAndWait(operation3)
 
         // Then
