@@ -10,7 +10,6 @@ import com.onesignal.notifications.INotificationClickListener
 import com.onesignal.notifications.INotificationLifecycleListener
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.notifications.IPermissionObserver
-import com.onesignal.notifications.internal.common.GenerateNotificationOpenIntentFromPushPayload
 import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleService
@@ -21,7 +20,6 @@ import com.onesignal.notifications.internal.summary.INotificationSummaryManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
-import org.json.JSONException
 
 interface INotificationActivityOpener {
     suspend fun openDestinationActivity(
@@ -42,7 +40,6 @@ internal class NotificationsManager(
     private val _notificationDataController: INotificationRepository,
     private val _summaryManager: INotificationSummaryManager,
 ) : INotificationsManager,
-    INotificationActivityOpener,
     INotificationPermissionChangedHandler,
     IApplicationLifecycleHandler {
     override var permission: Boolean = NotificationHelper.areNotificationsEnabled(_applicationService.appContext)
@@ -158,27 +155,5 @@ internal class NotificationsManager(
     override fun removeClickListener(listener: INotificationClickListener) {
         Logging.debug("NotificationsManager.removeClickListener(listener: $listener)")
         _notificationLifecycleService.removeExternalClickListener(listener)
-    }
-
-    override suspend fun openDestinationActivity(
-        activity: Activity,
-        pushPayloads: JSONArray,
-    ) {
-        try {
-            // Always use the top most notification if user tapped on the summary notification
-            val firstPayloadItem = pushPayloads.getJSONObject(0)
-            // val isHandled = _notificationLifecycleService.canOpenNotification(activity, firstPayloadItem)
-            val intentGenerator = GenerateNotificationOpenIntentFromPushPayload.create(activity, firstPayloadItem)
-
-            val intent = intentGenerator.getIntentVisible()
-            if (intent != null) {
-                Logging.info("SDK running startActivity with Intent: $intent")
-                activity.startActivity(intent)
-            } else {
-                Logging.info("SDK not showing an Activity automatically due to it's settings.")
-            }
-        } catch (e: JSONException) {
-            e.printStackTrace()
-        }
     }
 }

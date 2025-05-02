@@ -39,7 +39,6 @@ import com.onesignal.notifications.internal.lifecycle.impl.NotificationLifecycle
 import com.onesignal.notifications.internal.limiting.INotificationLimitManager
 import com.onesignal.notifications.internal.limiting.impl.NotificationLimitManager
 import com.onesignal.notifications.internal.listeners.DeviceRegistrationListener
-import com.onesignal.notifications.internal.listeners.NotificationListener
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessorHMS
 import com.onesignal.notifications.internal.open.impl.NotificationOpenedProcessor
@@ -94,6 +93,7 @@ internal class NotificationsModule : IModule {
 
         builder.register<NotificationLifecycleService>()
             .provides<INotificationLifecycleService>()
+            .provides<INotificationActivityOpener>()
 
         builder.register {
             if (FirebaseAnalyticsTracker.canTrack()) {
@@ -141,10 +141,8 @@ internal class NotificationsModule : IModule {
 
         // Startable services
         builder.register<DeviceRegistrationListener>().provides<IStartableService>()
-        builder.register<NotificationListener>().provides<IStartableService>()
 
         builder.register<NotificationsManager>()
             .provides<INotificationsManager>()
-            .provides<INotificationActivityOpener>()
     }
 }

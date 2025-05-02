@@ -18,7 +18,6 @@ import org.json.JSONObject
  * --------
  * [INotificationLifecycleCallback]: Can be used by other modules to use push
  * notifications to drive their own processing, and prevent it from being received and/or opened by the user.
- * [INotificationLifecycleEventHandler]: Used to hook into the received/opened events of a notification.
  *
  * External
  * --------
@@ -32,17 +31,11 @@ import org.json.JSONObject
  *  3. [INotificationServiceExtension.onNotificationReceived] To pre-process the notification, notification may be removed/changed. (Specified in AndroidManifest.xml).
  *  4. [INotificationLifecycleListener.onWillDisplay] To pre-process the notification while app in foreground, notification may be removed/changed.
  *  5. Process/Display the notification
- *  6. [INotificationLifecycleEventHandler.onNotificationReceived] To indicate the notification has been received and processed.
- *  7. User "opens" or "dismisses" the notification
- *  8. [INotificationLifecycleCallback.canOpenNotification] To determine if the notification can be opened by the notification module, or should be ignored.
- *  9. [INotificationLifecycleEventHandler.onNotificationOpened] To indicate the notification has been opened.
- * 10. [INotificationClickListener.onClick] To indicate the notification has been opened.
+ *  6. User "opens" or "dismisses" the notification
+ *  7. [INotificationLifecycleCallback.canOpenNotification] To determine if the notification can be opened by the notification module, or should be ignored.
+ *  8. [INotificationClickListener.onClick] To indicate the notification has been opened.
  */
 interface INotificationLifecycleService {
-    fun addInternalNotificationLifecycleEventHandler(handler: INotificationLifecycleEventHandler)
-
-    fun removeInternalNotificationLifecycleEventHandler(handler: INotificationLifecycleEventHandler)
-
     fun setInternalNotificationLifecycleCallback(callback: INotificationLifecycleCallback?)
 
     fun addExternalForegroundLifecycleListener(listener: INotificationLifecycleListener)
