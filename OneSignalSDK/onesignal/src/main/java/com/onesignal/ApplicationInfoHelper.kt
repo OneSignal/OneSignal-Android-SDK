@@ -35,8 +35,7 @@ class ApplicationInfoHelper {
                 // others, as we don't want to silently hide other issues.
                 if (e.cause is DeadSystemException) {
                     null
-                }
-                else {
+                } else {
                     throw e
                 }
             }
