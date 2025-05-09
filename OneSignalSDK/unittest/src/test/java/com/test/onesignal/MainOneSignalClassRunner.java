@@ -91,6 +91,8 @@ import com.onesignal.ShadowRoboNotificationManager;
 import com.onesignal.StaticResetHelper;
 import com.onesignal.SyncJobService;
 import com.onesignal.SyncService;
+import com.onesignal.debug.OneSignalLogEvent;
+import com.onesignal.debug.OneSignalLogListener;
 import com.onesignal.example.BlankActivity;
 import com.onesignal.example.MainActivity;
 import com.onesignal.influence.data.OSTrackerFactory;
@@ -133,6 +135,7 @@ import java.util.regex.Pattern;
 import static com.onesignal.OneSignalPackagePrivateHelper.FCMBroadcastReceiver_processBundle;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationBundleProcessor_Process;
 import static com.onesignal.OneSignalPackagePrivateHelper.NotificationOpenedProcessor_processFromContext;
+import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_Log;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_getSessionListener;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_handleNotificationOpen;
 import static com.onesignal.OneSignalPackagePrivateHelper.OneSignal_isInForeground;
@@ -4165,6 +4168,46 @@ public class MainOneSignalClassRunner {
       // Verify MainActivity has no orientation flag
       boolean mainHasFlag = OneSignalPackagePrivateHelper.hasConfigChangeFlag(mainActivity, ActivityInfo.CONFIG_ORIENTATION);
       assertFalse(mainHasFlag);
+   }
+
+   // ####### Unit test log listener ########
+   @Test
+   public void testAddLogListener() throws Exception {
+      final String[] lastMessage = new String[1];
+      OneSignal.addLogListener(event -> lastMessage[0] = event.getEntry());
+
+      OneSignal_Log(OneSignal.LOG_LEVEL.DEBUG, "test");
+      assertEquals(lastMessage[0], "test");
+   }
+
+   @Test
+   public void testRemoveLogListener() {
+      final String[] lastMessage = new String[1];
+      OneSignalLogListener listener = event -> lastMessage[0] = event.getEntry();
+      OneSignal.addLogListener(listener);
+
+      OneSignal.removeLogListener(listener);
+      OneSignal_Log(OneSignal.LOG_LEVEL.DEBUG, "test");
+      assertNull(lastMessage[0]);
+   }
+
+   @Test
+   public void testNestedAddLogListenerDoesNotThrow() {
+      OneSignalLogListener listener2 = event -> OneSignal.addLogListener(event2 -> {});
+
+      OneSignal.addLogListener(listener2);
+
+      OneSignal_Log(OneSignal.LOG_LEVEL.DEBUG, "test");
+   }
+
+   @Test
+   public void testNestedRemoveLogListenerDoesNotThrow() {
+      final OneSignalLogListener[] listener = new OneSignalLogListener[1];
+
+      listener[0] = event -> OneSignal.removeLogListener(listener[0]);
+      OneSignal.addLogListener(listener[0]);
+
+      OneSignal_Log(OneSignal.LOG_LEVEL.DEBUG, "test");
    }
 
    // ####### Unit test helper methods ########
