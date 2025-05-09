@@ -328,6 +328,10 @@ public class OneSignalPackagePrivateHelper {
       return OneSignal.isInForeground();
    }
 
+   public static void OneSignal_Log(@NonNull OneSignal.LOG_LEVEL level, @NonNull String message) {
+      OneSignal.Log(level,message);
+   }
+
    static public class OSSharedPreferencesWrapper extends com.onesignal.OSSharedPreferencesWrapper {}
 
    static public class RemoteOutcomeParams extends OneSignalRemoteParams.InfluenceParams {
