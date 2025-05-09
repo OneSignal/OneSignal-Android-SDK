@@ -73,6 +73,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ACTION_ID;
 import static com.onesignal.GenerateNotification.BUNDLE_KEY_ANDROID_NOTIFICATION_ID;
@@ -1348,7 +1349,7 @@ public class OneSignal {
       }
    }
 
-   private static final List<OneSignalLogListener> logListeners = new ArrayList<>();
+   private static final List<OneSignalLogListener> logListeners = new CopyOnWriteArrayList<>();
 
    public static void addLogListener(@NonNull OneSignalLogListener listener) {
       logListeners.add(listener);
