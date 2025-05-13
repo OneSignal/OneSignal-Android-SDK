@@ -1,9 +1,6 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
-    ext {
-        kotlinVersion = '1.7.10'
-    }
     repositories {
         google()
         mavenCentral()
@@ -12,8 +9,8 @@ buildscript {
         maven { url 'https://developer.huawei.com/repo/' }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.2.2'
-        classpath 'com.google.gms:google-services:4.3.10'
+        classpath 'com.android.tools.build:gradle:8.9.1'
+        classpath 'com.google.gms:google-services:4.4.2'
         classpath 'com.huawei.agconnect:agcp:1.6.2.300'
         
         // TODO: Do not place your application dependencies here; they belong
@@ -28,8 +25,4 @@ allprojects {
         // Huawei maven
         maven { url 'https://developer.huawei.com/repo/' }
     }
-}
-
-task clean(type: Delete) {
-    delete rootProject.buildDir
 }
