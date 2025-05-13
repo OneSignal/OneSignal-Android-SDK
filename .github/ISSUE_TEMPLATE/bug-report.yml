@@ -1,9 +1,7 @@
 name: 🪳 Bug report
 description: File a bug report
 title: "[Bug]: "
-labels: ["bug", "triage"]
-# assignees:
-#   - OneSignal/android-sdk
+labels: ["Bug"]
 body:
   - type: markdown
     attributes:
@@ -50,7 +48,7 @@ body:
     id: android-major-version
     attributes:
       label: Android version
-      description:  Which versions of Android are broken for you?
+      description: Which versions of Android are broken for you?
       multiple: true
       options:
         - "15"
