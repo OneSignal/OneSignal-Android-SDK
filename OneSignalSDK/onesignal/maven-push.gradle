@@ -32,7 +32,7 @@ class Global {
     static def POM_NAME = 'OneSignal'
     static def POM_ARTIFACT_ID = 'OneSignal'
     static def POM_PACKAGING = 'aar'
-    static def VERSION_NAME = '4.8.11'
+    static def VERSION_NAME = '4.8.12'
 
     static def GROUP_ID = 'com.onesignal'
     static def POM_DESCRIPTION = 'OneSignal Android SDK'
