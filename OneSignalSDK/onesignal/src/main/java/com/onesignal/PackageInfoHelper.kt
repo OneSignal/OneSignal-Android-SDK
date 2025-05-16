@@ -44,8 +44,7 @@ class PackageInfoHelper {
                 // others, as we don't want to silently hide other issues.
                 if (e.cause is DeadSystemException) {
                     GetPackageInfoResult(false, null)
-                }
-                else {
+                } else {
                     throw e
                 }
             }
