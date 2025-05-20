@@ -26,6 +26,59 @@ import io.mockk.spyk
 import org.json.JSONArray
 import org.json.JSONObject
 import org.robolectric.Robolectric
+import org.robolectric.android.controller.ActivityController
+
+private class Mocks {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val applicationService =
+        run {
+            val applicationService = ApplicationService()
+            applicationService.start(context)
+            applicationService
+        }
+
+    val mockSubscriptionManager: ISubscriptionManager =
+        run {
+            val mockSubManager = mockk<ISubscriptionManager>()
+            every { mockSubManager.subscriptions.push } returns
+                mockk<IPushSubscription>().apply { every { id } returns "UUID1" }
+            mockSubManager
+        }
+
+    val notificationLifecycleService =
+        spyk(
+            NotificationLifecycleService(
+                applicationService,
+                MockHelper.time(0),
+                MockHelper.configModelStore(),
+                mockk<IInfluenceManager>().apply {
+                    every { onDirectInfluenceFromNotification(any()) } returns Unit
+                },
+                mockSubscriptionManager,
+                mockk<IDeviceService>().apply {
+                    every { deviceType } returns IDeviceService.DeviceType.Android
+                },
+                mockk<INotificationBackendService>().apply {
+                    coEvery { updateNotificationAsOpened(any(), any(), any(), any()) } returns Unit
+                },
+                mockk<IReceiveReceiptWorkManager>(),
+                mockk<IAnalyticsTracker>().apply {
+                    every { trackOpenedEvent(any(), any()) } returns Unit
+                },
+            ),
+        )
+
+    val activity: Activity =
+        run {
+            val activityController : ActivityController<Activity>
+            Robolectric.buildActivity(Activity::class.java).use { controller ->
+                controller.setup() // Moves Activity to RESUMED state
+                activityController = controller
+            }
+            activityController.get()
+        }
+
+}
 
 @RobolectricTest
 class NotificationLifecycleServiceTests : FunSpec({
@@ -36,41 +89,9 @@ class NotificationLifecycleServiceTests : FunSpec({
 
     test("Fires openDestinationActivity") {
         // Given
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val applicationService = ApplicationService()
-        applicationService.start(context)
-
-        val mockSubscriptionManager = mockk<ISubscriptionManager>()
-        every { mockSubscriptionManager.subscriptions.push } returns
-            mockk<IPushSubscription>().apply { every { id } returns "UUID1" }
-
-        val notificationLifecycleService =
-            spyk(
-                NotificationLifecycleService(
-                    applicationService,
-                    MockHelper.time(0),
-                    MockHelper.configModelStore(),
-                    mockk<IInfluenceManager>().apply {
-                        every { onDirectInfluenceFromNotification(any()) } returns Unit
-                    },
-                    mockSubscriptionManager,
-                    mockk<IDeviceService>().apply {
-                        every { deviceType } returns IDeviceService.DeviceType.Android
-                    },
-                    mockk<INotificationBackendService>().apply {
-                        coEvery { updateNotificationAsOpened(any(), any(), any(), any()) } returns Unit
-                    },
-                    mockk<IReceiveReceiptWorkManager>(),
-                    mockk<IAnalyticsTracker>().apply {
-                        every { trackOpenedEvent(any(), any()) } returns Unit
-                    },
-                ),
-            )
-        val activity: Activity
-        Robolectric.buildActivity(Activity::class.java).use { controller ->
-            controller.setup() // Moves Activity to RESUMED state
-            activity = controller.get()
-        }
+        val mocks = Mocks()
+        val notificationLifecycleService = mocks.notificationLifecycleService
+        val activity = mocks.activity
 
         // When
         val payload =
