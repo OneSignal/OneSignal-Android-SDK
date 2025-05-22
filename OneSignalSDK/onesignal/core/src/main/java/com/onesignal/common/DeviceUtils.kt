@@ -32,7 +32,7 @@ object DeviceUtils {
             isOpen =
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     val imeInsets = view.rootWindowInsets
-                    imeInsets.isVisible(WindowInsetsCompat.Type.ime())
+                    imeInsets?.isVisible(WindowInsetsCompat.Type.ime()) ?: false
                 } else {
                     // Does not work for cases when keyboard is full screen for Android 9 and below
                     val heightDiff = metrics.heightPixels - visibleBounds.bottom
