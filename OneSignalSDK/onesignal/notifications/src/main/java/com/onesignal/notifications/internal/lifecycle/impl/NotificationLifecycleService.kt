@@ -7,6 +7,7 @@ import com.onesignal.common.JSONUtils
 import com.onesignal.common.events.CallbackProducer
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.exceptions.BackendException
+import com.onesignal.common.threading.OSPrimaryCoroutineScope
 import com.onesignal.core.internal.application.AppEntryAction
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -138,15 +139,17 @@ internal class NotificationLifecycleService(
 
             postedOpenedNotifIds.add(notificationId)
 
-            try {
-                _backend.updateNotificationAsOpened(
-                    appId,
-                    notificationId,
-                    subscriptionId,
-                    deviceType,
-                )
-            } catch (ex: BackendException) {
-                Logging.error("Notification opened confirmation failed with statusCode: ${ex.statusCode} response: ${ex.response}")
+            OSPrimaryCoroutineScope.execute {
+                try {
+                    _backend.updateNotificationAsOpened(
+                        appId,
+                        notificationId,
+                        subscriptionId,
+                        deviceType,
+                    )
+                } catch (ex: BackendException) {
+                    Logging.error("Notification opened confirmation failed with statusCode: ${ex.statusCode} response: ${ex.response}")
+                }
             }
         }
 
