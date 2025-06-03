@@ -3,14 +3,19 @@ package com.onesignal.debug.internal.logging
 import android.app.AlertDialog
 import com.onesignal.common.threading.suspendifyOnMain
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
+import com.onesignal.debug.OneSignalLogEvent
 import java.io.PrintWriter
 import java.io.StringWriter
+import java.util.concurrent.CopyOnWriteArraySet
 
 object Logging {
     private const val TAG = "OneSignal"
 
     var applicationService: IApplicationService? = null
+
+    private val logListeners = CopyOnWriteArraySet<ILogListener>()
 
     @JvmStatic
     var logLevel = LogLevel.WARN
@@ -19,9 +24,7 @@ object Logging {
     var visualLogLevel = LogLevel.NONE
 
     @JvmStatic
-    fun atLogLevel(level: LogLevel): Boolean {
-        return level.compareTo(visualLogLevel) < 1 || level.compareTo(logLevel) < 1
-    }
+    fun atLogLevel(level: LogLevel): Boolean = level.compareTo(visualLogLevel) < 1 || level.compareTo(logLevel) < 1
 
     @JvmStatic
     fun verbose(
@@ -112,7 +115,8 @@ object Logging {
                 suspendifyOnMain {
                     val currentActivity = applicationService?.current
                     if (currentActivity != null) {
-                        AlertDialog.Builder(currentActivity)
+                        AlertDialog
+                            .Builder(currentActivity)
                             .setTitle(level.toString())
                             .setMessage(finalFullMessage)
                             .show()
@@ -122,5 +126,31 @@ object Logging {
                 android.util.Log.e(TAG, "Error showing logging message.", t)
             }
         }
+
+        callLogListeners(level, message, throwable)
+    }
+
+    private fun callLogListeners(
+        level: LogLevel,
+        message: String,
+        throwable: Throwable?,
+    ) {
+        if (logListeners.isEmpty()) return
+
+        var logEntry = message
+        if (throwable != null) {
+            logEntry += "\n" + android.util.Log.getStackTraceString(throwable)
+        }
+        for (listener in logListeners) {
+            listener.onLogEvent(OneSignalLogEvent(level, logEntry))
+        }
+    }
+
+    fun addListener(listener: ILogListener) {
+        logListeners.add(listener)
+    }
+
+    fun removeListener(listener: ILogListener) {
+        logListeners.remove(listener)
     }
 }
