@@ -6,6 +6,7 @@ import com.onesignal.debug.OneSignalLogEvent
 import com.onesignal.debug.internal.logging.Logging
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldEndWith
 
 class TestLogLister : ILogListener {
     val calls = ArrayList<String>()
@@ -13,6 +14,11 @@ class TestLogLister : ILogListener {
     override fun onLogEvent(event: OneSignalLogEvent) {
         calls += event.entry
     }
+}
+
+infix fun <T : Collection<String>> T.shouldHaveEachItemEndWith(expected: Array<String>): T {
+    this.forEachIndexed { index, it -> it shouldEndWith expected[index] }
+    return this
 }
 
 class LoggingTests : FunSpec({
@@ -29,7 +35,7 @@ class LoggingTests : FunSpec({
         Logging.debug("test")
 
         // Then
-        listener.calls shouldBe arrayOf("test")
+        listener.calls shouldHaveEachItemEndWith arrayOf("test")
     }
 
     test("addListener twice") {
@@ -42,7 +48,7 @@ class LoggingTests : FunSpec({
         Logging.debug("test")
 
         // Then
-        listener.calls shouldBe arrayOf("test")
+        listener.calls shouldHaveEachItemEndWith arrayOf("test")
     }
 
     test("removeListener") {
@@ -83,7 +89,7 @@ class LoggingTests : FunSpec({
         Logging.debug("test3")
 
         // Then
-        nestedListener.calls shouldBe arrayOf("test2", "test3")
+        nestedListener.calls shouldHaveEachItemEndWith arrayOf("test2", "test3")
     }
 
     test("removeListener nested") {
@@ -102,6 +108,6 @@ class LoggingTests : FunSpec({
         Logging.debug("test2")
 
         // Then
-        calls shouldBe arrayOf("test")
+        calls shouldHaveEachItemEndWith arrayOf("test")
     }
 })

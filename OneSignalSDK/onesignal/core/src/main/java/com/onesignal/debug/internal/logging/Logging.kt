@@ -89,45 +89,59 @@ object Logging {
         throwable: Throwable?,
     ) {
         val fullMessage = "[${Thread.currentThread().name}] $message"
-        if (level.compareTo(logLevel) < 1) {
-            when (level) {
-                LogLevel.VERBOSE -> android.util.Log.v(TAG, fullMessage, throwable)
-                LogLevel.DEBUG -> android.util.Log.d(TAG, fullMessage, throwable)
-                LogLevel.INFO -> android.util.Log.i(TAG, fullMessage, throwable)
-                LogLevel.WARN -> android.util.Log.w(TAG, fullMessage, throwable)
-                LogLevel.ERROR, LogLevel.FATAL -> android.util.Log.e(TAG, message, throwable)
-                else -> {}
-            }
+
+        logToLogcat(level, fullMessage, throwable)
+        showVisualLogging(level, fullMessage, throwable)
+        callLogListeners(level, fullMessage, throwable)
+    }
+
+    private fun logToLogcat(
+        level: LogLevel,
+        message: String,
+        throwable: Throwable?,
+    ) {
+        if (level.compareTo(logLevel) >= 1) return
+        when (level) {
+            LogLevel.VERBOSE -> android.util.Log.v(TAG, message, throwable)
+            LogLevel.DEBUG -> android.util.Log.d(TAG, message, throwable)
+            LogLevel.INFO -> android.util.Log.i(TAG, message, throwable)
+            LogLevel.WARN -> android.util.Log.w(TAG, message, throwable)
+            LogLevel.ERROR, LogLevel.FATAL -> android.util.Log.e(TAG, message, throwable)
+            else -> {}
         }
+    }
 
-        if (level.compareTo(visualLogLevel) < 1 && applicationService?.current != null) {
-            try {
-                var fullMessage: String? = "$message\n".trimIndent()
-                if (throwable != null) {
-                    fullMessage += throwable.message
-                    val sw = StringWriter()
-                    val pw = PrintWriter(sw)
-                    throwable.printStackTrace(pw)
-                    fullMessage += sw.toString()
-                }
-                val finalFullMessage = fullMessage
+    private fun showVisualLogging(
+        level: LogLevel,
+        message: String,
+        throwable: Throwable?,
+    ) {
+        if (level.compareTo(visualLogLevel) >= 1) return
 
-                suspendifyOnMain {
-                    val currentActivity = applicationService?.current
-                    if (currentActivity != null) {
-                        AlertDialog
-                            .Builder(currentActivity)
-                            .setTitle(level.toString())
-                            .setMessage(finalFullMessage)
-                            .show()
-                    }
-                }
-            } catch (t: Throwable) {
-                android.util.Log.e(TAG, "Error showing logging message.", t)
+        try {
+            var fullMessage: String? = "$message\n".trimIndent()
+            if (throwable != null) {
+                fullMessage += throwable.message
+                val sw = StringWriter()
+                val pw = PrintWriter(sw)
+                throwable.printStackTrace(pw)
+                fullMessage += sw.toString()
             }
-        }
+            val finalFullMessage = fullMessage
 
-        callLogListeners(level, message, throwable)
+            suspendifyOnMain {
+                val currentActivity = applicationService?.current
+                if (currentActivity != null) {
+                    AlertDialog
+                        .Builder(currentActivity)
+                        .setTitle(level.toString())
+                        .setMessage(finalFullMessage)
+                        .show()
+                }
+            }
+        } catch (t: Throwable) {
+            android.util.Log.e(TAG, "Error showing logging message.", t)
+        }
     }
 
     private fun callLogListeners(
