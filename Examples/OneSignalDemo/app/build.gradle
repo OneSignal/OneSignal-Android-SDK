@@ -3,9 +3,15 @@ plugins {
 }
 
 android {
-    compileSdkVersion 34
+    namespace = "com.onesignal.sdktest"
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    compileSdkVersion 35
     defaultConfig {
-        minSdkVersion 21
+        minSdkVersion 24
         targetSdkVersion 34
         versionCode 1
         versionName "1.0"
@@ -50,15 +56,12 @@ android {
         }
     }
 
-    // Forced downgrade to Java 1.8 for compiling the application due to Android N error when building
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+    packagingOptions {
+        resources {
+            excludes += ['androidsupportmultidexversion.txt']
+        }
     }
 
-    packagingOptions {
-        exclude 'androidsupportmultidexversion.txt'
-    }
 
     task flavorSelection() {
         if (getGradle().getStartParameter().getTaskRequests().toString().contains("Gms")) {
@@ -71,14 +74,14 @@ android {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.1.0"
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'androidx.cardview:cardview:1.0.0'
-    implementation 'androidx.appcompat:appcompat:1.5.1'
-    implementation 'androidx.vectordrawable:vectordrawable:1.1.0'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.vectordrawable:vectordrawable:1.2.0'
 
-    implementation 'com.google.android.material:material:1.7.0'
-    implementation 'com.google.android.gms:play-services-location:21.0.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'com.google.android.gms:play-services-location:21.3.0'
 
     implementation 'com.github.bumptech.glide:glide:4.12.0'
 
