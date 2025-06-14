@@ -4,6 +4,7 @@ plugins {
     // however consumers look for an .aar file, which this causes it
     // to be created.
     id 'kotlin-android'
+    id 'com.vanniktech.maven.publish'
 }
 
 android {
