@@ -1,108 +1,44 @@
-/**
- * Modified MIT License
- *
- * Copyright 2021 OneSignal
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * 1. The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * 2. All copies of substantial portions of the Software may only be used in connection
- * with services provided by OneSignal.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
-
-apply plugin: 'maven-publish'
-apply plugin: 'signing'
-
-class Global {
-    static def POM_PACKAGING = 'aar'
-
-    static def POM_URL = 'https://github.com/onesignal/onesignal-android-sdk'
-    static def POM_SCM_URL = 'https://github.com/onesignal/onesignal-android-sdk'
-    static def POM_SCM_CONNECTION = 'scm:git:https://github.com/onesignal/onesignal-android-sdk'
-    static def POM_SCM_DEV_CONNECTION = 'scm:git:https://github.com/onesignal/onesignal-android-sdk'
-    static def POM_LICENCE_NAME = 'MIT License'
-    static def POM_LICENCE_URL = 'https://raw.githubusercontent.com/onesignal/onesignal-android-sdk/master/LICENSE'
-    static def POM_LICENCE_DIST = 'repo'
-    static def POM_DEVELOPER_ID = 'OneSignal'
-    static def POM_DEVELOPER_NAME = 'Josh Kasten'
-    static def SNAPSHOT_REPOSITORY_URL = 'https://oss.sonatype.org/content/repositories/snapshots'
-    static def RELEASE_REPOSITORY_URL = 'https://oss.sonatype.org/service/local/staging/deploy/maven2'
-}
-
-def getRepositoryUsername() {
-    return hasProperty('NEXUS_USERNAME') ? NEXUS_USERNAME : ""
-}
-
-def getRepositoryPassword() {
-    return hasProperty('NEXUS_PASSWORD') ? NEXUS_PASSWORD : ""
-}
-
-afterEvaluate {
-    publishing {
-        repositories {
-            maven {
-                url = Global.RELEASE_REPOSITORY_URL
-                credentials {
-                    username = getRepositoryUsername()
-                    password = getRepositoryPassword()
-                }
-            }
-        }
-
-        publications {
-            release(MavenPublication) {
-                afterEvaluate {
-                    from components.findByName('release')
-                }
-
-                pom {
-                    name = projectName
-                    description = projectDescription
-                    packaging = Global.POM_PACKAGING
-                    url = Global.POM_URL
-
-                    scm {
-                        url = Global.POM_SCM_URL
-                        connection = Global.POM_SCM_CONNECTION
-                        developerConnection = Global.POM_SCM_DEV_CONNECTION
-                    }
-
-                    licenses {
-                        license {
-                            name = Global.POM_LICENCE_NAME
-                            url = Global.POM_LICENCE_URL
-                            distribution = Global.POM_LICENCE_DIST
-                        }
-                    }
-
-                    developers {
-                        developer {
-                            id = Global.POM_DEVELOPER_ID
-                            name = Global.POM_DEVELOPER_NAME
-                        }
-                    }
-                }
-            }
-        }
+buildscript {
+    repositories sharedRepos
+    dependencies {
+        classpath sharedDeps
     }
+}
 
-    signing {
-        required { true }
-        sign publishing.publications.release
+import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
+import com.vanniktech.maven.publish.SonatypeHost
+
+mavenPublishing {
+    configure(new AndroidSingleVariantLibrary("release", true, true))
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+
+    signAllPublications()
+
+    coordinates(project.group, project.name, project.version)
+
+    pom {
+        name = "OneSignal Android SDK"
+        description = "OneSignal is a free email, sms, push notification, and in-app message service for mobile apps. This plugin makes it easy to integrate your native Android or Amazon app with OneSignal."
+        inceptionYear = "2015"
+        url = "https://github.com/onesignal/onesignal-android-sdk/"
+        licenses {
+            license {
+                name = "Modified MIT License"
+                url = "https://raw.githubusercontent.com/onesignal/onesignal-android-sdk/main/LICENSE"
+                distribution = "repo"
+            }
+        }
+        developers {
+            developer {
+                id = "OneSignal"
+                name = "OneSignal"
+                url = "https://github.com/OneSignal/"
+            }
+        }
+        scm {
+            url = "https://github.com/onesignal/onesignal-android-sdk"
+            connection = "scm:git:git://github.com/onesignal/onesignal-android-sdk.git"
+            developerConnection = "scm:git:ssh://git@github.com/onesignal/onesignal-android-sdk.git"
+        }
     }
 }
