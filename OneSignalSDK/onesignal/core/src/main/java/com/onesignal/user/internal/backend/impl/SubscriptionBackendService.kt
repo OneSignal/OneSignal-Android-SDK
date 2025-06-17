@@ -88,10 +88,12 @@ internal class SubscriptionBackendService(
 
     override suspend fun deleteSubscription(
         appId: String,
-        subscriptionId: String,
+        subscriptionType: SubscriptionType,
+        subscriptionToken: String,
         jwt: String?,
     ) {
-        val response = _httpClient.delete("apps/$appId/subscriptions/$subscriptionId", OptionalHeaders(jwt = jwt))
+        val type = subscriptionType.name.lowercase()
+        val response = _httpClient.delete("apps/$appId/by/type/$type/token/$subscriptionToken/subscriptions", OptionalHeaders(jwt = jwt))
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
