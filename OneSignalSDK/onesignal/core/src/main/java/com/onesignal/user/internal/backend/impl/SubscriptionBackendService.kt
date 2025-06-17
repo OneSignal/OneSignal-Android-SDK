@@ -10,6 +10,7 @@ import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.http.impl.OptionalHeaders
 import com.onesignal.user.internal.backend.ISubscriptionBackendService
 import com.onesignal.user.internal.backend.SubscriptionObject
+import com.onesignal.user.internal.subscriptions.SubscriptionType
 import org.json.JSONObject
 
 internal class SubscriptionBackendService(
@@ -95,6 +96,17 @@ internal class SubscriptionBackendService(
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
+    }
+
+    override suspend fun deleteSubscription(
+        appId: String,
+        subscriptionId: String,
+        subscriptionType: SubscriptionType,
+        jwt: String?
+    ) {
+        TODO("Not yet implemented")
+        // the endpoint is DELETE /by/type/:type/token/:token/subscriptions
+        
     }
 
     override suspend fun transferSubscription(
