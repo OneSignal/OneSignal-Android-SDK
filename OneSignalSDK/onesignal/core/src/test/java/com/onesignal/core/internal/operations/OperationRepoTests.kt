@@ -1,5 +1,6 @@
 package com.onesignal.core.internal.operations
 
+import com.onesignal.common.threading.OSPrimaryCoroutineScope
 import com.onesignal.common.threading.Waiter
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.operations.impl.OperationModelStore
@@ -100,6 +101,7 @@ class OperationRepoTests : FunSpec({
                     listOf(mocks.executor),
                     operationModelStore,
                     mocks.configModelStore,
+                    mocks.identityModelStore,
                     Time(),
                     getNewRecordState(mocks.configModelStore),
                 ),
@@ -165,6 +167,7 @@ class OperationRepoTests : FunSpec({
         // When
         operationRepo.start()
         operationRepo.enqueue(MyOperation())
+        OSPrimaryCoroutineScope.waitForIdle()
 
         // Then
         operationRepo.containsInstanceOf<MyOperation>() shouldBe true
@@ -269,6 +272,7 @@ class OperationRepoTests : FunSpec({
         // When
         opRepo.start()
         opRepo.enqueue(mockOperation())
+        OSPrimaryCoroutineScope.waitForIdle()
         val response1 =
             withTimeoutOrNull(999) {
                 opRepo.enqueueAndWait(mockOperation())
@@ -647,6 +651,7 @@ class OperationRepoTests : FunSpec({
         mocks.operationRepo.start()
         mocks.operationRepo.enqueue(operation1)
         mocks.operationRepo.enqueue(operation2)
+        OSPrimaryCoroutineScope.waitForIdle()
         mocks.operationRepo.enqueueAndWait(operation3)
 
         // Then
@@ -727,6 +732,7 @@ class OperationRepoTests : FunSpec({
         val mocks = Mocks()
         val op = mockOperation()
         mocks.operationRepo.enqueue(op)
+        OSPrimaryCoroutineScope.waitForIdle()
 
         // When
         mocks.operationRepo.loadSavedOperations()
@@ -767,6 +773,7 @@ class OperationRepoTests : FunSpec({
         // When
         opRepo.start()
         opRepo.enqueue(mockOperation())
+        OSPrimaryCoroutineScope.waitForIdle()
         val response1 =
             withTimeoutOrNull(999) {
                 opRepo.enqueueAndWait(mockOperation())
