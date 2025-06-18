@@ -2,6 +2,7 @@ package com.onesignal.user.internal.backend
 
 import com.onesignal.common.consistency.RywData
 import com.onesignal.common.exceptions.BackendException
+import com.onesignal.user.internal.subscriptions.SubscriptionType
 
 interface ISubscriptionBackendService {
     /**
@@ -42,11 +43,13 @@ interface ISubscriptionBackendService {
      * Delete an existing subscription.
      *
      * @param appId The ID of the OneSignal application this subscription exists under.
-     * @param subscriptionId The ID of the subscription to delete.
+     * @param subscriptionType The type of the subscription to delete.
+     * @param subscriptionToken The token/address of the subscription to delete.
      */
     suspend fun deleteSubscription(
         appId: String,
-        subscriptionId: String,
+        subscriptionType: SubscriptionType,
+        subscriptionToken: String,
         jwt: String? = null,
     )
 

@@ -32,7 +32,7 @@ internal class SubscriptionModelStoreListener(
     }
 
     override fun getRemoveOperation(model: SubscriptionModel): Operation {
-        return DeleteSubscriptionOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, model.id)
+        return DeleteSubscriptionOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, model.id, model.type, model.address)
     }
 
     override fun getUpdateOperation(
