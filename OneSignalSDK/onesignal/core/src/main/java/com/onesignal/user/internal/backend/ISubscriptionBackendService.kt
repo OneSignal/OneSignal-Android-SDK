@@ -52,21 +52,7 @@ interface ISubscriptionBackendService {
         subscriptionToken: String,
         jwt: String? = null,
     )
-
-    /**
-     * Delete an existing subscription by type
-     *
-     * @param appId The ID of the OneSignal application this subscription exists under.
-     * @param subscriptionId The ID of the subscription to delete.
-     * @param subscriptionType The type (Email or SMS) of the subscription to delete.
-     */
-    suspend fun deleteSubscription(
-        appId: String,
-        subscriptionId: String,
-        subscriptionType: SubscriptionType,
-        jwt: String? = null,
-    )
-
+    
     /**
      * Transfer an existing subscription to the user specified.
      *
