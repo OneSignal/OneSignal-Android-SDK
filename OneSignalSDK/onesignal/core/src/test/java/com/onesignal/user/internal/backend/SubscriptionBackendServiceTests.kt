@@ -121,7 +121,7 @@ class SubscriptionBackendServiceTests : FunSpec({
         // Then
         coVerify {
             spyHttpClient.delete(
-                "apps/appId/by/type/email/token/test@example.com/subscriptions",
+                "apps/appId/by/type/email/token/test%40example.com/subscriptions",
                 any(),
             )
         }
@@ -144,7 +144,7 @@ class SubscriptionBackendServiceTests : FunSpec({
         exception.response shouldBe "NOT FOUND"
         coVerify {
             spyHttpClient.delete(
-                "apps/appId/by/type/sms/token/+1234567890/subscriptions",
+                "apps/appId/by/type/sms/token/%2B1234567890/subscriptions",
                 any(),
             )
         }
