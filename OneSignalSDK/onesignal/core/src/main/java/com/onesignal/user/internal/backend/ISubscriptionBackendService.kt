@@ -52,7 +52,7 @@ interface ISubscriptionBackendService {
         subscriptionToken: String,
         jwt: String? = null,
     )
-    
+
     /**
      * Transfer an existing subscription to the user specified.
      *

@@ -3,7 +3,6 @@ package com.onesignal.user.internal.operations
 import com.onesignal.common.IDManager
 import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.Operation
-import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 
@@ -35,10 +34,10 @@ class DeleteSubscriptionOperation() : Operation(SubscriptionOperationExecutor.DE
      * and can be checked via [IDManager.isLocalId] to ensure correct processing.
      */
     var subscriptionId: String
-    get() = getStringProperty(::subscriptionId.name)
-    private set(value) {
-        setStringProperty(::subscriptionId.name, value)
-    }
+        get() = getStringProperty(::subscriptionId.name)
+        private set(value) {
+            setStringProperty(::subscriptionId.name, value)
+        }
 
     /**
      * The type of subscription.
@@ -57,18 +56,29 @@ class DeleteSubscriptionOperation() : Operation(SubscriptionOperationExecutor.DE
      * * [SubscriptionType.SMS]: A phone number in E.164 format.
      */
     var address: String
-    get() = getStringProperty(::address.name)
-    private set(value) {
-        setStringProperty(::address.name, value)
-    }
+        get() = getStringProperty(::address.name)
+        private set(value) {
+            setStringProperty(::address.name, value)
+        }
 
     override val createComparisonKey: String get() = "$appId.User.$onesignalId"
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.Subscription.$subscriptionId"
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.NONE
-    override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId) && !IDManager.isLocalId(subscriptionId)
+    override val canStartExecute: Boolean
+        get() =
+            !IDManager.isLocalId(onesignalId) &&
+                !IDManager.isLocalId(
+                    subscriptionId,
+                )
     override val applyToRecordId: String get() = subscriptionId
 
-    constructor(appId: String, onesignalId: String, subscriptionId: String, type: SubscriptionType, address: String) : this() {
+    constructor(
+        appId: String,
+        onesignalId: String,
+        subscriptionId: String,
+        type: SubscriptionType,
+        address: String,
+    ) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
         this.subscriptionId = subscriptionId
