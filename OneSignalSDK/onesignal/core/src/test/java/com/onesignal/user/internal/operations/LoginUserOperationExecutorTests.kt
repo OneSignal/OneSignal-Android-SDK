@@ -434,7 +434,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                     "name@company.com",
                     SubscriptionStatus.SUBSCRIBED,
                 ),
-                DeleteSubscriptionOperation(appId, localOneSignalId, "subscriptionId2"),
+                DeleteSubscriptionOperation(appId, localOneSignalId, "subscriptionId2", SubscriptionType.EMAIL, "name@company.com"),
             )
 
         // When

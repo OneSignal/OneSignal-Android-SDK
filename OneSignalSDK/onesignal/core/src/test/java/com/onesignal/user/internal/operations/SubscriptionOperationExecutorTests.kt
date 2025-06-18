@@ -301,7 +301,7 @@ class SubscriptionOperationExecutorTests :
                         "pushToken",
                         SubscriptionStatus.SUBSCRIBED,
                     ),
-                    DeleteSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId),
+                    DeleteSubscriptionOperation(appId, remoteOneSignalId, localSubscriptionId, SubscriptionType.PUSH, "pushToken"),
                 )
 
             // When
@@ -606,7 +606,7 @@ class SubscriptionOperationExecutorTests :
         test("delete subscription successfully deletes subscription") {
             // Given
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-            coEvery { mockSubscriptionBackendService.deleteSubscription(any(), any()) } just runs
+            coEvery { mockSubscriptionBackendService.deleteSubscription(any<String>(), any<SubscriptionType>(), any<String>(), any()) } just runs
 
             val mockIdentityModelStore = MockHelper.identityModelStore()
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
@@ -629,7 +629,7 @@ class SubscriptionOperationExecutorTests :
 
             val operations =
                 listOf<Operation>(
-                    DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
+                    DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, "pushToken"),
                 )
 
             // When
@@ -637,14 +637,14 @@ class SubscriptionOperationExecutorTests :
 
             // Then
             response.result shouldBe ExecutionResult.SUCCESS
-            coVerify(exactly = 1) { mockSubscriptionBackendService.deleteSubscription(appId, remoteSubscriptionId) }
+            coVerify(exactly = 1) { mockSubscriptionBackendService.deleteSubscription(appId, SubscriptionType.PUSH, "pushToken", any()) }
             verify(exactly = 1) { mockSubscriptionsModelStore.remove(remoteSubscriptionId, any()) }
         }
 
         test("delete subscription fails with retry when there is a network condition") {
             // Given
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-            coEvery { mockSubscriptionBackendService.deleteSubscription(any(), any()) } throws BackendException(408)
+            coEvery { mockSubscriptionBackendService.deleteSubscription(any<String>(), any<SubscriptionType>(), any<String>(), any()) } throws BackendException(408)
 
             val mockIdentityModelStore = MockHelper.identityModelStore()
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
@@ -665,7 +665,7 @@ class SubscriptionOperationExecutorTests :
 
             val operations =
                 listOf<Operation>(
-                    DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
+                    DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, "pushToken"),
                 )
 
             // When
@@ -673,7 +673,7 @@ class SubscriptionOperationExecutorTests :
 
             // Then
             response.result shouldBe ExecutionResult.FAIL_RETRY
-            coVerify(exactly = 1) { mockSubscriptionBackendService.deleteSubscription(appId, remoteSubscriptionId) }
+            coVerify(exactly = 1) { mockSubscriptionBackendService.deleteSubscription(appId, SubscriptionType.PUSH, "pushToken", any()) }
         }
 
         // If we get a 404 then the subscription has already been deleted,
@@ -681,7 +681,7 @@ class SubscriptionOperationExecutorTests :
         test("delete subscription is successful if there is a 404") {
             // Given
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-            coEvery { mockSubscriptionBackendService.deleteSubscription(any(), any()) } throws BackendException(404)
+            coEvery { mockSubscriptionBackendService.deleteSubscription(any<String>(), any<SubscriptionType>(), any<String>(), any()) } throws BackendException(404)
 
             val mockIdentityModelStore = MockHelper.identityModelStore()
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
@@ -702,7 +702,7 @@ class SubscriptionOperationExecutorTests :
 
             val operations =
                 listOf<Operation>(
-                    DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
+                    DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, "pushToken"),
                 )
 
             // When
@@ -710,13 +710,13 @@ class SubscriptionOperationExecutorTests :
 
             // Then
             response.result shouldBe ExecutionResult.SUCCESS
-            coVerify(exactly = 1) { mockSubscriptionBackendService.deleteSubscription(appId, remoteSubscriptionId) }
+            coVerify(exactly = 1) { mockSubscriptionBackendService.deleteSubscription(appId, SubscriptionType.PUSH, "pushToken", any()) }
         }
 
         test("delete subscription fails with retry when the backend returns MISSING, when isInMissingRetryWindow") {
             // Given
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
-            coEvery { mockSubscriptionBackendService.deleteSubscription(any(), any()) } throws BackendException(404)
+            coEvery { mockSubscriptionBackendService.deleteSubscription(any<String>(), any<SubscriptionType>(), any<String>(), any()) } throws BackendException(404)
 
             val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
             val mockBuildUserService = mockk<IRebuildUserService>()
@@ -738,7 +738,7 @@ class SubscriptionOperationExecutorTests :
 
             val operations =
                 listOf<Operation>(
-                    DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId),
+                    DeleteSubscriptionOperation(appId, remoteOneSignalId, remoteSubscriptionId, SubscriptionType.PUSH, "pushToken"),
                 )
 
             // When
