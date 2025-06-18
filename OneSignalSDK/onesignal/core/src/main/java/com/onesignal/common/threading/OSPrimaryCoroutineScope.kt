@@ -16,4 +16,6 @@ object OSPrimaryCoroutineScope {
             block()
         }
     }
+
+    suspend fun waitForIdle() = mainScope.launch { }.join()
 }
