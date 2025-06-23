@@ -284,7 +284,7 @@ internal class SubscriptionOperationExecutor(
 
     private suspend fun deleteSubscription(op: DeleteSubscriptionOperation): ExecutionResponse {
         try {
-            _subscriptionBackend.deleteSubscription(op.appId, op.subscriptionId, _identityModelStore.model.jwtToken)
+            _subscriptionBackend.deleteSubscription(op.appId, op.type, op.address, _identityModelStore.model.jwtToken)
 
             // remove the subscription model as a HYDRATE in case for some reason it still exists.
             _subscriptionModelStore.remove(op.subscriptionId, ModelChangeTags.HYDRATE)

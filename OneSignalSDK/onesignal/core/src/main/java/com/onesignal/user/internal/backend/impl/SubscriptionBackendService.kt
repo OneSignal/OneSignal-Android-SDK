@@ -10,7 +10,9 @@ import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.http.impl.OptionalHeaders
 import com.onesignal.user.internal.backend.ISubscriptionBackendService
 import com.onesignal.user.internal.backend.SubscriptionObject
+import com.onesignal.user.internal.subscriptions.SubscriptionType
 import org.json.JSONObject
+import java.net.URLEncoder
 
 internal class SubscriptionBackendService(
     private val _httpClient: IHttpClient,
@@ -87,10 +89,13 @@ internal class SubscriptionBackendService(
 
     override suspend fun deleteSubscription(
         appId: String,
-        subscriptionId: String,
+        subscriptionType: SubscriptionType,
+        subscriptionToken: String,
         jwt: String?,
     ) {
-        val response = _httpClient.delete("apps/$appId/subscriptions/$subscriptionId", OptionalHeaders(jwt = jwt))
+        val type = subscriptionType.name.lowercase()
+        val encodedToken = URLEncoder.encode(subscriptionToken, "UTF-8")
+        val response = _httpClient.delete("apps/$appId/by/type/$type/token/$encodedToken/subscriptions", OptionalHeaders(jwt = jwt))
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
