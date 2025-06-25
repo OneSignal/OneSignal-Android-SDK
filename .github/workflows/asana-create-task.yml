@@ -18,6 +18,7 @@ jobs:
             ISSUE_HTML_URL: ${{ github.event.issue.html_url }}
             ISSUE_ID: ${{ github.event.issue.id }}
             ISSUE_NUMBER: ${{ github.event.issue.number }}
+            REPO_FULL_NAME: ${{ github.event.repository.full_name }}
             SDK_PLATFORM_GROUP: "1208961704779581"
             SDK_PLATFORM_GROUP_MOBILE: "1208961704779582"
             SDK_PLATFORM: "1208961704779592"
@@ -37,6 +38,7 @@ jobs:
               --arg url "$ISSUE_HTML_URL" \
               --arg id "$ISSUE_ID" \
               --arg number "$ISSUE_NUMBER" \
+              --arg repo_full_name "$REPO_FULL_NAME" \
               --arg sdk_platform_group "$SDK_PLATFORM_GROUP" \
               --arg sdk_platform_group_mobile "$SDK_PLATFORM_GROUP_MOBILE" \
               --arg sdk_platform "$SDK_PLATFORM" \
@@ -61,7 +63,7 @@ jobs:
                   "name": $title,
                   "workspace": $workspace_id,
                   "projects": [$project_id_github_and_important_sdk_issues, $project_id_sdk_backlog],
-                  "notes": "Issue ID: \($id)\nIssue number: \($number)\nCreated via GitHub Actions\n----\n\n\($body)"
+                  "notes": "Issue ID: \($repo_full_name)#\($id)\nIssue number: \($number)\nCreated via GitHub Actions\n----\n\n\($body)"
                 }
               }')
 
