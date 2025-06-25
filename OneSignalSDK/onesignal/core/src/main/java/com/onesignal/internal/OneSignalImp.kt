@@ -467,8 +467,9 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         // to the queue.
         val currentPushSubscription = subscriptionModelStore!!.list().firstOrNull { it.id == configModel!!.pushSubscriptionId }
         val newPushSubscription = SubscriptionModel()
+        val localSubscriptionID = IDManager.createLocalId()
+        val currentSubscriptionID = currentPushSubscription?.id ?: localSubscriptionID
 
-        newPushSubscription.id = currentPushSubscription?.id ?: IDManager.createLocalId()
         newPushSubscription.type = SubscriptionType.PUSH
         newPushSubscription.optedIn = currentPushSubscription?.optedIn ?: true
         newPushSubscription.address = currentPushSubscription?.address ?: ""
@@ -477,10 +478,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         newPushSubscription.deviceOS = Build.VERSION.RELEASE
         newPushSubscription.carrier = DeviceUtils.getCarrierName(services.getService<IApplicationService>().appContext) ?: ""
         newPushSubscription.appVersion = AndroidUtils.getAppVersion(services.getService<IApplicationService>().appContext) ?: ""
-
-        // ensure we always know this devices push subscription ID
-        configModel!!.pushSubscriptionId = newPushSubscription.id
-
         subscriptions.add(newPushSubscription)
 
         // The next 4 lines makes this user the effective user locally.  We clear the subscriptions
@@ -492,13 +489,22 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         propertiesModelStore!!.replace(propertiesModel)
 
         if (suppressBackendOperation) {
+            newPushSubscription.id = currentSubscriptionID
             subscriptionModelStore!!.replaceAll(subscriptions, ModelChangeTags.NO_PROPOGATE)
-        } else if (currentPushSubscription != null) {
+        } else if (currentPushSubscription != null && identityModel.externalId != null) {
+            // case for switching to another user
+            newPushSubscription.id = currentSubscriptionID
             operationRepo!!.enqueue(TransferSubscriptionOperation(configModel!!.appId, currentPushSubscription.id, sdkId))
             subscriptionModelStore!!.replaceAll(subscriptions, ModelChangeTags.NO_PROPOGATE)
         } else {
+            // case for first time login or logout
+            // always use a local subscription ID to indicate a newly created subscription
+            newPushSubscription.id = localSubscriptionID
             subscriptionModelStore!!.replaceAll(subscriptions)
         }
+
+        // ensure we always know this devices push subscription ID
+        configModel!!.pushSubscriptionId = newPushSubscription.id
     }
 
     override fun <T> hasService(c: Class<T>): Boolean = services.hasService(c)
