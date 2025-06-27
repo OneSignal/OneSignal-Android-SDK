@@ -27,6 +27,9 @@ public class MainActivity extends AppCompatActivity {
 //        OneSignal.addEmailSubscriptionObserver(viewModel);
         viewModel.onActivityCreated(this)
                 .setupInterfaceElements();
+// TODO: Login and add trigger here
+//        OneSignal.login("nan");
+//        OneSignal.getInAppMessages().addTrigger("fruit", "apple");
     }
 
     @Override
