@@ -1,5 +1,10 @@
 plugins {
     id 'com.android.library'
+    // There isn't Kotlin or Java code in this top-level project,
+    // however consumers look for an .aar file, which this causes it
+    // to be created.
+    id 'kotlin-android'
+    id 'com.vanniktech.maven.publish'
 }
 
 android {
@@ -25,6 +30,8 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
     namespace 'com.onesignal'
+
+    kotlinOptions.freeCompilerArgs += ['-module-name', namespace]
 }
 
 ext {

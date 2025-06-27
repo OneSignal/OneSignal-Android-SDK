@@ -8,9 +8,9 @@ buildscript {
                 targetSdkVersion: 34,
                 minSdkVersion: 21
         ]
-        androidGradlePluginVersion = '7.2.0'
+        androidGradlePluginVersion = '8.8.2'
         googleServicesGradlePluginVersion = '4.3.10'
-        huaweiAgconnectVersion = '1.6.2.300'
+        huaweiAgconnectVersion = '1.9.1.304'
         huaweiHMSPushVersion = '6.3.0.304'
         huaweiHMSLocationVersion = '4.0.0.300'
         kotlinVersion = '1.7.10'
@@ -19,21 +19,29 @@ buildscript {
         ktlintVersion = '1.0.1'
         // DO NOT upgrade for tests, using an old version so it matches AOSP
         tdunningJsonForTest = '1.0'
+
+        sharedRepos = {
+            google()
+            mavenCentral()
+            gradlePluginPortal()
+            // Huawei maven
+            maven { url 'https://developer.huawei.com/repo/' }
+        }
+        sharedDeps = [
+            "com.android.tools.build:gradle:$androidGradlePluginVersion",
+            "com.google.gms:google-services:$googleServicesGradlePluginVersion",
+            "com.huawei.agconnect:agcp:$huaweiAgconnectVersion",
+            "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion",
+            "org.jlleitschuh.gradle:ktlint-gradle:$ktlintPluginVersion",
+            "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin:0.32.0"
+        ]
     }
 
-    repositories {
-        google()
-        mavenCentral()
-        gradlePluginPortal()
-        // Huawei maven
-        maven { url 'https://developer.huawei.com/repo/' }
-    }
-    dependencies {
-        classpath "com.android.tools.build:gradle:$androidGradlePluginVersion"
-        classpath "com.google.gms:google-services:$googleServicesGradlePluginVersion"
-        classpath "com.huawei.agconnect:agcp:$huaweiAgconnectVersion"
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
-        classpath "org.jlleitschuh.gradle:ktlint-gradle:$ktlintPluginVersion"
+    buildscript {
+        repositories sharedRepos
+        dependencies {
+            classpath sharedDeps
+        }
     }
 }
 
