@@ -29,6 +29,9 @@ import com.onesignal.sdktest.util.SharedPreferenceUtil;
 import com.onesignal.user.state.IUserStateObserver;
 import com.onesignal.user.state.UserChangedState;
 import com.onesignal.user.state.UserState;
+import com.onesignal.user.subscriptions.IPushSubscriptionObserver;
+import com.onesignal.user.subscriptions.PushSubscriptionChangedState;
+
 import org.json.JSONObject;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -60,88 +63,14 @@ public class MainApplication extends MultiDexApplication {
 
         OneSignal.initWithContext(this, appId);
 
-        // Ensure calling requestPermission in a thread right after initWithContext does not crash
-        // This will reproduce result similar to Kotlin CouroutineScope.launch{}, which may potentially crash the app
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        @SuppressLint({"NewApi", "LocalSuppress"}) CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-            OneSignal.getNotifications().requestPermission(true, Continue.none());
-        }, executor);
-        future.join(); // Waits for the task to complete
-        executor.shutdown();
 
-        OneSignal.getInAppMessages().addLifecycleListener(new IInAppMessageLifecycleListener() {
+        Log.d(Tag.LOG_TAG, "❌ dev app adding push sub observer ");
+        OneSignal.getUser().getPushSubscription().addObserver(new IPushSubscriptionObserver() {
             @Override
-            public void onWillDisplay(@NonNull IInAppMessageWillDisplayEvent event) {
-                Log.v(Tag.LOG_TAG, "onWillDisplayInAppMessage");
-            }
-
-            @Override
-            public void onDidDisplay(@NonNull IInAppMessageDidDisplayEvent event) {
-                Log.v(Tag.LOG_TAG, "onDidDisplayInAppMessage");
-            }
-
-            @Override
-            public void onWillDismiss(@NonNull IInAppMessageWillDismissEvent event) {
-                Log.v(Tag.LOG_TAG, "onWillDismissInAppMessage");
-            }
-
-            @Override
-            public void onDidDismiss(@NonNull IInAppMessageDidDismissEvent event) {
-                Log.v(Tag.LOG_TAG, "onDidDismissInAppMessage");
+            public void onPushSubscriptionChange(@NonNull PushSubscriptionChangedState state) {
+                Log.d(Tag.LOG_TAG, "❌ onPushSubscriptionChange " + state);
             }
         });
-
-        OneSignal.getInAppMessages().addClickListener(new IInAppMessageClickListener() {
-            @Override
-            public void onClick(@Nullable IInAppMessageClickEvent event) {
-                Log.v(Tag.LOG_TAG, "INotificationClickListener.inAppMessageClicked");
-            }
-        });
-
-        OneSignal.getNotifications().addClickListener(event ->
-        {
-            Log.v(Tag.LOG_TAG, "INotificationClickListener.onClick fired" +
-                    " with event: " + event);
-        });
-
-        OneSignal.getNotifications().addForegroundLifecycleListener(new INotificationLifecycleListener() {
-            @Override
-            public void onWillDisplay(@NonNull INotificationWillDisplayEvent event) {
-                Log.v(Tag.LOG_TAG, "INotificationLifecycleListener.onWillDisplay fired" +
-                        " with event: " + event);
-
-                IDisplayableNotification notification = event.getNotification();
-                JSONObject data = notification.getAdditionalData();
-
-                //Prevent OneSignal from displaying the notification immediately on return. Spin
-                //up a new thread to mimic some asynchronous behavior, when the async behavior (which
-                //takes 2 seconds) completes, then the notification can be displayed.
-                event.preventDefault();
-                Runnable r = () -> {
-                    try {
-                        Thread.sleep(SLEEP_TIME_TO_MIMIC_ASYNC_OPERATION);
-                    } catch (InterruptedException ignored) {
-                    }
-
-                    notification.display();
-                };
-
-                Thread t = new Thread(r);
-                t.start();
-            }
-        });
-
-        OneSignal.getUser().addObserver(new IUserStateObserver() {
-            @Override
-            public void onUserStateChange(@NonNull UserChangedState state) {
-                UserState currentUserState = state.getCurrent();
-                Log.v(Tag.LOG_TAG, "onUserStateChange fired " + currentUserState.toJSONObject());
-            }
-        });
-
-        OneSignal.getInAppMessages().setPaused(true);
-        OneSignal.getLocation().setShared(false);
-
         Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT);
     }
 

@@ -285,7 +285,7 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
         triggerSet = new HashMap<>();
         triggerArrayList = new ArrayList<>();
 
-        OneSignal.getUser().getPushSubscription().addObserver(this);
+        // OneSignal.getUser().getPushSubscription().addObserver(this);
         return this;
     }
 
