@@ -38,9 +38,8 @@ public class MainApplication extends MultiDexApplication {
     private static final int SLEEP_TIME_TO_MIMIC_ASYNC_OPERATION = 2000;
 
     public MainApplication() {
-        // run strict mode default in debug mode to surface any potential issues easier
-        if(BuildConfig.DEBUG)
-            StrictMode.enableDefaults();
+        StrictMode.allowThreadDiskWrites();
+        StrictMode.allowThreadDiskReads();
     }
 
     @SuppressLint("NewApi")
