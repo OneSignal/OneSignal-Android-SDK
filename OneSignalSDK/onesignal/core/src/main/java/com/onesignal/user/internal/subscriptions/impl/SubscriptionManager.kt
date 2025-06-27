@@ -1,6 +1,7 @@
 package com.onesignal.user.internal.subscriptions.impl
 
 import android.os.Build
+import android.util.Log
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.IDManager
@@ -157,6 +158,8 @@ internal class SubscriptionManager(
         args: ModelChangedArgs,
         tag: String,
     ) {
+        Log.d("app", "❌ SubscriptionManager.onModelUpdated TOP")
+
         val subscription =
             subscriptions.collection.firstOrNull {
                 args.model == (it as Subscription).model
@@ -165,9 +168,12 @@ internal class SubscriptionManager(
         if (subscription == null) {
             // this shouldn't happen, but create a new subscription if a model was updated and we
             // don't yet have a representation for it in the subscription list.
+            Log.d("app", "❌ onModelUpdated called for PushSubscription - NULL!!!")
+
             createSubscriptionAndAddToSubscriptionList(args.model as SubscriptionModel)
         } else {
             if (subscription is PushSubscription) {
+                Log.d("app", "❌ onModelUpdated called for PushSubscription")
                 subscription.changeHandlersNotifier.fireOnMain {
                     it.onPushSubscriptionChange(
                         PushSubscriptionChangedState(

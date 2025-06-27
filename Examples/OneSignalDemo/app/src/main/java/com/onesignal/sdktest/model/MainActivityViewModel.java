@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.appcompat.widget.Toolbar;
 import android.content.Intent;
 import android.os.Build;
+import android.util.Log;
 import android.util.Pair;
 import android.view.View;
 import android.view.ViewTreeObserver;
@@ -802,9 +803,12 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
             IPushSubscription subscription = OneSignal.getUser().getPushSubscription();
             if(pushSubscriptionEnabledSwitch.isChecked()) {
                 subscription.optIn();
+                Log.d("app", "❌ optin called");
             }
             else {
                 subscription.optOut();
+                Log.d("app", "❌ optOut called");
+
             }
         });
     }
