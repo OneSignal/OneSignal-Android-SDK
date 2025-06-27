@@ -98,7 +98,6 @@ open class Model(
                     val method =
                         this.javaClass.methods.firstOrNull {
                             it.returnType != Void::class.java &&
-                                it.parameterCount == 0 &&
                                 it.name.equals(
                                     "get$property",
                                     true,
