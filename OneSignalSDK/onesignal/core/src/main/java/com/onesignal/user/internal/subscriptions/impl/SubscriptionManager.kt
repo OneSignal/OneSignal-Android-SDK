@@ -190,6 +190,14 @@ internal class SubscriptionManager(
         model: SubscriptionModel,
         tag: String,
     ) {
+        // Do not remove the push subscription: we need to keep the existing push subscription and its observers
+        // This push subscription will immediately be replaced by the new one in the [onModelAdded] event
+        // The [onModelRemoved] event for a push subscription model should always be followed by a [onModelAdded]
+        // event with a new push subscription model. On 404s, no push subscription models are removed.
+        if (model.type == SubscriptionType.PUSH) {
+            return
+        }
+
         val subscription = subscriptions.collection.firstOrNull { it.id == model.id }
 
         if (subscription != null) {
