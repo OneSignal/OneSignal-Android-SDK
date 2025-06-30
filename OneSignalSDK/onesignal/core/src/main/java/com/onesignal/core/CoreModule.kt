@@ -29,7 +29,6 @@ import com.onesignal.core.internal.permissions.IRequestPermissionService
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.impl.PreferencesService
-import com.onesignal.core.internal.purchases.impl.TrackAmazonPurchase
 import com.onesignal.core.internal.purchases.impl.TrackGooglePurchase
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
@@ -80,7 +79,6 @@ internal class CoreModule : IModule {
             .provides<IStartableService>()
 
         // Purchase Tracking
-        builder.register<TrackAmazonPurchase>().provides<IStartableService>()
         builder.register<TrackGooglePurchase>().provides<IStartableService>()
 
         // Register dummy services in the event they are not configured. These dummy services
