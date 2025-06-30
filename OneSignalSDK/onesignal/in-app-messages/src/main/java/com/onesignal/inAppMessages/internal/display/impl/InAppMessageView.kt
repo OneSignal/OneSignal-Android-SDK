@@ -14,7 +14,6 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.animation.Animation
 import android.webkit.WebView
-import android.widget.PopupWindow
 import android.widget.RelativeLayout
 import androidx.cardview.widget.CardView
 import androidx.core.widget.PopupWindowCompat
@@ -51,7 +50,7 @@ internal class InAppMessageView(
     private val disableDragDismiss: Boolean,
     private val hideGrayOverlay: Boolean,
 ) {
-    private var popupWindow: PopupWindow? = null
+    private var popupWindow: OSPopupWindow? = null
 
     internal interface InAppMessageViewListener {
         fun onMessageWasDisplayed()
@@ -85,6 +84,16 @@ internal class InAppMessageView(
 
     private var isDismissTimerSet: Boolean = false
     private var cancelDismissTimer: Boolean = false
+
+    private val popupWindowListener =
+        object : OSPopupWindow.PopupWindowListener {
+            override fun onDismiss(wasDismissedManually: Boolean?) {
+                if (wasDismissedManually != true) {
+                    Logging.debug("PopupWindowListener.onDismiss called by the system.")
+                    messageController?.onMessageWasDismissed()
+                }
+            }
+        }
 
     init {
         setMarginsFromContent(messageContent)
@@ -271,11 +280,12 @@ internal class InAppMessageView(
      */
     private fun createPopupWindow(parentRelativeLayout: RelativeLayout) {
         popupWindow =
-            PopupWindow(
+            OSPopupWindow(
                 parentRelativeLayout,
                 if (hasBackground) WindowManager.LayoutParams.MATCH_PARENT else pageWidth,
                 if (hasBackground) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT,
                 false,
+                popupWindowListener,
             )
         popupWindow?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         popupWindow?.isTouchable = true
@@ -486,17 +496,14 @@ internal class InAppMessageView(
      */
     fun removeAllViews() {
         Logging.debug("InAppMessageView.removeAllViews()")
+        popupWindow?.wasDismissedManually = true
         if (isDismissTimerSet) {
             // Dismissed before the dismiss delay
             cancelDismissTimer = true
         }
-        if (draggableRelativeLayout != null) {
-            draggableRelativeLayout!!.removeAllViews()
-        }
 
-        if (popupWindow != null) {
-            popupWindow!!.dismiss()
-        }
+        draggableRelativeLayout?.removeAllViews()
+        popupWindow?.dismiss()
 
         dereferenceViews()
     }
