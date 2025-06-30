@@ -11,9 +11,7 @@ import java.lang.reflect.WildcardType
 abstract class ServiceRegistration<T> {
     val services: MutableSet<Class<*>> = mutableSetOf()
 
-    inline fun <reified TService : Any> provides(): ServiceRegistration<T> {
-        return provides(TService::class.java)
-    }
+    inline fun <reified TService : Any> provides(): ServiceRegistration<T> = provides(TService::class.java)
 
     /**
      * Indicate this registration wants to provide the provided class as
@@ -53,14 +51,12 @@ class ServiceRegistrationReflection<T>(
 
     override fun resolve(provider: IServiceProvider): Any? {
         if (obj != null) {
-            Logging.debug("${ServiceProvider.indent}Already instantiated: $obj")
             return obj
         }
 
         // use reflection to try to instantiate the thing
         for (constructor in clazz.constructors) {
             if (doesHaveAllParameters(constructor, provider)) {
-                Logging.debug("${ServiceProvider.indent}Found constructor: $constructor")
                 var paramList: MutableList<Any?> = mutableListOf()
 
                 for (param in constructor.genericParameterTypes) {
@@ -106,13 +102,13 @@ class ServiceRegistrationReflection<T>(
                     val clazz = argType.upperBounds.first()
                     if (clazz is Class<*>) {
                         if (!provider.hasService(clazz)) {
-                            Logging.debug("Constructor $constructor could not find service: $clazz")
+                            Logging.error("Constructor $constructor could not find service: $clazz")
                             return false
                         }
                     }
                 } else if (argType is Class<*>) {
                     if (!provider.hasService(argType)) {
-                        Logging.debug("Constructor $constructor could not find service: $argType")
+                        Logging.error("Constructor $constructor could not find service: $argType")
                         return false
                     }
                 } else {
@@ -120,11 +116,11 @@ class ServiceRegistrationReflection<T>(
                 }
             } else if (param is Class<*>) {
                 if (!provider.hasService(param)) {
-                    Logging.debug("Constructor $constructor could not find service: $param")
+                    Logging.error("Constructor $constructor could not find service: $param")
                     return false
                 }
             } else {
-                Logging.debug("Constructor $constructor could not identify param type: $param")
+                Logging.error("Constructor $constructor could not identify param type: $param")
                 return false
             }
         }

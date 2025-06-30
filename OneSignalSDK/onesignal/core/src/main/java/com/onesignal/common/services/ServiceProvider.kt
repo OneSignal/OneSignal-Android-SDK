@@ -1,7 +1,5 @@
 package com.onesignal.common.services
 
-import com.onesignal.debug.internal.logging.Logging
-
 /**
  * A service provider gives access to the implementations of a service.
  */
@@ -66,7 +64,6 @@ class ServiceProvider(
     override fun <T> getService(c: Class<T>): T {
         val service = getServiceOrNull(c)
         if (service == null) {
-            Logging.warn("Service not found: $c")
             throw Exception("Service $c could not be instantiated")
         }
 
@@ -75,7 +72,6 @@ class ServiceProvider(
 
     override fun <T> getServiceOrNull(c: Class<T>): T? {
         synchronized(serviceMap) {
-            Logging.debug("${indent}Retrieving service $c")
             return serviceMap[c]?.last()?.resolve(this) as T?
         }
     }
