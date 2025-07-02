@@ -244,6 +244,10 @@ internal open class UserManager(
         changeHandlersNotifier.unsubscribe(observer)
     }
 
+    override fun trackEvent(name: String, properties: Map<String, Any>?) {
+        TODO("Not yet implemented")
+    }
+
     override fun onModelReplaced(
         model: IdentityModel,
         tag: String,
