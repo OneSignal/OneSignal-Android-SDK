@@ -173,5 +173,8 @@ interface IUserManager {
      * @param name for the custom event
      * @param properties an optional property dictionary, must be serializable into a JSON Object
      */
-    fun trackEvent(name: String, properties: Map<String, Any>? = null)
+    fun trackEvent(
+        name: String,
+        properties: Map<String, Any>? = null,
+    )
 }
