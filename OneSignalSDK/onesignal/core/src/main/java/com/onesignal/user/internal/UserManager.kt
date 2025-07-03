@@ -5,11 +5,14 @@ import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
+import com.onesignal.common.threading.OSPrimaryCoroutineScope
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.IUserManager
 import com.onesignal.user.internal.backend.IdentityConstants
+import com.onesignal.user.internal.customEvents.ICustomEventController
+import com.onesignal.user.internal.customEvents.impl.CustomEventProperty
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.properties.PropertiesModel
@@ -26,6 +29,7 @@ internal open class UserManager(
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
     private val _languageContext: ILanguageContext,
+    private val _customEventController: ICustomEventController,
 ) : IUserManager, ISingletonModelStoreChangeHandler<IdentityModel> {
     override val onesignalId: String
         get() = if (IDManager.isLocalId(_identityModel.onesignalId)) "" else _identityModel.onesignalId
@@ -244,8 +248,11 @@ internal open class UserManager(
         changeHandlersNotifier.unsubscribe(observer)
     }
 
-    override fun trackEvent(name: String, properties: Map<String, Any>?) {
-        TODO("Not yet implemented")
+    override fun trackEvent(name: String, properties: Map<String, CustomEventProperty>?) {
+        // send custom event to the backend in the background
+        OSPrimaryCoroutineScope.execute {
+            _customEventController.sendCustomEvent(name, properties)
+        }
     }
 
     override fun onModelReplaced(
