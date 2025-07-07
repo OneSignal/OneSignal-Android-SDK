@@ -196,15 +196,6 @@ internal class InAppMessagesManager(
             for (redisplayInAppMessage in redisplayedInAppMessages) {
                 redisplayInAppMessage.isDisplayedInSession = false
             }
-
-            // attempt to fetch messages from the backend (if we have the pre-requisite data already)
-            val onesignalId = _userManager.onesignalId
-            val updateConditionDeferred =
-                _consistencyManager.getRywDataFromAwaitableCondition(IamFetchReadyCondition(onesignalId))
-            val rywToken = updateConditionDeferred.await()
-            if (rywToken != null) {
-                fetchMessages(rywToken)
-            }
         }
     }
 
