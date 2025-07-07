@@ -84,4 +84,9 @@ class CreateUserResponse(
      * The subscriptions for the user.
      */
     val subscriptions: List<SubscriptionObject>,
+    /**
+     * The RYW data returned by the server.
+     * This is expected for the response to CreateUser only, not UpdateUser.
+     */
+    val rywData: RywData?,
 )
