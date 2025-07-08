@@ -49,6 +49,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                     SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "pushToken2"),
                     SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL, token = "name@company.com"),
                 ),
+                null,
             )
 
         // Given
@@ -142,6 +143,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
                 listOf(),
+                null,
             )
 
         // Given
