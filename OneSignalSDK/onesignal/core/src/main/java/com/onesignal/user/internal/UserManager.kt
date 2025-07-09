@@ -12,7 +12,6 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.IUserManager
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.customEvents.ICustomEventController
-import com.onesignal.user.internal.customEvents.impl.CustomEventProperty
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.properties.PropertiesModel
@@ -248,7 +247,10 @@ internal open class UserManager(
         changeHandlersNotifier.unsubscribe(observer)
     }
 
-    override fun trackEvent(name: String, properties: Map<String, CustomEventProperty>?) {
+    override fun trackEvent(
+        name: String,
+        properties: Map<String, Any>?,
+    ) {
         // send custom event to the backend in the background
         OSPrimaryCoroutineScope.execute {
             _customEventController.sendCustomEvent(name, properties)

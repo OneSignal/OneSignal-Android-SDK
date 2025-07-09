@@ -1,7 +1,6 @@
 package com.onesignal.user
 
 import com.onesignal.OneSignal
-import com.onesignal.user.internal.customEvents.impl.CustomEventProperty
 import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.subscriptions.IPushSubscription
 
@@ -174,5 +173,8 @@ interface IUserManager {
      * @param name for the custom event
      * @param properties an optional property dictionary, must be serializable into a JSON Object
      */
-    fun trackEvent(name: String, properties: Map<String, CustomEventProperty>? = null)
+    fun trackEvent(
+        name: String,
+        properties: Map<String, Any>? = null,
+    )
 }

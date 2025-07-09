@@ -16,6 +16,8 @@ import com.onesignal.user.internal.backend.impl.SubscriptionBackendService
 import com.onesignal.user.internal.backend.impl.UserBackendService
 import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.builduser.impl.RebuildUserService
+import com.onesignal.user.internal.customEvents.ICustomEventController
+import com.onesignal.user.internal.customEvents.impl.CustomEventController
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.migrations.RecoverConfigPushSubscription
 import com.onesignal.user.internal.migrations.RecoverFromDroppedLoginBug
@@ -71,6 +73,9 @@ internal class UserModule : IModule {
         builder.register<LoginUserFromSubscriptionOperationExecutor>().provides<IOperationExecutor>()
         builder.register<RefreshUserOperationExecutor>().provides<IOperationExecutor>()
         builder.register<UserManager>().provides<IUserManager>()
+        builder.register<CustomEventController>()
+            .provides<ICustomEventController>()
+            .provides<IStartableService>()
 
         builder.register<UserRefreshService>().provides<IStartableService>()
 

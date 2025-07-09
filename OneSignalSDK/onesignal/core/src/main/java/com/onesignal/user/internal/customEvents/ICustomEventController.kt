@@ -1,8 +1,5 @@
 package com.onesignal.user.internal.customEvents
 
-import com.onesignal.session.internal.outcomes.IOutcomeEvent
-import com.onesignal.user.internal.customEvents.impl.CustomEventProperty
-
 /**
  * The gateway to user custom event logic.
  */
@@ -12,6 +9,6 @@ interface ICustomEventController {
      */
     suspend fun sendCustomEvent(
         name: String,
-        properties: Map<String, CustomEventProperty>?,
+        properties: Map<String, Any>? = null,
     )
 }
