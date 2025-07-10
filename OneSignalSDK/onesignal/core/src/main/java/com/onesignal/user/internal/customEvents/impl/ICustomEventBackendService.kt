@@ -1,21 +1,15 @@
 package com.onesignal.user.internal.customEvents.impl
 
-import com.onesignal.common.exceptions.BackendException
-import com.onesignal.session.internal.outcomes.impl.OutcomeEvent
-import org.json.JSONObject
+import com.onesignal.core.internal.operations.ExecutionResponse
 
 /**
  * The backend service for custom events.
  */
 interface ICustomEventBackendService {
     /**
-     * Send an custom event to the backend.
-     *
-     * If there is a non-successful response from the backend, a [BackendException] will be thrown with response data.
+     * Send an custom event to the backend and return the response.
      *
      * @param customEvent The custom event to send up.
      */
-    suspend fun sendCustomEvent(
-        customEvent: CustomEvent,
-    )
+    suspend fun sendCustomEvent(customEvent: CustomEvent): ExecutionResponse
 }

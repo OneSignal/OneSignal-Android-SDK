@@ -50,6 +50,12 @@ class CustomEvent(
         this.onesignalId = onesignalId
     }
 
+    override fun toString(): String {
+        return "Custom Event{" +
+            toJSONObject().toString() +
+            '}'
+    }
+
     companion object {
         private const val NAME = "name"
         private const val ONESIGNAL_ID = "onesignal_id"

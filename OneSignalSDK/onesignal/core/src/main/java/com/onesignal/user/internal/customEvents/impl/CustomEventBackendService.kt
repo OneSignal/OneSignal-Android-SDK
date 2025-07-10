@@ -14,7 +14,6 @@ internal class CustomEventBackendService(private val _http: IHttpClient) :
 
         val response = _http.post("apps/${customEvent.appId}/integrations/sdk/custom_events", jsonObject)
 
-        // TODO: handling failed response
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         }
