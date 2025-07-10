@@ -10,6 +10,7 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.IUserManager
 import com.onesignal.user.internal.backend.IdentityConstants
+import com.onesignal.user.internal.customEvents.ICustomEventController
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.properties.PropertiesModel
@@ -26,6 +27,7 @@ internal open class UserManager(
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
     private val _languageContext: ILanguageContext,
+    private val _customEventController: ICustomEventController,
 ) : IUserManager, ISingletonModelStoreChangeHandler<IdentityModel> {
     override val onesignalId: String
         get() = if (IDManager.isLocalId(_identityModel.onesignalId)) "" else _identityModel.onesignalId
@@ -242,6 +244,14 @@ internal open class UserManager(
 
     override fun removeObserver(observer: IUserStateObserver) {
         changeHandlersNotifier.unsubscribe(observer)
+    }
+
+    override fun trackEvent(
+        name: String,
+        properties: Map<String, Any>?,
+    ) {
+        // send custom event to the backend in the background
+        _customEventController.enqueueCustomEvent(name, properties)
     }
 
     override fun onModelReplaced(
