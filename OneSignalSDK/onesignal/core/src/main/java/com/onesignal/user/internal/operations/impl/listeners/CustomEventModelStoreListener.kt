@@ -15,16 +15,17 @@ internal class CustomEventModelStoreListener(
     opRepo: IOperationRepo,
     private val _identityModelStore: IdentityModelStore,
     private val _configModelStore: ConfigModelStore,
-    private val _time: ITime
+    private val _time: ITime,
 ) : ModelStoreListener<CustomEvent>(store, opRepo) {
     override fun getAddOperation(model: CustomEvent): Operation {
-        val op = TrackEventOperation(
-            _configModelStore.model.appId,
-            _identityModelStore.model.onesignalId,
-            _identityModelStore.model.externalId,
-            _time.currentTimeMillis,
-            model,
-        )
+        val op =
+            TrackEventOperation(
+                _configModelStore.model.appId,
+                _identityModelStore.model.onesignalId,
+                _identityModelStore.model.externalId,
+                _time.currentTimeMillis,
+                model,
+            )
         return op
     }
 
@@ -32,7 +33,13 @@ internal class CustomEventModelStoreListener(
         return null
     }
 
-    override fun getUpdateOperation(model: CustomEvent, path: String, property: String, oldValue: Any?, newValue: Any?): Operation? {
+    override fun getUpdateOperation(
+        model: CustomEvent,
+        path: String,
+        property: String,
+        oldValue: Any?,
+        newValue: Any?,
+    ): Operation? {
         return null
     }
 }
