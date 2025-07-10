@@ -9,7 +9,7 @@ class CustomEvent(
     override val appId: String,
     override val name: String,
     override val properties: Map<String, Any>?,
-    override val onesignalId: String?,
+    override var onesignalId: String?,
     override val externalId: String?,
     override val timeStamp: String,
     override val deviceType: String,
@@ -44,6 +44,10 @@ class CustomEvent(
         json.put(PAYLOAD, payload)
 
         return JSONObject().put("events", JSONArray().put(json))
+    }
+
+    fun updateOnesignalId(onesignalId: String) {
+        this.onesignalId = onesignalId
     }
 
     companion object {

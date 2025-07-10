@@ -5,9 +5,11 @@ package com.onesignal.user.internal.customEvents
  */
 interface ICustomEventController {
     /**
-     * Send an custom event to the backend with optional properties.
+     * Enqueue an custom event with optional properties to send to the backend.
+     * The event will be sent immediately if a backend onesignal ID is present; otherwise, it will
+     *  be saved into a queue and will be sent once the onesignal ID is fetched
      */
-    suspend fun sendCustomEvent(
+    fun enqueueCustomEvent(
         name: String,
         properties: Map<String, Any>? = null,
     )

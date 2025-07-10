@@ -5,7 +5,6 @@ import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
-import com.onesignal.common.threading.OSPrimaryCoroutineScope
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -252,9 +251,7 @@ internal open class UserManager(
         properties: Map<String, Any>?,
     ) {
         // send custom event to the backend in the background
-        OSPrimaryCoroutineScope.execute {
-            _customEventController.sendCustomEvent(name, properties)
-        }
+        _customEventController.enqueueCustomEvent(name, properties)
     }
 
     override fun onModelReplaced(
