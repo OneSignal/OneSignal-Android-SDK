@@ -1,15 +1,17 @@
 package com.onesignal.user.internal.customEvents.impl
 
 import com.onesignal.user.internal.customEvents.ICustomEvent
+import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
 class CustomEvent(
+    override val appId: String,
     override val name: String,
     override val properties: Map<String, Any>?,
     override val onesignalId: String?,
     override val externalId: String?,
-    override val timeStamp: Long,
+    override val timeStamp: String,
     override val deviceType: String,
     override val sdk: String,
     override val appVersion: String,
@@ -19,13 +21,15 @@ class CustomEvent(
         val json = JSONObject()
 
         json.put(NAME, name)
-        json.put(ONESIGNAL_ID, onesignalId)
+        // onesignal ID is not required if there exists an external ID
         if (externalId != null) {
             json.put(EXTERNAL_ID, externalId)
+        } else {
+            json.put(ONESIGNAL_ID, onesignalId)
         }
-        json.put(TIMESTAMP, timeStamp)
+        json.put(TIMESTAMP, timeStamp.toString())
 
-        // include some local properties under the event
+        // include some device properties under the event
         val ossdk = JSONObject()
         ossdk.put(DEVICE_TYPE, deviceType)
         ossdk.put(SDK, sdk)
@@ -39,7 +43,7 @@ class CustomEvent(
         }
         json.put(PAYLOAD, payload)
 
-        return json
+        return JSONObject().put("events", JSONArray().put(json))
     }
 
     companion object {
