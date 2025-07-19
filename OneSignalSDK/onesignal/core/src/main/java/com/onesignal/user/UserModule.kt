@@ -16,15 +16,20 @@ import com.onesignal.user.internal.backend.impl.SubscriptionBackendService
 import com.onesignal.user.internal.backend.impl.UserBackendService
 import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.builduser.impl.RebuildUserService
+import com.onesignal.user.internal.customEvents.CustomEventModelStore
+import com.onesignal.user.internal.customEvents.impl.CustomEventBackendService
+import com.onesignal.user.internal.customEvents.impl.ICustomEventBackendService
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.migrations.RecoverConfigPushSubscription
 import com.onesignal.user.internal.migrations.RecoverFromDroppedLoginBug
+import com.onesignal.user.internal.operations.impl.executors.CustomEventOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.IdentityOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.LoginUserFromSubscriptionOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.LoginUserOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.RefreshUserOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.UpdateUserOperationExecutor
+import com.onesignal.user.internal.operations.impl.listeners.CustomEventModelStoreListener
 import com.onesignal.user.internal.operations.impl.listeners.IdentityModelStoreListener
 import com.onesignal.user.internal.operations.impl.listeners.PropertiesModelStoreListener
 import com.onesignal.user.internal.operations.impl.listeners.SubscriptionModelStoreListener
@@ -71,6 +76,10 @@ internal class UserModule : IModule {
         builder.register<LoginUserFromSubscriptionOperationExecutor>().provides<IOperationExecutor>()
         builder.register<RefreshUserOperationExecutor>().provides<IOperationExecutor>()
         builder.register<UserManager>().provides<IUserManager>()
+        builder.register<CustomEventModelStore>().provides<CustomEventModelStore>()
+        builder.register<CustomEventModelStoreListener>().provides<IBootstrapService>()
+        builder.register<CustomEventOperationExecutor>().provides<IOperationExecutor>()
+        builder.register<CustomEventBackendService>().provides<ICustomEventBackendService>()
 
         builder.register<UserRefreshService>().provides<IStartableService>()
 

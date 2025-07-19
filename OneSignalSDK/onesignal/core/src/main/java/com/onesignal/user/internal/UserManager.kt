@@ -10,8 +10,10 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.IUserManager
 import com.onesignal.user.internal.backend.IdentityConstants
+import com.onesignal.user.internal.customEvents.CustomEventModelStore
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.operations.CustomEvent
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
@@ -25,6 +27,7 @@ internal open class UserManager(
     private val _subscriptionManager: ISubscriptionManager,
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
+    private val _customEventModelStore: CustomEventModelStore,
     private val _languageContext: ILanguageContext,
 ) : IUserManager, ISingletonModelStoreChangeHandler<IdentityModel> {
     override val onesignalId: String
@@ -242,6 +245,18 @@ internal open class UserManager(
 
     override fun removeObserver(observer: IUserStateObserver) {
         changeHandlersNotifier.unsubscribe(observer)
+    }
+
+    override fun trackEvent(
+        name: String,
+        properties: Map<String, Any>?,
+    ) {
+        val customEvent =
+            CustomEvent(
+                name,
+                properties,
+            )
+        _customEventModelStore.add(customEvent)
     }
 
     override fun onModelReplaced(

@@ -1,7 +1,9 @@
 package com.onesignal.user.internal
 
 import com.onesignal.core.internal.language.ILanguageContext
+import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.mocks.MockHelper
+import com.onesignal.user.internal.customEvents.CustomEventModelStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionList
 import io.kotest.core.spec.style.FunSpec
@@ -26,7 +28,7 @@ class UserManagerTests : FunSpec({
         every { languageContext.language = capture(languageSlot) } answers { }
 
         val userManager =
-            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), languageContext)
+            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), MockHelper.customEventModelStore(), languageContext)
 
         // When
         userManager.setLanguage("new-language")
@@ -44,7 +46,7 @@ class UserManagerTests : FunSpec({
             }
 
         val userManager =
-            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.languageContext())
+            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.customEventModelStore(), MockHelper.languageContext())
 
         // When
         val externalId = userManager.externalId
@@ -63,7 +65,7 @@ class UserManagerTests : FunSpec({
             }
 
         val userManager =
-            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.languageContext())
+            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.customEventModelStore(), MockHelper.languageContext())
 
         // When
         val alias1 = userManager.aliases["my-alias-key1"]
@@ -102,7 +104,7 @@ class UserManagerTests : FunSpec({
             }
 
         val userManager =
-            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext())
+            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.customEventModelStore(), MockHelper.languageContext())
 
         // When
         val tag1 = propertiesModelStore.model.tags["my-tag-key1"]
@@ -141,7 +143,7 @@ class UserManagerTests : FunSpec({
                 it.tags["my-tag-key1"] = "my-tag-value1"
             }
 
-        val userManager = UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext())
+        val userManager = UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.customEventModelStore(), MockHelper.languageContext())
 
         // When
         val tagSnapshot1 = userManager.getTags()
@@ -173,6 +175,7 @@ class UserManagerTests : FunSpec({
                 mockSubscriptionManager,
                 MockHelper.identityModelStore(),
                 MockHelper.propertiesModelStore(),
+                MockHelper.customEventModelStore(),
                 MockHelper.languageContext(),
             )
 
@@ -190,5 +193,35 @@ class UserManagerTests : FunSpec({
         verify(exactly = 1) { mockSubscriptionManager.removeEmailSubscription("email@co.com") }
         verify(exactly = 1) { mockSubscriptionManager.addSmsSubscription("+15558675309") }
         verify(exactly = 1) { mockSubscriptionManager.removeSmsSubscription("+15558675309") }
+    }
+
+    test("custom events are backed by the custom event model store") {
+        // Given
+        val customEventModelStore = CustomEventModelStore(mockk<IPreferencesService>())
+
+        val userManager =
+            UserManager(mockk<ISubscriptionManager>(), MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), customEventModelStore, MockHelper.languageContext())
+
+        val eventName = "eventName"
+        val properties =
+            mapOf(
+                "key1" to "value1",
+                "key2" to 2,
+                "key3" to mapOf("key3-1" to "value-3-1"),
+                "key4" to 5.123,
+            )
+
+        // When
+        userManager.trackEvent(
+            eventName,
+            properties,
+        )
+
+        // Then
+        val customEventList = customEventModelStore.list()
+        customEventList.size shouldBe 1
+        val event = customEventList.first()
+        event.name shouldBe eventName
+        event.properties shouldBe properties
     }
 })
