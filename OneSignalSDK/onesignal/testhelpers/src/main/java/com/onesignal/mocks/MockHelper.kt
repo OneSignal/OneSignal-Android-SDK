@@ -8,8 +8,10 @@ import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.session.internal.session.SessionModel
 import com.onesignal.session.internal.session.SessionModelStore
+import com.onesignal.user.internal.customEvents.CustomEventModelStore
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.operations.CustomEvent
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import io.mockk.Runs
@@ -111,6 +113,18 @@ object MockHelper {
         every { mockSessionStore.model } returns sessionModel
 
         return mockSessionStore
+    }
+
+    fun customEventModelStore(action: ((CustomEvent) -> Unit)? = null): CustomEventModelStore {
+        val customEvent = CustomEvent()
+
+        if (action != null) {
+            action(customEvent)
+        }
+
+        val mockCustomEventModelStore = mockk<CustomEventModelStore>()
+
+        return mockCustomEventModelStore
     }
 
     fun languageContext(language: String = "en"): ILanguageContext {
