@@ -8,6 +8,7 @@ import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.session.internal.session.SessionModel
 import com.onesignal.session.internal.session.SessionModelStore
+import com.onesignal.user.internal.customEvents.ICustomEventController
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.properties.PropertiesModel
@@ -125,5 +126,11 @@ object MockHelper {
         val deviceService = mockk<IDeviceService>()
         every { deviceService.deviceType } returns IDeviceService.DeviceType.Android
         return deviceService
+    }
+
+    fun customEventController(): ICustomEventController {
+        val controller = mockk<ICustomEventController>()
+        every { controller.sendCustomEvent(any()) } just runs
+        return controller
     }
 }
