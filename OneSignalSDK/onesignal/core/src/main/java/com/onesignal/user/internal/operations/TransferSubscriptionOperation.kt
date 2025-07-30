@@ -6,8 +6,14 @@ import com.onesignal.core.internal.operations.Operation
 import com.onesignal.user.internal.operations.impl.executors.SubscriptionOperationExecutor
 
 /**
+ * Deprecated as of 5.1.36, the SDK will no longer enqueue this operation. Use Create Subscription instead.
+ * TransferSubscriptionOperation only contains the ID, but the SDK should include accurate subscription data
+ * in the case that the push subscription may potentially have been deleted on the server.
+ * This class remains due to potentially cached operations.
+ * -------
  * An [Operation] to transfer a subscription to a new owner on the OneSignal backend.
  */
+@Deprecated("The SDK will no longer enqueue this operation. Use Create Subscription instead.")
 class TransferSubscriptionOperation() : Operation(SubscriptionOperationExecutor.TRANSFER_SUBSCRIPTION) {
     /**
      * The application ID this subscription will be transferred under.
