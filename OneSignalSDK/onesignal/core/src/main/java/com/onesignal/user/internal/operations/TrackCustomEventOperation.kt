@@ -3,10 +3,9 @@ package com.onesignal.user.internal.operations
 import com.onesignal.common.IDManager
 import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.Operation
-import com.onesignal.user.internal.customEvents.impl.CustomEvent
 import com.onesignal.user.internal.operations.impl.executors.CustomEventOperationExecutor
 
-class TrackEventOperation() : Operation(CustomEventOperationExecutor.CUSTOM_EVENT) {
+class TrackCustomEventOperation() : Operation(CustomEventOperationExecutor.CUSTOM_EVENT) {
     /**
      * The OneSignal appId the custom event was created.
      */
@@ -45,28 +44,38 @@ class TrackEventOperation() : Operation(CustomEventOperationExecutor.CUSTOM_EVEN
         }
 
     /**
-     * The custom event instance containing the event name and properties.
+     * The name for the custom event.
      */
-    var event: CustomEvent
-        get() = getAnyProperty(::event.name) as CustomEvent
+    var eventName: String
+        get() = getStringProperty(::eventName.name)
         set(value) {
-            setAnyProperty(::event.name, value)
+            setAnyProperty(::eventName.name, value)
         }
 
-    override val createComparisonKey: String get() = "$appId.User.$onesignalId"
-    override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.CustomEvent.$name"
+    /**
+     * The nullable properties for the custom event.
+     */
+    var eventProperties: String?
+        get() = getOptStringProperty(::eventProperties.name)
+        set(value) {
+            setOptStringProperty(::eventProperties.name, value)
+        }
+
+    override val createComparisonKey: String get() = "$appId.User.$onesignalId.CustomEvent.$eventName"
+    override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.CustomEvent.$eventName"
 
     // TODO: no batching of custom events until finalized
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.NONE
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
     override val applyToRecordId: String get() = onesignalId
 
-    constructor(appId: String, onesignalId: String, externalId: String?, timeStamp: Long, event: CustomEvent) : this() {
+    constructor(appId: String, onesignalId: String, externalId: String?, timeStamp: Long, eventName: String, eventProperties: String?) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
         this.externalId = externalId
         this.timeStamp = timeStamp
-        this.event = event
+        this.eventName = eventName
+        this.eventProperties = eventProperties
     }
 
     override fun translateIds(map: Map<String, String>) {

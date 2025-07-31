@@ -8,6 +8,7 @@ import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.user.internal.customEvents.ICustomEventBackendService
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.TimeZone
 
 internal class CustomEventBackendService(
     private val _httpClient: IHttpClient,
@@ -17,17 +18,25 @@ internal class CustomEventBackendService(
         onesignalId: String,
         externalId: String?,
         timestamp: Long,
-        customEvent: CustomEvent,
+        eventName: String,
+        eventProperties: String?,
         metadata: CustomEventMetadata,
     ): ExecutionResponse {
         val body = JSONObject()
-        body.put("name", customEvent.name)
-        body.put("app_id", appId)
+        body.put("name", eventName)
         body.put("onesignal_id", onesignalId)
         externalId?.let { body.put("external_id", it) }
-        body.put("timestamp", DateUtils.iso8601Format().format(timestamp))
+        body.put(
+            "timestamp",
+            DateUtils.iso8601Format().apply {
+                timeZone = TimeZone.getTimeZone("UTC")
+            }.format(
+                timestamp,
+            ),
+        )
 
-        val payload = customEvent.propertiesJson
+        val payload = eventProperties?.let { JSONObject(it) } ?: JSONObject()
+
         payload.put("os_sdk", metadata.toJSONObject())
 
         body.put("payload", payload)

@@ -13,7 +13,7 @@ import com.onesignal.core.internal.operations.IOperationExecutor
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.user.internal.customEvents.ICustomEventBackendService
 import com.onesignal.user.internal.customEvents.impl.CustomEventMetadata
-import com.onesignal.user.internal.operations.TrackEventOperation
+import com.onesignal.user.internal.operations.TrackCustomEventOperation
 
 internal class CustomEventOperationExecutor(
     private val _customEventBackendService: ICustomEventBackendService,
@@ -40,13 +40,14 @@ internal class CustomEventOperationExecutor(
 
         try {
             when (operation) {
-                is TrackEventOperation -> {
+                is TrackCustomEventOperation -> {
                     _customEventBackendService.sendCustomEvent(
                         operation.appId,
                         operation.onesignalId,
                         operation.externalId,
                         operation.timeStamp,
-                        operation.event,
+                        operation.eventName,
+                        operation.eventProperties,
                         eventMetadataJson,
                     )
                 }

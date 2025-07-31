@@ -130,7 +130,7 @@ object MockHelper {
 
     fun customEventController(): ICustomEventController {
         val controller = mockk<ICustomEventController>()
-        every { controller.sendCustomEvent(any()) } just runs
+        every { controller.sendCustomEvent(any(), any()) } just runs
         return controller
     }
 }
