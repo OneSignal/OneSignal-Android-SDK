@@ -1,7 +1,6 @@
 package com.onesignal.user.internal.customEvents
 
 import com.onesignal.core.internal.operations.ExecutionResponse
-import com.onesignal.user.internal.customEvents.impl.CustomEvent
 import com.onesignal.user.internal.customEvents.impl.CustomEventMetadata
 
 /**
@@ -18,7 +17,8 @@ interface ICustomEventBackendService {
         onesignalId: String,
         externalId: String?,
         timestamp: Long,
-        customEvent: CustomEvent,
+        eventName: String,
+        eventProperties: String?,
         metadata: CustomEventMetadata,
     ): ExecutionResponse
 }

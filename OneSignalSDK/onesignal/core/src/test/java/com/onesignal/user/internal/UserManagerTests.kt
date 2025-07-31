@@ -226,8 +226,10 @@ class UserManagerTests : FunSpec({
         verify(exactly = 1) {
             customEventController.sendCustomEvent(
                 withArg {
-                    it.name shouldBeEqual(eventName)
-                    it.properties.toString() shouldBeEqual(properties.toString())
+                    it.shouldBeEqual(eventName)
+                },
+                withArg {
+                    it.shouldBeEqual(properties)
                 },
             )
         }

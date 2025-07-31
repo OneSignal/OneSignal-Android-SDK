@@ -12,7 +12,6 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.IUserManager
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.customEvents.ICustomEventController
-import com.onesignal.user.internal.customEvents.impl.CustomEvent
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.properties.PropertiesModel
@@ -257,7 +256,7 @@ internal open class UserManager(
             return
         }
 
-        _customEventController.sendCustomEvent(CustomEvent(name, properties))
+        _customEventController.sendCustomEvent(name, properties)
     }
 
     override fun onModelReplaced(

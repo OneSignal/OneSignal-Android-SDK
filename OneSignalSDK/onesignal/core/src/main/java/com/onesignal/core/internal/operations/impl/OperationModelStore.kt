@@ -14,7 +14,7 @@ import com.onesignal.user.internal.operations.RefreshUserOperation
 import com.onesignal.user.internal.operations.SetAliasOperation
 import com.onesignal.user.internal.operations.SetPropertyOperation
 import com.onesignal.user.internal.operations.SetTagOperation
-import com.onesignal.user.internal.operations.TrackEventOperation
+import com.onesignal.user.internal.operations.TrackCustomEventOperation
 import com.onesignal.user.internal.operations.TrackPurchaseOperation
 import com.onesignal.user.internal.operations.TrackSessionEndOperation
 import com.onesignal.user.internal.operations.TrackSessionStartOperation
@@ -62,7 +62,7 @@ internal class OperationModelStore(prefs: IPreferencesService) : ModelStore<Oper
                 UpdateUserOperationExecutor.TRACK_SESSION_START -> TrackSessionStartOperation()
                 UpdateUserOperationExecutor.TRACK_SESSION_END -> TrackSessionEndOperation()
                 UpdateUserOperationExecutor.TRACK_PURCHASE -> TrackPurchaseOperation()
-                CustomEventOperationExecutor.CUSTOM_EVENT -> TrackEventOperation()
+                CustomEventOperationExecutor.CUSTOM_EVENT -> TrackCustomEventOperation()
                 else -> throw Exception("Unrecognized operation: $operationName")
             }
 
