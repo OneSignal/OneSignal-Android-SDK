@@ -163,4 +163,23 @@ object JSONUtils {
             `object`
         }
     }
+
+    /**
+     * Check if an object is JSON-serializable.
+     * Recursively check each item if object is a map or a list.
+     */
+    fun isValidJsonObject(value: Any?): Boolean {
+        return when (value) {
+            null,
+            is Boolean,
+            is Number,
+            is String,
+            is JSONObject,
+            is JSONArray,
+            -> true
+            is Map<*, *> -> value.keys.all { it is String } && value.values.all { isValidJsonObject(it) }
+            is List<*> -> value.all { isValidJsonObject(it) }
+            else -> false
+        }
+    }
 }
