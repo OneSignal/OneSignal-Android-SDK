@@ -314,6 +314,22 @@ internal class WebViewManager(
 
         // Setup receiver for page events / data from JS
         webView!!.addJavascriptInterface(OSJavaScriptInterface(), JS_OBJ_NAME)
+
+        webView!!.webViewClient = object : android.webkit.WebViewClient() {
+            override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    val mockRenderingComplete = """{"type":"rendering_complete"}"""
+                    try {
+                        val jsInterface = OSJavaScriptInterface()
+                        jsInterface.postMessage(mockRenderingComplete)
+                    } catch (e: Exception) {
+                        Logging.error("Issue when forcing rendering_complete: ", e)
+                    }
+                }, 3000)
+
+                super.onPageFinished(view, url)
+            }
+        }
         if (isFullScreen) {
             webView!!.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
                 View.SYSTEM_UI_FLAG_IMMERSIVE or
