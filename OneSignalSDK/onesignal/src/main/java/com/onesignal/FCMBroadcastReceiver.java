@@ -63,6 +63,7 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
    public void onReceive(Context context, Intent intent) {
       // Do not process token update messages here.
       // They are also non-ordered broadcasts.
+      long time = System.currentTimeMillis();
       Bundle bundle = intent.getExtras();
       if (bundle == null || "google.com/iid".equals(bundle.getString("from")))
          return;
@@ -92,6 +93,7 @@ public class FCMBroadcastReceiver extends WakefulBroadcastReceiver {
          }
       };
       processOrderBroadcast(context, intent, bundle, bundleReceiverCallback);
+      OneSignal.onesignalLog(OneSignal.LOG_LEVEL.INFO,"FCMBroadcastReceiver onReceive cost time"+ (System.currentTimeMillis() - time));
    }
 
    private void setSuccessfulResultCode() {

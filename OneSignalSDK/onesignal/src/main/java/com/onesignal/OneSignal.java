@@ -99,7 +99,7 @@ public class OneSignal {
    /**
     * An app entry type enum for knowing how the user foregrounded or backgrounded the app.
     * <br/><br/>
-    * The enum also helps decide the type of session the user is in an is tracked in {@link OneSignal#sessionManager}
+    * The enum also helps decide the type of session the user is in an is tracked in {@link OneSignal#mSessionManager}
     *  from the {@link OSSessionManager}.
     * <br/><br/>
     * {@link AppEntryAction#NOTIFICATION_CLICK} will always lead a overridden {@link com.onesignal.influence.domain.OSInfluenceType#DIRECT}.
@@ -470,12 +470,27 @@ public class OneSignal {
    static OSSharedPreferences getSharedPreferences() {
       return preferences;
    }
-   private static OSTrackerFactory trackerFactory = new OSTrackerFactory(preferences, logger, time);
-   private static OSSessionManager sessionManager = new OSSessionManager(sessionListener, trackerFactory, logger);
+   private static OSTrackerFactory mTrackerFactory;
+   private static OSSessionManager mSessionManager;
    @Nullable private static OSOutcomeEventsController outcomeEventsController;
    @Nullable private static OSOutcomeEventsFactory outcomeEventsFactory;
    @Nullable private static OSNotificationDataController notificationDataController;
    private static final Object outcomeEventsControllerSyncLock = new Object() {};
+
+
+   private static OSTrackerFactory getTrackerFactory(){
+      if(mTrackerFactory == null){
+         mTrackerFactory = new OSTrackerFactory(preferences, logger, time);
+      }
+      return mTrackerFactory;
+   }
+
+   private static OSSessionManager getOSSessionManager(){
+      if(mSessionManager == null){
+         mSessionManager = new OSSessionManager(sessionListener, getTrackerFactory(), logger);
+      }
+      return mSessionManager;
+   }
 
    static OSOutcomeEventsController getOutcomeEventsController() {
       if (outcomeEventsController == null) {
@@ -485,7 +500,7 @@ public class OneSignal {
                   OneSignalDbHelper dbHelper = getDBHelperInstance();
                   outcomeEventsFactory = new OSOutcomeEventsFactory(logger, apiClient, dbHelper, preferences);
                }
-               outcomeEventsController = new OSOutcomeEventsController(sessionManager, outcomeEventsFactory);
+               outcomeEventsController = new OSOutcomeEventsController(getOSSessionManager(), outcomeEventsFactory);
             }
          }
       }
@@ -919,7 +934,7 @@ public class OneSignal {
          if (outcomeEventsFactory == null)
             outcomeEventsFactory = new OSOutcomeEventsFactory(logger, apiClient, dbHelper, preferences);
 
-         sessionManager.initSessionFromCache();
+         getOSSessionManager().initSessionFromCache();
          getOutcomeEventsController().cleanCachedUniqueOutcomes();
       }
    }
@@ -998,12 +1013,12 @@ public class OneSignal {
 
          OneSignalStateSynchronizer.setNewSession();
          getOutcomeEventsController().cleanOutcomes();
-         sessionManager.restartSessionIfNeeded(getAppEntryState());
+         getOSSessionManager().restartSessionIfNeeded(getAppEntryState());
          getInAppMessageController().resetSessionLaunchTime();
          setLastSessionTime(time.getCurrentTimeMillis());
       } else if (isInForeground()) {
          logger.debug("Continue on same session with appEntryState: " + getAppEntryState());
-         sessionManager.attemptSessionUpgrade(getAppEntryState());
+         getOSSessionManager().attemptSessionUpgrade(getAppEntryState());
       }
 
       getInAppMessageController().initWithCachedInAppMessages();
@@ -1121,7 +1136,7 @@ public class OneSignal {
             if (params.googleProjectNumber != null)
                googleProjectNumber = params.googleProjectNumber;
 
-            remoteParamController.saveRemoteParams(params, trackerFactory, preferences, logger);
+            remoteParamController.saveRemoteParams(params, getTrackerFactory(), preferences, logger);
             onRemoteParamSet();
 
             NotificationChannelManager.processChannelList(
@@ -2509,7 +2524,7 @@ public class OneSignal {
    static void applicationOpenedByNotification(@Nullable final String notificationId) {
       // We want to set the app entry state to NOTIFICATION_CLICK when coming from background
       appEntryState = AppEntryAction.NOTIFICATION_CLICK;
-      sessionManager.onDirectInfluenceFromNotificationOpen(appEntryState, notificationId);
+      getOSSessionManager().onDirectInfluenceFromNotificationOpen(appEntryState, notificationId);
    }
 
    private static void notificationOpenedRESTCall(Context inContext, JSONArray dataArray) {
@@ -3330,11 +3345,11 @@ public class OneSignal {
    }
 
    static void setTrackerFactory(OSTrackerFactory trackerFactory) {
-      OneSignal.trackerFactory = trackerFactory;
+      OneSignal.mTrackerFactory = trackerFactory;
    }
 
    static void setSessionManager(OSSessionManager sessionManager) {
-      OneSignal.sessionManager = sessionManager;
+      OneSignal.mSessionManager = sessionManager;
    }
 
    static void setSharedPreferences(OSSharedPreferences preferences) {
@@ -3380,7 +3395,7 @@ public class OneSignal {
     * Start OneSignalOutcome module
     */
    static OSSessionManager getSessionManager() {
-      return sessionManager;
+      return getOSSessionManager();
    }
 
    static void sendClickActionOutcomes(@NonNull List<OSInAppMessageOutcome> outcomes) {
