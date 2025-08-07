@@ -44,7 +44,6 @@ import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.LoginUserFromSubscriptionOperation
 import com.onesignal.user.internal.operations.LoginUserOperation
-import com.onesignal.user.internal.operations.TransferSubscriptionOperation
 import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -467,10 +466,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         // to the queue.
         val currentPushSubscription = subscriptionModelStore!!.list().firstOrNull { it.id == configModel!!.pushSubscriptionId }
         val newPushSubscription = SubscriptionModel()
-        val localSubscriptionID = IDManager.createLocalId()
-        val currentSubscriptionID = currentPushSubscription?.id ?: localSubscriptionID
 
-        newPushSubscription.id = currentSubscriptionID
+        newPushSubscription.id = currentPushSubscription?.id ?: IDManager.createLocalId()
         newPushSubscription.type = SubscriptionType.PUSH
         newPushSubscription.optedIn = currentPushSubscription?.optedIn ?: true
         newPushSubscription.address = currentPushSubscription?.address ?: ""
@@ -480,6 +477,11 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         newPushSubscription.carrier = DeviceUtils.getCarrierName(services.getService<IApplicationService>().appContext) ?: ""
         newPushSubscription.appVersion = AndroidUtils.getAppVersion(services.getService<IApplicationService>().appContext) ?: ""
 
+        // ensure we always know this devices push subscription ID
+        configModel!!.pushSubscriptionId = newPushSubscription.id
+
+        subscriptions.add(newPushSubscription)
+
         // The next 4 lines makes this user the effective user locally.  We clear the subscriptions
         // first as a `NO_PROPOGATE` change because we don't want to drive deleting the cleared subscriptions
         // on the backend.  Once cleared we can then setup the new identity/properties model, and add
@@ -488,24 +490,11 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         identityModelStore!!.replace(identityModel)
         propertiesModelStore!!.replace(propertiesModel)
 
-        var changeTag = ModelChangeTags.NO_PROPOGATE
-
-        if (!suppressBackendOperation) {
-            if (currentPushSubscription?.id != null && identityModel.externalId != null) {
-                // add a transfer-subscription operation when switching user
-                operationRepo!!.enqueue(TransferSubscriptionOperation(configModel!!.appId, currentPushSubscription.id, sdkId))
-            } else {
-                // reset subscription when calling logout or login for the first time
-                newPushSubscription.id = localSubscriptionID
-                changeTag = ModelChangeTags.NORMAL
-            }
+        if (suppressBackendOperation) {
+            subscriptionModelStore!!.replaceAll(subscriptions, ModelChangeTags.NO_PROPOGATE)
+        } else {
+            subscriptionModelStore!!.replaceAll(subscriptions)
         }
-
-        // ensure we always know this devices push subscription ID
-        configModel!!.pushSubscriptionId = newPushSubscription.id
-
-        subscriptions.add(newPushSubscription)
-        subscriptionModelStore!!.replaceAll(subscriptions, changeTag)
     }
 
     override fun <T> hasService(c: Class<T>): Boolean = services.hasService(c)

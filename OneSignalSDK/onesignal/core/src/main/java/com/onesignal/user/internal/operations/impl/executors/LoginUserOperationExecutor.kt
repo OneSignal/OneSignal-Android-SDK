@@ -187,21 +187,36 @@ internal class LoginUserOperationExecutor(
                 propertiesModel.setStringProperty(PropertiesModel::onesignalId.name, backendOneSignalId, ModelChangeTags.HYDRATE)
             }
 
-            for (index in subscriptionList.indices) {
-                if (index >= response.subscriptions.size) {
-                    break
+            val backendSubscriptions = response.subscriptions.toMutableSet()
+
+            for (pair in subscriptionList) {
+                // Find the corresponding subscription (subscriptions are not returned in the order they are sent)
+                // 1. Start by matching the subscription ID
+                var backendSubscription = backendSubscriptions.firstOrNull { it.id == pair.first }
+                // 2. If ID fails, match the token, this should always succeed for email or sms
+                if (backendSubscription == null) {
+                    backendSubscription = backendSubscriptions.firstOrNull { it.token == pair.second.token && !it.token.isNullOrBlank() }
+                }
+                // 3. Match by type. By this point, only a single push subscription should remain, at most
+                if (backendSubscription == null) {
+                    backendSubscription = backendSubscriptions.firstOrNull { it.type == pair.second.type }
                 }
 
-                val backendSubscription = response.subscriptions[index]
+                if (backendSubscription != null) {
+                    idTranslations[pair.first] = backendSubscription.id!!
 
-                idTranslations[subscriptionList[index].first] = backendSubscription.id!!
+                    if (_configModelStore.model.pushSubscriptionId == pair.first) {
+                        _configModelStore.model.pushSubscriptionId = backendSubscription.id
+                    }
 
-                if (_configModelStore.model.pushSubscriptionId == subscriptionList[index].first) {
-                    _configModelStore.model.pushSubscriptionId = backendSubscription.id
+                    val subscriptionModel = _subscriptionsModelStore.get(pair.first)
+                    subscriptionModel?.setStringProperty(SubscriptionModel::id.name, backendSubscription.id!!, ModelChangeTags.HYDRATE)
+                } else {
+                    Logging.error("LoginUserOperationExecutor.createUser response is missing subscription data for ${pair.first}")
                 }
 
-                val subscriptionModel = _subscriptionsModelStore.get(subscriptionList[index].first)
-                subscriptionModel?.setStringProperty(SubscriptionModel::id.name, backendSubscription.id, ModelChangeTags.HYDRATE)
+                // Remove the processed backend subscription
+                backendSubscriptions.remove(backendSubscription)
             }
 
             val wasPossiblyAnUpsert = identities.isNotEmpty()
