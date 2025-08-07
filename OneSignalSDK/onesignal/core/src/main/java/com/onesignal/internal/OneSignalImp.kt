@@ -197,11 +197,16 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
             PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
 
+            val applicationService = services.getService<IApplicationService>()
+
             // start the application service. This is called explicitly first because we want
             // to make sure it has the context provided on input, for all other startable services
             // to depend on if needed.
-            val applicationService = services.getService<IApplicationService>()
             (applicationService as ApplicationService).start(context)
+            if (!applicationService.isDeviceStorageUnlocked) {
+                Logging.warn("initWithContext called when device storage is locked, no user data is accessible!")
+                return false
+            }
 
             // Give the logging singleton access to the application service to support visual logging.
             Logging.applicationService = applicationService
