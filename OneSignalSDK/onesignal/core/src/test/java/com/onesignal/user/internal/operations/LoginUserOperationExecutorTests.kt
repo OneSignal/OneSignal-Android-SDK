@@ -739,4 +739,124 @@ class LoginUserOperationExecutorTests : FunSpec({
             exactly = 0,
         ) { mockUserBackendService.createUser(appId, any(), any(), any()) }
     }
+
+    test("create user maps subscriptions when backend order is different (match by id/token)") {
+        // Given
+        val mockUserBackendService = mockk<IUserBackendService>()
+        // backend returns EMAIL first (with token), then PUSH — out of order
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(
+                    SubscriptionObject(id = remoteSubscriptionId2, type = SubscriptionObjectType.EMAIL, token = "name@company.com"),
+                    SubscriptionObject(id = remoteSubscriptionId1, type = SubscriptionObjectType.ANDROID_PUSH, token = "pushToken2"),
+                ),
+            )
+
+        val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
+        val mockIdentityModelStore = MockHelper.identityModelStore()
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        every { mockSubscriptionsModelStore.get(any()) } returns null
+
+        val executor =
+            LoginUserOperationExecutor(
+                mockIdentityOperationExecutor,
+                AndroidMockHelper.applicationService(),
+                MockHelper.deviceService(),
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                MockHelper.languageContext(),
+            )
+
+        // send PUSH then EMAIL (local IDs 1,2) — order differs from backend response
+        val ops =
+            listOf(
+                LoginUserOperation(appId, localOneSignalId, null, null),
+                CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED),
+                CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId2, SubscriptionType.EMAIL, true, "name@company.com", SubscriptionStatus.SUBSCRIBED),
+            )
+
+        // When
+        val response = executor.execute(ops)
+
+        // Then
+        response.result shouldBe ExecutionResult.SUCCESS
+        // ensure local to remote mapping is correct despite different order
+        response.idTranslations shouldBe
+            mapOf(
+                localOneSignalId to remoteOneSignalId,
+                // push
+                localSubscriptionId1 to remoteSubscriptionId1,
+                // email
+                localSubscriptionId2 to remoteSubscriptionId2,
+            )
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any()) }
+    }
+
+    test("create user maps push subscription by type when id and token don't match (case for deleted push sub)") {
+        // Given
+        val mockUserBackendService = mockk<IUserBackendService>()
+        // simulate server-side push sub recreated with new ID and no token; must match by type
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(
+                    SubscriptionObject(id = remoteSubscriptionId1, type = SubscriptionObjectType.ANDROID_PUSH, token = null),
+                ),
+            )
+
+        val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
+        val mockIdentityModelStore = MockHelper.identityModelStore()
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        // provide a local push model so the executor can hydrate its id
+        val localPushModel = SubscriptionModel().apply { id = localSubscriptionId1 }
+        every { mockSubscriptionsModelStore.get(localSubscriptionId1) } returns localPushModel
+
+        val configModelStore = MockHelper.configModelStore()
+        // assume current push sub is the local one we are creating
+        configModelStore.model.pushSubscriptionId = localSubscriptionId1
+
+        val executor =
+            LoginUserOperationExecutor(
+                mockIdentityOperationExecutor,
+                AndroidMockHelper.applicationService(),
+                MockHelper.deviceService(),
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                configModelStore,
+                MockHelper.languageContext(),
+            )
+
+        val ops =
+            listOf(
+                LoginUserOperation(appId, localOneSignalId, null, null),
+                CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken1", SubscriptionStatus.SUBSCRIBED),
+            )
+
+        // When
+        val response = executor.execute(ops)
+
+        // Then
+        response.result shouldBe ExecutionResult.SUCCESS
+        // should map by type and update both idTranslations and local model
+        response.idTranslations shouldBe
+            mapOf(
+                localOneSignalId to remoteOneSignalId,
+                localSubscriptionId1 to remoteSubscriptionId1,
+            )
+        localPushModel.id shouldBe remoteSubscriptionId1
+        // pushSubscriptionId should be updated from local to remote id
+        configModelStore.model.pushSubscriptionId shouldBe remoteSubscriptionId1
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any()) }
+    }
 })
