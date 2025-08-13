@@ -26,6 +26,11 @@ class PermissionsActivity : Activity() {
             return
         }
 
+        if (intent.extras == null) {
+            // This should never happen, but extras is null in rare crash reports
+            return
+        }
+
         requestPermissionService = OneSignal.getService()
         preferenceService = OneSignal.getService()
 
