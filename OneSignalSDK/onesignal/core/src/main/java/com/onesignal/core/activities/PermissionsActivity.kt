@@ -23,6 +23,13 @@ class PermissionsActivity : Activity() {
         super.onCreate(savedInstanceState)
 
         if (!OneSignal.initWithContext(this)) {
+            finishActivity()
+            return
+        }
+
+        if (intent.extras == null) {
+            // This should never happen, but extras is null in rare crash reports
+            finishActivity()
             return
         }
 
@@ -37,12 +44,16 @@ class PermissionsActivity : Activity() {
         handleBundleParams(intent.extras)
     }
 
+    private fun finishActivity() {
+        finish()
+        overridePendingTransition(R.anim.onesignal_fade_in, R.anim.onesignal_fade_out)
+    }
+
     private fun handleBundleParams(extras: Bundle?) {
         // https://github.com/OneSignal/OneSignal-Android-SDK/issues/30
         // Activity maybe invoked directly through automated testing, omit prompting on old Android versions.
         if (Build.VERSION.SDK_INT < 23) {
-            finish()
-            overridePendingTransition(R.anim.onesignal_fade_in, R.anim.onesignal_fade_out)
+            finishActivity()
             return
         }
 
@@ -127,8 +138,7 @@ class PermissionsActivity : Activity() {
             }, DELAY_TIME_CALLBACK_CALL.toLong())
         }
 
-        finish()
-        overridePendingTransition(R.anim.onesignal_fade_in, R.anim.onesignal_fade_out)
+        finishActivity()
     }
 
     private fun shouldShowSettings(permission: String): Boolean {
