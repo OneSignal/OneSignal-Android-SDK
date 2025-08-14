@@ -7,7 +7,9 @@ import android.content.ComponentCallbacks
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
+import android.os.UserManager
 import android.view.ViewTreeObserver.OnGlobalLayoutListener
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.DialogFragment
@@ -69,6 +71,25 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
 
     private val wasInBackground: Boolean
         get() = !isInForeground || nextResumeIsFirstActivity
+
+    /**
+     * Retrieve whether the user data is accessible.
+     *
+     * On Android 7.0+ (API 24+), encrypted user data is inaccessible until the user unlocks the device for the first time after boot.
+     * This includes:
+     *  * getSharedPreferences()
+     *  * Any file-based storage in the default credential-encrypted context
+     *
+     * Apps that auto-run on boot or background services triggered early may hit this issue.
+     */
+    override val isDeviceStorageUnlocked: Boolean
+        get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val userManager = appContext.getSystemService(Context.USER_SERVICE) as UserManager
+            userManager.isUserUnlocked
+        } else {
+            // Prior to API 24, the device booted into an unlocked state by default
+            true
+        }
 
     /**
      * Call to "start" this service, expected to be called during initialization of the SDK.
