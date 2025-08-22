@@ -64,11 +64,24 @@ fun suspendifyOnThread(
     priority: Int = -1,
     block: suspend () -> Unit,
 ) {
+    suspendifyOnThread(priority, block, null)
+}
+
+/**
+ * Allows a non suspending function to create a scope that can
+ * call suspending functions.  This is a nonblocking call, which
+ * means the scope will run on a background thread.  This will
+ * return immediately!!! Also provides an optional onComplete.
+ */
+fun suspendifyOnThread(
+    priority: Int = -1,
+    block: suspend () -> Unit,
+    onComplete: (() -> Unit)? = null
+) {
     thread(priority = priority) {
         try {
-            runBlocking {
-                block()
-            }
+            runBlocking { block() }
+            onComplete?.invoke()
         } catch (e: Exception) {
             Logging.error("Exception on thread", e)
         }

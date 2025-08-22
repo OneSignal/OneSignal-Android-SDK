@@ -30,6 +30,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import com.onesignal.OneSignal
+import com.onesignal.common.AndroidUtils
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
 
@@ -44,18 +45,25 @@ abstract class NotificationOpenedActivityBase : Activity() {
         processIntent()
     }
 
-    private fun processIntent() {
+    internal open fun processIntent() {
         if (!OneSignal.initWithContext(applicationContext)) {
             return
         }
-        suspendifyOnThread {
-            val openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
-            openedProcessor.processFromContext(this, intent)
-            // KEEP: Xiaomi Compatibility:
-            // Must keep this Activity alive while trampolining, that is
-            // startActivity() must be called BEFORE finish(), otherwise
-            // the app is never foregrounded.
-            finish()
-        }
+        suspendifyOnThread (
+            block = {
+                val openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
+                openedProcessor.processFromContext(this, intent)
+                // KEEP: Xiaomi Compatibility:
+                // Must keep this Activity alive while trampolining, that is
+                // startActivity() must be called BEFORE finish(), otherwise
+                // the app is never foregrounded.
+            }, onComplete = {
+                // Safely finish the activity on the main thread after processing is complete.
+                // This gives the system enough time to complete rendering before closing the Trampoline activity.
+                runOnUiThread {
+                    AndroidUtils.finishSafely(this)
+                }
+            }
+        )
     }
 }
