@@ -285,4 +285,14 @@ object AndroidUtils {
             }
         }
     }
+
+    /**
+     * Safely finishes the activity only if it's still valid.
+     * Prevents redundant or unsafe calls to finish(), reducing lifecycle issues or potential leaks.
+     */
+    fun finishSafely(activity: Activity) {
+        if (!activity.isDestroyed && !activity.isFinishing) {
+            activity.finish()
+        }
+    }
 }
