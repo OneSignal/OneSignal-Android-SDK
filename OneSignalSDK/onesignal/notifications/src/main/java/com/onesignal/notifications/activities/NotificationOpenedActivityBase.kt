@@ -49,7 +49,7 @@ abstract class NotificationOpenedActivityBase : Activity() {
         if (!OneSignal.initWithContext(applicationContext)) {
             return
         }
-        suspendifyOnThread (
+        suspendifyOnThread(
             block = {
                 val openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
                 openedProcessor.processFromContext(this, intent)
@@ -57,13 +57,14 @@ abstract class NotificationOpenedActivityBase : Activity() {
                 // Must keep this Activity alive while trampolining, that is
                 // startActivity() must be called BEFORE finish(), otherwise
                 // the app is never foregrounded.
-            }, onComplete = {
+            },
+            onComplete = {
                 // Safely finish the activity on the main thread after processing is complete.
                 // This gives the system enough time to complete rendering before closing the Trampoline activity.
                 runOnUiThread {
                     AndroidUtils.finishSafely(this)
                 }
-            }
+            },
         )
     }
 }

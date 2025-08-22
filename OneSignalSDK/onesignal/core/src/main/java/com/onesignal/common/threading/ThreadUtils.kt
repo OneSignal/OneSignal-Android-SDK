@@ -76,7 +76,7 @@ fun suspendifyOnThread(
 fun suspendifyOnThread(
     priority: Int = -1,
     block: suspend () -> Unit,
-    onComplete: (() -> Unit)? = null
+    onComplete: (() -> Unit)? = null,
 ) {
     thread(priority = priority) {
         try {
