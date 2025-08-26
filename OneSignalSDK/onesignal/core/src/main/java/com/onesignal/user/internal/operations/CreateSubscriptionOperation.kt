@@ -102,5 +102,8 @@ class CreateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.CR
         if (map.containsKey(onesignalId)) {
             onesignalId = map[onesignalId]!!
         }
+        if (map.containsKey(subscriptionId)) {
+            subscriptionId = map[subscriptionId]!!
+        }
     }
 }
