@@ -3,6 +3,7 @@ package com.onesignal.user.internal.operations.impl.executors
 import android.os.Build
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
+import com.onesignal.common.IDManager
 import com.onesignal.common.NetworkUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.RootToolsInternalMethods
@@ -87,11 +88,12 @@ internal class SubscriptionOperationExecutor(
         val enabled = lastUpdateOperation?.enabled ?: createOperation.enabled
         val address = lastUpdateOperation?.address ?: createOperation.address
         val status = lastUpdateOperation?.status ?: createOperation.status
+        val subId = if (!IDManager.isLocalId(createOperation.subscriptionId)) createOperation.subscriptionId else null
 
         try {
             val subscription =
                 SubscriptionObject(
-                    id = null,
+                    id = subId,
                     convert(createOperation.type),
                     address,
                     enabled,
