@@ -57,3 +57,4 @@ jobs:
             -Psigning.keyId="$keyId" \
             -Psigning.password="$signingPassword" \
             -Psigning.secretKeyRingFile="$(pwd)/$GPG_FILE_NAME"
+          
