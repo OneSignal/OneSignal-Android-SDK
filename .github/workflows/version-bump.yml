@@ -33,11 +33,11 @@ jobs:
           VERSION="${{ github.event.inputs.version }}"
           echo "Updating SDK_VERSION to $VERSION"
           
-          sed -i.bak "s/^SDK_VERSION=.*/SDK_VERSION=$VERSION/" OneSignal-Android-SDK/OneSignalSDK/gradle.properties
-          rm OneSignal-Android-SDK/OneSignalSDK/gradle.properties.bak
+          sed -i.bak "s/^SDK_VERSION=.*/SDK_VERSION=$VERSION/" OneSignalSDK/gradle.properties
+          rm OneSignalSDK/gradle.properties.bak
           
-          sed -i.bak "s/^SDK_VERSION=.*/SDK_VERSION=$VERSION/" OneSignal-Android-SDK/Examples/OneSignalDemo/gradle.properties
-          rm OneSignal-Android-SDK/Examples/OneSignalDemo/gradle.properties.bak
+          sed -i.bak "s/^SDK_VERSION=.*/SDK_VERSION=$VERSION/" Examples/OneSignalDemo/gradle.properties
+          rm Examples/OneSignalDemo/gradle.properties.bak
 
       - name: Create release branch and push
         run: |
