@@ -1,6 +1,9 @@
 name: Bump SDK Version and Create PR
 
 on:
+  push:
+    branches:
+      - "automate-release"
   workflow_dispatch:
     inputs:
       version:
