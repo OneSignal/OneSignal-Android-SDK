@@ -67,7 +67,7 @@ class HttpClientTests : FunSpec({
 
         // Then
         for (connection in mocks.factory.connections) {
-            connection.getRequestProperty("SDK-Version") shouldBe "onesignal/android/${OneSignalUtils.SDK_VERSION}"
+            connection.getRequestProperty("SDK-Version") shouldBe "onesignal/android/${OneSignalUtils.sdkVersion}"
             connection.getRequestProperty("OneSignal-Install-Id") shouldBe mocks.installIdService.getId().toString()
         }
     }

@@ -1,0 +1,62 @@
+name: Bump SDK Version and Create PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'New SDK version (e.g. 5.1.38)'
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install GitHub CLI
+        run: sudo apt-get install -y gh
+
+      - name: Authenticate GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Update gradle.properties files with SDK_VERSION
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          echo "Updating SDK_VERSION to $VERSION"
+          
+          sed -i.bak "s/^SDK_VERSION=.*/SDK_VERSION=$VERSION/" OneSignal-Android-SDK/OneSignalSDK/gradle.properties
+          rm OneSignal-Android-SDK/OneSignalSDK/gradle.properties.bak
+          
+          sed -i.bak "s/^SDK_VERSION=.*/SDK_VERSION=$VERSION/" OneSignal-Android-SDK/Examples/OneSignalDemo/gradle.properties
+          rm OneSignal-Android-SDK/Examples/OneSignalDemo/gradle.properties.bak
+
+      - name: Create release branch and push
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          BRANCH="rel/$VERSION"
+          
+          git fetch origin main
+          git checkout -b "$BRANCH" origin/main
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          git commit -am "chore: bump SDK_VERSION to $VERSION"
+          git push origin "$BRANCH"
+
+      - name: Create Pull Request
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          BRANCH="rel/$VERSION"
+          
+          gh pr create \
+            --title "Release SDK v$VERSION" \
+            --body "This PR bumps \`SDK_VERSION\` to \`$VERSION\` in gradle.properties.\n\nUpdated:\n- OneSignalSDK/gradle.properties\n- Examples/OneSignalDemo/gradle.properties" \
+            --head "$BRANCH" \
+            --base main

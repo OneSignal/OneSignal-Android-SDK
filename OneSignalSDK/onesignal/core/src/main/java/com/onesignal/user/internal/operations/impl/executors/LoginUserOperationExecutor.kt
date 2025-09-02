@@ -296,7 +296,7 @@ internal class LoginUserOperationExecutor(
                 operation.address,
                 operation.enabled,
                 operation.status.value,
-                OneSignalUtils.SDK_VERSION,
+                OneSignalUtils.sdkVersion,
                 Build.MODEL,
                 Build.VERSION.RELEASE,
                 RootToolsInternalMethods.isRooted,
