@@ -52,11 +52,15 @@ jobs:
           VERSION="${{ github.event.inputs.version }}"
           echo "Updating SDK_VERSION to $VERSION"
           
+          cat OneSignalSDK/gradle.properties
           sed -i.bak "s/^SDK_VERSION=.*/SDK_VERSION=$VERSION/" OneSignalSDK/gradle.properties
           rm OneSignalSDK/gradle.properties.bak
+          cat OneSignalSDK/gradle.properties
           
+          cat Examples/OneSignalDemo/gradle.properties
           sed -i.bak "s/^SDK_VERSION=.*/SDK_VERSION=$VERSION/" Examples/OneSignalDemo/gradle.properties
           rm Examples/OneSignalDemo/gradle.properties.bak
+          cat Examples/OneSignalDemo/gradle.properties
           
           git status
 
