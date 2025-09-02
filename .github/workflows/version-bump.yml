@@ -38,18 +38,22 @@ jobs:
           
           sed -i.bak "s/^SDK_VERSION=.*/SDK_VERSION=$VERSION/" Examples/OneSignalDemo/gradle.properties
           rm Examples/OneSignalDemo/gradle.properties.bak
-
-      - name: Create release branch and push
+      - name: Create release branch from main
         run: |
           VERSION="${{ github.event.inputs.version }}"
           BRANCH="rel/$VERSION"
-          
-          git fetch origin main
+
+          git fetch origin
           git checkout -b "$BRANCH" origin/main
-          
+
+      - name: Configure Git and commit changes
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          BRANCH="rel/$VERSION"
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
+
           git commit -am "chore: bump SDK_VERSION to $VERSION"
           git push origin "$BRANCH"
 
