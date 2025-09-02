@@ -1,0 +1,59 @@
+name: Publish to Maven Central
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    env:
+      BW_CLIENTID: ${{ secrets.BW_CLIENTID }}
+      BW_CLIENTSECRET: ${{ secrets.BW_CLIENTSECRET }}
+      BW_MASTER_PASSWORD: ${{ secrets.BW_MASTER_PASSWORD }}
+      ITEM_NAME: MavenCentral Secrets
+      GPG_FILE_NAME: onesignal_sdk_gpg_subkeys
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Install Bitwarden CLI
+        run: |
+          curl -Ls https://vault.bitwarden.com/download/?app=cli&platform=linux -o bw.zip
+          unzip bw.zip -d bw-bin
+          sudo mv bw-bin/bw /usr/local/bin
+          bw --version
+
+      - name: Login + Unlock Bitwarden
+        run: |
+          bw login --apikey
+          SESSION=$(bw unlock "$BW_MASTER_PASSWORD" --raw)
+          echo "BW_SESSION=$SESSION" >> $GITHUB_ENV
+
+      - name: Fetch Maven + Signing secrets from Bitwarden
+        run: |
+          ITEM_JSON=$(bw get item "$ITEM_NAME" --session "$BW_SESSION")
+          
+          echo "centralUsername=$(echo "$ITEM_JSON" | jq -r '.fields[] | select(.name=="centralUsername") | .value')" >> $GITHUB_ENV
+          echo "centralPassword=$(echo "$ITEM_JSON" | jq -r '.fields[] | select(.name=="centralPassword") | .value')" >> $GITHUB_ENV
+          echo "keyId=$(echo "$ITEM_JSON" | jq -r '.fields[] | select(.name=="keyId") | .value')" >> $GITHUB_ENV
+          echo "signingPassword=$(echo "$ITEM_JSON" | jq -r '.fields[] | select(.name=="signingPassword") | .value')" >> $GITHUB_ENV
+
+      - name: Download GPG Key File from Bitwarden
+        run: |
+          ITEM_ID=$(bw list items --session "$BW_SESSION" | jq -r '.[] | select(.name=="MavenCentral Secrets") | .id')
+          bw get attachment "$GPG_FILE_NAME" --itemid "$ITEM_ID" --session "$BW_SESSION" --output "$GPG_FILE_NAME"
+          echo "signing.secretKeyRingFile=$(pwd)/$GPG_FILE_NAME" >> $GITHUB_ENV
+
+      - name: Publish to Maven Central
+        run: |
+          ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache \
+            -PmavenCentralUsername="$centralUsername" \
+            -PmavenCentralPassword="$centralPassword" \
+            -Psigning.keyId="$keyId" \
+            -Psigning.password="$signingPassword" \
+            -Psigning.secretKeyRingFile="$(pwd)/$GPG_FILE_NAME"
