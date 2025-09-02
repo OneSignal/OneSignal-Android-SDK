@@ -21,7 +21,6 @@ internal class SubscriptionBackendService(
         subscription: SubscriptionObject,
     ): Pair<String, RywData?>? {
         val jsonSubscription = JSONConverter.convertToJSON(subscription)
-        jsonSubscription.remove("id")
         val requestJSON = JSONObject().put("subscription", jsonSubscription)
 
         val response = _httpClient.post("apps/$appId/users/by/$aliasLabel/$aliasValue/subscriptions", requestJSON)

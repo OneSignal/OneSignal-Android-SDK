@@ -33,7 +33,7 @@ class SubscriptionBackendServiceTests : FunSpec({
         // When
         val subscription =
             SubscriptionObject(
-                "no-id",
+                "sub-id",
                 SubscriptionObjectType.ANDROID_PUSH,
                 "pushToken",
                 true,
@@ -49,7 +49,7 @@ class SubscriptionBackendServiceTests : FunSpec({
                 "apps/appId/users/by/$aliasLabel/$aliasValue/subscriptions",
                 withArg {
                     val sub = it.getJSONObject("subscription")
-                    sub.has("id") shouldBe false
+                    sub.getString("id") shouldBe "sub-id"
                     sub.getString("type") shouldBe "AndroidPush"
                     sub.getString("token") shouldBe "pushToken"
                     sub.getBoolean("enabled") shouldBe true
@@ -70,7 +70,7 @@ class SubscriptionBackendServiceTests : FunSpec({
         // When
         val subscription =
             SubscriptionObject(
-                "no-id",
+                "sub-id",
                 SubscriptionObjectType.ANDROID_PUSH,
                 "pushToken",
                 true,
@@ -94,7 +94,7 @@ class SubscriptionBackendServiceTests : FunSpec({
                 "apps/appId/users/by/$aliasLabel/$aliasValue/subscriptions",
                 withArg {
                     val sub = it.getJSONObject("subscription")
-                    sub.has("id") shouldBe false
+                    sub.getString("id") shouldBe "sub-id"
                     sub.getString("type") shouldBe "AndroidPush"
                     sub.getString("token") shouldBe "pushToken"
                     sub.getBoolean("enabled") shouldBe true
