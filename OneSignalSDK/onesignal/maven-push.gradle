@@ -9,6 +9,10 @@ import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
 import com.vanniktech.maven.publish.SonatypeHost
 
 mavenPublishing {
+    if (!android.hasProperty("libraryVariants") || android.libraryVariants.find { it.name == "release" } == null) {
+        println("Skipping Maven publishing for ${project.name}, no release variant found")
+        return
+    }
     configure(new AndroidSingleVariantLibrary("release", true, true))
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
 

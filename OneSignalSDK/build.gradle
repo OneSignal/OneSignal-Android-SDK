@@ -13,7 +13,7 @@ buildscript {
         huaweiAgconnectVersion = '1.9.1.304'
         huaweiHMSPushVersion = '6.3.0.304'
         huaweiHMSLocationVersion = '4.0.0.300'
-        kotlinVersion = '1.7.10'
+        kotlinVersion = '1.9.0'
         kotestVersion = '5.8.0'
         ktlintPluginVersion = '11.6.1'
         ktlintVersion = '1.0.1'
@@ -42,6 +42,10 @@ buildscript {
         dependencies {
             classpath sharedDeps
         }
+    }
+    dependencies {
+        classpath 'androidx.benchmark:benchmark-gradle-plugin:1.4.0'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.7.10'
     }
 }
 
