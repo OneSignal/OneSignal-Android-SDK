@@ -1,9 +1,6 @@
 name: Bump SDK Version and Create PR
 
 on:
-  push:
-    branches:
-      - "automate-release"
   workflow_dispatch:
     inputs:
       version:
@@ -28,6 +25,14 @@ jobs:
       - name: Authenticate GitHub CLI
         run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
+      - name: Create release branch from main
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          BRANCH="rel/$VERSION"
+
+          git fetch origin
+          git checkout -b "$BRANCH" origin/main
+
       - name: Update gradle.properties files with SDK_VERSION
         run: |
           VERSION="${{ github.event.inputs.version }}"
@@ -38,13 +43,6 @@ jobs:
           
           sed -i.bak "s/^SDK_VERSION=.*/SDK_VERSION=$VERSION/" Examples/OneSignalDemo/gradle.properties
           rm Examples/OneSignalDemo/gradle.properties.bak
-      - name: Create release branch from main
-        run: |
-          VERSION="${{ github.event.inputs.version }}"
-          BRANCH="rel/$VERSION"
-
-          git fetch origin
-          git checkout -b "$BRANCH" origin/main
 
       - name: Configure Git and commit changes
         run: |
@@ -61,7 +59,7 @@ jobs:
         run: |
           VERSION="${{ github.event.inputs.version }}"
           BRANCH="rel/$VERSION"
-          
+
           gh pr create \
             --title "Release SDK v$VERSION" \
             --body "This PR bumps \`SDK_VERSION\` to \`$VERSION\` in gradle.properties.\n\nUpdated:\n- OneSignalSDK/gradle.properties\n- Examples/OneSignalDemo/gradle.properties" \
