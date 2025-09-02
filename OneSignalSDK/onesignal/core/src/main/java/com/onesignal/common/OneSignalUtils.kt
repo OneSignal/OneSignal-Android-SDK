@@ -4,7 +4,6 @@ import com.onesignal.core.BuildConfig
 import java.util.regex.Pattern
 
 object OneSignalUtils {
-
     /**
      * The version of this SDK. This is being formatted to ensure proper sorting when used in
      * User-Agent strings and other uses where lexicographical order matters.
