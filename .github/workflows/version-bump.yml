@@ -45,7 +45,7 @@ jobs:
           fi
 
           # Create branch fresh from origin/main
-          git checkout -b "$BRANCH" origin/main
+          git checkout -b "$BRANCH" origin/automate-release
 
       - name: Update gradle.properties files with SDK_VERSION
         run: |
