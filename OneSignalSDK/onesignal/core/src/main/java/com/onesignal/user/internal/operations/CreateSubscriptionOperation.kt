@@ -99,11 +99,7 @@ class CreateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.CR
     }
 
     override fun translateIds(map: Map<String, String>) {
-        if (map.containsKey(onesignalId)) {
-            onesignalId = map[onesignalId]!!
-        }
-        if (map.containsKey(subscriptionId)) {
-            subscriptionId = map[subscriptionId]!!
-        }
+        map[onesignalId]?.let { onesignalId = it }
+        map[subscriptionId]?.let { subscriptionId = it }
     }
 }
