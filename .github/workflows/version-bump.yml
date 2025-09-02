@@ -67,7 +67,7 @@ jobs:
       - name: Configure Git and commit changes
         run: |
           VERSION="${{ github.event.inputs.version }}"
-          BRANCH="rel/$VERSION"
+          BRANCH="trel/$VERSION"
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -78,7 +78,7 @@ jobs:
       - name: Create Pull Request
         run: |
           VERSION="${{ github.event.inputs.version }}"
-          BRANCH="rel/$VERSION"
+          BRANCH="trel/$VERSION"
 
           gh pr create \
             --title "Release SDK v$VERSION" \
