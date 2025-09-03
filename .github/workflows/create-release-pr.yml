@@ -69,6 +69,67 @@ jobs:
 
           git commit -am "chore: bump SDK_VERSION to $VERSION"
           git push origin "$BRANCH"
+          
+      - name: Generate Release Notes from Commits
+        id: generate_notes
+        run: |
+          echo "## 🔖 Auto-Generated Release Notes" > pr_body.md
+          echo "" >> pr_body.md
+
+          VERSION="${{ github.event.inputs.version }}"
+
+          # Determine release channel
+          if [[ "$VERSION" == *"alpha"* ]]; then
+            CHANNEL="alpha"
+          elif [[ "$VERSION" == *"beta"* ]]; then
+            CHANNEL="beta"
+          else
+            CHANNEL="current"
+          fi
+
+          echo "**Channels:** $CHANNEL" >> pr_body.md
+          echo "" >> pr_body.md
+
+          git fetch origin main
+
+          # Find last release merge commit (merge from rel/*)
+          LAST_RELEASE_COMMIT=$(git log origin/main --merges --pretty=format:"%H %s" \
+            | grep -m 1 -E "Merge pull request.*from rel/" \
+            | cut -d' ' -f1)
+
+          echo "Last release merge commit: $LAST_RELEASE_COMMIT"
+
+          COMMITS=$(git log $LAST_RELEASE_COMMIT..HEAD --pretty=format:"%s")
+
+          echo "$COMMITS" > all_commits.txt
+
+          echo "### 🚀 New Features" >> pr_body.md
+          grep -E '^feat' all_commits.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
+
+          echo "" >> pr_body.md
+          echo "### 🐛 Bug Fixes" >> pr_body.md
+          grep -E '^bug' all_commits.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
+
+          echo "" >> pr_body.md
+          echo "### 🔧 Improvements" >> pr_body.md
+          grep -E '^(perf|refactor)' all_commits.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
+
+          echo "" >> pr_body.md
+          echo "### 📝 Uncategorized Commits" >> pr_body.md
+          grep -v -E '^(feat|bug|perf|refactor)' all_commits.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
+
+          echo "" >> pr_body.md
+          echo "### 📦 Version" >> pr_body.md
+          echo "$VERSION" >> pr_body.md
+          
+          echo "" >> pr_body.md
+
+          # Final fallback: check if any commits were found at all
+          if [[ -z "$COMMITS" ]]; then
+            echo "### ⚠️ No commits found" >> pr_body.md
+            echo "_No commits were found since the last release merge._" >> pr_body.md
+            echo "Release manager to verify and add appropriate release notes." >> pr_body.md
+          fi
 
       - name: Create Pull Request
         run: |
@@ -77,6 +138,6 @@ jobs:
 
           gh pr create \
             --title "Release SDK v$VERSION" \
-            --body "This PR bumps \`SDK_VERSION\` to \`$VERSION\` in gradle.properties.\n\nUpdated:\n- OneSignalSDK/gradle.properties\n- Examples/OneSignalDemo/gradle.properties" \
+            --body-file pr_body.md \
             --head "$BRANCH" \
             --base main
