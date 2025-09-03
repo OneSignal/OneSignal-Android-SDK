@@ -104,17 +104,37 @@ jobs:
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
+      - name: Determine release channel
+        id: release_info
+        run: |
+          VERSION="${{ env.SDK_VERSION }}"
+      
+          if [[ "$VERSION" == *"alpha"* ]]; then
+            CHANNEL="alpha"
+            PRERELEASE="--prerelease"
+          elif [[ "$VERSION" == *"beta"* ]]; then
+            CHANNEL="beta"
+            PRERELEASE="--prerelease"
+          else
+            CHANNEL="Current"
+            PRERELEASE=""
+          fi
+      
+          echo "CHANNEL=$CHANNEL" >> $GITHUB_ENV
+          echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
+
       - name: Tag and create GitHub release
         if: success()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git tag "v${SDK_VERSION}"
-          git push origin "v${SDK_VERSION}"
+          git tag "${SDK_VERSION}"
+          git push origin "${SDK_VERSION}"
 
-          gh release create "v${SDK_VERSION}" \
-            --title "SDK v${SDK_VERSION}" \
-            --notes "Automated release for SDK version ${SDK_VERSION}"
+          gh release create "${SDK_VERSION}" \
+            --title "${SDK_VERSION}" \
+            --notes "Channels: $CHANNEL" \
+            $PRERELEASE
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
