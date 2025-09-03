@@ -55,10 +55,19 @@ jobs:
 
       - name: Publish to Maven Central
         run: |
+          echo "::add-mask::${{ env.centralPassword }}"
+          echo "::add-mask::${{ env.signingPassword }}"
+          echo "::add-mask::${{ env.centralUsername }}"
+          echo "::add-mask::${{ env.keyId }}"
+          echo "::add-mask::${{ env.GPG_FILE_NAME }}"
+          set +x
+          echo "Publishing to Maven Central..."
+          
           ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache \
             -PmavenCentralUsername="$centralUsername" \
             -PmavenCentralPassword="$centralPassword" \
             -Psigning.keyId="$keyId" \
             -Psigning.password="$signingPassword" \
-            -Psigning.secretKeyRingFile="$(pwd)/$GPG_FILE_NAME"
+            -Psigning.secretKeyRingFile="${{ github.workspace }}/${{ env.GPG_FILE_NAME }}"
+        working-directory: OneSignalSDK
           
