@@ -25,6 +25,22 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v3
 
+      - name: Ensure Java 11 or 17
+        id: setup-java
+        run: |
+          CURRENT_JAVA=$(java -version 2>&1 | head -n 1 | awk -F '"' '{print $2}')
+          echo "Current Java version: $CURRENT_JAVA"
+
+          if [[ "$CURRENT_JAVA" != 11.* && "$CURRENT_JAVA" != 17.* ]]; then
+            echo "Installing Java 11..."
+            sudo apt-get update
+            sudo apt-get install openjdk-11-jdk -y
+            echo "JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64" >> $GITHUB_ENV
+            echo "/usr/lib/jvm/java-11-openjdk-amd64/bin" >> $GITHUB_PATH
+          else
+            echo "Java version $CURRENT_JAVA is compatible."
+          fi
+
       - name: Install Bitwarden CLI
         run: |
           curl -Ls "https://vault.bitwarden.com/download/?app=cli&platform=linux" -o bw.zip
@@ -53,6 +69,11 @@ jobs:
           bw get attachment "$GPG_FILE_NAME" --itemid "$ITEM_ID" --session "$BW_SESSION" --output "$GPG_FILE_NAME"
           echo "signing.secretKeyRingFile=$(pwd)/$GPG_FILE_NAME" >> $GITHUB_ENV
 
+      - name: Assemble Release
+        run: |
+          ./gradlew assembleRelease
+        working-directory: OneSignalSDK
+
       - name: Publish to Maven Central
         run: |
           echo "::add-mask::${{ env.centralPassword }}"
@@ -62,7 +83,7 @@ jobs:
           echo "::add-mask::${{ env.GPG_FILE_NAME }}"
           set +x
           echo "Publishing to Maven Central..."
-          
+
           ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache \
             -PmavenCentralUsername="$centralUsername" \
             -PmavenCentralPassword="$centralPassword" \
@@ -70,4 +91,3 @@ jobs:
             -Psigning.password="$signingPassword" \
             -Psigning.secretKeyRingFile="${{ github.workspace }}/${{ env.GPG_FILE_NAME }}"
         working-directory: OneSignalSDK
-          
