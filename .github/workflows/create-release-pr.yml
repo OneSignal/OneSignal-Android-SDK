@@ -1,10 +1,11 @@
-name: Bump SDK Version and Create PR
+name: Create Release PR
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'New SDK version (e.g. 5.1.38)'
+        description: 'New SDK version (e.g. 5.1.38 or 5.2.0-beta1)'
+        type: string
         required: true
 
 permissions:
