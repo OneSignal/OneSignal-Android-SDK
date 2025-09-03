@@ -1,4 +1,4 @@
-name: Publish to Maven Central
+name: Publish Release
 
 on:
   push:
@@ -70,8 +70,27 @@ jobs:
           bw get attachment "$GPG_FILE_NAME" --itemid "$ITEM_ID" --session "$BW_SESSION" --output "$GPG_FILE_NAME"
           echo "signing.secretKeyRingFile=$(pwd)/$GPG_FILE_NAME" >> $GITHUB_ENV
 
-      - name: Assemble Release
+      - name: Extract SDK_VERSION from gradle.properties
+        id: version
         run: |
+          VERSION=$(grep '^SDK_VERSION=' OneSignalSDK/gradle.properties | cut -d '=' -f2)
+          echo "SDK_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "SDK_VERSION=$VERSION"
+
+      - name: Checkout release branch and assemble release
+        run: |
+          VERSION="${{ env.SDK_VERSION }}"
+          BRANCH="rel/$VERSION"
+
+          echo "Checking if branch $BRANCH exists..."
+          if ! git ls-remote --exit-code --heads origin "$BRANCH"; then
+            echo "❌ Branch '$BRANCH' does not exist on remote. Aborting."
+            exit 1
+          fi
+
+          git fetch origin "$BRANCH"
+          git checkout "$BRANCH"
+
           ./gradlew assembleRelease
         working-directory: OneSignalSDK
 
@@ -92,13 +111,6 @@ jobs:
             -Psigning.password="$signingPassword" \
             -Psigning.secretKeyRingFile="${{ github.workspace }}/${{ env.GPG_FILE_NAME }}"
         working-directory: OneSignalSDK
-
-      - name: Extract SDK_VERSION from gradle.properties
-        id: version
-        run: |
-          VERSION=$(grep '^SDK_VERSION=' OneSignalSDK/gradle.properties | cut -d '=' -f2)
-          echo "SDK_VERSION=$VERSION" >> $GITHUB_ENV
-          echo "SDK_VERSION=$VERSION"
 
       - name: Authenticate gh
         run: |
