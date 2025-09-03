@@ -91,3 +91,29 @@ jobs:
             -Psigning.password="$signingPassword" \
             -Psigning.secretKeyRingFile="${{ github.workspace }}/${{ env.GPG_FILE_NAME }}"
         working-directory: OneSignalSDK
+
+      - name: Extract SDK_VERSION from gradle.properties
+        id: version
+        run: |
+          VERSION=$(grep '^SDK_VERSION=' OneSignalSDK/gradle.properties | cut -d '=' -f2)
+          echo "SDK_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "SDK_VERSION=$VERSION"
+
+      - name: Authenticate gh
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Tag and create GitHub release
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git tag "v${SDK_VERSION}"
+          git push origin "v${SDK_VERSION}"
+
+          gh release create "v${SDK_VERSION}" \
+            --title "SDK v${SDK_VERSION}" \
+            --notes "Automated release for SDK version ${SDK_VERSION}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
