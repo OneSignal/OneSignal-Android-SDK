@@ -27,7 +27,7 @@ jobs:
 
       - name: Install Bitwarden CLI
         run: |
-          curl -Ls https://vault.bitwarden.com/download/?app=cli&platform=linux -o bw.zip
+          curl -Ls "https://vault.bitwarden.com/download/?app=cli&platform=linux" -o bw.zip
           unzip bw.zip -d bw-bin
           sudo mv bw-bin/bw /usr/local/bin
           bw --version
