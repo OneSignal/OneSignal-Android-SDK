@@ -1,14 +1,12 @@
 name: Publish to Maven Central
 
 on:
-  push:
-    branches:
-      - publish_job
 
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
 
 jobs:
   publish:
