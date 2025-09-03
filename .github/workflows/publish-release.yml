@@ -119,17 +119,13 @@ jobs:
           VERSION="${{ env.SDK_VERSION }}"
       
           if [[ "$VERSION" == *"alpha"* ]]; then
-            CHANNEL="alpha"
             PRERELEASE="--prerelease"
           elif [[ "$VERSION" == *"beta"* ]]; then
-            CHANNEL="beta"
             PRERELEASE="--prerelease"
           else
-            CHANNEL="Current"
             PRERELEASE=""
           fi
       
-          echo "CHANNEL=$CHANNEL" >> $GITHUB_ENV
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
 
       - name: Tag and create GitHub release
@@ -138,12 +134,25 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git tag "${SDK_VERSION}"
-          git push origin "${SDK_VERSION}"
+          VERSION="${{ env.SDK_VERSION }}"
 
-          gh release create "${SDK_VERSION}" \
-            --title "${SDK_VERSION}" \
-            --notes "Channels: $CHANNEL" \
-            $PRERELEASE
+          echo "Creating tag $VERSION..."
+          git tag "$VERSION"
+          git push origin "$VERSION"
+
+          echo "Fetching last merged PR from release branch..."
+          PR_BODY=$(gh pr list --state merged --search "rel/$VERSION in:title" --json body --jq '.[0].body')
+
+          if [[ -z "$PR_BODY" ]]; then
+            PR_BODY="No PR body found for rel/$VERSION"
+          fi
+
+          echo "$PR_BODY" > release_notes.md
+
+          echo "Creating GitHub release..."
+          gh release create "$VERSION" \
+            --title "$VERSION" \
+            --notes-file release_notes.md \
+            ${{ env.PRERELEASE }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
