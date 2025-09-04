@@ -28,22 +28,33 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.onesignal.OneSignal
-import com.onesignal.common.threading.suspendifyBlocking
+import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class NotificationDismissReceiver : BroadcastReceiver() {
     override fun onReceive(
         context: Context,
         intent: Intent,
     ) {
-        if (!OneSignal.initWithContext(context.applicationContext)) {
-            return
-        }
+        val pendingResult = goAsync()
 
-        var notificationOpenedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
+        suspendifyOnThread {
+            if (!OneSignal.initWithContext(context.applicationContext)) {
+                Logging.warn("NotificationOpenedReceiver skipped due to failed OneSignal init")
+                pendingResult.finish()
+                return@suspendifyOnThread
+            }
 
-        suspendifyBlocking {
-            notificationOpenedProcessor.processFromContext(context, intent)
+            val notificationOpenedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
+
+            // init OneSignal in background but process in main
+            withContext(Dispatchers.Main) {
+                notificationOpenedProcessor.processFromContext(context, intent)
+            }
+            pendingResult.finish()
         }
     }
 }

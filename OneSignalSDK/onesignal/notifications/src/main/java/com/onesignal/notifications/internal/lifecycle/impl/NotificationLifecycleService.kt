@@ -33,6 +33,8 @@ import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleServ
 import com.onesignal.notifications.internal.receivereceipt.IReceiveReceiptWorkManager
 import com.onesignal.session.internal.influence.IInfluenceManager
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -266,7 +268,9 @@ internal class NotificationLifecycleService(
             val intent = intentGenerator.getIntentVisible()
             if (intent != null) {
                 Logging.info("SDK running startActivity with Intent: $intent")
-                activity.startActivity(intent)
+                withContext(Dispatchers.Main) {
+                    activity.startActivity(intent)
+                }
             } else {
                 Logging.info("SDK not showing an Activity automatically due to it's settings.")
             }

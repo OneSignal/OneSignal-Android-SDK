@@ -35,13 +35,14 @@ import com.onesignal.debug.internal.logging.Logging
 
 class SyncJobService : JobService() {
     override fun onStartJob(jobParameters: JobParameters): Boolean {
-        if (!OneSignal.initWithContext(this)) {
-            return false
-        }
-
-        var backgroundService = OneSignal.getService<IBackgroundManager>()
-
         suspendifyOnThread {
+            // init OneSignal in background
+            if (!OneSignal.initWithContext(this)) {
+                jobFinished(jobParameters, false)
+                return@suspendifyOnThread
+            }
+
+            val backgroundService = OneSignal.getService<IBackgroundManager>()
             backgroundService.runBackgroundServices()
 
             Logging.debug("LollipopSyncRunnable:JobFinished needsJobReschedule: " + backgroundService.needsJobReschedule)
@@ -49,7 +50,6 @@ class SyncJobService : JobService() {
             // Reschedule if needed
             val reschedule = backgroundService.needsJobReschedule
             backgroundService.needsJobReschedule = false
-
             jobFinished(jobParameters, reschedule)
         }
 
