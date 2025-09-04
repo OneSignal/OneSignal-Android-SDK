@@ -9,6 +9,7 @@ import androidx.multidex.MultiDexApplication;
 
 import com.onesignal.Continue;
 import com.onesignal.OneSignal;
+import com.onesignal.debug.internal.logging.Logging;
 import com.onesignal.inAppMessages.IInAppMessageClickListener;
 import com.onesignal.inAppMessages.IInAppMessageClickEvent;
 import com.onesignal.inAppMessages.IInAppMessageDidDismissEvent;
@@ -57,13 +58,17 @@ public class MainApplication extends MultiDexApplication {
 
         OneSignalNotificationSender.setAppId(appId);
 
+        Long timeBefore = System.currentTimeMillis();
         OneSignal.initWithContext(this, appId);
+
+        Log.v(Tag.LOG_TAG, "Jin testing init duration: " + (System.currentTimeMillis() - timeBefore) + " ms");
+        Log.v(Tag.LOG_TAG, "Jin testing push sub ID: " + OneSignal.getUser().getPushSubscription().getId());
 
         // Ensure calling requestPermission in a thread right after initWithContext does not crash
         // This will reproduce result similar to Kotlin CouroutineScope.launch{}, which may potentially crash the app
         ExecutorService executor = Executors.newSingleThreadExecutor();
         @SuppressLint({"NewApi", "LocalSuppress"}) CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-            OneSignal.getNotifications().requestPermission(true, Continue.none());
+            //OneSignal.getNotifications().requestPermission(true, Continue.none());
         }, executor);
         future.join(); // Waits for the task to complete
         executor.shutdown();
