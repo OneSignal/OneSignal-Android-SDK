@@ -14,6 +14,7 @@ import com.onesignal.common.safeString
 import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
+import com.onesignal.common.threading.OSPrimaryCoroutineScope
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.CoreModule
 import com.onesignal.core.internal.application.IApplicationService
@@ -55,6 +56,7 @@ import org.json.JSONObject
 internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val sdkVersion: String = OneSignalUtils.SDK_VERSION
     override var isInitialized: Boolean = false
+    private var isInitializing: Boolean = false
 
     override var consentRequired: Boolean
         get() = configModel?.consentRequired ?: (_consentRequired == true)
@@ -84,7 +86,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     // we hardcode the DebugManager implementation so it can be used prior to calling `initWithContext`
     override val debug: IDebugManager = DebugManager()
     override val session: ISessionManager get() =
-        if (isInitialized) {
+        if (isInitialized || isInitializing) {
             services.getService()
         } else {
             throw Exception(
@@ -92,7 +94,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             )
         }
     override val notifications: INotificationsManager get() =
-        if (isInitialized) {
+        if (isInitialized || isInitializing) {
             services.getService()
         } else {
             throw Exception(
@@ -100,7 +102,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             )
         }
     override val location: ILocationManager get() =
-        if (isInitialized) {
+        if (isInitialized || isInitializing) {
             services.getService()
         } else {
             throw Exception(
@@ -108,7 +110,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             )
         }
     override val inAppMessages: IInAppMessagesManager get() =
-        if (isInitialized) {
+        if (isInitialized || isInitializing) {
             services.getService()
         } else {
             throw Exception(
@@ -116,7 +118,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             )
         }
     override val user: IUserManager get() =
-        if (isInitialized) {
+        if (isInitialized || isInitializing) {
             services.getService()
         } else {
             throw Exception(
@@ -146,6 +148,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     private var _disableGMSMissingPrompt: Boolean? = null
     private val initLock: Any = Any()
     private val loginLock: Any = Any()
+    private var forceCreateUser = false
 
     private val listOfModules =
         listOf(
@@ -210,8 +213,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             sessionModel = services.getService<SessionModelStore>().model
             operationRepo = services.getService<IOperationRepo>()
 
-            var forceCreateUser = false
-
             // initWithContext is called by our internal services/receivers/activities but they do not provide
             // an appId (they don't know it).  If the app has never called the external initWithContext
             // prior to our services/receivers/activities we will blow up, as no appId has been established.
@@ -249,97 +250,103 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 configModel!!.disableGMSMissingPrompt = _disableGMSMissingPrompt!!
             }
 
-            val startupService = StartupService(services)
+            // start all other loading in a background thread
+            isInitializing = true
+            OSPrimaryCoroutineScope.execute {
+                val startupService = StartupService(services)
 
-            // bootstrap services
-            startupService.bootstrap()
+                // bootstrap services
+                startupService.bootstrap()
 
-            if (forceCreateUser || !identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)) {
-                val legacyPlayerId =
-                    preferencesService!!.getString(
-                        PreferenceStores.ONESIGNAL,
-                        PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID,
-                    )
-                if (legacyPlayerId == null) {
-                    Logging.debug("initWithContext: creating new device-scoped user")
-                    createAndSwitchToNewUser()
-                    operationRepo!!.enqueue(
-                        LoginUserOperation(
-                            configModel!!.appId,
-                            identityModelStore!!.model.onesignalId,
-                            identityModelStore!!.model.externalId,
-                        ),
-                    )
-                } else {
-                    Logging.debug("initWithContext: creating user linked to subscription $legacyPlayerId")
-
-                    // Converting a 4.x SDK to the 5.x SDK.  We pull the legacy user sync values to create the subscription model, then enqueue
-                    // a specialized `LoginUserFromSubscriptionOperation`, which will drive fetching/refreshing of the local user
-                    // based on the subscription ID we do have.
-                    val legacyUserSyncString =
+                if (forceCreateUser || !identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)) {
+                    val legacyPlayerId =
                         preferencesService!!.getString(
                             PreferenceStores.ONESIGNAL,
-                            PreferenceOneSignalKeys.PREFS_LEGACY_USER_SYNCVALUES,
+                            PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID,
                         )
-                    var suppressBackendOperation = false
+                    if (legacyPlayerId == null) {
+                        Logging.debug("initWithContext: creating new device-scoped user")
+                        createAndSwitchToNewUser()
+                        operationRepo!!.enqueue(
+                            LoginUserOperation(
+                                configModel!!.appId,
+                                identityModelStore!!.model.onesignalId,
+                                identityModelStore!!.model.externalId,
+                            ),
+                        )
+                    } else {
+                        Logging.debug("initWithContext: creating user linked to subscription $legacyPlayerId")
 
-                    if (legacyUserSyncString != null) {
-                        val legacyUserSyncJSON = JSONObject(legacyUserSyncString)
-                        val notificationTypes = legacyUserSyncJSON.safeInt("notification_types")
+                        // Converting a 4.x SDK to the 5.x SDK.  We pull the legacy user sync values to create the subscription model, then enqueue
+                        // a specialized `LoginUserFromSubscriptionOperation`, which will drive fetching/refreshing of the local user
+                        // based on the subscription ID we do have.
+                        val legacyUserSyncString =
+                            preferencesService!!.getString(
+                                PreferenceStores.ONESIGNAL,
+                                PreferenceOneSignalKeys.PREFS_LEGACY_USER_SYNCVALUES,
+                            )
+                        var suppressBackendOperation = false
 
-                        val pushSubscriptionModel = SubscriptionModel()
-                        pushSubscriptionModel.id = legacyPlayerId
-                        pushSubscriptionModel.type = SubscriptionType.PUSH
-                        pushSubscriptionModel.optedIn =
-                            notificationTypes != SubscriptionStatus.NO_PERMISSION.value && notificationTypes != SubscriptionStatus.UNSUBSCRIBE.value
-                        pushSubscriptionModel.address =
-                            legacyUserSyncJSON.safeString("identifier") ?: ""
-                        if (notificationTypes != null) {
-                            pushSubscriptionModel.status = SubscriptionStatus.fromInt(notificationTypes) ?: SubscriptionStatus.NO_PERMISSION
-                        } else {
-                            pushSubscriptionModel.status = SubscriptionStatus.SUBSCRIBED
+                        if (legacyUserSyncString != null) {
+                            val legacyUserSyncJSON = JSONObject(legacyUserSyncString)
+                            val notificationTypes = legacyUserSyncJSON.safeInt("notification_types")
+
+                            val pushSubscriptionModel = SubscriptionModel()
+                            pushSubscriptionModel.id = legacyPlayerId
+                            pushSubscriptionModel.type = SubscriptionType.PUSH
+                            pushSubscriptionModel.optedIn =
+                                notificationTypes != SubscriptionStatus.NO_PERMISSION.value && notificationTypes != SubscriptionStatus.UNSUBSCRIBE.value
+                            pushSubscriptionModel.address =
+                                legacyUserSyncJSON.safeString("identifier") ?: ""
+                            if (notificationTypes != null) {
+                                pushSubscriptionModel.status = SubscriptionStatus.fromInt(notificationTypes) ?: SubscriptionStatus.NO_PERMISSION
+                            } else {
+                                pushSubscriptionModel.status = SubscriptionStatus.SUBSCRIBED
+                            }
+
+                            pushSubscriptionModel.sdk = OneSignalUtils.SDK_VERSION
+                            pushSubscriptionModel.deviceOS = Build.VERSION.RELEASE
+                            pushSubscriptionModel.carrier = DeviceUtils.getCarrierName(
+                                services.getService<IApplicationService>().appContext,
+                            ) ?: ""
+                            pushSubscriptionModel.appVersion = AndroidUtils.getAppVersion(
+                                services.getService<IApplicationService>().appContext,
+                            ) ?: ""
+
+                            configModel!!.pushSubscriptionId = legacyPlayerId
+                            subscriptionModelStore!!.add(
+                                pushSubscriptionModel,
+                                ModelChangeTags.NO_PROPOGATE,
+                            )
+                            suppressBackendOperation = true
                         }
 
-                        pushSubscriptionModel.sdk = OneSignalUtils.SDK_VERSION
-                        pushSubscriptionModel.deviceOS = Build.VERSION.RELEASE
-                        pushSubscriptionModel.carrier = DeviceUtils.getCarrierName(
-                            services.getService<IApplicationService>().appContext,
-                        ) ?: ""
-                        pushSubscriptionModel.appVersion = AndroidUtils.getAppVersion(
-                            services.getService<IApplicationService>().appContext,
-                        ) ?: ""
+                        createAndSwitchToNewUser(suppressBackendOperation = suppressBackendOperation)
 
-                        configModel!!.pushSubscriptionId = legacyPlayerId
-                        subscriptionModelStore!!.add(
-                            pushSubscriptionModel,
-                            ModelChangeTags.NO_PROPOGATE,
+                        operationRepo!!.enqueue(
+                            LoginUserFromSubscriptionOperation(
+                                configModel!!.appId,
+                                identityModelStore!!.model.onesignalId,
+                                legacyPlayerId,
+                            ),
                         )
-                        suppressBackendOperation = true
+                        preferencesService!!.saveString(
+                            PreferenceStores.ONESIGNAL,
+                            PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID,
+                            null,
+                        )
                     }
-
-                    createAndSwitchToNewUser(suppressBackendOperation = suppressBackendOperation)
-
-                    operationRepo!!.enqueue(
-                        LoginUserFromSubscriptionOperation(
-                            configModel!!.appId,
-                            identityModelStore!!.model.onesignalId,
-                            legacyPlayerId,
-                        ),
-                    )
-                    preferencesService!!.saveString(
-                        PreferenceStores.ONESIGNAL,
-                        PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID,
-                        null,
-                    )
+                } else {
+                    Logging.debug("initWithContext: using cached user ${identityModelStore!!.model.onesignalId}")
                 }
-            } else {
-                Logging.debug("initWithContext: using cached user ${identityModelStore!!.model.onesignalId}")
+
+                // schedule service starts out of main thread
+                // TODO: don't use a thread if already in background
+                startupService.scheduleStart()
+
+                isInitialized = true
             }
 
-            // schedule service starts out of main thread
-            startupService.scheduleStart()
-
-            isInitialized = true
             return true
         }
     }
@@ -350,7 +357,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     ) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
-        if (!isInitialized) {
+        if (!isInitialized && !isInitializing) {
             throw Exception("Must call 'initWithContext' before 'login'")
         }
 
@@ -402,7 +409,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     override fun logout() {
         Logging.log(LogLevel.DEBUG, "logout()")
 
-        if (!isInitialized) {
+        if (!isInitialized && !isInitializing) {
             throw Exception("Must call 'initWithContext' before 'logout'")
         }
 
