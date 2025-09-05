@@ -1,14 +1,19 @@
 name: Publish Release
 
 on:
-  workflow_dispatch:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
 
 permissions:
   contents: write
-  pull-requests: write
+  pull-requests: read
 
 jobs:
   publish:
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'rel/')
     runs-on: ubuntu-latest
 
     env:
@@ -20,8 +25,10 @@ jobs:
       GPG_FILE_NAME: onesignal_sdk_gpg_subkeys
 
     steps:
-      - name: Checkout source
+      - name: Checkout release branch
         uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
 
       - name: Ensure Java 11 or 17
         run: |
@@ -35,9 +42,9 @@ jobs:
             echo "/usr/lib/jvm/java-11-openjdk-amd64/bin" >> $GITHUB_PATH
           fi
 
-      - name: Decode GPG key from base64
+      - name: Decode GPG file from secret
         run: |
-          echo "$SDK_SIGNING_SECRET_KEY_RING_ENCODED" | base64 -d > $GPG_FILE_NAME
+          echo "$SDK_SIGNING_SECRET_KEY_RING_ENCODED" | base64 -d > "$GPG_FILE_NAME"
           echo "signing.secretKeyRingFile=$(pwd)/$GPG_FILE_NAME" >> $GITHUB_ENV
 
       - name: Extract SDK_VERSION from gradle.properties
@@ -47,87 +54,56 @@ jobs:
           echo "SDK_VERSION=$VERSION" >> $GITHUB_ENV
           echo "SDK_VERSION=$VERSION"
 
-      - name: Checkout release branch and assemble release
-        run: |
-          VERSION="${{ env.SDK_VERSION }}"
-          BRANCH="rel/$VERSION"
-
-          echo "Checking if branch $BRANCH exists..."
-          if ! git ls-remote --exit-code --heads origin "$BRANCH"; then
-            echo "❌ Branch '$BRANCH' does not exist on remote. Aborting."
-            exit 1
-          fi
-
-          git fetch origin "$BRANCH"
-          git checkout "$BRANCH"
-
-          ./gradlew assembleRelease
+      - name: Assemble Release
+        run: ./gradlew assembleRelease
         working-directory: OneSignalSDK
 
       - name: Publish to Maven Central
         run: |
-          set +x  # Prevent secrets from being printed
-          echo "Publishing to Maven Central..."
-
           ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache \
-            -PmavenCentralUsername="${MAVEN_USERNAME}" \
-            -PmavenCentralPassword="${MAVEN_PASSWORD}" \
-            -Psigning.keyId="${SDK_SIGNING_KEY_ID}" \
-            -Psigning.password="${SDK_SIGNING_PASSWORD}" \
-            -Psigning.secretKeyRingFile="${{ github.workspace }}/${{ env.GPG_FILE_NAME }}"
+            -PmavenCentralUsername="$MAVEN_USERNAME" \
+            -PmavenCentralPassword="$MAVEN_PASSWORD" \
+            -Psigning.keyId="$SDK_SIGNING_KEY_ID" \
+            -Psigning.password="$SDK_SIGNING_PASSWORD" \
+            -Psigning.secretKeyRingFile="$(pwd)/$GPG_FILE_NAME"
         working-directory: OneSignalSDK
 
-      - name: Authenticate GitHub CLI
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+      - name: Authenticate gh CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
-      - name: Determine release channel
-        id: release_info
+      - name: Tag and create GitHub Release
         run: |
           VERSION="${{ env.SDK_VERSION }}"
+
+          # Determine release channel
           if [[ "$VERSION" == *"alpha"* ]]; then
             PRERELEASE="--prerelease"
+            CHANNEL="alpha"
           elif [[ "$VERSION" == *"beta"* ]]; then
             PRERELEASE="--prerelease"
+            CHANNEL="beta"
           else
             PRERELEASE=""
+            CHANNEL="current"
           fi
-          echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
 
-      - name: Tag and create GitHub release
-        if: success()
-        run: |
+          # Extract PR body as release notes
+          PR_NUMBER=$(echo "${{ github.event.pull_request.number }}")
+          PR_BODY=$(gh pr view "$PR_NUMBER" --json body -q ".body")
+          echo -e "Channels: $CHANNEL\n\n$PR_BODY" > release_notes.md
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          VERSION="${{ env.SDK_VERSION }}"
-
-          echo "Creating tag $VERSION..."
+          echo "Tagging release v$VERSION"
           git tag "$VERSION"
           git push origin "$VERSION"
 
-          echo "Fetching last merged PR from release branch..."
-          PR_BODY=$(gh pr list --state merged --search "rel/$VERSION in:title" --json body --jq '.[0].body')
-
-          if [[ -z "$PR_BODY" ]]; then
-            PR_BODY="No PR body found for rel/$VERSION"
-          fi
-
-          echo "$PR_BODY" > release_notes.md
-
-          echo "Creating GitHub release..."
+          echo "Creating GitHub release"
           gh release create "$VERSION" \
             --title "$VERSION" \
             --notes-file release_notes.md \
-            ${{ env.PRERELEASE }}
+            $PRERELEASE
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Delete release branch from remote
-        if: success()
-        run: |
-          VERSION="${{ env.SDK_VERSION }}"
-          BRANCH="rel/$VERSION"
-
-          echo "Deleting remote branch $BRANCH..."
-          git push origin --delete "$BRANCH"
+          
