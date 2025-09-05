@@ -1,7 +1,6 @@
 name: Publish Release
 
 on:
-  
   workflow_dispatch:
 
 permissions:
@@ -13,10 +12,11 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      BW_CLIENTID: ${{ secrets.BW_CLIENTID }}
-      BW_CLIENTSECRET: ${{ secrets.BW_CLIENTSECRET }}
-      BW_MASTER_PASSWORD: ${{ secrets.BW_MASTER_PASSWORD }}
-      ITEM_NAME: MavenCentral Secrets
+      MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+      MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+      SDK_SIGNING_KEY_ID: ${{ secrets.SDK_SIGNING_KEY_ID }}
+      SDK_SIGNING_PASSWORD: ${{ secrets.SDK_SIGNING_PASSWORD }}
+      SDK_SIGNING_SECRET_KEY_RING_ENCODED: ${{ secrets.SDK_SIGNING_SECRET_KEY_RING_ENCODED }}
       GPG_FILE_NAME: onesignal_sdk_gpg_subkeys
 
     steps:
@@ -24,47 +24,20 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Ensure Java 11 or 17
-        id: setup-java
         run: |
           CURRENT_JAVA=$(java -version 2>&1 | head -n 1 | awk -F '"' '{print $2}')
           echo "Current Java version: $CURRENT_JAVA"
-
           if [[ "$CURRENT_JAVA" != 11.* && "$CURRENT_JAVA" != 17.* ]]; then
             echo "Installing Java 11..."
             sudo apt-get update
             sudo apt-get install openjdk-11-jdk -y
             echo "JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64" >> $GITHUB_ENV
             echo "/usr/lib/jvm/java-11-openjdk-amd64/bin" >> $GITHUB_PATH
-          else
-            echo "Java version $CURRENT_JAVA is compatible."
           fi
 
-      - name: Install Bitwarden CLI
+      - name: Decode GPG key from base64
         run: |
-          curl -Ls "https://vault.bitwarden.com/download/?app=cli&platform=linux" -o bw.zip
-          unzip bw.zip -d bw-bin
-          sudo mv bw-bin/bw /usr/local/bin
-          bw --version
-
-      - name: Login + Unlock Bitwarden
-        run: |
-          bw login --apikey
-          SESSION=$(bw unlock "$BW_MASTER_PASSWORD" --raw)
-          echo "BW_SESSION=$SESSION" >> $GITHUB_ENV
-
-      - name: Fetch Maven + Signing secrets from Bitwarden
-        run: |
-          ITEM_JSON=$(bw get item "$ITEM_NAME" --session "$BW_SESSION")
-          
-          echo "centralUsername=$(echo "$ITEM_JSON" | jq -r '.fields[] | select(.name=="centralUsername") | .value')" >> $GITHUB_ENV
-          echo "centralPassword=$(echo "$ITEM_JSON" | jq -r '.fields[] | select(.name=="centralPassword") | .value')" >> $GITHUB_ENV
-          echo "keyId=$(echo "$ITEM_JSON" | jq -r '.fields[] | select(.name=="keyId") | .value')" >> $GITHUB_ENV
-          echo "signingPassword=$(echo "$ITEM_JSON" | jq -r '.fields[] | select(.name=="signingPassword") | .value')" >> $GITHUB_ENV
-
-      - name: Download GPG Key File from Bitwarden
-        run: |
-          ITEM_ID=$(bw list items --session "$BW_SESSION" | jq -r '.[] | select(.name=="MavenCentral Secrets") | .id')
-          bw get attachment "$GPG_FILE_NAME" --itemid "$ITEM_ID" --session "$BW_SESSION" --output "$GPG_FILE_NAME"
+          echo "$SDK_SIGNING_SECRET_KEY_RING_ENCODED" | base64 -d > $GPG_FILE_NAME
           echo "signing.secretKeyRingFile=$(pwd)/$GPG_FILE_NAME" >> $GITHUB_ENV
 
       - name: Extract SDK_VERSION from gradle.properties
@@ -93,23 +66,18 @@ jobs:
 
       - name: Publish to Maven Central
         run: |
-          echo "::add-mask::${{ env.centralPassword }}"
-          echo "::add-mask::${{ env.signingPassword }}"
-          echo "::add-mask::${{ env.centralUsername }}"
-          echo "::add-mask::${{ env.keyId }}"
-          echo "::add-mask::${{ env.GPG_FILE_NAME }}"
-          set +x
+          set +x  # Prevent secrets from being printed
           echo "Publishing to Maven Central..."
 
           ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache \
-            -PmavenCentralUsername="$centralUsername" \
-            -PmavenCentralPassword="$centralPassword" \
-            -Psigning.keyId="$keyId" \
-            -Psigning.password="$signingPassword" \
+            -PmavenCentralUsername="${MAVEN_USERNAME}" \
+            -PmavenCentralPassword="${MAVEN_PASSWORD}" \
+            -Psigning.keyId="${SDK_SIGNING_KEY_ID}" \
+            -Psigning.password="${SDK_SIGNING_PASSWORD}" \
             -Psigning.secretKeyRingFile="${{ github.workspace }}/${{ env.GPG_FILE_NAME }}"
         working-directory: OneSignalSDK
 
-      - name: Authenticate gh
+      - name: Authenticate GitHub CLI
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
@@ -117,7 +85,6 @@ jobs:
         id: release_info
         run: |
           VERSION="${{ env.SDK_VERSION }}"
-      
           if [[ "$VERSION" == *"alpha"* ]]; then
             PRERELEASE="--prerelease"
           elif [[ "$VERSION" == *"beta"* ]]; then
@@ -125,7 +92,6 @@ jobs:
           else
             PRERELEASE=""
           fi
-      
           echo "PRERELEASE=$PRERELEASE" >> $GITHUB_ENV
 
       - name: Tag and create GitHub release
@@ -156,3 +122,12 @@ jobs:
             ${{ env.PRERELEASE }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete release branch from remote
+        if: success()
+        run: |
+          VERSION="${{ env.SDK_VERSION }}"
+          BRANCH="rel/$VERSION"
+
+          echo "Deleting remote branch $BRANCH..."
+          git push origin --delete "$BRANCH"
