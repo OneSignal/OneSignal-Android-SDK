@@ -1,11 +1,6 @@
 name: Create Release PR
 
 on:
-
-  push:
-    branches:
-      - automate-release
-
   workflow_dispatch:
     inputs:
       version:
