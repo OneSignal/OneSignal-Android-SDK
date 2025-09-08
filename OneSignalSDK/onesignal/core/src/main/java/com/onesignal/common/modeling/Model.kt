@@ -6,7 +6,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.math.BigDecimal
 import java.util.Collections
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The base class for a [Model].  A model is effectively a map of data, each key in the map being
@@ -63,7 +62,6 @@ open class Model(
         }
 
     protected val data: MutableMap<String, Any?> = Collections.synchronizedMap(mutableMapOf())
-    private val pendingWrites: MutableMap<String, Any?> = ConcurrentHashMap()
     private val changeNotifier = EventProducer<IModelChangedHandler>()
 
     init {
@@ -458,38 +456,6 @@ open class Model(
         notifyChanged(name, name, tag, oldValue, value)
     }
 
-    fun setBufferedProperty(
-        name: String,
-        value: Any?,
-        tag: String = ModelChangeTags.NORMAL
-    ) {
-        if (value != null) {
-            pendingWrites[name] = value
-        } else {
-            pendingWrites.remove(name)
-        }
-
-        // Do NOT notify yet – notification happens on flush
-        // TODO: flush asynchronously
-    }
-
-    fun flushBuffer() {
-        synchronized(data) {
-            for ((key, newValue) in pendingWrites) {
-                val oldValue = data[key]
-                if (oldValue != newValue) {
-                    if (newValue != null) {
-                        data[key] = newValue
-                    } else {
-                        data.remove(key)
-                    }
-                    notifyChanged(key, key, ModelChangeTags.NORMAL, oldValue, newValue)
-                }
-            }
-            pendingWrites.clear()
-        }
-    }
-
     /**
      * Determine whether the provided property is currently set in this model.
      *
@@ -682,10 +648,6 @@ open class Model(
                 defaultValue
             }
         }
-    }
-
-    fun getPropertyBuffered(name: String): Any? {
-        return pendingWrites[name] ?: data[name]
     }
 
     private fun notifyChanged(
