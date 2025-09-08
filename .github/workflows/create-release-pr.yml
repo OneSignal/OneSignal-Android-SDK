@@ -70,15 +70,13 @@ jobs:
           echo "✅ Found last release tag: $LAST_TAG"
           echo "range=$LAST_TAG..HEAD" >> $GITHUB_OUTPUT
 
-      - name: Generate Release Notes from PR titles
+      - name: Generate Release Notes from Commit Titles
         id: generate_notes
         run: |
-          RANGE="${{ steps.fetch_last_release.outputs.range }}"
-          echo "Using commit range: $RANGE"
-        
           echo "## 🔖 Auto-Generated Release Notes" > pr_body.md
           echo "" >> pr_body.md
 
+          # Detect release channel
           if [[ "$VERSION" == *"alpha"* ]]; then
             CHANNEL="alpha"
           elif [[ "$VERSION" == *"beta"* ]]; then
@@ -90,31 +88,34 @@ jobs:
           echo "**Channels:** $CHANNEL" >> pr_body.md
           echo "" >> pr_body.md
 
+          # Use commit range from previous release tag
+          RANGE="${{ steps.fetch_last_release.outputs.range }}"
           echo "Using commit range: $RANGE"
 
-          PR_TITLES=$(git log "$RANGE" --pretty=format:"%s" | grep -E '^Merge pull request' | awk -F'"' '{print $2}')
+          # Get all commit subjects in the range
+          COMMIT_MESSAGES=$(git log "$RANGE" --pretty=format:"%s" || true)
 
-          if [[ -z "$PR_TITLES" ]]; then
-            echo "❌ No merged PRs found since last release. Exiting safely."
+          if [[ -z "$COMMIT_MESSAGES" ]]; then
+            echo "❌ No commits found in range $RANGE. Exiting safely."
             exit 0
           fi
 
-          echo "$PR_TITLES" > pr_titles.txt
+          echo "$COMMIT_MESSAGES" > commit_titles.txt
 
           echo "### 🚀 New Features" >> pr_body.md
-          grep -i '^feat' pr_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
+          grep -i '^feat' commit_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
 
           echo "" >> pr_body.md
           echo "### 🐛 Bug Fixes" >> pr_body.md
-          grep -i '^bug' pr_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
+          grep -i '^bug' commit_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
 
           echo "" >> pr_body.md
           echo "### 🔧 Improvements" >> pr_body.md
-          grep -i -E '^(perf|refactor)' pr_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
+          grep -i -E '^(perf|refactor)' commit_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
 
           echo "" >> pr_body.md
-          echo "### 📝 Uncategorized PRs" >> pr_body.md
-          grep -vi -E '^(feat|bug|perf|refactor)' pr_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
+          echo "### 📝 Uncategorized Commits" >> pr_body.md
+          grep -v -i -E '^(feat|bug|perf|refactor)' commit_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
 
           echo "" >> pr_body.md
           echo "### 📦 Version" >> pr_body.md
