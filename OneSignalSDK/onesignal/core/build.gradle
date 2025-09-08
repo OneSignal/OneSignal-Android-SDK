@@ -11,6 +11,11 @@ android {
         minSdkVersion rootProject.buildVersions.minSdkVersion
         consumerProguardFiles "consumer-rules.pro"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField "String", "SDK_VERSION", "\"${rootProject.version}\""
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {

@@ -53,7 +53,7 @@ import com.onesignal.user.internal.subscriptions.SubscriptionType
 import org.json.JSONObject
 
 internal class OneSignalImp : IOneSignal, IServiceProvider {
-    override val sdkVersion: String = OneSignalUtils.SDK_VERSION
+    override val sdkVersion: String = OneSignalUtils.sdkVersion
     override var isInitialized: Boolean = false
 
     override var consentRequired: Boolean
@@ -300,7 +300,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                             pushSubscriptionModel.status = SubscriptionStatus.SUBSCRIBED
                         }
 
-                        pushSubscriptionModel.sdk = OneSignalUtils.SDK_VERSION
+                        pushSubscriptionModel.sdk = OneSignalUtils.sdkVersion
                         pushSubscriptionModel.deviceOS = Build.VERSION.RELEASE
                         pushSubscriptionModel.carrier = DeviceUtils.getCarrierName(
                             services.getService<IApplicationService>().appContext,
@@ -472,7 +472,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         newPushSubscription.optedIn = currentPushSubscription?.optedIn ?: true
         newPushSubscription.address = currentPushSubscription?.address ?: ""
         newPushSubscription.status = currentPushSubscription?.status ?: SubscriptionStatus.NO_PERMISSION
-        newPushSubscription.sdk = OneSignalUtils.SDK_VERSION
+        newPushSubscription.sdk = OneSignalUtils.sdkVersion
         newPushSubscription.deviceOS = Build.VERSION.RELEASE
         newPushSubscription.carrier = DeviceUtils.getCarrierName(services.getService<IApplicationService>().appContext) ?: ""
         newPushSubscription.appVersion = AndroidUtils.getAppVersion(services.getService<IApplicationService>().appContext) ?: ""
