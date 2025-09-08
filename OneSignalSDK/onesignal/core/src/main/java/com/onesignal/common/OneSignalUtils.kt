@@ -14,6 +14,10 @@ object OneSignalUtils {
         formatVersion(BuildConfig.SDK_VERSION)
     }
 
+    /**
+     * Formats a version string to ensure proper lexicographical sorting.
+     * For example, "1.2.3-beta" becomes "010203-beta", "1.20.3" becomes "010203".
+     */
     internal fun formatVersion(version: String): String {
         val parts = version.split("-", limit = 2)
         val base = parts[0].split(".")
