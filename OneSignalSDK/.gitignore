@@ -1,9 +1,0 @@
-.gradle
-local.properties
-Examples/OneSignalDemo/local.properties
-.DS_Store
-/build
-/captures
-*.gpg
-/**/.idea
-*.iml
