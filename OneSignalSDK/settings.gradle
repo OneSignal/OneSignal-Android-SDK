@@ -3,7 +3,10 @@
 gradle.rootProject {
     allprojects {
         group = 'com.onesignal'
-        version = gradle.rootProject.hasProperty("SDK_VERSION") ? gradle.rootProject.getProperty("SDK_VERSION") : "x.x.x"
+        if (!gradle.rootProject.hasProperty("SDK_VERSION")) {
+            throw new RuntimeException("SDK_VERSION is not defined. Please pass -PSDK_VERSION=X.Y.Z to the build or update gradle.properties.")
+        }
+        version = gradle.rootProject.getProperty("SDK_VERSION")
         configurations.all {
             resolutionStrategy.dependencySubstitution {
                 substitute(module('com.onesignal:OneSignal')).using(project(':OneSignal'))
