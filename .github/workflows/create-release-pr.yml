@@ -56,9 +56,25 @@ jobs:
           git commit -am "chore: bump SDK_VERSION to $VERSION"
           git push origin "$BRANCH"
 
+      - name: Fetch Last GitHub Release Tag
+        id: fetch_last_release
+        run: |
+          echo "Fetching latest GitHub release tag..."
+          LAST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+
+          if [[ -z "$LAST_TAG" ]]; then
+            echo "❌ No previous release tag found. Cannot generate release notes."
+            exit 0
+          fi
+
+          echo "✅ Found last release tag: $LAST_TAG"
+          echo "range=$LAST_TAG..HEAD" >> $GITHUB_OUTPUT
+
       - name: Generate Release Notes from PR titles
         id: generate_notes
+        if: steps.fetch_last_release.outputs.range != ''
         run: |
+          RANGE: ${{ steps.fetch_last_release.outputs.range }}
           echo "## 🔖 Auto-Generated Release Notes" > pr_body.md
           echo "" >> pr_body.md
 
@@ -73,17 +89,9 @@ jobs:
           echo "**Channels:** $CHANNEL" >> pr_body.md
           echo "" >> pr_body.md
 
-          LAST_REL_MERGE_SHA=$(git log origin/main --merges --pretty=format:"%H %s" | grep -m1 "Merge pull request" | grep "from rel/" | cut -d' ' -f1)
+          echo "Using commit range: $RANGE"
 
-          if [[ -z "$LAST_REL_MERGE_SHA" ]]; then
-            echo "⚠️ Could not find previous rel/* merge. Using fallback HEAD~50"
-            RANGE="HEAD~50..HEAD"
-          else
-            echo "✅ Last rel/* merge SHA: $LAST_REL_MERGE_SHA"
-            RANGE="$LAST_REL_MERGE_SHA..HEAD"
-          fi
-
-          PR_TITLES=$(git log $RANGE --pretty=format:"%s" | grep -E '^Merge pull request' | awk -F'"' '{print $2}')
+          PR_TITLES=$(git log "$RANGE" --pretty=format:"%s" | grep -E '^Merge pull request' | awk -F'"' '{print $2}')
 
           if [[ -z "$PR_TITLES" ]]; then
             echo "❌ No merged PRs found since last release. Exiting safely."
