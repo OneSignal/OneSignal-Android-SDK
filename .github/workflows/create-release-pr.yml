@@ -72,9 +72,10 @@ jobs:
 
       - name: Generate Release Notes from PR titles
         id: generate_notes
-        if: steps.fetch_last_release.outputs.range != ''
         run: |
-          RANGE: ${{ steps.fetch_last_release.outputs.range }}
+          RANGE="${{ steps.fetch_last_release.outputs.range }}"
+          echo "Using commit range: $RANGE"
+        
           echo "## 🔖 Auto-Generated Release Notes" > pr_body.md
           echo "" >> pr_body.md
 
