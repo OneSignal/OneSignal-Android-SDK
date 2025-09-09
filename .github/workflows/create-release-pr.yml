@@ -19,7 +19,8 @@ jobs:
     env:
       VERSION: ${{ github.event.inputs.version }}
       BRANCH: rel/${{ github.event.inputs.version }}
-
+      GH_REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -70,13 +71,12 @@ jobs:
           echo "✅ Found last release tag: $LAST_TAG"
           echo "range=$LAST_TAG..HEAD" >> $GITHUB_OUTPUT
 
-      - name: Generate Release Notes from Commit Titles
+      - name: Generate Release Notes from PR Titles
         id: generate_notes
         run: |
           echo "## 🔖 Auto-Generated Release Notes" > pr_body.md
           echo "" >> pr_body.md
 
-          # Detect release channel
           if [[ "$VERSION" == *"alpha"* ]]; then
             CHANNEL="alpha"
           elif [[ "$VERSION" == *"beta"* ]]; then
@@ -88,34 +88,54 @@ jobs:
           echo "**Channels:** $CHANNEL" >> pr_body.md
           echo "" >> pr_body.md
 
-          # Use commit range from previous release tag
           RANGE="${{ steps.fetch_last_release.outputs.range }}"
-          echo "Using commit range: $RANGE"
+          echo "📦 Commit range: $RANGE"
 
-          # Get all commit subjects in the range
-          COMMIT_MESSAGES=$(git log "$RANGE" --pretty=format:"%s" || true)
+          COMMITS=$(git log "$RANGE" --pretty=format:"%H" | sort -u)
 
-          if [[ -z "$COMMIT_MESSAGES" ]]; then
-            echo "❌ No commits found in range $RANGE. Exiting safely."
+          if [[ -z "$COMMITS" ]]; then
+            echo "❌ No commits found. Exiting."
             exit 0
           fi
 
-          echo "$COMMIT_MESSAGES" > commit_titles.txt
+          > raw_titles.txt
+          for SHA in $COMMITS; do
+            PR_INFO=$(gh api "repos/${{ github.repository }}/commits/$SHA/pulls" \
+              -H "Accept: application/vnd.github.groot-preview+json" 2>/dev/null)
 
+            TITLE=$(echo "$PR_INFO" | jq -r '.[0].title // empty')
+            NUMBER=$(echo "$PR_INFO" | jq -r '.[0].number // empty')
+
+            if [[ -n "$TITLE" && -n "$NUMBER" ]]; then
+              echo "$TITLE ([#$NUMBER](https://github.com/${{ github.repository }}/pull/$NUMBER))" >> raw_titles.txt
+              echo "✅ $SHA → $TITLE (#$NUMBER)"
+            else
+              echo "⚠️ $SHA → No PR found"
+            fi
+          done
+
+          sort -fu raw_titles.txt > pr_titles.txt
+
+          if [[ ! -s pr_titles.txt ]]; then
+            echo "❌ No PR titles found from commits. Exiting."
+            exit 0
+          fi
+
+          echo "" >> pr_body.md
           echo "### 🚀 New Features" >> pr_body.md
-          grep -i '^feat' commit_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
+          grep -i '^feat' pr_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
 
           echo "" >> pr_body.md
           echo "### 🐛 Bug Fixes" >> pr_body.md
-          grep -i '^bug' commit_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
+          grep -i '^bug' pr_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
 
           echo "" >> pr_body.md
           echo "### 🔧 Improvements" >> pr_body.md
-          grep -i -E '^(perf|refactor)' commit_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
+          grep -i -E '^(perf|refactor)' pr_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
 
           echo "" >> pr_body.md
-          echo "### 📝 Uncategorized Commits" >> pr_body.md
-          grep -v -i -E '^(feat|bug|perf|refactor)' commit_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
+          echo "### 📝 Uncategorized PRs" >> pr_body.md
+          grep -v -i -E '^(feat|bug|perf|refactor)' pr_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
 
           echo "" >> pr_body.md
           echo "### 📦 Version" >> pr_body.md
