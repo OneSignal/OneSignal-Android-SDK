@@ -19,6 +19,7 @@ jobs:
     env:
       VERSION: ${{ github.event.inputs.version }}
       BRANCH: rel/${{ github.event.inputs.version }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout repository
