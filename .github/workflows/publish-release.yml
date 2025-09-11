@@ -54,8 +54,7 @@ jobs:
         run: ./gradlew assembleRelease
         working-directory: OneSignalSDK
 
-      - name:
-        Dry Run: Publish to Maven Local with signing
+      - name: Dry Run - Publish to Maven Local with signing
         run: |
           ./gradlew publishToMavenLocal --no-configuration-cache \
             -Psigning.keyId="$SDK_SIGNING_KEY_ID" \
