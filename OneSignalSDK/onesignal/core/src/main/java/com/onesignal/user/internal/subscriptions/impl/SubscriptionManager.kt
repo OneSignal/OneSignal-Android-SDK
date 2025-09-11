@@ -256,7 +256,7 @@ internal class SubscriptionManager(
         }
         val pushSubModel = (pushSub as Subscription).model
 
-        pushSubModel.sdk = OneSignalUtils.SDK_VERSION
+        pushSubModel.sdk = OneSignalUtils.sdkVersion
         pushSubModel.deviceOS = Build.VERSION.RELEASE
 
         val carrier = DeviceUtils.getCarrierName(_applicationService.appContext)

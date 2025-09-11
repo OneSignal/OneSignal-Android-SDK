@@ -30,6 +30,10 @@ allprojects {
     }
 }
 
+subprojects {
+    ext.SDK_VERSION = rootProject.findProperty("SDK_VERSION") ?: "x.x.x"
+}
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }

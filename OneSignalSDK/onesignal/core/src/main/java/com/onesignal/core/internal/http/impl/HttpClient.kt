@@ -135,7 +135,7 @@ internal class HttpClient(
                     con.useCaches = false
                     con.connectTimeout = timeout
                     con.readTimeout = timeout
-                    con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignalUtils.SDK_VERSION)
+                    con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignalUtils.sdkVersion)
 
                     if (OneSignalWrapper.sdkType != null && OneSignalWrapper.sdkVersion != null) {
                         con.setRequestProperty("SDK-Wrapper", "onesignal/${OneSignalWrapper.sdkType}/${OneSignalWrapper.sdkVersion}")
