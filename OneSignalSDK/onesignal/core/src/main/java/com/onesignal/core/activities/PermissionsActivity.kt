@@ -22,21 +22,24 @@ class PermissionsActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (!OneSignal.initWithContext(this)) {
-            finishActivity()
-            return
-        }
-
         if (intent.extras == null) {
             // This should never happen, but extras is null in rare crash reports
             finishActivity()
             return
         }
 
-        requestPermissionService = OneSignal.getService()
-        preferenceService = OneSignal.getService()
+        OneSignal.initWithContext(this) { ok: Boolean ->
+            if (!ok) {
+                // unsuccessful init
+                finishActivity()
+                return@initWithContext
+            }
 
-        handleBundleParams(intent.extras)
+            requestPermissionService = OneSignal.getService()
+            preferenceService = OneSignal.getService()
+
+            handleBundleParams(intent.extras)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

@@ -37,12 +37,14 @@ class BootUpReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
-        if (!OneSignal.initWithContext(context.applicationContext)) {
-            return
+        OneSignal.initWithContext(context.applicationContext) { ok: Boolean ->
+            if (!ok) {
+                return@initWithContext
+            }
+
+            val restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
+
+            restoreWorkManager.beginEnqueueingWork(context, true)
         }
-
-        val restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
-
-        restoreWorkManager.beginEnqueueingWork(context, true)
     }
 }
