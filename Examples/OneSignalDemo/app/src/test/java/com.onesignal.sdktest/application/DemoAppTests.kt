@@ -101,7 +101,7 @@ class DemoAppTests : FunSpec({
         //isolationMode = IsolationMode.InstancePerTest
 
         // Given
-        val context = ApplicationProvider.getApplicationContext<TestApplication>()
+        val context = getApplicationContext<TestApplication>()
         OneSignal.initWithContext(context, "appId")
 
         // When
@@ -111,8 +111,18 @@ class DemoAppTests : FunSpec({
         pushSub shouldNotBe null
     }
 
-    test("fawef") {
+    test("externalId retrieved correctly when login right after init") {
+        val context = getApplicationContext<TestApplication>()
+        OneSignal.initWithContext(context, "appId")
+        val testExternalId = "testUser"
 
+        // When
+        val oldExternalId = OneSignal.User.externalId
+        OneSignal.login(testExternalId)
+        val newExternalId = OneSignal.User.externalId
+
+        oldExternalId shouldBe ""
+        newExternalId shouldBe testExternalId
     }
 })
 
