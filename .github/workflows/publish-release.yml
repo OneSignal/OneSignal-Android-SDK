@@ -1,7 +1,15 @@
 name: Publish Release
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or commit SHA to run on"
+        required: false
+        default: "main"
 
 permissions:
   contents: write
@@ -10,6 +18,11 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+
+    # Auto-run only if this is a rel/* merge commit into main, OR manual dispatch
+    if: github.event_name == 'workflow_dispatch' ||
+      (startsWith(github.event.head_commit.message, 'Merge pull request') &&
+      contains(github.event.head_commit.message, 'rel/'))
 
     env:
       MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
@@ -21,8 +34,10 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      - name: Checkout main
+      - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.ref || github.sha }}
 
       - name: Ensure Java 11 or 17
         run: |
@@ -60,14 +75,15 @@ jobs:
         working-directory: OneSignalSDK
 
       - name: Dry Run - Publish to Maven Local with signing
+        working-directory: OneSignalSDK
         run: |
           ./gradlew publishToMavenLocal --no-configuration-cache \
             -Psigning.keyId="$SDK_SIGNING_KEY_ID" \
             -Psigning.password="$SDK_SIGNING_PASSWORD" \
             -Psigning.secretKeyRingFile="$GPG_FILE_PATH"
-        working-directory: OneSignalSDK
 
       - name: Publish to Maven Central
+        working-directory: OneSignalSDK
         run: |
           ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache \
             -PmavenCentralUsername="$MAVEN_USERNAME" \
@@ -75,7 +91,6 @@ jobs:
             -Psigning.keyId="$SDK_SIGNING_KEY_ID" \
             -Psigning.password="$SDK_SIGNING_PASSWORD" \
             -Psigning.secretKeyRingFile="$GPG_FILE_PATH"
-        working-directory: OneSignalSDK
 
       - name: Get latest merged rel/* PR into main
         id: fetch_pr
