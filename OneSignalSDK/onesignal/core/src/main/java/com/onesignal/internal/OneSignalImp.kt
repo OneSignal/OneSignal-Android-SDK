@@ -393,9 +393,11 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     ) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
-        if (!isInitStarted) {
-            throw Exception("Must call 'initWithContext' before 'login'")
+        if (!isInitStarted && !isInitialized) {
+            throw IllegalStateException("Must call 'initWithContext' before use")
         }
+
+        waitForInit()
 
         var currentIdentityExternalId: String? = null
         var currentIdentityOneSignalId: String? = null
@@ -445,9 +447,11 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     override fun logout() {
         Logging.log(LogLevel.DEBUG, "logout()")
 
-        if (!isInitStarted) {
-            throw Exception("Must call 'initWithContext' before 'logout'")
+        if (!isInitStarted && !isInitialized) {
+            throw IllegalStateException("Must call 'initWithContext' before use")
         }
+
+        waitForInit()
 
         // only allow one login/logout at a time
         synchronized(loginLock) {
