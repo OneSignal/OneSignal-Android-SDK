@@ -23,26 +23,28 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
             return
         }
 
-        if (!OneSignal.initWithContext(context.applicationContext)) {
-            return
-        }
+        OneSignal.initWithContext(context.applicationContext) { ok: Boolean ->
+            if (!ok) {
+                return@initWithContext
+            }
 
-        val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
+            val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
 
-        if (!isFCMMessage(intent)) {
+            if (!isFCMMessage(intent)) {
+                setSuccessfulResultCode()
+                return@initWithContext
+            }
+
+            val processedResult = bundleProcessor.processBundleFromReceiver(context, bundle)
+
+            // Prevent other FCM receivers from firing if work manager is processing the notification
+            if (processedResult!!.isWorkManagerProcessing) {
+                setAbort()
+                return@initWithContext
+            }
+
             setSuccessfulResultCode()
-            return
         }
-
-        val processedResult = bundleProcessor.processBundleFromReceiver(context, bundle)
-
-        // Prevent other FCM receivers from firing if work manager is processing the notification
-        if (processedResult!!.isWorkManagerProcessing) {
-            setAbort()
-            return
-        }
-
-        setSuccessfulResultCode()
     }
 
     private fun setSuccessfulResultCode() {
