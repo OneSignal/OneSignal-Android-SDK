@@ -1,8 +1,6 @@
 name: Publish Release
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -11,7 +9,6 @@ permissions:
 
 jobs:
   publish:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'rel/')
     runs-on: ubuntu-latest
 
     env:
@@ -21,6 +18,7 @@ jobs:
       SDK_SIGNING_PASSWORD: ${{ secrets.SDK_SIGNING_PASSWORD }}
       SDK_SIGNING_SECRET_KEY_RING_ENCODED: ${{ secrets.SDK_SIGNING_SECRET_KEY_RING_ENCODED }}
       GPG_FILE_NAME: onesignal_sdk_gpg_subkeys
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout main
@@ -72,6 +70,26 @@ jobs:
             -Psigning.secretKeyRingFile="$(pwd)/$GPG_FILE_NAME"
         working-directory: OneSignalSDK
 
+      - name: Get latest merged rel/* PR into main
+        id: fetch_pr
+        run: |
+          PR_JSON=$(gh pr list \
+            --state merged \
+            --base main \
+            --json number,title,body,headRefName,mergedAt \
+            --jq '[.[] | select(.headRefName | startswith("rel/"))] | sort_by(.mergedAt) | last')
+
+          if [[ -z "$PR_JSON" || "$PR_JSON" == "null" ]]; then
+            echo "❌ No merged release PR found."
+            exit 1
+          fi
+
+          echo "✅ Found release PR:"
+          echo "$PR_JSON" | jq -r '.title'
+
+          PR_BODY=$(echo "$PR_JSON" | jq -r '.body')
+          echo "$PR_BODY" > release_notes.md
+
       - name: Tag and create GitHub Release
         run: |
           VERSION="${{ env.SDK_VERSION }}"
@@ -87,12 +105,7 @@ jobs:
             CHANNEL="current"
           fi
 
-          # Fetch PR body using the commit SHA
-          PR_BODY=$(gh api /repos/${{ github.repository }}/commits/${{ github.sha }}/pulls \
-            -H "Accept: application/vnd.github.groot-preview+json" \
-            --jq '.[0].body')
-
-          echo -e "Channels: $CHANNEL\n\n$PR_BODY" > release_notes.md
+          echo -e "Channels: $CHANNEL\n\n$(cat release_notes.md)" > release_notes.md
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -106,5 +119,3 @@ jobs:
             --title "$VERSION" \
             --notes-file release_notes.md \
             $PRERELEASE
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
