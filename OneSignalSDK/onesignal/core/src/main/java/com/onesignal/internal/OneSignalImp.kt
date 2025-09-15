@@ -391,7 +391,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
         if (!isInitStarted && !isInitialized) {
-            throw IllegalStateException("Must call 'initWithContext' before use")
+            throw IllegalStateException("Must call 'initWithContext' before 'login'")
         }
 
         waitForInit()
@@ -445,7 +445,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         Logging.log(LogLevel.DEBUG, "logout()")
 
         if (!isInitStarted && !isInitialized) {
-            throw IllegalStateException("Must call 'initWithContext' before use")
+            throw IllegalStateException("Must call 'initWithContext' before 'logout'")
         }
 
         waitForInit()
