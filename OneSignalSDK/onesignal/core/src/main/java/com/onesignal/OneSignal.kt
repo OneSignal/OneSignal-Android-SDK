@@ -2,7 +2,6 @@ package com.onesignal
 
 import android.content.Context
 import com.onesignal.common.services.IServiceProvider
-import com.onesignal.common.threading.suspendifyOnMain
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.debug.IDebugManager
 import com.onesignal.inAppMessages.IInAppMessagesManager
