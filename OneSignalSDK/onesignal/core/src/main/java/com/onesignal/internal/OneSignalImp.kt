@@ -59,6 +59,7 @@ import java.util.concurrent.TimeUnit
 internal class OneSignalImp : IOneSignal, IServiceProvider {
     @Volatile
     private var initLatch = CountDownLatch(1)
+
     @Volatile
     private var isInitializedSuccess: Boolean = false
 
@@ -214,8 +215,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
     private fun initUser(forceCreateUser: Boolean) {
         // create a new local user
-        if (forceCreateUser
-            || !identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)
+        if (forceCreateUser ||
+            !identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)
         ) {
             val legacyPlayerId =
                 preferencesService!!.getString(
@@ -300,10 +301,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         } else {
             Logging.debug("initWithContext: using cached user ${identityModelStore!!.model.onesignalId}")
         }
-    }
-
-    private fun backgroundInit() {
-
     }
 
     override fun initWithContext(
@@ -553,26 +550,31 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     override fun <T> getAllServices(c: Class<T>): List<T> = services.getAllServices(c)
 
     private fun waitForInit(timeoutMs: Long = ANDROID_ANR_TIMEOUT_MS) {
-        val awaitCompleted = try {
-            initLatch.await(timeoutMs, TimeUnit.MILLISECONDS)
-        } catch (e: InterruptedException) {
-            Logging.error("Interrupted while waiting for SDK initialization", e)
-            false
-        }
-
-        if (!awaitCompleted) {
-            // Check if we're on the main thread and suggest moving to background if so
-            val isMainThread = try {
-                android.os.Looper.getMainLooper().thread == Thread.currentThread()
-            } catch (_: Throwable) {
+        val awaitCompleted =
+            try {
+                initLatch.await(timeoutMs, TimeUnit.MILLISECONDS)
+            } catch (e: InterruptedException) {
+                Logging.error("Interrupted while waiting for SDK initialization", e)
                 false
             }
-            val message = if (isMainThread) {
-                "Timeout waiting for SDK initialization. This call was made on the main thread, which can block UI. " +
+
+        // TODO: catch the actual exception
+        if (!awaitCompleted) {
+            // Check if we're on the main thread and suggest moving to background if so
+            val isMainThread =
+                try {
+                    // TODO: AndroidUtils.isMainThread
+                    android.os.Looper.getMainLooper().thread == Thread.currentThread()
+                } catch (_: Throwable) {
+                    false
+                }
+            val message =
+                if (isMainThread) {
+                    "Timeout waiting for SDK initialization. This call was made on the main thread, which can block UI. " +
                         "Consider calling from a background thread."
-            } else {
-                "Timeout waiting for SDK initialization."
-            }
+                } else {
+                    "Timeout waiting for SDK initialization."
+                }
             throw IllegalStateException(message)
         }
 

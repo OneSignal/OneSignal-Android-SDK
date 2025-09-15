@@ -3,7 +3,6 @@ package com.onesignal.sdktest.application
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.SharedPreferences
-import androidx.test.core.app.ApplicationProvider
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.OneSignal
@@ -65,8 +64,6 @@ class DemoAppTests : FunSpec({
     }
 
     test("ensure adding tags right after initWithContext is successful") {
-        //isolationMode = IsolationMode.InstancePerTest
-
         // Given
         val context = getApplicationContext<TestApplication>()
         val tagKey = "tagKey"
@@ -84,8 +81,6 @@ class DemoAppTests : FunSpec({
     }
 
     test("onesignalId requested right after initWithContext should be local") {
-        //isolationMode = IsolationMode.InstancePerTest
-
         // Given
         val context = getApplicationContext<TestApplication>()
 
@@ -98,8 +93,6 @@ class DemoAppTests : FunSpec({
     }
 
     test("a push subscription should be created right after initWithContext") {
-        //isolationMode = IsolationMode.InstancePerTest
-
         // Given
         val context = getApplicationContext<TestApplication>()
         OneSignal.initWithContext(context, "appId")
@@ -131,9 +124,8 @@ class DemoAppTests : FunSpec({
  */
 class BlockingPrefsContext(
     context: Context,
-    private val unblockTrigger: CountDownLatch,
-) : ContextWrapper(context)
-{
+    private val unblockTrigger: CountDownLatch
+) : ContextWrapper(context) {
     override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {
         try {
             unblockTrigger.await(10000, TimeUnit.MILLISECONDS)
