@@ -73,7 +73,7 @@ internal class ReceiveReceiptWorkManager(
 
     class ReceiveReceiptWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
         override suspend fun doWork(): Result {
-            if (!OneSignal.initWithContext(applicationContext)) {
+            if (!OneSignal.ensureOneSignalInitialized(applicationContext)) {
                 return Result.success()
             }
 

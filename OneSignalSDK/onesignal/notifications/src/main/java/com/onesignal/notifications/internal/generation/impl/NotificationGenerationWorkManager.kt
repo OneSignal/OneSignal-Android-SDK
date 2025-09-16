@@ -63,7 +63,7 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
 
     class NotificationGenerationWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
         override suspend fun doWork(): Result {
-            if (!OneSignal.initWithContext(applicationContext)) {
+            if (!OneSignal.ensureOneSignalInitialized(applicationContext)) {
                 return Result.success()
             }
 
