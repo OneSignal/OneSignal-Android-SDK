@@ -2,6 +2,7 @@ package com.onesignal
 
 import android.content.Context
 import com.onesignal.common.services.IServiceProvider
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.debug.IDebugManager
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.internal.OneSignalImp
@@ -204,8 +205,25 @@ object OneSignal {
      * THIS IS AN INTERNAL INTERFACE AND SHOULD NOT BE USED DIRECTLY.
      */
     @JvmStatic
-    fun initWithContext(context: Context): Boolean {
-        return oneSignal.initWithContext(context, null)
+    fun initWithContext(
+        context: Context,
+        onCompleted: ((Boolean) -> Unit)? = null,
+    ): Boolean {
+        // use as normal if no onCompleted has passed
+        if (onCompleted == null) {
+            return oneSignal.initWithContext(context, null)
+        }
+
+        // init in background and signal the return value in callback
+        suspendifyOnThread {
+            // TODO: timeout?
+            val result = oneSignal.initWithContext(context, null)
+            if (onCompleted != null) {
+                onCompleted(result)
+            }
+        }
+
+        return true
     }
 
     /**

@@ -19,8 +19,8 @@ import com.onesignal.debug.internal.logging.Logging
 import java.util.Random
 
 object AndroidUtils {
-
     const val ANDROID_ANR_TIMEOUT_MS = 5000L
+
     fun getRandomDelay(
         minDelay: Int,
         maxDelay: Int,
@@ -285,6 +285,16 @@ object AndroidUtils {
                 }
                 return null
             }
+        }
+    }
+
+    /**
+     * Safely finishes the activity only if it's still valid.
+     * Prevents redundant or unsafe calls to finish(), reducing lifecycle issues or potential leaks.
+     */
+    fun finishSafely(activity: Activity) {
+        if (!activity.isDestroyed && !activity.isFinishing) {
+            activity.finish()
         }
     }
 }

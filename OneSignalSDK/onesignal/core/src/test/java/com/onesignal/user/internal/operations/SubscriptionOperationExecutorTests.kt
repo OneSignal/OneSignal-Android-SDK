@@ -45,7 +45,7 @@ class SubscriptionOperationExecutorTests :
             coEvery { mockConsistencyManager.setRywData(any(), any(), any()) } just runs
         }
 
-        test("create subscription successfully creates subscription") {
+        test("create subscription successfully creates subscription, with local ID") {
             // Given
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
             coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } returns
@@ -95,10 +95,65 @@ class SubscriptionOperationExecutorTests :
                     IdentityConstants.ONESIGNAL_ID,
                     remoteOneSignalId,
                     withArg {
+                        it.id shouldBe null
                         it.type shouldBe SubscriptionObjectType.ANDROID_PUSH
                         it.enabled shouldBe true
                         it.token shouldBe "pushToken"
                         it.notificationTypes shouldBe SubscriptionStatus.SUBSCRIBED.value
+                    },
+                )
+            }
+        }
+
+        test("create subscription includes the subscription ID if non-local") {
+            // Given
+            val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
+            coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } returns
+                Pair(remoteSubscriptionId, rywData)
+
+            val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+            val subscriptionModel = SubscriptionModel()
+            subscriptionModel.id = remoteSubscriptionId
+            every { mockSubscriptionsModelStore.get(remoteSubscriptionId) } returns subscriptionModel
+
+            val mockBuildUserService = mockk<IRebuildUserService>()
+
+            val subscriptionOperationExecutor =
+                SubscriptionOperationExecutor(
+                    mockSubscriptionBackendService,
+                    MockHelper.deviceService(),
+                    AndroidMockHelper.applicationService(),
+                    mockSubscriptionsModelStore,
+                    MockHelper.configModelStore(),
+                    mockBuildUserService,
+                    getNewRecordState(),
+                    mockConsistencyManager,
+                )
+
+            val operations =
+                listOf<Operation>(
+                    CreateSubscriptionOperation(
+                        appId,
+                        remoteOneSignalId,
+                        remoteSubscriptionId,
+                        SubscriptionType.PUSH,
+                        true,
+                        "pushToken",
+                        SubscriptionStatus.SUBSCRIBED,
+                    ),
+                )
+
+            // When
+            subscriptionOperationExecutor.execute(operations)
+
+            // Then
+            coVerify(exactly = 1) {
+                mockSubscriptionBackendService.createSubscription(
+                    appId,
+                    IdentityConstants.ONESIGNAL_ID,
+                    remoteOneSignalId,
+                    withArg {
+                        it.id shouldBe remoteSubscriptionId
                     },
                 )
             }

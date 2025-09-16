@@ -3,6 +3,7 @@ package com.onesignal.user.internal.operations.impl.executors
 import android.os.Build
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
+import com.onesignal.common.IDManager
 import com.onesignal.common.NetworkUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.RootToolsInternalMethods
@@ -287,14 +288,15 @@ internal class LoginUserOperationExecutor(
                     SubscriptionObjectType.fromDeviceType(_deviceService.deviceType)
                 }
             }
+        val subId = if (!IDManager.isLocalId(operation.subscriptionId)) operation.subscriptionId else null
         mutableSubscriptions[operation.subscriptionId] =
             SubscriptionObject(
-                id = null,
+                id = subId,
                 subscriptionType,
                 operation.address,
                 operation.enabled,
                 operation.status.value,
-                OneSignalUtils.SDK_VERSION,
+                OneSignalUtils.sdkVersion,
                 Build.MODEL,
                 Build.VERSION.RELEASE,
                 RootToolsInternalMethods.isRooted,
