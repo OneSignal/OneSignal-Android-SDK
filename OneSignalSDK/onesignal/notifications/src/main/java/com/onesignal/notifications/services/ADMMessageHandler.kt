@@ -13,17 +13,15 @@ import com.onesignal.notifications.internal.registration.impl.IPushRegistratorCa
 class ADMMessageHandler : ADMMessageHandlerBase("ADMMessageHandler") {
     override fun onMessage(intent: Intent) {
         val context = applicationContext
-        OneSignal.initWithContext(context) { ok: Boolean ->
-            if (!ok) {
-                return@initWithContext
-            }
-
-            val bundle = intent.extras
-
-            val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
-
-            bundleProcessor.processBundleFromReceiver(context, bundle!!)
+        if (!OneSignal.initWithContext(context)) {
+            return
         }
+
+        val bundle = intent.extras
+
+        val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
+
+        bundleProcessor.processBundleFromReceiver(context, bundle!!)
     }
 
     override fun onRegistered(newRegistrationId: String) {

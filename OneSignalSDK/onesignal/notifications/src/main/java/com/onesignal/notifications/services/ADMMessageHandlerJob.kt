@@ -17,17 +17,14 @@ class ADMMessageHandlerJob : ADMMessageHandlerJobBase() {
         if (context == null) {
             return
         }
-        OneSignal.initWithContext(context.applicationContext) { ok: Boolean ->
-            if (!ok) {
-                return@initWithContext
-            }
-
-            val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
-
-            val bundle = intent?.extras
-
-            bundleProcessor.processBundleFromReceiver(context!!, bundle!!)
+        if (!OneSignal.initWithContext(context.applicationContext)) {
+            return
         }
+        val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
+
+        val bundle = intent?.extras
+
+        bundleProcessor.processBundleFromReceiver(context!!, bundle!!)
     }
 
     override fun onRegistered(
