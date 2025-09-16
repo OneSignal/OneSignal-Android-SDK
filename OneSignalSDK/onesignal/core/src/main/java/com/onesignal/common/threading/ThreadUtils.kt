@@ -88,51 +88,12 @@ fun suspendifyOnThread(
     block: suspend () -> Unit,
     onComplete: (() -> Unit)? = null,
 ) {
-    suspendifyOnThread<Unit>(
-        priority = priority,
-        block = {
-            block()
-        },
-        onComplete = {
-            onComplete?.invoke()
-        }
-    )}
-
-/**
- * Allows a non-suspending function to execute a suspending lambda on a background thread,
- * and optionally receive the result (or error) via a callback once it completes.
- *
- * This is a non-blocking, fire-and-forget helper that internally runs the suspending
- * [block] inside a `runBlocking {}` context on a new thread. It immediately returns
- * to the caller while the work continues in the background.
- *
- * @param priority The priority of the background thread. Default is -1.
- *                 Higher values indicate higher thread priority.
- *
- * @param block A suspending lambda to be executed on the background thread and return a value.
- *
- * @param onComplete An optional callback invoked after [block] finishes.
- *                   It receives a [Result] containing either the value returned by [block],
- *                   or an exception if one occurred.
- *                   Note: This runs on the same background thread, not the main thread.
- */
-fun <T> suspendifyOnThread(
-    priority: Int = -1,
-    block: suspend () -> T,
-    onComplete: ((Result<T>) -> Unit)? = null,
-) {
     thread(priority = priority) {
-        val result = try {
-            val value = runBlocking { block() }
-            Result.success(value)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-
         try {
-            onComplete?.invoke(result)
+            runBlocking { block() }
+            onComplete?.invoke()
         } catch (e: Exception) {
-            Logging.error("Exception during onComplete callback", e)
+            Logging.error("Exception on thread", e)
         }
     }
 }
