@@ -10,6 +10,9 @@ on:
         description: "Branch or commit SHA to run on"
         required: false
         default: "main"
+      version:
+        description: "Release version (leave blank to auto-detect from gradle.properties)"
+        required: false
 
 permissions:
   contents: write
@@ -63,12 +66,16 @@ jobs:
           ls -lh "$GPG_FILE_PATH"
           gpg --list-packets "$GPG_FILE_PATH" || echo "Invalid key file!"
 
-      - name: Extract SDK_VERSION from gradle.properties
-        id: version
+      - name: Resolve release version
+        id: resolve_version
         run: |
-          VERSION=$(grep '^SDK_VERSION=' OneSignalSDK/gradle.properties | cut -d '=' -f2)
+          if [[ -n "${{ github.event.inputs.version }}" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION=$(grep '^SDK_VERSION=' OneSignalSDK/gradle.properties | cut -d '=' -f2)
+          fi
           echo "SDK_VERSION=$VERSION" >> $GITHUB_ENV
-          echo "SDK_VERSION=$VERSION"
+          echo "Resolved version: $VERSION"
 
       - name: Assemble Release
         run: ./gradlew assembleRelease
