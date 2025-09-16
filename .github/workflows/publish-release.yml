@@ -1,0 +1,143 @@
+name: Publish Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or commit SHA to run on"
+        required: false
+        default: "main"
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    # Auto-run only if this is a rel/* merge commit into main, OR manual dispatch
+    if: github.event_name == 'workflow_dispatch' ||
+      (startsWith(github.event.head_commit.message, 'Merge pull request') &&
+      contains(github.event.head_commit.message, 'rel/'))
+
+    env:
+      MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+      MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+      SDK_SIGNING_KEY_ID: ${{ secrets.SDK_SIGNING_KEY_ID }}
+      SDK_SIGNING_PASSWORD: ${{ secrets.SDK_SIGNING_PASSWORD }}
+      SDK_SIGNING_SECRET_KEY_RING_ENCODED: ${{ secrets.SDK_SIGNING_SECRET_KEY_RING_ENCODED }}
+      GPG_FILE_NAME: onesignal_sdk_gpg_subkeys
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.ref || github.sha }}
+
+      - name: Ensure Java 11 or 17
+        run: |
+          CURRENT_JAVA=$(java -version 2>&1 | head -n 1 | awk -F '"' '{print $2}')
+          echo "Current Java version: $CURRENT_JAVA"
+          if [[ "$CURRENT_JAVA" != 11.* && "$CURRENT_JAVA" != 17.* ]]; then
+            echo "Installing Java 11..."
+            sudo apt-get update
+            sudo apt-get install openjdk-11-jdk -y
+            echo "JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64" >> $GITHUB_ENV
+            echo "/usr/lib/jvm/java-11-openjdk-amd64/bin" >> $GITHUB_PATH
+          fi
+
+      - name: Decode GPG file from secret
+        working-directory: OneSignalSDK
+        run: |
+          echo "$SDK_SIGNING_SECRET_KEY_RING_ENCODED" | base64 -d > "$GPG_FILE_NAME"
+          echo "GPG_FILE_PATH=$(pwd)/$GPG_FILE_NAME" >> $GITHUB_ENV
+
+      - name: Verify GPG file
+        working-directory: OneSignalSDK
+        run: |
+          ls -lh "$GPG_FILE_PATH"
+          gpg --list-packets "$GPG_FILE_PATH" || echo "Invalid key file!"
+
+      - name: Extract release version from gradle.properties
+        id: extract_version
+        run: |
+          VERSION=$(grep '^SDK_VERSION=' OneSignalSDK/gradle.properties | cut -d '=' -f2)
+          echo "SDK_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Resolved version: $VERSION"
+
+      - name: Assemble Release
+        run: ./gradlew assembleRelease
+        working-directory: OneSignalSDK
+
+      - name: Dry Run - Publish to Maven Local with signing
+        working-directory: OneSignalSDK
+        run: |
+          ./gradlew publishToMavenLocal --no-configuration-cache \
+            -Psigning.keyId="$SDK_SIGNING_KEY_ID" \
+            -Psigning.password="$SDK_SIGNING_PASSWORD" \
+            -Psigning.secretKeyRingFile="$GPG_FILE_PATH"
+
+      - name: Publish to Maven Central
+        working-directory: OneSignalSDK
+        run: |
+          ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache \
+            -PmavenCentralUsername="$MAVEN_USERNAME" \
+            -PmavenCentralPassword="$MAVEN_PASSWORD" \
+            -Psigning.keyId="$SDK_SIGNING_KEY_ID" \
+            -Psigning.password="$SDK_SIGNING_PASSWORD" \
+            -Psigning.secretKeyRingFile="$GPG_FILE_PATH"
+
+      - name: Get latest merged rel/* PR into main
+        id: fetch_pr
+        run: |
+          PR_JSON=$(gh pr list \
+            --state merged \
+            --base main \
+            --json number,title,body,headRefName,mergedAt \
+            --jq '[.[] | select(.headRefName | startswith("rel/"))] | sort_by(.mergedAt) | last')
+
+          if [[ -z "$PR_JSON" || "$PR_JSON" == "null" ]]; then
+            echo "❌ No merged release PR found."
+            exit 1
+          fi
+
+          echo "✅ Found release PR:"
+          echo "$PR_JSON" | jq -r '.title'
+
+          PR_BODY=$(echo "$PR_JSON" | jq -r '.body')
+          echo "$PR_BODY" > release_notes.md
+
+      - name: Tag and create GitHub Release
+        run: |
+          VERSION="${{ env.SDK_VERSION }}"
+
+          if [[ "$VERSION" == *"alpha"* ]]; then
+            PRERELEASE="--prerelease"
+            CHANNEL="alpha"
+          elif [[ "$VERSION" == *"beta"* ]]; then
+            PRERELEASE="--prerelease"
+            CHANNEL="beta"
+          else
+            PRERELEASE=""
+            CHANNEL="current"
+          fi
+
+          echo -e "Channels: $CHANNEL\n\n$(cat release_notes.md)" > release_notes.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          echo "Tagging release $VERSION"
+          git tag "$VERSION"
+          git push origin "$VERSION"
+
+          echo "Creating GitHub release"
+          gh release create "$VERSION" \
+            --title "$VERSION" \
+            --notes-file release_notes.md \
+            $PRERELEASE
