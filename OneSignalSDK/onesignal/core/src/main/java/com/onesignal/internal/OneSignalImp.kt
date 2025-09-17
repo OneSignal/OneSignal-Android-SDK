@@ -15,7 +15,6 @@ import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
 import com.onesignal.common.threading.LatchAwaiter
-import com.onesignal.common.threading.OSPrimaryCoroutineScope
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.CoreModule
 import com.onesignal.core.internal.application.IApplicationService
@@ -52,19 +51,19 @@ import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 internal class OneSignalImp : IOneSignal, IServiceProvider {
     @Volatile
     private var latchAwaiter = LatchAwaiter("OneSignalImp")
-
     @Volatile
-    private var isInitializedSuccess: Boolean = false
+    private var initState: InitState = InitState.NOT_STARTED
 
     override val sdkVersion: String = OneSignalUtils.sdkVersion
-    override var isInitialized = false
 
-    var isInitStarted = false
+    override val isInitialized: Boolean
+        get() = initState == InitState.SUCCESS
 
     override var consentRequired: Boolean
         get() = configModel?.consentRequired ?: (_consentRequired == true)
@@ -308,78 +307,77 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
         // do not do this again if already initialized or init is in progress
-        if (isInitialized || isInitStarted) {
-            Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized")
+        if (initState.isSDKAccessible()) {
+            Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized or in progress")
             return true
         }
 
-        isInitStarted = true
-        var forceCreateUser = false
+        initState = InitState.IN_PROGRESS
 
-        // if an appId is supplied, we can move all loading in background and the countdown latch
-        // will free up accessors when initialization is fully completed
         if (appId != null) {
-            OSPrimaryCoroutineScope.execute {
-                try {
-                    initEssentials(context)
-
-                    if (!configModel!!.hasProperty(ConfigModel::appId.name) || configModel!!.appId != appId) {
-                        forceCreateUser = true
-                    }
-
-                    configModel!!.appId = appId
-                    updateConfig()
-                    val startupService = bootstrapServices()
-                    initUser(forceCreateUser)
-                    startupService.scheduleStart()
-                    isInitializedSuccess = true
+            // Fast path: run in background and return immediately
+            suspendifyOnThread {
+                if (suspendInitInternal(context, appId)) {
+                    initState = InitState.SUCCESS
                     latchAwaiter.completeSuccess()
-                } catch (e: Throwable) {
-                    Logging.error("initWithContext failed!", e)
-                    latchAwaiter.completeFailed(e)
+                } else {
+                    initState = InitState.FAILED
+                    latchAwaiter.completeFailed()
+                }
+            }
+            return true
+        }
+
+        // app == null
+        // Slow path: wait for result synchronously
+        suspendifyOnThread {
+            val result = suspendInitInternal(context, appId)
+            initState = if (result) InitState.SUCCESS else InitState.FAILED
+            latchAwaiter.waitForCompletion()
+        }
+
+        return initState == InitState.SUCCESS
+    }
+
+    internal suspend fun suspendInitInternal(context: Context, appId: String?): Boolean = withContext(kotlinx.coroutines.Dispatchers.Default) {
+        try {
+            initEssentials(context)
+
+            var forceCreateUser = false
+            if (appId != null) {
+                // If new appId is different from stored one, flag user recreation
+                if (!configModel!!.hasProperty(ConfigModel::appId.name) || configModel!!.appId != appId) {
+                    forceCreateUser = true
+                }
+                configModel!!.appId = appId
+            } else {
+                // appId is null — fallback to legacy
+                if (!configModel!!.hasProperty(ConfigModel::appId.name)) {
+                    val legacyAppId = getLegacyAppId()
+                    if (legacyAppId == null) {
+                        Logging.warn("suspendInitInternal: no appId provided or found in legacy config.")
+                        initState = InitState.FAILED
+                        latchAwaiter.completeFailed()
+                        return@withContext false
+                    }
+                    forceCreateUser = true
+                    configModel!!.appId = legacyAppId
                 }
             }
 
-            isInitialized = true
+            updateConfig()
+            val startupService = bootstrapServices()
+            initUser(forceCreateUser)
+            startupService.scheduleStart()
+            latchAwaiter.completeSuccess()
+            return@withContext true
 
-            return true
+        } catch (e: Throwable) {
+            Logging.error("suspendInitInternal failed!", e)
+            initState = InitState.FAILED
+            latchAwaiter.completeFailed(e)
+            return@withContext false
         }
-
-        // If the appId is not supplied, then it is called from internal classes. We will need to return
-        // a Boolean indicating whether it is safe to proceed.
-        initEssentials(context)
-
-        if (!configModel!!.hasProperty(ConfigModel::appId.name)) {
-            val legacyAppId = getLegacyAppId()
-            if (legacyAppId == null) {
-                Logging.warn("initWithContext called without providing appId, and no appId has been established!")
-                isInitStarted = false
-                return false
-            } else {
-                Logging.debug("initWithContext: using cached legacy appId $legacyAppId")
-                forceCreateUser = true
-                configModel!!.appId = legacyAppId
-            }
-        }
-
-        // now we can move all other loading into background
-        OSPrimaryCoroutineScope.execute {
-            try {
-                updateConfig()
-                val startupService = bootstrapServices()
-                initUser(forceCreateUser)
-                startupService.scheduleStart()
-                isInitializedSuccess = true
-                latchAwaiter.completeSuccess()
-            } catch (e: Throwable) {
-                Logging.error("initWithContext failed!", e)
-                latchAwaiter.completeFailed(e)
-            }
-        }
-
-        isInitialized = true
-
-        return true
     }
 
     override fun login(
@@ -388,20 +386,17 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     ) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
-        if (!isInitStarted && !isInitialized) {
+        if (!initState.isSDKAccessible()) {
             throw IllegalStateException("Must call 'initWithContext' before 'login'")
         }
 
         waitForInit()
 
         var currentIdentityExternalId: String? = null
-        var currentIdentityOneSignalId: String? = null
-        var newIdentityOneSignalId: String = ""
 
         // only allow one login/logout at a time
         synchronized(loginLock) {
             currentIdentityExternalId = identityModelStore!!.model.externalId
-            currentIdentityOneSignalId = identityModelStore!!.model.onesignalId
 
             if (currentIdentityExternalId == externalId) {
                 return
@@ -411,38 +406,43 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             createAndSwitchToNewUser { identityModel, _ ->
                 identityModel.externalId = externalId
             }
-
-            newIdentityOneSignalId = identityModelStore!!.model.onesignalId
         }
 
         // on a background thread enqueue the login/fetch of the new user
         suspendifyOnThread {
-            // We specify an "existingOneSignalId" here when the current user is anonymous to
-            // allow this login to attempt a "conversion" of the anonymous user.  We also
-            // wait for the LoginUserOperation operation to execute, which can take a *very* long
-            // time if network conditions prevent the operation to succeed.  This allows us to
-            // provide a callback to the caller when we can absolutely say the user is logged
-            // in, so they may take action on their own backend.
-            val result =
-                operationRepo!!.enqueueAndWait(
-                    LoginUserOperation(
-                        configModel!!.appId,
-                        newIdentityOneSignalId,
-                        externalId,
-                        if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
-                    ),
-                )
+            suspendLogin(externalId)
+        }
+    }
 
-            if (!result) {
-                Logging.log(LogLevel.ERROR, "Could not login user")
-            }
+    internal suspend fun suspendLogin(externalId: String) = withContext(kotlinx.coroutines.Dispatchers.Default) {
+        // We specify an "existingOneSignalId" here when the current user is anonymous to
+        // allow this login to attempt a "conversion" of the anonymous user.  We also
+        // wait for the LoginUserOperation operation to execute, which can take a *very* long
+        // time if network conditions prevent the operation to succeed.  This allows us to
+        // provide a callback to the caller when we can absolutely say the user is logged
+        // in, so they may take action on their own backend.
+        val currentIdentityExternalId = identityModelStore!!.model.externalId
+        val currentIdentityOneSignalId = identityModelStore!!.model.onesignalId
+        val newIdentityOneSignalId = identityModelStore!!.model.onesignalId
+        val result =
+            operationRepo!!.enqueueAndWait(
+                LoginUserOperation(
+                    configModel!!.appId,
+                    newIdentityOneSignalId,
+                    externalId,
+                    if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
+                ),
+            )
+
+        if (!result) {
+            Logging.log(LogLevel.ERROR, "Could not login user")
         }
     }
 
     override fun logout() {
         Logging.log(LogLevel.DEBUG, "logout()")
 
-        if (!isInitStarted && !isInitialized) {
+        if (!initState.isSDKAccessible()) {
             throw IllegalStateException("Must call 'initWithContext' before 'logout'")
         }
 
@@ -552,11 +552,22 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     }
 
     private fun <T> waitAndReturn(getter: () -> T): T {
-        if (!isInitStarted && !isInitialized) {
-            throw IllegalStateException("Must call 'initWithContext' before use")
+        when (initState) {
+            InitState.NOT_STARTED -> {
+                throw IllegalStateException("Must call 'initWithContext' before use")
+            }
+            InitState.IN_PROGRESS -> {
+                Logging.debug("Waiting for init to complete...")
+                latchAwaiter.waitForCompletion()
+            }
+            InitState.FAILED -> {
+                throw IllegalStateException("Initialization failed. Cannot proceed.")
+            }
+            else -> {
+                // SUCCESS
+            }
         }
-        Logging.debug("Wait and return: $getter")
-        waitForInit()
+
         return getter()
     }
 }
