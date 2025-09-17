@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.Build
 import com.onesignal.IOneSignal
 import com.onesignal.common.AndroidUtils
-import com.onesignal.common.AndroidUtils.ANDROID_ANR_TIMEOUT_MS
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.IDManager
 import com.onesignal.common.OneSignalUtils
@@ -15,6 +14,7 @@ import com.onesignal.common.safeString
 import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
+import com.onesignal.common.threading.LatchAwaiter
 import com.onesignal.common.threading.OSPrimaryCoroutineScope
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.CoreModule
@@ -53,12 +53,10 @@ import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
 import org.json.JSONObject
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 internal class OneSignalImp : IOneSignal, IServiceProvider {
     @Volatile
-    private var initLatch = CountDownLatch(1)
+    private var latchAwaiter = LatchAwaiter("OneSignalImp")
 
     @Volatile
     private var isInitializedSuccess: Boolean = false
@@ -335,10 +333,10 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                     initUser(forceCreateUser)
                     startupService.scheduleStart()
                     isInitializedSuccess = true
+                    latchAwaiter.completeSuccess()
                 } catch (e: Throwable) {
                     Logging.error("initWithContext failed!", e)
-                } finally {
-                    initLatch.countDown()
+                    latchAwaiter.completeFailed(e)
                 }
             }
 
@@ -372,10 +370,10 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 initUser(forceCreateUser)
                 startupService.scheduleStart()
                 isInitializedSuccess = true
+                latchAwaiter.completeSuccess()
             } catch (e: Throwable) {
                 Logging.error("initWithContext failed!", e)
-            } finally {
-                initLatch.countDown()
+                latchAwaiter.completeFailed(e)
             }
         }
 
@@ -549,38 +547,8 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
     override fun <T> getAllServices(c: Class<T>): List<T> = services.getAllServices(c)
 
-    private fun waitForInit(timeoutMs: Long = ANDROID_ANR_TIMEOUT_MS) {
-        val awaitCompleted =
-            try {
-                initLatch.await(timeoutMs, TimeUnit.MILLISECONDS)
-            } catch (e: InterruptedException) {
-                Logging.error("Interrupted while waiting for SDK initialization", e)
-                false
-            }
-
-        // TODO: catch the actual exception
-        if (!awaitCompleted) {
-            // Check if we're on the main thread and suggest moving to background if so
-            val isMainThread =
-                try {
-                    // TODO: AndroidUtils.isMainThread
-                    android.os.Looper.getMainLooper().thread == Thread.currentThread()
-                } catch (_: Throwable) {
-                    false
-                }
-            val message =
-                if (isMainThread) {
-                    "Timeout waiting for SDK initialization. This call was made on the main thread, which can block UI. " +
-                        "Consider calling from a background thread."
-                } else {
-                    "Timeout waiting for SDK initialization."
-                }
-            throw IllegalStateException(message)
-        }
-
-        if (!isInitializedSuccess) {
-            throw IllegalStateException("SDK initialization failed.")
-        }
+    private fun waitForInit() {
+        latchAwaiter.waitForCompletion()
     }
 
     private fun <T> waitAndReturn(getter: () -> T): T {

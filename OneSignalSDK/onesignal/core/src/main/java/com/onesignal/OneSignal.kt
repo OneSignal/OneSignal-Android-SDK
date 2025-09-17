@@ -216,7 +216,7 @@ object OneSignal {
             block = { oneSignal.initWithContext(context, null) },
             onCompleteOnMain = { result ->
                 onCompleted.invoke(result.isSuccess)
-            }
+            },
         )
     }
 

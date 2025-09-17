@@ -78,10 +78,11 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
 
                 val androidNotificationId = inputData.getInt(ANDROID_NOTIF_ID_WORKER_DATA_PARAM, 0)
                 val jsonPayload = JSONObject(inputData.getString(JSON_PAYLOAD_WORKER_DATA_PARAM))
-                val timestamp = inputData.getLong(
-                    TIMESTAMP_WORKER_DATA_PARAM,
-                    System.currentTimeMillis() / 1000L
-                )
+                val timestamp =
+                    inputData.getLong(
+                        TIMESTAMP_WORKER_DATA_PARAM,
+                        System.currentTimeMillis() / 1000L,
+                    )
                 val isRestoring = inputData.getBoolean(IS_RESTORING_WORKER_DATA_PARAM, false)
 
                 notificationProcessor.processNotificationData(

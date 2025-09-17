@@ -11,8 +11,6 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
 import com.onesignal.notifications.internal.common.NotificationConstants
 import com.onesignal.notifications.internal.registration.impl.IPushRegistratorCallback
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.json.JSONException
 import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicBoolean
@@ -73,28 +71,29 @@ object OneSignalHmsEventBridge {
             val time = OneSignal.getService<ITime>()
             val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
 
-            val dataJson = try {
-                val messageDataJSON = JSONObject(message.data)
+            val dataJson =
+                try {
+                    val messageDataJSON = JSONObject(message.data)
 
-                // Ensure HMS_TTL_KEY is present
-                if (message.ttl == 0) {
-                    messageDataJSON.put(HMS_TTL_KEY, NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD)
-                } else {
-                    messageDataJSON.put(HMS_TTL_KEY, message.ttl)
+                    // Ensure HMS_TTL_KEY is present
+                    if (message.ttl == 0) {
+                        messageDataJSON.put(HMS_TTL_KEY, NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD)
+                    } else {
+                        messageDataJSON.put(HMS_TTL_KEY, message.ttl)
+                    }
+
+                    // Ensure HMS_SENT_TIME_KEY is present
+                    if (message.sentTime == 0L) {
+                        messageDataJSON.put(HMS_SENT_TIME_KEY, time.currentTimeMillis)
+                    } else {
+                        messageDataJSON.put(HMS_SENT_TIME_KEY, message.sentTime)
+                    }
+
+                    messageDataJSON.toString()
+                } catch (e: JSONException) {
+                    Logging.error("OneSignalHmsEventBridge error when trying to create RemoteMessage data JSON", e)
+                    null
                 }
-
-                // Ensure HMS_SENT_TIME_KEY is present
-                if (message.sentTime == 0L) {
-                    messageDataJSON.put(HMS_SENT_TIME_KEY, time.currentTimeMillis)
-                } else {
-                    messageDataJSON.put(HMS_SENT_TIME_KEY, message.sentTime)
-                }
-
-                messageDataJSON.toString()
-            } catch (e: JSONException) {
-                Logging.error("OneSignalHmsEventBridge error when trying to create RemoteMessage data JSON", e)
-                null
-            }
 
             // HMS notification with Message Type being Message won't trigger Activity reverse trampolining logic
             // For this case OneSignal relies on NotificationOpenedActivityHMS activity.

@@ -29,34 +29,38 @@ package com.onesignal.core.services
 import android.app.job.JobParameters
 import android.app.job.JobService
 import com.onesignal.OneSignal
+import com.onesignal.common.threading.LatchAwaiter
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.background.IBackgroundManager
 import com.onesignal.debug.internal.logging.Logging
 
 class SyncJobService : JobService() {
     override fun onStartJob(jobParameters: JobParameters): Boolean {
-        var reschedule = false
+        val latchAwaiter = LatchAwaiter("SyncJobService")
 
-        OneSignal.initWithContext(this) { success ->
-            if (!success) {
-                jobFinished(jobParameters, false)
-                return@initWithContext
-            }
-
-            suspendifyOnThread(
-                block = {
-                    val backgroundService = OneSignal.getService<IBackgroundManager>()
-                    backgroundService.runBackgroundServices()
-                    Logging.debug("LollipopSyncRunnable:JobFinished needsJobReschedule: ${backgroundService.needsJobReschedule}")
-                    reschedule = backgroundService.needsJobReschedule
-                    backgroundService.needsJobReschedule = false
-                },
-                onCompleteOnMain = {
-                    jobFinished(jobParameters, reschedule)
-                }
-            )
+        var isOneSignalInitialized = false
+        OneSignal.initWithContext(this) { result ->
+            isOneSignalInitialized = result
+            latchAwaiter.completeSuccess()
         }
-        // We're doing work on a background thread
+
+        // need to wait for initialization
+        latchAwaiter.waitForCompletion()
+        if (!isOneSignalInitialized) return false
+
+        suspendifyOnThread {
+            val backgroundService = OneSignal.getService<IBackgroundManager>()
+            backgroundService.runBackgroundServices()
+
+            Logging.debug("LollipopSyncRunnable:JobFinished needsJobReschedule: " + backgroundService.needsJobReschedule)
+
+            // Reschedule if needed
+            val reschedule = backgroundService.needsJobReschedule
+            backgroundService.needsJobReschedule = false
+
+            jobFinished(jobParameters, reschedule)
+        }
+
         return true
     }
 

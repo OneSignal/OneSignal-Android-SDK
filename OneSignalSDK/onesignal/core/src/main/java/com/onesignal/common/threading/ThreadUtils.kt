@@ -89,12 +89,13 @@ fun <T> suspendifyOnThread(
     onCompleteOnMain: ((Result<T>) -> Unit)? = null,
 ) {
     thread(priority = priority) {
-        val result = try {
-            val value = runBlocking { block() }
-            Result.success(value)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+        val result =
+            try {
+                val value = runBlocking { block() }
+                Result.success(value)
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
 
         try {
             runBlocking { withContext(Dispatchers.Main) { onCompleteOnMain?.invoke(result) } }
@@ -124,4 +125,16 @@ fun suspendifyOnThread(
             Logging.error("Exception on thread '$name'", e)
         }
     }
+}
+
+/**
+ * Create an awaiter for OneSignal SDK specifically.
+ */
+fun createOneSignalAwaiter() = LatchAwaiter("OneSignal SDK")
+
+/**
+ * Wait for initialization with a custom timeout, returning boolean instead of throwing.
+ */
+fun LatchAwaiter.waitSafely(timeoutMs: Long = LatchAwaiter.ANDROID_ANR_TIMEOUT_MS): Boolean {
+    return tryWaitForCompletion(timeoutMs).success
 }
