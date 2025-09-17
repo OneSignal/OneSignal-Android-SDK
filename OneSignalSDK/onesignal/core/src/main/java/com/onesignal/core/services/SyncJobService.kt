@@ -32,27 +32,34 @@ import com.onesignal.OneSignal
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.background.IBackgroundManager
 import com.onesignal.debug.internal.logging.Logging
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 
 class SyncJobService : JobService() {
     override fun onStartJob(jobParameters: JobParameters): Boolean {
+        runBlocking {
+            OneSignal.ensureOneSignalInitialized(this)
+        }
+        
+
         suspendifyOnThread {
             if (!OneSignal.initWithContext(this)) {
-                // Unable to initialize OneSignal, finish all jobs
-                jobFinished(jobParameters, false)
+                withContext(Dispatchers.Main) {
+                    jobFinished(jobParameters, false)
+                }
                 return@suspendifyOnThread
             }
 
-            var backgroundService = OneSignal.getService<IBackgroundManager>()
-
-            backgroundService.runBackgroundServices()
-
-            Logging.debug("LollipopSyncRunnable:JobFinished needsJobReschedule: " + backgroundService.needsJobReschedule)
+            val backgroundService = OneSignal.getService<IBackgroundManager>()
 
             // Reschedule if needed
             val reschedule = backgroundService.needsJobReschedule
             backgroundService.needsJobReschedule = false
 
-            jobFinished(jobParameters, reschedule)
+            withContext(Dispatchers.Main) {
+                jobFinished(jobParameters, reschedule)
+            }
         }
 
         return true

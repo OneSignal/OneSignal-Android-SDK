@@ -32,6 +32,8 @@ import android.content.Intent
 import android.os.Bundle
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessorHMS
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 // HMS Core creates a notification with an Intent when opened to start this Activity.
 //   Intent is defined via OneSignal's backend and is sent to HMS.
@@ -72,14 +74,19 @@ class NotificationOpenedActivityHMS : Activity() {
     }
 
     private fun processOpen(intent: Intent?) {
+        val activity = this
+
         suspendifyOnThread {
             if (!OneSignal.initWithContext(applicationContext)) {
                 return@suspendifyOnThread
             }
 
-            var notificationPayloadProcessorHMS = OneSignal.getService<INotificationOpenedProcessorHMS>()
+            val notificationPayloadProcessorHMS = OneSignal.getService<INotificationOpenedProcessorHMS>()
 
-            notificationPayloadProcessorHMS.handleHMSNotificationOpenIntent(this, intent)
+            // handleHMSNotificationOpenIntent must be called from main thread as it involves activity lifecycle
+            withContext(Dispatchers.Main) {
+                notificationPayloadProcessorHMS.handleHMSNotificationOpenIntent(activity, intent)
+            }
         }
     }
 }

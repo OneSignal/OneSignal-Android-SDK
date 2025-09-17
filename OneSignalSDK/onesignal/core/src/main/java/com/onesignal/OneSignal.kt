@@ -2,6 +2,7 @@ package com.onesignal
 
 import android.content.Context
 import com.onesignal.common.services.IServiceProvider
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.debug.IDebugManager
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.internal.OneSignalImp
@@ -9,6 +10,7 @@ import com.onesignal.location.ILocationManager
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.session.ISessionManager
 import com.onesignal.user.IUserManager
+import kotlin.coroutines.resume
 
 /**
  * This singleton class is the entry point to the OneSignal SDK. It
@@ -204,8 +206,30 @@ object OneSignal {
      * THIS IS AN INTERNAL INTERFACE AND SHOULD NOT BE USED DIRECTLY.
      */
     @JvmStatic
-    suspend fun initWithContext(context: Context): Boolean {
-        return oneSignal.initWithContext(context, null)
+    fun initWithContext(
+        context: Context,
+        onCompleted: ((Boolean) -> Unit),
+    ) {
+        // init in background and signal the return value in callback
+        suspendifyOnThread(
+            // TODO: timeout?
+            block = { oneSignal.initWithContext(context, null) },
+            onCompleteOnMain = { result ->
+                onCompleted.invoke(result.isSuccess)
+            }
+        )
+    }
+
+    /**
+     * Ensures OneSignal is initialized with the given context.
+     * Returns true if initialization succeeds, false otherwise.
+     */
+    suspend fun ensureOneSignalInitialized(context: Context): Boolean {
+        return kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+            initWithContext(context) { initSuccess ->
+                cont.resume(initSuccess)
+            }
+        }
     }
 
     /**

@@ -45,6 +45,7 @@ class BootUpReceiver : BroadcastReceiver() {
 
             val restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
 
+            // beginEnqueueingWork() can be safely called from background
             restoreWorkManager.beginEnqueueingWork(context, true)
         }
     }

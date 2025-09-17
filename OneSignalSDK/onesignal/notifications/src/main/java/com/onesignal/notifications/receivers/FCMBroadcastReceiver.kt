@@ -7,6 +7,8 @@ import android.content.Intent
 import com.onesignal.OneSignal
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 // This is the entry point when a FCM payload is received from the Google Play services app
 // OneSignal does not use FirebaseMessagingService.onMessageReceived as it does not allow multiple
@@ -37,6 +39,7 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
                 return@suspendifyOnThread
             }
 
+            // processBundleFromReceiver can be safely called from background
             val processedResult = bundleProcessor.processBundleFromReceiver(context, bundle)
 
             // Prevent other FCM receivers from firing if work manager is processing the notification
@@ -49,26 +52,30 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun setSuccessfulResultCode() {
-        if (isOrderedBroadcast) {
-            resultCode = Activity.RESULT_OK
+    private suspend fun setSuccessfulResultCode() {
+        withContext(Dispatchers.Main) {
+            if (isOrderedBroadcast) {
+                resultCode = Activity.RESULT_OK
+            }
         }
     }
 
-    private fun setAbort() {
+    private suspend fun setAbort() {
         if (isOrderedBroadcast) {
-            // Prevents other BroadcastReceivers from firing
-            abortBroadcast()
+            withContext(Dispatchers.Main) {
+                // Prevents other BroadcastReceivers from firing
+                abortBroadcast()
 
-            // TODO: Previous error and related to this Github issue ticket
-            //    https://github.com/OneSignal/OneSignal-Android-SDK/issues/307
-            // RESULT_OK prevents the following confusing logcat entry;
-            // W/GCM: broadcast intent callback: result=CANCELLED forIntent {
-            //    act=com.google.android.c2dm.intent.RECEIVE
-            //    flg=0x10000000
-            //    pkg=com.onesignal.sdktest (has extras)
-            // }
-            resultCode = Activity.RESULT_OK
+                // TODO: Previous error and related to this Github issue ticket
+                //    https://github.com/OneSignal/OneSignal-Android-SDK/issues/307
+                // RESULT_OK prevents the following confusing logcat entry;
+                // W/GCM: broadcast intent callback: result=CANCELLED forIntent {
+                //    act=com.google.android.c2dm.intent.RECEIVE
+                //    flg=0x10000000
+                //    pkg=com.onesignal.sdktest (has extras)
+                // }
+                resultCode = Activity.RESULT_OK
+            }
         }
     }
 

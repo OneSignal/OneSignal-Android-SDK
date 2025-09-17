@@ -29,17 +29,15 @@ class PermissionsActivity : Activity() {
             return
         }
 
-        // handle OneSignal bundle params in background
-        suspendifyOnThread {
-            if (!OneSignal.initWithContext(this)) {
+        OneSignal.initWithContext(this) { result ->
+            if (result) {
+                requestPermissionService = OneSignal.getService()
+                preferenceService = OneSignal.getService()
+
+                handleBundleParams(intent.extras)
+            } else {
                 finishActivity()
-                return@suspendifyOnThread
             }
-
-            requestPermissionService = OneSignal.getService()
-            preferenceService = OneSignal.getService()
-
-            handleBundleParams(intent.extras)
         }
     }
 

@@ -32,6 +32,8 @@ import android.os.Bundle
 import com.onesignal.OneSignal
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 abstract class NotificationOpenedActivityBase : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,6 +47,9 @@ abstract class NotificationOpenedActivityBase : Activity() {
     }
 
     internal open fun processIntent() {
+        val context = this
+
+
         suspendifyOnThread {
             if (!OneSignal.initWithContext(applicationContext)) {
                 return@suspendifyOnThread
@@ -52,13 +57,15 @@ abstract class NotificationOpenedActivityBase : Activity() {
 
             val openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
 
-            openedProcessor.processFromContext(this, intent)
+            withContext(Dispatchers.Main) {
+                openedProcessor.processFromContext(context, intent)
 
-            // KEEP: Xiaomi Compatibility:
-            // Must keep this Activity alive while trampolining, that is
-            // startActivity() must be called BEFORE finish(), otherwise
-            // the app is never foregrounded.
-            finish()
+                // KEEP: Xiaomi Compatibility:
+                // Must keep this Activity alive while trampolining, that is
+                // startActivity() must be called BEFORE finish(), otherwise
+                // the app is never foregrounded.
+                finish()
+            }
         }
     }
 }

@@ -11,6 +11,8 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
 import com.onesignal.notifications.internal.common.NotificationConstants
 import com.onesignal.notifications.internal.registration.impl.IPushRegistratorCallback
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONException
 import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicBoolean
@@ -100,6 +102,8 @@ object OneSignalHmsEventBridge {
             }
 
             val bundle = JSONUtils.jsonStringToBundle(data) ?: return@suspendifyOnThread
+
+            // processing bundle in background
             bundleProcessor.processBundleFromReceiver(context, bundle)
         }
     }

@@ -30,6 +30,8 @@ import android.content.Intent
 import com.onesignal.OneSignal
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class NotificationDismissReceiver : BroadcastReceiver() {
     override fun onReceive(
@@ -43,7 +45,10 @@ class NotificationDismissReceiver : BroadcastReceiver() {
 
             val notificationOpenedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
 
-            notificationOpenedProcessor.processFromContext(context, intent)
+            withContext(Dispatchers.Main) {
+                notificationOpenedProcessor.processFromContext(context, intent)
+            }
+
         }
     }
 }
