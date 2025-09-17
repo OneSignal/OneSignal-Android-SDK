@@ -3,6 +3,7 @@ package com.onesignal.notifications.services
 import android.content.Intent
 import com.amazon.device.messaging.ADMMessageHandlerBase
 import com.onesignal.OneSignal
+import com.onesignal.OneSignal.ensureOneSignalInitialized
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
@@ -13,16 +14,16 @@ import com.onesignal.notifications.internal.registration.impl.IPushRegistratorCa
 class ADMMessageHandler : ADMMessageHandlerBase("ADMMessageHandler") {
     override fun onMessage(intent: Intent) {
         val context = applicationContext
+        val bundle = intent.extras ?: return
+
         suspendifyOnThread {
-            if (!OneSignal.initWithContext(context)) {
+            if (!ensureOneSignalInitialized(context)) {
+                Logging.warn("onMessage skipped due to failed OneSignal init")
                 return@suspendifyOnThread
             }
 
-            val bundle = intent.extras
-
             val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
-
-            bundleProcessor.processBundleFromReceiver(context, bundle!!)
+            bundleProcessor.processBundleFromReceiver(context, bundle)
         }
     }
 

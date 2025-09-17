@@ -9,6 +9,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkerParameters
 import com.onesignal.OneSignal
+import com.onesignal.OneSignal.ensureOneSignalInitialized
 import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -73,13 +74,14 @@ internal class ReceiveReceiptWorkManager(
 
     class ReceiveReceiptWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
         override suspend fun doWork(): Result {
-            if (!OneSignal.initWithContext(applicationContext)) {
+            if (!ensureOneSignalInitialized(applicationContext)) {
+                Logging.warn("ReceiveReceiptWorker skipped due to failed OneSignal initialization")
                 return Result.success()
             }
 
-            val notificationId = inputData.getString(OS_NOTIFICATION_ID)!!
-            val appId = inputData.getString(OS_APP_ID)!!
-            val subscriptionId = inputData.getString(OS_SUBSCRIPTION_ID)!!
+            val notificationId = inputData.getString(OS_NOTIFICATION_ID) ?: return Result.failure()
+            val appId = inputData.getString(OS_APP_ID) ?: return Result.failure()
+            val subscriptionId = inputData.getString(OS_SUBSCRIPTION_ID) ?: return Result.failure()
 
             val receiveReceiptProcessor = OneSignal.getService<IReceiveReceiptProcessor>()
             receiveReceiptProcessor.sendReceiveReceipt(appId, subscriptionId, notificationId)

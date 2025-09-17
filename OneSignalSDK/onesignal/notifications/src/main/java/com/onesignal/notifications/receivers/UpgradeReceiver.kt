@@ -31,7 +31,9 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import com.onesignal.OneSignal
+import com.onesignal.OneSignal.ensureOneSignalInitialized
 import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.restoration.INotificationRestoreWorkManager
 
 class UpgradeReceiver : BroadcastReceiver() {
@@ -39,16 +41,17 @@ class UpgradeReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
-        // TODO: Now that we arent restoring like we use to, think we can remove this? Ill do some
-        //  testing and look at the issue but maybe someone has a answer or rems what directly
-        //  was causing this issue
+        // TODO: Now that we aren't restoring like we used to, think we can remove this?
+        // I'll do some testing and look at the issue, but maybe someone has an answer or
+        // remembers what directly was causing this issue.
         // Return early if using Android 7.0 due to upgrade restore crash (#263)
         if (Build.VERSION.SDK_INT == Build.VERSION_CODES.N) {
             return
         }
 
         suspendifyOnThread {
-            if (!OneSignal.initWithContext(context.applicationContext)) {
+            if (!ensureOneSignalInitialized(context.applicationContext)) {
+                Logging.warn("NotificationRestoreReceiver skipped due to failed OneSignal init")
                 return@suspendifyOnThread
             }
 

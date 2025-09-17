@@ -30,6 +30,7 @@ package com.onesignal
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import com.onesignal.common.threading.suspendifyBlocking
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessorHMS
 import kotlinx.coroutines.Dispatchers
@@ -74,18 +75,17 @@ class NotificationOpenedActivityHMS : Activity() {
     }
 
     private fun processOpen(intent: Intent?) {
-        val activity = this
 
-        suspendifyOnThread {
-            if (!OneSignal.initWithContext(applicationContext)) {
-                return@suspendifyOnThread
+        OneSignal.initWithContext(applicationContext) { success ->
+            if (!success) {
+                return@initWithContext
             }
 
             val notificationPayloadProcessorHMS = OneSignal.getService<INotificationOpenedProcessorHMS>()
+            val self = this
 
-            // handleHMSNotificationOpenIntent must be called from main thread as it involves activity lifecycle
-            withContext(Dispatchers.Main) {
-                notificationPayloadProcessorHMS.handleHMSNotificationOpenIntent(activity, intent)
+            suspendifyBlocking {
+                notificationPayloadProcessorHMS.handleHMSNotificationOpenIntent(self, intent)
             }
         }
     }

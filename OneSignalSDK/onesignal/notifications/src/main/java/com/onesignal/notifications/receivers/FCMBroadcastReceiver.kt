@@ -5,7 +5,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.onesignal.OneSignal
+import com.onesignal.OneSignal.ensureOneSignalInitialized
 import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -26,9 +28,9 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
             return
         }
 
-        // OneSignal will process the bundle in background
         suspendifyOnThread {
-            if (!OneSignal.initWithContext(context.applicationContext)) {
+            if (!ensureOneSignalInitialized(context.applicationContext)) {
+                Logging.warn("FCMBroadcastReceiver skipped due to failed OneSignal init")
                 return@suspendifyOnThread
             }
 
@@ -39,11 +41,10 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
                 return@suspendifyOnThread
             }
 
-            // processBundleFromReceiver can be safely called from background
             val processedResult = bundleProcessor.processBundleFromReceiver(context, bundle)
 
             // Prevent other FCM receivers from firing if work manager is processing the notification
-            if (processedResult!!.isWorkManagerProcessing) {
+            if (processedResult?.isWorkManagerProcessing == true) {
                 setAbort()
                 return@suspendifyOnThread
             }

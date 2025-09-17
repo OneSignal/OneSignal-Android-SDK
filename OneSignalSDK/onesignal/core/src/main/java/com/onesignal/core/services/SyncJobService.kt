@@ -32,36 +32,31 @@ import com.onesignal.OneSignal
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.background.IBackgroundManager
 import com.onesignal.debug.internal.logging.Logging
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 
 class SyncJobService : JobService() {
     override fun onStartJob(jobParameters: JobParameters): Boolean {
-        runBlocking {
-            OneSignal.ensureOneSignalInitialized(this)
-        }
-        
+        var reschedule = false
 
-        suspendifyOnThread {
-            if (!OneSignal.initWithContext(this)) {
-                withContext(Dispatchers.Main) {
-                    jobFinished(jobParameters, false)
+        OneSignal.initWithContext(this) { success ->
+            if (!success) {
+                jobFinished(jobParameters, false)
+                return@initWithContext
+            }
+
+            suspendifyOnThread(
+                block = {
+                    val backgroundService = OneSignal.getService<IBackgroundManager>()
+                    backgroundService.runBackgroundServices()
+                    Logging.debug("LollipopSyncRunnable:JobFinished needsJobReschedule: ${backgroundService.needsJobReschedule}")
+                    reschedule = backgroundService.needsJobReschedule
+                    backgroundService.needsJobReschedule = false
+                },
+                onCompleteOnMain = {
+                    jobFinished(jobParameters, reschedule)
                 }
-                return@suspendifyOnThread
-            }
-
-            val backgroundService = OneSignal.getService<IBackgroundManager>()
-
-            // Reschedule if needed
-            val reschedule = backgroundService.needsJobReschedule
-            backgroundService.needsJobReschedule = false
-
-            withContext(Dispatchers.Main) {
-                jobFinished(jobParameters, reschedule)
-            }
+            )
         }
-
+        // We're doing work on a background thread
         return true
     }
 

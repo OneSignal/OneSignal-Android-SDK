@@ -65,45 +65,41 @@ object OneSignalHmsEventBridge {
         context: Context,
         message: RemoteMessage,
     ) {
-        suspendifyOnThread {
-            if (!OneSignal.initWithContext(context)) {
-                return@suspendifyOnThread
+        OneSignal.initWithContext(context) { success ->
+            if (!success) {
+                return@initWithContext
             }
 
-            var time = OneSignal.getService<ITime>()
+            val time = OneSignal.getService<ITime>()
             val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
 
-            var data = message.data
-            try {
+            val dataJson = try {
                 val messageDataJSON = JSONObject(message.data)
+
+                // Ensure HMS_TTL_KEY is present
                 if (message.ttl == 0) {
                     messageDataJSON.put(HMS_TTL_KEY, NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD)
                 } else {
                     messageDataJSON.put(HMS_TTL_KEY, message.ttl)
                 }
 
+                // Ensure HMS_SENT_TIME_KEY is present
                 if (message.sentTime == 0L) {
                     messageDataJSON.put(HMS_SENT_TIME_KEY, time.currentTimeMillis)
                 } else {
                     messageDataJSON.put(HMS_SENT_TIME_KEY, message.sentTime)
                 }
 
-                data = messageDataJSON.toString()
+                messageDataJSON.toString()
             } catch (e: JSONException) {
-                Logging.error("OneSignalHmsEventBridge error when trying to create RemoteMessage data JSON")
+                Logging.error("OneSignalHmsEventBridge error when trying to create RemoteMessage data JSON", e)
+                null
             }
 
             // HMS notification with Message Type being Message won't trigger Activity reverse trampolining logic
-            // for this case OneSignal rely on NotificationOpenedActivityHMS activity
-            // Last EMUI (12 to the date) is based on Android 10, so no
-            // Activity trampolining restriction exist for HMS devices
-            if (data == null) {
-                return@suspendifyOnThread
-            }
-
-            val bundle = JSONUtils.jsonStringToBundle(data) ?: return@suspendifyOnThread
-
-            // processing bundle in background
+            // For this case OneSignal relies on NotificationOpenedActivityHMS activity.
+            // Last EMUI (12 to date) is based on Android 10, so no activity trampolining restriction exists for HMS devices.
+            val bundle = dataJson?.let { JSONUtils.jsonStringToBundle(it) } ?: return@initWithContext
             bundleProcessor.processBundleFromReceiver(context, bundle)
         }
     }
