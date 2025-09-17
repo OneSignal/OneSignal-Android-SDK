@@ -30,7 +30,7 @@ package com.onesignal
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import com.onesignal.common.threading.suspendifyBlocking
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessorHMS
 
 // HMS Core creates a notification with an Intent when opened to start this Activity.
@@ -72,14 +72,14 @@ class NotificationOpenedActivityHMS : Activity() {
     }
 
     private fun processOpen(intent: Intent?) {
-        if (!OneSignal.initWithContext(applicationContext)) {
-            return
-        }
+        suspendifyOnThread {
+            if (!OneSignal.initWithContext(applicationContext)) {
+                return@suspendifyOnThread
+            }
 
-        var notificationPayloadProcessorHMS = OneSignal.getService<INotificationOpenedProcessorHMS>()
-        val self = this
-        suspendifyBlocking {
-            notificationPayloadProcessorHMS.handleHMSNotificationOpenIntent(self, intent)
+            var notificationPayloadProcessorHMS = OneSignal.getService<INotificationOpenedProcessorHMS>()
+
+            notificationPayloadProcessorHMS.handleHMSNotificationOpenIntent(this, intent)
         }
     }
 }

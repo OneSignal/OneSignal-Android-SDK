@@ -28,7 +28,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.onesignal.OneSignal
-import com.onesignal.common.threading.suspendifyBlocking
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
 
 class NotificationDismissReceiver : BroadcastReceiver() {
@@ -36,13 +36,13 @@ class NotificationDismissReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
-        if (!OneSignal.initWithContext(context.applicationContext)) {
-            return
-        }
+        suspendifyOnThread {
+            if (!OneSignal.initWithContext(context.applicationContext)) {
+                return@suspendifyOnThread
+            }
 
-        var notificationOpenedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
+            val notificationOpenedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
 
-        suspendifyBlocking {
             notificationOpenedProcessor.processFromContext(context, intent)
         }
     }

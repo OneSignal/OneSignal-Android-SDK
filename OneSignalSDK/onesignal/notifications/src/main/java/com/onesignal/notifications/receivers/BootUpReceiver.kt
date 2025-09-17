@@ -30,6 +30,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.onesignal.OneSignal
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.notifications.internal.restoration.INotificationRestoreWorkManager
 
 class BootUpReceiver : BroadcastReceiver() {
@@ -37,12 +38,14 @@ class BootUpReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
-        if (!OneSignal.initWithContext(context.applicationContext)) {
-            return
+        suspendifyOnThread {
+            if (!OneSignal.initWithContext(context.applicationContext)) {
+                return@suspendifyOnThread
+            }
+
+            val restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
+
+            restoreWorkManager.beginEnqueueingWork(context, true)
         }
-
-        val restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
-
-        restoreWorkManager.beginEnqueueingWork(context, true)
     }
 }

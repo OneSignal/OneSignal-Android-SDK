@@ -31,6 +31,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import com.onesignal.OneSignal
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.notifications.internal.restoration.INotificationRestoreWorkManager
 
 class UpgradeReceiver : BroadcastReceiver() {
@@ -46,11 +47,13 @@ class UpgradeReceiver : BroadcastReceiver() {
             return
         }
 
-        if (!OneSignal.initWithContext(context.applicationContext)) {
-            return
-        }
+        suspendifyOnThread {
+            if (!OneSignal.initWithContext(context.applicationContext)) {
+                return@suspendifyOnThread
+            }
 
-        val restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
-        restoreWorkManager.beginEnqueueingWork(context, true)
+            val restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
+            restoreWorkManager.beginEnqueueingWork(context, true)
+        }
     }
 }

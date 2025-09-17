@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.os.Handler
 import androidx.core.app.ActivityCompat
 import com.onesignal.OneSignal
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.R
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
@@ -22,21 +23,24 @@ class PermissionsActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (!OneSignal.initWithContext(this)) {
-            finishActivity()
-            return
-        }
-
         if (intent.extras == null) {
             // This should never happen, but extras is null in rare crash reports
             finishActivity()
             return
         }
 
-        requestPermissionService = OneSignal.getService()
-        preferenceService = OneSignal.getService()
+        // handle OneSignal bundle params in background
+        suspendifyOnThread {
+            if (!OneSignal.initWithContext(this)) {
+                finishActivity()
+                return@suspendifyOnThread
+            }
 
-        handleBundleParams(intent.extras)
+            requestPermissionService = OneSignal.getService()
+            preferenceService = OneSignal.getService()
+
+            handleBundleParams(intent.extras)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
