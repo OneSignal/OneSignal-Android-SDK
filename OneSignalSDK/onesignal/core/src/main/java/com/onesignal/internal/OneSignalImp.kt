@@ -51,6 +51,7 @@ import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
@@ -330,13 +331,20 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
         // app == null
         // Slow path: wait for result synchronously
-        suspendifyOnThread {
-            val result = suspendInitInternal(context, appId)
-            initState = if (result) InitState.SUCCESS else InitState.FAILED
-            latchAwaiter.waitForCompletion()
+        val result =
+            runBlocking {
+                suspendInitInternal(context, appId)
+            }
+
+        if (!result) {
+            initState = InitState.FAILED
+            latchAwaiter.completeFailed()
+            return false
         }
 
-        return initState == InitState.SUCCESS
+        initState = InitState.SUCCESS
+        latchAwaiter.completeSuccess()
+        return true
     }
 
     internal suspend fun suspendInitInternal(context: Context, appId: String?): Boolean = withContext(kotlinx.coroutines.Dispatchers.Default) {

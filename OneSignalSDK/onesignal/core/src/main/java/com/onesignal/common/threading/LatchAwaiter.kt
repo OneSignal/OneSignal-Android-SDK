@@ -167,7 +167,7 @@ class LatchAwaiter(
     private fun getDefaultTimeout(): Long {
         val isMainThread =
             try {
-                Looper.getMainLooper().thread == Thread.currentThread()
+                AndroidUtils.isRunningOnMainThread()
             } catch (_: Throwable) {
                 false
             }
