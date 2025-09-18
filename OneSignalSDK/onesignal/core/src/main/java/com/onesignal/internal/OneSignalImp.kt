@@ -318,36 +318,23 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         if (appId != null) {
             // Fast path: run in background and return immediately
             suspendifyOnThread {
-                if (suspendInitInternal(context, appId)) {
-                    initState = InitState.SUCCESS
-                    latchAwaiter.completeSuccess()
-                } else {
-                    initState = InitState.FAILED
-                    latchAwaiter.completeFailed()
-                }
+                suspendInitInternal(context, appId)
             }
             return true
         }
 
         // app == null
-        // Slow path: wait for result synchronously
+        // Slow path: wait for result synchronously; internal receivers and workers will need to init
+        // in background
         val result =
             runBlocking {
                 suspendInitInternal(context, appId)
             }
 
-        if (!result) {
-            initState = InitState.FAILED
-            latchAwaiter.completeFailed()
-            return false
-        }
-
-        initState = InitState.SUCCESS
-        latchAwaiter.completeSuccess()
-        return true
+        return result
     }
 
-    internal suspend fun suspendInitInternal(context: Context, appId: String?): Boolean = withContext(kotlinx.coroutines.Dispatchers.Default) {
+    private suspend fun suspendInitInternal(context: Context, appId: String?): Boolean = withContext(kotlinx.coroutines.Dispatchers.Default) {
         try {
             initEssentials(context)
 
@@ -401,10 +388,13 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         waitForInit()
 
         var currentIdentityExternalId: String? = null
+        var currentIdentityOneSignalId: String? = null
+        var newIdentityOneSignalId: String = ""
 
         // only allow one login/logout at a time
         synchronized(loginLock) {
             currentIdentityExternalId = identityModelStore!!.model.externalId
+            currentIdentityOneSignalId = identityModelStore!!.model.onesignalId
 
             if (currentIdentityExternalId == externalId) {
                 return
@@ -414,11 +404,31 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             createAndSwitchToNewUser { identityModel, _ ->
                 identityModel.externalId = externalId
             }
+
+            newIdentityOneSignalId = identityModelStore!!.model.onesignalId
         }
 
         // on a background thread enqueue the login/fetch of the new user
         suspendifyOnThread {
-            suspendLogin(externalId)
+            // We specify an "existingOneSignalId" here when the current user is anonymous to
+            // allow this login to attempt a "conversion" of the anonymous user.  We also
+            // wait for the LoginUserOperation operation to execute, which can take a *very* long
+            // time if network conditions prevent the operation to succeed.  This allows us to
+            // provide a callback to the caller when we can absolutely say the user is logged
+            // in, so they may take action on their own backend.
+            val result =
+                operationRepo!!.enqueueAndWait(
+                    LoginUserOperation(
+                        configModel!!.appId,
+                        newIdentityOneSignalId,
+                        externalId,
+                        if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
+                    ),
+                )
+
+            if (!result) {
+                Logging.log(LogLevel.ERROR, "Could not login user")
+            }
         }
     }
 
