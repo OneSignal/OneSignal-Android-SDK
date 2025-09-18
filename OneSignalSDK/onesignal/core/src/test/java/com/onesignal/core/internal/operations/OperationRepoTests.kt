@@ -542,14 +542,14 @@ class OperationRepoTests : FunSpec({
     test("starting OperationModelStore should be processed, following normal delay rules") {
         // Given
         val mocks = Mocks()
-        mocks.configModelStore.model.opRepoExecutionInterval = 100
+        mocks.configModelStore.model.opRepoExecutionInterval = 200
         every { mocks.operationModelStore.list() } returns listOf(mockOperation())
         val executeOperationsCall = mockExecuteOperations(mocks.operationRepo)
 
         // When
         mocks.operationRepo.start()
         val immediateResult =
-            withTimeoutOrNull(100) {
+            withTimeoutOrNull(200) {
                 executeOperationsCall.waitForWake()
             }
         val delayedResult =
