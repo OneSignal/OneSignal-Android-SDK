@@ -29,9 +29,11 @@ internal enum class InitState {
      * SDK initialization has failed due to an unrecoverable error (e.g., missing app ID).
      * All dependent operations should fail fast or throw until re-initialized.
      */
-    FAILED;
+    FAILED,
 
-    fun isSDKAccessible() : Boolean {
+    ;
+
+    fun isSDKAccessible(): Boolean {
         return this == IN_PROGRESS || this == SUCCESS
     }
 }

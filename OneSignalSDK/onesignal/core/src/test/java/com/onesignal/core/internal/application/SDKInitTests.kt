@@ -12,10 +12,9 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.maps.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import org.robolectric.shadows.ShadowApplication
 
 @RobolectricTest
-class SDKInitTests: FunSpec({
+class SDKInitTests : FunSpec({
 
     test("OneSignal accessors throw before calling initWithContext") {
         val os = OneSignalImp()
@@ -41,16 +40,17 @@ class SDKInitTests: FunSpec({
         // Given
         // block SharedPreference before calling init
         val trigger = LatchAwaiter("Test")
-        val context =  getApplicationContext<Context>()
+        val context = getApplicationContext<Context>()
         val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
         var initSuccess = true
 
         // When
-        val accessorThread = Thread {
-            // this will block until after SharedPreferences is released
-            initSuccess = os.initWithContext(blockingPrefContext, null)
-        }
+        val accessorThread =
+            Thread {
+                // this will block until after SharedPreferences is released
+                initSuccess = os.initWithContext(blockingPrefContext, null)
+            }
 
         accessorThread.start()
         accessorThread.join(500)
@@ -71,14 +71,15 @@ class SDKInitTests: FunSpec({
         // Given
         // block SharedPreference before calling init
         val trigger = LatchAwaiter("Test")
-        val context =  getApplicationContext<Context>()
+        val context = getApplicationContext<Context>()
         val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
 
         // When
-        val accessorThread = Thread {
-            os.initWithContext(blockingPrefContext, "appId")
-        }
+        val accessorThread =
+            Thread {
+                os.initWithContext(blockingPrefContext, "appId")
+            }
 
         accessorThread.start()
         accessorThread.join(500)
@@ -92,14 +93,15 @@ class SDKInitTests: FunSpec({
         // Given
         // block SharedPreference before calling init
         val trigger = LatchAwaiter("Test")
-        val context =  getApplicationContext<Context>()
+        val context = getApplicationContext<Context>()
         val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
 
-        val accessorThread = Thread {
-            os.initWithContext(blockingPrefContext, "appId")
-            os.user // This should block until either trigger is released or timed out
-        }
+        val accessorThread =
+            Thread {
+                os.initWithContext(blockingPrefContext, "appId")
+                os.user // This should block until either trigger is released or timed out
+            }
 
         accessorThread.start()
         accessorThread.join(500)
@@ -183,13 +185,14 @@ class SDKInitTests: FunSpec({
         val blockingPrefContext = BlockingPrefsContext(context, neverCompleteTrigger)
         val os = OneSignalImp()
 
-        val accessorThread = Thread {
-            os.initWithContext(blockingPrefContext, "appId")
+        val accessorThread =
+            Thread {
+                os.initWithContext(blockingPrefContext, "appId")
 
-            shouldThrow<IllegalStateException> {
-                os.user // May timeout with appropriate error
+                shouldThrow<IllegalStateException> {
+                    os.user // May timeout with appropriate error
+                }
             }
-        }
 
         accessorThread.start()
         accessorThread.join(2100) // Wait longer than expected timeout
@@ -232,9 +235,12 @@ class SDKInitTests: FunSpec({
  */
 class BlockingPrefsContext(
     context: Context,
-    private val unblockTrigger: LatchAwaiter
+    private val unblockTrigger: LatchAwaiter,
 ) : ContextWrapper(context) {
-    override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {
+    override fun getSharedPreferences(
+        name: String,
+        mode: Int,
+    ): SharedPreferences {
         try {
             unblockTrigger.waitForCompletion(2000)
         } catch (e: InterruptedException) {

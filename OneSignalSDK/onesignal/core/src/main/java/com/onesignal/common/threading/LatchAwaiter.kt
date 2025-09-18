@@ -1,6 +1,5 @@
 package com.onesignal.common.threading
 
-import android.os.Looper
 import com.onesignal.common.AndroidUtils
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
