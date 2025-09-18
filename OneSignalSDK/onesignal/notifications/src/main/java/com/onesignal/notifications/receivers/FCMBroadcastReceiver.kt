@@ -28,6 +28,7 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
             return
         }
 
+        // process in background
         suspendifyOnThread {
             if (!ensureOneSignalInitialized(context.applicationContext)) {
                 Logging.warn("FCMBroadcastReceiver skipped due to failed OneSignal init")

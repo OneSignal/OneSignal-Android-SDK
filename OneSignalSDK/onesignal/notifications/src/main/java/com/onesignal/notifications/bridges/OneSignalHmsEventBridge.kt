@@ -63,6 +63,7 @@ object OneSignalHmsEventBridge {
         context: Context,
         message: RemoteMessage,
     ) {
+        // call init in background and back when the init result is available
         OneSignal.initWithContext(context) { success ->
             if (!success) {
                 return@initWithContext

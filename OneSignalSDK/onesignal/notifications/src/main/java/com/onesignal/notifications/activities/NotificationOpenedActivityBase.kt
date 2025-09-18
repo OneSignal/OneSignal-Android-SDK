@@ -46,6 +46,7 @@ abstract class NotificationOpenedActivityBase : Activity() {
     }
 
     internal open fun processIntent() {
+        // call init in background
         OneSignal.initWithContext(applicationContext) { success ->
             if (!success) {
                 return@initWithContext
@@ -60,7 +61,7 @@ abstract class NotificationOpenedActivityBase : Activity() {
                     // startActivity() must be called BEFORE finish(), or app won't foreground.
                 },
                 onCompleteOnMain = {
-                    // Finish activity after processing to avoid rendering issues
+                    // Finish activity on main thread after processing to avoid rendering issues
                     AndroidUtils.finishSafely(this)
                 },
             )

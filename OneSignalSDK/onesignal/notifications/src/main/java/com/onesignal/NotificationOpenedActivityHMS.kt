@@ -72,6 +72,7 @@ class NotificationOpenedActivityHMS : Activity() {
     }
 
     private fun processOpen(intent: Intent?) {
+        // run init in background
         OneSignal.initWithContext(applicationContext) { success ->
             if (!success) {
                 return@initWithContext

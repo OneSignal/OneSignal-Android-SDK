@@ -28,6 +28,7 @@ class PermissionsActivity : Activity() {
             return
         }
 
+        // init in background and signal the result in main thread
         OneSignal.initWithContext(this) { result ->
             if (result) {
                 requestPermissionService = OneSignal.getService()

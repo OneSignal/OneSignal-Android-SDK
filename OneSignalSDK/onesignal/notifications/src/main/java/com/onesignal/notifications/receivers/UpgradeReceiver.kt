@@ -49,6 +49,7 @@ class UpgradeReceiver : BroadcastReceiver() {
             return
         }
 
+        // move the entire process to background; beginEnqueueingWork does not need to be called on main
         suspendifyOnThread {
             if (!ensureOneSignalInitialized(context.applicationContext)) {
                 Logging.warn("NotificationRestoreReceiver skipped due to failed OneSignal init")

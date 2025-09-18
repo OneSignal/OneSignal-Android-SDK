@@ -40,6 +40,7 @@ class BootUpReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
+        // move the entire process to background; beginEnqueueingWork does not need to be called on main
         suspendifyOnThread {
             if (!ensureOneSignalInitialized(context.applicationContext)) {
                 Logging.warn("NotificationRestoreReceiver skipped due to failed OneSignal init")
