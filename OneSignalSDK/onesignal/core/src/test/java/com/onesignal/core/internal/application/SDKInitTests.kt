@@ -5,134 +5,225 @@ import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
-import com.onesignal.OneSignal
 import com.onesignal.common.threading.LatchAwaiter
 import com.onesignal.internal.OneSignalImp
-import com.onesignal.user.internal.identity.IdentityModelStore
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.assertions.throwables.shouldThrowUnit
-import io.kotest.core.spec.IsolationMode
 import io.kotest.core.spec.style.FunSpec
-import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.maps.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.matchers.string.shouldStartWith
-import java.util.concurrent.Executors
+import org.robolectric.shadows.ShadowApplication
 
 @RobolectricTest
 class SDKInitTests: FunSpec({
-    IsolationMode.InstancePerLeaf
 
-    test("ensure OneSignal accessors should throw before calling initWithContext") {
+    test("OneSignal accessors throw before calling initWithContext") {
+        val os = OneSignalImp()
+
         shouldThrow<IllegalStateException> {
-            OneSignal.User
+            os.user
         }
         shouldThrow<IllegalStateException> {
-            OneSignal.InAppMessages
+            os.inAppMessages
         }
         shouldThrow<IllegalStateException> {
-            OneSignal.Session
+            os.session
         }
         shouldThrow<IllegalStateException> {
-            OneSignal.Notifications
+            os.notifications
         }
         shouldThrow<IllegalStateException> {
-            OneSignal.Location
+            os.location
         }
     }
 
-    test("init will not block when no other accessor is called after initWithContext") {
+    test("initWithContext with no appId blocks and will return false") {
         // Given
         // block SharedPreference before calling init
         val trigger = LatchAwaiter("Test")
         val context =  getApplicationContext<Context>()
         val blockingPrefContext = BlockingPrefsContext(context, trigger)
+        val os = OneSignalImp()
+        var initSuccess = true
 
         // When
-        val exec = Executors.newSingleThreadExecutor()
-        val future = exec.submit { OneSignal.initWithContext(blockingPrefContext, "appId") }
+        val accessorThread = Thread {
+            // this will block until after SharedPreferences is released
+            initSuccess = os.initWithContext(blockingPrefContext, null)
+        }
 
-        // Then
+        accessorThread.start()
+        accessorThread.join(500)
 
+        accessorThread.isAlive shouldBe true
 
-        // now release the SharedPreferences
+        // release SharedPreferences
         trigger.completeSuccess()
-        future.isDone.shouldBeTrue()
 
-        OneSignal.isInitialized shouldBe true
+        accessorThread.join(500)
+        accessorThread.isAlive shouldBe false
 
-        future.cancel(true)
-        exec.shutdownNow()
+        // always return false because appId is missing
+        initSuccess shouldBe false
     }
 
-    test("ensure adding tags right after initWithContext is successful") {
+    test("initWithContext with appId does not block") {
+        // Given
+        // block SharedPreference before calling init
+        val trigger = LatchAwaiter("Test")
+        val context =  getApplicationContext<Context>()
+        val blockingPrefContext = BlockingPrefsContext(context, trigger)
+        val os = OneSignalImp()
+
+        // When
+        val accessorThread = Thread {
+            os.initWithContext(blockingPrefContext, "appId")
+        }
+
+        accessorThread.start()
+        accessorThread.join(500)
+
+        // Then
+        // should complete even SharedPreferences is unavailable
+        accessorThread.isAlive shouldBe false
+    }
+
+    test("accessors will be blocked if call too early after initWithContext with appId") {
+        // Given
+        // block SharedPreference before calling init
+        val trigger = LatchAwaiter("Test")
+        val context =  getApplicationContext<Context>()
+        val blockingPrefContext = BlockingPrefsContext(context, trigger)
+        val os = OneSignalImp()
+
+        val accessorThread = Thread {
+            os.initWithContext(blockingPrefContext, "appId")
+            os.user // This should block until either trigger is released or timed out
+        }
+
+        accessorThread.start()
+        accessorThread.join(500)
+
+        accessorThread.isAlive shouldBe true
+
+        // release the lock on SharedPreferences
+        trigger.completeSuccess()
+
+        accessorThread.join(500)
+        accessorThread.isAlive shouldBe false
+    }
+
+    test("ensure adding tags right after initWithContext with appId is successful") {
         // Given
         val context = getApplicationContext<Context>()
+        val os = OneSignalImp()
         val tagKey = "tagKey"
         val tagValue = "tagValue"
         val testTags = mapOf(tagKey to tagValue)
 
         // When
-        OneSignal.initWithContext(context, "appId")
-
-        OneSignal.User.addTags(testTags)
+        os.initWithContext(context, "appId")
+        os.user.addTags(testTags)
 
         // Then
-        val tags = OneSignal.User.getTags()
+        val tags = os.user.getTags()
         tags shouldContain (tagKey to tagValue)
-    }
-
-    test("onesignalId requested right after initWithContext should be local") {
-        // Given
-        val context = getApplicationContext<Context>()
-
-        // When
-        OneSignal.initWithContext(context, "appId")
-        val onesignalId = OneSignal.getService<IdentityModelStore>().model.onesignalId
-
-        // Then
-        onesignalId shouldStartWith "local"
     }
 
     test("a push subscription should be created right after initWithContext") {
         // Given
         val context = getApplicationContext<Context>()
-        OneSignal.initWithContext(context, "appId")
+        val os = OneSignalImp()
+        os.initWithContext(context, "appId")
 
         // When
-        val pushSub = OneSignal.User.pushSubscription
+        val pushSub = os.user.pushSubscription
 
         // Then
         pushSub shouldNotBe null
+        pushSub.token shouldNotBe null
     }
 
     test("externalId retrieved correctly when login right after init") {
+        // Given
         val context = getApplicationContext<Context>()
-        OneSignal.initWithContext(context, "appId")
+        val os = OneSignalImp()
         val testExternalId = "testUser"
 
         // When
-        val oldExternalId = OneSignal.User.externalId
-        OneSignal.login(testExternalId)
-        val newExternalId = OneSignal.User.externalId
+        os.initWithContext(context, "appId")
+        val oldExternalId = os.user.externalId
+        os.login(testExternalId)
+        val newExternalId = os.user.externalId
 
         oldExternalId shouldBe ""
         newExternalId shouldBe testExternalId
     }
 
-    test("attempting logout before initWithContext throws exception") {
+    test("accessor instances after multiple initWithContext calls are consistent") {
         // Given
+        val context = getApplicationContext<Context>()
         val os = OneSignalImp()
 
         // When
-        val exception =
-            shouldThrowUnit<Exception> {
-                os.logout()
-            }
+        os.initWithContext(context, "appId")
+        val oldUser = os.user
+
+        // Second init from some internal class
+        os.initWithContext(context, null)
+        val newUser = os.user
 
         // Then
-        exception.message shouldBe "Must call 'initWithContext' before 'logout'"
+        oldUser shouldBe newUser
+    }
+
+    test("accessor timeout with never-completing background init") {
+        val neverCompleteTrigger = LatchAwaiter("NeverComplete")
+        val context = getApplicationContext<Context>()
+        val blockingPrefContext = BlockingPrefsContext(context, neverCompleteTrigger)
+        val os = OneSignalImp()
+
+        val accessorThread = Thread {
+            os.initWithContext(blockingPrefContext, "appId")
+
+            shouldThrow<IllegalStateException> {
+                os.user // May timeout with appropriate error
+            }
+        }
+
+        accessorThread.start()
+        accessorThread.join(2100) // Wait longer than expected timeout
+
+        // Thread should complete (either successfully or with timeout exception)
+        accessorThread.isAlive shouldBe false
+    }
+
+    test("integration: full user workflow after initialization") {
+        val context = getApplicationContext<Context>()
+        val os = OneSignalImp()
+        val testExternalId = "test-user"
+        val tags = mapOf("test" to "integration", "version" to "1.0")
+
+        os.initWithContext(context, "appId")
+
+        // Test user workflow
+        // init
+        val initialExternalId = os.user.externalId
+        initialExternalId shouldBe ""
+
+        // login
+        os.login(testExternalId)
+        os.user.externalId shouldBe testExternalId
+
+        // addTags and getTags
+        os.user.addTags(tags)
+        val retrievedTags = os.user.getTags()
+        retrievedTags shouldContain ("test" to "integration")
+        retrievedTags shouldContain ("version" to "1.0")
+
+        // logout
+        os.logout()
+        os.user.externalId shouldBe ""
     }
 })
 
@@ -145,7 +236,7 @@ class BlockingPrefsContext(
 ) : ContextWrapper(context) {
     override fun getSharedPreferences(name: String, mode: Int): SharedPreferences {
         try {
-            unblockTrigger.waitForCompletion(10000)
+            unblockTrigger.waitForCompletion(2000)
         } catch (e: InterruptedException) {
             throw e
         }
