@@ -41,7 +41,7 @@ class SDKInitTests : FunSpec({
         // block SharedPreference before calling init
         val trigger = LatchAwaiter("Test")
         val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, trigger)
+        val blockingPrefContext = BlockingPrefsContext(context, trigger, 2000)
         val os = OneSignalImp()
         var initSuccess = true
 
@@ -65,6 +65,7 @@ class SDKInitTests : FunSpec({
 
         // always return false because appId is missing
         initSuccess shouldBe false
+        os.isInitialized shouldBe false
     }
 
     test("initWithContext with appId does not block") {
@@ -72,7 +73,7 @@ class SDKInitTests : FunSpec({
         // block SharedPreference before calling init
         val trigger = LatchAwaiter("Test")
         val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, trigger)
+        val blockingPrefContext = BlockingPrefsContext(context, trigger, 1000)
         val os = OneSignalImp()
 
         // When
@@ -87,6 +88,7 @@ class SDKInitTests : FunSpec({
         // Then
         // should complete even SharedPreferences is unavailable
         accessorThread.isAlive shouldBe false
+        os.isInitialized shouldBe true
     }
 
     test("accessors will be blocked if call too early after initWithContext with appId") {
@@ -94,7 +96,7 @@ class SDKInitTests : FunSpec({
         // block SharedPreference before calling init
         val trigger = LatchAwaiter("Test")
         val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, trigger)
+        val blockingPrefContext = BlockingPrefsContext(context, trigger, 2000)
         val os = OneSignalImp()
 
         val accessorThread =
@@ -113,6 +115,7 @@ class SDKInitTests : FunSpec({
 
         accessorThread.join(500)
         accessorThread.isAlive shouldBe false
+        os.isInitialized shouldBe true
     }
 
     test("ensure adding tags right after initWithContext with appId is successful") {
@@ -182,7 +185,7 @@ class SDKInitTests : FunSpec({
     test("accessor timeout with never-completing background init") {
         val neverCompleteTrigger = LatchAwaiter("NeverComplete")
         val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, neverCompleteTrigger)
+        val blockingPrefContext = BlockingPrefsContext(context, neverCompleteTrigger, 1000)
         val os = OneSignalImp()
 
         val accessorThread =
@@ -195,10 +198,11 @@ class SDKInitTests : FunSpec({
             }
 
         accessorThread.start()
-        accessorThread.join(2100) // Wait longer than expected timeout
+        accessorThread.join(1100) // Wait longer than timeout
 
         // Thread should complete (either successfully or with timeout exception)
         accessorThread.isAlive shouldBe false
+        os.isInitialized shouldBe false
     }
 
     test("integration: full user workflow after initialization") {
@@ -236,13 +240,14 @@ class SDKInitTests : FunSpec({
 class BlockingPrefsContext(
     context: Context,
     private val unblockTrigger: LatchAwaiter,
+    private val timeoutInMillis: Long,
 ) : ContextWrapper(context) {
     override fun getSharedPreferences(
         name: String,
         mode: Int,
     ): SharedPreferences {
         try {
-            unblockTrigger.waitForCompletion(2000)
+            unblockTrigger.waitForCompletion(timeoutInMillis)
         } catch (e: InterruptedException) {
             throw e
         }

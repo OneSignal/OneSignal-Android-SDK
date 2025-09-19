@@ -126,15 +126,3 @@ fun suspendifyOnThread(
         }
     }
 }
-
-/**
- * Create an awaiter for OneSignal SDK specifically.
- */
-fun createOneSignalAwaiter() = LatchAwaiter("OneSignal SDK")
-
-/**
- * Wait for initialization with a custom timeout, returning boolean instead of throwing.
- */
-fun LatchAwaiter.waitSafely(timeoutMs: Long = LatchAwaiter.ANDROID_ANR_TIMEOUT_MS): Boolean {
-    return tryWaitForCompletion(timeoutMs).success
-}

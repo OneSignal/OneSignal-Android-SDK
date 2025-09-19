@@ -90,32 +90,6 @@ class LatchAwaiter(
     }
 
     /**
-     * Wait for initialization and return success status instead of throwing.
-     *
-     * @param timeoutMs Timeout in milliseconds
-     * @return InitResult containing success status and optional error
-     */
-    fun tryWaitForCompletion(timeoutMs: Long = getDefaultTimeout()): InitResult {
-        return try {
-            waitForCompletion(timeoutMs)
-            InitResult(success = true, error = null, timedOut = false)
-        } catch (e: IllegalStateException) {
-            val timedOut = e.message?.contains("Timeout") == true
-            InitResult(success = false, error = e, timedOut = timedOut)
-        }
-    }
-
-    /**
-     * Check if initialization has already completed.
-     */
-    fun isCompleted(): Boolean = synchronized(this) { isInitialized }
-
-    /**
-     * Check if initialization was successful (only valid after completion).
-     */
-    fun wasSuccessful(): Boolean = synchronized(this) { isInitialized && initializationSuccess }
-
-    /**
      * Reset the awaiter to wait for a new initialization.
      * Use with caution - typically you'd create a new instance instead.
      */

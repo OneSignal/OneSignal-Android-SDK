@@ -321,6 +321,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             suspendifyOnThread {
                 suspendInitInternal(context, appId)
             }
+            initState = InitState.SUCCESS
             return true
         }
 
@@ -331,7 +332,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             runBlocking {
                 suspendInitInternal(context, appId)
             }
-
+        initState = if (result) InitState.SUCCESS else InitState.FAILED
         return result
     }
 
@@ -588,6 +589,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             }
             else -> {
                 // SUCCESS
+                latchAwaiter.waitForCompletion()
             }
         }
 
