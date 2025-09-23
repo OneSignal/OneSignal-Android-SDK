@@ -358,7 +358,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                         if (legacyAppId == null) {
                             Logging.warn("suspendInitInternal: no appId provided or found in legacy config.")
                             initState = InitState.FAILED
-                            latchAwaiter.completeFailed()
+                            latchAwaiter.release()
                             return@withContext false
                         }
                         forceCreateUser = true
@@ -370,12 +370,12 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 val startupService = bootstrapServices()
                 initUser(forceCreateUser)
                 startupService.scheduleStart()
-                latchAwaiter.completeSuccess()
+                latchAwaiter.release()
                 return@withContext true
             } catch (e: Throwable) {
                 Logging.error("suspendInitInternal failed!", e)
                 initState = InitState.FAILED
-                latchAwaiter.completeFailed(e)
+                latchAwaiter.release()
                 return@withContext false
             }
         }
@@ -572,7 +572,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
     override fun <T> getAllServices(c: Class<T>): List<T> = services.getAllServices(c)
 
     private fun waitForInit() {
-        latchAwaiter.waitForCompletion()
+        latchAwaiter.await()
     }
 
     private fun <T> waitAndReturn(getter: () -> T): T {
@@ -582,14 +582,13 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             }
             InitState.IN_PROGRESS -> {
                 Logging.debug("Waiting for init to complete...")
-                latchAwaiter.waitForCompletion()
+                waitForInit()
             }
             InitState.FAILED -> {
                 throw IllegalStateException("Initialization failed. Cannot proceed.")
             }
             else -> {
                 // SUCCESS
-                latchAwaiter.waitForCompletion()
             }
         }
 

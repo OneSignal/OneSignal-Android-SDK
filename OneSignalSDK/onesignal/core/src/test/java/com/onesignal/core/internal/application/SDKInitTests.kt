@@ -58,7 +58,7 @@ class SDKInitTests : FunSpec({
         accessorThread.isAlive shouldBe true
 
         // release SharedPreferences
-        trigger.completeSuccess()
+        trigger.release()
 
         accessorThread.join(500)
         accessorThread.isAlive shouldBe false
@@ -111,7 +111,7 @@ class SDKInitTests : FunSpec({
         accessorThread.isAlive shouldBe true
 
         // release the lock on SharedPreferences
-        trigger.completeSuccess()
+        trigger.release()
 
         accessorThread.join(500)
         accessorThread.isAlive shouldBe false
@@ -247,7 +247,7 @@ class BlockingPrefsContext(
         mode: Int,
     ): SharedPreferences {
         try {
-            unblockTrigger.waitForCompletion(timeoutInMillis)
+            unblockTrigger.await(timeoutInMillis)
         } catch (e: InterruptedException) {
             throw e
         }

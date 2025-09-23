@@ -8,7 +8,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldEndWith
 
-class TestLogLister : ILogListener {
+public class TestLogLister : ILogListener {
     val calls = ArrayList<String>()
 
     override fun onLogEvent(event: OneSignalLogEvent) {
