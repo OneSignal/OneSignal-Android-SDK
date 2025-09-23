@@ -19,7 +19,7 @@ class LatchAwaiter(
 ) {
     companion object {
         const val DEFAULT_TIMEOUT_MS = 30_000L // 30 seconds
-        const val ANDROID_ANR_TIMEOUT_MS = 5_000L // Conservative ANR threshold
+        const val ANDROID_ANR_TIMEOUT_MS = 4_800L // Conservative ANR threshold
     }
 
     private val latch = CountDownLatch(1)
