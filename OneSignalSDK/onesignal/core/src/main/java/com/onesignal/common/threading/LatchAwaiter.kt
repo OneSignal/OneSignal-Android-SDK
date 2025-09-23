@@ -1,6 +1,7 @@
 package com.onesignal.common.threading
 
 import com.onesignal.common.AndroidUtils
+import com.onesignal.debug.internal.logging.Logging
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -64,10 +65,8 @@ class LatchAwaiter(
 
     /**
      * Wait for initialization to complete with timeout.
-     * Throws IllegalStateException if timeout occurs or initialization fails.
      *
      * @param timeoutMs Timeout in milliseconds. Defaults to ANDROID_ANR_TIMEOUT_MS on main thread.
-     * @throws IllegalStateException if timeout occurs, initialization fails, or thread is interrupted
      */
     fun waitForCompletion(timeoutMs: Long = getDefaultTimeout()) {
         if (isAlreadyCompleted()) {
@@ -75,15 +74,18 @@ class LatchAwaiter(
             return
         }
 
-        val awaitCompleted =
+        val err =
             try {
                 initLatch.await(timeoutMs, TimeUnit.MILLISECONDS)
+                null
             } catch (e: InterruptedException) {
-                throw IllegalStateException("Interrupted while waiting for $componentName initialization", e)
+                logAllThreadsInfo()
+                e
             }
 
-        if (!awaitCompleted) {
-            throw IllegalStateException(createTimeoutMessage(timeoutMs))
+        if (err != null) {
+            val message = createTimeoutMessage(timeoutMs)
+            Logging.warn("$message $err")
         }
 
         checkResult()
@@ -135,6 +137,20 @@ class LatchAwaiter(
         } else {
             "Timeout waiting for $componentName initialization after ${timeoutMs}ms."
         }
+    }
+
+    private fun logAllThreadsInfo(): String {
+        val allThreads = Thread.getAllStackTraces()
+        var msg = ""
+
+        for ((thread, stack) in allThreads) {
+            msg.plus("ThreadDump Thread: ${thread.name} [${thread.state}]\n")
+            for (element in stack) {
+                msg.plus("\tat $element\n")
+            }
+        }
+
+        return msg
     }
 
     private fun getDefaultTimeout(): Long {
