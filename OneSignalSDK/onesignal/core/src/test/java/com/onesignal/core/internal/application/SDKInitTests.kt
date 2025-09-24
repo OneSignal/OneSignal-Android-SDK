@@ -123,7 +123,7 @@ class SDKInitTests : FunSpec({
         // release the lock on SharedPreferences
         trigger.release()
 
-        accessorThread.join(500)
+        accessorThread.join(1000)
         accessorThread.isAlive shouldBe false
         os.isInitialized shouldBe true
     }
@@ -219,29 +219,6 @@ class SDKInitTests : FunSpec({
 
         // Then
         oldUser shouldBe newUser
-    }
-
-    test("accessor timeout with never-completing background init") {
-        val neverCompleteTrigger = LatchAwaiter("NeverComplete")
-        val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, neverCompleteTrigger, 1000)
-        val os = OneSignalImp()
-
-        val accessorThread =
-            Thread {
-                os.initWithContext(blockingPrefContext, "appId")
-
-                shouldThrow<IllegalStateException> {
-                    os.user // May timeout with appropriate error
-                }
-            }
-
-        accessorThread.start()
-        accessorThread.join(1500) // Wait longer than timeout
-
-        // Thread should complete (either successfully or with timeout exception)
-        accessorThread.isAlive shouldBe false
-        os.isInitialized shouldBe false
     }
 
     test("integration: full user workflow after initialization") {

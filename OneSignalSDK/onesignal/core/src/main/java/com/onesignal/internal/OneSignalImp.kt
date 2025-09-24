@@ -51,6 +51,7 @@ import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -318,7 +319,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
         initState = InitState.IN_PROGRESS
 
-        // Fast path: run in background and return immediately
+        // init in background and return immediately to ensure non-blocking
         suspendifyOnThread {
             suspendInitInternal(context, appId)
         }
@@ -326,6 +327,9 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         return true
     }
 
+    /**
+     * Called from internal classes only. Remain suspend until initialization is fully completed.
+     */
     override suspend fun initWithContext(context: Context): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context)")
 
@@ -358,7 +362,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         context: Context,
         appId: String?,
     ): Boolean =
-        withContext(kotlinx.coroutines.Dispatchers.Default) {
+        withContext(Dispatchers.Default) {
             try {
                 initEssentials(context)
 

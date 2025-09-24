@@ -79,28 +79,21 @@ fun suspendifyOnThread(
  * @param block A suspending lambda to be executed on the background thread.
  *              This is where you put your suspending code.
  *
- * @param onCompleteOnMain An optional lambda that will be invoked on the main
- *                   thread after [block] has finished executing and returns success.
+ * @param onComplete An optional lambda that will be invoked on the same
+ *                   background thread after [block] has finished executing.
  *                   Useful for cleanup or follow-up logic.
  **/
-fun <T> suspendifyOnThread(
+fun suspendifyOnThread(
     priority: Int = -1,
-    block: suspend () -> T,
-    onCompleteOnMain: ((Result<T>) -> Unit)? = null,
+    block: suspend () -> Unit,
+    onComplete: (() -> Unit)? = null,
 ) {
     thread(priority = priority) {
-        val result =
-            try {
-                val value = runBlocking { block() }
-                Result.success(value)
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-
         try {
-            runBlocking { withContext(Dispatchers.Main) { onCompleteOnMain?.invoke(result) } }
+            runBlocking { block() }
+            onComplete?.invoke()
         } catch (e: Exception) {
-            Logging.error("Exception during onComplete callback", e)
+            Logging.error("Exception on thread", e)
         }
     }
 }
