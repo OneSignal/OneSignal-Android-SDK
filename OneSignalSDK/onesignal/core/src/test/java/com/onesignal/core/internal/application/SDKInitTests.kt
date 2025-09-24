@@ -21,6 +21,9 @@ import kotlinx.coroutines.runBlocking
 class SDKInitTests : FunSpec({
 
     beforeAny {
+        val context = getApplicationContext<Context>()
+        val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
         Logging.logLevel = LogLevel.NONE
     }
 

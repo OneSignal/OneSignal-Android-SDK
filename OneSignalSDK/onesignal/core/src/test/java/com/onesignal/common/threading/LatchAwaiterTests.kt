@@ -1,7 +1,6 @@
 package com.onesignal.common.threading
 
 import com.onesignal.debug.LogLevel
-import com.onesignal.debug.internal.TestLogLister
 import com.onesignal.debug.internal.logging.Logging
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
@@ -15,11 +14,8 @@ import java.util.concurrent.TimeUnit
 class LatchAwaiterTests : FunSpec({
 
     lateinit var awaiter: LatchAwaiter
-    lateinit var testLogListener: TestLogLister
 
     beforeEach {
-        testLogListener = TestLogLister()
-        Logging.addListener(testLogListener)
         Logging.logLevel = LogLevel.NONE
         awaiter = LatchAwaiter("TestComponent")
     }
