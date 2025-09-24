@@ -31,7 +31,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import com.onesignal.OneSignal
-import com.onesignal.OneSignal.ensureOneSignalInitialized
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.restoration.INotificationRestoreWorkManager
@@ -49,9 +48,9 @@ class UpgradeReceiver : BroadcastReceiver() {
             return
         }
 
-        // move the entire process to background; beginEnqueueingWork does not need to be called on main
+        // init OneSignal and enqueue restore work in background
         suspendifyOnThread {
-            if (!ensureOneSignalInitialized(context.applicationContext)) {
+            if (!OneSignal.initWithContext(context.applicationContext)) {
                 Logging.warn("NotificationRestoreReceiver skipped due to failed OneSignal init")
                 return@suspendifyOnThread
             }

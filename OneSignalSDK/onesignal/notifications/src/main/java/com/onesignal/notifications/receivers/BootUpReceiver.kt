@@ -30,7 +30,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.onesignal.OneSignal
-import com.onesignal.OneSignal.ensureOneSignalInitialized
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.restoration.INotificationRestoreWorkManager
@@ -40,9 +39,9 @@ class BootUpReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
-        // move the entire process to background; beginEnqueueingWork does not need to be called on main
+        // in background, init onesignal and begin enqueueing restore work
         suspendifyOnThread {
-            if (!ensureOneSignalInitialized(context.applicationContext)) {
+            if (!OneSignal.initWithContext(context.applicationContext)) {
                 Logging.warn("NotificationRestoreReceiver skipped due to failed OneSignal init")
                 return@suspendifyOnThread
             }

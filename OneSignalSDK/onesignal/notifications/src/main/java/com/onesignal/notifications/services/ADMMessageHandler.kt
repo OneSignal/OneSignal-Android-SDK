@@ -3,7 +3,6 @@ package com.onesignal.notifications.services
 import android.content.Intent
 import com.amazon.device.messaging.ADMMessageHandlerBase
 import com.onesignal.OneSignal
-import com.onesignal.OneSignal.ensureOneSignalInitialized
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
@@ -17,7 +16,7 @@ class ADMMessageHandler : ADMMessageHandlerBase("ADMMessageHandler") {
         val bundle = intent.extras ?: return
 
         suspendifyOnThread {
-            if (!ensureOneSignalInitialized(context)) {
+            if (!OneSignal.initWithContext(context)) {
                 Logging.warn("onMessage skipped due to failed OneSignal init")
                 return@suspendifyOnThread
             }

@@ -8,11 +8,14 @@ import android.os.Bundle
 import android.os.Handler
 import androidx.core.app.ActivityCompat
 import com.onesignal.OneSignal
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.R
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class PermissionsActivity : Activity() {
     private var requestPermissionService: RequestPermissionService? = null
@@ -28,15 +31,21 @@ class PermissionsActivity : Activity() {
             return
         }
 
-        // init in background and signal the result in main thread
-        OneSignal.initWithContext(this) { result ->
-            if (result) {
+        // init in background
+        suspendifyOnThread {
+            val initialized = OneSignal.initWithContext(this)
+
+            // finishActivity() and handleBundleParams must be called from main
+            withContext(Dispatchers.Main) {
+                if (!initialized) {
+                    finishActivity()
+                    return@withContext
+                }
+
                 requestPermissionService = OneSignal.getService()
                 preferenceService = OneSignal.getService()
 
                 handleBundleParams(intent.extras)
-            } else {
-                finishActivity()
             }
         }
     }

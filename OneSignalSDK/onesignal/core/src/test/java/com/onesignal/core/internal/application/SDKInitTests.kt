@@ -6,15 +6,23 @@ import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.threading.LatchAwaiter
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.internal.OneSignalImp
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.maps.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.runBlocking
 
 @RobolectricTest
 class SDKInitTests : FunSpec({
+
+    beforeAny {
+        Logging.logLevel = LogLevel.NONE
+    }
 
     test("OneSignal accessors throw before calling initWithContext") {
         val os = OneSignalImp()
@@ -49,7 +57,9 @@ class SDKInitTests : FunSpec({
         val accessorThread =
             Thread {
                 // this will block until after SharedPreferences is released
-                initSuccess = os.initWithContext(blockingPrefContext, null)
+                runBlocking {
+                    initSuccess = os.initWithContext(blockingPrefContext)
+                }
             }
 
         accessorThread.start()
@@ -135,6 +145,35 @@ class SDKInitTests : FunSpec({
         tags shouldContain (tagKey to tagValue)
     }
 
+    test("ensure login called right after initWithContext can set externalId correctly") {
+        // Given
+        // block SharedPreference before calling init
+        val trigger = LatchAwaiter("Test")
+        val context = getApplicationContext<Context>()
+        val blockingPrefContext = BlockingPrefsContext(context, trigger, 2000)
+        val os = OneSignalImp()
+        val externalId = "testUser"
+
+        val accessorThread =
+            Thread {
+                os.initWithContext(blockingPrefContext, "appId")
+                os.login(externalId)
+            }
+
+        accessorThread.start()
+        accessorThread.join(500)
+
+        os.isInitialized shouldBe true
+        accessorThread.isAlive shouldBe true
+
+        // release the lock on SharedPreferences
+        trigger.release()
+
+        accessorThread.join(500)
+        accessorThread.isAlive shouldBe false
+        os.user.externalId shouldBe externalId
+    }
+
     test("a push subscription should be created right after initWithContext") {
         // Given
         val context = getApplicationContext<Context>()
@@ -175,7 +214,7 @@ class SDKInitTests : FunSpec({
         val oldUser = os.user
 
         // Second init from some internal class
-        os.initWithContext(context, null)
+        os.initWithContext(context)
         val newUser = os.user
 
         // Then
@@ -198,7 +237,7 @@ class SDKInitTests : FunSpec({
             }
 
         accessorThread.start()
-        accessorThread.join(1100) // Wait longer than timeout
+        accessorThread.join(1500) // Wait longer than timeout
 
         // Thread should complete (either successfully or with timeout exception)
         accessorThread.isAlive shouldBe false
@@ -249,6 +288,8 @@ class BlockingPrefsContext(
         try {
             unblockTrigger.await(timeoutInMillis)
         } catch (e: InterruptedException) {
+            throw e
+        } catch (e: TimeoutCancellationException) {
             throw e
         }
 

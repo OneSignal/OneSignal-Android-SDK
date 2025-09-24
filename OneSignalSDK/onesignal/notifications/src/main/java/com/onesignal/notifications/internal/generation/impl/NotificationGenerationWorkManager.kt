@@ -7,7 +7,6 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkerParameters
 import com.onesignal.OneSignal
-import com.onesignal.OneSignal.ensureOneSignalInitialized
 import com.onesignal.common.AndroidUtils
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.common.NotificationFormatHelper
@@ -64,7 +63,7 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
 
     class NotificationGenerationWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
         override suspend fun doWork(): Result {
-            if (!ensureOneSignalInitialized(applicationContext)) {
+            if (!OneSignal.initWithContext(applicationContext)) {
                 Logging.warn("NotificationWorker skipped due to failed OneSignal initialization")
                 return Result.success()
             }

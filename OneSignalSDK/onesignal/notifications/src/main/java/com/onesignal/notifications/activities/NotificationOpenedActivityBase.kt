@@ -46,25 +46,17 @@ abstract class NotificationOpenedActivityBase : Activity() {
     }
 
     internal open fun processIntent() {
-        // call init in background
-        OneSignal.initWithContext(applicationContext) { success ->
-            if (!success) {
-                return@initWithContext
+        suspendifyOnThread {
+            if (!OneSignal.initWithContext(applicationContext)) {
+                return@suspendifyOnThread
             }
 
-            suspendifyOnThread(
-                block = {
-                    val openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
-                    openedProcessor.processFromContext(this, intent)
-                    // KEEP: Xiaomi Compatibility:
-                    // Must keep this Activity alive while trampolining.
-                    // startActivity() must be called BEFORE finish(), or app won't foreground.
-                },
-                onCompleteOnMain = {
-                    // Finish activity on main thread after processing to avoid rendering issues
-                    AndroidUtils.finishSafely(this)
-                },
-            )
+            val openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
+            openedProcessor.processFromContext(this, intent)
+
+            runOnUiThread {
+                AndroidUtils.finishSafely(this)
+            }
         }
     }
 }

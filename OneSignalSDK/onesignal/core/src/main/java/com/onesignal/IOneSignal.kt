@@ -85,8 +85,15 @@ interface IOneSignal {
      */
     fun initWithContext(
         context: Context,
-        appId: String?,
+        appId: String,
     ): Boolean
+
+    /**
+     * Initialize the OneSignal SDK, suspend until initialization is completed
+     *
+     * @param context The Android context the SDK should use.
+     */
+    suspend fun initWithContext(context: Context): Boolean
 
     /**
      * Login to OneSignal under the user identified by the [externalId] provided. The act of

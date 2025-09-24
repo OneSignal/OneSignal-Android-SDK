@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
  *   awaiter.awaitOrThrow() // or await() to just check
  */
 class LatchAwaiter(
-    private val componentName: String = "Component"
+    private val componentName: String = "Component",
 ) {
     companion object {
         const val DEFAULT_TIMEOUT_MS = 30_000L // 30 seconds
@@ -37,13 +37,14 @@ class LatchAwaiter(
      * @return true if latch was released before timeout, false otherwise.
      */
     fun await(timeoutMs: Long = getDefaultTimeout()): Boolean {
-        val completed = try {
-            latch.await(timeoutMs, TimeUnit.MILLISECONDS)
-        } catch (e: InterruptedException) {
-            Logging.warn("Interrupted while waiting for $componentName", e)
-            logAllThreadsInfo()
-            false
-        }
+        val completed =
+            try {
+                latch.await(timeoutMs, TimeUnit.MILLISECONDS)
+            } catch (e: InterruptedException) {
+                Logging.warn("Interrupted while waiting for $componentName", e)
+                logAllThreadsInfo()
+                false
+            }
 
         if (!completed) {
             val message = createTimeoutMessage(timeoutMs)
@@ -63,24 +64,26 @@ class LatchAwaiter(
     }
 
     private fun getDefaultTimeout(): Long {
-        val isMainThread = try {
-            AndroidUtils.isRunningOnMainThread()
-        } catch (_: Throwable) {
-            false
-        }
+        val isMainThread =
+            try {
+                AndroidUtils.isRunningOnMainThread()
+            } catch (_: Throwable) {
+                false
+            }
         return if (isMainThread) ANDROID_ANR_TIMEOUT_MS else DEFAULT_TIMEOUT_MS
     }
 
     private fun createTimeoutMessage(timeoutMs: Long): String {
-        val isMainThread = try {
-            AndroidUtils.isRunningOnMainThread()
-        } catch (_: Throwable) {
-            false
-        }
+        val isMainThread =
+            try {
+                AndroidUtils.isRunningOnMainThread()
+            } catch (_: Throwable) {
+                false
+            }
 
         return if (isMainThread) {
             "Timeout waiting for $componentName after ${timeoutMs}ms on the main thread. " +
-                    "This can cause ANRs. Consider calling from a background thread."
+                "This can cause ANRs. Consider calling from a background thread."
         } else {
             "Timeout waiting for $componentName after ${timeoutMs}ms."
         }

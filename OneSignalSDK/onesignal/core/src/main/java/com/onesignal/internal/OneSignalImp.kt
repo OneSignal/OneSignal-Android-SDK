@@ -51,8 +51,10 @@ import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 
 internal class OneSignalImp : IOneSignal, IServiceProvider {
@@ -304,7 +306,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
     override fun initWithContext(
         context: Context,
-        appId: String?,
+        appId: String,
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
@@ -316,21 +318,37 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
         initState = InitState.IN_PROGRESS
 
-        if (appId != null) {
-            // Fast path: run in background and return immediately
-            suspendifyOnThread {
-                suspendInitInternal(context, appId)
-            }
-            initState = InitState.SUCCESS
+        // Fast path: run in background and return immediately
+        suspendifyOnThread {
+            suspendInitInternal(context, appId)
+        }
+        initState = InitState.SUCCESS
+        return true
+    }
+
+    override suspend fun initWithContext(context: Context): Boolean {
+        Logging.log(LogLevel.DEBUG, "initWithContext(context: $context)")
+
+        // do not do this again if already initialized or init is in progress
+        if (initState.isSDKAccessible()) {
+            Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized or in progress")
             return true
         }
 
-        // app == null
-        // Slow path: wait for result synchronously; internal receivers and workers will need to init
-        // in background
+        initState = InitState.IN_PROGRESS
         val result =
-            runBlocking {
-                suspendInitInternal(context, appId)
+            try {
+                withTimeout(LatchAwaiter.ANDROID_ANR_TIMEOUT_MS) {
+                    runBlocking {
+                        suspendInitInternal(context, null)
+                    }
+                }
+            } catch (e: TimeoutCancellationException) {
+                Logging.log(LogLevel.ERROR, "initWithContext: Initialization timed out")
+                false
+            } catch (e: Exception) {
+                Logging.log(LogLevel.ERROR, "initWithContext: Initialization failed with exception", e)
+                false
             }
         initState = if (result) InitState.SUCCESS else InitState.FAILED
         return result
@@ -436,32 +454,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             }
         }
     }
-
-    internal suspend fun suspendLogin(externalId: String) =
-        withContext(kotlinx.coroutines.Dispatchers.Default) {
-            // We specify an "existingOneSignalId" here when the current user is anonymous to
-            // allow this login to attempt a "conversion" of the anonymous user.  We also
-            // wait for the LoginUserOperation operation to execute, which can take a *very* long
-            // time if network conditions prevent the operation to succeed.  This allows us to
-            // provide a callback to the caller when we can absolutely say the user is logged
-            // in, so they may take action on their own backend.
-            val currentIdentityExternalId = identityModelStore!!.model.externalId
-            val currentIdentityOneSignalId = identityModelStore!!.model.onesignalId
-            val newIdentityOneSignalId = identityModelStore!!.model.onesignalId
-            val result =
-                operationRepo!!.enqueueAndWait(
-                    LoginUserOperation(
-                        configModel!!.appId,
-                        newIdentityOneSignalId,
-                        externalId,
-                        if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
-                    ),
-                )
-
-            if (!result) {
-                Logging.log(LogLevel.ERROR, "Could not login user")
-            }
-        }
 
     override fun logout() {
         Logging.log(LogLevel.DEBUG, "logout()")
@@ -589,6 +581,7 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             }
             else -> {
                 // SUCCESS
+                waitForInit()
             }
         }
 
