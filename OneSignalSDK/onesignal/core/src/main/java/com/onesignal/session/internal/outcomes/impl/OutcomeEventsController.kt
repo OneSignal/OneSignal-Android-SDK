@@ -1,6 +1,7 @@
 package com.onesignal.session.internal.outcomes.impl
 
 import android.os.Process
+import com.onesignal.common.NetworkUtils
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -18,7 +19,6 @@ import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
-import java.net.HttpURLConnection
 
 internal class OutcomeEventsController(
     private val _session: ISessionService,
@@ -76,14 +76,14 @@ internal class OutcomeEventsController(
 
             _outcomeEventsCache.deleteOldOutcomeEvent(event)
         } catch (ex: BackendException) {
-            if (ex.statusCode == HttpURLConnection.HTTP_BAD_REQUEST) {
-                Logging.error("400 error sending outcome event, omitting further retries!")
-                _outcomeEventsCache.deleteOldOutcomeEvent(event)
+            val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
+            val err = "OutcomeEventsController.sendSavedOutcomeEvent: Sending outcome with name: ${event.outcomeId} failed with status code: ${ex.statusCode} and response: ${ex.response}"
+
+            if (responseType == NetworkUtils.ResponseStatusType.RETRYABLE) {
+                Logging.warn("$err Outcome event was cached and will be reattempted on app cold start")
             } else {
-                Logging.warn(
-                    """OutcomeEventsController.sendSavedOutcomeEvent: Sending outcome with name: ${event.outcomeId} failed with status code: ${ex.statusCode} and response: ${ex.response}
-Outcome event was cached and will be reattempted on app cold start""",
-                )
+                Logging.error("$err Outcome event will be omitted!")
+                _outcomeEventsCache.deleteOldOutcomeEvent(event)
             }
         }
     }
@@ -226,18 +226,18 @@ Outcome event was cached and will be reattempted on app cold start""",
             // The only case where an actual success has occurred and the OutcomeEvent should be sent back
             return OutcomeEvent.fromOutcomeEventParamstoOutcomeEvent(eventParams)
         } catch (ex: BackendException) {
-            if (ex.statusCode == HttpURLConnection.HTTP_BAD_REQUEST) {
-                Logging.error("400 error sending outcome event, omitting further retries!")
-                _outcomeEventsCache.deleteOldOutcomeEvent(eventParams)
-            } else {
-                Logging.warn(
-                    """OutcomeEventsController.sendAndCreateOutcomeEvent: Sending outcome with name: $name failed with status code: ${ex.statusCode} and response: ${ex.response}
-Outcome event was cached and will be reattempted on app cold start""",
-                )
+            val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
+            val err = "OutcomeEventsController.sendAndCreateOutcomeEvent: Sending outcome with name: $name failed with status code: ${ex.statusCode} and response: ${ex.response}"
+
+            if (responseType == NetworkUtils.ResponseStatusType.RETRYABLE) {
+                Logging.warn("$err Outcome event was cached and will be reattempted on app cold start")
 
                 // Only if we need to save and retry the outcome, then we will save the timestamp for future sending
                 eventParams.timestamp = timestampSeconds
                 _outcomeEventsCache.saveOutcomeEvent(eventParams)
+            } else {
+                Logging.error("$err Outcome event will be omitted!")
+                _outcomeEventsCache.deleteOldOutcomeEvent(eventParams)
             }
 
             // Return null to determine not a failure, but not a success in terms of the request made
