@@ -6,8 +6,9 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
- * A generic latch that allows waiting for asynchronous initialization or completion
- * with timeout support and detailed logging.
+ * This class allows blocking execution until asynchronous initialization or completion is signaled, with support for configurable timeouts and detailed logging for troubleshooting.
+ * It is designed for scenarios where certain tasks, such as SDK initialization, must finish before continuing.
+ * When used on the main/UI thread, it applies a shorter timeout and logs a thread stack trace to warn developers, helping to prevent Application Not Responding (ANR) errors caused by blocking the UI thread.
  *
  * Usage:
  *   val awaiter = LatchAwaiter("OneSignal SDK Init")
@@ -64,13 +65,7 @@ class LatchAwaiter(
     }
 
     private fun getDefaultTimeout(): Long {
-        val isMainThread =
-            try {
-                AndroidUtils.isRunningOnMainThread()
-            } catch (_: Throwable) {
-                false
-            }
-        return if (isMainThread) ANDROID_ANR_TIMEOUT_MS else DEFAULT_TIMEOUT_MS
+        return if (AndroidUtils.isRunningOnMainThread()) ANDROID_ANR_TIMEOUT_MS else DEFAULT_TIMEOUT_MS
     }
 
     private fun createTimeoutMessage(timeoutMs: Long): String {
