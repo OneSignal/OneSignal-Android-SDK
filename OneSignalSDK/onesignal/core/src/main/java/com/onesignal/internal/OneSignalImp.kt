@@ -51,11 +51,6 @@ import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionStatus
 import com.onesignal.user.internal.subscriptions.SubscriptionType
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 
 internal class OneSignalImp : IOneSignal, IServiceProvider {
@@ -312,16 +307,18 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
         // do not do this again if already initialized or init is in progress
-        if (initState.isSDKAccessible()) {
-            Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized or in progress")
-            return true
+        synchronized(initLock) {
+            if (initState.isSDKAccessible()) {
+                Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized or in progress")
+                return true
+            }
         }
 
         initState = InitState.IN_PROGRESS
 
         // init in background and return immediately to ensure non-blocking
         suspendifyOnThread {
-            suspendInitInternal(context, appId)
+            internalInit(context, appId)
         }
         initState = InitState.SUCCESS
         return true
@@ -334,73 +331,55 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context)")
 
         // do not do this again if already initialized or init is in progress
-        if (initState.isSDKAccessible()) {
-            Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized or in progress")
-            return true
+        synchronized(initLock) {
+            if (initState.isSDKAccessible()) {
+                Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized or in progress")
+                return true
+            }
+
+            initState = InitState.IN_PROGRESS
         }
 
-        initState = InitState.IN_PROGRESS
-        val result =
-            try {
-                withTimeout(LatchAwaiter.ANDROID_ANR_TIMEOUT_MS) {
-                    runBlocking {
-                        suspendInitInternal(context, null)
-                    }
-                }
-            } catch (e: TimeoutCancellationException) {
-                Logging.log(LogLevel.ERROR, "initWithContext: Initialization timed out")
-                false
-            } catch (e: Exception) {
-                Logging.log(LogLevel.ERROR, "initWithContext: Initialization failed with exception", e)
-                false
-            }
+        val result = internalInit(context, null)
         initState = if (result) InitState.SUCCESS else InitState.FAILED
         return result
     }
 
-    private suspend fun suspendInitInternal(
+    private fun internalInit(
         context: Context,
         appId: String?,
-    ): Boolean =
-        withContext(Dispatchers.Default) {
-            try {
-                initEssentials(context)
+    ): Boolean {
+        initEssentials(context)
 
-                var forceCreateUser = false
-                if (appId != null) {
-                    // If new appId is different from stored one, flag user recreation
-                    if (!configModel!!.hasProperty(ConfigModel::appId.name) || configModel!!.appId != appId) {
-                        forceCreateUser = true
-                    }
-                    configModel!!.appId = appId
-                } else {
-                    // appId is null — fallback to legacy
-                    if (!configModel!!.hasProperty(ConfigModel::appId.name)) {
-                        val legacyAppId = getLegacyAppId()
-                        if (legacyAppId == null) {
-                            Logging.warn("suspendInitInternal: no appId provided or found in legacy config.")
-                            initState = InitState.FAILED
-                            latchAwaiter.release()
-                            return@withContext false
-                        }
-                        forceCreateUser = true
-                        configModel!!.appId = legacyAppId
-                    }
+        var forceCreateUser = false
+        if (appId != null) {
+            // If new appId is different from stored one, flag user recreation
+            if (!configModel!!.hasProperty(ConfigModel::appId.name) || configModel!!.appId != appId) {
+                forceCreateUser = true
+            }
+            configModel!!.appId = appId
+        } else {
+            // appId is null — fallback to legacy
+            if (!configModel!!.hasProperty(ConfigModel::appId.name)) {
+                val legacyAppId = getLegacyAppId()
+                if (legacyAppId == null) {
+                    Logging.warn("suspendInitInternal: no appId provided or found in legacy config.")
+                    initState = InitState.FAILED
+                    latchAwaiter.release()
+                    return false
                 }
-
-                updateConfig()
-                val startupService = bootstrapServices()
-                initUser(forceCreateUser)
-                startupService.scheduleStart()
-                latchAwaiter.release()
-                return@withContext true
-            } catch (e: Throwable) {
-                Logging.error("suspendInitInternal failed!", e)
-                initState = InitState.FAILED
-                latchAwaiter.release()
-                return@withContext false
+                forceCreateUser = true
+                configModel!!.appId = legacyAppId
             }
         }
+
+        updateConfig()
+        val startupService = bootstrapServices()
+        initUser(forceCreateUser)
+        startupService.scheduleStart()
+        latchAwaiter.release()
+        return true
+    }
 
     override fun login(
         externalId: String,

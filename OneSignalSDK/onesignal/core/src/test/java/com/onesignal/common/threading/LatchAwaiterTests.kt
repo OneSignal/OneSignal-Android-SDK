@@ -2,14 +2,11 @@ package com.onesignal.common.threading
 
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
-import io.kotest.matchers.booleans.shouldBeFalse
-import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.longs.shouldBeGreaterThan
 import io.kotest.matchers.longs.shouldBeLessThan
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
+import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.delay
 
 class LatchAwaiterTests : FunSpec({
 
@@ -30,12 +27,7 @@ class LatchAwaiterTests : FunSpec({
             val completed = awaiter.await(0)
 
             // Then
-            completed.shouldBeTrue()
-        }
-
-        test("awaitOrThrow does not throw if already released") {
-            awaiter.release()
-            awaiter.awaitOrThrow(100) // should not throw
+            completed shouldBe true
         }
     }
 
@@ -48,14 +40,15 @@ class LatchAwaiterTests : FunSpec({
             val startTime = System.currentTimeMillis()
 
             // Simulate delayed success from another thread
-            Executors.newSingleThreadScheduledExecutor().schedule({
+            suspendifyOnThread {
+                delay(completionDelay)
                 awaiter.release()
-            }, completionDelay, TimeUnit.MILLISECONDS)
+            }
 
             val result = awaiter.await(timeoutMs)
             val duration = System.currentTimeMillis() - startTime
 
-            result.shouldBeTrue()
+            result shouldBe true
             duration shouldBeGreaterThan (completionDelay - 50)
             duration shouldBeLessThan (completionDelay + 150) // buffer
         }
@@ -70,22 +63,9 @@ class LatchAwaiterTests : FunSpec({
             val completed = awaiter.await(timeoutMs)
             val duration = System.currentTimeMillis() - startTime
 
-            completed.shouldBeFalse()
+            completed shouldBe false
             duration shouldBeGreaterThan (timeoutMs - 50)
             duration shouldBeLessThan (timeoutMs + 150)
-        }
-
-        test("awaitOrThrow throws on timeout") {
-            val timeoutMs = 100L
-            val startTime = System.currentTimeMillis()
-
-            shouldThrow<IllegalStateException> {
-                awaiter.awaitOrThrow(timeoutMs)
-            }
-
-            val duration = System.currentTimeMillis() - startTime
-            duration shouldBeGreaterThan (timeoutMs - 30)
-            duration shouldBeLessThan (timeoutMs + 100)
         }
 
         test("timeout of 0 returns false immediately") {
@@ -93,17 +73,8 @@ class LatchAwaiterTests : FunSpec({
             val completed = awaiter.await(0)
             val duration = System.currentTimeMillis() - startTime
 
-            completed.shouldBeFalse()
-            duration shouldBeLessThan (20L)
-        }
-
-        test("timeout of 0 throws immediately in awaitOrThrow") {
-            val startTime = System.currentTimeMillis()
-            shouldThrow<IllegalStateException> {
-                awaiter.awaitOrThrow(0)
-            }
-            val duration = System.currentTimeMillis() - startTime
-            duration shouldBeLessThan (20L)
+            completed shouldBe false
+            duration shouldBeLessThan 20L
         }
     }
 })

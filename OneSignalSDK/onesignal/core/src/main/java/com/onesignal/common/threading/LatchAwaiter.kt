@@ -55,15 +55,6 @@ class LatchAwaiter(
         return completed
     }
 
-    /**
-     * Wait for the latch and throw if not completed in time.
-     */
-    fun awaitOrThrow(timeoutMs: Long = getDefaultTimeout()) {
-        if (!await(timeoutMs)) {
-            throw IllegalStateException("$componentName initialization timeout after ${timeoutMs}ms")
-        }
-    }
-
     private fun getDefaultTimeout(): Long {
         return if (AndroidUtils.isRunningOnMainThread()) ANDROID_ANR_TIMEOUT_MS else DEFAULT_TIMEOUT_MS
     }

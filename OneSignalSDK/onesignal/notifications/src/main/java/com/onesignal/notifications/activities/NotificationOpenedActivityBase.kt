@@ -53,7 +53,13 @@ abstract class NotificationOpenedActivityBase : Activity() {
 
             val openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()
             openedProcessor.processFromContext(this, intent)
+            // KEEP: Xiaomi Compatibility:
+            // Must keep this Activity alive while trampolining, that is
+            // startActivity() must be called BEFORE finish(), otherwise
+            // the app is never foregrounded.
 
+            // Safely finish the activity on the main thread after processing is complete.
+            // This gives the system enough time to complete rendering before closing the Trampoline activity.
             runOnUiThread {
                 AndroidUtils.finishSafely(this)
             }

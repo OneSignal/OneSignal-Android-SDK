@@ -21,10 +21,13 @@ import kotlinx.coroutines.runBlocking
 class SDKInitTests : FunSpec({
 
     beforeAny {
+        Logging.logLevel = LogLevel.NONE
+    }
+
+    afterAny {
         val context = getApplicationContext<Context>()
         val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
         prefs.edit().clear().commit()
-        Logging.logLevel = LogLevel.NONE
     }
 
     test("OneSignal accessors throw before calling initWithContext") {

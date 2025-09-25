@@ -39,15 +39,18 @@ class BootUpReceiver : BroadcastReceiver() {
         context: Context,
         intent: Intent,
     ) {
+        val pendingResult = goAsync()
         // in background, init onesignal and begin enqueueing restore work
         suspendifyOnThread {
             if (!OneSignal.initWithContext(context.applicationContext)) {
                 Logging.warn("NotificationRestoreReceiver skipped due to failed OneSignal init")
+                pendingResult.finish()
                 return@suspendifyOnThread
             }
 
             val restoreWorkManager = OneSignal.getService<INotificationRestoreWorkManager>()
             restoreWorkManager.beginEnqueueingWork(context, true)
+            pendingResult.finish()
         }
     }
 }
