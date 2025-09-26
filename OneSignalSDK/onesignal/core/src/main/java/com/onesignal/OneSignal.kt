@@ -204,8 +204,8 @@ object OneSignal {
      * THIS IS AN INTERNAL INTERFACE AND SHOULD NOT BE USED DIRECTLY.
      */
     @JvmStatic
-    fun initWithContext(context: Context): Boolean {
-        return oneSignal.initWithContext(context, null)
+    suspend fun initWithContext(context: Context): Boolean {
+        return oneSignal.initWithContext(context)
     }
 
     /**

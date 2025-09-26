@@ -14,17 +14,23 @@ class ADMMessageHandlerJob : ADMMessageHandlerJobBase() {
         context: Context?,
         intent: Intent?,
     ) {
-        if (context == null) {
-            return
-        }
-        if (!OneSignal.initWithContext(context.applicationContext)) {
-            return
-        }
-        val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
-
         val bundle = intent?.extras
 
-        bundleProcessor.processBundleFromReceiver(context!!, bundle!!)
+        if (context == null || bundle == null) {
+            return
+        }
+
+        val safeContext = context.applicationContext
+
+        suspendifyOnThread {
+            if (!OneSignal.initWithContext(safeContext)) {
+                Logging.warn("onMessage skipped due to failed OneSignal init")
+                return@suspendifyOnThread
+            }
+
+            val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
+            bundleProcessor.processBundleFromReceiver(safeContext, bundle)
+        }
     }
 
     override fun onRegistered(
