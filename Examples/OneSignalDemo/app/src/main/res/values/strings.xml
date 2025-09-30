@@ -8,6 +8,7 @@
     <string name="id_colon">Id:</string>
     <string name="login_user">Login User</string>
     <string name="logout_user">Logout User</string>
+    <string name="track_event">Track Event</string>
 
     <string name="aliases">Aliases</string>
     <string name="external_user_id_colon">EUID:</string>

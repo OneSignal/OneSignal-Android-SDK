@@ -14,6 +14,7 @@ public class ProfileUtil {
         EMAIL("Email"),
         SMS("SMS"),
         EXTERNAL_USER_ID("External User Id"),
+        EVENT_NAME("Event Name"),
 
         TAG("Tags"),
         TRIGGER("Triggers");
@@ -127,6 +128,21 @@ public class ProfileUtil {
         return true;
     }
 
+    private static boolean isEventNameValid(TextInputLayout eventNameTextInputLayout) {
+        eventNameTextInputLayout.setErrorEnabled(false);
+        if (eventNameTextInputLayout.getEditText() != null) {
+            String eventName = eventNameTextInputLayout.getEditText().getText().toString().trim();
+            if (eventName.isEmpty()) {
+                eventNameTextInputLayout.setError("Event name is required");
+                return false;
+            }
+        } else {
+            eventNameTextInputLayout.setError(Text.ERROR);
+            return false;
+        }
+        return true;
+    }
+
     static boolean isContentValid(FieldType field, TextInputLayout alertDialogTextInputLayout) {
         switch (field) {
             case APP_ID:
@@ -139,6 +155,8 @@ public class ProfileUtil {
                 return isSMSValid(alertDialogTextInputLayout);
             case EXTERNAL_USER_ID:
                 return isExternalUserIdValid(alertDialogTextInputLayout);
+            case EVENT_NAME:
+                return isEventNameValid(alertDialogTextInputLayout);
             case TAG:
             case TRIGGER:
                 return isKeyValid(alertDialogTextInputLayout);

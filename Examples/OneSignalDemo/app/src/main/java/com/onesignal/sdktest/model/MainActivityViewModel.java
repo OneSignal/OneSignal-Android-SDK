@@ -82,6 +82,7 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
     private TextView appIdTextView;
     private Button loginUserButton;
     private Button logoutUserButton;
+    private Button trackEventButton;
 
     // Alias
     private TextView aliasTitleTextView;
@@ -196,28 +197,39 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
 
         appBarLayout = getActivity().findViewById(R.id.main_activity_app_bar_layout);
         toolbar = getActivity().findViewById(R.id.main_activity_toolbar);
-        privacyConsentLinearLayout = getActivity().findViewById(R.id.main_activity_privacy_consent_linear_layout);
+        privacyConsentLinearLayout =
+                getActivity().findViewById(R.id.main_activity_privacy_consent_linear_layout);
         nestedScrollView = getActivity().findViewById(R.id.main_activity_nested_scroll_view);
 
-        privacyConsentTitleTextView = getActivity().findViewById(R.id.main_activity_privacy_consent_title_text_view);
-        privacyConsentDescriptionTextView = getActivity().findViewById(R.id.main_activity_privacy_consent_description_text_view);
-        privacyConsentAllowButton = getActivity().findViewById(R.id.main_activity_privacy_consent_allow_button);
+        privacyConsentTitleTextView =
+                getActivity().findViewById(R.id.main_activity_privacy_consent_title_text_view);
+        privacyConsentDescriptionTextView = getActivity()
+                .findViewById(R.id.main_activity_privacy_consent_description_text_view);
+        privacyConsentAllowButton =
+                getActivity().findViewById(R.id.main_activity_privacy_consent_allow_button);
 
         appTitleTextView = getActivity().findViewById(R.id.main_activity_account_title_text_view);
-        appIdRelativeLayout = getActivity().findViewById(R.id.main_activity_account_details_app_id_relative_layout);
-        appIdTitleTextView = getActivity().findViewById(R.id.main_activity_account_details_app_id_title_text_view);
-        appIdTextView = getActivity().findViewById(R.id.main_activity_account_details_app_id_text_view);
-        revokeConsentButton = getActivity().findViewById(R.id.main_activity_app_revoke_consent_button);
+        appIdRelativeLayout = getActivity()
+                .findViewById(R.id.main_activity_account_details_app_id_relative_layout);
+        appIdTitleTextView = getActivity()
+                .findViewById(R.id.main_activity_account_details_app_id_title_text_view);
+        appIdTextView =
+                getActivity().findViewById(R.id.main_activity_account_details_app_id_text_view);
+        revokeConsentButton =
+                getActivity().findViewById(R.id.main_activity_app_revoke_consent_button);
         loginUserButton = getActivity().findViewById(R.id.main_activity_login_user_button);
         logoutUserButton = getActivity().findViewById(R.id.main_activity_logout_user_button);
+        trackEventButton = getActivity().findViewById(R.id.main_activity_track_event_button);
 
         aliasTitleTextView = getActivity().findViewById(R.id.main_activity_aliases_title_text_view);
-        noAliasesTextView = getActivity().findViewById(R.id.main_activity_aliases_no_aliases_text_view);
+        noAliasesTextView =
+                getActivity().findViewById(R.id.main_activity_aliases_no_aliases_text_view);
         addAliasButton = getActivity().findViewById(R.id.main_activity_add_alias_button);
         aliasesRecyclerView = getActivity().findViewById(R.id.main_activity_aliases_recycler_view);
 
         emailHeaderTextView = getActivity().findViewById(R.id.main_activity_email_title_text_view);
-        noEmailsTextView = getActivity().findViewById(R.id.main_activity_emails_no_emails_text_view);
+        noEmailsTextView =
+                getActivity().findViewById(R.id.main_activity_emails_no_emails_text_view);
         addEmailButton = getActivity().findViewById(R.id.main_activity_add_email_button);
         emailsRecyclerView = getActivity().findViewById(R.id.main_activity_emails_recycler_view);
 
@@ -231,44 +243,71 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
         tagsRecyclerView = getActivity().findViewById(R.id.main_activity_tags_recycler_view);
         addTagButton = getActivity().findViewById(R.id.main_activity_add_tags_button);
 
-        pushNotificationTitleTextView = getActivity().findViewById(R.id.main_activity_push_notification_title_text_view);
-        sendPushNotificationTitleTextView= getActivity().findViewById(R.id.main_activity_send_push_notification_title_text_view);
-        pushNotificationRecyclerView = getActivity().findViewById(R.id.main_activity_push_notification_recycler_view);
+        pushNotificationTitleTextView =
+                getActivity().findViewById(R.id.main_activity_push_notification_title_text_view);
+        sendPushNotificationTitleTextView = getActivity()
+                .findViewById(R.id.main_activity_send_push_notification_title_text_view);
+        pushNotificationRecyclerView =
+                getActivity().findViewById(R.id.main_activity_push_notification_recycler_view);
 
-        outcomeTitleTextView = getActivity().findViewById(R.id.main_activity_outcomes_title_text_view);
-        sendOutcomeButton = getActivity().findViewById(R.id.main_activity_outcomes_send_outcome_button);
+        outcomeTitleTextView =
+                getActivity().findViewById(R.id.main_activity_outcomes_title_text_view);
+        sendOutcomeButton =
+                getActivity().findViewById(R.id.main_activity_outcomes_send_outcome_button);
 
-        triggersTitleTextView = getActivity().findViewById(R.id.main_activity_in_app_messages_triggers_title_text_view);
-        noTriggersTextView = getActivity().findViewById(R.id.main_activity_in_app_messages_triggers_no_triggers_text_view);
-        triggersRecyclerView = getActivity().findViewById(R.id.main_activity_in_app_messages_triggers_recycler_view);
+        triggersTitleTextView = getActivity()
+                .findViewById(R.id.main_activity_in_app_messages_triggers_title_text_view);
+        noTriggersTextView = getActivity()
+                .findViewById(R.id.main_activity_in_app_messages_triggers_no_triggers_text_view);
+        triggersRecyclerView = getActivity()
+                .findViewById(R.id.main_activity_in_app_messages_triggers_recycler_view);
         addTriggerButton = getActivity().findViewById(R.id.main_activity_add_triggers_button);
 
-        inAppMessagingTitleTextView = getActivity().findViewById(R.id.main_activity_in_app_messaging_title_text_view);
-        sendInAppMessagingTitleTextView = getActivity().findViewById(R.id.main_activity_send_in_app_messaging_title_text_view);
-        inAppMessagingRecyclerView = getActivity().findViewById(R.id.main_activity_in_app_messaging_recycler_view);
+        inAppMessagingTitleTextView =
+                getActivity().findViewById(R.id.main_activity_in_app_messaging_title_text_view);
+        sendInAppMessagingTitleTextView = getActivity()
+                .findViewById(R.id.main_activity_send_in_app_messaging_title_text_view);
+        inAppMessagingRecyclerView =
+                getActivity().findViewById(R.id.main_activity_in_app_messaging_recycler_view);
 
-        locationTitleTextView = getActivity().findViewById(R.id.main_activity_location_title_text_view);
-        locationSharedRelativeLayout = getActivity().findViewById(R.id.main_activity_location_shared_relative_layout);
-        locationSharedTextView = getActivity().findViewById(R.id.main_activity_location_shared_text_view);
-        locationSharedDescriptionTextView = getActivity().findViewById(R.id.main_activity_location_shared_info_text_view);
-        locationSharedSwitch = getActivity().findViewById(R.id.main_activity_location_shared_switch);
-        promptLocationButton = getActivity().findViewById(R.id.main_activity_location_prompt_location_button);
+        locationTitleTextView =
+                getActivity().findViewById(R.id.main_activity_location_title_text_view);
+        locationSharedRelativeLayout =
+                getActivity().findViewById(R.id.main_activity_location_shared_relative_layout);
+        locationSharedTextView =
+                getActivity().findViewById(R.id.main_activity_location_shared_text_view);
+        locationSharedDescriptionTextView =
+                getActivity().findViewById(R.id.main_activity_location_shared_info_text_view);
+        locationSharedSwitch =
+                getActivity().findViewById(R.id.main_activity_location_shared_switch);
+        promptLocationButton =
+                getActivity().findViewById(R.id.main_activity_location_prompt_location_button);
 
-        pushSubscriptionEnabledRelativeLayout = getActivity().findViewById(R.id.main_activity_push_subscription_relative_layout);
-        pushSubscriptionEnabledTitleTextView = getActivity().findViewById(R.id.main_activity_push_subscription_info_text_view);
-        pushSubscriptionIdTitleTextView = getActivity().findViewById(R.id.main_activity_push_subscription_id_title_text_view);
-        pushSubscriptionIdTextView = getActivity().findViewById(R.id.main_activity_push_subscription_id_text_view);
-        pushSubscriptionEnabledSwitch = getActivity().findViewById(R.id.main_activity_push_subscription_switch);
+        pushSubscriptionEnabledRelativeLayout =
+                getActivity().findViewById(R.id.main_activity_push_subscription_relative_layout);
+        pushSubscriptionEnabledTitleTextView =
+                getActivity().findViewById(R.id.main_activity_push_subscription_info_text_view);
+        pushSubscriptionIdTitleTextView =
+                getActivity().findViewById(R.id.main_activity_push_subscription_id_title_text_view);
+        pushSubscriptionIdTextView =
+                getActivity().findViewById(R.id.main_activity_push_subscription_id_text_view);
+        pushSubscriptionEnabledSwitch =
+                getActivity().findViewById(R.id.main_activity_push_subscription_switch);
 
         promptPushBottonLayout = getActivity().findViewById(R.id.main_activity_push_prompt_layout);
         promptPushButton = getActivity().findViewById(R.id.main_activity_push_prompt_push_button);
 
-        pauseInAppMessagesRelativeLayout = getActivity().findViewById(R.id.main_activity_iam_pause_in_app_messages_relative_layout);
-        pauseInAppMessagesTextView = getActivity().findViewById(R.id.main_activity_iam_pause_in_app_messages_text_view);
-        pauseInAppMessagesDescriptionTextView = getActivity().findViewById(R.id.main_activity_iam_pause_in_app_messages_info_text_view);
-        pauseInAppMessagesSwitch = getActivity().findViewById(R.id.main_activity_iam_pause_in_app_messages_switch);
+        pauseInAppMessagesRelativeLayout = getActivity()
+                .findViewById(R.id.main_activity_iam_pause_in_app_messages_relative_layout);
+        pauseInAppMessagesTextView =
+                getActivity().findViewById(R.id.main_activity_iam_pause_in_app_messages_text_view);
+        pauseInAppMessagesDescriptionTextView = getActivity()
+                .findViewById(R.id.main_activity_iam_pause_in_app_messages_info_text_view);
+        pauseInAppMessagesSwitch =
+                getActivity().findViewById(R.id.main_activity_iam_pause_in_app_messages_switch);
 
-        Button navigateNextActivity = getActivity().findViewById(R.id.main_activity_navigate_button);
+        Button navigateNextActivity =
+                getActivity().findViewById(R.id.main_activity_navigate_button);
         navigateNextActivity.setOnClickListener(v -> {
             getActivity().startActivity(new Intent(getActivity(), SecondaryActivity.class));
         });
@@ -386,38 +425,62 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
     }
 
     private void setupScrollView() {
-        nestedScrollView.getViewTreeObserver().addOnScrollChangedListener(new ViewTreeObserver.OnScrollChangedListener() {
-            @Override
-            public void onScrollChanged() {
-                int scrollY = nestedScrollView.getScrollY();
-                shouldScrollTop = scrollY != 0;
-            }
-        });
+        nestedScrollView.getViewTreeObserver()
+                .addOnScrollChangedListener(new ViewTreeObserver.OnScrollChangedListener() {
+                    @Override
+                    public void onScrollChanged() {
+                        int scrollY = nestedScrollView.getScrollY();
+                        shouldScrollTop = scrollY != 0;
+                    }
+                });
     }
 
     private void setupAppLayout() {
         revokeConsentButton.setOnClickListener(v -> togglePrivacyConsent(false));
 
         loginUserButton.setOnClickListener(v -> {
-            dialog.createUpdateAlertDialog("", Dialog.DialogAction.LOGIN, ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
-                @Override
-                public void onSuccess(String update) {
-                    if (update != null && !update.isEmpty()) {
-                        OneSignal.login(update);
-                        refreshState();
-                    }
-                }
+            dialog.createUpdateAlertDialog("", Dialog.DialogAction.LOGIN,
+                    ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
+                        @Override
+                        public void onSuccess(String update) {
+                            if (update != null && !update.isEmpty()) {
+                                OneSignal.login(update);
+                                refreshState();
+                            }
+                        }
 
-                @Override
-                public void onFailure() {
+                        @Override
+                        public void onFailure() {
 
-                }
-            });
+                        }
+                    });
         });
 
         logoutUserButton.setOnClickListener(v -> {
             OneSignal.logout();
             refreshState();
+        });
+
+        trackEventButton.setOnClickListener(v -> {
+            Map<String, Object> properties = new HashMap<>();
+            properties.put("someNum", 123);
+            properties.put("someFloat", 3.14159);
+            properties.put("someString", "abc");
+            properties.put("someBool", true);
+
+            Map<String, Object> nestedMap = new HashMap<>();
+            nestedMap.put("def", "456");
+
+            Map<String, Object> someObject = new HashMap<>();
+            someObject.put("abc", "123");
+            someObject.put("nested", nestedMap);
+            properties.put("someObject", someObject);
+
+            properties.put("someArray", new int[] {1, 2, 3, 4});
+            properties.put("someMixedArray", new Object[] {1, "2"});
+            properties.put("someNull", null);
+
+            OneSignal.getUser().trackEvent("android-test", properties);
         });
     }
 
@@ -432,42 +495,46 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
 
     private void setupAliasLayout() {
         setupAliasesRecyclerView();
-        addAliasButton.setOnClickListener(v -> dialog.createAddPairAlertDialog("Add Alias", ProfileUtil.FieldType.ALIAS, new AddPairAlertDialogCallback() {
-            @Override
-            public void onSuccess(Pair<String, Object> pair) {
-                if (pair.second == null || pair.second.toString().isEmpty()) {
-                    OneSignal.getUser().removeAlias(pair.first);
-                    aliasSet.remove(pair.first);
-                    toaster.makeCustomViewToast("Deleted alias " + pair.first, ToastType.SUCCESS);
-                } else {
-                    OneSignal.getUser().addAlias(pair.first, pair.second.toString());
-                    aliasSet.put(pair.first, pair.second);
-                    toaster.makeCustomViewToast("Added alias " + pair.first, ToastType.SUCCESS);
-                }
+        addAliasButton.setOnClickListener(v -> dialog.createAddPairAlertDialog("Add Alias",
+                ProfileUtil.FieldType.ALIAS, new AddPairAlertDialogCallback() {
+                    @Override
+                    public void onSuccess(Pair<String, Object> pair) {
+                        if (pair.second == null || pair.second.toString().isEmpty()) {
+                            OneSignal.getUser().removeAlias(pair.first);
+                            aliasSet.remove(pair.first);
+                            toaster.makeCustomViewToast("Deleted alias " + pair.first,
+                                    ToastType.SUCCESS);
+                        } else {
+                            OneSignal.getUser().addAlias(pair.first, pair.second.toString());
+                            aliasSet.put(pair.first, pair.second);
+                            toaster.makeCustomViewToast("Added alias " + pair.first,
+                                    ToastType.SUCCESS);
+                        }
 
-                refreshAliasRecyclerView();
-            }
+                        refreshAliasRecyclerView();
+                    }
 
-            @Override
-            public void onFailure() {
-                refreshAliasRecyclerView();
-            }
-        }));
+                    @Override
+                    public void onFailure() {
+                        refreshAliasRecyclerView();
+                    }
+                }));
     }
 
     private void setupAliasesRecyclerView() {
         recyclerViewBuilder.setupRecyclerView(aliasesRecyclerView, 20, false, true);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         aliasesRecyclerView.setLayoutManager(linearLayoutManager);
-        aliasesRecyclerViewAdapter = new PairRecyclerViewAdapter(context, aliasArrayList, new PairItemActionCallback() {
-            @Override
-            public void onLongClick(String key) {
-                OneSignal.getUser().removeAlias(key);
-                aliasSet.remove(key);
-                refreshAliasRecyclerView();
-                toaster.makeCustomViewToast("Deleted alias " + key, ToastType.SUCCESS);
-            }
-        });
+        aliasesRecyclerViewAdapter =
+                new PairRecyclerViewAdapter(context, aliasArrayList, new PairItemActionCallback() {
+                    @Override
+                    public void onLongClick(String key) {
+                        OneSignal.getUser().removeAlias(key);
+                        aliasSet.remove(key);
+                        refreshAliasRecyclerView();
+                        toaster.makeCustomViewToast("Deleted alias " + key, ToastType.SUCCESS);
+                    }
+                });
         aliasesRecyclerView.setAdapter(aliasesRecyclerViewAdapter);
     }
 
@@ -479,9 +546,11 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
                 aliasArrayList.addAll(aliasSet.entrySet());
 
                 if (aliasArrayList.size() > 0) {
-                    animate.toggleAnimationView(false, View.GONE, aliasesRecyclerView, noAliasesTextView);
+                    animate.toggleAnimationView(false, View.GONE, aliasesRecyclerView,
+                            noAliasesTextView);
                 } else {
-                    animate.toggleAnimationView(true, View.GONE, aliasesRecyclerView, noAliasesTextView);
+                    animate.toggleAnimationView(true, View.GONE, aliasesRecyclerView,
+                            noAliasesTextView);
                 }
 
                 aliasesRecyclerViewAdapter.notifyDataSetChanged();
@@ -497,6 +566,7 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
     private class DummySubscription implements ISubscription {
 
         private String _id;
+
         public DummySubscription(String id) {
             _id = id;
         }
@@ -512,87 +582,97 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
         setupEmailRecyclerView();
 
         MainActivityViewModel self = this;
-        addEmailButton.setOnClickListener(v -> dialog.createUpdateAlertDialog("", Dialog.DialogAction.ADD, ProfileUtil.FieldType.EMAIL, new UpdateAlertDialogCallback() {
-            @Override
-            public void onSuccess(String value) {
-                if (value != null && !value.isEmpty()) {
-                    OneSignal.getUser().addEmail(value);
-                    emailArrayList.add(new DummySubscription(value));
-                    toaster.makeCustomViewToast("Added email " + value, ToastType.SUCCESS);
-                }
+        addEmailButton
+                .setOnClickListener(v -> dialog.createUpdateAlertDialog("", Dialog.DialogAction.ADD,
+                        ProfileUtil.FieldType.EMAIL, new UpdateAlertDialogCallback() {
+                            @Override
+                            public void onSuccess(String value) {
+                                if (value != null && !value.isEmpty()) {
+                                    OneSignal.getUser().addEmail(value);
+                                    emailArrayList.add(new DummySubscription(value));
+                                    toaster.makeCustomViewToast("Added email " + value,
+                                            ToastType.SUCCESS);
+                                }
 
-                refreshEmailRecyclerView();
-            }
+                                refreshEmailRecyclerView();
+                            }
 
-            @Override
-            public void onFailure() {
-                refreshEmailRecyclerView();
-            }
-        }));
+                            @Override
+                            public void onFailure() {
+                                refreshEmailRecyclerView();
+                            }
+                        }));
     }
 
     private void setupSMSLayout() {
         setupSMSRecyclerView();
 
         MainActivityViewModel self = this;
-        addSMSButton.setOnClickListener(v -> dialog.createUpdateAlertDialog("", Dialog.DialogAction.ADD, ProfileUtil.FieldType.SMS, new UpdateAlertDialogCallback() {
-            @Override
-            public void onSuccess(String value) {
-                if (value != null && !value.isEmpty()) {
-                    OneSignal.getUser().addSms(value);
-                    smsArrayList.add(new DummySubscription(value));
-                    toaster.makeCustomViewToast("Added SMS " + value, ToastType.SUCCESS);
-                }
+        addSMSButton
+                .setOnClickListener(v -> dialog.createUpdateAlertDialog("", Dialog.DialogAction.ADD,
+                        ProfileUtil.FieldType.SMS, new UpdateAlertDialogCallback() {
+                            @Override
+                            public void onSuccess(String value) {
+                                if (value != null && !value.isEmpty()) {
+                                    OneSignal.getUser().addSms(value);
+                                    smsArrayList.add(new DummySubscription(value));
+                                    toaster.makeCustomViewToast("Added SMS " + value,
+                                            ToastType.SUCCESS);
+                                }
 
-                refreshSMSRecyclerView();
-            }
+                                refreshSMSRecyclerView();
+                            }
 
-            @Override
-            public void onFailure() {
-                refreshSMSRecyclerView();
-            }
-        }));
+                            @Override
+                            public void onFailure() {
+                                refreshSMSRecyclerView();
+                            }
+                        }));
     }
 
     private void setupTagsLayout() {
         setupTagRecyclerView();
 
-        addTagButton.setOnClickListener(v -> dialog.createAddPairAlertDialog("Add Tag", ProfileUtil.FieldType.TAG, new AddPairAlertDialogCallback() {
-            @Override
-            public void onSuccess(Pair<String, Object> pair) {
-                if (pair.second == null || pair.second.toString().isEmpty()) {
-                    OneSignal.getUser().removeTag(pair.first);
-                    tagSet.remove(pair.first);
-                    toaster.makeCustomViewToast("Deleted tag " + pair.first, ToastType.SUCCESS);
-                } else {
-                    OneSignal.getUser().addTag(pair.first, pair.second.toString());
-                    tagSet.put(pair.first, pair.second);
-                    toaster.makeCustomViewToast("Added tag " + pair.first, ToastType.SUCCESS);
-                }
+        addTagButton.setOnClickListener(v -> dialog.createAddPairAlertDialog("Add Tag",
+                ProfileUtil.FieldType.TAG, new AddPairAlertDialogCallback() {
+                    @Override
+                    public void onSuccess(Pair<String, Object> pair) {
+                        if (pair.second == null || pair.second.toString().isEmpty()) {
+                            OneSignal.getUser().removeTag(pair.first);
+                            tagSet.remove(pair.first);
+                            toaster.makeCustomViewToast("Deleted tag " + pair.first,
+                                    ToastType.SUCCESS);
+                        } else {
+                            OneSignal.getUser().addTag(pair.first, pair.second.toString());
+                            tagSet.put(pair.first, pair.second);
+                            toaster.makeCustomViewToast("Added tag " + pair.first,
+                                    ToastType.SUCCESS);
+                        }
 
-                refreshTagRecyclerView();
-            }
+                        refreshTagRecyclerView();
+                    }
 
-            @Override
-            public void onFailure() {
-                refreshTagRecyclerView();
-            }
-        }));
+                    @Override
+                    public void onFailure() {
+                        refreshTagRecyclerView();
+                    }
+                }));
     }
 
     private void setupTagRecyclerView() {
         recyclerViewBuilder.setupRecyclerView(tagsRecyclerView, 20, false, true);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         tagsRecyclerView.setLayoutManager(linearLayoutManager);
-        tagPairRecyclerViewAdapter = new PairRecyclerViewAdapter(context, tagArrayList, new PairItemActionCallback() {
-            @Override
-            public void onLongClick(String key) {
-                OneSignal.getUser().removeTag(key);
-                tagSet.remove(key);
-                refreshTagRecyclerView();
-                toaster.makeCustomViewToast("Deleted tag " + key, ToastType.SUCCESS);
-            }
-        });
+        tagPairRecyclerViewAdapter =
+                new PairRecyclerViewAdapter(context, tagArrayList, new PairItemActionCallback() {
+                    @Override
+                    public void onLongClick(String key) {
+                        OneSignal.getUser().removeTag(key);
+                        tagSet.remove(key);
+                        refreshTagRecyclerView();
+                        toaster.makeCustomViewToast("Deleted tag " + key, ToastType.SUCCESS);
+                    }
+                });
         tagsRecyclerView.setAdapter(tagPairRecyclerViewAdapter);
     }
 
@@ -618,13 +698,14 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
         recyclerViewBuilder.setupRecyclerView(emailsRecyclerView, 20, false, true);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         emailsRecyclerView.setLayoutManager(linearLayoutManager);
-        emailsRecyclerViewAdapter = new SubscriptionRecyclerViewAdapter(context, emailArrayList, value -> {
-            String email = ((DummySubscription)value).getId();
-            OneSignal.getUser().removeEmail(email);
-            emailArrayList.remove(value);
-            refreshEmailRecyclerView();
-            toaster.makeCustomViewToast("Deleted email " + email, ToastType.SUCCESS);
-        });
+        emailsRecyclerViewAdapter =
+                new SubscriptionRecyclerViewAdapter(context, emailArrayList, value -> {
+                    String email = ((DummySubscription) value).getId();
+                    OneSignal.getUser().removeEmail(email);
+                    emailArrayList.remove(value);
+                    refreshEmailRecyclerView();
+                    toaster.makeCustomViewToast("Deleted email " + email, ToastType.SUCCESS);
+                });
         emailsRecyclerView.setAdapter(emailsRecyclerViewAdapter);
     }
 
@@ -644,13 +725,14 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
         recyclerViewBuilder.setupRecyclerView(smssRecyclerView, 20, false, true);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         smssRecyclerView.setLayoutManager(linearLayoutManager);
-        smssRecyclerViewAdapter = new SubscriptionRecyclerViewAdapter(context, smsArrayList, value -> {
-            String number = ((DummySubscription)value).getId();
-            OneSignal.getUser().removeSms(number);
-            smsArrayList.remove(value);
-            refreshSMSRecyclerView();
-            toaster.makeCustomViewToast("Deleted SMS " + number, ToastType.SUCCESS);
-        });
+        smssRecyclerViewAdapter =
+                new SubscriptionRecyclerViewAdapter(context, smsArrayList, value -> {
+                    String number = ((DummySubscription) value).getId();
+                    OneSignal.getUser().removeSms(number);
+                    smsArrayList.remove(value);
+                    refreshSMSRecyclerView();
+                    toaster.makeCustomViewToast("Deleted SMS " + number, ToastType.SUCCESS);
+                });
         smssRecyclerView.setAdapter(smssRecyclerViewAdapter);
     }
 
@@ -667,75 +749,83 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
     }
 
     private void setupOutcomeLayout() {
-        sendOutcomeButton.setOnClickListener(v -> dialog.createSendOutcomeAlertDialog("Select an Outcome Type...", new SendOutcomeAlertDialogCallback() {
-            @Override
-            public boolean onSuccess(OutcomeEvent outcomeEvent, String name, String value) {
-                switch (outcomeEvent) {
-                    case OUTCOME:
-                        OneSignal.getSession().addOutcome(name);
-                        break;
-                    case UNIQUE_OUTCOME:
-                        OneSignal.getSession().addUniqueOutcome(name);
-                        break;
-                    case OUTCOME_WITH_VALUE:
-                        if (value.isEmpty()) {
-                            toaster.makeCustomViewToast("Please enter an outcome value!", ToastType.ERROR);
-                            return false;
+        sendOutcomeButton.setOnClickListener(v -> dialog.createSendOutcomeAlertDialog(
+                "Select an Outcome Type...", new SendOutcomeAlertDialogCallback() {
+                    @Override
+                    public boolean onSuccess(OutcomeEvent outcomeEvent, String name, String value) {
+                        switch (outcomeEvent) {
+                            case OUTCOME:
+                                OneSignal.getSession().addOutcome(name);
+                                break;
+                            case UNIQUE_OUTCOME:
+                                OneSignal.getSession().addUniqueOutcome(name);
+                                break;
+                            case OUTCOME_WITH_VALUE:
+                                if (value.isEmpty()) {
+                                    toaster.makeCustomViewToast("Please enter an outcome value!",
+                                            ToastType.ERROR);
+                                    return false;
+                                }
+
+                                OneSignal.getSession().addOutcomeWithValue(name,
+                                        Float.parseFloat(value));
+                                break;
                         }
 
-                        OneSignal.getSession().addOutcomeWithValue(name, Float.parseFloat(value));
-                        break;
-                }
+                        return true;
+                    }
 
-                return true;
-            }
+                    @Override
+                    public void onFailure() {
 
-            @Override
-            public void onFailure() {
-
-            }
-        }));
+                    }
+                }));
     }
 
     private void setupTriggersLayout() {
         animate.toggleAnimationView(true, View.GONE, triggersRecyclerView, noTriggersTextView);
 
         setupTriggerRecyclerView();
-        addTriggerButton.setOnClickListener(v -> dialog.createAddPairAlertDialog("Add Trigger", ProfileUtil.FieldType.TRIGGER, new AddPairAlertDialogCallback() {
-            @Override
-            public void onSuccess(Pair<String, Object> pair) {
-                if (pair.second == null || pair.second.toString().isEmpty()) {
-                    OneSignal.getInAppMessages().removeTrigger(pair.first);
-                    triggerSet.remove(pair.first);
-                    toaster.makeCustomViewToast("Deleted trigger " + pair.first, ToastType.SUCCESS);
-                } else {
-                    OneSignal.getInAppMessages().addTrigger(pair.first, pair.second.toString());
-                    triggerSet.put(pair.first, pair.second);
-                    toaster.makeCustomViewToast("Added trigger " + pair.first, ToastType.SUCCESS);
-                }
+        addTriggerButton.setOnClickListener(v -> dialog.createAddPairAlertDialog("Add Trigger",
+                ProfileUtil.FieldType.TRIGGER, new AddPairAlertDialogCallback() {
+                    @Override
+                    public void onSuccess(Pair<String, Object> pair) {
+                        if (pair.second == null || pair.second.toString().isEmpty()) {
+                            OneSignal.getInAppMessages().removeTrigger(pair.first);
+                            triggerSet.remove(pair.first);
+                            toaster.makeCustomViewToast("Deleted trigger " + pair.first,
+                                    ToastType.SUCCESS);
+                        } else {
+                            OneSignal.getInAppMessages().addTrigger(pair.first,
+                                    pair.second.toString());
+                            triggerSet.put(pair.first, pair.second);
+                            toaster.makeCustomViewToast("Added trigger " + pair.first,
+                                    ToastType.SUCCESS);
+                        }
 
-                refreshTriggerRecyclerView();
-            }
+                        refreshTriggerRecyclerView();
+                    }
 
-            @Override
-            public void onFailure() {
-                refreshTriggerRecyclerView();
-            }
-        }));
+                    @Override
+                    public void onFailure() {
+                        refreshTriggerRecyclerView();
+                    }
+                }));
     }
 
     private void setupTriggerRecyclerView() {
         recyclerViewBuilder.setupRecyclerView(triggersRecyclerView, 20, false, true);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         triggersRecyclerView.setLayoutManager(linearLayoutManager);
-        triggerPairRecyclerViewAdapter = new PairRecyclerViewAdapter(context, triggerArrayList, key -> {
-            OneSignal.getInAppMessages().removeTrigger(key);
-            triggerSet.remove(key);
+        triggerPairRecyclerViewAdapter =
+                new PairRecyclerViewAdapter(context, triggerArrayList, key -> {
+                    OneSignal.getInAppMessages().removeTrigger(key);
+                    triggerSet.remove(key);
 
-            refreshTriggerRecyclerView();
+                    refreshTriggerRecyclerView();
 
-            toaster.makeCustomViewToast("Deleted trigger " + key, ToastType.SUCCESS);
-        });
+                    toaster.makeCustomViewToast("Deleted trigger " + key, ToastType.SUCCESS);
+                });
         triggersRecyclerView.setAdapter(triggerPairRecyclerViewAdapter);
     }
 
@@ -747,9 +837,11 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
                 triggerArrayList.addAll(triggerSet.entrySet());
 
                 if (triggerArrayList.size() > 0) {
-                    animate.toggleAnimationView(false, View.GONE, triggersRecyclerView, noTriggersTextView);
+                    animate.toggleAnimationView(false, View.GONE, triggersRecyclerView,
+                            noTriggersTextView);
                 } else {
-                    animate.toggleAnimationView(true, View.GONE, triggersRecyclerView, noTriggersTextView);
+                    animate.toggleAnimationView(true, View.GONE, triggersRecyclerView,
+                            noTriggersTextView);
                 }
 
                 triggerPairRecyclerViewAdapter.notifyDataSetChanged();
@@ -800,10 +892,9 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
         // Add a listener to toggle the push notification enablement for the push subscription.
         pushSubscriptionEnabledSwitch.setOnClickListener(v -> {
             IPushSubscription subscription = OneSignal.getUser().getPushSubscription();
-            if(pushSubscriptionEnabledSwitch.isChecked()) {
+            if (pushSubscriptionEnabledSwitch.isChecked()) {
                 subscription.optIn();
-            }
-            else {
+            } else {
                 subscription.optOut();
             }
         });
@@ -831,7 +922,8 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
         GridLayoutManager gridLayoutManager = new GridLayoutManager(getActivity(), 2);
         pushNotificationRecyclerView.setLayoutManager(gridLayoutManager);
 
-        pushNotificationRecyclerViewAdapter = new NotificationRecyclerViewAdapter(context, Notification.values());
+        pushNotificationRecyclerViewAdapter =
+                new NotificationRecyclerViewAdapter(context, Notification.values());
         pushNotificationRecyclerView.setAdapter(pushNotificationRecyclerViewAdapter);
     }
 
@@ -846,7 +938,8 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
             pauseInAppMessagesSwitch.setChecked(!isInAppMessagesPaused);
         });
 
-        pauseInAppMessagesSwitch.setChecked(SharedPreferenceUtil.getCachedInAppMessagingPausedStatus(context));
+        pauseInAppMessagesSwitch
+                .setChecked(SharedPreferenceUtil.getCachedInAppMessagingPausedStatus(context));
         pauseInAppMessagesSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             OneSignal.getInAppMessages().setPaused(isChecked);
             SharedPreferenceUtil.cacheInAppMessagingPausedStatus(context, isChecked);
@@ -858,7 +951,8 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
         GridLayoutManager gridLayoutManager = new GridLayoutManager(getActivity(), 2);
         inAppMessagingRecyclerView.setLayoutManager(gridLayoutManager);
 
-        inAppMessagingRecyclerViewAdapter = new InAppMessageRecyclerViewAdapter(context, InAppMessage.values());
+        inAppMessagingRecyclerViewAdapter =
+                new InAppMessageRecyclerViewAdapter(context, InAppMessage.values());
         inAppMessagingRecyclerView.setAdapter(inAppMessagingRecyclerViewAdapter);
     }
 
@@ -892,39 +986,39 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
 
 
 
-    private  void refreshState() {
+    private void refreshState() {
         // appId
         appIdTextView.setText(getOneSignalAppId());
 
         // aliases
-//        aliasSet.clear();
-//        for (Map.Entry<String, String> aliasEntry :OneSignal.getUser().getAliases().entrySet()) {
-//            aliasSet.put(aliasEntry.getKey(), aliasEntry.getValue());
-//        }
-//        refreshAliasRecyclerView();
+        // aliasSet.clear();
+        // for (Map.Entry<String, String> aliasEntry :OneSignal.getUser().getAliases().entrySet()) {
+        // aliasSet.put(aliasEntry.getKey(), aliasEntry.getValue());
+        // }
+        // refreshAliasRecyclerView();
 
         // email subscriptions
-//        emailArrayList.clear();
-//        List<IEmailSubscription> emailSubs = OneSignal.getUser().getSubscriptions().getEmails();
-//        for (IEmailSubscription emailSub: emailSubs) {
-//            emailArrayList.add(emailSub);
-//        }
-//        refreshEmailRecyclerView();
+        // emailArrayList.clear();
+        // List<IEmailSubscription> emailSubs = OneSignal.getUser().getSubscriptions().getEmails();
+        // for (IEmailSubscription emailSub: emailSubs) {
+        // emailArrayList.add(emailSub);
+        // }
+        // refreshEmailRecyclerView();
 
         // sms subscriptions
-//        smsArrayList.clear();
-//        List<ISmsSubscription> smsSubs = OneSignal.getUser().getSubscriptions().getSmss();
-//        for (ISmsSubscription smsSub: smsSubs) {
-//            smsArrayList.add(smsSub);
-//        }
-//        refreshSMSRecyclerView();
+        // smsArrayList.clear();
+        // List<ISmsSubscription> smsSubs = OneSignal.getUser().getSubscriptions().getSmss();
+        // for (ISmsSubscription smsSub: smsSubs) {
+        // smsArrayList.add(smsSub);
+        // }
+        // refreshSMSRecyclerView();
 
         // tags
-//        tagSet.clear();
-//        for (Map.Entry<String, String> tagEntry :OneSignal.getUser().getTags().entrySet()) {
-//            tagSet.put(tagEntry.getKey(), tagEntry.getValue());
-//        }
-//        refreshTagRecyclerView();
+        // tagSet.clear();
+        // for (Map.Entry<String, String> tagEntry :OneSignal.getUser().getTags().entrySet()) {
+        // tagSet.put(tagEntry.getKey(), tagEntry.getValue());
+        // }
+        // refreshTagRecyclerView();
 
         // triggers
         triggerSet.clear();
