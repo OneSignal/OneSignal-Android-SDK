@@ -1,6 +1,10 @@
 package com.onesignal.core.internal.startup
 
 import com.onesignal.common.services.ServiceProvider
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 internal class StartupService(
     private val services: ServiceProvider,
@@ -10,9 +14,10 @@ internal class StartupService(
     }
 
     // schedule to start all startable services in a separate thread
+    @OptIn(DelicateCoroutinesApi::class)
     fun scheduleStart() {
-        Thread {
+        GlobalScope.launch(Dispatchers.Default) {
             services.getAllServices<IStartableService>().forEach { it.start() }
-        }.start()
+        }
     }
 }

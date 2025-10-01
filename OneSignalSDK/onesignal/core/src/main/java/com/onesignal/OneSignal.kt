@@ -136,6 +136,24 @@ object OneSignal {
     }
 
     /**
+     * Initialize the OneSignal SDK asynchronously. This should be called during startup of the application.
+     * This method provides a suspended version that returns a boolean indicating success.
+     * Uses Dispatchers.IO internally to prevent ANRs and optimize for I/O operations.
+     *
+     * @param context The Android context the SDK should use.
+     * @param appId The application ID the OneSignal SDK is bound to.
+     * @return Boolean indicating if initialization was successful.
+     */
+    @JvmStatic
+    suspend fun initWithContextSuspend(
+        context: Context,
+        appId: String,
+    ): Boolean {
+        // OneSignalImp handles IO dispatcher internally
+        return oneSignal.initWithContext(context, appId)
+    }
+
+    /**
      * Login to OneSignal under the user identified by the [externalId] provided. The act of
      * logging a user into the OneSignal SDK will switch the [User] context to that specific user.
      *

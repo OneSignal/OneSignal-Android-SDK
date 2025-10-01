@@ -5,7 +5,7 @@ import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
-import com.onesignal.common.threading.LatchAwaiter
+import com.onesignal.common.threading.CompletionAwaiter
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.internal.OneSignalImp
@@ -53,7 +53,7 @@ class SDKInitTests : FunSpec({
     test("initWithContext with no appId blocks and will return false") {
         // Given
         // block SharedPreference before calling init
-        val trigger = LatchAwaiter("Test")
+        val trigger = CompletionAwaiter("Test")
         val context = getApplicationContext<Context>()
         val blockingPrefContext = BlockingPrefsContext(context, trigger, 2000)
         val os = OneSignalImp()
@@ -74,7 +74,7 @@ class SDKInitTests : FunSpec({
         accessorThread.isAlive shouldBe true
 
         // release SharedPreferences
-        trigger.release()
+        trigger.complete()
 
         accessorThread.join(500)
         accessorThread.isAlive shouldBe false
@@ -87,7 +87,7 @@ class SDKInitTests : FunSpec({
     test("initWithContext with appId does not block") {
         // Given
         // block SharedPreference before calling init
-        val trigger = LatchAwaiter("Test")
+        val trigger = CompletionAwaiter("Test")
         val context = getApplicationContext<Context>()
         val blockingPrefContext = BlockingPrefsContext(context, trigger, 1000)
         val os = OneSignalImp()
@@ -110,7 +110,7 @@ class SDKInitTests : FunSpec({
     test("accessors will be blocked if call too early after initWithContext with appId") {
         // Given
         // block SharedPreference before calling init
-        val trigger = LatchAwaiter("Test")
+        val trigger = CompletionAwaiter("Test")
         val context = getApplicationContext<Context>()
         val blockingPrefContext = BlockingPrefsContext(context, trigger, 2000)
         val os = OneSignalImp()
@@ -127,7 +127,7 @@ class SDKInitTests : FunSpec({
         accessorThread.isAlive shouldBe true
 
         // release the lock on SharedPreferences
-        trigger.release()
+        trigger.complete()
 
         accessorThread.join(1000)
         accessorThread.isAlive shouldBe false
@@ -154,7 +154,7 @@ class SDKInitTests : FunSpec({
     test("ensure login called right after initWithContext can set externalId correctly") {
         // Given
         // block SharedPreference before calling init
-        val trigger = LatchAwaiter("Test")
+        val trigger = CompletionAwaiter("Test")
         val context = getApplicationContext<Context>()
         val blockingPrefContext = BlockingPrefsContext(context, trigger, 2000)
         val os = OneSignalImp()
@@ -164,6 +164,9 @@ class SDKInitTests : FunSpec({
             Thread {
                 os.initWithContext(blockingPrefContext, "appId")
                 os.login(externalId)
+                
+                // Wait for background login operation to complete
+                Thread.sleep(100)
             }
 
         accessorThread.start()
@@ -173,7 +176,7 @@ class SDKInitTests : FunSpec({
         accessorThread.isAlive shouldBe true
 
         // release the lock on SharedPreferences
-        trigger.release()
+        trigger.complete()
 
         accessorThread.join(500)
         accessorThread.isAlive shouldBe false
@@ -204,6 +207,10 @@ class SDKInitTests : FunSpec({
         os.initWithContext(context, "appId")
         val oldExternalId = os.user.externalId
         os.login(testExternalId)
+        
+        // Wait for background login operation to complete
+        Thread.sleep(100) 
+        
         val newExternalId = os.user.externalId
 
         oldExternalId shouldBe ""
@@ -242,6 +249,10 @@ class SDKInitTests : FunSpec({
 
         // login
         os.login(testExternalId)
+        
+        // Wait for background login operation to complete
+        Thread.sleep(100)
+        
         os.user.externalId shouldBe testExternalId
 
         // addTags and getTags
@@ -252,6 +263,10 @@ class SDKInitTests : FunSpec({
 
         // logout
         os.logout()
+        
+        // Wait for background logout operation to complete
+        Thread.sleep(100)
+        
         os.user.externalId shouldBe ""
     }
 })
@@ -261,7 +276,7 @@ class SDKInitTests : FunSpec({
  */
 class BlockingPrefsContext(
     context: Context,
-    private val unblockTrigger: LatchAwaiter,
+    private val unblockTrigger: CompletionAwaiter,
     private val timeoutInMillis: Long,
 ) : ContextWrapper(context) {
     override fun getSharedPreferences(

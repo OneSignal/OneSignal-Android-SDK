@@ -23,29 +23,34 @@ interface IOneSignal {
      * The user manager for accessing user-scoped
      * management.
      */
+    @Deprecated(message = "Use suspend version", ReplaceWith("getUser"))
     val user: IUserManager
 
     /**
      * The session manager for accessing session-scoped management.
      */
+    @Deprecated(message = "Use suspend version", ReplaceWith("getSession"))
     val session: ISessionManager
 
     /**
      * The notification manager for accessing device-scoped
      * notification management.
      */
+    @Deprecated(message = "Use suspend version", ReplaceWith("getNotifications"))
     val notifications: INotificationsManager
 
     /**
      * The location manager for accessing device-scoped
      * location management.
      */
+    @Deprecated(message =  "Use suspend version", ReplaceWith("getLocation"))
     val location: ILocationManager
 
     /**
      * The In App Messaging manager for accessing device-scoped
      * IAP management.
      */
+    @Deprecated(message = "Use suspend version", ReplaceWith("getInAppMessages"))
     val inAppMessages: IInAppMessagesManager
 
     /**
@@ -62,17 +67,20 @@ interface IOneSignal {
      * should be set to `true` prior to the invocation of
      * [initWithContext] to ensure compliance.
      */
+    @Deprecated(message = "Use suspend version", ReplaceWith("get or set ConsentRequiredSuspend"))
     var consentRequired: Boolean
 
     /**
      * Indicates whether privacy consent has been granted. This field is only relevant when
      * the application has opted into data privacy protections. See [consentRequired].
      */
+    @Deprecated(message = "Use suspend version", ReplaceWith("get or set ConsentGivenSuspend"))
     var consentGiven: Boolean
 
     /**
      * Whether to disable the "GMS is missing" prompt to the user.
      */
+    @Deprecated("Use suspend version", ReplaceWith("get or set DisableGMSMissingPromptSuspend"))
     var disableGMSMissingPrompt: Boolean
 
     /**
@@ -83,6 +91,7 @@ interface IOneSignal {
      *
      * @return true if the SDK could be successfully initialized, false otherwise.
      */
+    @Deprecated("Use suspend version", ReplaceWith("initWithContext(context)"))
     fun initWithContext(
         context: Context,
         appId: String,
@@ -116,11 +125,13 @@ interface IOneSignal {
      * trust for the login operation.  Required when identity verification has been enabled. See
      * [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
      */
+    @Deprecated("Use suspend version", ReplaceWith("suspend fun login(externalId, jwtBearerToken)"))
     fun login(
         externalId: String,
         jwtBearerToken: String? = null,
     )
 
+    @Deprecated(message = "Use suspend version", ReplaceWith("suspend fun login(externalId)"))
     fun login(externalId: String) = login(externalId, null)
 
     /**
@@ -129,5 +140,99 @@ interface IOneSignal {
      * be retrieved, except through this device as long as the app remains installed and the app
      * data is not cleared.
      */
+    @Deprecated(message = "Use suspend version", ReplaceWith("suspend fun logout()"))
     fun logout()
+
+    // Suspend versions of property accessors and methods to avoid blocking threads
+
+    /**
+     * Initialize the OneSignal SDK, suspend until initialization is completed
+     *
+     * @param context The Android context the SDK should use.
+     * @param appId The application ID the OneSignal SDK is bound to.
+     *
+     * @return true if the SDK could be successfully initialized, false otherwise.
+     */
+    suspend fun initWithContext(
+        context: Context,
+        appId: String? = null,
+    ): Boolean
+
+    /**
+     * Get the session manager without blocking the calling thread.
+     * Suspends until the SDK is initialized.
+     */
+    suspend fun getSession(): ISessionManager
+
+    /**
+     * Get the notifications manager without blocking the calling thread.
+     * Suspends until the SDK is initialized.
+     */
+    suspend fun getNotifications(): INotificationsManager
+
+    /**
+     * Get the location manager without blocking the calling thread.
+     * Suspends until the SDK is initialized.
+     */
+    suspend fun getLocation(): ILocationManager
+
+    /**
+     * Get the in-app messages manager without blocking the calling thread.
+     * Suspends until the SDK is initialized.
+     */
+    suspend fun getInAppMessages(): IInAppMessagesManager
+
+    /**
+     * Get the user manager without blocking the calling thread.
+     * Suspends until the SDK is initialized.
+     */
+    suspend fun getUser(): IUserManager
+
+    // Suspend versions of configuration properties for thread-safe access
+
+    /**
+     * Get the consent required flag in a thread-safe manner.
+     */
+    suspend fun getConsentRequired(): Boolean
+
+    /**
+     * Set the consent required flag in a thread-safe manner.
+     */
+    suspend fun setConsentRequired(required: Boolean)
+
+    /**
+     * Get the consent given flag in a thread-safe manner.
+     */
+    suspend fun getConsentGiven(): Boolean
+
+    /**
+     * Set the consent given flag in a thread-safe manner.
+     */
+    suspend fun setConsentGiven(value: Boolean)
+
+    /**
+     * Get the disable GMS missing prompt flag in a thread-safe manner.
+     */
+    suspend fun getDisableGMSMissingPrompt(): Boolean
+
+    /**
+     * Set the disable GMS missing prompt flag in a thread-safe manner.
+     */
+    suspend fun setDisableGMSMissingPrompt(value: Boolean)
+
+    /**
+     * Login a user with external ID and optional JWT token (suspend version).
+     * Handles initialization automatically.
+     */
+    suspend fun login(
+        context: Context,
+        externalId: String,
+        jwtBearerToken: String? = null
+    )
+
+    /**
+     * Logout the current user (suspend version).
+     * Handles initialization automatically.
+     */
+    suspend fun logout(context: Context)
 }
