@@ -505,7 +505,7 @@ internal class OneSignalImp(
 
     override suspend fun login(
         context: Context,
-        appId: String?,
+        appId: String,
         externalId: String,
         jwtBearerToken: String?,
     ) = withContext(ioDispatcher) {
@@ -514,7 +514,7 @@ internal class OneSignalImp(
         // Calling this again is safe if already initialized. It will be a no-op.
         // This prevents issues if the user calls login before init as we cannot guarantee
         // the order of calls.
-        val initResult = initWithContextSuspend(context, appId)
+        val initResult = initWithContext(context, appId)
         if (!initResult) {
             throw IllegalStateException("'initWithContext failed' before 'login'")
         }
@@ -524,14 +524,14 @@ internal class OneSignalImp(
 
     override suspend fun logout(
         context: Context,
-        appId: String?,
+        appId: String,
     ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "logoutSuspend()")
 
         // Calling this again is safe if already initialized. It will be a no-op.
         // This prevents issues if the user calls login before init as we cannot guarantee
         // the order of calls.
-        val initResult = initWithContextSuspend(context, appId)
+        val initResult = initWithContext(context, appId)
         if (!initResult) {
             throw IllegalStateException("'initWithContext failed' before 'logout'")
         }

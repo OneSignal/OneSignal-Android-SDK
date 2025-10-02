@@ -237,7 +237,7 @@ object OneSignal {
     @JvmStatic
     suspend fun login(
         context: Context,
-        appId: String?,
+        appId: String,
         externalId: String,
         jwtBearerToken: String? = null,
     ) {
@@ -253,7 +253,7 @@ object OneSignal {
      */
     suspend fun logout(
         context: Context,
-        appId: String?,
+        appId: String,
     ) {
         oneSignal.logout(context, appId)
     }
