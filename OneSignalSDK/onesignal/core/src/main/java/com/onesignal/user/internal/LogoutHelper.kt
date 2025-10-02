@@ -18,12 +18,15 @@ class LogoutHelper(
                 return
             }
 
+            // Create new device-scoped user (clears external ID)
             userSwitcher.createAndSwitchToNewUser()
+            
+            // Enqueue login operation for the new device-scoped user (no external ID)
             operationRepo.enqueue(
                 LoginUserOperation(
                     configModel.appId,
                     identityModelStore.model.onesignalId,
-                    identityModelStore.model.externalId,
+                    null, // No external ID for device-scoped user
                 ),
             )
 

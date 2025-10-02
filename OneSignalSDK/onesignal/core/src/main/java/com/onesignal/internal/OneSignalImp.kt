@@ -95,7 +95,7 @@ internal class OneSignalImp(
     @Deprecated(message = "Use suspend version", ReplaceWith("get or set disableGMSMissingPrompt"))
     override var disableGMSMissingPrompt: Boolean
         get() = if (isInitialized) {
-            blockingGet { configModel.disableGMSMissingPrompt }
+            blockingGet { configModel.disableGMSMissingPrompt ?: (_disableGMSMissingPrompt == true) }
         } else {
             _disableGMSMissingPrompt == true
         }
@@ -318,7 +318,7 @@ internal class OneSignalImp(
         }
 
         waitForInit()
-        suspendifyOnThread { loginHelper.login(externalId) }
+        suspendifyOnThread { loginHelper.login(externalId, jwtBearerToken) }
     }
 
     @Deprecated("Use suspend version", replaceWith = ReplaceWith("suspend fun logout()"))
@@ -503,7 +503,7 @@ internal class OneSignalImp(
             throw IllegalStateException("'initWithContext failed' before 'login'")
         }
 
-        loginHelper.login(externalId)
+        loginHelper.login(externalId, jwtBearerToken)
     }
 
     override suspend fun logout(context: Context) = withContext(ioDispatcher) {

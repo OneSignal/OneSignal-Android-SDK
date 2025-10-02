@@ -13,7 +13,7 @@ class LoginHelper(
     private val configModel: ConfigModel,
     private val loginLock: Any,
 ) {
-    suspend fun login(externalId: String) {
+    suspend fun login(externalId: String, jwtBearerToken: String? = null) {
         var currentIdentityExternalId: String? = null
         var currentIdentityOneSignalId: String? = null
         var newIdentityOneSignalId: String = ""
