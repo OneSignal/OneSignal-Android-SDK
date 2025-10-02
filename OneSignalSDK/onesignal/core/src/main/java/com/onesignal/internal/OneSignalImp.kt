@@ -246,12 +246,12 @@ internal class OneSignalImp(
         return startupService
     }
 
-    @Deprecated(message = "Use suspend version", ReplaceWith("initWithContext(context, appId)"))
+    @Deprecated(message = "Use suspend version", ReplaceWith("initWithContextSuspend(context, appId)"))
     override fun initWithContext(
         context: Context,
         appId: String,
     ) : Boolean {
-        Logging.log(LogLevel.DEBUG, "Calling deprecated initWithContext(context: $context, appId: $appId)")
+        Logging.log(LogLevel.DEBUG, "Calling deprecated initWithContextSuspend(context: $context, appId: $appId)")
 
         // do not do this again if already initialized or init is in progress
         synchronized(initLock) {
@@ -276,7 +276,7 @@ internal class OneSignalImp(
      */
     override suspend fun initWithContext(context: Context): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context)")
-        return initWithContext(context, null)
+        return initWithContextSuspend(context, null)
     }
 
     private fun internalInit(
@@ -467,7 +467,7 @@ internal class OneSignalImp(
         configModel.disableGMSMissingPrompt = value
     }
 
-    override suspend fun initWithContext(context: Context, appId: String?): Boolean {
+    override suspend fun initWithContextSuspend(context: Context, appId: String?): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
         // Use IO dispatcher for initialization to prevent ANRs and optimize for I/O operations
@@ -490,6 +490,7 @@ internal class OneSignalImp(
 
     override suspend fun login(
         context: Context,
+        appId: String?,
         externalId: String,
         jwtBearerToken: String?
     ) = withContext(ioDispatcher) {
@@ -498,7 +499,7 @@ internal class OneSignalImp(
         // Calling this again is safe if already initialized. It will be a no-op.
         // This prevents issues if the user calls login before init as we cannot guarantee
         // the order of calls.
-        val initResult = initWithContext(context)
+        val initResult = initWithContextSuspend(context, appId)
         if (!initResult) {
             throw IllegalStateException("'initWithContext failed' before 'login'")
         }
@@ -506,13 +507,13 @@ internal class OneSignalImp(
         loginHelper.login(externalId, jwtBearerToken)
     }
 
-    override suspend fun logout(context: Context) = withContext(ioDispatcher) {
+    override suspend fun logout(context: Context, appId: String?) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "logoutSuspend()")
 
         // Calling this again is safe if already initialized. It will be a no-op.
         // This prevents issues if the user calls login before init as we cannot guarantee
         // the order of calls.
-        val initResult = initWithContext(context)
+        val initResult = initWithContextSuspend(context, appId)
         if (!initResult) {
             throw IllegalStateException("'initWithContext failed' before 'logout'")
         }

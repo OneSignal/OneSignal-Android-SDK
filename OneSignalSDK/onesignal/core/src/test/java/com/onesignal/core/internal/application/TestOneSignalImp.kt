@@ -95,7 +95,7 @@ class TestOneSignalImp(
         true
     }
     
-    override suspend fun initWithContext(context: Context, appId: String?): Boolean = withContext(ioDispatcher) {
+    override suspend fun initWithContextSuspend(context: Context, appId: String?): Boolean = withContext(ioDispatcher) {
         initializationCount++
         initialized = true
         true
@@ -150,19 +150,24 @@ class TestOneSignalImp(
         disableGMSMissingPrompt = value
     }
     
-    override suspend fun login(context: Context, externalId: String, jwtBearerToken: String?): Unit = withContext(ioDispatcher) {
+    override suspend fun login(
+        context: Context,
+        appId: String?,
+        externalId: String,
+        jwtBearerToken: String?
+    ) = withContext(ioDispatcher) {
         // Auto-initialize if needed
         if (!initialized) {
-            initWithContext(context, null)
+            initWithContextSuspend(context, appId)
         }
         loginCount++
         currentExternalId = externalId
     }
     
-    override suspend fun logout(context: Context): Unit = withContext(ioDispatcher) {
+    override suspend fun logout(context: Context, appId: String?) = withContext(ioDispatcher) {
         // Auto-initialize if needed
         if (!initialized) {
-            initWithContext(context, null)
+            initWithContextSuspend(context, appId)
         }
         logoutCount++
         currentExternalId = ""

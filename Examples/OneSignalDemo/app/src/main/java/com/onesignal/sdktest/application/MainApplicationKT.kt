@@ -1,5 +1,16 @@
 package com.onesignal.sdktest.application
 
+/**
+ * Modern Kotlin implementation of MainApplication.
+ * 
+ * This replaces the deprecated MainApplication.java with:
+ * - Better async handling using Kotlin Coroutines
+ * - Modern OneSignal API usage
+ * - Cleaner code structure
+ * - Proper ANR prevention
+ * 
+ * @see MainApplication (deprecated Java version)
+ */
 import android.annotation.SuppressLint
 import android.os.StrictMode
 import android.util.Log

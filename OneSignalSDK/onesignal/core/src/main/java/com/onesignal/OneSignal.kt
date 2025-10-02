@@ -140,17 +140,16 @@ object OneSignal {
      * This method provides a suspended version that returns a boolean indicating success.
      * Uses Dispatchers.IO internally to prevent ANRs and optimize for I/O operations.
      *
-     * @param context The Android context the SDK should use.
+     * @param context Application context is recommended for SDK operations
      * @param appId The application ID the OneSignal SDK is bound to.
      * @return Boolean indicating if initialization was successful.
      */
     @JvmStatic
     suspend fun initWithContextSuspend(
         context: Context,
-        appId: String,
+        appId: String? = null,
     ): Boolean {
-        // OneSignalImp handles IO dispatcher internally
-        return oneSignal.initWithContext(context, appId)
+        return oneSignal.initWithContextSuspend(context, appId)
     }
 
     /**
@@ -224,6 +223,36 @@ object OneSignal {
     @JvmStatic
     suspend fun initWithContext(context: Context): Boolean {
         return oneSignal.initWithContext(context)
+    }
+
+    /**
+     * Login a user with external ID and optional JWT token (suspend version).
+     * Handles initialization automatically.
+     * 
+     * @param context Application context is recommended for SDK operations
+     * @param appId The OneSignal app ID
+     * @param externalId External user ID for login
+     * @param jwtBearerToken Optional JWT token for authentication
+     */
+    @JvmStatic
+    suspend fun login(
+        context: Context,
+        appId: String?,
+        externalId: String,
+        jwtBearerToken: String? = null
+    ) {
+        oneSignal.login(context, appId, externalId, jwtBearerToken)
+    }
+
+    /**
+     * Logout the current user (suspend version).
+     * Handles initialization automatically.
+     * 
+     * @param context Application context is recommended for SDK operations
+     * @param appId The OneSignal app ID
+     */
+    suspend fun logout(context: Context, appId: String?) {
+        oneSignal.logout(context, appId)
     }
 
     /**

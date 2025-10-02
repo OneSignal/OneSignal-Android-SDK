@@ -153,7 +153,7 @@ interface IOneSignal {
      *
      * @return true if the SDK could be successfully initialized, false otherwise.
      */
-    suspend fun initWithContext(
+    suspend fun initWithContextSuspend(
         context: Context,
         appId: String? = null,
     ): Boolean
@@ -226,6 +226,7 @@ interface IOneSignal {
      */
     suspend fun login(
         context: Context,
+        appId: String?,
         externalId: String,
         jwtBearerToken: String? = null
     )
@@ -234,5 +235,5 @@ interface IOneSignal {
      * Logout the current user (suspend version).
      * Handles initialization automatically.
      */
-    suspend fun logout(context: Context)
+    suspend fun logout(context: Context, appId: String?)
 }

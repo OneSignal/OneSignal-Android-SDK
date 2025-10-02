@@ -62,6 +62,20 @@ android {
         exclude 'androidsupportmultidexversion.txt'
     }
 
+    // Exclude deprecated Java MainApplication from compilation to prevent conflicts
+    sourceSets {
+        main {
+            java {
+                exclude '**/MainApplication.java'
+            }
+        }
+    }
+
+    // Alternative approach: exclude from all source sets
+    android.sourceSets.all { sourceSet ->
+        sourceSet.java.exclude '**/MainApplication.java'
+    }
+
     task flavorSelection() {
         def tasksList = gradle.startParameter.taskRequests.toString()
         if (tasksList.contains('Gms')) {

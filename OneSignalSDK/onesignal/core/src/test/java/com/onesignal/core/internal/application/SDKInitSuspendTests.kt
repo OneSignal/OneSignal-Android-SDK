@@ -29,6 +29,8 @@ import kotlinx.coroutines.withContext
 @RobolectricTest
 class SDKInitSuspendTests : FunSpec({
 
+    val testAppId = "test-app-id-123"
+
     beforeEach {
         Logging.logLevel = LogLevel.NONE
     }
@@ -48,7 +50,7 @@ class SDKInitSuspendTests : FunSpec({
 
         runBlocking {
             // When
-            os.login(context, testExternalId)
+            os.login(context, testAppId, testExternalId)
             
             // Then - verify state actually changed
             os.getCurrentExternalId() shouldBe testExternalId
@@ -65,11 +67,11 @@ class SDKInitSuspendTests : FunSpec({
         
         runBlocking {
             // Setup - login first
-            os.login(context, "initial-user")
+            os.login(context, testAppId, "initial-user")
             os.getCurrentExternalId() shouldBe "initial-user"
             
             // When
-            os.logout(context)
+            os.logout(context, testAppId)
             
             // Then - verify state was cleared
             os.getCurrentExternalId() shouldBe ""
@@ -142,7 +144,7 @@ class SDKInitSuspendTests : FunSpec({
             
             withContext(Dispatchers.IO) {
                 backgroundThreadName = Thread.currentThread().name
-                os.login(context, "thread-test-user")
+                os.login(context, testAppId, "thread-test-user")
             }
             
             // Then - verify it ran on different thread
@@ -160,13 +162,13 @@ class SDKInitSuspendTests : FunSpec({
         runBlocking {
             // When - run operations sequentially (not concurrently to avoid race conditions)
             os.initWithContext(context, "sequential-app-id")
-            os.login(context, "user1")
+            os.login(context, testAppId, "user1")
             val user1Id = os.getCurrentExternalId()
             
-            os.logout(context)
+            os.logout(context, testAppId)
             val loggedOutId = os.getCurrentExternalId()
             
-            os.login(context, "final-user")
+            os.login(context, testAppId, "final-user")
             val finalId = os.getCurrentExternalId()
             
             // Then - verify each step worked correctly
@@ -188,7 +190,7 @@ class SDKInitSuspendTests : FunSpec({
         
         runBlocking {
             // When - call login without explicit init
-            os.login(context, "auto-init-user")
+            os.login(context, testAppId, "auto-init-user")
             
             // Then - should auto-initialize and work
             os.isInitialized shouldBe true
@@ -197,7 +199,7 @@ class SDKInitSuspendTests : FunSpec({
             os.getLoginCount() shouldBe 1
             
             // When - call logout (should not double-initialize)
-            os.logout(context)
+            os.logout(context, testAppId)
             
             // Then
             os.getCurrentExternalId() shouldBe ""

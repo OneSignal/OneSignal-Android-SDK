@@ -33,18 +33,29 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * @deprecated This Java implementation is deprecated. Use {@link MainApplicationKT} instead.
+ * The Kotlin version provides better async handling and modern coroutines support.
+ * 
+ * NOTE: This file is excluded from compilation in build.gradle to prevent conflicts.
+ * It's kept for reference only and will be removed in a future version.
+ */
+@Deprecated(since = "5.4.0", forRemoval = true)
 public class MainApplication extends MultiDexApplication {
     private static final int SLEEP_TIME_TO_MIMIC_ASYNC_OPERATION = 2000;
 
     public MainApplication() {
         // run strict mode to surface any potential issues easier
         StrictMode.enableDefaults();
+        Log.w(Tag.LOG_TAG, "MainApplication (Java) is deprecated. Please use MainApplicationKT (Kotlin) instead.");
     }
 
     @SuppressLint("NewApi")
     @Override
     public void onCreate() {
         super.onCreate();
+        Log.w(Tag.LOG_TAG, "DEPRECATED: Using MainApplication (Java). Please migrate to MainApplicationKT (Kotlin) for better async support.");
+        
         OneSignal.getDebug().setLogLevel(LogLevel.DEBUG);
 
         // OneSignal Initialization

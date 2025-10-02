@@ -82,14 +82,14 @@ class LogoutHelperTests : FunSpec({
         // When
         logoutHelper.logout()
 
-        // Then - should create new user and enqueue logout operation
+        // Then - should create new user and enqueue login operation for device-scoped user
         verify(exactly = 1) { mockUserSwitcher.createAndSwitchToNewUser() }
         verify(exactly = 1) { 
             mockOperationRepo.enqueue(
                 withArg<LoginUserOperation> { operation ->
                     operation.appId shouldBe appId
                     operation.onesignalId shouldBe onesignalId
-                    operation.externalId shouldBe externalId
+                    operation.externalId shouldBe null // Device-scoped user after logout
 //                    operation.existingOneSignalId shouldBe null
                 }
             )
