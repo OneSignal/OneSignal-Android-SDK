@@ -9,30 +9,30 @@ import java.util.concurrent.TimeUnit
 /**
  * A unified completion awaiter that supports both blocking and suspend-based waiting.
  * This class allows both legacy blocking code and modern coroutines to wait for the same event.
- * 
- * It is designed for scenarios where certain tasks, such as SDK initialization, must finish 
- * before continuing. When used on the main/UI thread for blocking operations, it applies a 
+ *
+ * It is designed for scenarios where certain tasks, such as SDK initialization, must finish
+ * before continuing. When used on the main/UI thread for blocking operations, it applies a
  * shorter timeout and logs warnings to prevent ANR errors.
- * 
- * PERFORMANCE NOTE: Having both blocking (CountDownLatch) and suspend (Channel) mechanisms 
+ *
+ * PERFORMANCE NOTE: Having both blocking (CountDownLatch) and suspend (Channel) mechanisms
  * in place is very low cost and should not hurt performance. The overhead is minimal:
  * - CountDownLatch: ~32 bytes, optimized for blocking threads
  * - Channel: ~64 bytes, optimized for coroutine suspension
  * - Total overhead: <100 bytes per awaiter instance
  * - Notification cost: Two simple operations (countDown + trySend)
- * 
+ *
  * This dual approach provides optimal performance for each use case rather than forcing
  * a one-size-fits-all solution that would be suboptimal for both scenarios.
  *
  * Usage:
  *   val awaiter = CompletionAwaiter("OneSignal SDK Init")
- *   
+ *
  *   // For blocking code:
  *   awaiter.await()
- *   
+ *
  *   // For suspend code:
  *   awaiter.awaitSuspend()
- *   
+ *
  *   // When complete:
  *   awaiter.complete()
  */
@@ -57,7 +57,7 @@ class CompletionAwaiter(
 
     /**
      * Wait for completion using blocking approach with an optional timeout.
-     * 
+     *
      * @param timeoutMs Timeout in milliseconds, defaults to context-appropriate timeout
      * @return true if completed before timeout, false otherwise.
      */

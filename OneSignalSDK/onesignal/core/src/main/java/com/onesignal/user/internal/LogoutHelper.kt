@@ -10,7 +10,7 @@ class LogoutHelper(
     private val identityModelStore: IdentityModelStore,
     private val userSwitcher: UserSwitcher,
     private val operationRepo: IOperationRepo,
-    private val configModel: ConfigModel
+    private val configModel: ConfigModel,
 ) {
     fun logout() {
         synchronized(logoutLock) {
@@ -20,13 +20,14 @@ class LogoutHelper(
 
             // Create new device-scoped user (clears external ID)
             userSwitcher.createAndSwitchToNewUser()
-            
+
             // Enqueue login operation for the new device-scoped user (no external ID)
             operationRepo.enqueue(
                 LoginUserOperation(
                     configModel.appId,
                     identityModelStore.model.onesignalId,
-                    null, // No external ID for device-scoped user
+                    null,
+                    // No external ID for device-scoped user
                 ),
             )
 

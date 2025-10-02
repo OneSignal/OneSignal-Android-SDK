@@ -13,7 +13,10 @@ class LoginHelper(
     private val configModel: ConfigModel,
     private val loginLock: Any,
 ) {
-    suspend fun login(externalId: String, jwtBearerToken: String? = null) {
+    suspend fun login(
+        externalId: String,
+        jwtBearerToken: String? = null,
+    ) {
         var currentIdentityExternalId: String? = null
         var currentIdentityOneSignalId: String? = null
         var newIdentityOneSignalId: String = ""
@@ -34,14 +37,15 @@ class LoginHelper(
             newIdentityOneSignalId = identityModelStore.model.onesignalId
         }
 
-        val result = operationRepo.enqueueAndWait(
-            LoginUserOperation(
-                configModel.appId,
-                newIdentityOneSignalId,
-                externalId,
-                if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
-            ),
-        )
+        val result =
+            operationRepo.enqueueAndWait(
+                LoginUserOperation(
+                    configModel.appId,
+                    newIdentityOneSignalId,
+                    externalId,
+                    if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
+                ),
+            )
 
         if (!result) {
             Logging.error("Could not login user")

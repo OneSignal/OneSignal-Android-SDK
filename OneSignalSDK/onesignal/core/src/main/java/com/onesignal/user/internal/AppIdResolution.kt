@@ -5,15 +5,15 @@ import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.getLegacyAppId
 
 data class AppIdResolution(
-    val appId: String?, // nullable
+    val appId: String?,
     val forceCreateUser: Boolean,
-    val failed: Boolean
+    val failed: Boolean,
 )
 
 fun resolveAppId(
     inputAppId: String?,
     configModel: ConfigModel,
-    preferencesService: IPreferencesService
+    preferencesService: IPreferencesService,
 ): AppIdResolution {
     var forceCreateUser = false
     var resolvedAppId: String? = inputAppId

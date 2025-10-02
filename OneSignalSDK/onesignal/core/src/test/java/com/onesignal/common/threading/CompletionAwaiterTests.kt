@@ -10,8 +10,13 @@ import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
-import kotlinx.coroutines.*
-import kotlinx.coroutines.test.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runTest
 
 class CompletionAwaiterTests : FunSpec({
 
@@ -81,14 +86,14 @@ class CompletionAwaiterTests : FunSpec({
             // Mock AndroidUtils to avoid Looper.getMainLooper() issues
             mockkObject(AndroidUtils)
             every { AndroidUtils.isRunningOnMainThread() } returns false
-            
+
             val startTime = System.currentTimeMillis()
             val completed = awaiter.await(0)
             val duration = System.currentTimeMillis() - startTime
 
             completed shouldBe false
             duration shouldBeLessThan 20L
-            
+
             unmockkObject(AndroidUtils)
         }
 
@@ -99,12 +104,13 @@ class CompletionAwaiterTests : FunSpec({
 
             // Start multiple blocking callers
             repeat(numCallers) { index ->
-                val thread = Thread {
-                    val result = awaiter.await(2000)
-                    synchronized(results) {
-                        results.add(result)
+                val thread =
+                    Thread {
+                        val result = awaiter.await(2000)
+                        synchronized(results) {
+                            results.add(result)
+                        }
                     }
-                }
                 thread.start()
                 jobs.add(thread)
             }
@@ -133,7 +139,7 @@ class CompletionAwaiterTests : FunSpec({
 
                 // When - should complete immediately without hanging
                 awaiter.awaitSuspend()
-                
+
                 // Then - if we get here, it completed successfully
                 // No timing assertions needed in test environment
             }
@@ -144,10 +150,11 @@ class CompletionAwaiterTests : FunSpec({
                 val completionDelay = 100L
 
                 // Start delayed completion
-                val completionJob = launch {
-                    delay(completionDelay)
-                    awaiter.complete()
-                }
+                val completionJob =
+                    launch {
+                        delay(completionDelay)
+                        awaiter.complete()
+                    }
 
                 // Wait for completion
                 awaiter.awaitSuspend()
@@ -163,12 +170,13 @@ class CompletionAwaiterTests : FunSpec({
                 val results = mutableListOf<String>()
 
                 // Start multiple suspend callers
-                val jobs = (1..numCallers).map { index ->
-                    async {
-                        awaiter.awaitSuspend()
-                        results.add("caller-$index")
+                val jobs =
+                    (1..numCallers).map { index ->
+                        async {
+                            awaiter.awaitSuspend()
+                            results.add("caller-$index")
+                        }
                     }
-                }
 
                 // Wait a bit to ensure all coroutines are suspended
                 delay(50)
@@ -186,16 +194,17 @@ class CompletionAwaiterTests : FunSpec({
 
         test("awaitSuspend can be cancelled") {
             runTest {
-            val job = launch {
-                awaiter.awaitSuspend()
-            }
+                val job =
+                    launch {
+                        awaiter.awaitSuspend()
+                    }
 
-            // Wait a bit then cancel
-            delay(50)
-            job.cancel()
+                // Wait a bit then cancel
+                delay(50)
+                job.cancel()
 
-            // Job should be cancelled
-            job.isCancelled shouldBe true
+                // Job should be cancelled
+                job.isCancelled shouldBe true
             }
         }
     }
@@ -205,56 +214,58 @@ class CompletionAwaiterTests : FunSpec({
         test("completion unblocks both blocking and suspend callers") {
             // This test verifies the dual mechanism works
             // We'll test blocking and suspend separately since mixing them in runTest is problematic
-            
+
             // Test suspend callers first
             runTest {
                 val suspendResults = mutableListOf<String>()
-                
+
                 // Start suspend callers
-                val suspendJobs = (1..2).map { index ->
-                    async {
-                        awaiter.awaitSuspend()
-                        suspendResults.add("suspend-$index")
+                val suspendJobs =
+                    (1..2).map { index ->
+                        async {
+                            awaiter.awaitSuspend()
+                            suspendResults.add("suspend-$index")
+                        }
                     }
-                }
-                
+
                 // Wait a bit to ensure all are waiting
                 delay(50)
-                
+
                 // Complete the awaiter
                 awaiter.complete()
-                
+
                 // Wait for all to complete
                 suspendJobs.awaitAll()
-                
+
                 // All should have completed
                 suspendResults.size shouldBe 2
             }
-            
+
             // Reset for blocking test
             awaiter = CompletionAwaiter("TestComponent")
-            
+
             // Test blocking callers
             val blockingResults = mutableListOf<Boolean>()
-            val blockingThreads = (1..2).map { index ->
-                Thread {
-                    val result = awaiter.await(2000)
-                    synchronized(blockingResults) {
-                        blockingResults.add(result)
+            val blockingThreads =
+                (1..2).map { index ->
+                    Thread {
+                        val result = awaiter.await(2000)
+                        synchronized(blockingResults) {
+                            blockingResults.add(result)
+                        }
                     }
                 }
-            }
             blockingThreads.forEach { it.start() }
-            
+
             // Wait a bit to ensure all are waiting
             Thread.sleep(100)
-            
+
             // Complete the awaiter
             awaiter.complete()
-            
+
             // Wait for all to complete
             blockingThreads.forEach { it.join(1000) }
-            
+
             // All should have completed
             blockingResults.size shouldBe 2
             blockingResults.all { it } shouldBe true
@@ -281,7 +292,7 @@ class CompletionAwaiterTests : FunSpec({
 
                 // Then wait - should return immediately without hanging
                 awaiter.awaitSuspend()
-                
+
                 // Multiple calls should also work immediately
                 awaiter.awaitSuspend()
                 awaiter.awaitSuspend()
@@ -295,9 +306,11 @@ class CompletionAwaiterTests : FunSpec({
 
                 // Start some waiters first
                 repeat(numOperations / 2) { index ->
-                    jobs.add(async { 
-                        awaiter.awaitSuspend()
-                    })
+                    jobs.add(
+                        async {
+                            awaiter.awaitSuspend()
+                        },
+                    )
                 }
 
                 // Wait a bit for them to start waiting

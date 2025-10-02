@@ -57,19 +57,21 @@ class UserSwitcher(
         modify?.invoke(identityModel, propertiesModel)
 
         val subscriptions = mutableListOf<SubscriptionModel>()
-        val currentPushSubscription = subscriptionModelStore.list()
-            .firstOrNull { it.id == configModel.pushSubscriptionId }
-        val newPushSubscription = SubscriptionModel().apply {
-            id = currentPushSubscription?.id ?: idManager.createLocalId()
-            type = SubscriptionType.PUSH
-            optedIn = currentPushSubscription?.optedIn ?: true
-            address = currentPushSubscription?.address ?: ""
-            status = currentPushSubscription?.status ?: SubscriptionStatus.NO_PERMISSION
-            sdk = oneSignalUtils.sdkVersion
-            deviceOS = this@UserSwitcher.deviceOS ?: ""
-            carrier = carrierName ?: ""
-            appVersion = androidUtils.getAppVersion(appContextProvider()) ?: ""
-        }
+        val currentPushSubscription =
+            subscriptionModelStore.list()
+                .firstOrNull { it.id == configModel.pushSubscriptionId }
+        val newPushSubscription =
+            SubscriptionModel().apply {
+                id = currentPushSubscription?.id ?: idManager.createLocalId()
+                type = SubscriptionType.PUSH
+                optedIn = currentPushSubscription?.optedIn ?: true
+                address = currentPushSubscription?.address ?: ""
+                status = currentPushSubscription?.status ?: SubscriptionStatus.NO_PERMISSION
+                sdk = oneSignalUtils.sdkVersion
+                deviceOS = this@UserSwitcher.deviceOS ?: ""
+                carrier = carrierName ?: ""
+                appVersion = androidUtils.getAppVersion(appContextProvider()) ?: ""
+            }
 
         configModel.pushSubscriptionId = newPushSubscription.id
         subscriptions.add(newPushSubscription)
@@ -90,23 +92,24 @@ class UserSwitcher(
         legacyUserSyncJSON: JSONObject,
         configModel: ConfigModel,
         subscriptionModelStore: SubscriptionModelStore,
-        appContext: Context
+        appContext: Context,
     ): Boolean {
         val notificationTypes = legacyUserSyncJSON.safeInt("notification_types")
 
-        val pushSubscriptionModel = SubscriptionModel().apply {
-            id = legacyPlayerId
-            type = SubscriptionType.PUSH
-            optedIn = notificationTypes != SubscriptionStatus.NO_PERMISSION.value &&
+        val pushSubscriptionModel =
+            SubscriptionModel().apply {
+                id = legacyPlayerId
+                type = SubscriptionType.PUSH
+                optedIn = notificationTypes != SubscriptionStatus.NO_PERMISSION.value &&
                     notificationTypes != SubscriptionStatus.UNSUBSCRIBE.value
-            address = legacyUserSyncJSON.safeString("identifier") ?: ""
-            status = notificationTypes?.let { SubscriptionStatus.fromInt(it) }
-                ?: SubscriptionStatus.SUBSCRIBED
-            sdk = OneSignalUtils.sdkVersion
-            deviceOS = this@UserSwitcher.deviceOS ?: ""
-            carrier = carrierName ?: ""
-            appVersion = AndroidUtils.getAppVersion(appContext) ?: ""
-        }
+                address = legacyUserSyncJSON.safeString("identifier") ?: ""
+                status = notificationTypes?.let { SubscriptionStatus.fromInt(it) }
+                    ?: SubscriptionStatus.SUBSCRIBED
+                sdk = OneSignalUtils.sdkVersion
+                deviceOS = this@UserSwitcher.deviceOS ?: ""
+                carrier = carrierName ?: ""
+                appVersion = AndroidUtils.getAppVersion(appContext) ?: ""
+            }
 
         configModel.pushSubscriptionId = legacyPlayerId
         subscriptionModelStore.add(pushSubscriptionModel, ModelChangeTags.NO_PROPOGATE)
@@ -152,7 +155,7 @@ class UserSwitcher(
                         legacyUserSyncJSON = JSONObject(legacyUserSyncString),
                         configModel = configModel,
                         subscriptionModelStore = subscriptionModelStore,
-                        appContext = services.getService<IApplicationService>().appContext
+                        appContext = services.getService<IApplicationService>().appContext,
                     )
                     suppressBackendOperation = true
                 }

@@ -228,7 +228,7 @@ object OneSignal {
     /**
      * Login a user with external ID and optional JWT token (suspend version).
      * Handles initialization automatically.
-     * 
+     *
      * @param context Application context is recommended for SDK operations
      * @param appId The OneSignal app ID
      * @param externalId External user ID for login
@@ -239,7 +239,7 @@ object OneSignal {
         context: Context,
         appId: String?,
         externalId: String,
-        jwtBearerToken: String? = null
+        jwtBearerToken: String? = null,
     ) {
         oneSignal.login(context, appId, externalId, jwtBearerToken)
     }
@@ -247,11 +247,14 @@ object OneSignal {
     /**
      * Logout the current user (suspend version).
      * Handles initialization automatically.
-     * 
+     *
      * @param context Application context is recommended for SDK operations
      * @param appId The OneSignal app ID
      */
-    suspend fun logout(context: Context, appId: String?) {
+    suspend fun logout(
+        context: Context,
+        appId: String?,
+    ) {
         oneSignal.logout(context, appId)
     }
 

@@ -52,14 +52,17 @@ private class Mocks {
     val mockContext = mockk<Context>(relaxed = true)
     val mockPreferencesService = mockk<IPreferencesService>(relaxed = true)
     val mockOperationRepo = mockk<IOperationRepo>(relaxed = true)
-    val mockApplicationService = mockk<IApplicationService>(relaxed = true).apply {
-        every { appContext } returns mockContext
-    }
-    val mockServices = mockk<ServiceProvider>(relaxed = true).apply {
-        every { getService(IApplicationService::class.java) } returns mockApplicationService
-    }
+    val mockApplicationService =
+        mockk<IApplicationService>(relaxed = true).apply {
+            every { appContext } returns mockContext
+        }
+    val mockServices =
+        mockk<ServiceProvider>(relaxed = true).apply {
+            every { getService(IApplicationService::class.java) } returns mockApplicationService
+        }
     val mockConfigModel = mockk<ConfigModel>(relaxed = true)
     val mockOneSignalUtils = spyk(OneSignalUtils)
+
     // No longer need DeviceUtils - we'll pass carrier name directly
     val mockAndroidUtils = spyk(AndroidUtils)
     val mockIdManager = mockk<IDManager>(relaxed = true)
@@ -74,9 +77,9 @@ private class Mocks {
         }
         return store
     }
-    
+
     fun createPropertiesModelStore() = mockk<PropertiesModelStore>(relaxed = true)
-    
+
     // Keep references to the latest created stores for verification in tests
     var identityModelStore: IdentityModelStore? = null
     var propertiesModelStore: PropertiesModelStore? = null
@@ -123,9 +126,9 @@ private class Mocks {
     fun createUserSwitcher(): UserSwitcher {
         // Create fresh instances for this test
         identityModelStore = createIdentityModelStore()
-        propertiesModelStore = createPropertiesModelStore() 
+        propertiesModelStore = createPropertiesModelStore()
         subscriptionModelStore = createSubscriptionModelStore()
-        
+
         return UserSwitcher(
             preferencesService = mockPreferencesService,
             operationRepo = mockOperationRepo,
@@ -139,7 +142,7 @@ private class Mocks {
             carrierName = testCarrier,
             deviceOS = testDeviceOS,
             androidUtils = mockAndroidUtils,
-            appContextProvider = { mockContext }
+            appContextProvider = { mockContext },
         )
     }
 
@@ -156,7 +159,7 @@ private class Mocks {
 
 /**
  * Unit tests for the UserSwitcher class
- * 
+ *
  * These tests focus on the pure business logic of user switching operations,
  * complementing the integration tests in SDKInitTests.kt which test
  * end-to-end SDK initialization and user switching behavior.
@@ -189,7 +192,7 @@ class UserSwitcherTests : FunSpec({
         // Given
         val mocks = Mocks()
         val userSwitcher = mocks.createUserSwitcher()
-        
+
         // When
         userSwitcher.createAndSwitchToNewUser { identityModel, _ ->
             identityModel.externalId = mocks.testExternalId
@@ -237,13 +240,14 @@ class UserSwitcherTests : FunSpec({
         val userSwitcher = mocks.createUserSwitcher()
 
         // When
-        val result = userSwitcher.createPushSubscriptionFromLegacySync(
-            legacyPlayerId = mocks.legacyPlayerId,
-            legacyUserSyncJSON = legacyUserSyncJSON,
-            configModel = mockConfigModel,
-            subscriptionModelStore = mockSubscriptionModelStore,
-            appContext = mocks.mockContext
-        )
+        val result =
+            userSwitcher.createPushSubscriptionFromLegacySync(
+                legacyPlayerId = mocks.legacyPlayerId,
+                legacyUserSyncJSON = legacyUserSyncJSON,
+                configModel = mockConfigModel,
+                subscriptionModelStore = mockSubscriptionModelStore,
+                appContext = mocks.mockContext,
+            )
 
         // Then
         result shouldBe true

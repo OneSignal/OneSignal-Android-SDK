@@ -164,7 +164,7 @@ class SDKInitTests : FunSpec({
             Thread {
                 os.initWithContext(blockingPrefContext, "appId")
                 os.login(externalId)
-                
+
                 // Wait for background login operation to complete
                 Thread.sleep(100)
             }
@@ -207,10 +207,10 @@ class SDKInitTests : FunSpec({
         os.initWithContext(context, "appId")
         val oldExternalId = os.user.externalId
         os.login(testExternalId)
-        
+
         // Wait for background login operation to complete
-        Thread.sleep(100) 
-        
+        Thread.sleep(100)
+
         val newExternalId = os.user.externalId
 
         oldExternalId shouldBe ""
@@ -249,10 +249,10 @@ class SDKInitTests : FunSpec({
 
         // login
         os.login(testExternalId)
-        
+
         // Wait for background login operation to complete
         Thread.sleep(100)
-        
+
         os.user.externalId shouldBe testExternalId
 
         // addTags and getTags
@@ -263,10 +263,10 @@ class SDKInitTests : FunSpec({
 
         // logout
         os.logout()
-        
+
         // Wait for background logout operation to complete
         Thread.sleep(100)
-        
+
         os.user.externalId shouldBe ""
     }
 })

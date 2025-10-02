@@ -43,7 +43,7 @@ interface IOneSignal {
      * The location manager for accessing device-scoped
      * location management.
      */
-    @Deprecated(message =  "Use suspend version", ReplaceWith("getLocation"))
+    @Deprecated(message = "Use suspend version", ReplaceWith("getLocation"))
     val location: ILocationManager
 
     /**
@@ -228,12 +228,15 @@ interface IOneSignal {
         context: Context,
         appId: String?,
         externalId: String,
-        jwtBearerToken: String? = null
+        jwtBearerToken: String? = null,
     )
 
     /**
      * Logout the current user (suspend version).
      * Handles initialization automatically.
      */
-    suspend fun logout(context: Context, appId: String?)
+    suspend fun logout(
+        context: Context,
+        appId: String?,
+    )
 }

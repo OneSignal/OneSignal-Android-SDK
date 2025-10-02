@@ -18,10 +18,7 @@ import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.preferences.IPreferencesService
-import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStoreFix
-import com.onesignal.core.internal.preferences.PreferenceStores
-import com.onesignal.core.internal.preferences.getLegacyAppId
 import com.onesignal.core.internal.startup.StartupService
 import com.onesignal.debug.IDebugManager
 import com.onesignal.debug.LogLevel
@@ -47,7 +44,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 internal class OneSignalImp(
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : IOneSignal, IServiceProvider {
     @Volatile
     private var initAwaiter = CompletionAwaiter("OneSignalImp")
@@ -62,11 +59,12 @@ internal class OneSignalImp(
 
     @Deprecated(message = "Use suspend version", ReplaceWith("get or set consentRequired"))
     override var consentRequired: Boolean
-        get() = if (isInitialized) {
-            blockingGet { configModel.consentRequired ?: (_consentRequired == true) }
-        } else {
-            _consentRequired == true
-        }
+        get() =
+            if (isInitialized) {
+                blockingGet { configModel.consentRequired ?: (_consentRequired == true) }
+            } else {
+                _consentRequired == true
+            }
         set(value) {
             _consentRequired = value
             if (isInitialized) {
@@ -76,11 +74,12 @@ internal class OneSignalImp(
 
     @Deprecated(message = "Use suspend version", ReplaceWith("get or set consentGiven"))
     override var consentGiven: Boolean
-        get() = if (isInitialized) {
-            blockingGet { configModel.consentGiven ?: (_consentGiven == true) }
-        } else {
-            _consentGiven == true
-        }
+        get() =
+            if (isInitialized) {
+                blockingGet { configModel.consentGiven ?: (_consentGiven == true) }
+            } else {
+                _consentGiven == true
+            }
         set(value) {
             val oldValue = _consentGiven
             _consentGiven = value
@@ -94,11 +93,12 @@ internal class OneSignalImp(
 
     @Deprecated(message = "Use suspend version", ReplaceWith("get or set disableGMSMissingPrompt"))
     override var disableGMSMissingPrompt: Boolean
-        get() = if (isInitialized) {
-            blockingGet { configModel.disableGMSMissingPrompt ?: (_disableGMSMissingPrompt == true) }
-        } else {
-            _disableGMSMissingPrompt == true
-        }
+        get() =
+            if (isInitialized) {
+                blockingGet { configModel.disableGMSMissingPrompt ?: (_disableGMSMissingPrompt == true) }
+            } else {
+                _disableGMSMissingPrompt == true
+            }
         set(value) {
             _disableGMSMissingPrompt = value
             if (isInitialized) {
@@ -108,6 +108,7 @@ internal class OneSignalImp(
 
     // we hardcode the DebugManager implementation so it can be used prior to calling `initWithContext`
     override val debug: IDebugManager = DebugManager()
+
     @Deprecated(message = "Use suspend version", ReplaceWith("getSession"))
     override val session: ISessionManager
         get() =
@@ -147,24 +148,25 @@ internal class OneSignalImp(
             "com.onesignal.inAppMessages.InAppMessagesModule",
             "com.onesignal.location.LocationModule",
         )
-    private val services: ServiceProvider = ServiceBuilder().apply {
-        val modules = mutableListOf<IModule>()
-        modules.add(CoreModule())
-        modules.add(SessionModule())
-        modules.add(UserModule())
-        for (moduleClassName in listOfModules) {
-            try {
-                val moduleClass = Class.forName(moduleClassName)
-                val moduleInstance = moduleClass.newInstance() as IModule
-                modules.add(moduleInstance)
-            } catch (e: ClassNotFoundException) {
-                e.printStackTrace()
+    private val services: ServiceProvider =
+        ServiceBuilder().apply {
+            val modules = mutableListOf<IModule>()
+            modules.add(CoreModule())
+            modules.add(SessionModule())
+            modules.add(UserModule())
+            for (moduleClassName in listOfModules) {
+                try {
+                    val moduleClass = Class.forName(moduleClassName)
+                    val moduleInstance = moduleClass.newInstance() as IModule
+                    modules.add(moduleInstance)
+                } catch (e: ClassNotFoundException) {
+                    e.printStackTrace()
+                }
             }
-        }
-        for (module in modules) {
-            module.register(this)
-        }
-    }.build()
+            for (module in modules) {
+                module.register(this)
+            }
+        }.build()
 
     // get the current config model, if there is one
     private val configModel: ConfigModel by lazy { services.getService<ConfigModelStore>().model }
@@ -206,7 +208,7 @@ internal class OneSignalImp(
             identityModelStore = identityModelStore,
             userSwitcher = userSwitcher,
             operationRepo = operationRepo,
-            configModel = configModel
+            configModel = configModel,
         )
     }
 
@@ -250,7 +252,7 @@ internal class OneSignalImp(
     override fun initWithContext(
         context: Context,
         appId: String,
-    ) : Boolean {
+    ): Boolean {
         Logging.log(LogLevel.DEBUG, "Calling deprecated initWithContextSuspend(context: $context, appId: $appId)")
 
         // do not do this again if already initialized or init is in progress
@@ -305,7 +307,7 @@ internal class OneSignalImp(
 
     @Deprecated(
         "Use suspend version",
-        replaceWith = ReplaceWith("login(externalId, jwtBearerToken)")
+        replaceWith = ReplaceWith("login(externalId, jwtBearerToken)"),
     )
     override fun login(
         externalId: String,
@@ -396,7 +398,6 @@ internal class OneSignalImp(
         return getter()
     }
 
-
     private fun <T> blockingGet(getter: () -> T): T {
         try {
             if (AndroidUtils.isRunningOnMainThread()) {
@@ -416,58 +417,72 @@ internal class OneSignalImp(
     // Suspend API Implementation
     // ===============================
 
-    override suspend fun getSession(): ISessionManager = withContext(ioDispatcher) {
-        suspendAndReturn { services.getService() }
-    }
-
-    override suspend fun getNotifications(): INotificationsManager = withContext(ioDispatcher) {
-        suspendAndReturn { services.getService() }
-    }
-
-    override suspend fun getLocation(): ILocationManager = withContext(ioDispatcher) {
-        suspendAndReturn { services.getService() }
-    }
-
-    override suspend fun getInAppMessages(): IInAppMessagesManager = withContext(ioDispatcher) {
-        suspendAndReturn { services.getService() }
-    }
-
-    override suspend fun getUser(): IUserManager = withContext(ioDispatcher) {
-        suspendAndReturn { services.getService() }
-    }
-
-    override suspend fun getConsentRequired(): Boolean = withContext(ioDispatcher) {
-        configModel.consentRequired ?: (_consentRequired == true)
-    }
-
-    override suspend fun setConsentRequired(required: Boolean) = withContext(ioDispatcher) {
-        _consentRequired = required
-        configModel.consentRequired = required
-    }
-
-    override suspend fun getConsentGiven(): Boolean = withContext(ioDispatcher) {
-        configModel.consentGiven ?: (_consentGiven == true)
-    }
-
-    override suspend fun setConsentGiven(value: Boolean) = withContext(ioDispatcher) {
-        val oldValue = _consentGiven
-        _consentGiven = value
-        configModel.consentGiven = value
-        if (oldValue != value && value) {
-            operationRepo.forceExecuteOperations()
+    override suspend fun getSession(): ISessionManager =
+        withContext(ioDispatcher) {
+            suspendAndReturn { services.getService() }
         }
-    }
 
-    override suspend fun getDisableGMSMissingPrompt(): Boolean = withContext(ioDispatcher) {
-        configModel.disableGMSMissingPrompt
-    }
+    override suspend fun getNotifications(): INotificationsManager =
+        withContext(ioDispatcher) {
+            suspendAndReturn { services.getService() }
+        }
 
-    override suspend fun setDisableGMSMissingPrompt(value: Boolean) = withContext(ioDispatcher) {
-        _disableGMSMissingPrompt = value
-        configModel.disableGMSMissingPrompt = value
-    }
+    override suspend fun getLocation(): ILocationManager =
+        withContext(ioDispatcher) {
+            suspendAndReturn { services.getService() }
+        }
 
-    override suspend fun initWithContextSuspend(context: Context, appId: String?): Boolean {
+    override suspend fun getInAppMessages(): IInAppMessagesManager =
+        withContext(ioDispatcher) {
+            suspendAndReturn { services.getService() }
+        }
+
+    override suspend fun getUser(): IUserManager =
+        withContext(ioDispatcher) {
+            suspendAndReturn { services.getService() }
+        }
+
+    override suspend fun getConsentRequired(): Boolean =
+        withContext(ioDispatcher) {
+            configModel.consentRequired ?: (_consentRequired == true)
+        }
+
+    override suspend fun setConsentRequired(required: Boolean) =
+        withContext(ioDispatcher) {
+            _consentRequired = required
+            configModel.consentRequired = required
+        }
+
+    override suspend fun getConsentGiven(): Boolean =
+        withContext(ioDispatcher) {
+            configModel.consentGiven ?: (_consentGiven == true)
+        }
+
+    override suspend fun setConsentGiven(value: Boolean) =
+        withContext(ioDispatcher) {
+            val oldValue = _consentGiven
+            _consentGiven = value
+            configModel.consentGiven = value
+            if (oldValue != value && value) {
+                operationRepo.forceExecuteOperations()
+            }
+        }
+
+    override suspend fun getDisableGMSMissingPrompt(): Boolean =
+        withContext(ioDispatcher) {
+            configModel.disableGMSMissingPrompt
+        }
+
+    override suspend fun setDisableGMSMissingPrompt(value: Boolean) =
+        withContext(ioDispatcher) {
+            _disableGMSMissingPrompt = value
+            configModel.disableGMSMissingPrompt = value
+        }
+
+    override suspend fun initWithContextSuspend(
+        context: Context,
+        appId: String?,
+    ): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
         // Use IO dispatcher for initialization to prevent ANRs and optimize for I/O operations
@@ -492,7 +507,7 @@ internal class OneSignalImp(
         context: Context,
         appId: String?,
         externalId: String,
-        jwtBearerToken: String?
+        jwtBearerToken: String?,
     ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
@@ -507,7 +522,10 @@ internal class OneSignalImp(
         loginHelper.login(externalId, jwtBearerToken)
     }
 
-    override suspend fun logout(context: Context, appId: String?) = withContext(ioDispatcher) {
+    override suspend fun logout(
+        context: Context,
+        appId: String?,
+    ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "logoutSuspend()")
 
         // Calling this again is safe if already initialized. It will be a no-op.
