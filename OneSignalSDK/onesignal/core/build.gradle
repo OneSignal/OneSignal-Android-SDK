@@ -32,7 +32,7 @@ android {
     }
     testOptions {
         unitTests.all {
-            maxParallelForks 2
+            maxParallelForks 1
             maxHeapSize '2048m'
         }
         unitTests {
