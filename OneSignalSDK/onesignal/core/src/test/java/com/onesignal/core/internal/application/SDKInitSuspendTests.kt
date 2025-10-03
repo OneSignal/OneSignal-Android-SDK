@@ -96,47 +96,12 @@ class SDKInitSuspendTests : FunSpec({
                 // Expected timeout due to operation queue processing in test environment
                 // This proves the suspend method is working correctly
                 os.isInitialized shouldBe true
-                println("✅ Login suspend method works correctly - timed out as expected due to operation queue")
+                println("Login suspend method works correctly - timed out as expected due to operation queue")
             }
         }
     }
 
-    test("login suspend method throws IllegalArgumentException for null appId") {
-        // Given
-        val context = getApplicationContext<Context>()
-        val os = OneSignalImp()
-        val testExternalId = "testUser123"
-
-        runBlocking {
-            // When / Then
-            try {
-                os.login(context, null, testExternalId)
-                // Should not reach here
-                false shouldBe true
-            } catch (e: IllegalArgumentException) {
-                // Expected behavior
-                e.message shouldBe "appId cannot be null for login"
-            }
-        }
-    }
-
-    test("logout suspend method throws IllegalArgumentException for null appId") {
-        // Given
-        val context = getApplicationContext<Context>()
-        val os = OneSignalImp()
-
-        runBlocking {
-            // When / Then
-            try {
-                os.logout(context, null)
-                // Should not reach here
-                false shouldBe true
-            } catch (e: IllegalArgumentException) {
-                // Expected behavior
-                e.message shouldBe "appId cannot be null for logout"
-            }
-        }
-    }
+    // Note: Tests for null appId removed since appId is now non-nullable
 
     test("login suspend method with JWT token") {
         // Given
@@ -158,7 +123,7 @@ class SDKInitSuspendTests : FunSpec({
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
                 // Expected timeout due to operation queue processing
                 os.isInitialized shouldBe true
-                println("✅ Login with JWT suspend method works correctly - timed out as expected due to operation queue")
+                println("Login with JWT suspend method works correctly - timed out as expected due to operation queue")
             }
         }
     }
@@ -186,7 +151,7 @@ class SDKInitSuspendTests : FunSpec({
                 // Expected timeout due to operation queue processing in test environment
                 // This proves the suspend method is working correctly
                 os.isInitialized shouldBe true
-                println("✅ Logout suspend method works correctly - timed out as expected due to operation queue")
+                println("Logout suspend method works correctly - timed out as expected due to operation queue")
             }
         }
     }
@@ -213,7 +178,7 @@ class SDKInitSuspendTests : FunSpec({
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
                 // Expected timeout due to operation queue processing
                 os.isInitialized shouldBe true
-                println("✅ Multiple login calls suspend method works correctly - timed out as expected due to operation queue")
+                println("Multiple login calls suspend method works correctly - timed out as expected due to operation queue")
             }
         }
     }
@@ -238,7 +203,7 @@ class SDKInitSuspendTests : FunSpec({
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
                 // Expected timeout due to operation queue processing
                 os.isInitialized shouldBe true
-                println("✅ Login/logout sequence suspend methods work correctly - timed out as expected due to operation queue")
+                println("Login/logout sequence suspend methods work correctly - timed out as expected due to operation queue")
             }
         }
     }

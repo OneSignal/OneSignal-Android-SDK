@@ -128,7 +128,7 @@ class LoginHelperTests : FunSpec({
                     operation.appId shouldBe appId
                     operation.onesignalId shouldBe newOneSignalId
                     operation.externalId shouldBe newExternalId
-//                    operation.existingOneSignalId shouldBe currentOneSignalId
+                    operation.existingOnesignalId shouldBe null // Current user already has external ID, so no existing OneSignal ID
                 },
             )
         }
@@ -188,7 +188,7 @@ class LoginHelperTests : FunSpec({
                     operation.appId shouldBe appId
                     operation.onesignalId shouldBe newOneSignalId
                     operation.externalId shouldBe newExternalId
-//                    operation.existingOneSignalId shouldBe currentOneSignalId // For conversion
+                    operation.existingOnesignalId shouldBe currentOneSignalId // For conversion
                 },
             )
         }

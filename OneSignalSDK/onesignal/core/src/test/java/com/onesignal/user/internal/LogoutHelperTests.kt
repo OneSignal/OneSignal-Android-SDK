@@ -93,7 +93,7 @@ class LogoutHelperTests : FunSpec({
                     operation.appId shouldBe appId
                     operation.onesignalId shouldBe onesignalId
                     operation.externalId shouldBe null // Device-scoped user after logout
-//                    operation.existingOneSignalId shouldBe null
+                    operation.existingOnesignalId shouldBe null
                 },
             )
         }
