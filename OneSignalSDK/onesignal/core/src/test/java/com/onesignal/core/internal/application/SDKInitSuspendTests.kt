@@ -44,7 +44,7 @@ class SDKInitSuspendTests : FunSpec({
         runBlocking {
             // When
             val result = os.initWithContextSuspend(context, null)
-            
+
             // Then - should return false because no appId is provided and configModel doesn't have an appId
             result shouldBe false
             os.isInitialized shouldBe false
@@ -211,9 +211,10 @@ class SDKInitSuspendTests : FunSpec({
         val oneSignalImp = OneSignalImp()
 
         // When/Then - should throw exception immediately
-        val exception = shouldThrow<IllegalStateException> {
-            oneSignalImp.login("testUser", null)
-        }
+        val exception =
+            shouldThrow<IllegalStateException> {
+                oneSignalImp.login("testUser", null)
+            }
 
         // Should throw immediately because isInitialized is false
         exception.message shouldBe "Must call 'initWithContext' before 'login'"
@@ -225,9 +226,10 @@ class SDKInitSuspendTests : FunSpec({
 
         // When/Then - should throw exception immediately
         runBlocking {
-            val exception = shouldThrow<IllegalStateException> {
-                oneSignalImp.loginSuspend("testUser", null)
-            }
+            val exception =
+                shouldThrow<IllegalStateException> {
+                    oneSignalImp.loginSuspend("testUser", null)
+                }
 
             // Should throw immediately because isInitialized is false
             exception.message shouldBe "Must call 'initWithContext' before use"
@@ -240,9 +242,10 @@ class SDKInitSuspendTests : FunSpec({
 
         // When/Then - should throw exception immediately
         runBlocking {
-            val exception = shouldThrow<IllegalStateException> {
-                oneSignalImp.logoutSuspend()
-            }
+            val exception =
+                shouldThrow<IllegalStateException> {
+                    oneSignalImp.logoutSuspend()
+                }
 
             // Should throw immediately because isInitialized is false
             exception.message shouldBe "Must call 'initWithContext' before use"

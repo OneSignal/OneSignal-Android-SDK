@@ -216,46 +216,45 @@ class OneSignalImpTests : FunSpec({
         // This test documents that waitForInit() has timeout protection
         // In a real scenario, if initWithContext was never called,
         // waitForInit() would timeout after 30 seconds and throw an exception
-        
+
         // Given - a fresh OneSignalImp instance
         val oneSignalImp = OneSignalImp()
-        
+
         // The timeout behavior is built into CompletionAwaiter.await()
         // which waits for up to 30 seconds (or 4.8 seconds on main thread)
         // before timing out and returning false
-        
+
         // NOTE: We don't actually test the 30-second timeout here because:
         // 1. It would make tests too slow (30 seconds per test)
         // 2. The timeout is tested in CompletionAwaiterTests
         // 3. This test documents the behavior for developers
-        
+
         oneSignalImp.isInitialized shouldBe false
     }
 
     test("waitForInit timeout mechanism exists - CompletionAwaiter integration") {
         // This test verifies that the timeout mechanism is properly integrated
         // by checking that CompletionAwaiter has timeout capabilities
-        
+
         // Given
         val oneSignalImp = OneSignalImp()
-        
+
         // The timeout behavior is implemented through CompletionAwaiter.await()
         // which has a default timeout of 30 seconds (or 4.8 seconds on main thread)
-        
+
         // We can verify the timeout mechanism exists by checking:
         // 1. The CompletionAwaiter is properly initialized
         // 2. The initState is NOT_STARTED (which would trigger timeout)
         // 3. The isInitialized property correctly reflects the state
-        
+
         oneSignalImp.isInitialized shouldBe false
-        
+
         // In a real scenario where initWithContext is never called:
         // - waitForInit() would call initAwaiter.await()
         // - CompletionAwaiter.await() would wait up to 30 seconds
         // - After timeout, it would return false
         // - waitForInit() would then throw "initWithContext was not called or timed out"
-        
+
         // This test documents this behavior without actually waiting 30 seconds
     }
-
 })

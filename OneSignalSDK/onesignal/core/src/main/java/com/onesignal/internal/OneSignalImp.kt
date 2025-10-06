@@ -516,16 +516,16 @@ internal class OneSignalImp(
         loginHelper.login(externalId, jwtBearerToken)
     }
 
-    override suspend fun logoutSuspend(
-    ) = withContext(ioDispatcher) {
-        Logging.log(LogLevel.DEBUG, "logoutSuspend()")
+    override suspend fun logoutSuspend() =
+        withContext(ioDispatcher) {
+            Logging.log(LogLevel.DEBUG, "logoutSuspend()")
 
-        suspendUntilInit()
+            suspendUntilInit()
 
-        if (!isInitialized) {
-            throw IllegalStateException("'initWithContext failed' before 'logout'")
+            if (!isInitialized) {
+                throw IllegalStateException("'initWithContext failed' before 'logout'")
+            }
+
+            logoutHelper.logout()
         }
-
-        logoutHelper.logout()
-    }
 }

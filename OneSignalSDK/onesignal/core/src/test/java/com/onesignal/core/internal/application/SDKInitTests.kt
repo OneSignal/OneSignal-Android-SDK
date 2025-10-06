@@ -279,9 +279,10 @@ class SDKInitTests : FunSpec({
         val oneSignalImp = OneSignalImp()
 
         // When/Then - should throw exception immediately
-        val exception = shouldThrow<IllegalStateException> {
-            oneSignalImp.login("testUser", null)
-        }
+        val exception =
+            shouldThrow<IllegalStateException> {
+                oneSignalImp.login("testUser", null)
+            }
 
         // Should throw immediately because isInitialized is false
         exception.message shouldBe "Must call 'initWithContext' before 'login'"
@@ -292,9 +293,10 @@ class SDKInitTests : FunSpec({
         val oneSignalImp = OneSignalImp()
 
         // When/Then - should throw exception immediately
-        val exception = shouldThrow<IllegalStateException> {
-            oneSignalImp.logout()
-        }
+        val exception =
+            shouldThrow<IllegalStateException> {
+                oneSignalImp.logout()
+            }
 
         // Should throw immediately because isInitialized is false
         exception.message shouldBe "Must call 'initWithContext' before 'logout'"

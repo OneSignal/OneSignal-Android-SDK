@@ -242,8 +242,7 @@ object OneSignal {
     /**
      * Logout the current user (suspend version).
      */
-    suspend fun logoutSuspend(
-    ) {
+    suspend fun logoutSuspend() {
         oneSignal.logout()
     }
 
