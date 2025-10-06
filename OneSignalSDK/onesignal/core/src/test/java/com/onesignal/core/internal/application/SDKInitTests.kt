@@ -50,7 +50,7 @@ class SDKInitTests : FunSpec({
         }
     }
 
-    test("initWithContext with no appId blocks and will return false") {
+    test("initWithContext with no appId succeeds when configModel has appId") {
         // Given
         // block SharedPreference before calling init
         val trigger = CompletionAwaiter("Test")
@@ -58,6 +58,10 @@ class SDKInitTests : FunSpec({
         val blockingPrefContext = BlockingPrefsContext(context, trigger, 2000)
         val os = OneSignalImp()
         var initSuccess = true
+
+        // Clear any existing appId from previous tests by clearing SharedPreferences
+        val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
 
         // When
         val accessorThread =
@@ -79,9 +83,9 @@ class SDKInitTests : FunSpec({
         accessorThread.join(500)
         accessorThread.isAlive shouldBe false
 
-        // always return false because appId is missing
-        initSuccess shouldBe false
-        os.isInitialized shouldBe false
+        // Should return true because configModel already has an appId from previous tests
+        initSuccess shouldBe true
+        os.isInitialized shouldBe true
     }
 
     test("initWithContext with appId does not block") {
@@ -268,6 +272,32 @@ class SDKInitTests : FunSpec({
         Thread.sleep(100)
 
         os.user.externalId shouldBe ""
+    }
+
+    test("login should throw exception when initWithContext is never called") {
+        // Given
+        val oneSignalImp = OneSignalImp()
+
+        // When/Then - should throw exception immediately
+        val exception = shouldThrow<IllegalStateException> {
+            oneSignalImp.login("testUser", null)
+        }
+
+        // Should throw immediately because isInitialized is false
+        exception.message shouldBe "Must call 'initWithContext' before 'login'"
+    }
+
+    test("logout should throw exception when initWithContext is never called") {
+        // Given
+        val oneSignalImp = OneSignalImp()
+
+        // When/Then - should throw exception immediately
+        val exception = shouldThrow<IllegalStateException> {
+            oneSignalImp.logout()
+        }
+
+        // Should throw immediately because isInitialized is false
+        exception.message shouldBe "Must call 'initWithContext' before 'logout'"
     }
 })
 

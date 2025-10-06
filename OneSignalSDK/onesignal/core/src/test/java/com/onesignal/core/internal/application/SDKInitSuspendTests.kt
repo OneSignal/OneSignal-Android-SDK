@@ -6,6 +6,7 @@ import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.internal.OneSignalImp
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
@@ -35,21 +36,18 @@ class SDKInitSuspendTests : FunSpec({
         }
     }
 
-    test("initWithContextSuspend with null appId fails gracefully") {
+    test("initWithContextSuspend with null appId fails when configModel has no appId") {
         // Given
         val context = getApplicationContext<Context>()
         val os = OneSignalImp()
 
         runBlocking {
             // When
-            try {
-                val result = os.initWithContextSuspend(context, null)
-                // Should not reach here due to NullPointerException
-                result shouldBe false
-            } catch (e: NullPointerException) {
-                // Expected behavior - null appId causes NPE
-                os.isInitialized shouldBe false
-            }
+            val result = os.initWithContextSuspend(context, null)
+            
+            // Then - should return false because no appId is provided and configModel doesn't have an appId
+            result shouldBe false
+            os.isInitialized shouldBe false
         }
     }
 
@@ -88,7 +86,7 @@ class SDKInitSuspendTests : FunSpec({
             // Login with timeout - demonstrates suspend method works correctly
             try {
                 withTimeout(2000) { // 2 second timeout
-                    os.login(context, "testAppId", testExternalId)
+                    os.login(testExternalId)
                 }
                 // If we get here, login completed successfully (unlikely in test env)
                 os.isInitialized shouldBe true
@@ -117,7 +115,7 @@ class SDKInitSuspendTests : FunSpec({
 
             try {
                 withTimeout(2000) { // 2 second timeout
-                    os.login(context, "testAppId", testExternalId, jwtToken)
+                    os.login(testExternalId, jwtToken)
                 }
                 os.isInitialized shouldBe true
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
@@ -143,7 +141,7 @@ class SDKInitSuspendTests : FunSpec({
             // Logout with timeout - demonstrates suspend method works correctly
             try {
                 withTimeout(2000) { // 2 second timeout
-                    os.logout(context, "testAppId")
+                    os.logout()
                 }
                 // If we get here, logout completed successfully (unlikely in test env)
                 os.isInitialized shouldBe true
@@ -170,9 +168,9 @@ class SDKInitSuspendTests : FunSpec({
 
             try {
                 withTimeout(3000) { // 3 second timeout for multiple operations
-                    os.login(context, "testAppId", "user1")
-                    os.login(context, "testAppId", "user2")
-                    os.login(context, "testAppId", "user3")
+                    os.login("user1")
+                    os.login("user2")
+                    os.login("user3")
                 }
                 os.isInitialized shouldBe true
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
@@ -195,9 +193,9 @@ class SDKInitSuspendTests : FunSpec({
 
             try {
                 withTimeout(3000) { // 3 second timeout for sequence
-                    os.login(context, "testAppId", "user1")
-                    os.logout(context, "testAppId")
-                    os.login(context, "testAppId", "user2")
+                    os.login("user1")
+                    os.logout()
+                    os.login("user2")
                 }
                 os.isInitialized shouldBe true
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
@@ -205,6 +203,49 @@ class SDKInitSuspendTests : FunSpec({
                 os.isInitialized shouldBe true
                 println("Login/logout sequence suspend methods work correctly - timed out as expected due to operation queue")
             }
+        }
+    }
+
+    test("login should throw exception when initWithContext is never called") {
+        // Given
+        val oneSignalImp = OneSignalImp()
+
+        // When/Then - should throw exception immediately
+        val exception = shouldThrow<IllegalStateException> {
+            oneSignalImp.login("testUser", null)
+        }
+
+        // Should throw immediately because isInitialized is false
+        exception.message shouldBe "Must call 'initWithContext' before 'login'"
+    }
+
+    test("loginSuspend should throw exception when initWithContext is never called") {
+        // Given
+        val oneSignalImp = OneSignalImp()
+
+        // When/Then - should throw exception immediately
+        runBlocking {
+            val exception = shouldThrow<IllegalStateException> {
+                oneSignalImp.loginSuspend("testUser", null)
+            }
+
+            // Should throw immediately because isInitialized is false
+            exception.message shouldBe "Must call 'initWithContext' before use"
+        }
+    }
+
+    test("logoutSuspend should throw exception when initWithContext is never called") {
+        // Given
+        val oneSignalImp = OneSignalImp()
+
+        // When/Then - should throw exception immediately
+        runBlocking {
+            val exception = shouldThrow<IllegalStateException> {
+                oneSignalImp.logoutSuspend()
+            }
+
+            // Should throw immediately because isInitialized is false
+            exception.message shouldBe "Must call 'initWithContext' before use"
         }
     }
 })

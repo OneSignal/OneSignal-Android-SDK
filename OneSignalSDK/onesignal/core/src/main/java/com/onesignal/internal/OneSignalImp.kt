@@ -40,8 +40,12 @@ import com.onesignal.user.internal.resolveAppId
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+
+private const val MAX_TIMEOUT_TO_INIT = 30_000L // 30 seconds
 
 internal class OneSignalImp(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
@@ -57,7 +61,6 @@ internal class OneSignalImp(
     override val isInitialized: Boolean
         get() = initState == InitState.SUCCESS
 
-    @Deprecated(message = "Use suspend version", ReplaceWith("get or set consentRequired"))
     override var consentRequired: Boolean
         get() =
             if (isInitialized) {
@@ -72,7 +75,6 @@ internal class OneSignalImp(
             }
         }
 
-    @Deprecated(message = "Use suspend version", ReplaceWith("get or set consentGiven"))
     override var consentGiven: Boolean
         get() =
             if (isInitialized) {
@@ -91,7 +93,6 @@ internal class OneSignalImp(
             }
         }
 
-    @Deprecated(message = "Use suspend version", ReplaceWith("get or set disableGMSMissingPrompt"))
     override var disableGMSMissingPrompt: Boolean
         get() =
             if (isInitialized) {
@@ -109,27 +110,22 @@ internal class OneSignalImp(
     // we hardcode the DebugManager implementation so it can be used prior to calling `initWithContext`
     override val debug: IDebugManager = DebugManager()
 
-    @Deprecated(message = "Use suspend version", ReplaceWith("getSession"))
     override val session: ISessionManager
         get() =
             waitAndReturn { services.getService() }
 
-    @Deprecated(message = "Use suspend version", ReplaceWith("getNotifications"))
     override val notifications: INotificationsManager
         get() =
             waitAndReturn { services.getService() }
 
-    @Deprecated(message = "Use suspend version", ReplaceWith("get or set location"))
     override val location: ILocationManager
         get() =
             waitAndReturn { services.getService() }
 
-    @Deprecated(message = "Use suspend version", ReplaceWith("get or set inAppMessages"))
     override val inAppMessages: IInAppMessagesManager
         get() =
             waitAndReturn { services.getService() }
 
-    @Deprecated(message = "Use suspend version", ReplaceWith("getUser"))
     override val user: IUserManager
         get() =
             waitAndReturn { services.getService() }
@@ -248,7 +244,6 @@ internal class OneSignalImp(
         return startupService
     }
 
-    @Deprecated(message = "Use suspend version", ReplaceWith("initWithContextSuspend(context, appId)"))
     override fun initWithContext(
         context: Context,
         appId: String,
@@ -305,10 +300,6 @@ internal class OneSignalImp(
         return true
     }
 
-    @Deprecated(
-        "Use suspend version",
-        replaceWith = ReplaceWith("login(externalId, jwtBearerToken)"),
-    )
     override fun login(
         externalId: String,
         jwtBearerToken: String?,
@@ -323,7 +314,6 @@ internal class OneSignalImp(
         suspendifyOnThread { loginHelper.login(externalId, jwtBearerToken) }
     }
 
-    @Deprecated("Use suspend version", replaceWith = ReplaceWith("suspend fun logout()"))
     override fun logout() {
         Logging.log(LogLevel.DEBUG, "Calling deprecated logout()")
 
@@ -344,7 +334,10 @@ internal class OneSignalImp(
     override fun <T> getAllServices(c: Class<T>): List<T> = services.getAllServices(c)
 
     private fun waitForInit() {
-        initAwaiter.await()
+        val completed = initAwaiter.await()
+        if (!completed) {
+            throw IllegalStateException("initWithContext was timed out")
+        }
     }
 
     /**
@@ -361,7 +354,13 @@ internal class OneSignalImp(
             }
             InitState.IN_PROGRESS -> {
                 Logging.debug("Suspend waiting for init to complete...")
-                initAwaiter.awaitSuspend()
+                try {
+                    withTimeout(MAX_TIMEOUT_TO_INIT) {
+                        initAwaiter.awaitSuspend()
+                    }
+                } catch (e: TimeoutCancellationException) {
+                    throw IllegalStateException("initWithContext was timed out after $MAX_TIMEOUT_TO_INIT ms")
+                }
             }
             InitState.FAILED -> {
                 throw IllegalStateException("Initialization failed. Cannot proceed.")
@@ -503,36 +502,27 @@ internal class OneSignalImp(
         }
     }
 
-    override suspend fun login(
-        context: Context,
-        appId: String,
+    override suspend fun loginSuspend(
         externalId: String,
         jwtBearerToken: String?,
     ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
-        // Calling this again is safe if already initialized. It will be a no-op.
-        // This prevents issues if the user calls login before init as we cannot guarantee
-        // the order of calls.
-        val initResult = initWithContext(context, appId)
-        if (!initResult) {
+        suspendUntilInit()
+        if (!isInitialized) {
             throw IllegalStateException("'initWithContext failed' before 'login'")
         }
 
         loginHelper.login(externalId, jwtBearerToken)
     }
 
-    override suspend fun logout(
-        context: Context,
-        appId: String,
+    override suspend fun logoutSuspend(
     ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "logoutSuspend()")
 
-        // Calling this again is safe if already initialized. It will be a no-op.
-        // This prevents issues if the user calls login before init as we cannot guarantee
-        // the order of calls.
-        val initResult = initWithContext(context, appId)
-        if (!initResult) {
+        suspendUntilInit()
+
+        if (!isInitialized) {
             throw IllegalStateException("'initWithContext failed' before 'logout'")
         }
 

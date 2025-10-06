@@ -227,35 +227,24 @@ object OneSignal {
 
     /**
      * Login a user with external ID and optional JWT token (suspend version).
-     * Handles initialization automatically.
      *
-     * @param context Application context is recommended for SDK operations
-     * @param appId The OneSignal app ID
      * @param externalId External user ID for login
      * @param jwtBearerToken Optional JWT token for authentication
      */
     @JvmStatic
-    suspend fun login(
-        context: Context,
-        appId: String,
+    suspend fun loginSuspend(
         externalId: String,
         jwtBearerToken: String? = null,
     ) {
-        oneSignal.login(context, appId, externalId, jwtBearerToken)
+        oneSignal.login(externalId, jwtBearerToken)
     }
 
     /**
      * Logout the current user (suspend version).
-     * Handles initialization automatically.
-     *
-     * @param context Application context is recommended for SDK operations
-     * @param appId The OneSignal app ID
      */
-    suspend fun logout(
-        context: Context,
-        appId: String,
+    suspend fun logoutSuspend(
     ) {
-        oneSignal.logout(context, appId)
+        oneSignal.logout()
     }
 
     /**

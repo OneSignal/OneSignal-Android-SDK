@@ -93,7 +93,7 @@ class AppIdHelperTests : FunSpec({
         val result = resolveAppId(null, configModel, mockPreferencesService)
 
         // Then
-        result.appId shouldBe null // input was null, so resolved stays null but config has existing
+        result.appId shouldBe differentAppId // should return the existing appId from configModel
         result.forceCreateUser shouldBe false
         result.failed shouldBe false
 

@@ -30,6 +30,9 @@ fun resolveAppId(
             }
             forceCreateUser = true
             resolvedAppId = legacyAppId
+        } else {
+            // configModel already has an appId, use it
+            resolvedAppId = configModel.appId
         }
     }
     return AppIdResolution(resolvedAppId, forceCreateUser, false)
