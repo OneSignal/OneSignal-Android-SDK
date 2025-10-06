@@ -2,20 +2,20 @@ package com.onesignal.common.threading
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.newSingleThreadContext
 
 object OSPrimaryCoroutineScope {
-    // CoroutineScope tied to the main thread
-    private val mainScope = CoroutineScope(newSingleThreadContext(name = "OSPrimaryCoroutineScope"))
+    // Uses computation dispatcher for CPU-intensive operations
+    private val computationScope = CoroutineScope(OneSignalDispatchers.Computation)
 
     /**
-     * Executes the given [block] on the OS primary coroutine scope.
+     * Executes the given [block] on the computation scope.
+     * Uses OneSignal's computation dispatcher for CPU-intensive work.
      */
     fun execute(block: suspend () -> Unit) {
-        mainScope.launch {
+        computationScope.launch {
             block()
         }
     }
 
-    suspend fun waitForIdle() = mainScope.launch { }.join()
+    suspend fun waitForIdle() = computationScope.launch { }.join()
 }
