@@ -5,7 +5,8 @@ import android.os.Bundle
 import com.huawei.hms.push.RemoteMessage
 import com.onesignal.OneSignal
 import com.onesignal.common.JSONUtils
-import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.common.threading.suspendifyOnDefault
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
@@ -38,8 +39,8 @@ object OneSignalHmsEventBridge {
     ) {
         if (firstToken.compareAndSet(true, false)) {
             Logging.info("OneSignalHmsEventBridge onNewToken - HMS token: $token Bundle: $bundle")
-            var registerer = OneSignal.getService<IPushRegistratorCallback>()
-            suspendifyOnThread {
+            suspendifyOnIO {
+                val registerer = OneSignal.getService<IPushRegistratorCallback>()
                 registerer.fireCallback(token)
             }
         } else {
@@ -63,12 +64,12 @@ object OneSignalHmsEventBridge {
         context: Context,
         message: RemoteMessage,
     ) {
-        suspendifyOnThread {
+        suspendifyOnDefault {
             if (!OneSignal.initWithContext(context)) {
-                return@suspendifyOnThread
+                return@suspendifyOnDefault
             }
 
-            var time = OneSignal.getService<ITime>()
+            val time = OneSignal.getService<ITime>()
             val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
 
             var data = message.data
@@ -96,10 +97,10 @@ object OneSignalHmsEventBridge {
             // Last EMUI (12 to the date) is based on Android 10, so no
             // Activity trampolining restriction exist for HMS devices
             if (data == null) {
-                return@suspendifyOnThread
+                return@suspendifyOnDefault
             }
 
-            val bundle = JSONUtils.jsonStringToBundle(data) ?: return@suspendifyOnThread
+            val bundle = JSONUtils.jsonStringToBundle(data) ?: return@suspendifyOnDefault
             bundleProcessor.processBundleFromReceiver(context, bundle)
         }
     }

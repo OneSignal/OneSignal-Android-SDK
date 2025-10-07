@@ -11,7 +11,7 @@ import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
 import com.onesignal.common.threading.CompletionAwaiter
 import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.CoreModule
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
@@ -261,7 +261,7 @@ internal class OneSignalImp(
         }
 
         // init in background and return immediately to ensure non-blocking
-        suspendifyOnThread {
+        suspendifyOnIO {
             internalInit(context, appId)
         }
         initState = InitState.SUCCESS
@@ -311,7 +311,7 @@ internal class OneSignalImp(
         }
 
         waitForInit()
-        suspendifyOnThread { loginHelper.login(externalId, jwtBearerToken) }
+        suspendifyOnIO { loginHelper.login(externalId, jwtBearerToken) }
     }
 
     override fun logout() {
@@ -322,7 +322,7 @@ internal class OneSignalImp(
         }
 
         waitForInit()
-        suspendifyOnThread { logoutHelper.logout() }
+        suspendifyOnIO { logoutHelper.logout() }
     }
 
     override fun <T> hasService(c: Class<T>): Boolean = services.hasService(c)

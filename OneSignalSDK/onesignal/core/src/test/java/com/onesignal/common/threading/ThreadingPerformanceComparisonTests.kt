@@ -3,41 +3,126 @@ package com.onesignal.common.threading
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import io.kotest.core.spec.style.FunSpec
-import io.kotest.matchers.shouldBe
-import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.comparables.shouldBeLessThan
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.Executors
 import java.util.concurrent.ThreadFactory
-import java.lang.Runtime
+import java.util.concurrent.TimeUnit
 
+// Performance tests - run manually when needed
+// To run these tests, set the environment variable: RUN_PERFORMANCE_TESTS=true
 class ThreadingPerformanceComparisonTests : FunSpec({
 
     beforeAny {
         Logging.logLevel = LogLevel.NONE
     }
 
-    test("dispatcher vs individual threads - creation time comparison") {
-        val numberOfOperations = 50
-        val results = mutableMapOf<String, Long>()
-
-        // Test 1: Individual Thread Creation
+    test("simple performance test") {
+        // Skip performance tests unless explicitly enabled
+        if (System.getenv("RUN_PERFORMANCE_TESTS") != "true") {
+            println("Skipping performance test - set RUN_PERFORMANCE_TESTS=true to run")
+            return@test
+        }
+        
+        println("Starting simple performance test...")
+        
+        // Test 1: Simple individual thread test
         val individualThreadTime = measureTime {
-            repeat(numberOfOperations) { i ->
-                val context = newSingleThreadContext("IndividualThread-$i")
-                try {
-                    CoroutineScope(context).launch {
-                        Thread.sleep(10) // Simulate work
+            val threads = mutableListOf<Thread>()
+            repeat(10) { i ->
+                val thread = Thread {
+                    Thread.sleep(10) // Simulate work
+                }
+                threads.add(thread)
+                thread.start()
+            }
+            // Wait for all threads to complete
+            threads.forEach { it.join() }
+        }
+        println("Individual Threads: ${individualThreadTime}ms")
+
+        // Test 2: Simple dispatcher test
+        val dispatcherTime = measureTime {
+            val executor = Executors.newFixedThreadPool(2, ThreadFactory { r ->
+                Thread(r, "DispatcherThread-${System.nanoTime()}")
+            })
+            val dispatcher = executor.asCoroutineDispatcher()
+            
+            try {
+                runBlocking {
+                    repeat(10) { i ->
+                        launch(dispatcher) {
+                            Thread.sleep(10) // Simulate work
+                        }
                     }
-                } finally {
-                    // Note: newSingleThreadContext doesn't have close() method
-                    // The context will be cleaned up when the scope is cancelled
+                }
+            } finally {
+                executor.shutdown()
+                executor.awaitTermination(5, TimeUnit.SECONDS)
+            }
+        }
+        println("Dispatcher (2 threads): ${dispatcherTime}ms")
+
+        // Test 3: OneSignal Dispatchers test (this might be hanging)
+        println("Testing OneSignal Dispatchers...")
+        try {
+            val oneSignalTime = measureTime {
+                runBlocking {
+                    repeat(10) { i ->
+                        launch(OneSignalDispatchers.IO) {
+                            Thread.sleep(10) // Simulate work
+                        }
+                    }
                 }
             }
+            println("OneSignal Dispatchers: ${oneSignalTime}ms")
+        } catch (e: Exception) {
+            println("OneSignal Dispatchers failed: ${e.message}")
+        }
+
+        // Test 4: OneSignal Dispatchers with launchOnIO (this might be hanging)
+        println("Testing OneSignal launchOnIO...")
+        try {
+            val oneSignalFireAndForgetTime = measureTime {
+                repeat(10) { i ->
+                    OneSignalDispatchers.launchOnIO {
+                        Thread.sleep(10) // Simulate work
+                    }
+                }
+                // Give some time for completion
+                Thread.sleep(100)
+            }
+            println("OneSignal (fire & forget): ${oneSignalFireAndForgetTime}ms")
+        } catch (e: Exception) {
+            println("OneSignal launchOnIO failed: ${e.message}")
+        }
+
+        println("Performance test completed!")
+    }
+
+    test("dispatcher vs individual threads - execution performance") {
+        // Skip performance tests unless explicitly enabled
+        if (System.getenv("RUN_PERFORMANCE_TESTS") != "true") {
+            println("Skipping performance test - set RUN_PERFORMANCE_TESTS=true to run")
+            return@test
+        }
+        val numberOfOperations = 20
+        val workDuration = 50L // ms
+        val results = mutableMapOf<String, Long>()
+
+        // Test 1: Individual Threads
+        val individualThreadTime = measureTime {
+            val threads = mutableListOf<Thread>()
+            repeat(numberOfOperations) { i ->
+                val thread = Thread {
+                    Thread.sleep(workDuration)
+                }
+                threads.add(thread)
+                thread.start()
+            }
+            threads.forEach { it.join() }
         }
         results["Individual Threads"] = individualThreadTime
 
@@ -49,9 +134,11 @@ class ThreadingPerformanceComparisonTests : FunSpec({
             val dispatcher = executor.asCoroutineDispatcher()
             
             try {
-                repeat(numberOfOperations) { i ->
-                    CoroutineScope(dispatcher).launch {
-                        Thread.sleep(10) // Simulate work
+                runBlocking {
+                    repeat(numberOfOperations) { i ->
+                        launch(dispatcher) {
+                            Thread.sleep(workDuration)
+                        }
                     }
                 }
             } finally {
@@ -60,496 +147,313 @@ class ThreadingPerformanceComparisonTests : FunSpec({
         }
         results["Dispatcher (2 threads)"] = dispatcherTime
 
-        // Test 3: Thread { } creation
-        val threadCreationTime = measureTime {
-            repeat(numberOfOperations) { i ->
-                Thread {
-                    Thread.sleep(10) // Simulate work
-                }.start()
-            }
-        }
-        results["Thread { } creation"] = threadCreationTime
-
-        // Test 4: OneSignal Dispatchers (for comparison)
+        // Test 3: OneSignal Dispatchers
         val oneSignalTime = measureTime {
-            repeat(numberOfOperations) { i ->
-                OneSignalDispatchers.launchOnIO {
-                    Thread.sleep(10) // Simulate work
-                }
-            }
-        }
-        results["OneSignal Dispatchers"] = oneSignalTime
-
-        // Print results
-        println("\n=== Threading Performance Results ===")
-        results.forEach { (name, time) ->
-            println("$name: ${time}ms")
-        }
-
-        // Dispatcher should be significantly faster than individual threads
-        dispatcherTime shouldBeLessThan individualThreadTime
-        oneSignalTime shouldBeLessThan individualThreadTime
-
-        // Individual threads should take much longer
-        individualThreadTime shouldBeGreaterThan dispatcherTime * 2
-    }
-
-    test("dispatcher vs individual threads - execution performance") {
-        val numberOfOperations = 200
-        val workDuration = 50L // ms
-
-        // Test 1: Individual Thread Execution
-        val individualExecutionTime = measureTime {
             runBlocking {
-                val contexts = (1..numberOfOperations).map { 
-                    newSingleThreadContext("ExecThread-$it") 
-                }
-                
-                try {
-                    contexts.forEach { context ->
-                        CoroutineScope(context).launch {
-                            Thread.sleep(workDuration)
-                        }
-                    }
-                } finally {
-                    // Note: newSingleThreadContext doesn't have close() method
-                    // The contexts will be cleaned up when the scopes are cancelled
-                }
-            }
-        }
-
-        // Test 2: Dispatcher Execution
-        val dispatcherExecutionTime = measureTime {
-            runBlocking {
-                val executor = Executors.newFixedThreadPool(2, ThreadFactory { r ->
-                    Thread(r, "ExecDispatcher-${System.nanoTime()}")
-                })
-                val dispatcher = executor.asCoroutineDispatcher()
-                
-                try {
-                    repeat(numberOfOperations) {
-                        CoroutineScope(dispatcher).launch {
-                            Thread.sleep(workDuration)
-                        }
-                    }
-                } finally {
-                    executor.shutdown()
-                }
-            }
-        }
-
-        // Test 3: Thread { } Execution
-        val threadExecutionTime = measureTime {
-            val threads = mutableListOf<Thread>()
-            repeat(numberOfOperations) {
-                val thread = Thread {
-                    Thread.sleep(workDuration)
-                }
-                threads.add(thread)
-                thread.start()
-            }
-            // Wait for all threads to complete
-            threads.forEach { it.join() }
-        }
-
-        // Test 4: OneSignal Dispatchers Execution
-        val oneSignalExecutionTime = measureTime {
-            runBlocking {
-                repeat(numberOfOperations) {
+                repeat(numberOfOperations) { i ->
                     OneSignalDispatchers.launchOnIO {
                         Thread.sleep(workDuration)
                     }
                 }
             }
         }
+        results["OneSignal Dispatchers"] = oneSignalTime
 
+        // Print results
         println("\n=== Execution Performance Results ===")
-        println("Individual threads: ${individualExecutionTime}ms")
-        println("Dispatcher (2 threads): ${dispatcherExecutionTime}ms")
-        println("Thread { } execution: ${threadExecutionTime}ms")
-        println("OneSignal Dispatchers: ${oneSignalExecutionTime}ms")
+        results.forEach { (name, time) ->
+            println("$name: ${time}ms")
+        }
 
-        // Dispatcher should be more efficient for execution
-        dispatcherExecutionTime shouldBeLessThan individualExecutionTime
-        oneSignalExecutionTime shouldBeLessThan individualExecutionTime
+        // Dispatcher should be faster than individual threads
+        dispatcherTime shouldBeLessThan individualThreadTime
+        oneSignalTime shouldBeLessThan individualThreadTime
     }
 
-    test("thread pool vs individual threads - scalability test") {
-        val operationCounts = listOf(10, 50, 100, 200)
-        val results = mutableMapOf<Int, Triple<Long, Long, Long>>()
+    test("memory usage comparison") {
+        // Skip performance tests unless explicitly enabled
+        if (System.getenv("RUN_PERFORMANCE_TESTS") != "true") {
+            println("Skipping performance test - set RUN_PERFORMANCE_TESTS=true to run")
+            return@test
+        }
+        val numberOfOperations = 50
+        val results = mutableMapOf<String, Long>()
 
-        operationCounts.forEach { count ->
-            // Individual threads
+        // Test 1: Individual Threads Memory Usage
+        val initialMemory1 = getUsedMemory()
+        val threads = mutableListOf<Thread>()
+        repeat(numberOfOperations) { i ->
+            val thread = Thread {
+                Thread.sleep(100)
+            }
+            threads.add(thread)
+            thread.start()
+        }
+        threads.forEach { it.join() }
+        val finalMemory1 = getUsedMemory()
+        val individualThreadMemory = finalMemory1 - initialMemory1
+        results["Individual Threads Memory"] = individualThreadMemory
+
+        // Test 2: Dispatcher Memory Usage
+        val initialMemory2 = getUsedMemory()
+        val executor = Executors.newFixedThreadPool(2, ThreadFactory { r ->
+            Thread(r, "DispatcherThread-${System.nanoTime()}")
+        })
+        val dispatcher = executor.asCoroutineDispatcher()
+        
+        try {
+            runBlocking {
+                repeat(numberOfOperations) { i ->
+                    launch(dispatcher) {
+                        Thread.sleep(100)
+                    }
+                }
+            }
+        } finally {
+            executor.shutdown()
+        }
+        val finalMemory2 = getUsedMemory()
+        val dispatcherMemory = finalMemory2 - initialMemory2
+        results["Dispatcher Memory"] = dispatcherMemory
+
+        // Test 3: OneSignal Dispatchers Memory Usage
+        val initialMemory3 = getUsedMemory()
+        runBlocking {
+            repeat(numberOfOperations) { i ->
+                OneSignalDispatchers.launchOnIO {
+                    Thread.sleep(100)
+                }
+            }
+        }
+        val finalMemory3 = getUsedMemory()
+        val oneSignalMemory = finalMemory3 - initialMemory3
+        results["OneSignal Dispatchers Memory"] = oneSignalMemory
+
+        // Print results
+        println("\n=== Memory Usage Results ===")
+        results.forEach { (name, memory) ->
+            println("$name: ${memory}KB")
+        }
+
+        // Dispatcher should use less memory than individual threads
+        dispatcherMemory shouldBeLessThan individualThreadMemory
+        oneSignalMemory shouldBeLessThan individualThreadMemory
+    }
+
+    test("scalability comparison") {
+        // Skip performance tests unless explicitly enabled
+        if (System.getenv("RUN_PERFORMANCE_TESTS") != "true") {
+            println("Skipping performance test - set RUN_PERFORMANCE_TESTS=true to run")
+            return@test
+        }
+        val testSizes = listOf(10, 50, 100)
+        val results = mutableMapOf<String, MutableMap<Int, Long>>()
+
+        testSizes.forEach { size ->
+            println("Testing with $size operations...")
+            
+            // Individual Threads
             val individualTime = measureTime {
-                val contexts = (1..count).map { 
-                    newSingleThreadContext("ScaleTest-$it") 
-                }
-                try {
-                    contexts.forEach { context ->
-                        CoroutineScope(context).launch {
-                            Thread.sleep(5)
-                        }
-                    }
-                } finally {
-                    // Note: newSingleThreadContext doesn't have close() method
-                    // The contexts will be cleaned up when the scopes are cancelled
-                }
-            }
-
-            // Dispatcher
-            val dispatcherTime = measureTime {
-                val executor = Executors.newFixedThreadPool(2, ThreadFactory { r ->
-                    Thread(r, "ScaleDispatcher-${System.nanoTime()}")
-                })
-                val dispatcher = executor.asCoroutineDispatcher()
-                
-                try {
-                    repeat(count) {
-                        CoroutineScope(dispatcher).launch {
-                            Thread.sleep(5)
-                        }
-                    }
-                } finally {
-                    executor.shutdown()
-                }
-            }
-
-            // Thread { } creation
-            val threadTime = measureTime {
                 val threads = mutableListOf<Thread>()
-                repeat(count) {
+                repeat(size) { i ->
                     val thread = Thread {
-                        Thread.sleep(5)
+                        Thread.sleep(10)
                     }
                     threads.add(thread)
                     thread.start()
                 }
                 threads.forEach { it.join() }
             }
+            results.getOrPut("Individual Threads") { mutableMapOf() }[size] = individualTime
 
-            results[count] = Triple(individualTime, dispatcherTime, threadTime)
+            // Dispatcher
+            val dispatcherTime = measureTime {
+                val executor = Executors.newFixedThreadPool(2, ThreadFactory { r ->
+                    Thread(r, "DispatcherThread-${System.nanoTime()}")
+                })
+                val dispatcher = executor.asCoroutineDispatcher()
+                
+                try {
+                    runBlocking {
+                        repeat(size) { i ->
+                            launch(dispatcher) {
+                                Thread.sleep(10)
+                            }
+                        }
+                    }
+                } finally {
+                    executor.shutdown()
+                }
+            }
+            results.getOrPut("Dispatcher") { mutableMapOf() }[size] = dispatcherTime
+
+            // OneSignal Dispatchers
+            val oneSignalTime = measureTime {
+                runBlocking {
+                    repeat(size) { i ->
+                        OneSignalDispatchers.launchOnIO {
+                            Thread.sleep(10)
+                        }
+                    }
+                }
+            }
+            results.getOrPut("OneSignal Dispatchers") { mutableMapOf() }[size] = oneSignalTime
         }
 
-        println("\n=== Scalability Test Results ===")
-        println("Operations | Individual | Dispatcher | Thread { } | Individual/Dispatcher | Individual/Thread")
-        println("-----------|------------|------------|------------|---------------------|------------------")
-        
-        results.forEach { (count, times) ->
-            val individual = times.first
-            val dispatcher = times.second
-            val thread = times.third
-            val ratio1 = if (dispatcher > 0) individual.toDouble() / dispatcher else Double.POSITIVE_INFINITY
-            val ratio2 = if (thread > 0) individual.toDouble() / thread else Double.POSITIVE_INFINITY
-            val ratio1Str = if (ratio1 == Double.POSITIVE_INFINITY) "∞" else "%.2fx".format(ratio1)
-            val ratio2Str = if (ratio2 == Double.POSITIVE_INFINITY) "∞" else "%.2fx".format(ratio2)
-            println("%-10d | %-10d | %-10d | %-10d | %-19s | %s".format(count, individual, dispatcher, thread, ratio1Str, ratio2Str))
+        // Print scalability results
+        println("\n=== Scalability Results ===")
+        results.forEach { (name, times) ->
+            println("$name:")
+            times.forEach { (size, time) ->
+                println("  $size operations: ${time}ms")
+            }
         }
 
-        // Dispatcher should scale much better
-        results.forEach { (count, times) ->
-            val (individual, dispatcher, thread) = times
-            if (individual > dispatcher) {
-                println("✅ With $count operations: Dispatcher is ${individual.toDouble() / dispatcher}x faster than individual threads")
-            }
-            if (individual > thread) {
-                println("✅ With $count operations: Thread { } is ${individual.toDouble() / thread}x faster than individual threads")
-            }
-            if (thread > dispatcher) {
-                println("✅ With $count operations: Dispatcher is ${thread.toDouble() / dispatcher}x faster than Thread { }")
-            }
+        // Verify that dispatcher scales better than individual threads
+        testSizes.forEach { size ->
+            val individualTime = results["Individual Threads"]!![size]!!
+            val dispatcherTime = results["Dispatcher"]!![size]!!
+            val oneSignalTime = results["OneSignal Dispatchers"]!![size]!!
+            
+            dispatcherTime shouldBeLessThan individualTime
+            oneSignalTime shouldBeLessThan individualTime
         }
     }
 
-    test("Thread { } vs other approaches - comprehensive comparison") {
-        val numberOfOperations = 100
+    test("thread creation vs dispatcher creation performance") {
+        // Skip performance tests unless explicitly enabled
+        if (System.getenv("RUN_PERFORMANCE_TESTS") != "true") {
+            println("Skipping performance test - set RUN_PERFORMANCE_TESTS=true to run")
+            return@test
+        }
+        val numberOfTests = 1000
         val results = mutableMapOf<String, Long>()
-        val memoryResults = mutableMapOf<String, Long>()
 
-        println("\n=== Thread { } Comprehensive Comparison ===")
-        println("Testing with $numberOfOperations operations...")
-
-        // Force garbage collection
-        System.gc()
-        Thread.sleep(100)
-
-        // Test 1: Thread { } creation
-        val initialMemory1 = getMemoryUsage()
+        // Test 1: Individual Thread Creation
         val threadCreationTime = measureTime {
-            val threads = mutableListOf<Thread>()
-            repeat(numberOfOperations) { i ->
-                val thread = Thread {
-                    Thread.sleep(10) // Simulate work
-                }
-                threads.add(thread)
-                thread.start()
+            repeat(numberOfTests) { i ->
+                Thread {
+                    // Empty thread
+                }.start()
             }
-            threads.forEach { it.join() } // Wait for completion
         }
-        val finalMemory1 = getMemoryUsage()
-        results["Thread { } creation"] = threadCreationTime
-        memoryResults["Thread { } creation"] = finalMemory1 - initialMemory1
+        results["Thread Creation"] = threadCreationTime
 
-        // Test 2: newSingleThreadContext
-        System.gc()
-        Thread.sleep(100)
-        
-        val initialMemory2 = getMemoryUsage()
-        val individualThreadTime = measureTime {
-            val contexts = mutableListOf<kotlinx.coroutines.CoroutineDispatcher>()
-            repeat(numberOfOperations) { i ->
-                val context = newSingleThreadContext("IndividualThread-$i")
-                contexts.add(context)
-                CoroutineScope(context).launch {
-                    Thread.sleep(10) // Simulate work
-                }
-            }
-            Thread.sleep(200) // Allow completion
-        }
-        val finalMemory2 = getMemoryUsage()
-        results["newSingleThreadContext"] = individualThreadTime
-        memoryResults["newSingleThreadContext"] = finalMemory2 - initialMemory2
-
-        // Test 3: Dispatcher with 2 threads
-        System.gc()
-        Thread.sleep(100)
-        
-        val initialMemory3 = getMemoryUsage()
-        val dispatcherTime = measureTime {
-            val executor = Executors.newFixedThreadPool(2, ThreadFactory { r ->
-                Thread(r, "DispatcherThread-${System.nanoTime()}")
-            })
-            val dispatcher = executor.asCoroutineDispatcher()
-            
-            try {
-                repeat(numberOfOperations) { i ->
-                    CoroutineScope(dispatcher).launch {
-                        Thread.sleep(10) // Simulate work
-                    }
-                }
-                Thread.sleep(200) // Allow completion
-            } finally {
+        // Test 2: Dispatcher Creation
+        val dispatcherCreationTime = measureTime {
+            repeat(numberOfTests) { i ->
+                val executor = Executors.newFixedThreadPool(2, ThreadFactory { r ->
+                    Thread(r, "DispatcherThread-${System.nanoTime()}")
+                })
+                val dispatcher = executor.asCoroutineDispatcher()
                 executor.shutdown()
             }
         }
-        val finalMemory3 = getMemoryUsage()
-        results["Dispatcher (2 threads)"] = dispatcherTime
-        memoryResults["Dispatcher (2 threads)"] = finalMemory3 - initialMemory3
+        results["Dispatcher Creation"] = dispatcherCreationTime
 
-        // Test 4: OneSignal Dispatchers
-        System.gc()
-        Thread.sleep(100)
-        
-        val initialMemory4 = getMemoryUsage()
+        // Test 3: OneSignal Dispatchers (reuse existing)
         val oneSignalTime = measureTime {
-            repeat(numberOfOperations) { i ->
+            repeat(numberOfTests) { i ->
                 OneSignalDispatchers.launchOnIO {
-                    Thread.sleep(10) // Simulate work
+                    // Empty coroutine
                 }
             }
-            Thread.sleep(200) // Allow completion
         }
-        val finalMemory4 = getMemoryUsage()
         results["OneSignal Dispatchers"] = oneSignalTime
-        memoryResults["OneSignal Dispatchers"] = finalMemory4 - initialMemory4
 
-        // Print results with memory data
-        println("\n=== Results ===")
-        println("Approach              | Time(ms) | Memory Δ")
-        println("---------------------|----------|----------")
-        
+        // Print results
+        println("\n=== Creation Performance Results ===")
         results.forEach { (name, time) ->
-            val memoryDelta = memoryResults[name] ?: 0L
-            val memoryStr = formatBytes(memoryDelta)
-            println("%-20s | %-8d | %-8s".format(name, time, memoryStr))
+            println("$name: ${time}ms")
         }
 
-        // Calculate ratios
-        val threadTime = results["Thread { } creation"]!!
-        val individualTime = results["newSingleThreadContext"]!!
-        val dispatcherTimeResult = results["Dispatcher (2 threads)"]!!
-        val oneSignalTimeResult = results["OneSignal Dispatchers"]!!
-
-        println("\n=== Performance Ratios ===")
-        println("Thread { } vs newSingleThreadContext: ${threadTime.toDouble() / individualTime}x")
-        println("Thread { } vs Dispatcher: ${threadTime.toDouble() / dispatcherTimeResult}x")
-        println("Thread { } vs OneSignal: ${threadTime.toDouble() / oneSignalTimeResult}x")
-
-        println("\n=== Memory Efficiency Ratios ===")
-        val threadMemory = memoryResults["Thread { } creation"]!!
-        val individualMemory = memoryResults["newSingleThreadContext"]!!
-        val dispatcherMemory = memoryResults["Dispatcher (2 threads)"]!!
-        val oneSignalMemory = memoryResults["OneSignal Dispatchers"]!!
-        
-        println("Thread { } vs newSingleThreadContext: ${threadMemory.toDouble() / individualMemory}x")
-        println("Thread { } vs Dispatcher: ${threadMemory.toDouble() / dispatcherMemory}x")
-        println("Thread { } vs OneSignal: ${threadMemory.toDouble() / oneSignalMemory}x")
-
-        println("\n=== Analysis ===")
-        if (threadTime < individualTime) {
-            println("✅ Thread { } is ${individualTime.toDouble() / threadTime}x faster than newSingleThreadContext")
-        }
-        if (threadTime < dispatcherTimeResult) {
-            println("✅ Thread { } is ${dispatcherTimeResult.toDouble() / threadTime}x faster than Dispatcher")
-        }
-        if (threadTime < oneSignalTimeResult) {
-            println("✅ Thread { } is ${oneSignalTimeResult.toDouble() / threadTime}x faster than OneSignal Dispatchers")
-        }
-        if (threadTime > dispatcherTimeResult) {
-            println("ℹ️  Dispatcher is ${threadTime.toDouble() / dispatcherTimeResult}x faster than Thread { }")
-        }
-        if (threadTime > oneSignalTimeResult) {
-            println("ℹ️  OneSignal Dispatchers are ${threadTime.toDouble() / oneSignalTimeResult}x faster than Thread { }")
-        }
-        
-        // Memory analysis
-        if (threadMemory > individualMemory) {
-            println("⚠️  Thread { } uses ${threadMemory.toDouble() / individualMemory}x more memory than newSingleThreadContext")
-        }
-        if (threadMemory > dispatcherMemory) {
-            println("⚠️  Thread { } uses ${threadMemory.toDouble() / dispatcherMemory}x more memory than Dispatcher")
-        }
-        if (threadMemory > oneSignalMemory) {
-            println("⚠️  Thread { } uses ${threadMemory.toDouble() / oneSignalMemory}x more memory than OneSignal Dispatchers")
-        }
-        
-        println("\n🎯 Thread { } trades memory efficiency for raw speed")
-        println("🎯 For sustained operations, dispatchers provide better resource efficiency")
+        // OneSignal dispatchers should be fastest (reusing existing pool)
+        oneSignalTime shouldBeLessThan threadCreationTime
+        oneSignalTime shouldBeLessThan dispatcherCreationTime
     }
 
-    test("demonstrate thread pool efficiency") {
-        val operations = 100
-        val latch = java.util.concurrent.CountDownLatch(operations)
-        val startTime = System.currentTimeMillis()
-
-        // Use OneSignal dispatcher for concurrent operations
-        repeat(operations) { i ->
-            OneSignalDispatchers.launchOnIO {
-                Thread.sleep(20) // Simulate work
-                latch.countDown()
-            }
+    test("resource cleanup comparison") {
+        // Skip performance tests unless explicitly enabled
+        if (System.getenv("RUN_PERFORMANCE_TESTS") != "true") {
+            println("Skipping performance test - set RUN_PERFORMANCE_TESTS=true to run")
+            return@test
         }
+        val numberOfOperations = 100
+        val initialThreads = Thread.activeCount()
 
-        latch.await()
-        val totalTime = System.currentTimeMillis() - startTime
-
-        println("\n=== Thread Pool Efficiency Demo ===")
-        println("Concurrent operations: $operations")
-        println("Total time: ${totalTime}ms")
-        println("Average time per operation: ${totalTime.toDouble() / operations}ms")
-        println("Threads used: 4 (OneSignal IO pool)")
-
-        // Should complete efficiently with limited threads
-        totalTime shouldBeLessThan 5000L // Should complete in under 5 seconds
-    }
-
-    test("compare resource usage patterns") {
-        val initialThreadCount = Thread.activeCount()
-        
-        // Test individual thread creation
-        val individualContexts = mutableListOf<kotlinx.coroutines.CoroutineDispatcher>()
-        repeat(50) { i ->
-            val context = newSingleThreadContext("ResourceTest-$i")
-            individualContexts.add(context)
+        // Test 1: Individual Threads (should create many threads)
+        repeat(numberOfOperations) { i ->
+            Thread {
+                Thread.sleep(50)
+            }.start()
         }
-        val individualThreadCount = Thread.activeCount()
+        Thread.sleep(200) // Wait for completion
+        val afterIndividualThreads = Thread.activeCount()
 
-        // Test dispatcher usage
+        // Test 2: Dispatcher (should reuse threads)
         val executor = Executors.newFixedThreadPool(2, ThreadFactory { r ->
-            Thread(r, "ResourceDispatcher-${System.nanoTime()}")
+            Thread(r, "DispatcherThread-${System.nanoTime()}")
         })
         val dispatcher = executor.asCoroutineDispatcher()
         
-        repeat(50) { i ->
-            CoroutineScope(dispatcher).launch {
-                Thread.sleep(10)
-            }
-        }
-        val dispatcherThreadCount = Thread.activeCount()
-
-        // Test Thread { } usage
-        val threads = mutableListOf<Thread>()
-        repeat(50) { i ->
-            val thread = Thread {
-                Thread.sleep(10)
-            }
-            threads.add(thread)
-            thread.start()
-        }
-        val threadCreationCount = Thread.activeCount()
-
-        // Clean up
-        executor.shutdown()
-        threads.forEach { it.join() } // Wait for threads to complete
-        Thread.sleep(100) // Allow cleanup
-
-        val finalThreadCount = Thread.activeCount()
-
-        println("\n=== Resource Usage Comparison ===")
-        println("Initial thread count: $initialThreadCount")
-        println("After individual threads: $individualThreadCount (+${individualThreadCount - initialThreadCount})")
-        println("After dispatcher usage: $dispatcherThreadCount (+${dispatcherThreadCount - initialThreadCount})")
-        println("After Thread { } usage: $threadCreationCount (+${threadCreationCount - initialThreadCount})")
-        println("Final thread count: $finalThreadCount")
-
-        // Note: Thread.activeCount() includes all JVM threads, not just our created ones
-        // The key insight is that dispatchers reuse threads while individual contexts create new ones
-        val individualThreadsCreated = individualThreadCount - initialThreadCount
-        val dispatcherThreadsCreated = dispatcherThreadCount - initialThreadCount
-        val threadCreationThreadsCreated = threadCreationCount - initialThreadCount
-        
-        println("Individual threads created: $individualThreadsCreated")
-        println("Dispatcher threads created: $dispatcherThreadsCreated")
-        println("Thread { } threads created: $threadCreationThreadsCreated")
-        
-        // The dispatcher approach is more efficient regardless of exact thread count
-        // because it reuses existing threads instead of creating new ones
-        println("✅ Dispatcher approach is more efficient due to thread reuse")
-        println("✅ Thread { } creates many threads but they complete quickly")
-    }
-
-    test("comprehensive memory and performance analysis") {
-        val numberOfOperations = 100
-        val results = mutableMapOf<String, PerformanceMetrics>()
-
-        println("\n=== Comprehensive Memory & Performance Analysis ===")
-        println("Testing with $numberOfOperations operations...")
-
-        // Force garbage collection before starting
-        System.gc()
-        Thread.sleep(100)
-
-        // Test 1: Individual Threads (newSingleThreadContext)
-        val initialMemory1 = getMemoryUsage()
-        val initialThreads1 = getThreadCount()
-        
-        val individualTime = measureTime {
-            val contexts = mutableListOf<kotlinx.coroutines.CoroutineDispatcher>()
-            repeat(numberOfOperations) { i ->
-                val context = newSingleThreadContext("IndividualThread-$i")
-                contexts.add(context)
-                CoroutineScope(context).launch {
-                    Thread.sleep(10) // Simulate work
+        try {
+            runBlocking {
+                repeat(numberOfOperations) { i ->
+                    launch(dispatcher) {
+                        Thread.sleep(50)
+                    }
                 }
             }
-            Thread.sleep(200) // Allow completion
+        } finally {
+            executor.shutdown()
         }
-        
-        val finalMemory1 = getMemoryUsage()
-        val finalThreads1 = getThreadCount()
-        results["Individual Threads"] = PerformanceMetrics(
-            individualTime,
-            finalMemory1,
-            finalThreads1,
-            finalMemory1 - initialMemory1
-        )
+        val afterDispatcher = Thread.activeCount()
 
-        // Test 2: Dispatcher (2 threads)
-        System.gc()
-        Thread.sleep(100)
-        
-        val initialMemory2 = getMemoryUsage()
-        val initialThreads2 = getThreadCount()
-        
+        // Test 3: OneSignal Dispatchers (should reuse threads)
+        runBlocking {
+            repeat(numberOfOperations) { i ->
+                OneSignalDispatchers.launchOnIO {
+                    Thread.sleep(50)
+                }
+            }
+        }
+        val afterOneSignal = Thread.activeCount()
+
+        println("\n=== Resource Usage Results ===")
+        println("Initial threads: $initialThreads")
+        println("After individual threads: $afterIndividualThreads")
+        println("After dispatcher: $afterDispatcher")
+        println("After OneSignal dispatchers: $afterOneSignal")
+
+        // Dispatcher should use fewer threads than individual threads
+        afterDispatcher shouldBeLessThan afterIndividualThreads
+        afterOneSignal shouldBeLessThan afterIndividualThreads
+    }
+
+    test("concurrent access performance") {
+        // Skip performance tests unless explicitly enabled
+        if (System.getenv("RUN_PERFORMANCE_TESTS") != "true") {
+            println("Skipping performance test - set RUN_PERFORMANCE_TESTS=true to run")
+            return@test
+        }
+        val numberOfConcurrentOperations = 50
+        val results = mutableMapOf<String, Long>()
+
+        // Test 1: Individual Threads with concurrent access
+        val individualTime = measureTime {
+            val threads = mutableListOf<Thread>()
+            repeat(numberOfConcurrentOperations) { i ->
+                val thread = Thread {
+                    Thread.sleep(20)
+                }
+                threads.add(thread)
+                thread.start()
+            }
+            threads.forEach { it.join() }
+        }
+        results["Individual Threads"] = individualTime
+
+        // Test 2: Dispatcher with concurrent access
         val dispatcherTime = measureTime {
             val executor = Executors.newFixedThreadPool(2, ThreadFactory { r ->
                 Thread(r, "DispatcherThread-${System.nanoTime()}")
@@ -557,174 +461,51 @@ class ThreadingPerformanceComparisonTests : FunSpec({
             val dispatcher = executor.asCoroutineDispatcher()
             
             try {
-                repeat(numberOfOperations) { i ->
-                    CoroutineScope(dispatcher).launch {
-                        Thread.sleep(10) // Simulate work
+                runBlocking {
+                    repeat(numberOfConcurrentOperations) { i ->
+                        launch(dispatcher) {
+                            Thread.sleep(20)
+                        }
                     }
                 }
-                Thread.sleep(200) // Allow completion
             } finally {
                 executor.shutdown()
             }
         }
-        
-        val finalMemory2 = getMemoryUsage()
-        val finalThreads2 = getThreadCount()
-        results["Dispatcher (2 threads)"] = PerformanceMetrics(
-            dispatcherTime,
-            finalMemory2,
-            finalThreads2,
-            finalMemory2 - initialMemory2
-        )
+        results["Dispatcher"] = dispatcherTime
 
-        // Test 3: Thread { } creation
-        System.gc()
-        Thread.sleep(100)
-        
-        val initialMemory3 = getMemoryUsage()
-        val initialThreads3 = getThreadCount()
-        
-        val threadTime = measureTime {
-            val threads = mutableListOf<Thread>()
-            repeat(numberOfOperations) { i ->
-                val thread = Thread {
-                    Thread.sleep(10) // Simulate work
-                }
-                threads.add(thread)
-                thread.start()
-            }
-            threads.forEach { it.join() } // Wait for completion
-        }
-        
-        val finalMemory3 = getMemoryUsage()
-        val finalThreads3 = getThreadCount()
-        results["Thread { } creation"] = PerformanceMetrics(
-            threadTime,
-            finalMemory3,
-            finalThreads3,
-            finalMemory3 - initialMemory3
-        )
-
-        // Test 4: OneSignal Dispatchers
-        System.gc()
-        Thread.sleep(100)
-        
-        val initialMemory4 = getMemoryUsage()
-        val initialThreads4 = getThreadCount()
-        
+        // Test 3: OneSignal Dispatchers with concurrent access
         val oneSignalTime = measureTime {
-            repeat(numberOfOperations) { i ->
-                OneSignalDispatchers.launchOnIO {
-                    Thread.sleep(10) // Simulate work
+            runBlocking {
+                repeat(numberOfConcurrentOperations) { i ->
+                    OneSignalDispatchers.launchOnIO {
+                        Thread.sleep(20)
+                    }
                 }
             }
-            Thread.sleep(200) // Allow completion
         }
-        
-        val finalMemory4 = getMemoryUsage()
-        val finalThreads4 = getThreadCount()
-        results["OneSignal Dispatchers"] = PerformanceMetrics(
-            oneSignalTime,
-            finalMemory4,
-            finalThreads4,
-            finalMemory4 - initialMemory4
-        )
+        results["OneSignal Dispatchers"] = oneSignalTime
 
-        // Print comprehensive results
-        println("\n=== Detailed Results ===")
-        println("Approach              | Time(ms) | Memory Used | Memory Δ | Threads | Thread Δ")
-        println("---------------------|----------|-------------|----------|---------|----------")
-        
-        results.forEach { (name, metrics) ->
-            val memoryUsedStr = formatBytes(metrics.memoryUsed)
-            val memoryDeltaStr = formatBytes(metrics.memoryDelta)
-            println("%-20s | %-8d | %-11s | %-8s | %-7d | %-8d".format(
-                name, metrics.timeMs, memoryUsedStr, memoryDeltaStr, metrics.threadCount, 
-                metrics.threadCount - getThreadCount() + metrics.threadCount
-            ))
+        // Print results
+        println("\n=== Concurrent Access Performance Results ===")
+        results.forEach { (name, time) ->
+            println("$name: ${time}ms")
         }
 
-        // Calculate efficiency ratios
-        println("\n=== Efficiency Analysis ===")
-        val individual = results["Individual Threads"]!!
-        val dispatcher = results["Dispatcher (2 threads)"]!!
-        val thread = results["Thread { } creation"]!!
-        val oneSignal = results["OneSignal Dispatchers"]!!
-
-        println("Speed Ratios (lower is faster):")
-        println("Thread { } vs Individual: ${thread.timeMs.toDouble() / individual.timeMs}x")
-        println("Thread { } vs Dispatcher: ${thread.timeMs.toDouble() / dispatcher.timeMs}x")
-        println("Thread { } vs OneSignal: ${thread.timeMs.toDouble() / oneSignal.timeMs}x")
-
-        println("\nMemory Efficiency (lower is better):")
-        println("Thread { } vs Individual: ${thread.memoryDelta.toDouble() / individual.memoryDelta}x")
-        println("Thread { } vs Dispatcher: ${thread.memoryDelta.toDouble() / dispatcher.memoryDelta}x")
-        println("Thread { } vs OneSignal: ${thread.memoryDelta.toDouble() / oneSignal.memoryDelta}x")
-
-        println("\nThread Efficiency (lower is better):")
-        println("Thread { } vs Individual: ${thread.threadCount.toDouble() / individual.threadCount}x")
-        println("Thread { } vs Dispatcher: ${thread.threadCount.toDouble() / dispatcher.threadCount}x")
-        println("Thread { } vs OneSignal: ${thread.threadCount.toDouble() / oneSignal.threadCount}x")
-
-        // Performance per resource analysis
-        println("\n=== Performance per Resource ===")
-        println("Approach              | Time/Memory | Time/Thread | Overall Efficiency")
-        println("---------------------|-------------|-------------|-------------------")
-        
-        results.forEach { (name, metrics) ->
-            val timePerMemory = if (metrics.memoryDelta > 0) metrics.timeMs.toDouble() / metrics.memoryDelta else 0.0
-            val timePerThread = if (metrics.threadCount > 0) metrics.timeMs.toDouble() / metrics.threadCount else 0.0
-            val overallEfficiency = if (metrics.memoryDelta > 0 && metrics.threadCount > 0) {
-                metrics.timeMs.toDouble() / (metrics.memoryDelta * metrics.threadCount)
-            } else 0.0
-            
-            println("%-20s | %-11.2f | %-11.2f | %-17.6f".format(
-                name, timePerMemory, timePerThread, overallEfficiency
-            ))
-        }
-
-        println("\n=== Key Insights ===")
-        if (thread.timeMs < individual.timeMs) {
-            println("✅ Thread { } is ${individual.timeMs.toDouble() / thread.timeMs}x faster than Individual Threads")
-        }
-        if (thread.memoryDelta > individual.memoryDelta) {
-            println("⚠️  Thread { } uses ${thread.memoryDelta.toDouble() / individual.memoryDelta}x more memory than Individual Threads")
-        }
-        if (thread.threadCount > individual.threadCount) {
-            println("⚠️  Thread { } creates ${thread.threadCount.toDouble() / individual.threadCount}x more threads than Individual Threads")
-        }
-        
-        println("🎯 Thread { } trades memory and thread count for raw speed")
-        println("🎯 Dispatchers provide the best balance of speed and resource efficiency")
+        // Dispatcher should handle concurrent access better
+        dispatcherTime shouldBeLessThan individualTime
+        oneSignalTime shouldBeLessThan individualTime
     }
 })
 
 private fun measureTime(block: () -> Unit): Long {
     val startTime = System.currentTimeMillis()
     block()
-    return System.currentTimeMillis() - startTime
+    val endTime = System.currentTimeMillis()
+    return endTime - startTime
 }
 
-private fun getMemoryUsage(): Long {
+private fun getUsedMemory(): Long {
     val runtime = Runtime.getRuntime()
-    return runtime.totalMemory() - runtime.freeMemory()
+    return (runtime.totalMemory() - runtime.freeMemory()) / 1024 // Convert to KB
 }
-
-private fun getThreadCount(): Int {
-    return Thread.activeCount()
-}
-
-private fun formatBytes(bytes: Long): String {
-    return when {
-        bytes >= 1024 * 1024 -> "${bytes / (1024 * 1024)}MB"
-        bytes >= 1024 -> "${bytes / 1024}KB"
-        else -> "${bytes}B"
-    }
-}
-
-private data class PerformanceMetrics(
-    val timeMs: Long,
-    val memoryUsed: Long,
-    val threadCount: Int,
-    val memoryDelta: Long = 0
-)

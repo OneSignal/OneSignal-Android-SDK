@@ -31,7 +31,8 @@ import android.content.Intent
 import android.os.Bundle
 import com.onesignal.OneSignal
 import com.onesignal.common.AndroidUtils
-import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.common.threading.suspendifyOnDefault
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
 
 abstract class NotificationOpenedActivityBase : Activity() {
@@ -46,9 +47,9 @@ abstract class NotificationOpenedActivityBase : Activity() {
     }
 
     internal open fun processIntent() {
-        suspendifyOnThread {
+        suspendifyOnDefault {
             if (!OneSignal.initWithContext(applicationContext)) {
-                return@suspendifyOnThread
+                return@suspendifyOnDefault
             }
 
             val openedProcessor = OneSignal.getService<INotificationOpenedProcessor>()

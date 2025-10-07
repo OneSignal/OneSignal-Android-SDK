@@ -5,7 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.onesignal.OneSignal
-import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
 
@@ -27,11 +27,11 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
 
         val pendingResult = goAsync()
         // process in background
-        suspendifyOnThread {
+        suspendifyOnIO {
             if (!OneSignal.initWithContext(context.applicationContext)) {
                 Logging.warn("FCMBroadcastReceiver skipped due to failed OneSignal init")
                 pendingResult.finish()
-                return@suspendifyOnThread
+                return@suspendifyOnIO
             }
 
             val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
@@ -39,7 +39,7 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
             if (!isFCMMessage(intent)) {
                 setSuccessfulResultCode()
                 pendingResult.finish()
-                return@suspendifyOnThread
+                return@suspendifyOnIO
             }
 
             val processedResult = bundleProcessor.processBundleFromReceiver(context, bundle)
@@ -48,7 +48,7 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
             if (processedResult?.isWorkManagerProcessing == true) {
                 setAbort()
                 pendingResult.finish()
-                return@suspendifyOnThread
+                return@suspendifyOnIO
             }
 
             setSuccessfulResultCode()

@@ -17,6 +17,7 @@ import android.util.Log
 import androidx.annotation.NonNull
 import androidx.multidex.MultiDexApplication
 import com.onesignal.OneSignal
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.debug.LogLevel
 import com.onesignal.inAppMessages.IInAppMessageClickEvent
 import com.onesignal.inAppMessages.IInAppMessageClickListener
@@ -64,20 +65,23 @@ class MainApplicationKT : MultiDexApplication() {
         OneSignalNotificationSender.setAppId(appId)
 
         // Initialize OneSignal asynchronously on background thread to avoid ANR
-        CoroutineScope(Dispatchers.IO).launch {
-            val success = OneSignal.initWithContextSuspend(this@MainApplicationKT, appId)
-            Log.d(Tag.LOG_TAG, "OneSignal async init success: $success")
-            
-            if (success) {
+        OneSignalDispatchers.launchOnIO {
+            try {
+                OneSignal.initWithContextSuspend(this@MainApplicationKT, appId)
+                Log.d(Tag.LOG_TAG, "OneSignal async init completed")
+
                 // Set up all OneSignal listeners after successful async initialization
                 setupOneSignalListeners()
-                
+
                 // Request permission - this will internally switch to Main thread for UI operations
                 OneSignal.Notifications.requestPermission(true)
+
+                Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT)
+
+            } catch (e: Exception) {
+                Log.e(Tag.LOG_TAG, "OneSignal initialization error", e)
             }
         }
-
-        Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT)
     }
 
     private fun setupOneSignalListeners() {

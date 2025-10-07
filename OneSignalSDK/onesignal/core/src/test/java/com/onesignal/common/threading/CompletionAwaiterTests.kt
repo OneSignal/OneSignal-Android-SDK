@@ -54,7 +54,7 @@ class CompletionAwaiterTests : FunSpec({
             val startTime = System.currentTimeMillis()
 
             // Simulate delayed completion from another thread
-            suspendifyOnThread {
+            suspendifyOnIO {
                 delay(completionDelay)
                 awaiter.complete()
             }

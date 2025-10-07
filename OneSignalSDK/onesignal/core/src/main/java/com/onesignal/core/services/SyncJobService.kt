@@ -29,17 +29,17 @@ package com.onesignal.core.services
 import android.app.job.JobParameters
 import android.app.job.JobService
 import com.onesignal.OneSignal
-import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.background.IBackgroundManager
 import com.onesignal.debug.internal.logging.Logging
 
 class SyncJobService : JobService() {
     override fun onStartJob(jobParameters: JobParameters): Boolean {
-        suspendifyOnThread {
+        suspendifyOnIO {
             // init OneSignal in background
             if (!OneSignal.initWithContext(this)) {
                 jobFinished(jobParameters, false)
-                return@suspendifyOnThread
+                return@suspendifyOnIO
             }
 
             val backgroundService = OneSignal.getService<IBackgroundManager>()

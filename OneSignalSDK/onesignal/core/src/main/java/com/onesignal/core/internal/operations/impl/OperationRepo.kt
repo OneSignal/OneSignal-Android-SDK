@@ -1,7 +1,8 @@
 package com.onesignal.core.internal.operations.impl
 
-import com.onesignal.common.threading.OSPrimaryCoroutineScope
 import com.onesignal.common.threading.WaiterWithValue
+import com.onesignal.common.threading.suspendifyOnDefault
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.GroupComparisonType
@@ -14,10 +15,7 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import kotlin.math.max
@@ -51,7 +49,6 @@ internal class OperationRepo(
     private val waiter = WaiterWithValue<LoopWaiterMessage>()
     private val retryWaiter = WaiterWithValue<LoopWaiterMessage>()
     private var paused = false
-    private var coroutineScope = CoroutineScope(newSingleThreadContext(name = "OpRepo"))
     private val initialized = CompletableDeferred<Unit>()
 
     override suspend fun awaitInitialized() {
@@ -96,7 +93,7 @@ internal class OperationRepo(
 
     override fun start() {
         paused = false
-        coroutineScope.launch {
+        suspendifyOnIO {
             // load saved operations first then start processing the queue to ensure correct operation order
             loadSavedOperations()
             processQueueForever()
@@ -117,7 +114,7 @@ internal class OperationRepo(
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueue(operation: $operation, flush: $flush)")
 
         operation.id = UUID.randomUUID().toString()
-        OSPrimaryCoroutineScope.execute {
+        suspendifyOnDefault {
             internalEnqueue(OperationQueueItem(operation, bucket = enqueueIntoBucket), flush, true)
         }
     }
