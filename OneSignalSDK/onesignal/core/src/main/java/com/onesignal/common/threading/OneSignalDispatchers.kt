@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * to have better control over thread naming and resource usage.
  */
 object OneSignalDispatchers {
-    private const val CORE_POOL_SIZE = 4
+          private const val CORE_POOL_SIZE = 2
 
     private class OneSignalThreadFactory(private val namePrefix: String) : ThreadFactory {
         private val threadNumber = AtomicInteger(1)

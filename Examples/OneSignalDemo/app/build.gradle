@@ -49,6 +49,21 @@ android {
 //            signingConfig null
 //            productFlavors.huawei.signingConfig signingConfigs.huawei
             debuggable true
+            // Note: profileable is automatically enabled when debuggable=true
+            // Enable method tracing for detailed performance analysis
+            testCoverageEnabled false
+        }
+        // Profileable release build for performance testing
+        profileable {
+            initWith release
+            debuggable false
+            profileable true
+            minifyEnabled false
+            signingConfig signingConfigs.debug
+            // Disable proguard for easier profiling
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Use release variant for dependencies
+            matchingFallbacks = ['release']
         }
     }
 
