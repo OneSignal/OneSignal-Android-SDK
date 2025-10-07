@@ -214,7 +214,7 @@ object AndroidUtils {
                         applicationService.appContext.packageName,
                         PackageManager.GET_PERMISSIONS,
                     )
-            val permissionList = listOf(*packageInfo.requestedPermissions)
+            val permissionList = listOf(packageInfo.requestedPermissions as String)
 
             return if (!permissionList.contains(permission)) {
                 false
@@ -251,9 +251,9 @@ object AndroidUtils {
             applicationService.appContext
                 .packageManager
                 .getPackageInfo(applicationService.appContext.packageName, PackageManager.GET_PERMISSIONS)
-        val permissionList = listOf(*packageInfo.requestedPermissions)
+        val permissionList = packageInfo.requestedPermissions
 
-        return permissions.filter { permissionList.contains(it) }
+        return permissions.filter { permissionList?.contains(it) ?: false }
     }
 
     // Interim method that works around Proguard's overly aggressive assumenosideeffects which
