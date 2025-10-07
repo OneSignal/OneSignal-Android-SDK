@@ -4,8 +4,8 @@ buildscript {
 
     ext {
         buildVersions = [
-                compileSdkVersion: 34,
-                targetSdkVersion: 34,
+                compileSdkVersion: 35,
+                targetSdkVersion: 35,
                 minSdkVersion: 21
         ]
         androidGradlePluginVersion = '8.8.2'

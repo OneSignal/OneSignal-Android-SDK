@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace 'com.onesignal.sdktest'
-    compileSdkVersion 34
+    compileSdkVersion 35
     defaultConfig {
         minSdkVersion 21
         targetSdkVersion 34
@@ -55,6 +55,7 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+        coreLibraryDesugaringEnabled = true
     }
 
     packagingOptions {
@@ -101,4 +102,9 @@ dependencies {
     // Optionally add HMS location
     huaweiImplementation 'com.huawei.hms:location:4.0.0.300'
     /** END - Huawei Builds **/
+
+    implementation("io.opentelemetry.android:android-agent:0.11.0-alpha")
+    implementation('io.opentelemetry:opentelemetry-sdk-logs') // 1.49.0
+    implementation("io.honeycomb.android:honeycomb-opentelemetry-android:0.0.19")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
