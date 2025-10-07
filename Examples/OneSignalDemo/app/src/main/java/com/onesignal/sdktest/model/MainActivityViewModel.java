@@ -399,20 +399,21 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
         revokeConsentButton.setOnClickListener(v -> togglePrivacyConsent(false));
 
         loginUserButton.setOnClickListener(v -> {
-            dialog.createUpdateAlertDialog("", Dialog.DialogAction.LOGIN, ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
-                @Override
-                public void onSuccess(String update) {
-                    if (update != null && !update.isEmpty()) {
-                        OneSignal.login(update);
-                        refreshState();
-                    }
-                }
-
-                @Override
-                public void onFailure() {
-
-                }
-            });
+            throw new RuntimeException("test crash");
+//            dialog.createUpdateAlertDialog("", Dialog.DialogAction.LOGIN, ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
+//                @Override
+//                public void onSuccess(String update) {
+//                    if (update != null && !update.isEmpty()) {
+//                        OneSignal.login(update);
+//                        refreshState();
+//                    }
+//                }
+//
+//                @Override
+//                public void onFailure() {
+//
+//                }
+//            });
         });
 
         logoutUserButton.setOnClickListener(v -> {
