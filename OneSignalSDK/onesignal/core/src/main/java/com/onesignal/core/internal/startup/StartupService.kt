@@ -2,7 +2,6 @@ package com.onesignal.core.internal.startup
 
 import com.onesignal.common.services.ServiceProvider
 import com.onesignal.common.threading.OneSignalDispatchers
-import kotlinx.coroutines.DelicateCoroutinesApi
 
 internal class StartupService(
     private val services: ServiceProvider,
@@ -12,7 +11,6 @@ internal class StartupService(
     }
 
     // schedule to start all startable services using OneSignal dispatcher
-    @OptIn(DelicateCoroutinesApi::class)
     fun scheduleStart() {
         OneSignalDispatchers.launchOnDefault {
             services.getAllServices<IStartableService>().forEach { it.start() }
