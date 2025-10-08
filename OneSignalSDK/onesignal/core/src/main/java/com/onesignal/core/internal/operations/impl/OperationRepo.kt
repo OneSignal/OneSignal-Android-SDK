@@ -1,7 +1,6 @@
 package com.onesignal.core.internal.operations.impl
 
 import com.onesignal.common.threading.WaiterWithValue
-import com.onesignal.common.threading.suspendifyOnDefault
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -16,7 +15,6 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 import kotlin.math.max
