@@ -11,12 +11,12 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadFactory
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Optimized threading manager for the OneSignal SDK.
@@ -31,12 +31,12 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 object OneSignalDispatchers {
     // Optimized pool sizes based on CPU cores and workload analysis
-    private const val IO_CORE_POOL_SIZE = 2  // Increased for better concurrency
-    private const val IO_MAX_POOL_SIZE = 2   // Increased for better concurrency
-    private const val DEFAULT_CORE_POOL_SIZE = 2  // Optimal for CPU operations
-    private const val DEFAULT_MAX_POOL_SIZE = 2   // Slightly larger for CPU operations
-    private const val KEEP_ALIVE_TIME_SECONDS = 30L  // Keep threads alive longer to reduce recreation
-    
+    private const val IO_CORE_POOL_SIZE = 2 // Increased for better concurrency
+    private const val IO_MAX_POOL_SIZE = 2 // Increased for better concurrency
+    private const val DEFAULT_CORE_POOL_SIZE = 2 // Optimal for CPU operations
+    private const val DEFAULT_MAX_POOL_SIZE = 2 // Slightly larger for CPU operations
+    private const val KEEP_ALIVE_TIME_SECONDS = 30L // Keep threads alive longer to reduce recreation
+
     // Lazy initialization to avoid creating threads until actually needed
     private val isInitialized = AtomicBoolean(false)
     private val useFallback = AtomicBoolean(false)
@@ -54,12 +54,12 @@ object OneSignalDispatchers {
     }
 
     // Lazy-initialized thread pools
-    private var _ioExecutor: ThreadPoolExecutor? = null
-    private var _defaultExecutor: ThreadPoolExecutor? = null
-    private var _ioDispatcher: CoroutineDispatcher? = null
-    private var _defaultDispatcher: CoroutineDispatcher? = null
-    private var _ioScope: CoroutineScope? = null
-    private var _defaultScope: CoroutineScope? = null
+    private var ioExecutor: ThreadPoolExecutor? = null
+    private var defaultExecutor: ThreadPoolExecutor? = null
+    private var ioDispatcher: CoroutineDispatcher? = null
+    private var defaultDispatcher: CoroutineDispatcher? = null
+    private var ioScope: CoroutineScope? = null
+    private var defaultScope: CoroutineScope? = null
 
     // Non-blocking lazy initialization to prevent startup delays
     private fun initializeIfNeeded() {
@@ -68,44 +68,48 @@ object OneSignalDispatchers {
             if (!isInitialized.compareAndSet(false, true)) {
                 return // Another thread already initialized
             }
-            
+
             try {
                 // Initialize IO executor for I/O operations
-                _ioExecutor = ThreadPoolExecutor(
-                    IO_CORE_POOL_SIZE,
-                    IO_MAX_POOL_SIZE,
-                    KEEP_ALIVE_TIME_SECONDS,
-                    TimeUnit.SECONDS,
-                    LinkedBlockingQueue(10), // Small queue to prevent memory bloat
-                    OptimizedThreadFactory("OneSignal-IO")
-                ).apply {
-                    allowCoreThreadTimeOut(false) // Keep core threads alive
-                }
+                ioExecutor =
+                    ThreadPoolExecutor(
+                        IO_CORE_POOL_SIZE,
+                        IO_MAX_POOL_SIZE,
+                        KEEP_ALIVE_TIME_SECONDS,
+                        TimeUnit.SECONDS,
+                        LinkedBlockingQueue(10),
+                        // Small queue to prevent memory bloat
+                        OptimizedThreadFactory("OneSignal-IO"),
+                    ).apply {
+                        allowCoreThreadTimeOut(false) // Keep core threads alive
+                    }
 
                 // Initialize Default executor for CPU operations
-                _defaultExecutor = ThreadPoolExecutor(
-                    DEFAULT_CORE_POOL_SIZE,
-                    DEFAULT_MAX_POOL_SIZE,
-                    KEEP_ALIVE_TIME_SECONDS,
-                    TimeUnit.SECONDS,
-                    LinkedBlockingQueue(10), // Small queue to prevent memory bloat
-                    OptimizedThreadFactory("OneSignal-Default")
-                ).apply {
-                    allowCoreThreadTimeOut(false) // Keep core threads alive
-                }
+                defaultExecutor =
+                    ThreadPoolExecutor(
+                        DEFAULT_CORE_POOL_SIZE,
+                        DEFAULT_MAX_POOL_SIZE,
+                        KEEP_ALIVE_TIME_SECONDS,
+                        TimeUnit.SECONDS,
+                        LinkedBlockingQueue(10),
+                        // Small queue to prevent memory bloat
+                        OptimizedThreadFactory("OneSignal-Default"),
+                    ).apply {
+                        allowCoreThreadTimeOut(false) // Keep core threads alive
+                    }
 
-                _ioDispatcher = _ioExecutor!!.asCoroutineDispatcher()
-                _defaultDispatcher = _defaultExecutor!!.asCoroutineDispatcher()
-                _ioScope = CoroutineScope(SupervisorJob() + _ioDispatcher!!)
-                _defaultScope = CoroutineScope(SupervisorJob() + _defaultDispatcher!!)
+                ioDispatcher = ioExecutor!!.asCoroutineDispatcher()
+                defaultDispatcher = defaultExecutor!!.asCoroutineDispatcher()
+                ioScope = CoroutineScope(SupervisorJob() + ioDispatcher!!)
+                defaultScope = CoroutineScope(SupervisorJob() + defaultDispatcher!!)
             } catch (e: Exception) {
                 // Fallback to Android's default dispatchers if custom ones fail
                 println("OneSignalDispatchers: Falling back to default dispatchers due to: ${e.message}")
                 useFallback.set(true)
-                _ioDispatcher = Dispatchers.IO
-                _defaultDispatcher = Dispatchers.Default
-                _ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-                _defaultScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+                ioDispatcher = Dispatchers.IO
+                defaultDispatcher = Dispatchers.Default
+                ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+                defaultScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
                 // Don't reset isInitialized here - we want to keep the fallback state
             }
         }
@@ -114,22 +118,22 @@ object OneSignalDispatchers {
     // Lazy properties that initialize only on first access
     val IO: CoroutineDispatcher by lazy {
         initializeIfNeeded()
-        _ioDispatcher ?: Dispatchers.IO
+        ioDispatcher ?: Dispatchers.IO
     }
 
     val Default: CoroutineDispatcher by lazy {
         initializeIfNeeded()
-        _defaultDispatcher ?: Dispatchers.Default
+        defaultDispatcher ?: Dispatchers.Default
     }
 
     val IOScope: CoroutineScope by lazy {
         initializeIfNeeded()
-        _ioScope ?: CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        ioScope ?: CoroutineScope(SupervisorJob() + Dispatchers.IO)
     }
 
     val DefaultScope: CoroutineScope by lazy {
         initializeIfNeeded()
-        _defaultScope ?: CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        defaultScope ?: CoroutineScope(SupervisorJob() + Dispatchers.Default)
     }
 
     // Optimized utility functions with reduced overhead
@@ -152,18 +156,18 @@ object OneSignalDispatchers {
     // Performance monitoring and metrics
     fun getPerformanceMetrics(): String {
         if (!isInitialized.get()) return "Not initialized"
-        
-        val ioExecutor = _ioExecutor ?: return "Not initialized"
-        val defaultExecutor = _defaultExecutor ?: return "Not initialized"
+
+        val ioExec = ioExecutor ?: return "Not initialized"
+        val defaultExec = defaultExecutor ?: return "Not initialized"
 
         return """
             OneSignalDispatchers Performance Metrics:
-            - IO Pool: ${ioExecutor.activeCount}/${ioExecutor.corePoolSize} active/core threads
-            - IO Queue: ${ioExecutor.queue.size} pending tasks
-            - Default Pool: ${defaultExecutor.activeCount}/${defaultExecutor.corePoolSize} active/core threads
-            - Default Queue: ${defaultExecutor.queue.size} pending tasks
-            - Total completed tasks: ${ioExecutor.completedTaskCount + defaultExecutor.completedTaskCount}
-            - Memory usage: ~${(ioExecutor.activeCount + defaultExecutor.activeCount) * 1024}KB (thread stacks, ~1MB each)
+            - IO Pool: ${ioExec.activeCount}/${ioExec.corePoolSize} active/core threads
+            - IO Queue: ${ioExec.queue.size} pending tasks
+            - Default Pool: ${defaultExec.activeCount}/${defaultExec.corePoolSize} active/core threads
+            - Default Queue: ${defaultExec.queue.size} pending tasks
+            - Total completed tasks: ${ioExec.completedTaskCount + defaultExec.completedTaskCount}
+            - Memory usage: ~${(ioExec.activeCount + defaultExec.activeCount) * 1024}KB (thread stacks, ~1MB each)
             """.trimIndent()
     }
 
@@ -171,10 +175,10 @@ object OneSignalDispatchers {
     fun shutdown() {
         try {
             if (isInitialized.get()) {
-                _ioExecutor?.shutdown()
-                _defaultExecutor?.shutdown()
-                _ioScope?.cancel()
-                _defaultScope?.cancel()
+                ioExecutor?.shutdown()
+                defaultExecutor?.shutdown()
+                ioScope?.cancel()
+                defaultScope?.cancel()
                 isInitialized.set(false)
             }
         } catch (e: Exception) {
@@ -186,18 +190,18 @@ object OneSignalDispatchers {
 
     fun getStatus(): String {
         if (!isInitialized.get()) return "Not initialized"
-        
-        val ioExecutor = _ioExecutor
-        val defaultExecutor = _defaultExecutor
-        
+
+        val ioExec = ioExecutor
+        val defaultExec = defaultExecutor
+
         return """
             OneSignalDispatchers Status:
             - Initialized: ${isInitialized.get()}
             - Using Fallback: ${useFallback.get()}
-            - IO Executor: ${if (ioExecutor?.isShutdown == true) "Shutdown" else "Active"}
-            - Default Executor: ${if (defaultExecutor?.isShutdown == true) "Shutdown" else "Active"}
-            - IO Scope: ${if (_ioScope?.isActive == true) "Active" else "Cancelled"}
-            - Default Scope: ${if (_defaultScope?.isActive == true) "Active" else "Cancelled"}
+            - IO Executor: ${if (ioExec?.isShutdown == true) "Shutdown" else "Active"}
+            - Default Executor: ${if (defaultExec?.isShutdown == true) "Shutdown" else "Active"}
+            - IO Scope: ${if (ioScope?.isActive == true) "Active" else "Cancelled"}
+            - Default Scope: ${if (defaultScope?.isActive == true) "Active" else "Cancelled"}
             """.trimIndent()
     }
 }

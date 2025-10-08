@@ -1,6 +1,5 @@
 package com.onesignal.session.internal.outcomes.impl
 
-import android.os.Process
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.config.ConfigModelStore

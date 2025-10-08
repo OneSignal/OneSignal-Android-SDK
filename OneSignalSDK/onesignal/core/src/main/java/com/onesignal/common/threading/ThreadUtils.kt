@@ -11,9 +11,8 @@ import kotlinx.coroutines.withContext
  * now using the centralized OneSignal dispatcher system for improved resource management
  * and consistent threading behavior across the SDK.
  *
- */
-
-/**
+ * @see OneSignalDispatchers
+ *
  * Allows a non suspending function to create a scope that can
  * call suspending functions while on the main thread.  This is a nonblocking call,
  * the scope will start on a background thread and block as it switches
@@ -59,12 +58,9 @@ fun suspendifyOnIO(
  * @param block The suspending code to execute
  *
  */
-fun suspendifyOnIO(
-    block: suspend () -> Unit,
-) {
+fun suspendifyOnIO(block: suspend () -> Unit) {
     suspendifyWithCompletion(useIO = true, block = block, onComplete = null)
 }
-
 
 /**
  * Modern utility for executing suspending code on the default dispatcher.
@@ -75,7 +71,6 @@ fun suspendifyOnIO(
 fun suspendifyOnDefault(block: suspend () -> Unit) {
     suspendifyWithCompletion(useIO = false, block = block, onComplete = null)
 }
-
 
 /**
  * Modern utility for executing suspending code with completion callback.

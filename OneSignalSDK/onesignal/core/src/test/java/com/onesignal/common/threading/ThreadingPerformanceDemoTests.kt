@@ -7,7 +7,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
-import kotlinx.coroutines.runBlocking
 import java.util.concurrent.Executors
 import java.util.concurrent.ThreadFactory
 
@@ -25,48 +24,55 @@ class ThreadingPerformanceDemoTests : FunSpec({
         println("Testing with $numberOfOperations operations...")
 
         // Test 1: Individual Thread Creation
-        val individualThreadTime = measureTime {
-            repeat(numberOfOperations) { i ->
-                val context = newSingleThreadContext("IndividualThread-$i")
-                try {
-                    CoroutineScope(context).launch {
-                        Thread.sleep(10) // Simulate work
+        val individualThreadTime =
+            measureTime {
+                repeat(numberOfOperations) { i ->
+                    val context = newSingleThreadContext("IndividualThread-$i")
+                    try {
+                        CoroutineScope(context).launch {
+                            Thread.sleep(10) // Simulate work
+                        }
+                    } finally {
+                        // Note: newSingleThreadContext doesn't have close() method
+                        // The context will be cleaned up when the scope is cancelled
                     }
-                } finally {
-                    // Note: newSingleThreadContext doesn't have close() method
-                    // The context will be cleaned up when the scope is cancelled
                 }
             }
-        }
         results["Individual Threads"] = individualThreadTime
 
         // Test 2: Dispatcher with 2 threads
-        val dispatcherTime = measureTime {
-            val executor = Executors.newFixedThreadPool(2, ThreadFactory { r ->
-                Thread(r, "DispatcherThread-${System.nanoTime()}")
-            })
-            val dispatcher = executor.asCoroutineDispatcher()
-            
-            try {
-                repeat(numberOfOperations) { i ->
-                    CoroutineScope(dispatcher).launch {
-                        Thread.sleep(10) // Simulate work
+        val dispatcherTime =
+            measureTime {
+                val executor =
+                    Executors.newFixedThreadPool(
+                        2,
+                        ThreadFactory { r ->
+                            Thread(r, "DispatcherThread-${System.nanoTime()}")
+                        },
+                    )
+                val dispatcher = executor.asCoroutineDispatcher()
+
+                try {
+                    repeat(numberOfOperations) { i ->
+                        CoroutineScope(dispatcher).launch {
+                            Thread.sleep(10) // Simulate work
+                        }
                     }
+                } finally {
+                    executor.shutdown()
                 }
-            } finally {
-                executor.shutdown()
             }
-        }
         results["Dispatcher (2 threads)"] = dispatcherTime
 
         // Test 3: OneSignal Dispatchers (for comparison)
-        val oneSignalTime = measureTime {
-            repeat(numberOfOperations) { i ->
-                OneSignalDispatchers.launchOnIO {
-                    Thread.sleep(10) // Simulate work
+        val oneSignalTime =
+            measureTime {
+                repeat(numberOfOperations) { i ->
+                    OneSignalDispatchers.launchOnIO {
+                        Thread.sleep(10) // Simulate work
+                    }
                 }
             }
-        }
         results["OneSignal Dispatchers"] = oneSignalTime
 
         // Print results
@@ -96,7 +102,7 @@ class ThreadingPerformanceDemoTests : FunSpec({
 
     test("demonstrate resource usage difference") {
         val initialThreadCount = Thread.activeCount()
-        
+
         println("\n=== Resource Usage Comparison ===")
         println("Initial thread count: $initialThreadCount")
 
@@ -111,11 +117,15 @@ class ThreadingPerformanceDemoTests : FunSpec({
         println("After creating 50 individual thread contexts: $individualThreadCount (+${individualThreadCount - initialThreadCount})")
 
         // Test dispatcher usage
-        val executor = Executors.newFixedThreadPool(2, ThreadFactory { r ->
-            Thread(r, "ResourceDispatcher-${System.nanoTime()}")
-        })
+        val executor =
+            Executors.newFixedThreadPool(
+                2,
+                ThreadFactory { r ->
+                    Thread(r, "ResourceDispatcher-${System.nanoTime()}")
+                },
+            )
         val dispatcher = executor.asCoroutineDispatcher()
-        
+
         repeat(50) { i ->
             CoroutineScope(dispatcher).launch {
                 Thread.sleep(10)
@@ -138,7 +148,7 @@ class ThreadingPerformanceDemoTests : FunSpec({
 
         println("Individual threads created: $individualThreadsCreated")
         println("Dispatcher threads created: $dispatcherThreadsCreated")
-        
+
         if (dispatcherThreadsCreated < individualThreadsCreated) {
             println("✅ Dispatcher uses ${individualThreadsCreated - dispatcherThreadsCreated} fewer threads")
         }
@@ -153,39 +163,46 @@ class ThreadingPerformanceDemoTests : FunSpec({
 
         operationCounts.forEach { count ->
             // Individual threads
-            val individualTime = measureTime {
-                val contexts = (1..count).map { 
-                    newSingleThreadContext("ScaleTest-$it") 
-                }
-                try {
-                    contexts.forEach { context ->
-                        CoroutineScope(context).launch {
-                            Thread.sleep(5)
+            val individualTime =
+                measureTime {
+                    val contexts =
+                        (1..count).map {
+                            newSingleThreadContext("ScaleTest-$it")
                         }
+                    try {
+                        contexts.forEach { context ->
+                            CoroutineScope(context).launch {
+                                Thread.sleep(5)
+                            }
+                        }
+                    } finally {
+                        // Note: newSingleThreadContext doesn't have close() method
+                        // The contexts will be cleaned up when the scopes are cancelled
                     }
-                } finally {
-                    // Note: newSingleThreadContext doesn't have close() method
-                    // The contexts will be cleaned up when the scopes are cancelled
                 }
-            }
 
             // Dispatcher
-            val dispatcherTime = measureTime {
-                val executor = Executors.newFixedThreadPool(2, ThreadFactory { r ->
-                    Thread(r, "ScaleDispatcher-${System.nanoTime()}")
-                })
-                val dispatcher = executor.asCoroutineDispatcher()
-                
-                try {
-                    repeat(count) {
-                        CoroutineScope(dispatcher).launch {
-                            Thread.sleep(5)
+            val dispatcherTime =
+                measureTime {
+                    val executor =
+                        Executors.newFixedThreadPool(
+                            2,
+                            ThreadFactory { r ->
+                                Thread(r, "ScaleDispatcher-${System.nanoTime()}")
+                            },
+                        )
+                    val dispatcher = executor.asCoroutineDispatcher()
+
+                    try {
+                        repeat(count) {
+                            CoroutineScope(dispatcher).launch {
+                                Thread.sleep(5)
+                            }
                         }
+                    } finally {
+                        executor.shutdown()
                     }
-                } finally {
-                    executor.shutdown()
                 }
-            }
 
             results[count] = Pair(individualTime, dispatcherTime)
         }
@@ -193,7 +210,7 @@ class ThreadingPerformanceDemoTests : FunSpec({
         println("\n=== Scalability Results ===")
         println("Operations | Individual | Dispatcher | Ratio")
         println("-----------|------------|------------|------")
-        
+
         results.forEach { (count, times) ->
             val ratio = if (times.second > 0) times.first.toDouble() / times.second else Double.POSITIVE_INFINITY
             val ratioStr = if (ratio == Double.POSITIVE_INFINITY) "∞" else "%.2fx".format(ratio)

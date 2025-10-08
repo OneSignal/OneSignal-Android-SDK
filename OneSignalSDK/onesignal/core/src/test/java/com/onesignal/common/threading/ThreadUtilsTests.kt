@@ -204,7 +204,7 @@ class ThreadUtilsTests : FunSpec({
                 },
                 onComplete = {
                     latch.countDown()
-                }
+                },
             )
         }
 

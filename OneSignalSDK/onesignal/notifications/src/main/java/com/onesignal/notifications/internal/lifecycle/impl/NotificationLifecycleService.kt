@@ -142,7 +142,8 @@ internal class NotificationLifecycleService(
             postedOpenedNotifIds.add(notificationId)
 
             suspendifyWithErrorHandling(
-                useIO = true, // or false for CPU operations
+                useIO = true,
+                // or false for CPU operations
                 block = {
                     _backend.updateNotificationAsOpened(
                         appId,
@@ -157,7 +158,7 @@ internal class NotificationLifecycleService(
                     } else {
                         Logging.error("Unexpected error in notification opened confirmation", ex)
                     }
-                }
+                },
             )
         }
 

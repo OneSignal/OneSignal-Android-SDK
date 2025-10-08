@@ -32,7 +32,6 @@ import android.os.Bundle
 import com.onesignal.OneSignal
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.threading.suspendifyOnDefault
-import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.notifications.internal.open.INotificationOpenedProcessor
 
 abstract class NotificationOpenedActivityBase : Activity() {
