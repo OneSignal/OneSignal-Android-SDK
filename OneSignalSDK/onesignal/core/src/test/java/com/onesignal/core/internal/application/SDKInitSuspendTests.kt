@@ -46,7 +46,7 @@ class SDKInitSuspendTests : FunSpec({
         // Given
         val context = getApplicationContext<Context>()
         val os = OneSignalImp()
-        
+
         // Clear any existing appId from previous tests by clearing SharedPreferences
         val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
         prefs.edit().clear().commit()
