@@ -19,6 +19,12 @@ class SDKInitSuspendTests : FunSpec({
         Logging.logLevel = LogLevel.NONE
     }
 
+    afterAny {
+        val context = getApplicationContext<Context>()
+        val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
+    }
+
     // ===== INITIALIZATION TESTS =====
 
     test("initWithContextSuspend with appId returns true") {
@@ -40,6 +46,10 @@ class SDKInitSuspendTests : FunSpec({
         // Given
         val context = getApplicationContext<Context>()
         val os = OneSignalImp()
+        
+        // Clear any existing appId from previous tests by clearing SharedPreferences
+        val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
 
         runBlocking {
             // When

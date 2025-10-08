@@ -296,6 +296,7 @@ internal class OneSignalImp(
         updateConfig()
         userSwitcher.initUser(forceCreateUser)
         startupService.scheduleStart()
+        initState = InitState.SUCCESS
         notifyInitComplete()
         return true
     }
@@ -497,7 +498,7 @@ internal class OneSignalImp(
             }
 
             val result = internalInit(context, appId)
-            initState = if (result) InitState.SUCCESS else InitState.FAILED
+            // initState is already set correctly in internalInit, no need to overwrite it
             result
         }
     }
