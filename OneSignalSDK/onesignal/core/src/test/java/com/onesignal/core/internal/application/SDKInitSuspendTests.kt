@@ -26,7 +26,11 @@ class SDKInitSuspendTests : FunSpec({
             .clear()
             .remove("MODEL_STORE_config") // Specifically clear the config model store
             .remove("GT_APP_ID") // Clear legacy appId that might be set by other tests
-            .commit()
+            .remove("GT_PLAYER_ID") // Clear legacy player ID that might be set by other tests
+            .commit() // Use commit() for synchronous behavior
+
+        // Ensure cleanup is complete before proceeding
+        Thread.sleep(10)
     }
 
     // ===== INITIALIZATION TESTS =====
@@ -49,7 +53,6 @@ class SDKInitSuspendTests : FunSpec({
     test("initWithContextSuspend with null appId fails when configModel has no appId") {
         // Given
         val context = getApplicationContext<Context>()
-        val os = OneSignalImp()
 
         // Clear any existing appId from previous tests by clearing SharedPreferences
         val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
@@ -57,7 +60,14 @@ class SDKInitSuspendTests : FunSpec({
             .clear()
             .remove("MODEL_STORE_config") // Specifically clear the config model store
             .remove("GT_APP_ID") // Clear legacy appId that might be set by other tests
-            .commit()
+            .remove("GT_PLAYER_ID") // Clear legacy player ID that might be set by other tests
+            .commit() // Use commit() for synchronous behavior
+
+        // Ensure cleanup is complete before proceeding
+        Thread.sleep(10)
+
+        // Create a fresh OneSignalImp instance for this test
+        val os = OneSignalImp()
 
         runBlocking {
             // When
