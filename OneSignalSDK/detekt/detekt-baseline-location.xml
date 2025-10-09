@@ -67,10 +67,6 @@
     <ID>TooGenericExceptionCaught:HmsLocationController.kt$HmsLocationController$e: Exception</ID>
     <ID>TooGenericExceptionCaught:LocationManager.kt$LocationManager$t: Throwable</ID>
     <ID>TooGenericExceptionThrown:GmsLocationController.kt$GmsLocationController.LocationUpdateListener$throw Exception("googleApiClient not connected, cannot listen!")</ID>
-    <ID>UndocumentedPublicClass:GmsLocationControllerTests.kt$GmsLocationControllerTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:LocationBackgroundServiceTests.kt$LocationBackgroundServiceTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:LocationCapturerTests.kt$LocationCapturerTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:LocationPermissionControllerTests.kt$LocationPermissionControllerTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:ShadowGoogleApiClient.kt$ShadowGoogleApiClient : GoogleApiClient</ID>
     <ID>UndocumentedPublicClass:ShadowGoogleApiClient.kt$ShadowGoogleApiClient$Companion</ID>
     <ID>UndocumentedPublicClass:ShadowGoogleApiClient.kt$ShadowGoogleApiClientBuilder</ID>

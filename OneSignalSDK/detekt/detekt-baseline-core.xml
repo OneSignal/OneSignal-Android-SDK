@@ -153,7 +153,6 @@
     <ID>EmptyDefaultConstructor:DebugManager.kt$DebugManager$()</ID>
     <ID>EmptyDefaultConstructor:PushSubscription.kt$UninitializedPushSubscription$()</ID>
     <ID>EmptyDefaultConstructor:SubscriptionModel.kt$SubscriptionType$()</ID>
-    <ID>ExplicitItLambdaParameter:LoggingTests.kt${ index, it -&gt; it shouldEndWith expected[index] }</ID>
     <ID>ForbiddenComment:DeviceService.kt$DeviceService$// TODO: Maybe able to switch to GoogleApiAvailability.isGooglePlayServicesAvailable to simplify</ID>
     <ID>ForbiddenComment:HttpClient.kt$HttpClient$// TODO: SHOULD RETURN OK INSTEAD OF NOT_MODIFIED TO MAKE TRANSPARENT?</ID>
     <ID>ForbiddenComment:IPreferencesService.kt$PreferenceOneSignalKeys$* (String) The serialized IAMs TODO: This isn't currently used, determine if actually needed for cold start IAM fetch delay</ID>
@@ -201,7 +200,6 @@
     <ID>LongParameterList:IParamsBackendService.kt$ParamsObject$( var googleProjectNumber: String? = null, var enterprise: Boolean? = null, var useIdentityVerification: Boolean? = null, var notificationChannels: JSONArray? = null, var firebaseAnalytics: Boolean? = null, var restoreTTLFilter: Boolean? = null, var clearGroupOnSummaryClick: Boolean? = null, var receiveReceiptEnabled: Boolean? = null, var disableGMSMissingPrompt: Boolean? = null, var unsubscribeWhenNotificationsDisabled: Boolean? = null, var locationShared: Boolean? = null, var requiresUserPrivacyConsent: Boolean? = null, var opRepoExecutionInterval: Long? = null, var influenceParams: InfluenceParamsObject, var fcmParams: FCMParamsObject, )</ID>
     <ID>LongParameterList:IUserBackendService.kt$IUserBackendService$( appId: String, aliasLabel: String, aliasValue: String, properties: PropertiesObject, refreshDeviceMetadata: Boolean, propertyiesDelta: PropertiesDeltasObject, )</ID>
     <ID>LongParameterList:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$( private val _identityOperationExecutor: IdentityOperationExecutor, private val _application: IApplicationService, private val _deviceService: IDeviceService, private val _userBackend: IUserBackendService, private val _identityModelStore: IdentityModelStore, private val _propertiesModelStore: PropertiesModelStore, private val _subscriptionsModelStore: SubscriptionModelStore, private val _configModelStore: ConfigModelStore, private val _languageContext: ILanguageContext, )</ID>
-    <ID>LongParameterList:OperationRepoTests.kt$OperationRepoTests.Companion$( id: String = UUID.randomUUID().toString(), name: String = "DUMMY_OPERATION", canStartExecute: Boolean = true, groupComparisonType: GroupComparisonType = GroupComparisonType.NONE, createComparisonKey: String = "create-key", modifyComparisonKey: String = "modify-key", operationIdSlot: CapturingSlot&lt;String&gt;? = null, applyToRecordId: String = "", )</ID>
     <ID>LongParameterList:OutcomeEventsController.kt$OutcomeEventsController$( private val _session: ISessionService, private val _influenceManager: IInfluenceManager, private val _outcomeEventsCache: IOutcomeEventsRepository, private val _outcomeEventsPreferences: IOutcomeEventsPreferences, private val _outcomeEventsBackend: IOutcomeEventsBackendService, private val _configModelStore: ConfigModelStore, private val _identityModelStore: IdentityModelStore, private val _subscriptionManager: ISubscriptionManager, private val _deviceService: IDeviceService, private val _time: ITime, )</ID>
     <ID>LongParameterList:SubscriptionObject.kt$SubscriptionObject$( val id: String? = null, val type: SubscriptionObjectType? = null, val token: String? = null, val enabled: Boolean? = null, val notificationTypes: Int? = null, val sdk: String? = null, val deviceModel: String? = null, val deviceOS: String? = null, val rooted: Boolean? = null, val netType: Int? = null, val carrier: String? = null, val appVersion: String? = null, )</ID>
     <ID>LongParameterList:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$( private val _subscriptionBackend: ISubscriptionBackendService, private val _deviceService: IDeviceService, private val _applicationService: IApplicationService, private val _subscriptionModelStore: SubscriptionModelStore, private val _configModelStore: ConfigModelStore, private val _buildUserService: IRebuildUserService, private val _newRecordState: NewRecordsState, private val _consistencyManager: IConsistencyManager, )</ID>
@@ -292,8 +290,6 @@
     <ID>MaxLineLength:DeviceService.kt$DeviceService$return if (isHMSCoreInstalledAndEnabledFallback()) IDeviceService.DeviceType.Huawei else IDeviceService.DeviceType.Android</ID>
     <ID>MaxLineLength:DeviceService.kt$DeviceService$val result = isHuaweiMobileServicesAvailableMethod.invoke(availabilityInstance, _applicationService.appContext) as Int</ID>
     <ID>MaxLineLength:DeviceService.kt$DeviceService.Companion$private const val GOOGLE_PLAY_SERVICES_PACKAGE = "com.google.android.gms" // = GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE</ID>
-    <ID>MaxLineLength:DeviceServiceTests.kt$DeviceServiceTests$every { AndroidUtils.getManifestMetaBoolean(ApplicationProvider.getApplicationContext(), "com.onesignal.preferHMS") } returns false</ID>
-    <ID>MaxLineLength:DeviceServiceTests.kt$DeviceServiceTests$every { AndroidUtils.getManifestMetaBoolean(ApplicationProvider.getApplicationContext(), "com.onesignal.preferHMS") } returns true</ID>
     <ID>MaxLineLength:DeviceUtils.kt$DeviceUtils$return if (networkType == ConnectivityManager.TYPE_WIFI || networkType == ConnectivityManager.TYPE_ETHERNET) 0 else 1</ID>
     <ID>MaxLineLength:ExecutorMocks.kt$ExecutorMocks.Companion$fun getNewRecordState(configModelStore: ConfigModelStore = MockHelper.configModelStore())</ID>
     <ID>MaxLineLength:HttpClient.kt$HttpClient$"$method `$url` was called before the user provided privacy consent. Your application is set to require the user's privacy consent before the OneSignal SDK can be initialized. Please ensure the user has provided consent before calling this method. You can check the latest OneSignal consent status by calling OneSignal.privacyConsent"</ID>
@@ -309,7 +305,6 @@
     <ID>MaxLineLength:HttpClient.kt$HttpClient$retVal = HttpResponse(httpResponse, cachedResponse, retryAfterSeconds = retryAfter, retryLimit = retryLimit)</ID>
     <ID>MaxLineLength:HttpClient.kt$HttpClient$retVal = HttpResponse(httpResponse, json, retryAfterSeconds = retryAfter, retryLimit = retryLimit)</ID>
     <ID>MaxLineLength:HttpClient.kt$HttpClient$retVal = HttpResponse(httpResponse, jsonResponse, retryAfterSeconds = retryAfter, retryLimit = retryLimit)</ID>
-    <ID>MaxLineLength:HttpClientTests.kt$HttpClientTests$// HttpClient will add 5 seconds to the httpTimeout to "give up" so we need to fail the request more than 5 seconds beyond our timeout.</ID>
     <ID>MaxLineLength:HttpResponse.kt$HttpResponse$get() = statusCode == HttpURLConnection.HTTP_OK || statusCode == HttpURLConnection.HTTP_ACCEPTED || statusCode == HttpURLConnection.HTTP_NOT_MODIFIED || statusCode == HttpURLConnection.HTTP_CREATED</ID>
     <ID>MaxLineLength:IDatabase.kt$IDatabase$*</ID>
     <ID>MaxLineLength:IInAppMessageClickResult.kt$IInAppMessageClickResult$*</ID>
@@ -323,24 +318,15 @@
     <ID>MaxLineLength:IServiceBuilder.kt$IServiceBuilder$*</ID>
     <ID>MaxLineLength:IUserBackendService.kt$IUserBackendService$*</ID>
     <ID>MaxLineLength:IUserManager.kt$IUserManager$*</ID>
-    <ID>MaxLineLength:IdentityBackendServiceTests.kt$IdentityBackendServiceTests$coEvery { spyHttpClient.patch(any(), any()) } returns HttpResponse(200, "{ identity: { aliasKey1: \"aliasValue1\"} }")</ID>
     <ID>MaxLineLength:IdentityOperationExecutor.kt$IdentityOperationExecutor$// A conflict indicates the alias doesn't exist on the user it's being deleted from. This is good!</ID>
     <ID>MaxLineLength:IdentityOperationExecutor.kt$IdentityOperationExecutor$_identityModelStore.model.setStringProperty(lastOperation.label, lastOperation.value, ModelChangeTags.HYDRATE)</ID>
     <ID>MaxLineLength:IdentityOperationExecutor.kt$IdentityOperationExecutor$return</ID>
     <ID>MaxLineLength:IdentityOperationExecutor.kt$IdentityOperationExecutor$return ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)</ID>
     <ID>MaxLineLength:IdentityOperationExecutor.kt$IdentityOperationExecutor$val rebuildOps = _buildUserService.getRebuildOperationsIfCurrentUser(lastOperation.appId, lastOperation.onesignalId)</ID>
-    <ID>MaxLineLength:IdentityOperationExecutorTests.kt$IdentityOperationExecutorTests$)</ID>
-    <ID>MaxLineLength:IdentityOperationExecutorTests.kt$IdentityOperationExecutorTests$IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState())</ID>
-    <ID>MaxLineLength:IdentityOperationExecutorTests.kt$IdentityOperationExecutorTests$IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, newRecordState)</ID>
-    <ID>MaxLineLength:IdentityOperationExecutorTests.kt$IdentityOperationExecutorTests$coEvery { mockIdentityBackendService.deleteAlias(any(), any(), any(), any()) } throws BackendException(400, "INVALID")</ID>
-    <ID>MaxLineLength:IdentityOperationExecutorTests.kt$IdentityOperationExecutorTests$coEvery { mockIdentityBackendService.deleteAlias(any(), any(), any(), any()) } throws BackendException(408, "TIMEOUT")</ID>
-    <ID>MaxLineLength:IdentityOperationExecutorTests.kt$IdentityOperationExecutorTests$coEvery { mockIdentityBackendService.setAlias(any(), any(), any(), any()) } throws BackendException(400, "INVALID")</ID>
-    <ID>MaxLineLength:IdentityOperationExecutorTests.kt$IdentityOperationExecutorTests$mockIdentityBackendService.setAlias("appId", IdentityConstants.ONESIGNAL_ID, "onesignalId", mapOf("aliasKey1" to "aliasValue1"))</ID>
     <ID>MaxLineLength:InfluenceManager.kt$InfluenceManager$"InfluenceManager.attemptSessionUpgrade: channel updated, search for ending direct influences on channels: $channelTrackersToReset"</ID>
     <ID>MaxLineLength:InfluenceManager.kt$InfluenceManager$Logging.debug("InfluenceManager.restartSessionIfNeeded(entryAction: $entryAction):\n channelTrackers: $channelTrackers")</ID>
     <ID>MaxLineLength:InfluenceManager.kt$InfluenceManager$channelInfluenceType?.isIndirect() == true &amp;&amp; channelTracker.indirectIds != null &amp;&amp; channelTracker.indirectIds!!.length() &gt; 0</ID>
     <ID>MaxLineLength:InfluenceManager.kt$InfluenceManager$updated = setSessionTracker(channelTrackerByAction, InfluenceType.DIRECT, directId ?: channelTrackerByAction.directId, null)</ID>
-    <ID>MaxLineLength:InfluenceManagerTests.kt$InfluenceManagerTests$InfluenceManager(mockSessionService, mockApplicationService, mockConfigModelStore, mockPreferences, MockHelper.time(1111))</ID>
     <ID>MaxLineLength:InitialOSDatabase.kt$InitialOSDatabase$OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME.toString()</ID>
     <ID>MaxLineLength:InitialOSDatabase.kt$InitialOSDatabase$OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY</ID>
     <ID>MaxLineLength:JSONConverter.kt$JSONConverter$val respIdentities = jsonObject.safeJSONObject("identity")?.toMap()?.mapValues { it.value.toString() } ?: mapOf()</ID>
@@ -363,22 +349,6 @@
     <ID>MaxLineLength:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$subscriptionModel?.setStringProperty(SubscriptionModel::id.name, backendSubscription.id!!, ModelChangeTags.HYDRATE)</ID>
     <ID>MaxLineLength:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$val containsSubscriptionOperation = operations.any { it is CreateSubscriptionOperation || it is TransferSubscriptionOperation }</ID>
     <ID>MaxLineLength:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$val response = _userBackend.createUser(createUserOperation.appId, identities, subscriptionList.map { it.second }, properties)</ID>
-    <ID>MaxLineLength:LoginUserOperationExecutorTests.kt$LoginUserOperationExecutorTests$)</ID>
-    <ID>MaxLineLength:LoginUserOperationExecutorTests.kt$LoginUserOperationExecutorTests$CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken1", SubscriptionStatus.SUBSCRIBED)</ID>
-    <ID>MaxLineLength:LoginUserOperationExecutorTests.kt$LoginUserOperationExecutorTests$CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId1, SubscriptionType.PUSH, true, "pushToken2", SubscriptionStatus.SUBSCRIBED)</ID>
-    <ID>MaxLineLength:LoginUserOperationExecutorTests.kt$LoginUserOperationExecutorTests$CreateSubscriptionOperation(appId, localOneSignalId, localSubscriptionId2, SubscriptionType.EMAIL, true, "name@company.com", SubscriptionStatus.SUBSCRIBED)</ID>
-    <ID>MaxLineLength:LoginUserOperationExecutorTests.kt$LoginUserOperationExecutorTests$LoginUserOperationExecutor(mockIdentityOperationExecutor, AndroidMockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())</ID>
-    <ID>MaxLineLength:LoginUserOperationExecutorTests.kt$LoginUserOperationExecutorTests$LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())</ID>
-    <ID>MaxLineLength:LoginUserOperationExecutorTests.kt$LoginUserOperationExecutorTests$SubscriptionObject(id = remoteSubscriptionId1, type = SubscriptionObjectType.ANDROID_PUSH, token = "pushToken2")</ID>
-    <ID>MaxLineLength:LoginUserOperationExecutorTests.kt$LoginUserOperationExecutorTests$SubscriptionObject(id = remoteSubscriptionId1, type = SubscriptionObjectType.ANDROID_PUSH, token = null)</ID>
-    <ID>MaxLineLength:LoginUserOperationExecutorTests.kt$LoginUserOperationExecutorTests$SubscriptionObject(id = remoteSubscriptionId2, type = SubscriptionObjectType.EMAIL, token = "name@company.com")</ID>
-    <ID>MaxLineLength:LoginUserOperationExecutorTests.kt$LoginUserOperationExecutorTests$coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(404, "NOT FOUND")</ID>
-    <ID>MaxLineLength:LoginUserOperationExecutorTests.kt$LoginUserOperationExecutorTests$coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(408, "TIMEOUT")</ID>
-    <ID>MaxLineLength:LoginUserOperationExecutorTests.kt$LoginUserOperationExecutorTests$coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(408, "TIMEOUT", retryAfterSeconds = 10)</ID>
-    <ID>MaxLineLength:LoginUserOperationExecutorTests.kt$LoginUserOperationExecutorTests$listOf(SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH), SubscriptionObject(remoteSubscriptionId2, SubscriptionObjectType.EMAIL))</ID>
-    <ID>MaxLineLength:LoginUserOperationExecutorTests.kt$LoginUserOperationExecutorTests$response.idTranslations shouldBe mapOf(localOneSignalId to remoteOneSignalId, localSubscriptionId1 to remoteSubscriptionId1, localSubscriptionId2 to remoteSubscriptionId2)</ID>
-    <ID>MaxLineLength:LoginUserOperationExecutorTests.kt$LoginUserOperationExecutorTests$test</ID>
-    <ID>MaxLineLength:LoginUserOperationExecutorTests.kt$LoginUserOperationExecutorTests$val operations = listOf&lt;Operation&gt;(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))</ID>
     <ID>MaxLineLength:MisconfiguredLocationManager.kt$MisconfiguredLocationManager.Companion$private val EXCEPTION get() = Exception("Must include gradle module com.onesignal:Location in order to use this functionality!")</ID>
     <ID>MaxLineLength:MisconfiguredNotificationsManager.kt$MisconfiguredNotificationsManager.Companion$private val EXCEPTION get() = Exception("Must include gradle module com.onesignal:Notification in order to use this functionality!")</ID>
     <ID>MaxLineLength:Model.kt$Model$Boolean::class.java, java.lang.Boolean::class.java -&gt; data[property] = jsonObject.getBoolean(property)</ID>
@@ -386,7 +356,6 @@
     <ID>MaxLineLength:Model.kt$Model$Float::class.java, java.lang.Float::class.java -&gt; data[property] = jsonObject.getDouble(property).toFloat()</ID>
     <ID>MaxLineLength:Model.kt$Model$String::class.java, java.lang.String::class.java -&gt; data[property] = jsonObject.getString(property)</ID>
     <ID>MaxLineLength:ModelStore.kt$ModelStore$_prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + name, jsonArray.toString())</ID>
-    <ID>MaxLineLength:ModelingTests.kt$ModelingTests$prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + "operations", jsonArray.toString())</ID>
     <ID>MaxLineLength:OSDatabase.kt$OSDatabase$"ADD COLUMN "</ID>
     <ID>MaxLineLength:OSDatabase.kt$OSDatabase$"Error inserting or throw on table: $table with nullColumnHack: $nullColumnHack and values: $values"</ID>
     <ID>MaxLineLength:OSDatabase.kt$OSDatabase$"Error under delete transaction under table: $table with whereClause: $whereClause and whereArgs: $whereArgs"</ID>
@@ -404,39 +373,18 @@
     <ID>MaxLineLength:OneSignalImp.kt$OneSignalImp$val currentPushSubscription = subscriptionModelStore!!.list().firstOrNull { it.id == configModel!!.pushSubscriptionId }</ID>
     <ID>MaxLineLength:OneSignalUtils.kt$OneSignalUtils$val emRegex = "^[a-zA-Z0-9.!#$%&amp;'*+/=?^_`{|}~-]+@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\])|(([a-zA-Z\\-0-9]+\\.)+[a-zA-Z]{2,}))$"</ID>
     <ID>MaxLineLength:OperationModelStore.kt$OperationModelStore$LoginUserFromSubscriptionOperationExecutor.LOGIN_USER_FROM_SUBSCRIPTION_USER -&gt; LoginUserFromSubscriptionOperation()</ID>
-    <ID>MaxLineLength:OperationModelStoreTests.kt$OperationModelStoreTests$prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + "operations", jsonArray.toString())</ID>
-    <ID>MaxLineLength:OperationModelStoreTests.kt$OperationModelStoreTests$val validOperation = SetPropertyOperation(UUID.randomUUID().toString(), UUID.randomUUID().toString(), "property", "value")</ID>
     <ID>MaxLineLength:OperationRepo.kt$OperationRepo$ExecutionResult.FAIL_UNAUTHORIZED</ID>
     <ID>MaxLineLength:OperationRepo.kt$OperationRepo$Logging.debug("OperationRepo: internalEnqueue - operation.id: ${queueItem.operation.id} already exists in the queue.")</ID>
     <ID>MaxLineLength:OperationRepo.kt$OperationRepo$Logging.error("Operation execution failed with eventual retry, pausing the operation repo: $operations")</ID>
-    <ID>MaxLineLength:OperationRepoTests.kt$OperationRepoTests$prefs.saveString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.MODEL_STORE_PREFIX + "operations", jsonArray.toString())</ID>
-    <ID>MaxLineLength:OperationRepoTests.kt$OperationRepoTests$test</ID>
-    <ID>MaxLineLength:OperationRepoTests.kt$OperationRepoTests$val operation1 = mockOperation("operationId1", canStartExecute = false, groupComparisonType = GroupComparisonType.ALTER)</ID>
-    <ID>MaxLineLength:OperationRepoTests.kt$OperationRepoTests$}</ID>
     <ID>MaxLineLength:OutcomeEvent.kt$OutcomeEvent$return session == event.session &amp;&amp; notificationIds == event.notificationIds &amp;&amp; name == event.name &amp;&amp; timestamp == event.timestamp &amp;&amp; sessionTime == event.sessionTime &amp;&amp; weight == event.weight</ID>
     <ID>MaxLineLength:OutcomeEvent.kt$OutcomeEvent.Companion$if</ID>
     <ID>MaxLineLength:OutcomeEvent.kt$OutcomeEvent.Companion$}</ID>
     <ID>MaxLineLength:OutcomeEventParams.kt$OutcomeEventParams$fun isUnattributed()</ID>
-    <ID>MaxLineLength:OutcomeEventsBackendServiceTests.kt$OutcomeEventsBackendServiceTests$outcomeEventsController.sendOutcomeEvent("appId", "onesignalId", "subscriptionId", "AndroidPush", null, evnt)</ID>
     <ID>MaxLineLength:OutcomeEventsController.kt$OutcomeEventsController$"OutcomeEventsController.removeDisabledInfluences: Outcomes disabled for channel: " + influence.influenceChannel.toString()</ID>
     <ID>MaxLineLength:OutcomeEventsController.kt$OutcomeEventsController$"OutcomeEventsController.sendAndCreateOutcomeEvent: Outcomes disabled for channel: " + influence.influenceChannel</ID>
     <ID>MaxLineLength:OutcomeEventsController.kt$OutcomeEventsController$_outcomeEventsBackend.sendOutcomeEvent(appId, _identityModelStore.model.onesignalId, subscriptionId, deviceType, direct, event)</ID>
     <ID>MaxLineLength:OutcomeEventsController.kt$OutcomeEventsController$_outcomeEventsPreferences.unattributedUniqueOutcomeEventsSentByChannel = unattributedUniqueOutcomeEventsSentOnSession</ID>
-    <ID>MaxLineLength:OutcomeEventsControllerTests.kt$OutcomeEventsControllerTests$OutcomeEventParams("outcomeId1", OutcomeSource(OutcomeSourceBody(JSONArray().put("notificationId1")), null), .4f, 0, 1111)</ID>
-    <ID>MaxLineLength:OutcomeEventsControllerTests.kt$OutcomeEventsControllerTests$OutcomeEventParams("outcomeId2", OutcomeSource(null, OutcomeSourceBody(JSONArray().put("notificationId2").put("notificationId3"))), .2f, 0, 2222)</ID>
-    <ID>MaxLineLength:OutcomeEventsControllerTests.kt$OutcomeEventsControllerTests$coEvery { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any(), any(), any()) } throws BackendException(408, null)</ID>
-    <ID>MaxLineLength:OutcomeEventsControllerTests.kt$OutcomeEventsControllerTests$every { mockInfluenceManager.influences } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DISABLED, null))</ID>
-    <ID>MaxLineLength:OutcomeEventsControllerTests.kt$OutcomeEventsControllerTests$every { mockInfluenceManager.influences } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.UNATTRIBUTED, null))</ID>
-    <ID>MaxLineLength:OutcomeEventsControllerTests.kt$OutcomeEventsControllerTests$every { mockInfluenceManager.influences } returns listOf(notificationInfluence1) andThen listOf(notificationInfluence2)</ID>
-    <ID>MaxLineLength:OutcomeEventsControllerTests.kt$OutcomeEventsControllerTests$mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", "AndroidPush", null, evnt)</ID>
-    <ID>MaxLineLength:OutcomeEventsControllerTests.kt$OutcomeEventsControllerTests$mockOutcomeEventsBackend.sendOutcomeEvent(MockHelper.DEFAULT_APP_ID, "onesignalId", "subscriptionId", "AndroidPush", true, evnt)</ID>
-    <ID>MaxLineLength:OutcomeEventsControllerTests.kt$OutcomeEventsControllerTests$val notificationInfluence = Influence(InfluenceChannel.NOTIFICATION, InfluenceType.INDIRECT, JSONArray(notificationIds))</ID>
-    <ID>MaxLineLength:OutcomeEventsControllerTests.kt$OutcomeEventsControllerTests$val notificationInfluence1 = Influence(InfluenceChannel.NOTIFICATION, InfluenceType.INDIRECT, JSONArray(notificationIds1))</ID>
-    <ID>MaxLineLength:OutcomeEventsControllerTests.kt$OutcomeEventsControllerTests$val notificationInfluence2 = Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray(notificationIds2))</ID>
     <ID>MaxLineLength:OutcomeEventsRepository.kt$OutcomeEventsRepository$"WHERE"</ID>
-    <ID>MaxLineLength:OutcomeEventsRepositoryTests.kt$OutcomeEventsRepositoryTests$OutcomeSourceBody(JSONArray().put("notificationId1").put("notificationId2"), JSONArray().put("iamId1").put("iamId2"))</ID>
-    <ID>MaxLineLength:OutcomeEventsRepositoryTests.kt$OutcomeEventsRepositoryTests$it[OutcomeEventsTable.COLUMN_NAME_NOTIFICATION_IDS] shouldBe JSONArray("[\"notificationId1\"]").toString()</ID>
-    <ID>MaxLineLength:OutcomeEventsRepositoryTests.kt$OutcomeEventsRepositoryTests$test</ID>
     <ID>MaxLineLength:OutcomeTableProvider.kt$OutcomeTableProvider$" SET "</ID>
     <ID>MaxLineLength:OutcomeTableProvider.kt$OutcomeTableProvider$"ALTER TABLE " + OutcomeEventsTable.TABLE_NAME + " ADD COLUMN " + OutcomeEventsTable.COLUMN_NAME_SESSION_TIME + " INTEGER DEFAULT 1;"</ID>
     <ID>MaxLineLength:OutcomeTableProvider.kt$OutcomeTableProvider$"INSERT INTO " + CachedUniqueOutcomeTable.TABLE_NAME_V2 + "(" + commonColumnsWithNewInfluenceIdColumn + ")"</ID>
@@ -450,9 +398,6 @@
     <ID>MaxLineLength:OutcomesDbContract.kt$OutcomeEventsTable$const</ID>
     <ID>MaxLineLength:OutcomesDbContract.kt$OutcomeEventsTable$const val COLUMN_NAME_PARAMS = "params" // Added on DB v4 SDK v3.12.0 replaced with weight on DB v5 SDK v3.12.1, migration added on DB v6 SDK v3.12.2</ID>
     <ID>MaxLineLength:OutcomesDbContract.kt$OutcomesDbContract$OutcomeEventsTable.COLUMN_NAME_TIMESTAMP</ID>
-    <ID>MaxLineLength:PreferencesServiceTests.kt$PreferencesServiceTests$preferencesService.saveStringSet(mockPrefStoreName, mockStringSetPrefStoreKey, setOf("default2-1", "default2-2"))</ID>
-    <ID>MaxLineLength:PreferencesServiceTests.kt$PreferencesServiceTests$val store = ApplicationProvider.getApplicationContext&lt;Context&gt;().getSharedPreferences(mockPrefStoreName, Context.MODE_PRIVATE)</ID>
-    <ID>MaxLineLength:PreferencesServiceTests.kt$PreferencesServiceTests$val stringSetValue = preferencesService.getStringSet(mockPrefStoreName, mockStringSetPrefStoreKey, setOf("default1", "default2"))</ID>
     <ID>MaxLineLength:PropertiesObject.kt$PropertiesObject$get() = tags != null || language != null || timezoneId != null || country != null || latitude != null || longitude != null</ID>
     <ID>MaxLineLength:PropertyOperationHelper.kt$PropertyOperationHelper$// PropertiesModel::locationAccuracy.name -&gt; PropertiesObject(propertiesObject.tags, propertiesObject.language, propertiesObject.timezoneId, propertiesObject.country, propertiesObject.latitude, propertiesObject.longitude)</ID>
     <ID>MaxLineLength:PropertyOperationHelper.kt$PropertyOperationHelper$// PropertiesModel::locationBackground.name -&gt; PropertiesObject(propertiesObject.tags, propertiesObject.language, propertiesObject.timezoneId, propertiesObject.country, propertiesObject.latitude, propertiesObject.longitude)</ID>
@@ -461,22 +406,11 @@
     <ID>MaxLineLength:RecoverConfigPushSubscription.kt$RecoverConfigPushSubscription$val activePushSubscription by lazy { _subscriptionModelStore.list().firstOrNull { it.type == SubscriptionType.PUSH } }</ID>
     <ID>MaxLineLength:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$subscriptionModel.optedIn = subscriptionModel.status != SubscriptionStatus.UNSUBSCRIBE &amp;&amp; subscriptionModel.status != SubscriptionStatus.DISABLED_FROM_REST_API_DEFAULT_REASON</ID>
     <ID>MaxLineLength:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$subscriptionModel.status = SubscriptionStatus.fromInt(subscription.notificationTypes ?: SubscriptionStatus.SUBSCRIBED.value) ?: SubscriptionStatus.SUBSCRIBED</ID>
-    <ID>MaxLineLength:RefreshUserOperationExecutorTests.kt$RefreshUserOperationExecutorTests$SubscriptionObject(existingSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "on-backend-push-token")</ID>
-    <ID>MaxLineLength:RefreshUserOperationExecutorTests.kt$RefreshUserOperationExecutorTests$SubscriptionObject(remoteSubscriptionId1, SubscriptionObjectType.ANDROID_PUSH, enabled = true, token = "pushToken2")</ID>
-    <ID>MaxLineLength:RefreshUserOperationExecutorTests.kt$RefreshUserOperationExecutorTests$coEvery { mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId) } throws BackendException(400)</ID>
-    <ID>MaxLineLength:RefreshUserOperationExecutorTests.kt$RefreshUserOperationExecutorTests$coEvery { mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId) } throws BackendException(404)</ID>
     <ID>MaxLineLength:RequestPermissionService.kt$RequestPermissionService.&lt;no name provided&gt;$.</ID>
     <ID>MaxLineLength:SessionListener.kt$SessionListener$TrackSessionEndOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, durationInSeconds)</ID>
     <ID>MaxLineLength:SessionListener.kt$SessionListener$_operationRepo.enqueue(TrackSessionStartOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId), true)</ID>
-    <ID>MaxLineLength:SessionServiceTests.kt$Mocks$SessionService(MockHelper.applicationService(), MockHelper.configModelStore(), mockSessionModelStore, MockHelper.time(currentTime))</ID>
     <ID>MaxLineLength:SingletonModelStore.kt$SingletonModelStore$override fun unsubscribe(handler: ISingletonModelStoreChangeHandler&lt;TModel&gt;)</ID>
-    <ID>MaxLineLength:StartupServiceTests.kt$StartupServiceTests$val startupService = StartupService(setupServiceProvider(listOf(), listOf(mockStartableService1, mockStartableService2)))</ID>
-    <ID>MaxLineLength:StartupServiceTests.kt$StartupServiceTests$val startupService = StartupService(setupServiceProvider(listOf(), listOf(mockStartupService1, mockStartupService2)))</ID>
-    <ID>MaxLineLength:StartupServiceTests.kt$StartupServiceTests$val startupService = StartupService(setupServiceProvider(listOf(mockBootstrapService1, mockBootstrapService2), listOf()))</ID>
-    <ID>MaxLineLength:SubscriptionBackendServiceTests.kt$SubscriptionBackendServiceTests$coEvery { spyHttpClient.post(any(), any()) } returns HttpResponse(202, "{ \"subscription\": { id: \"subscriptionId\" }, \"ryw_token\": \"123\"}")</ID>
     <ID>MaxLineLength:SubscriptionManager.kt$SubscriptionManager$((subscription as PushSubscription).changeHandlersNotifier).subscribeAll(existingPushSubscription.changeHandlersNotifier)</ID>
-    <ID>MaxLineLength:SubscriptionManagerTests.kt$SubscriptionManagerTests$subscriptionManager.addOrUpdatePushSubscriptionToken("pushToken2", SubscriptionStatus.FIREBASE_FCM_ERROR_IOEXCEPTION_OTHER)</ID>
-    <ID>MaxLineLength:SubscriptionManagerTests.kt$SubscriptionManagerTests$val subscriptionManager = SubscriptionManager(mockApplicationService, mockSessionService, mockSubscriptionModelStore)</ID>
     <ID>MaxLineLength:SubscriptionModelStoreListener.kt$SubscriptionModelStoreListener$return DeleteSubscriptionOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, model.id)</ID>
     <ID>MaxLineLength:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$// TODO: whenever the end-user changes users, we need to add the read-your-write token here, currently no code to handle the re-fetch IAMs</ID>
     <ID>MaxLineLength:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$// toss this, but create an identical CreateSubscriptionOperation to re-create the subscription being updated.</ID>
@@ -485,9 +419,6 @@
     <ID>MaxLineLength:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$val lastUpdateOperation = operations.lastOrNull { it is UpdateSubscriptionOperation } as UpdateSubscriptionOperation?</ID>
     <ID>MaxLineLength:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$val operations = _buildUserService.getRebuildOperationsIfCurrentUser(createOperation.appId, createOperation.onesignalId)</ID>
     <ID>MaxLineLength:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$val rywData = _subscriptionBackend.updateSubscription(lastOperation.appId, lastOperation.subscriptionId, subscription)</ID>
-    <ID>MaxLineLength:SubscriptionOperationExecutorTests.kt$SubscriptionOperationExecutorTests$coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any()) } throws BackendException(404)</ID>
-    <ID>MaxLineLength:SubscriptionOperationExecutorTests.kt$SubscriptionOperationExecutorTests$coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(404)</ID>
-    <ID>MaxLineLength:SubscriptionOperationExecutorTests.kt$SubscriptionOperationExecutorTests$coEvery { mockSubscriptionBackendService.updateSubscription(any(), any(), any()) } throws BackendException(408)</ID>
     <ID>MaxLineLength:SyncJobService.kt$SyncJobService$Logging.debug("LollipopSyncRunnable:JobFinished needsJobReschedule: " + backgroundService.needsJobReschedule)</ID>
     <ID>MaxLineLength:TrackGooglePurchase.kt$TrackGooglePurchase$// Invoke 'applicationContext' to avoid exceptions caused by 'ReceiverRestrictedContext' when using 'bindService'.</ID>
     <ID>MaxLineLength:TrackGooglePurchase.kt$TrackGooglePurchase$_applicationService.appContext.applicationContext.bindService(serviceIntent, serviceConn, Context.BIND_AUTO_CREATE)</ID>
@@ -506,23 +437,6 @@
     <ID>MaxLineLength:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$propertiesObject = PropertyOperationHelper.createPropertiesFromOperation(operation, propertiesObject)</ID>
     <ID>MaxLineLength:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$return ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)</ID>
     <ID>MaxLineLength:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$val purchasesArray = if (deltasObject.purchases != null) deltasObject.purchases!!.toMutableList() else mutableListOf()</ID>
-    <ID>MaxLineLength:UpdateUserOperationExecutorTests.kt$UpdateUserOperationExecutorTests$coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } throws BackendException(404)</ID>
-    <ID>MaxLineLength:UserBackendServiceTests.kt$UserBackendServiceTests$coEvery { spyHttpClient.patch(any(), any()) } returns HttpResponse(202, "{properties: { lat: 12.34, long: 45.67}}")</ID>
-    <ID>MaxLineLength:UserBackendServiceTests.kt$UserBackendServiceTests$coEvery { spyHttpClient.patch(any(), any()) } returns HttpResponse(202, "{properties: { tags: {tagKey1: tagValue1}}}")</ID>
-    <ID>MaxLineLength:UserBackendServiceTests.kt$UserBackendServiceTests$coEvery { spyHttpClient.patch(any(), any()) } returns HttpResponse(202, "{properties: { timezone_id: \"America/New_York\"}}")</ID>
-    <ID>MaxLineLength:UserBackendServiceTests.kt$UserBackendServiceTests$it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(0).getDouble("amount") shouldBe 2222</ID>
-    <ID>MaxLineLength:UserBackendServiceTests.kt$UserBackendServiceTests$it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(0).getString("iso") shouldBe "iso1"</ID>
-    <ID>MaxLineLength:UserBackendServiceTests.kt$UserBackendServiceTests$it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(0).getString("sku") shouldBe "sku1"</ID>
-    <ID>MaxLineLength:UserBackendServiceTests.kt$UserBackendServiceTests$it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(1).getDouble("amount") shouldBe 4444</ID>
-    <ID>MaxLineLength:UserBackendServiceTests.kt$UserBackendServiceTests$it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(1).getString("iso") shouldBe "iso2"</ID>
-    <ID>MaxLineLength:UserBackendServiceTests.kt$UserBackendServiceTests$it.getJSONObject("deltas").getJSONArray("purchases").getJSONObject(1).getString("sku") shouldBe "sku2"</ID>
-    <ID>MaxLineLength:UserBackendServiceTests.kt$UserBackendServiceTests$userBackendService.updateUser("appId", aliasLabel, aliasValue, properties, refreshDeviceMetadata = false, propertiesDelta)</ID>
-    <ID>MaxLineLength:UserBackendServiceTests.kt$UserBackendServiceTests$userBackendService.updateUser("appId", aliasLabel, aliasValue, properties, refreshDeviceMetadata = true, propertiesDelta)</ID>
-    <ID>MaxLineLength:UserBackendServiceTests.kt$UserBackendServiceTests$}</ID>
-    <ID>MaxLineLength:UserManagerTests.kt$UserManagerTests$UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), languageContext)</ID>
-    <ID>MaxLineLength:UserManagerTests.kt$UserManagerTests$UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext())</ID>
-    <ID>MaxLineLength:UserManagerTests.kt$UserManagerTests$UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.languageContext())</ID>
-    <ID>MaxLineLength:UserManagerTests.kt$UserManagerTests$val userManager = UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext())</ID>
     <ID>MemberNameEqualsClassName:OneSignal.kt$OneSignal$private val oneSignal: IOneSignal by lazy { OneSignalImp() }</ID>
     <ID>NestedBlockDepth:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation&gt;): ExecutionResponse</ID>
     <ID>NestedBlockDepth:InfluenceManager.kt$InfluenceManager$private fun attemptSessionUpgrade( entryAction: AppEntryAction, directId: String? = null, )</ID>
@@ -649,20 +563,13 @@
     <ID>UndocumentedPublicClass:AndroidUtils.kt$AndroidUtils$SchemaType</ID>
     <ID>UndocumentedPublicClass:AndroidUtils.kt$AndroidUtils.SchemaType$Companion</ID>
     <ID>UndocumentedPublicClass:ApplicationService.kt$ApplicationService : IApplicationServiceActivityLifecycleCallbacksOnGlobalLayoutListener</ID>
-    <ID>UndocumentedPublicClass:ApplicationServiceTests.kt$ApplicationServiceTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:ApplicationServiceTests.kt$ApplicationServiceTests$Companion</ID>
     <ID>UndocumentedPublicClass:ConfigModel.kt$ConfigModel : Model</ID>
     <ID>UndocumentedPublicClass:ConfigModel.kt$InfluenceConfigModel$Companion</ID>
     <ID>UndocumentedPublicClass:ConfigModelStore.kt$ConfigModelStore : SingletonModelStore</ID>
-    <ID>UndocumentedPublicClass:ConsistencyManagerTests.kt$ConsistencyManagerTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:DateUtils.kt$DateUtils</ID>
-    <ID>UndocumentedPublicClass:DeviceServiceTests.kt$DeviceServiceTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:DeviceUtils.kt$DeviceUtils</ID>
-    <ID>UndocumentedPublicClass:EventProducerTest.kt$EventProducerTest : FunSpec</ID>
     <ID>UndocumentedPublicClass:ExecutorMocks.kt$ExecutorMocks</ID>
     <ID>UndocumentedPublicClass:ExecutorMocks.kt$ExecutorMocks$Companion</ID>
-    <ID>UndocumentedPublicClass:HttpClientTests.kt$HttpClientTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:HttpClientTests.kt$Mocks</ID>
     <ID>UndocumentedPublicClass:ICondition.kt$ICondition</ID>
     <ID>UndocumentedPublicClass:IConsistencyKeyEnum.kt$IConsistencyKeyEnum</ID>
     <ID>UndocumentedPublicClass:IConsistencyManager.kt$IConsistencyManager</ID>
@@ -698,76 +605,46 @@
     <ID>UndocumentedPublicClass:IUserBackendService.kt$CreateUserResponse</ID>
     <ID>UndocumentedPublicClass:IUserBackendService.kt$IUserBackendService</ID>
     <ID>UndocumentedPublicClass:IamFetchReadyCondition.kt$IamFetchReadyCondition$Companion</ID>
-    <ID>UndocumentedPublicClass:IdentityBackendServiceTests.kt$IdentityBackendServiceTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:IdentityModelStore.kt$IdentityModelStore : SingletonModelStore</ID>
-    <ID>UndocumentedPublicClass:IdentityOperationExecutorTests.kt$IdentityOperationExecutorTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:InAppMessageActionUrlType.kt$InAppMessageActionUrlType$Companion</ID>
     <ID>UndocumentedPublicClass:Influence.kt$Influence</ID>
     <ID>UndocumentedPublicClass:Influence.kt$Influence$Companion</ID>
     <ID>UndocumentedPublicClass:InfluenceChannel.kt$InfluenceChannel</ID>
     <ID>UndocumentedPublicClass:InfluenceChannel.kt$InfluenceChannel$Companion</ID>
-    <ID>UndocumentedPublicClass:InfluenceManagerTests.kt$InfluenceManagerTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:InfluenceType.kt$InfluenceType</ID>
     <ID>UndocumentedPublicClass:InfluenceType.kt$InfluenceType$Companion</ID>
-    <ID>UndocumentedPublicClass:InstallIdServiceTests.kt$InstallIdServiceTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:JSONConverter.kt$JSONConverter</ID>
-    <ID>UndocumentedPublicClass:JSONObjectEnvTest.kt$JSONObjectJVMEnvTest : FunSpec</ID>
-    <ID>UndocumentedPublicClass:JSONObjectEnvTest.kt$JSONObjectRobolectricEnvTest : FunSpec</ID>
-    <ID>UndocumentedPublicClass:JSONObjectExtensionsTest.kt$JSONObjectExtensionsTest : DescribeSpec</ID>
     <ID>UndocumentedPublicClass:JSONUtils.kt$JSONUtils</ID>
     <ID>UndocumentedPublicClass:LogLevel.kt$LogLevel</ID>
     <ID>UndocumentedPublicClass:LogLevel.kt$LogLevel$Companion</ID>
     <ID>UndocumentedPublicClass:Logging.kt$Logging</ID>
-    <ID>UndocumentedPublicClass:LoggingTests.kt$LoggingTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:LoggingTests.kt$TestLogLister : ILogListener</ID>
-    <ID>UndocumentedPublicClass:LoginUserOperationExecutorTests.kt$LoginUserOperationExecutorTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:MigrationRecovery.kt$MigrationRecovery : IMigrationRecovery</ID>
-    <ID>UndocumentedPublicClass:MigrationRecoveryTests.kt$MigrationRecoveryTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:ModelingTests.kt$ModelingTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:NetworkUtils.kt$NetworkUtils</ID>
     <ID>UndocumentedPublicClass:NetworkUtils.kt$NetworkUtils$ResponseStatusType</ID>
-    <ID>UndocumentedPublicClass:OSDatabaseTests.kt$OSDatabaseTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:OSPrimaryCoroutineScope.kt$OSPrimaryCoroutineScope</ID>
     <ID>UndocumentedPublicClass:OneSignalDbContract.kt$OneSignalDbContract</ID>
     <ID>UndocumentedPublicClass:OneSignalDbContract.kt$OneSignalDbContract$InAppMessageTable : BaseColumns</ID>
     <ID>UndocumentedPublicClass:OneSignalDbContract.kt$OneSignalDbContract$NotificationTable : BaseColumns</ID>
-    <ID>UndocumentedPublicClass:OneSignalImpTests.kt$OneSignalImpTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:OneSignalLogEvent.kt$OneSignalLogEvent</ID>
     <ID>UndocumentedPublicClass:OneSignalUtils.kt$OneSignalUtils</ID>
-    <ID>UndocumentedPublicClass:OneSignalUtilsTest.kt$OneSignalUtilsTest : FunSpec</ID>
     <ID>UndocumentedPublicClass:OneSignalWrapper.kt$OneSignalWrapper</ID>
     <ID>UndocumentedPublicClass:Operation.kt$GroupComparisonType</ID>
-    <ID>UndocumentedPublicClass:OperationModelStoreTests.kt$OperationModelStoreTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:OperationRepoTests.kt$OperationRepoTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:OperationRepoTests.kt$OperationRepoTests$Companion</ID>
     <ID>UndocumentedPublicClass:OptionalHeaders.kt$OptionalHeaders</ID>
-    <ID>UndocumentedPublicClass:OutcomeEventsBackendServiceTests.kt$OutcomeEventsBackendServiceTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:OutcomeEventsControllerTests.kt$OutcomeEventsControllerTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:OutcomeEventsRepositoryTests.kt$OutcomeEventsRepositoryTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:PermissionsActivity.kt$PermissionsActivity : Activity</ID>
     <ID>UndocumentedPublicClass:PermissionsActivity.kt$PermissionsActivity$Companion</ID>
     <ID>UndocumentedPublicClass:PreferenceStoreFix.kt$PreferenceStoreFix</ID>
-    <ID>UndocumentedPublicClass:PreferencesServiceTests.kt$PreferencesServiceTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:PropertiesDeltasObject.kt$PropertiesDeltasObject</ID>
     <ID>UndocumentedPublicClass:PropertiesDeltasObject.kt$PurchaseObject</ID>
     <ID>UndocumentedPublicClass:PropertiesModel.kt$PropertiesModel : Model</ID>
     <ID>UndocumentedPublicClass:PropertiesModelStore.kt$PropertiesModelStore : SingletonModelStore</ID>
-    <ID>UndocumentedPublicClass:PropertiesModelTests.kt$PropertiesModelTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:PropertiesObject.kt$PropertiesObject</ID>
     <ID>UndocumentedPublicClass:PushSubscriptionChangedState.kt$PushSubscriptionChangedState</ID>
     <ID>UndocumentedPublicClass:RebuildUserService.kt$RebuildUserService : IRebuildUserService</ID>
-    <ID>UndocumentedPublicClass:RecoverFromDroppedLoginBugTests.kt$RecoverFromDroppedLoginBugTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:RefreshUserOperationExecutorTests.kt$RefreshUserOperationExecutorTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:RootToolsInternalMethods.kt$RootToolsInternalMethods</ID>
     <ID>UndocumentedPublicClass:RywData.kt$RywData</ID>
     <ID>UndocumentedPublicClass:ServiceBuilder.kt$ServiceBuilder : IServiceBuilder</ID>
     <ID>UndocumentedPublicClass:ServiceProvider.kt$ServiceProvider$Companion</ID>
-    <ID>UndocumentedPublicClass:ServiceProviderTest.kt$ServiceProviderTest : FunSpec</ID>
     <ID>UndocumentedPublicClass:SessionModelStore.kt$SessionModelStore : SingletonModelStore</ID>
-    <ID>UndocumentedPublicClass:SessionServiceTests.kt$SessionServiceTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:StartupServiceTests.kt$StartupServiceTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:SubscriptionBackendServiceTests.kt$SubscriptionBackendServiceTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:SubscriptionManagerTests.kt$SubscriptionManagerTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:SubscriptionModel.kt$SubscriptionModel : Model</ID>
     <ID>UndocumentedPublicClass:SubscriptionModel.kt$SubscriptionStatus</ID>
     <ID>UndocumentedPublicClass:SubscriptionModel.kt$SubscriptionStatus$Companion</ID>
@@ -776,19 +653,14 @@
     <ID>UndocumentedPublicClass:SubscriptionObject.kt$SubscriptionObject</ID>
     <ID>UndocumentedPublicClass:SubscriptionObjectType.kt$SubscriptionObjectType</ID>
     <ID>UndocumentedPublicClass:SubscriptionObjectType.kt$SubscriptionObjectType$Companion</ID>
-    <ID>UndocumentedPublicClass:SubscriptionOperationExecutorTests.kt$SubscriptionOperationExecutorTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:SyncJobService.kt$SyncJobService : JobService</ID>
     <ID>UndocumentedPublicClass:TimeUtils.kt$TimeUtils</ID>
-    <ID>UndocumentedPublicClass:UpdateUserOperationExecutorTests.kt$UpdateUserOperationExecutorTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:UserBackendServiceTests.kt$UserBackendServiceTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:UserChangedState.kt$UserChangedState</ID>
-    <ID>UndocumentedPublicClass:UserManagerTests.kt$UserManagerTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:UserRefreshService.kt$UserRefreshService : IStartableServiceISessionLifecycleHandler</ID>
     <ID>UndocumentedPublicClass:ViewUtils.kt$ViewUtils</ID>
     <ID>UnusedParameter:AndroidUtils.kt$AndroidUtils$_class: Class&lt;*&gt;</ID>
     <ID>UnusedPrivateProperty:AndroidUtils.kt$AndroidUtils$var requestPermission: String? = null</ID>
     <ID>UnusedPrivateProperty:ApplicationService.kt$ApplicationService$val listenerKey = "decorViewReady:$runnable"</ID>
-    <ID>UnusedPrivateProperty:ModelingTests.kt$ModelingTests$val event = EventProducer&lt;SubscriptionModel&gt;()</ID>
     <ID>UnusedPrivateProperty:OSDatabase.kt$OSDatabase.Companion$private const val FLOAT_TYPE = " FLOAT"</ID>
     <ID>UnusedPrivateProperty:OperationRepo.kt$OperationRepo$private val _time: ITime</ID>
     <ID>UtilityClassWithPublicConstructor:ExecutorMocks.kt$ExecutorMocks</ID>

@@ -98,24 +98,9 @@
     <ID>MaxLineLength:IInAppBackendService.kt$IInAppBackendService$*</ID>
     <ID>MaxLineLength:IInAppDisplayer.kt$IInAppDisplayer$*</ID>
     <ID>MaxLineLength:InAppBackendService.kt$InAppBackendService$return</ID>
-    <ID>MaxLineLength:InAppBackendServiceTests.kt$InAppBackendServiceTests$"retries according to retry limit and retryAfterSeconds and makes final request without RYW token after retries exhausted"</ID>
-    <ID>MaxLineLength:InAppBackendServiceTests.kt$InAppBackendServiceTests$"{ in_app_messages: [{id: \"messageId1\", variants:{all: {en: \"content1\"}}, triggers:[[{id: \"triggerId1\", kind: \"custom\", property: \"property1\", operator: \"equal\", value: \"value1\"}]], end_time: \"2008-09-03T20:56:35.450686Z\", redisplay: { limit: 11111, delay: 22222}}] }"</ID>
-    <ID>MaxLineLength:InAppBackendServiceTests.kt$InAppBackendServiceTests$"{html: \"html1\", display_duration: 123, styles: {remove_height_margin: true, remove_width_margin: true}}"</ID>
-    <ID>MaxLineLength:InAppBackendServiceTests.kt$InAppBackendServiceTests$coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(200, "{html: \"html1\", display_duration: 123 }")</ID>
-    <ID>MaxLineLength:InAppBackendServiceTests.kt$InAppBackendServiceTests$coVerify(exactly = 1) { mockHttpClient.get("in_app_messages/device_preview?preview_id=previewUUID&amp;app_id=appId", any()) }</ID>
-    <ID>MaxLineLength:InAppBackendServiceTests.kt$InAppBackendServiceTests$coVerify(exactly = 1) { mockHttpClient.get("in_app_messages/messageId/variants/variantId/html?app_id=appId", any()) }</ID>
-    <ID>MaxLineLength:InAppBackendServiceTests.kt$InAppBackendServiceTests$coVerify(exactly = 4) { mockHttpClient.get("in_app_messages/messageId/variants/variantId/html?app_id=appId", any()) }</ID>
-    <ID>MaxLineLength:InAppBackendServiceTests.kt$InAppBackendServiceTests$inAppBackendService.sendIAMClick("appId", "subscriptionId", "variantId", "messageId", "clickId", isFirstClick = true)</ID>
-    <ID>MaxLineLength:InAppBackendServiceTests.kt$InAppBackendServiceTests$inAppBackendService.sendIAMPageImpression("appId", "subscriptionId", "variantId", "messageId", "pageId")</ID>
-    <ID>MaxLineLength:InAppBackendServiceTests.kt$InAppBackendServiceTests$it.rywToken == "1234" &amp;&amp; it.retryCount == null &amp;&amp; it.sessionDuration == mockSessionDurationProvider()</ID>
-    <ID>MaxLineLength:InAppBackendServiceTests.kt$InAppBackendServiceTests$it.rywToken == "1234" &amp;&amp; it.sessionDuration == mockSessionDurationProvider() &amp;&amp; it.retryCount != null</ID>
-    <ID>MaxLineLength:InAppBackendServiceTests.kt$InAppBackendServiceTests$it.rywToken == null &amp;&amp; it.sessionDuration == mockSessionDurationProvider() &amp;&amp; it.retryCount == null</ID>
-    <ID>MaxLineLength:InAppBackendServiceTests.kt$InAppBackendServiceTests$val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", RywData("123", 500L), mockSessionDurationProvider)</ID>
-    <ID>MaxLineLength:InAppBackendServiceTests.kt$InAppBackendServiceTests$val response = inAppBackendService.listInAppMessages("appId", "subscriptionId", RywData("1234", 500L), mockSessionDurationProvider)</ID>
     <ID>MaxLineLength:InAppDisplayer.kt$InAppDisplayer$// Handles exception "MissingWebViewPackageException: Failed to load WebView provider: No WebView installed"</ID>
     <ID>MaxLineLength:InAppDisplayer.kt$InAppDisplayer$val webViewManager = WebViewManager(message, currentActivity, content, _lifecycle, _applicationService, _promptFactory)</ID>
     <ID>MaxLineLength:InAppMessageLifecycleEvent.kt$InAppMessageLifecycleEvent : IInAppMessageWillDisplayEventIInAppMessageWillDismissEventIInAppMessageDidDisplayEventIInAppMessageDidDismissEvent</ID>
-    <ID>MaxLineLength:InAppMessagePreviewHandlerTests.kt$InAppMessagePreviewHandlerTests$test</ID>
     <ID>MaxLineLength:InAppMessageRedisplayStats.kt$InAppMessageRedisplayStats$"OSInAppMessage lastDisplayTime: $lastDisplayTime currentTimeInSeconds: $currentTimeInSeconds diffInSeconds: $diffInSeconds displayDelay: $displayDelay"</ID>
     <ID>MaxLineLength:InAppMessageView.kt$InAppMessageView$Logging.warn("WebView height update skipped because of null layoutParams, new height will be used once it is displayed.")</ID>
     <ID>MaxLineLength:InAppMessageView.kt$InAppMessageView$WebViewManager.Position.CENTER_MODAL, WebViewManager.Position.FULL_SCREEN -&gt; Gravity.CENTER_HORIZONTAL</ID>
@@ -152,8 +137,6 @@
     <ID>MaxLineLength:InAppPreferencesController.kt$InAppPreferencesController$set(value) = _prefs.saveStringSet(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_DISMISSED_IAMS, value)</ID>
     <ID>MaxLineLength:InAppPreferencesController.kt$InAppPreferencesController$set(value) = _prefs.saveStringSet(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_IMPRESSIONED_IAMS, value)</ID>
     <ID>MaxLineLength:InAppPreferencesController.kt$InAppPreferencesController$set(value) = _prefs.saveStringSet(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_PAGE_IMPRESSIONED_IAMS, value)</ID>
-    <ID>MaxLineLength:InAppRepositoryTests.kt$InAppRepositoryTests$val inAppRepository = InAppRepository(mockDatabasePair.first, MockHelper.time(1111), mockInAppPreferencesController)</ID>
-    <ID>MaxLineLength:InAppRepositoryTests.kt$InAppRepositoryTests$val mockDatabasePair = DatabaseMockHelper.databaseProvider(OneSignalDbContract.InAppMessageTable.TABLE_NAME, records)</ID>
     <ID>MaxLineLength:OneSignalAnimate.kt$OneSignalAnimate$backgroundAnimation.addUpdateListener { valueAnimator -&gt; view.setBackgroundColor((valueAnimator.animatedValue as Int)) }</ID>
     <ID>MaxLineLength:TriggerController.kt$TriggerController$Trigger.OSTriggerOperator.EXISTS</ID>
     <ID>MaxLineLength:TriggerController.kt$TriggerController$Trigger.OSTriggerOperator.GREATER_THAN_OR_EQUAL_TO -&gt; deviceDoubleValue &gt; triggerDoubleValue || deviceDoubleValue == triggerDoubleValue</ID>
@@ -199,10 +182,6 @@
     <ID>TooManyFunctions:InAppMessagesManager.kt$InAppMessagesManager : IInAppMessagesManagerIStartableServiceISubscriptionChangedHandlerISingletonModelStoreChangeHandlerIInAppLifecycleEventHandlerITriggerHandlerISessionLifecycleHandlerIApplicationLifecycleHandler</ID>
     <ID>TooManyFunctions:TriggerController.kt$TriggerController : ITriggerControllerIModelStoreChangeHandler</ID>
     <ID>TooManyFunctions:WebViewManager.kt$WebViewManager : IActivityLifecycleHandler</ID>
-    <ID>UndocumentedPublicClass:InAppBackendServiceTests.kt$InAppBackendServiceTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:InAppMessagePreviewHandlerTests.kt$InAppMessagePreviewHandlerTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:InAppMessagesManagerTests.kt$InAppMessagesManagerTests : FunSpec</ID>
-    <ID>UndocumentedPublicClass:InAppRepositoryTests.kt$InAppRepositoryTests : FunSpec</ID>
     <ID>UndocumentedPublicClass:TriggerModel.kt$TriggerModel : Model</ID>
     <ID>UndocumentedPublicClass:TriggerModelStore.kt$TriggerModelStore : SimpleModelStore</ID>
   </CurrentIssues>

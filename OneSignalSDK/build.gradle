@@ -59,4 +59,30 @@ allprojects {
         // Huawei maven
         maven { url 'https://developer.huawei.com/repo/' }
     }
+
+}
+
+subprojects {
+    plugins.withId("io.gitlab.arturbosch.detekt") {
+        afterEvaluate {
+            tasks.withType(io.gitlab.arturbosch.detekt.Detekt).configureEach {
+                // Only analyze main source sets
+                source = files(
+                        "$projectDir/src/main/java",
+                        "$projectDir/src/main/kotlin"
+                )
+                // Exclude all test-related files and directories
+                exclude "**/test/**"
+                exclude "**/androidTest/**"
+                exclude "**/src/test/**"
+                exclude "**/src/androidTest/**"
+                exclude "**/*Test.kt"
+                exclude "**/*Tests.kt"
+                exclude "**/*Spec.kt"
+                exclude "**/*Test.java"
+                exclude "**/*Tests.java"
+                exclude "**/*Spec.java"
+            }
+        }
+    }
 }
