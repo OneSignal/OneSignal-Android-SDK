@@ -12,11 +12,13 @@ import java.util.concurrent.ThreadFactory
 
 class ThreadingPerformanceDemoTests : FunSpec({
 
+    val runPerformanceTests = System.getenv("RUN_PERFORMANCE_TESTS") == "true"
+
     beforeAny {
         Logging.logLevel = LogLevel.NONE
     }
 
-    test("demonstrate dispatcher vs individual threads performance") {
+    test("demonstrate dispatcher vs individual threads performance").config(enabled = runPerformanceTests) {
         val numberOfOperations = 50
         val results = mutableMapOf<String, Long>()
 
@@ -100,7 +102,7 @@ class ThreadingPerformanceDemoTests : FunSpec({
         }
     }
 
-    test("demonstrate resource usage difference") {
+    test("demonstrate resource usage difference").config(enabled = runPerformanceTests)  {
         val initialThreadCount = Thread.activeCount()
 
         println("\n=== Resource Usage Comparison ===")
@@ -154,7 +156,7 @@ class ThreadingPerformanceDemoTests : FunSpec({
         }
     }
 
-    test("demonstrate scalability difference") {
+    test("demonstrate scalability difference").config(enabled = runPerformanceTests)  {
         val operationCounts = listOf(10, 50, 100, 200)
         val results = mutableMapOf<Int, Pair<Long, Long>>()
 

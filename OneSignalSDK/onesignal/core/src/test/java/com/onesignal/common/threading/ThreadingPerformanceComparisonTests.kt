@@ -19,12 +19,9 @@ class ThreadingPerformanceComparisonTests : FunSpec({
         Logging.logLevel = LogLevel.NONE
     }
 
-    test("simple performance test") {
-        // Skip performance tests unless explicitly enabled
-        if (System.getenv("RUN_PERFORMANCE_TESTS") != "true") {
-            println("Skipping performance test - set RUN_PERFORMANCE_TESTS=true to run")
-            return@test
-        }
+    val runPerformanceTests = System.getenv("RUN_PERFORMANCE_TESTS") == "true"
+
+    test("simple performance test").config(enabled = runPerformanceTests) {
 
         println("Starting simple performance test...")
 
@@ -111,12 +108,7 @@ class ThreadingPerformanceComparisonTests : FunSpec({
         println("Performance test completed!")
     }
 
-    test("dispatcher vs individual threads - execution performance") {
-        // Skip performance tests unless explicitly enabled
-        if (System.getenv("RUN_PERFORMANCE_TESTS") != "true") {
-            println("Skipping performance test - set RUN_PERFORMANCE_TESTS=true to run")
-            return@test
-        }
+    test("dispatcher vs individual threads - execution performance").config(enabled = runPerformanceTests) {
         val numberOfOperations = 20
         val workDuration = 50L // ms
         val results = mutableMapOf<String, Long>()
@@ -187,12 +179,7 @@ class ThreadingPerformanceComparisonTests : FunSpec({
         oneSignalTime shouldBeLessThan individualThreadTime
     }
 
-    test("memory usage comparison") {
-        // Skip performance tests unless explicitly enabled
-        if (System.getenv("RUN_PERFORMANCE_TESTS") != "true") {
-            println("Skipping performance test - set RUN_PERFORMANCE_TESTS=true to run")
-            return@test
-        }
+    test("memory usage comparison").config(enabled = runPerformanceTests) {
         val numberOfOperations = 50
         val results = mutableMapOf<String, Long>()
 
@@ -262,12 +249,7 @@ class ThreadingPerformanceComparisonTests : FunSpec({
         oneSignalMemory shouldBeLessThan individualThreadMemory
     }
 
-    test("scalability comparison") {
-        // Skip performance tests unless explicitly enabled
-        if (System.getenv("RUN_PERFORMANCE_TESTS") != "true") {
-            println("Skipping performance test - set RUN_PERFORMANCE_TESTS=true to run")
-            return@test
-        }
+    test("scalability comparison").config(enabled = runPerformanceTests) {
         val testSizes = listOf(10, 50, 100)
         val results = mutableMapOf<String, MutableMap<Int, Long>>()
 
@@ -350,12 +332,7 @@ class ThreadingPerformanceComparisonTests : FunSpec({
         }
     }
 
-    test("thread creation vs dispatcher creation performance") {
-        // Skip performance tests unless explicitly enabled
-        if (System.getenv("RUN_PERFORMANCE_TESTS") != "true") {
-            println("Skipping performance test - set RUN_PERFORMANCE_TESTS=true to run")
-            return@test
-        }
+    test("thread creation vs dispatcher creation performance").config(enabled = runPerformanceTests) {
         val numberOfTests = 1000
         val results = mutableMapOf<String, Long>()
 
@@ -409,12 +386,7 @@ class ThreadingPerformanceComparisonTests : FunSpec({
         oneSignalTime shouldBeLessThan dispatcherCreationTime
     }
 
-    test("resource cleanup comparison") {
-        // Skip performance tests unless explicitly enabled
-        if (System.getenv("RUN_PERFORMANCE_TESTS") != "true") {
-            println("Skipping performance test - set RUN_PERFORMANCE_TESTS=true to run")
-            return@test
-        }
+    test("resource cleanup comparison").config(enabled = runPerformanceTests) {
         val numberOfOperations = 100
         val initialThreads = Thread.activeCount()
 
@@ -471,12 +443,7 @@ class ThreadingPerformanceComparisonTests : FunSpec({
         afterOneSignal shouldBeLessThan afterIndividualThreads
     }
 
-    test("concurrent access performance") {
-        // Skip performance tests unless explicitly enabled
-        if (System.getenv("RUN_PERFORMANCE_TESTS") != "true") {
-            println("Skipping performance test - set RUN_PERFORMANCE_TESTS=true to run")
-            return@test
-        }
+    test("concurrent access performance").config(enabled = runPerformanceTests) {
         val numberOfConcurrentOperations = 50
         val results = mutableMapOf<String, Long>()
 

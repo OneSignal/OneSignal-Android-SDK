@@ -22,7 +22,10 @@ class SDKInitSuspendTests : FunSpec({
     afterAny {
         val context = getApplicationContext<Context>()
         val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
-        prefs.edit().clear().commit()
+        prefs.edit()
+            .clear()
+            .remove("MODEL_STORE_config") // Specifically clear the config model store
+            .commit()
     }
 
     // ===== INITIALIZATION TESTS =====
@@ -49,7 +52,10 @@ class SDKInitSuspendTests : FunSpec({
 
         // Clear any existing appId from previous tests by clearing SharedPreferences
         val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
-        prefs.edit().clear().commit()
+        prefs.edit()
+            .clear()
+            .remove("MODEL_STORE_config") // Specifically clear the config model store
+            .commit()
 
         runBlocking {
             // When
