@@ -3,6 +3,7 @@ plugins {
     id 'kotlin-android'
     id 'org.jlleitschuh.gradle.ktlint'
     id 'com.vanniktech.maven.publish'
+    id 'io.gitlab.arturbosch.detekt'
 }
 
 android {
@@ -105,6 +106,13 @@ ktlint {
     additionalEditorconfig = [
         "max_line_length": "500",
     ]
+}
+
+detekt {
+    config = files("$rootDir/detekt/detekt-config.yml")
+    baseline = file("$rootDir/detekt/detekt-baseline-in-app-messages.xml")
+    buildUponDefaultConfig = true
+    allRules = false
 }
 
 apply from: '../maven-push.gradle'

@@ -9,6 +9,7 @@ buildscript {
                 minSdkVersion: 21
         ]
         androidGradlePluginVersion = '8.8.2'
+        detektVersion = '1.23.8'
         googleServicesGradlePluginVersion = '4.3.10'
         huaweiAgconnectVersion = '1.9.1.304'
         huaweiHMSPushVersion = '6.3.0.304'
@@ -17,6 +18,7 @@ buildscript {
         kotestVersion = '5.8.0'
         ktlintPluginVersion = '11.6.1'
         ktlintVersion = '1.0.1'
+        ioMockVersion = '1.13.2'
         // DO NOT upgrade for tests, using an old version so it matches AOSP
         tdunningJsonForTest = '1.0'
 
@@ -33,7 +35,9 @@ buildscript {
             "com.huawei.agconnect:agcp:$huaweiAgconnectVersion",
             "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion",
             "org.jlleitschuh.gradle:ktlint-gradle:$ktlintPluginVersion",
-            "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin:0.32.0"
+            "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin:0.32.0",
+            "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:$detektVersion"
+
         ]
     }
 

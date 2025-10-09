@@ -1,0 +1,78 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ConstructorParameterNaming:GmsLocationController.kt$GmsLocationController$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:GmsLocationController.kt$GmsLocationController$private val _fusedLocationApiWrapper: IFusedLocationApiWrapper</ID>
+    <ID>ConstructorParameterNaming:GmsLocationController.kt$GmsLocationController.GoogleApiClientListener$private val _parent: GmsLocationController</ID>
+    <ID>ConstructorParameterNaming:GmsLocationController.kt$GmsLocationController.LocationUpdateListener$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:GmsLocationController.kt$GmsLocationController.LocationUpdateListener$private val _fusedLocationApiWrapper: IFusedLocationApiWrapper</ID>
+    <ID>ConstructorParameterNaming:GmsLocationController.kt$GmsLocationController.LocationUpdateListener$private val _parent: GmsLocationController</ID>
+    <ID>ConstructorParameterNaming:HmsLocationController.kt$HmsLocationController$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:HmsLocationController.kt$HmsLocationController.LocationUpdateListener$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:HmsLocationController.kt$HmsLocationController.LocationUpdateListener$private val _parent: HmsLocationController</ID>
+    <ID>ConstructorParameterNaming:LocationBackgroundService.kt$LocationBackgroundService$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:LocationBackgroundService.kt$LocationBackgroundService$private val _capturer: ILocationCapturer</ID>
+    <ID>ConstructorParameterNaming:LocationBackgroundService.kt$LocationBackgroundService$private val _locationManager: ILocationManager</ID>
+    <ID>ConstructorParameterNaming:LocationBackgroundService.kt$LocationBackgroundService$private val _prefs: ILocationPreferencesService</ID>
+    <ID>ConstructorParameterNaming:LocationBackgroundService.kt$LocationBackgroundService$private val _time: ITime</ID>
+    <ID>ConstructorParameterNaming:LocationCapturer.kt$LocationCapturer$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:LocationCapturer.kt$LocationCapturer$private val _controller: ILocationController</ID>
+    <ID>ConstructorParameterNaming:LocationCapturer.kt$LocationCapturer$private val _prefs: ILocationPreferencesService</ID>
+    <ID>ConstructorParameterNaming:LocationCapturer.kt$LocationCapturer$private val _propertiesModelStore: PropertiesModelStore</ID>
+    <ID>ConstructorParameterNaming:LocationCapturer.kt$LocationCapturer$private val _time: ITime</ID>
+    <ID>ConstructorParameterNaming:LocationManager.kt$LocationManager$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:LocationManager.kt$LocationManager$private val _capturer: ILocationCapturer</ID>
+    <ID>ConstructorParameterNaming:LocationManager.kt$LocationManager$private val _locationController: ILocationController</ID>
+    <ID>ConstructorParameterNaming:LocationManager.kt$LocationManager$private val _locationPermissionController: LocationPermissionController</ID>
+    <ID>ConstructorParameterNaming:LocationManager.kt$LocationManager$private val _prefs: IPreferencesService</ID>
+    <ID>ConstructorParameterNaming:LocationPermissionController.kt$LocationPermissionController$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:LocationPermissionController.kt$LocationPermissionController$private val _requestPermission: IRequestPermissionService</ID>
+    <ID>ConstructorParameterNaming:LocationPreferencesService.kt$LocationPreferencesService$private val _prefs: IPreferencesService</ID>
+    <ID>CyclomaticComplexMethod:LocationManager.kt$LocationManager$override suspend fun requestPermission(): Boolean</ID>
+    <ID>ForbiddenComment:GmsLocationController.kt$GmsLocationController$// TODO: google api client has a blocking connect with timeout, use that instead of our withTimeout?</ID>
+    <ID>LongMethod:GmsLocationController.kt$GmsLocationController$override suspend fun start(): Boolean</ID>
+    <ID>LongMethod:HmsLocationController.kt$HmsLocationController$override suspend fun start(): Boolean</ID>
+    <ID>LongMethod:LocationManager.kt$LocationManager$override suspend fun requestPermission(): Boolean</ID>
+    <ID>MagicNumber:GmsLocationController.kt$GmsLocationController.LocationUpdateListener$1.5</ID>
+    <ID>MagicNumber:HmsLocationController.kt$HmsLocationController.LocationUpdateListener$1.5</ID>
+    <ID>MagicNumber:LocationBackgroundService.kt$LocationBackgroundService$1000</ID>
+    <ID>MagicNumber:LocationCapturer.kt$LocationCapturer$7</ID>
+    <ID>MagicNumber:LocationManager.kt$LocationManager$29</ID>
+    <ID>MaxLineLength:FusedLocationApiWrapperImpl.kt$FusedLocationApiWrapperImpl$LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, locationListener)</ID>
+    <ID>MaxLineLength:GmsLocationController.kt$GmsLocationController$"GMSLocationController connection to GoogleApiService failed: (${result?.errorCode}) ${result?.errorMessage}"</ID>
+    <ID>MaxLineLength:GmsLocationController.kt$GmsLocationController$"Location permission exists but GoogleApiClient timed out. Maybe related to mismatch google-play aar versions."</ID>
+    <ID>MaxLineLength:GmsLocationController.kt$GmsLocationController$// TODO: google api client has a blocking connect with timeout, use that instead of our withTimeout?</ID>
+    <ID>MaxLineLength:GmsLocationController.kt$GmsLocationController$self.locationUpdateListener = LocationUpdateListener(_applicationService, self, proxyGoogleApiClient.realInstance, _fusedLocationApiWrapper)</ID>
+    <ID>MaxLineLength:GmsLocationController.kt$GmsLocationController.GoogleApiClientListener$Logging.debug("GMSLocationController GoogleApiClientListener onConnectionSuspended connectionResult: $connectionResult")</ID>
+    <ID>MaxLineLength:GmsLocationController.kt$GmsLocationController.GoogleApiClientListener$private</ID>
+    <ID>MaxLineLength:HmsLocationController.kt$HmsLocationController$com.huawei.hms.location.LocationServices.getFusedLocationProviderClient(_applicationService.appContext)</ID>
+    <ID>MaxLineLength:LocationManager.kt$LocationManager$// If permission already given prompt will return positive, otherwise will prompt again or show settings</ID>
+    <ID>MaxLineLength:LocationManager.kt$LocationManager$Logging.warn("Requesting location permission, but location sharing must also be enabled by setting isShared to true")</ID>
+    <ID>MaxLineLength:LocationManager.kt$LocationManager$_locationPermissionController.prompt(fallbackToSettings, LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING)</ID>
+    <ID>MaxLineLength:LocationManager.kt$LocationManager$hasBackgroundPermissionGranted = AndroidUtils.hasPermission(LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING, true, _applicationService)</ID>
+    <ID>MaxLineLength:LocationManager.kt$LocationManager$hasCoarsePermissionGranted = AndroidUtils.hasPermission(LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING, true, _applicationService)</ID>
+    <ID>MaxLineLength:LocationManager.kt$LocationManager$private var _isShared: Boolean = _prefs.getBool(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_LOCATION_SHARED, false)!!</ID>
+    <ID>MaxLineLength:LocationManager.kt$LocationManager$}</ID>
+    <ID>MaxLineLength:LocationPermissionController.kt$LocationPermissionController.&lt;no name provided&gt;.&lt;no name provided&gt;$val hasPermission = AndroidUtils.hasPermission(currPermission, true, _applicationService)</ID>
+    <ID>MaxLineLength:LocationUtils.kt$LocationUtils$ContextCompat.checkSelfPermission(context, "android.permission.ACCESS_COARSE_LOCATION") === PackageManager.PERMISSION_GRANTED</ID>
+    <ID>MaxLineLength:LocationUtils.kt$LocationUtils$ContextCompat.checkSelfPermission(context, "android.permission.ACCESS_FINE_LOCATION") === PackageManager.PERMISSION_GRANTED</ID>
+    <ID>MayBeConst:GmsLocationController.kt$GmsLocationController.Companion$val API_FALLBACK_TIME = 30000</ID>
+    <ID>PrintStackTrace:GoogleApiClientCompatProxy.kt$GoogleApiClientCompatProxy$t</ID>
+    <ID>ProtectedMemberInFinalClass:GmsLocationController.kt$GmsLocationController$LocationHandlerThread : HandlerThread</ID>
+    <ID>SwallowedException:GmsLocationController.kt$GmsLocationController$e: TimeoutCancellationException</ID>
+    <ID>SwallowedException:LocationUtils.kt$LocationUtils$e: NoClassDefFoundError</ID>
+    <ID>TooGenericExceptionCaught:FusedLocationApiWrapperImpl.kt$FusedLocationApiWrapperImpl$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:GoogleApiClientCompatProxy.kt$GoogleApiClientCompatProxy$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:HmsLocationController.kt$HmsLocationController$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:LocationManager.kt$LocationManager$t: Throwable</ID>
+    <ID>TooGenericExceptionThrown:GmsLocationController.kt$GmsLocationController.LocationUpdateListener$throw Exception("googleApiClient not connected, cannot listen!")</ID>
+    <ID>UndocumentedPublicClass:GmsLocationControllerTests.kt$GmsLocationControllerTests : FunSpec</ID>
+    <ID>UndocumentedPublicClass:LocationBackgroundServiceTests.kt$LocationBackgroundServiceTests : FunSpec</ID>
+    <ID>UndocumentedPublicClass:LocationCapturerTests.kt$LocationCapturerTests : FunSpec</ID>
+    <ID>UndocumentedPublicClass:LocationPermissionControllerTests.kt$LocationPermissionControllerTests : FunSpec</ID>
+    <ID>UndocumentedPublicClass:ShadowGoogleApiClient.kt$ShadowGoogleApiClient : GoogleApiClient</ID>
+    <ID>UndocumentedPublicClass:ShadowGoogleApiClient.kt$ShadowGoogleApiClient$Companion</ID>
+    <ID>UndocumentedPublicClass:ShadowGoogleApiClient.kt$ShadowGoogleApiClientBuilder</ID>
+  </CurrentIssues>
+</SmellBaseline>
