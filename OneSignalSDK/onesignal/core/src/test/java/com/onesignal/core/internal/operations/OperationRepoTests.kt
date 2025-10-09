@@ -158,7 +158,7 @@ class OperationRepoTests : FunSpec({
         // When
         operationRepo.start()
         operationRepo.enqueue(MyOperation())
-        
+
         // Wait for the operation to be enqueued and processed
         Thread.sleep(50)
         OneSignalDispatchers.DefaultScope.launch { }.join()
