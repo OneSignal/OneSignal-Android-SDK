@@ -113,7 +113,7 @@ internal class OperationRepo(
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueue(operation: $operation, flush: $flush)")
 
         operation.id = UUID.randomUUID().toString()
-        // Use runBlocking to ensure synchronous behavior for testing
+        // Use suspendifyOnIO to ensure non-blocking behavior for main thread
         suspendifyOnIO {
             internalEnqueue(OperationQueueItem(operation, bucket = enqueueIntoBucket), flush, true)
         }

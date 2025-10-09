@@ -25,6 +25,7 @@ class SDKInitSuspendTests : FunSpec({
         prefs.edit()
             .clear()
             .remove("MODEL_STORE_config") // Specifically clear the config model store
+            .remove("GT_APP_ID") // Clear legacy appId that might be set by other tests
             .commit()
     }
 
@@ -55,6 +56,7 @@ class SDKInitSuspendTests : FunSpec({
         prefs.edit()
             .clear()
             .remove("MODEL_STORE_config") // Specifically clear the config model store
+            .remove("GT_APP_ID") // Clear legacy appId that might be set by other tests
             .commit()
 
         runBlocking {

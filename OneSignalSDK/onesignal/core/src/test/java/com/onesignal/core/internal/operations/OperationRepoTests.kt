@@ -354,6 +354,8 @@ class OperationRepoTests : FunSpec({
 
         // When
         mocks.operationRepo.enqueue(operation1)
+        // Add small delay to ensure operations are processed in order
+        Thread.sleep(10)
         mocks.operationRepo.enqueue(operation2)
         mocks.operationRepo.start()
 
