@@ -161,7 +161,7 @@ class OperationRepoTests : FunSpec({
 
         // Wait for the operation to be enqueued and processed
         Thread.sleep(50)
-        OneSignalDispatchers.DefaultScope.launch { }.join()
+        OneSignalDispatchers.waitForDefaultScope()
 
         // Then
         operationRepo.containsInstanceOf<MyOperation>() shouldBe true
@@ -266,7 +266,7 @@ class OperationRepoTests : FunSpec({
         // When
         opRepo.start()
         opRepo.enqueue(mockOperation())
-        OneSignalDispatchers.DefaultScope.launch { }.join()
+        OneSignalDispatchers.waitForDefaultScope()
         val response1 =
             withTimeoutOrNull(999) {
                 opRepo.enqueueAndWait(mockOperation())
@@ -647,7 +647,7 @@ class OperationRepoTests : FunSpec({
         mocks.operationRepo.start()
         mocks.operationRepo.enqueue(operation1)
         mocks.operationRepo.enqueue(operation2)
-        OneSignalDispatchers.DefaultScope.launch { }.join()
+        OneSignalDispatchers.waitForDefaultScope()
         mocks.operationRepo.enqueueAndWait(operation3)
 
         // Then
@@ -728,7 +728,7 @@ class OperationRepoTests : FunSpec({
         val mocks = Mocks()
         val op = mockOperation()
         mocks.operationRepo.enqueue(op)
-        OneSignalDispatchers.DefaultScope.launch { }.join()
+        OneSignalDispatchers.waitForDefaultScope()
 
         // When
         mocks.operationRepo.loadSavedOperations()
@@ -769,7 +769,7 @@ class OperationRepoTests : FunSpec({
         // When
         opRepo.start()
         opRepo.enqueue(mockOperation())
-        OneSignalDispatchers.DefaultScope.launch { }.join()
+        OneSignalDispatchers.waitForDefaultScope()
         val response1 =
             withTimeoutOrNull(999) {
                 opRepo.enqueueAndWait(mockOperation())

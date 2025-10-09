@@ -8,6 +8,7 @@ import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -18,9 +19,9 @@ class OneSignalDispatchersTests : FunSpec({
     }
 
     test("OneSignalDispatchers should be properly initialized") {
-        // Access a dispatcher to trigger initialization
-        OneSignalDispatchers.IO
-        OneSignalDispatchers.isInitialized() shouldBe true
+        // Access dispatchers to trigger initialization
+        OneSignalDispatchers.IO shouldNotBe null
+        OneSignalDispatchers.Default shouldNotBe null
     }
 
     test("IO dispatcher should execute work on background thread") {
@@ -28,7 +29,7 @@ class OneSignalDispatchersTests : FunSpec({
         var backgroundThreadId: Long? = null
 
         runBlocking {
-            OneSignalDispatchers.withIO {
+            withContext(OneSignalDispatchers.IO) {
                 backgroundThreadId = Thread.currentThread().id
             }
         }
@@ -42,7 +43,7 @@ class OneSignalDispatchersTests : FunSpec({
         var backgroundThreadId: Long? = null
 
         runBlocking {
-            OneSignalDispatchers.withDefault {
+            withContext(OneSignalDispatchers.Default) {
                 backgroundThreadId = Thread.currentThread().id
             }
         }
@@ -73,28 +74,6 @@ class OneSignalDispatchersTests : FunSpec({
 
         Thread.sleep(50)
         completed shouldBe false
-    }
-
-    test("runBlockingOnIO should execute work synchronously") {
-        var completed = false
-
-        OneSignalDispatchers.runBlockingOnIO {
-            Thread.sleep(100)
-            completed = true
-        }
-
-        completed shouldBe true
-    }
-
-    test("runBlockingOnDefault should execute work synchronously") {
-        var completed = false
-
-        OneSignalDispatchers.runBlockingOnDefault {
-            Thread.sleep(100)
-            completed = true
-        }
-
-        completed shouldBe true
     }
 
     test("getStatus should return meaningful status information") {

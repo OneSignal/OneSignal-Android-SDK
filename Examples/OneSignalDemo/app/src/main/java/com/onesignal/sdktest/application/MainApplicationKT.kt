@@ -9,7 +9,7 @@ package com.onesignal.sdktest.application
  * - Cleaner code structure
  * - Proper ANR prevention
  * 
- * @see MainApplication (deprecated Java version)
+ * @see MainApplication.java (deprecated Java version)
  */
 import android.annotation.SuppressLint
 import android.os.StrictMode
@@ -17,7 +17,6 @@ import android.util.Log
 import androidx.annotation.NonNull
 import androidx.multidex.MultiDexApplication
 import com.onesignal.OneSignal
-import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.debug.LogLevel
 import com.onesignal.inAppMessages.IInAppMessageClickEvent
 import com.onesignal.inAppMessages.IInAppMessageClickListener
@@ -40,10 +39,15 @@ import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.state.UserChangedState
 import com.onesignal.user.state.UserState
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 class MainApplicationKT : MultiDexApplication() {
+
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     init {
         // run strict mode to surface any potential issues easier
         StrictMode.enableDefaults()
@@ -65,7 +69,7 @@ class MainApplicationKT : MultiDexApplication() {
         OneSignalNotificationSender.setAppId(appId)
 
         // Initialize OneSignal asynchronously on background thread to avoid ANR
-        OneSignalDispatchers.launchOnIO {
+        applicationScope.launch {
             try {
                 OneSignal.initWithContextSuspend(this@MainApplicationKT, appId)
                 Log.d(Tag.LOG_TAG, "OneSignal async init completed")

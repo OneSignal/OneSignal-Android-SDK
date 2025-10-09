@@ -60,9 +60,6 @@ android {
             profileable true
             minifyEnabled false
             signingConfig signingConfigs.debug
-            // Disable proguard for easier profiling
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            // Use release variant for dependencies
             matchingFallbacks = ['release']
         }
     }
