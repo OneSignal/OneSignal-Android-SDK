@@ -89,9 +89,8 @@ internal class RefreshUserOperationExecutor(
                 }
             }
 
-            if (response.properties.timezoneId != null) {
-                propertiesModel.timezone = response.properties.timezoneId
-            }
+            // No longer hydrate timezone from remote, set locally
+            propertiesModel.update()
 
             val subscriptionModels = mutableListOf<SubscriptionModel>()
             for (subscription in response.subscriptions) {
