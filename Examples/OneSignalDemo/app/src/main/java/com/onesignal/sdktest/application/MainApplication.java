@@ -38,6 +38,7 @@ public class MainApplication extends MultiDexApplication {
 
     public MainApplication() {
         // run strict mode to surface any potential issues easier
+        // FOO
         StrictMode.enableDefaults();
     }
 
