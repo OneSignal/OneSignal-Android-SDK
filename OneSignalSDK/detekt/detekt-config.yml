@@ -112,6 +112,9 @@ potential-bugs:
     active: true
     ignoreAnnotated: ["Inject"]
 
+  UnsafeCallOnNullableType:
+    active: true
+
 # ───────────── COROUTINES ─────────────
 coroutines:
   GlobalCoroutineUsage:

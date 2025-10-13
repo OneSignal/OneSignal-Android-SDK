@@ -2,6 +2,7 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
+    <ID>AvoidReferentialEquality:SubscriptionBackendService.kt$SubscriptionBackendService$rywToken !== null</ID>
     <ID>ComplexCondition:PropertiesModelStoreListener.kt$PropertiesModelStoreListener$path.startsWith(PropertiesModel::locationTimestamp.name) || path.startsWith(PropertiesModel::locationBackground.name) || path.startsWith(PropertiesModel::locationType.name) || path.startsWith(PropertiesModel::locationAccuracy.name)</ID>
     <ID>ComplexCondition:TrackGooglePurchase.kt$TrackGooglePurchase.Companion$args.size == 4 &amp;&amp; args[0] == Int::class.javaPrimitiveType &amp;&amp; args[1] == String::class.java &amp;&amp; args[2] == String::class.java &amp;&amp; args[3] == Bundle::class.java &amp;&amp; returnType == Bundle::class.java</ID>
     <ID>ComplexCondition:TrackGooglePurchase.kt$TrackGooglePurchase.Companion$args.size == 4 &amp;&amp; args[0] == Int::class.javaPrimitiveType &amp;&amp; args[1] == String::class.java &amp;&amp; args[2] == String::class.java &amp;&amp; args[3] == String::class.java</ID>
@@ -147,6 +148,9 @@
     <ID>CyclomaticComplexMethod:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse</ID>
     <ID>CyclomaticComplexMethod:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private suspend fun createSubscription( createOperation: CreateSubscriptionOperation, operations: List&lt;Operation&gt;, ): ExecutionResponse</ID>
     <ID>CyclomaticComplexMethod:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$override suspend fun execute(operations: List&lt;Operation&gt;): ExecutionResponse</ID>
+    <ID>DoubleMutabilityForCollection:OutcomeEventsController.kt$OutcomeEventsController$// Keeps track of unique outcome events sent for UNATTRIBUTED sessions on a per session level private var unattributedUniqueOutcomeEventsSentOnSession: MutableSet&lt;String&gt; = mutableSetOf()</ID>
+    <ID>DoubleMutabilityForCollection:PropertyOperationHelper.kt$PropertyOperationHelper$var tags = propertiesObject.tags?.toMutableMap()</ID>
+    <ID>DoubleMutabilityForCollection:ServiceRegistration.kt$ServiceRegistrationReflection$var paramList: MutableList&lt;Any?&gt; = mutableListOf()</ID>
     <ID>EmptyCatchBlock:JSONUtils.kt$JSONUtils${ }</ID>
     <ID>EmptyDefaultConstructor:ApplicationService.kt$ApplicationService$()</ID>
     <ID>EmptyDefaultConstructor:CallbackProducer.kt$CallbackProducer$()</ID>
@@ -172,6 +176,11 @@
     <ID>GlobalCoroutineUsage:HttpClient.kt$HttpClient$GlobalScope.launch(Dispatchers.IO) { var httpResponse = -1 var con: HttpURLConnection? = null if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.O) { TrafficStats.setThreadStatsTag(THREAD_ID) } try { con = _connectionFactory.newHttpURLConnection(url) // https://github.com/OneSignal/OneSignal-Android-SDK/issues/1465 // Android 4.4 and older devices fail to register to onesignal.com to due it's TLS1.2+ requirement if (Build.VERSION.SDK_INT &lt; Build.VERSION_CODES.LOLLIPOP_MR1 &amp;&amp; con is HttpsURLConnection) { val conHttps = con conHttps.sslSocketFactory = TLS12SocketFactory( conHttps.sslSocketFactory, ) } con.useCaches = false con.connectTimeout = timeout con.readTimeout = timeout con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignalUtils.sdkVersion) if (OneSignalWrapper.sdkType != null &amp;&amp; OneSignalWrapper.sdkVersion != null) { con.setRequestProperty("SDK-Wrapper", "onesignal/${OneSignalWrapper.sdkType}/${OneSignalWrapper.sdkVersion}") } con.setRequestProperty("Accept", OS_ACCEPT_HEADER) val subscriptionId = _configModelStore.model.pushSubscriptionId if (subscriptionId != null &amp;&amp; subscriptionId.isNotEmpty()) { con.setRequestProperty("OneSignal-Subscription-Id", subscriptionId) } con.setRequestProperty("OneSignal-Install-Id", _installIdService.getId().toString()) if (jsonBody != null) { con.doInput = true } if (method != null) { con.setRequestProperty("Content-Type", "application/json; charset=UTF-8") con.requestMethod = method con.doOutput = true } logHTTPSent(con.requestMethod, con.url, jsonBody, con.requestProperties) if (jsonBody != null) { val strJsonBody = JSONUtils.toUnescapedEUIDString(jsonBody) val sendBytes = strJsonBody.toByteArray(charset("UTF-8")) con.setFixedLengthStreamingMode(sendBytes.size) val outputStream = con.outputStream outputStream.write(sendBytes) } // H E A D E R S if (headers?.cacheKey != null) { val eTag = _prefs.getString( PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_ETAG_PREFIX + headers.cacheKey, ) if (eTag != null) { con.setRequestProperty("If-None-Match", eTag) Logging.debug("HttpClient: Adding header if-none-match: $eTag") } } if (headers?.rywToken != null) { con.setRequestProperty("OneSignal-RYW-Token", headers.rywToken.toString()) } if (headers?.retryCount != null) { con.setRequestProperty("Onesignal-Retry-Count", headers.retryCount.toString()) } if (headers?.sessionDuration != null) { con.setRequestProperty("OneSignal-Session-Duration", headers.sessionDuration.toString()) } // Network request is made from getResponseCode() httpResponse = con.responseCode val retryAfter = retryAfterFromResponse(con) val retryLimit = retryLimitFromResponse(con) val newDelayUntil = _time.currentTimeMillis + (retryAfter ?: 0) * 1_000 if (newDelayUntil &gt; delayNewRequestsUntil) delayNewRequestsUntil = newDelayUntil when (httpResponse) { HttpURLConnection.HTTP_NOT_MODIFIED -&gt; { val cachedResponse = _prefs.getString( PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + headers?.cacheKey, ) Logging.debug( "HttpClient: Got Response = ${method ?: "GET"} ${con.url} - Using Cached response due to 304: " + cachedResponse, ) // TODO: SHOULD RETURN OK INSTEAD OF NOT_MODIFIED TO MAKE TRANSPARENT? retVal = HttpResponse(httpResponse, cachedResponse, retryAfterSeconds = retryAfter, retryLimit = retryLimit) } HttpURLConnection.HTTP_ACCEPTED, HttpURLConnection.HTTP_CREATED, HttpURLConnection.HTTP_OK -&gt; { val inputStream = con.inputStream val scanner = Scanner(inputStream, "UTF-8") val json = if (scanner.useDelimiter("\\A").hasNext()) scanner.next() else "" scanner.close() Logging.debug( "HttpClient: Got Response = ${method ?: "GET"} ${con.url} - STATUS: $httpResponse - Body: " + json, ) if (headers?.cacheKey != null) { val eTag = con.getHeaderField("etag") if (eTag != null) { Logging.debug("HttpClient: Got Response = Response has etag of $eTag so caching the response.") _prefs.saveString( PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_ETAG_PREFIX + headers.cacheKey, eTag, ) _prefs.saveString( PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_HTTP_CACHE_PREFIX + headers.cacheKey, json, ) } } retVal = HttpResponse(httpResponse, json, retryAfterSeconds = retryAfter, retryLimit = retryLimit) } else -&gt; { Logging.debug("HttpClient: Got Response = ${method ?: "GET"} ${con.url} - FAILED STATUS: $httpResponse") var inputStream = con.errorStream if (inputStream == null) { inputStream = con.inputStream } var jsonResponse: String? = null if (inputStream != null) { val scanner = Scanner(inputStream, "UTF-8") jsonResponse = if (scanner.useDelimiter("\\A").hasNext()) scanner.next() else "" scanner.close() Logging.warn("HttpClient: Got Response = $method - STATUS: $httpResponse - Body: $jsonResponse") } else { Logging.warn("HttpClient: Got Response = $method - STATUS: $httpResponse - No response body!") } retVal = HttpResponse(httpResponse, jsonResponse, retryAfterSeconds = retryAfter, retryLimit = retryLimit) } } } catch (t: Throwable) { if (t is ConnectException || t is UnknownHostException) { Logging.info("HttpClient: Could not send last request, device is offline. Throwable: " + t.javaClass.name) } else { Logging.warn("HttpClient: $method Error thrown from network stack. ", t) } retVal = HttpResponse(httpResponse, null, t) } finally { con?.disconnect() } }</ID>
     <ID>GlobalCoroutineUsage:PreferencesService.kt$PreferencesService$GlobalScope.async(Dispatchers.IO) { var lastSyncTime = _time.currentTimeMillis while (true) { try { // go through all outstanding items to process for (storeKey in prefsToApply.keys) { val storeMap = prefsToApply[storeKey]!! val prefsToWrite = getSharedPrefsByName(storeKey) if (prefsToWrite == null) { // the assumption here is there is no context yet, but will be. So ensure // we wake up to try again and persist the preference. waiter.wake() continue } val editor = prefsToWrite.edit() synchronized(storeMap) { for (key in storeMap.keys) { when (val value = storeMap[key]) { is String -&gt; editor.putString(key, value as String?) is Boolean -&gt; editor.putBoolean(key, (value as Boolean?)!!) is Int -&gt; editor.putInt(key, (value as Int?)!!) is Long -&gt; editor.putLong(key, (value as Long?)!!) is Set&lt;*&gt; -&gt; editor.putStringSet(key, value as Set&lt;String?&gt;?) null -&gt; editor.remove(key) } } storeMap.clear() } editor.apply() } // potentially delay to prevent this from constant IO if a bunch of // preferences are set sequentially. val newTime = _time.currentTimeMillis val delay = lastSyncTime - newTime + WRITE_CALL_DELAY_TO_BUFFER_MS lastSyncTime = newTime if (delay &gt; 0) { delay(delay) } // wait to be woken up for the next pass waiter.waitForWake() } catch (e: Throwable) { Logging.log(LogLevel.ERROR, "Error with Preference work loop", e) } } }</ID>
     <ID>GlobalCoroutineUsage:RecoverFromDroppedLoginBug.kt$RecoverFromDroppedLoginBug$GlobalScope.launch(Dispatchers.IO) { _operationRepo.awaitInitialized() if (isInBadState()) { Logging.warn( "User with externalId:" + "${_identityModelStore.model.externalId} " + "was in a bad state, causing it to not update on OneSignal's " + "backend! We are recovering and replaying all unsent " + "operations now.", ) recoverByAddingBackDroppedLoginOperation() } }</ID>
+    <ID>InjectDispatcher:BackgroundManager.kt$BackgroundManager$Unconfined</ID>
+    <ID>InjectDispatcher:HttpClient.kt$HttpClient$IO</ID>
+    <ID>InjectDispatcher:OutcomeEventsRepository.kt$OutcomeEventsRepository$IO</ID>
+    <ID>InjectDispatcher:PreferencesService.kt$PreferencesService$IO</ID>
+    <ID>InjectDispatcher:RecoverFromDroppedLoginBug.kt$RecoverFromDroppedLoginBug$IO</ID>
     <ID>InstanceOfCheckForException:HttpClient.kt$HttpClient$t is ConnectException</ID>
     <ID>InstanceOfCheckForException:HttpClient.kt$HttpClient$t is UnknownHostException</ID>
     <ID>LongMethod:ApplicationService.kt$ApplicationService$override suspend fun waitUntilSystemConditionsAvailable(): Boolean</ID>
@@ -260,6 +269,25 @@
     <ID>MagicNumber:TrackGooglePurchase.kt$TrackGooglePurchase.Companion$4</ID>
     <ID>MagicNumber:TrackGooglePurchase.kt$TrackGooglePurchase.Companion$99</ID>
     <ID>MagicNumber:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$404</ID>
+    <ID>MapGetWithNotNullAssertionOperator:DeleteAliasOperation.kt$DeleteAliasOperation$map[onesignalId]!!</ID>
+    <ID>MapGetWithNotNullAssertionOperator:DeleteSubscriptionOperation.kt$DeleteSubscriptionOperation$map[onesignalId]!!</ID>
+    <ID>MapGetWithNotNullAssertionOperator:DeleteSubscriptionOperation.kt$DeleteSubscriptionOperation$map[subscriptionId]!!</ID>
+    <ID>MapGetWithNotNullAssertionOperator:DeleteTagOperation.kt$DeleteTagOperation$map[onesignalId]!!</ID>
+    <ID>MapGetWithNotNullAssertionOperator:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$response.identities[IdentityConstants.ONESIGNAL_ID]!!</ID>
+    <ID>MapGetWithNotNullAssertionOperator:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$subscriptions[operation.subscriptionId]!!</ID>
+    <ID>MapGetWithNotNullAssertionOperator:PreferencesService.kt$PreferencesService$prefsToApply[storeKey]!!</ID>
+    <ID>MapGetWithNotNullAssertionOperator:PreferencesService.kt$PreferencesService$prefsToApply[store]!!</ID>
+    <ID>MapGetWithNotNullAssertionOperator:RefreshUserOperation.kt$RefreshUserOperation$map[onesignalId]!!</ID>
+    <ID>MapGetWithNotNullAssertionOperator:SetAliasOperation.kt$SetAliasOperation$map[onesignalId]!!</ID>
+    <ID>MapGetWithNotNullAssertionOperator:SetPropertyOperation.kt$SetPropertyOperation$map[onesignalId]!!</ID>
+    <ID>MapGetWithNotNullAssertionOperator:SetTagOperation.kt$SetTagOperation$map[onesignalId]!!</ID>
+    <ID>MapGetWithNotNullAssertionOperator:TrackPurchaseOperation.kt$TrackPurchaseOperation$map[onesignalId]!!</ID>
+    <ID>MapGetWithNotNullAssertionOperator:TrackSessionEndOperation.kt$TrackSessionEndOperation$map[onesignalId]!!</ID>
+    <ID>MapGetWithNotNullAssertionOperator:TrackSessionStartOperation.kt$TrackSessionStartOperation$map[onesignalId]!!</ID>
+    <ID>MapGetWithNotNullAssertionOperator:TransferSubscriptionOperation.kt$TransferSubscriptionOperation$map[onesignalId]!!</ID>
+    <ID>MapGetWithNotNullAssertionOperator:TransferSubscriptionOperation.kt$TransferSubscriptionOperation$map[subscriptionId]!!</ID>
+    <ID>MapGetWithNotNullAssertionOperator:UpdateSubscriptionOperation.kt$UpdateSubscriptionOperation$map[onesignalId]!!</ID>
+    <ID>MapGetWithNotNullAssertionOperator:UpdateSubscriptionOperation.kt$UpdateSubscriptionOperation$map[subscriptionId]!!</ID>
     <ID>MaxLineLength:AlertDialogPrepromptForAndroidSettings.kt$AlertDialogPrepromptForAndroidSettings$Logging.log(LogLevel.ERROR, "Alert dialog for Android settings was skipped because the activity was unavailable to display it.")</ID>
     <ID>MaxLineLength:ApplicationService.kt$ApplicationService$"ApplicationService.handleFocus: application is now in focus, nextResumeIsFirstActivity=$nextResumeIsFirstActivity"</ID>
     <ID>MaxLineLength:ApplicationService.kt$ApplicationService$"ApplicationService.onOrientationChanged: Configuration Orientation Change: LANDSCAPE ($orientation) on activity: $activity"</ID>
@@ -291,7 +319,6 @@
     <ID>MaxLineLength:DeviceService.kt$DeviceService$val result = isHuaweiMobileServicesAvailableMethod.invoke(availabilityInstance, _applicationService.appContext) as Int</ID>
     <ID>MaxLineLength:DeviceService.kt$DeviceService.Companion$private const val GOOGLE_PLAY_SERVICES_PACKAGE = "com.google.android.gms" // = GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE</ID>
     <ID>MaxLineLength:DeviceUtils.kt$DeviceUtils$return if (networkType == ConnectivityManager.TYPE_WIFI || networkType == ConnectivityManager.TYPE_ETHERNET) 0 else 1</ID>
-    <ID>MaxLineLength:ExecutorMocks.kt$ExecutorMocks.Companion$fun getNewRecordState(configModelStore: ConfigModelStore = MockHelper.configModelStore())</ID>
     <ID>MaxLineLength:HttpClient.kt$HttpClient$"$method `$url` was called before the user provided privacy consent. Your application is set to require the user's privacy consent before the OneSignal SDK can be initialized. Please ensure the user has provided consent before calling this method. You can check the latest OneSignal consent status by calling OneSignal.privacyConsent"</ID>
     <ID>MaxLineLength:HttpClient.kt$HttpClient$"HttpClient: Got Response = ${method ?: "GET"} ${con.url} - STATUS: $httpResponse - Body: " + json</ID>
     <ID>MaxLineLength:HttpClient.kt$HttpClient$"HttpClient: Got Response = ${method ?: "GET"} ${con.url} - Using Cached response due to 304: "</ID>
@@ -327,8 +354,6 @@
     <ID>MaxLineLength:InfluenceManager.kt$InfluenceManager$Logging.debug("InfluenceManager.restartSessionIfNeeded(entryAction: $entryAction):\n channelTrackers: $channelTrackers")</ID>
     <ID>MaxLineLength:InfluenceManager.kt$InfluenceManager$channelInfluenceType?.isIndirect() == true &amp;&amp; channelTracker.indirectIds != null &amp;&amp; channelTracker.indirectIds!!.length() &gt; 0</ID>
     <ID>MaxLineLength:InfluenceManager.kt$InfluenceManager$updated = setSessionTracker(channelTrackerByAction, InfluenceType.DIRECT, directId ?: channelTrackerByAction.directId, null)</ID>
-    <ID>MaxLineLength:InitialOSDatabase.kt$InitialOSDatabase$OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME.toString()</ID>
-    <ID>MaxLineLength:InitialOSDatabase.kt$InitialOSDatabase$OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY</ID>
     <ID>MaxLineLength:JSONConverter.kt$JSONConverter$val respIdentities = jsonObject.safeJSONObject("identity")?.toMap()?.mapValues { it.value.toString() } ?: mapOf()</ID>
     <ID>MaxLineLength:JSONObjectExtensions.kt$*</ID>
     <ID>MaxLineLength:LoginUserFromSubscriptionOperation.kt$LoginUserFromSubscriptionOperation$class</ID>
@@ -447,6 +472,12 @@
     <ID>NestedBlockDepth:ServiceRegistration.kt$ServiceRegistrationReflection$private fun doesHaveAllParameters( constructor: Constructor&lt;*&gt;, provider: IServiceProvider, ): Boolean</ID>
     <ID>NestedBlockDepth:TrackGooglePurchase.kt$TrackGooglePurchase$private fun sendPurchases( skusToAdd: ArrayList&lt;String&gt;, newPurchaseTokens: ArrayList&lt;String&gt;, )</ID>
     <ID>NestedBlockDepth:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$override suspend fun execute(operations: List&lt;Operation&gt;): ExecutionResponse</ID>
+    <ID>NoNameShadowing:AndroidUtils.kt$AndroidUtils$uri</ID>
+    <ID>NoNameShadowing:BackgroundManager.kt$BackgroundManager$delayMs</ID>
+    <ID>NoNameShadowing:InfluenceChannel.kt$InfluenceChannel.Companion${ it.equalsName(value) }</ID>
+    <ID>NoNameShadowing:InfluenceType.kt$InfluenceType.Companion${ it.name.equals(value, ignoreCase = true) }</ID>
+    <ID>NoNameShadowing:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$operations</ID>
+    <ID>NoNameShadowing:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$operations</ID>
     <ID>PrintStackTrace:AndroidUtils.kt$AndroidUtils$e</ID>
     <ID>PrintStackTrace:ApplicationService.kt$ApplicationService$e</ID>
     <ID>PrintStackTrace:DeviceUtils.kt$DeviceUtils$t</ID>
@@ -519,7 +550,6 @@
     <ID>TooGenericExceptionThrown:LoginUserFromSubscriptionOperationExecutor.kt$LoginUserFromSubscriptionOperationExecutor$throw Exception("Unrecognized operation: $startingOp")</ID>
     <ID>TooGenericExceptionThrown:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$throw Exception("Unrecognized operation: $operation")</ID>
     <ID>TooGenericExceptionThrown:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$throw Exception("Unrecognized operation: $startingOp")</ID>
-    <ID>TooGenericExceptionThrown:MockHttpConnectionFactory.kt$MockHttpConnectionFactory.MockHttpURLConnection$throw Exception("No error response body")</ID>
     <ID>TooGenericExceptionThrown:Model.kt$Model$throw Exception("If parent model is set, parent property must also be set.")</ID>
     <ID>TooGenericExceptionThrown:Model.kt$Model$throw Exception("If parent property is set, parent model must also be set.")</ID>
     <ID>TooGenericExceptionThrown:OneSignalImp.kt$OneSignalImp$throw Exception( "Must call 'initWithContext' before use", )</ID>
@@ -568,8 +598,6 @@
     <ID>UndocumentedPublicClass:ConfigModelStore.kt$ConfigModelStore : SingletonModelStore</ID>
     <ID>UndocumentedPublicClass:DateUtils.kt$DateUtils</ID>
     <ID>UndocumentedPublicClass:DeviceUtils.kt$DeviceUtils</ID>
-    <ID>UndocumentedPublicClass:ExecutorMocks.kt$ExecutorMocks</ID>
-    <ID>UndocumentedPublicClass:ExecutorMocks.kt$ExecutorMocks$Companion</ID>
     <ID>UndocumentedPublicClass:ICondition.kt$ICondition</ID>
     <ID>UndocumentedPublicClass:IConsistencyKeyEnum.kt$IConsistencyKeyEnum</ID>
     <ID>UndocumentedPublicClass:IConsistencyManager.kt$IConsistencyManager</ID>
@@ -658,11 +686,125 @@
     <ID>UndocumentedPublicClass:UserChangedState.kt$UserChangedState</ID>
     <ID>UndocumentedPublicClass:UserRefreshService.kt$UserRefreshService : IStartableServiceISessionLifecycleHandler</ID>
     <ID>UndocumentedPublicClass:ViewUtils.kt$ViewUtils</ID>
+    <ID>UnnecessaryAbstractClass:Subscription.kt$Subscription$Subscription</ID>
+    <ID>UnnecessaryApply:ChannelTracker.kt$ChannelTracker$apply { influenceType = InfluenceType.UNATTRIBUTED }</ID>
+    <ID>UnnecessaryNotNullOperator:BackgroundManager.kt$BackgroundManager$_applicationService.appContext!!</ID>
+    <ID>UnnecessaryNotNullOperator:BackgroundManager.kt$BackgroundManager$syncServiceJobClass!!</ID>
+    <ID>UnnecessaryNotNullOperator:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$TimeUtils.getTimeZoneId()!!</ID>
+    <ID>UnnecessaryNotNullOperator:OneSignalImp.kt$OneSignalImp$identityModelStore!!</ID>
+    <ID>UnnecessaryNotNullOperator:OneSignalImp.kt$OneSignalImp$preferencesService!!</ID>
+    <ID>UnnecessaryNotNullOperator:OneSignalImp.kt$OneSignalImp$propertiesModelStore!!</ID>
+    <ID>UnnecessaryNotNullOperator:OneSignalImp.kt$OneSignalImp$subscriptionModelStore!!</ID>
+    <ID>UnnecessaryNotNullOperator:ServiceProvider.kt$ServiceProvider$serviceMap!!</ID>
+    <ID>UnreachableCode:IamFetchReadyCondition.kt$IamFetchReadyCondition$it.rywToken ?: ""</ID>
+    <ID>UnsafeCallOnNullableType:AndroidUtils.kt$AndroidUtils$throwable.cause!!</ID>
+    <ID>UnsafeCallOnNullableType:ApplicationService.kt$ApplicationService$_appContext!!</ID>
+    <ID>UnsafeCallOnNullableType:ApplicationService.kt$ApplicationService$current!!</ID>
+    <ID>UnsafeCallOnNullableType:ApplicationService.kt$ApplicationService.&lt;no name provided&gt;$current!!</ID>
+    <ID>UnsafeCallOnNullableType:BackgroundManager.kt$BackgroundManager$backgroundSyncJob!!</ID>
+    <ID>UnsafeCallOnNullableType:CallbackProducer.kt$CallbackProducer$this.callback!!</ID>
+    <ID>UnsafeCallOnNullableType:CallbackProducer.kt$CallbackProducer$this@CallbackProducer.callback!!</ID>
+    <ID>UnsafeCallOnNullableType:DatabaseProvider.kt$DatabaseProvider$osDatabase!!</ID>
+    <ID>UnsafeCallOnNullableType:DeleteAliasOperation.kt$DeleteAliasOperation$map[onesignalId]!!</ID>
+    <ID>UnsafeCallOnNullableType:DeleteSubscriptionOperation.kt$DeleteSubscriptionOperation$map[onesignalId]!!</ID>
+    <ID>UnsafeCallOnNullableType:DeleteSubscriptionOperation.kt$DeleteSubscriptionOperation$map[subscriptionId]!!</ID>
+    <ID>UnsafeCallOnNullableType:DeleteTagOperation.kt$DeleteTagOperation$map[onesignalId]!!</ID>
+    <ID>UnsafeCallOnNullableType:DeviceUtils.kt$DeviceUtils$activityWeakReference.get()!!</ID>
+    <ID>UnsafeCallOnNullableType:HttpClient.kt$HttpClient$retVal!!</ID>
+    <ID>UnsafeCallOnNullableType:IdentityBackendService.kt$IdentityBackendService$response.payload!!</ID>
+    <ID>UnsafeCallOnNullableType:InfluenceManager.kt$InfluenceManager$channelTracker.indirectIds!!</ID>
+    <ID>UnsafeCallOnNullableType:InfluenceManager.kt$InfluenceManager$lastInfluence!!</ID>
+    <ID>UnsafeCallOnNullableType:InfluenceManager.kt$InfluenceManager$trackers[InfluenceConstants.IAM_TAG]!!</ID>
+    <ID>UnsafeCallOnNullableType:InfluenceManager.kt$InfluenceManager$trackers[InfluenceConstants.NOTIFICATION_TAG]!!</ID>
+    <ID>UnsafeCallOnNullableType:LoginUserOperation.kt$LoginUserOperation$existingOnesignalId!!</ID>
+    <ID>UnsafeCallOnNullableType:LoginUserOperation.kt$LoginUserOperation$map[existingOnesignalId]!!</ID>
+    <ID>UnsafeCallOnNullableType:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$backendSubscription.id!!</ID>
+    <ID>UnsafeCallOnNullableType:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$createUserOperation.externalId!!</ID>
+    <ID>UnsafeCallOnNullableType:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$loginUserOp.existingOnesignalId!!</ID>
+    <ID>UnsafeCallOnNullableType:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$loginUserOp.externalId!!</ID>
+    <ID>UnsafeCallOnNullableType:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$response.identities[IdentityConstants.ONESIGNAL_ID]!!</ID>
+    <ID>UnsafeCallOnNullableType:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$subscriptions[operation.subscriptionId]!!</ID>
+    <ID>UnsafeCallOnNullableType:Model.kt$Model$_parentModel!!</ID>
+    <ID>UnsafeCallOnNullableType:OneSignalImp.kt$OneSignalImp$_consentGiven!!</ID>
+    <ID>UnsafeCallOnNullableType:OneSignalImp.kt$OneSignalImp$_consentRequired!!</ID>
+    <ID>UnsafeCallOnNullableType:OneSignalImp.kt$OneSignalImp$_disableGMSMissingPrompt!!</ID>
+    <ID>UnsafeCallOnNullableType:OneSignalImp.kt$OneSignalImp$configModel!!</ID>
+    <ID>UnsafeCallOnNullableType:OneSignalImp.kt$OneSignalImp$operationRepo!!</ID>
+    <ID>UnsafeCallOnNullableType:OutcomeEvent.kt$OutcomeEvent.Companion$source.directBody!!</ID>
+    <ID>UnsafeCallOnNullableType:OutcomeEvent.kt$OutcomeEvent.Companion$source.directBody!!.notificationIds!!</ID>
+    <ID>UnsafeCallOnNullableType:OutcomeEvent.kt$OutcomeEvent.Companion$source.indirectBody!!</ID>
+    <ID>UnsafeCallOnNullableType:OutcomeEvent.kt$OutcomeEvent.Companion$source.indirectBody!!.notificationIds!!</ID>
+    <ID>UnsafeCallOnNullableType:ParamsBackendService.kt$ParamsBackendService$response.payload!!</ID>
+    <ID>UnsafeCallOnNullableType:PermissionsActivity.kt$PermissionsActivity$androidPermissionString!!</ID>
+    <ID>UnsafeCallOnNullableType:PermissionsActivity.kt$PermissionsActivity$extras!!</ID>
+    <ID>UnsafeCallOnNullableType:PermissionsActivity.kt$PermissionsActivity$permissionRequestType!!</ID>
+    <ID>UnsafeCallOnNullableType:PermissionsActivity.kt$PermissionsActivity$preferenceService!!</ID>
+    <ID>UnsafeCallOnNullableType:PermissionsActivity.kt$PermissionsActivity$preferenceService!!.getBool( PreferenceStores.ONESIGNAL, "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$permission", false, )!!</ID>
+    <ID>UnsafeCallOnNullableType:PermissionsActivity.kt$PermissionsActivity$requestPermissionService!!</ID>
+    <ID>UnsafeCallOnNullableType:PreferencesService.kt$PreferencesService$(value as Boolean?)!!</ID>
+    <ID>UnsafeCallOnNullableType:PreferencesService.kt$PreferencesService$(value as Int?)!!</ID>
+    <ID>UnsafeCallOnNullableType:PreferencesService.kt$PreferencesService$(value as Long?)!!</ID>
+    <ID>UnsafeCallOnNullableType:PreferencesService.kt$PreferencesService$prefsToApply[storeKey]!!</ID>
+    <ID>UnsafeCallOnNullableType:PreferencesService.kt$PreferencesService$prefsToApply[store]!!</ID>
+    <ID>UnsafeCallOnNullableType:RefreshUserOperation.kt$RefreshUserOperation$map[onesignalId]!!</ID>
+    <ID>UnsafeCallOnNullableType:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$subscription.id!!</ID>
+    <ID>UnsafeCallOnNullableType:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$subscription.type!!</ID>
+    <ID>UnsafeCallOnNullableType:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$tagKVP.value!!</ID>
+    <ID>UnsafeCallOnNullableType:ServiceProvider.kt$ServiceProvider$serviceMap!![c]!!</ID>
+    <ID>UnsafeCallOnNullableType:ServiceProvider.kt$ServiceProvider$serviceMap[service]!!</ID>
+    <ID>UnsafeCallOnNullableType:SessionService.kt$SessionService$config!!</ID>
+    <ID>UnsafeCallOnNullableType:SessionService.kt$SessionService$session!!</ID>
+    <ID>UnsafeCallOnNullableType:SetAliasOperation.kt$SetAliasOperation$map[onesignalId]!!</ID>
+    <ID>UnsafeCallOnNullableType:SetPropertyOperation.kt$SetPropertyOperation$map[onesignalId]!!</ID>
+    <ID>UnsafeCallOnNullableType:SetTagOperation.kt$SetTagOperation$map[onesignalId]!!</ID>
+    <ID>UnsafeCallOnNullableType:SubscriptionBackendService.kt$SubscriptionBackendService$response.payload!!</ID>
+    <ID>UnsafeCallOnNullableType:TrackGooglePurchase.kt$TrackGooglePurchase$_prefs.getBool(PreferenceStores.PLAYER_PURCHASES, PreferencePlayerPurchasesKeys.PREFS_EXISTING_PURCHASES, true)!!</ID>
+    <ID>UnsafeCallOnNullableType:TrackGooglePurchase.kt$TrackGooglePurchase$currentSkus[sku]!!</ID>
+    <ID>UnsafeCallOnNullableType:TrackGooglePurchase.kt$TrackGooglePurchase$getPurchasesMethod!!</ID>
+    <ID>UnsafeCallOnNullableType:TrackGooglePurchase.kt$TrackGooglePurchase$getSkuDetailsMethod!!</ID>
+    <ID>UnsafeCallOnNullableType:TrackGooglePurchase.kt$TrackGooglePurchase$ownedSkus!!</ID>
+    <ID>UnsafeCallOnNullableType:TrackGooglePurchase.kt$TrackGooglePurchase$purchaseDataList!!</ID>
+    <ID>UnsafeCallOnNullableType:TrackGooglePurchase.kt$TrackGooglePurchase$responseList!!</ID>
+    <ID>UnsafeCallOnNullableType:TrackGooglePurchase.kt$TrackGooglePurchase.&lt;no name provided&gt;$asInterfaceMethod!!</ID>
+    <ID>UnsafeCallOnNullableType:TrackGooglePurchase.kt$TrackGooglePurchase.Companion$clazz!!</ID>
+    <ID>UnsafeCallOnNullableType:TrackPurchaseOperation.kt$TrackPurchaseOperation$map[onesignalId]!!</ID>
+    <ID>UnsafeCallOnNullableType:TrackSessionEndOperation.kt$TrackSessionEndOperation$map[onesignalId]!!</ID>
+    <ID>UnsafeCallOnNullableType:TrackSessionStartOperation.kt$TrackSessionStartOperation$map[onesignalId]!!</ID>
+    <ID>UnsafeCallOnNullableType:TransferSubscriptionOperation.kt$TransferSubscriptionOperation$map[onesignalId]!!</ID>
+    <ID>UnsafeCallOnNullableType:TransferSubscriptionOperation.kt$TransferSubscriptionOperation$map[subscriptionId]!!</ID>
+    <ID>UnsafeCallOnNullableType:UpdateSubscriptionOperation.kt$UpdateSubscriptionOperation$map[onesignalId]!!</ID>
+    <ID>UnsafeCallOnNullableType:UpdateSubscriptionOperation.kt$UpdateSubscriptionOperation$map[subscriptionId]!!</ID>
+    <ID>UnsafeCallOnNullableType:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$deltasObject.amountSpent!!</ID>
+    <ID>UnsafeCallOnNullableType:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$deltasObject.purchases!!</ID>
+    <ID>UnsafeCallOnNullableType:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$deltasObject.sessionCount!!</ID>
+    <ID>UnsafeCallOnNullableType:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$deltasObject.sessionTime!!</ID>
+    <ID>UnsafeCallOnNullableType:UserBackendService.kt$UserBackendService$response.payload!!</ID>
     <ID>UnusedParameter:AndroidUtils.kt$AndroidUtils$_class: Class&lt;*&gt;</ID>
     <ID>UnusedPrivateProperty:AndroidUtils.kt$AndroidUtils$var requestPermission: String? = null</ID>
     <ID>UnusedPrivateProperty:ApplicationService.kt$ApplicationService$val listenerKey = "decorViewReady:$runnable"</ID>
     <ID>UnusedPrivateProperty:OSDatabase.kt$OSDatabase.Companion$private const val FLOAT_TYPE = " FLOAT"</ID>
     <ID>UnusedPrivateProperty:OperationRepo.kt$OperationRepo$private val _time: ITime</ID>
-    <ID>UtilityClassWithPublicConstructor:ExecutorMocks.kt$ExecutorMocks</ID>
+    <ID>UseIsNullOrEmpty:ChannelTracker.kt$ChannelTracker$id == null || id.isEmpty()</ID>
+    <ID>UseOrEmpty:JSONConverter.kt$JSONConverter$jsonObject.safeJSONObject("identity")?.toMap()?.mapValues { it.value.toString() } ?: mapOf()</ID>
+    <ID>UseOrEmpty:OneSignalImp.kt$OneSignalImp$AndroidUtils.getAppVersion( services.getService&lt;IApplicationService&gt;().appContext, ) ?: ""</ID>
+    <ID>UseOrEmpty:OneSignalImp.kt$OneSignalImp$AndroidUtils.getAppVersion(services.getService&lt;IApplicationService&gt;().appContext) ?: ""</ID>
+    <ID>UseOrEmpty:OneSignalImp.kt$OneSignalImp$DeviceUtils.getCarrierName( services.getService&lt;IApplicationService&gt;().appContext, ) ?: ""</ID>
+    <ID>UseOrEmpty:OneSignalImp.kt$OneSignalImp$DeviceUtils.getCarrierName(services.getService&lt;IApplicationService&gt;().appContext) ?: ""</ID>
+    <ID>UseOrEmpty:OneSignalImp.kt$OneSignalImp$currentPushSubscription?.address ?: ""</ID>
+    <ID>UseOrEmpty:OneSignalImp.kt$OneSignalImp$legacyUserSyncJSON.safeString("identifier") ?: ""</ID>
+    <ID>UseOrEmpty:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$subscription.appVersion ?: ""</ID>
+    <ID>UseOrEmpty:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$subscription.carrier ?: ""</ID>
+    <ID>UseOrEmpty:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$subscription.deviceOS ?: ""</ID>
+    <ID>UseOrEmpty:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$subscription.sdk ?: ""</ID>
+    <ID>UseOrEmpty:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$subscription.token ?: ""</ID>
+    <ID>UseOrEmpty:SubscriptionBackendService.kt$SubscriptionBackendService$identityJSON?.toMap()?.mapValues { it.value.toString() } ?: mapOf()</ID>
+    <ID>UseOrEmpty:SubscriptionManager.kt$SubscriptionManager$pushToken ?: ""</ID>
+    <ID>UseOrEmpty:UserManager.kt$UserManager$_identityModel.externalId ?: ""</ID>
+    <ID>VarCouldBeVal:AndroidUtils.kt$AndroidUtils$var requestPermission: String? = null</ID>
+    <ID>VarCouldBeVal:InfluenceManager.kt$InfluenceManager$var updated: Boolean = if (lastIds.length() &gt; 0) { setSessionTracker( channelTracker, InfluenceType.INDIRECT, null, lastIds, ) } else { setSessionTracker(channelTracker, InfluenceType.UNATTRIBUTED, null, null) }</ID>
+    <ID>VarCouldBeVal:LanguageContext.kt$LanguageContext$private var deviceLanguageProvider = LanguageProviderDevice()</ID>
+    <ID>VarCouldBeVal:OperationRepo.kt$OperationRepo$private var coroutineScope = CoroutineScope(newSingleThreadContext(name = "OpRepo"))</ID>
+    <ID>VarCouldBeVal:ServiceRegistration.kt$ServiceRegistrationReflection$var paramList: MutableList&lt;Any?&gt; = mutableListOf()</ID>
+    <ID>VarCouldBeVal:SyncJobService.kt$SyncJobService$var backgroundService = OneSignal.getService&lt;IBackgroundManager&gt;()</ID>
   </CurrentIssues>
 </SmellBaseline>
