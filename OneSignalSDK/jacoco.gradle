@@ -1,0 +1,252 @@
+// JaCoCo Test Coverage Configuration
+// This file contains all JaCoCo-related configuration for test coverage reporting
+
+subprojects {
+    // Apply JaCoCo to all modules with tests
+    plugins.withId("com.android.library") {
+        apply plugin: 'jacoco'
+        
+        jacoco {
+            toolVersion = "0.8.11"
+        }
+        
+        android {
+            buildTypes {
+                debug {
+                    testCoverageEnabled = true
+                }
+            }
+        }
+        
+        def coverageExcludes = [
+            // Android generated
+            '**/R.class',
+            '**/R$*.class',
+            '**/BuildConfig.*',
+            '**/Manifest*.*',
+            'android/**/*.*',
+            
+            // Test files (just in case)
+            '**/*Test*.*',
+            '**/*Mock*.*',
+            '**/test/**/*.*',
+            '**/androidTest/**/*.*',
+            
+            // View binding & injection
+            '**/*$ViewInjector*.*',
+            '**/*$ViewBinder*.*',
+            '**/*Binding.*',
+            
+            // Kotlin lambdas & synthetic
+            '**/Lambda$*.class',
+            '**/Lambda.class',
+            '**/*Lambda.class',
+            '**/*Lambda*.class',
+            '**/*$inlined$*.class',
+            
+            // Dagger/Hilt generated
+            '**/*_MembersInjector.class',
+            '**/Dagger*.*',
+            '**/*_Factory.*',
+            '**/*_Provide*Factory.*',
+            '**/*Module.*',
+            '**/*Module_*.*',
+            '**/*Component.*',
+            '**/*Component$*.*',
+            '**/*Subcomponent*.*',
+            '**/Hilt_*.*',
+            '**/*_HiltModules*.*',
+            
+            // Data classes & enums (often no logic to test)
+            '**/*$Companion.class',
+            
+            // Sealed classes
+            '**/*$WhenMappings.class'
+        ]
+        
+        tasks.register('jacocoTestReport', JacocoReport) {
+            dependsOn 'testDebugUnitTest'
+            
+            reports {
+                xml.required = true
+                html.required = true
+                csv.required = false
+            }
+            
+            def javaClasses = fileTree(dir: "$buildDir/intermediates/javac/debug", excludes: coverageExcludes)
+            def kotlinClasses = fileTree(dir: "$buildDir/tmp/kotlin-classes/debug", excludes: coverageExcludes)
+            
+            classDirectories.from = files([javaClasses, kotlinClasses])
+            
+            sourceDirectories.from = files([
+                "$projectDir/src/main/java",
+                "$projectDir/src/main/kotlin"
+            ])
+            
+            executionData.from = fileTree(dir: buildDir, includes: [
+                'outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec',
+                'jacoco/testDebugUnitTest.exec'
+            ])
+        }
+        
+        tasks.register('jacocoTestCoverageVerification', JacocoCoverageVerification) {
+            dependsOn 'jacocoTestReport'
+            
+            def javaClasses = fileTree(dir: "$buildDir/intermediates/javac/debug", excludes: coverageExcludes)
+            def kotlinClasses = fileTree(dir: "$buildDir/tmp/kotlin-classes/debug", excludes: coverageExcludes)
+            
+            classDirectories.from = files([javaClasses, kotlinClasses])
+            
+            sourceDirectories.from = files([
+                "$projectDir/src/main/java",
+                "$projectDir/src/main/kotlin"
+            ])
+            
+            executionData.from = fileTree(dir: buildDir, includes: [
+                'outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec',
+                'jacoco/testDebugUnitTest.exec'
+            ])
+            
+            violationRules {
+                rule {
+                    // Start with baseline - we'll gradually increase these thresholds
+                    enabled = false  // Disabled for now - just generate reports, don't enforce
+                    element = 'CLASS'
+                    
+                    limit {
+                        counter = 'LINE'
+                        value = 'COVEREDRATIO'
+                        minimum = 0.00  // Baseline: 0% - increase this as coverage improves
+                    }
+                    
+                    limit {
+                        counter = 'BRANCH'
+                        value = 'COVEREDRATIO'
+                        minimum = 0.00  // Baseline: 0% - increase this as coverage improves
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Task to run coverage on all modules
+tasks.register('jacocoTestReportAll') {
+    group = 'verification'
+    description = 'Generate JaCoCo test coverage reports for all modules'
+    
+    subprojects.each { subproject ->
+        subproject.plugins.withId('com.android.library') {
+            dependsOn "${subproject.path}:jacocoTestReport"
+        }
+    }
+}
+
+// Task to verify coverage on all modules
+tasks.register('jacocoTestCoverageVerificationAll') {
+    group = 'verification'
+    description = 'Verify JaCoCo test coverage is above threshold for all modules'
+    
+    subprojects.each { subproject ->
+        subproject.plugins.withId('com.android.library') {
+            dependsOn "${subproject.path}:jacocoTestCoverageVerification"
+        }
+    }
+}
+
+// Task to print coverage summary for CI/CD
+tasks.register('jacocoTestReportSummary') {
+    group = 'verification'
+    description = 'Print JaCoCo test coverage summary for all modules (useful for CI/CD)'
+    
+    dependsOn 'jacocoTestReportAll'
+    
+    doLast {
+        def totalInstructions = 0
+        def coveredInstructions = 0
+        def totalBranches = 0
+        def coveredBranches = 0
+        def totalLines = 0
+        def coveredLines = 0
+        
+        println("\n" + "=".multiply(80))
+        println("JaCoCo Test Coverage Summary")
+        println("=".multiply(80))
+        
+        subprojects.each { subproject ->
+            subproject.plugins.withId('com.android.library') {
+                def reportFile = file("${subproject.buildDir}/reports/jacoco/jacocoTestReport/jacocoTestReport.xml")
+                
+                if (reportFile.exists()) {
+                    def parser = new XmlSlurper()
+                    parser.setFeature("http://apache.org/xml/features/disallow-doctype-decl", false)
+                    parser.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+                    def report = parser.parse(reportFile)
+                    def moduleName = subproject.name
+                    
+                    def instructions = report.counter.find { it.@type == 'INSTRUCTION' }
+                    def branches = report.counter.find { it.@type == 'BRANCH' }
+                    def lines = report.counter.find { it.@type == 'LINE' }
+                    
+                    if (instructions) {
+                        def missed = instructions.@missed.toInteger()
+                        def covered = instructions.@covered.toInteger()
+                        def total = missed + covered
+                        def percentage = total > 0 ? (covered * 100.0 / total) : 0
+                        
+                        totalInstructions += total
+                        coveredInstructions += covered
+                        
+                        println("\nModule: ${moduleName}")
+                        println("  Instructions: ${covered}/${total} (${String.format('%.2f', percentage)}%)")
+                    }
+                    
+                    if (branches) {
+                        def missed = branches.@missed.toInteger()
+                        def covered = branches.@covered.toInteger()
+                        def total = missed + covered
+                        def percentage = total > 0 ? (covered * 100.0 / total) : 0
+                        
+                        totalBranches += total
+                        coveredBranches += covered
+                        
+                        println("  Branches:     ${covered}/${total} (${String.format('%.2f', percentage)}%)")
+                    }
+                    
+                    if (lines) {
+                        def missed = lines.@missed.toInteger()
+                        def covered = lines.@covered.toInteger()
+                        def total = missed + covered
+                        def percentage = total > 0 ? (covered * 100.0 / total) : 0
+                        
+                        totalLines += total
+                        coveredLines += covered
+                        
+                        println("  Lines:        ${covered}/${total} (${String.format('%.2f', percentage)}%)")
+                    }
+                    
+                    println("  Report:       file://${reportFile.parentFile}/html/index.html")
+                }
+            }
+        }
+        
+        if (totalInstructions > 0) {
+            def overallInstructionPercent = (coveredInstructions * 100.0 / totalInstructions)
+            def overallBranchPercent = totalBranches > 0 ? (coveredBranches * 100.0 / totalBranches) : 0
+            def overallLinePercent = totalLines > 0 ? (coveredLines * 100.0 / totalLines) : 0
+            
+            println("\n" + "=".multiply(80))
+            println("Overall Coverage")
+            println("=".multiply(80))
+            println("Instructions: ${coveredInstructions}/${totalInstructions} (${String.format('%.2f', overallInstructionPercent)}%)")
+            println("Branches:     ${coveredBranches}/${totalBranches} (${String.format('%.2f', overallBranchPercent)}%)")
+            println("Lines:        ${coveredLines}/${totalLines} (${String.format('%.2f', overallLinePercent)}%)")
+            println("=".multiply(80) + "\n")
+            
+            // CI-friendly output
+            println("::set-output name=coverage::${String.format('%.2f', overallLinePercent)}")
+            println("COVERAGE_PERCENTAGE=${String.format('%.2f', overallLinePercent)}")
+        }
+    }
+}
+

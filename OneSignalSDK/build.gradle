@@ -56,3 +56,6 @@ allprojects {
         maven { url 'https://developer.huawei.com/repo/' }
     }
 }
+
+// Apply JaCoCo configuration from separate file
+apply from: 'jacoco.gradle'
