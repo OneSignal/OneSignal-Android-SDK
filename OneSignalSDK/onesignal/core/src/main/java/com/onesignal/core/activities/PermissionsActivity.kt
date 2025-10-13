@@ -9,7 +9,6 @@ import android.os.Handler
 import androidx.core.app.ActivityCompat
 import com.onesignal.OneSignal
 import com.onesignal.common.threading.suspendifyOnDefault
-import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.R
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService

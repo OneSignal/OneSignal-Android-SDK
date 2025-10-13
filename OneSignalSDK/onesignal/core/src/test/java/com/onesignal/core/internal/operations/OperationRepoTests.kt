@@ -1,6 +1,5 @@
 package com.onesignal.core.internal.operations
 
-import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.Waiter
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.operations.impl.OperationModelStore
@@ -32,7 +31,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.coroutines.yield
 import org.json.JSONArray
 import java.util.UUID
 
@@ -158,7 +156,7 @@ class OperationRepoTests : FunSpec({
         // When
         operationRepo.start()
         operationRepo.enqueue(MyOperation())
-        
+
         // Give a small delay to ensure the operation is in the queue
         Thread.sleep(50)
 
@@ -276,8 +274,8 @@ class OperationRepoTests : FunSpec({
             }
 
         // Then
-        response1 shouldBe null  // Should timeout due to 1s retry delay
-        response2 shouldBe true  // Should succeed after retry delay expires
+        response1 shouldBe null // Should timeout due to 1s retry delay
+        response2 shouldBe true // Should succeed after retry delay expires
     }
 
     test("enqueue operation executes and is removed when executed after fail") {
@@ -356,7 +354,7 @@ class OperationRepoTests : FunSpec({
 
         // When
         mocks.operationRepo.start()
-        
+
         // Enqueue operations in sequence to ensure proper grouping
         mocks.operationRepo.enqueue(operation1)
         mocks.operationRepo.enqueue(operation2)
@@ -369,7 +367,7 @@ class OperationRepoTests : FunSpec({
             mocks.operationModelStore.add(operation1)
             mocks.operationModelStore.add(operation2)
         }
-        
+
         // Verify they were executed as a group (this is the key functionality)
         coVerify {
             mocks.executor.execute(
@@ -381,7 +379,7 @@ class OperationRepoTests : FunSpec({
                 },
             )
         }
-        
+
         // Verify cleanup
         coVerify {
             mocks.operationModelStore.remove("operationId1")
@@ -625,7 +623,7 @@ class OperationRepoTests : FunSpec({
 
         // When
         mocks.operationRepo.start()
-        
+
         // Enqueue all operations first so operation2 is in the queue when operation1 executes
         mocks.operationRepo.enqueue(operation1)
         mocks.operationRepo.enqueue(operation2)

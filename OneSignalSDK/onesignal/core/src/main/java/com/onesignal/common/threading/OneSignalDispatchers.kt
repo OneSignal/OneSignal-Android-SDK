@@ -1,16 +1,13 @@
 package com.onesignal.common.threading
 
-import androidx.annotation.VisibleForTesting
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
@@ -68,7 +65,8 @@ internal object OneSignalDispatchers {
                 LinkedBlockingQueue(QUEUE_CAPACITY),
                 OptimizedThreadFactory(
                     namePrefix = IO_THREAD_NAME_PREFIX,
-                    priority = Thread.NORM_PRIORITY - 1, // Slightly lower priority for I/O tasks
+                    priority = Thread.NORM_PRIORITY - 1,
+                    // Slightly lower priority for I/O tasks
                 ),
             ).apply {
                 allowCoreThreadTimeOut(false) // Keep core threads alive
