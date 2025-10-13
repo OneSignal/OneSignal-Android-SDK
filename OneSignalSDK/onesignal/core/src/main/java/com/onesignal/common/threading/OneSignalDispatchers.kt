@@ -1,16 +1,13 @@
 package com.onesignal.common.threading
 
-import androidx.annotation.VisibleForTesting
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
@@ -123,16 +120,6 @@ internal object OneSignalDispatchers {
 
     private val DefaultScope: CoroutineScope by lazy {
         CoroutineScope(SupervisorJob() + Default)
-    }
-
-    @VisibleForTesting
-    internal fun waitForDefaultScope() {
-        runBlocking {
-            // Wait for all active coroutines in DefaultScope to complete
-            DefaultScope.coroutineContext[Job]?.children?.toList()?.forEach { child ->
-                child.join()
-            }
-        }
     }
 
     fun launchOnIO(block: suspend () -> Unit) {

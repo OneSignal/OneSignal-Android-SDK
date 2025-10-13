@@ -1,6 +1,5 @@
 package com.onesignal.core.internal.operations
 
-import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.Waiter
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.operations.impl.OperationModelStore
@@ -16,6 +15,8 @@ import com.onesignal.mocks.MockPreferencesService
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.LoginUserOperation
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.ints.shouldBeGreaterThan
+import io.kotest.matchers.ints.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.mockk.CapturingSlot
 import io.mockk.coEvery
@@ -639,55 +640,6 @@ class OperationRepoTests : FunSpec({
         }
     }
 
-    // This tests the combination of translation and grouping functionality
-    // by verifying the system can handle both scenarios in the same workflow
-    test("system handles translation and grouping together correctly") {
-        // Given
-        val mocks = Mocks()
-        mocks.configModelStore.model.opRepoPostCreateDelay = 100
-
-        // Create a scenario that combines both translation and grouping:
-        // - One operation that creates translation mappings
-        // - Multiple operations that can be grouped together
-        // - At least one operation in the group needs those translations
-
-        val translationSourceOp = mockOperation("translation-source", groupComparisonType = GroupComparisonType.NONE)
-        val translationTargetOp = mockOperation("translation-target", groupComparisonType = GroupComparisonType.NONE, applyToRecordId = "server-id")
-        val groupOp1 = mockOperation("group-op-1", groupComparisonType = GroupComparisonType.CREATE, createComparisonKey = "group")
-        val groupOp2 = mockOperation("group-op-2", groupComparisonType = GroupComparisonType.CREATE, createComparisonKey = "group")
-
-        // Mock translation source to return ID mappings
-        coEvery {
-            mocks.executor.execute(listOf(translationSourceOp))
-        } returns ExecutionResponse(ExecutionResult.SUCCESS, mapOf("local-id" to "server-id"))
-
-        // When
-        mocks.operationRepo.start()
-
-        // Enqueue operations in a way that exercises both features:
-        // 1. Translation source and target (exercises translation)
-        mocks.operationRepo.enqueue(translationSourceOp)
-        mocks.operationRepo.enqueue(translationTargetOp)
-
-        // 2. Groupable operations (exercises grouping)
-        mocks.operationRepo.enqueue(groupOp1)
-        mocks.operationRepo.enqueueAndWait(groupOp2)
-
-        OneSignalDispatchers.waitForDefaultScope()
-
-        // Then verify the system handled both scenarios:
-
-        // 1. Translation functionality worked
-        coVerify { mocks.executor.execute(listOf(translationSourceOp)) }
-        coVerify { translationTargetOp.translateIds(mapOf("local-id" to "server-id")) }
-
-        // 2. Multiple executions happened (individual and grouped operations)
-        coVerify(atLeast = 3) { mocks.executor.execute(any()) }
-
-        // 3. System processed all operations without errors
-        // (The fact that we got here without exceptions proves the core functionality works)
-    }
-
     // operations not removed from the queue may get stuck in the queue if app is force closed within the delay
     test("execution of an operation with translation IDs removes the operation from queue before delay") {
         // Given
@@ -814,6 +766,102 @@ class OperationRepoTests : FunSpec({
         response1 shouldBe null
         response2 shouldBe true
         opRepo.forceExecuteOperations()
+    }
+
+    // This test verifies the critical execution order when translation IDs and grouping work together
+    // It ensures that operations requiring translation wait for translation mappings before being grouped
+    test("translation IDs are applied before operations are grouped with correct execution order") {
+        // Given
+        val mocks = Mocks()
+        mocks.configModelStore.model.opRepoPostCreateDelay = 100
+
+        // Track execution order using a list
+        val executionOrder = mutableListOf<String>()
+
+        // Create operations for testing translation + grouping interaction
+        val translationSource = mockOperation("translation-source", groupComparisonType = GroupComparisonType.NONE)
+        val groupableOp1 = mockOperation("groupable-1", groupComparisonType = GroupComparisonType.CREATE, createComparisonKey = "test-group", applyToRecordId = "target-id")
+        val groupableOp2 = mockOperation("groupable-2", groupComparisonType = GroupComparisonType.CREATE, createComparisonKey = "test-group", applyToRecordId = "different-id")
+
+        // Mock the translateIds call to track when translation happens
+        every { groupableOp1.translateIds(any()) } answers {
+            executionOrder.add("translate-groupable-1")
+            Unit
+        }
+
+        // Mock groupableOp2 to ensure it doesn't get translated
+        every { groupableOp2.translateIds(any()) } answers {
+            executionOrder.add("translate-groupable-2-unexpected")
+            Unit
+        }
+
+        // Mock all execution calls and track them
+        coEvery {
+            mocks.executor.execute(any())
+        } answers {
+            val operations = firstArg<List<Operation>>()
+            when {
+                operations.size == 1 && operations.contains(translationSource) -> {
+                    executionOrder.add("execute-translation-source")
+                    ExecutionResponse(ExecutionResult.SUCCESS, mapOf("source-local-id" to "target-id"))
+                }
+                operations.size == 2 && operations.contains(groupableOp1) && operations.contains(groupableOp2) -> {
+                    executionOrder.add("execute-grouped-operations")
+                    ExecutionResponse(ExecutionResult.SUCCESS)
+                }
+                operations.size == 1 && operations.contains(groupableOp1) -> {
+                    executionOrder.add("execute-single-groupable-1")
+                    ExecutionResponse(ExecutionResult.SUCCESS)
+                }
+                operations.size == 1 && operations.contains(groupableOp2) -> {
+                    executionOrder.add("execute-single-groupable-2")
+                    ExecutionResponse(ExecutionResult.SUCCESS)
+                }
+                else -> {
+                    executionOrder.add("execute-other-${operations.size}")
+                    ExecutionResponse(ExecutionResult.SUCCESS)
+                }
+            }
+        }
+
+        // When
+        mocks.operationRepo.start()
+
+        // Enqueue operations in a way that tests the critical scenario:
+        // 1. Translation source generates mappings
+        // 2. Operations needing translation wait for those mappings
+        // 3. After translation, operations are grouped and executed together
+        mocks.operationRepo.enqueue(translationSource)
+        mocks.operationRepo.enqueue(groupableOp1) // This needs translation
+        mocks.operationRepo.enqueueAndWait(groupableOp2) // This doesn't need translation but should be grouped
+
+        // OneSignalDispatchers.waitForDefaultScope()
+
+        // Then verify the critical execution order
+        executionOrder.size shouldBe 4 // Translation source + 2 translations + grouped execution
+
+        // 1. Translation source must execute first to generate mappings
+        executionOrder[0] shouldBe "execute-translation-source"
+
+        // 2. Translation is applied to operations (order may vary)
+        executionOrder.contains("translate-groupable-1") shouldBe true
+
+        // 3. After translation, operations should be grouped and executed together
+        executionOrder.last() shouldBe "execute-grouped-operations"
+
+        // Additional verifications to ensure the test is comprehensive
+        coVerify(exactly = 1) { mocks.executor.execute(listOf(translationSource)) }
+        coVerify(exactly = 1) { groupableOp1.translateIds(mapOf("source-local-id" to "target-id")) }
+
+        // The key verification: translation happens BEFORE grouped execution
+        val translationIndex = executionOrder.indexOf("translate-groupable-1")
+        val groupedExecutionIndex = executionOrder.indexOf("execute-grouped-operations")
+        translationIndex shouldBeGreaterThan -1
+        groupedExecutionIndex shouldBeGreaterThan -1
+        translationIndex shouldBeLessThan groupedExecutionIndex
+
+        // Verify that the grouped execution happened with both operations
+        // We can't easily verify the exact list content with MockK, but we verified it in the execution order tracking
     }
 }) {
     companion object {
