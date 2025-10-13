@@ -644,8 +644,8 @@ class OperationRepoTests : FunSpec({
         // Given
         val mocks = Mocks()
         mocks.configModelStore.model.opRepoPostCreateDelay = 100
-        val operation1 = mockOperation(groupComparisonType = GroupComparisonType.NONE)
-        val operation2 = mockOperation(groupComparisonType = GroupComparisonType.CREATE, createComparisonKey = "create-key", applyToRecordId = "local-id1")
+        val operation1 = mockOperation(id = "local-id1", groupComparisonType = GroupComparisonType.NONE)
+        val operation2 = mockOperation(groupComparisonType = GroupComparisonType.CREATE, createComparisonKey = "create-key")
         val operation3 = mockOperation(groupComparisonType = GroupComparisonType.CREATE, createComparisonKey = "create-key", applyToRecordId = "id2")
         coEvery {
             mocks.executor.execute(listOf(operation1))
