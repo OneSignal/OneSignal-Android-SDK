@@ -645,14 +645,16 @@ class OperationRepoTests : FunSpec({
         val mocks = Mocks()
         mocks.configModelStore.model.opRepoPostCreateDelay = 100
         val operation1 = mockOperation(groupComparisonType = GroupComparisonType.NONE)
-        val operation2 = mockOperation(groupComparisonType = GroupComparisonType.CREATE)
-        val operation3 = mockOperation(groupComparisonType = GroupComparisonType.CREATE, applyToRecordId = "id2")
+        val operation2 = mockOperation(groupComparisonType = GroupComparisonType.CREATE, createComparisonKey = "create-key", applyToRecordId = "local-id1")
+        val operation3 = mockOperation(groupComparisonType = GroupComparisonType.CREATE, createComparisonKey = "create-key", applyToRecordId = "id2")
         coEvery {
             mocks.executor.execute(listOf(operation1))
         } returns ExecutionResponse(ExecutionResult.SUCCESS, mapOf("local-id1" to "id2"))
 
         // When
         mocks.operationRepo.start()
+
+        // Enqueue all operations first so operation2 and operation3 are in the queue when operation1 executes
         mocks.operationRepo.enqueue(operation1)
         mocks.operationRepo.enqueue(operation2)
         mocks.operationRepo.enqueueAndWait(operation3)
