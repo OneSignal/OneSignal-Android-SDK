@@ -68,13 +68,13 @@ internal object OneSignalDispatchers {
                 LinkedBlockingQueue(QUEUE_CAPACITY),
                 OptimizedThreadFactory(
                     namePrefix = IO_THREAD_NAME_PREFIX,
-                    priority = Thread.MAX_PRIORITY,
+                    priority = Thread.NORM_PRIORITY - 1, // Slightly lower priority for I/O tasks
                 ),
             ).apply {
                 allowCoreThreadTimeOut(false) // Keep core threads alive
             }
         } catch (e: Exception) {
-            Logging.error("OneSignalDispatchers: Failed to create IO executor, using fallback: ${e.message}")
+            Logging.error("OneSignalDispatchers: Failed to create IO executor: ${e.message}")
             throw e // Let the dispatcher fallback handle this
         }
     }
@@ -92,7 +92,7 @@ internal object OneSignalDispatchers {
                 allowCoreThreadTimeOut(false) // Keep core threads alive
             }
         } catch (e: Exception) {
-            Logging.error("OneSignalDispatchers: Failed to create Default executor, using fallback: ${e.message}")
+            Logging.error("OneSignalDispatchers: Failed to create Default executor: ${e.message}")
             throw e // Let the dispatcher fallback handle this
         }
     }
@@ -102,7 +102,7 @@ internal object OneSignalDispatchers {
         try {
             ioExecutor.asCoroutineDispatcher()
         } catch (e: Exception) {
-            Logging.error("OneSignalDispatchers: Using fallback Android.IO dispatcher: ${e.message}")
+            Logging.error("OneSignalDispatchers: Using fallback Dispatchers.IO dispatcher: ${e.message}")
             Dispatchers.IO
         }
     }
@@ -111,7 +111,7 @@ internal object OneSignalDispatchers {
         try {
             defaultExecutor.asCoroutineDispatcher()
         } catch (e: Exception) {
-            Logging.error("OneSignalDispatchers: Using fallback Android.Default dispatcher: ${e.message}")
+            Logging.error("OneSignalDispatchers: Using fallback Dispatchers.Default dispatcher: ${e.message}")
             Dispatchers.Default
         }
     }
@@ -122,16 +122,6 @@ internal object OneSignalDispatchers {
 
     private val DefaultScope: CoroutineScope by lazy {
         CoroutineScope(SupervisorJob() + Default)
-    }
-
-    @VisibleForTesting
-    internal fun waitForDefaultScope() {
-        runBlocking {
-            // Wait for all active coroutines in DefaultScope to complete
-            DefaultScope.coroutineContext[Job]?.children?.forEach { child ->
-                child.join()
-            }
-        }
     }
 
     fun launchOnIO(block: suspend () -> Unit) {

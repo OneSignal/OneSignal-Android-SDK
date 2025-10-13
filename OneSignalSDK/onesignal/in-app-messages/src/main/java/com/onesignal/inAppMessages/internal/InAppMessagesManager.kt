@@ -11,6 +11,7 @@ import com.onesignal.common.events.EventProducer
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
+import com.onesignal.common.threading.suspendifyOnDefault
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
@@ -161,7 +162,7 @@ internal class InAppMessagesManager(
             }
 
             if (!value) {
-                suspendifyOnIO {
+                suspendifyOnDefault {
                     evaluateInAppMessages()
                 }
             }
@@ -727,7 +728,7 @@ internal class InAppMessagesManager(
 
         makeRedisplayMessagesAvailableWithTriggers(listOf(triggerId), false)
 
-        suspendifyOnIO {
+        suspendifyOnDefault {
             // This method is called when a time-based trigger timer fires, meaning the message can
             //  probably be shown now. So the current message conditions should be re-evaluated
             evaluateInAppMessages()
@@ -739,7 +740,7 @@ internal class InAppMessagesManager(
 
         makeRedisplayMessagesAvailableWithTriggers(listOf(newTriggerKey), true)
 
-        suspendifyOnIO {
+        suspendifyOnDefault {
             // This method is called when a time-based trigger timer fires, meaning the message can
             //  probably be shown now. So the current message conditions should be re-evaluated
             evaluateInAppMessages()
