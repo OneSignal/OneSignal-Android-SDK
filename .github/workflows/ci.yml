@@ -1,4 +1,4 @@
-name: Test
+name: Build and Test
 
 on:
   pull_request:
@@ -27,6 +27,27 @@ jobs:
         working-directory: OneSignalSDK
         run: |
           ./gradlew testReleaseUnitTest --console=plain --continue
+      - name: "[Test] Generate Coverage Report"
+        working-directory: OneSignalSDK
+        run: |
+          ./gradlew jacocoTestReportAll --console=plain
+      - name: "[Test] Display Coverage Summary"
+        working-directory: OneSignalSDK
+        run: |
+          ./gradlew jacocoTestReportSummary --console=plain
+      - name: "[Test] Verify Coverage Threshold (Baseline - Not Enforced)"
+        working-directory: OneSignalSDK
+        continue-on-error: true  # Baseline: Don't fail build on coverage yet
+        run: |
+          ./gradlew jacocoTestCoverageVerificationAll --console=plain || echo "Coverage threshold not enforced during baseline period"
+      - name: Upload Coverage Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            OneSignalSDK/onesignal/*/build/reports/jacoco/jacocoTestReport/html/**
+            OneSignalSDK/onesignal/*/build/reports/jacoco/jacocoTestReport/*.xml
       - name: Unit tests results
         if: failure()
         uses: actions/upload-artifact@v4
