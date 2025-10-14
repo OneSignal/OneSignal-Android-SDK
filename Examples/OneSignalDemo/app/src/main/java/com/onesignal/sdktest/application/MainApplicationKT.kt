@@ -9,7 +9,7 @@ package com.onesignal.sdktest.application
  * - Cleaner code structure
  * - Proper ANR prevention
  * 
- * @see MainApplication (deprecated Java version)
+ * @see MainApplication.java (deprecated Java version)
  */
 import android.annotation.SuppressLint
 import android.os.StrictMode
@@ -39,10 +39,15 @@ import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.state.UserChangedState
 import com.onesignal.user.state.UserState
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 class MainApplicationKT : MultiDexApplication() {
+
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     init {
         // run strict mode to surface any potential issues easier
         StrictMode.enableDefaults()
@@ -64,20 +69,23 @@ class MainApplicationKT : MultiDexApplication() {
         OneSignalNotificationSender.setAppId(appId)
 
         // Initialize OneSignal asynchronously on background thread to avoid ANR
-        CoroutineScope(Dispatchers.IO).launch {
-            val success = OneSignal.initWithContextSuspend(this@MainApplicationKT, appId)
-            Log.d(Tag.LOG_TAG, "OneSignal async init success: $success")
-            
-            if (success) {
+        applicationScope.launch {
+            try {
+                OneSignal.initWithContextSuspend(this@MainApplicationKT, appId)
+                Log.d(Tag.LOG_TAG, "OneSignal async init completed")
+
                 // Set up all OneSignal listeners after successful async initialization
                 setupOneSignalListeners()
-                
+
                 // Request permission - this will internally switch to Main thread for UI operations
                 OneSignal.Notifications.requestPermission(true)
+
+                Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT)
+
+            } catch (e: Exception) {
+                Log.e(Tag.LOG_TAG, "OneSignal initialization error", e)
             }
         }
-
-        Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT)
     }
 
     private fun setupOneSignalListeners() {

@@ -2,69 +2,30 @@ package com.onesignal.common.threading
 
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import kotlin.concurrent.thread
 
 /**
- * Allows a non-suspending function to create a scope that can
- * call suspending functions.  This is a blocking call, which
- * means it will not return until the suspending scope has been
- * completed.  The current thread will also be blocked until
- * the suspending scope has completed.
+ * Modernized ThreadUtils that leverages OneSignalDispatchers for better thread management.
  *
- * Note: This can be very dangerous!! Blocking a thread (especially
- * the main thread) has the potential for a deadlock.  Consider this
- * code that is running on the main thread:
+ * This file provides utilities for bridging non-suspending code with suspending functions,
+ * now using the centralized OneSignal dispatcher system for improved resource management
+ * and consistent threading behavior across the SDK.
  *
- * ```
- * suspendifyOnThread {
- *   withContext(Dispatchers.Main) {
- *   }
- * }
- * ```
+ * @see OneSignalDispatchers
  *
- * The `withContext` will suspend until the main thread is available, but
- * the main thread is parked via this `suspendifyBlocking`. This will
- * never recover.
- */
-fun suspendifyBlocking(block: suspend () -> Unit) {
-    runBlocking {
-        block()
-    }
-}
-
-/**
  * Allows a non suspending function to create a scope that can
  * call suspending functions while on the main thread.  This is a nonblocking call,
  * the scope will start on a background thread and block as it switches
  * over to the main thread context.  This will return immediately!!!
+ *
+ * @param block A suspending lambda to be executed on the background thread.
+ *              This is where you put your suspending code.
+ *
  */
 fun suspendifyOnMain(block: suspend () -> Unit) {
-    thread {
-        try {
-            runBlocking {
-                withContext(Dispatchers.Main) {
-                    block()
-                }
-            }
-        } catch (e: Exception) {
-            Logging.error("Exception on thread with switch to main", e)
-        }
+    OneSignalDispatchers.launchOnIO {
+        withContext(Dispatchers.Main) { block() }
     }
-}
-
-/**
- * Allows a non suspending function to create a scope that can
- * call suspending functions.  This is a nonblocking call, which
- * means the scope will run on a background thread.  This will
- * return immediately!!!
- */
-fun suspendifyOnThread(
-    priority: Int = -1,
-    block: suspend () -> Unit,
-) {
-    suspendifyOnThread(priority, block, null)
 }
 
 /**
@@ -72,30 +33,19 @@ fun suspendifyOnThread(
  * call suspending functions.  This is a nonblocking call, which
  * means the scope will run on a background thread.  This will
  * return immediately!!! Also provides an optional onComplete.
- *
- * @param priority The priority of the background thread. Default is -1.
- *                 Higher values indicate higher thread priority.
- *
+ **
  * @param block A suspending lambda to be executed on the background thread.
  *              This is where you put your suspending code.
  *
  * @param onComplete An optional lambda that will be invoked on the same
  *                   background thread after [block] has finished executing.
  *                   Useful for cleanup or follow-up logic.
- **/
-fun suspendifyOnThread(
-    priority: Int = -1,
+ */
+fun suspendifyOnIO(
     block: suspend () -> Unit,
     onComplete: (() -> Unit)? = null,
 ) {
-    thread(priority = priority) {
-        try {
-            runBlocking { block() }
-            onComplete?.invoke()
-        } catch (e: Exception) {
-            Logging.error("Exception on thread", e)
-        }
-    }
+    suspendifyWithCompletion(useIO = true, block = block, onComplete = onComplete)
 }
 
 /**
@@ -103,19 +53,93 @@ fun suspendifyOnThread(
  * call suspending functions.  This is a nonblocking call, which
  * means the scope will run on a background thread.  This will
  * return immediately!!!
+ * Uses OneSignal's centralized thread management for better resource control.
+ *
+ * @param block The suspending code to execute
+ *
  */
-fun suspendifyOnThread(
-    name: String,
-    priority: Int = -1,
+fun suspendifyOnIO(block: suspend () -> Unit) {
+    suspendifyWithCompletion(useIO = true, block = block, onComplete = null)
+}
+
+/**
+ * Modern utility for executing suspending code on the default dispatcher.
+ * Uses OneSignal's centralized thread management for CPU-intensive operations.
+ *
+ * @param block The suspending code to execute
+ */
+fun suspendifyOnDefault(block: suspend () -> Unit) {
+    suspendifyWithCompletion(useIO = false, block = block, onComplete = null)
+}
+
+/**
+ * Modern utility for executing suspending code with completion callback.
+ * Uses OneSignal's centralized thread management for better resource control.
+ *
+ * @param useIO Whether to use IO scope (true) or Default scope (false)
+ * @param block The suspending code to execute
+ * @param onComplete Optional callback to execute after completion
+ */
+fun suspendifyWithCompletion(
+    useIO: Boolean = true,
     block: suspend () -> Unit,
+    onComplete: (() -> Unit)? = null,
 ) {
-    thread(name = name, priority = priority) {
-        try {
-            runBlocking {
+    if (useIO) {
+        OneSignalDispatchers.launchOnIO {
+            try {
                 block()
+                onComplete?.invoke()
+            } catch (e: Exception) {
+                Logging.error("Exception in suspendifyWithCompletion", e)
             }
-        } catch (e: Exception) {
-            Logging.error("Exception on thread '$name'", e)
+        }
+    } else {
+        OneSignalDispatchers.launchOnDefault {
+            try {
+                block()
+                onComplete?.invoke()
+            } catch (e: Exception) {
+                Logging.error("Exception in suspendifyWithCompletion", e)
+            }
+        }
+    }
+}
+
+/**
+ * Modern utility for executing suspending code with error handling.
+ * Uses OneSignal's centralized thread management with comprehensive error handling.
+ *
+ * @param useIO Whether to use IO scope (true) or Default scope (false)
+ * @param block The suspending code to execute
+ * @param onError Optional error handler
+ * @param onComplete Optional completion handler
+ */
+fun suspendifyWithErrorHandling(
+    useIO: Boolean = true,
+    block: suspend () -> Unit,
+    onError: ((Exception) -> Unit)? = null,
+    onComplete: (() -> Unit)? = null,
+) {
+    if (useIO) {
+        OneSignalDispatchers.launchOnIO {
+            try {
+                block()
+                onComplete?.invoke()
+            } catch (e: Exception) {
+                Logging.error("Exception in suspendifyWithErrorHandling", e)
+                onError?.invoke(e)
+            }
+        }
+    } else {
+        OneSignalDispatchers.launchOnDefault {
+            try {
+                block()
+                onComplete?.invoke()
+            } catch (e: Exception) {
+                Logging.error("Exception in suspendifyWithErrorHandling", e)
+                onError?.invoke(e)
+            }
         }
     }
 }

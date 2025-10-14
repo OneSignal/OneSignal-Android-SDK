@@ -10,7 +10,8 @@ import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
 import com.onesignal.common.threading.CompletionAwaiter
-import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.common.threading.OneSignalDispatchers
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.CoreModule
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
@@ -39,7 +40,6 @@ import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.resolveAppId
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -48,7 +48,7 @@ import kotlinx.coroutines.withTimeout
 private const val MAX_TIMEOUT_TO_INIT = 30_000L // 30 seconds
 
 internal class OneSignalImp(
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val ioDispatcher: CoroutineDispatcher = OneSignalDispatchers.IO,
 ) : IOneSignal, IServiceProvider {
     @Volatile
     private var initAwaiter = CompletionAwaiter("OneSignalImp")
@@ -260,7 +260,7 @@ internal class OneSignalImp(
         }
 
         // init in background and return immediately to ensure non-blocking
-        suspendifyOnThread {
+        suspendifyOnIO {
             internalInit(context, appId)
         }
         initState = InitState.SUCCESS
@@ -295,6 +295,7 @@ internal class OneSignalImp(
         updateConfig()
         userSwitcher.initUser(forceCreateUser)
         startupService.scheduleStart()
+        initState = InitState.SUCCESS
         notifyInitComplete()
         return true
     }
@@ -310,7 +311,7 @@ internal class OneSignalImp(
         }
 
         waitForInit()
-        suspendifyOnThread { loginHelper.login(externalId, jwtBearerToken) }
+        suspendifyOnIO { loginHelper.login(externalId, jwtBearerToken) }
     }
 
     override fun logout() {
@@ -321,7 +322,7 @@ internal class OneSignalImp(
         }
 
         waitForInit()
-        suspendifyOnThread { logoutHelper.logout() }
+        suspendifyOnIO { logoutHelper.logout() }
     }
 
     override fun <T> hasService(c: Class<T>): Boolean = services.hasService(c)
@@ -335,7 +336,7 @@ internal class OneSignalImp(
     private fun waitForInit() {
         val completed = initAwaiter.await()
         if (!completed) {
-            throw IllegalStateException("initWithContext was timed out")
+            throw IllegalStateException("initWithContext was not called or timed out")
         }
     }
 
@@ -496,7 +497,7 @@ internal class OneSignalImp(
             }
 
             val result = internalInit(context, appId)
-            initState = if (result) InitState.SUCCESS else InitState.FAILED
+            // initState is already set correctly in internalInit, no need to overwrite it
             result
         }
     }

@@ -3,7 +3,7 @@ package com.onesignal.notifications.services
 import android.content.Intent
 import com.amazon.device.messaging.ADMMessageHandlerBase
 import com.onesignal.OneSignal
-import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
 import com.onesignal.notifications.internal.registration.impl.IPushRegistratorCallback
@@ -15,10 +15,10 @@ class ADMMessageHandler : ADMMessageHandlerBase("ADMMessageHandler") {
         val context = applicationContext
         val bundle = intent.extras ?: return
 
-        suspendifyOnThread {
+        suspendifyOnIO {
             if (!OneSignal.initWithContext(context)) {
                 Logging.warn("onMessage skipped due to failed OneSignal init")
-                return@suspendifyOnThread
+                return@suspendifyOnIO
             }
 
             val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
@@ -29,8 +29,8 @@ class ADMMessageHandler : ADMMessageHandlerBase("ADMMessageHandler") {
     override fun onRegistered(newRegistrationId: String) {
         Logging.info("ADM registration ID: $newRegistrationId")
 
-        var registerer = OneSignal.getService<IPushRegistratorCallback>()
-        suspendifyOnThread {
+        suspendifyOnIO {
+            val registerer = OneSignal.getService<IPushRegistratorCallback>()
             registerer.fireCallback(newRegistrationId)
         }
     }
@@ -44,8 +44,8 @@ class ADMMessageHandler : ADMMessageHandlerBase("ADMMessageHandler") {
             )
         }
 
-        var registerer = OneSignal.getService<IPushRegistratorCallback>()
-        suspendifyOnThread {
+        suspendifyOnIO {
+            val registerer = OneSignal.getService<IPushRegistratorCallback>()
             registerer.fireCallback(null)
         }
     }

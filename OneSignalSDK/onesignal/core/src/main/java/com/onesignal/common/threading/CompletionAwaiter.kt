@@ -1,6 +1,7 @@
 package com.onesignal.common.threading
 
 import com.onesignal.common.AndroidUtils
+import com.onesignal.common.threading.OneSignalDispatchers.BASE_THREAD_NAME
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.CompletableDeferred
 import java.util.concurrent.CountDownLatch
@@ -101,12 +102,31 @@ class CompletionAwaiter(
     }
 
     private fun logAllThreads(): String {
-        val allThreads = Thread.getAllStackTraces()
         val sb = StringBuilder()
-        for ((thread, stack) in allThreads) {
-            sb.append("ThreadDump Thread: ${thread.name} [${thread.state}]\n")
-            for (element in stack) {
-                sb.append("\tat $element\n")
+
+        // Add OneSignal dispatcher status first (fast)
+        sb.append("=== OneSignal Dispatchers Status ===\n")
+        sb.append(OneSignalDispatchers.getStatus())
+        sb.append("=== OneSignal Dispatchers Performance ===\n")
+        sb.append(OneSignalDispatchers.getPerformanceMetrics())
+        sb.append("\n\n")
+
+        // Add lightweight thread info (fast)
+        sb.append("=== All Threads Summary ===\n")
+        val threads = Thread.getAllStackTraces().keys
+        for (thread in threads) {
+            sb.append("Thread: ${thread.name} [${thread.state}] ${if (thread.isDaemon) "(daemon)" else ""}\n")
+        }
+
+        // Only add full stack traces for OneSignal threads (much faster)
+        sb.append("\n=== OneSignal Thread Details ===\n")
+        for ((thread, stack) in Thread.getAllStackTraces()) {
+            if (thread.name.startsWith(BASE_THREAD_NAME)) {
+                sb.append("Thread: ${thread.name} [${thread.state}]\n")
+                for (element in stack.take(10)) { // Limit to first 10 frames
+                    sb.append("\tat $element\n")
+                }
+                sb.append("\n")
             }
         }
 

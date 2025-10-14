@@ -27,7 +27,12 @@ class SDKInitTests : FunSpec({
     afterAny {
         val context = getApplicationContext<Context>()
         val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
-        prefs.edit().clear().commit()
+        prefs.edit()
+            .clear()
+            .commit()
+
+        // Wait longer to ensure cleanup is complete
+        Thread.sleep(50)
     }
 
     test("OneSignal accessors throw before calling initWithContext") {
@@ -61,7 +66,16 @@ class SDKInitTests : FunSpec({
 
         // Clear any existing appId from previous tests by clearing SharedPreferences
         val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
-        prefs.edit().clear().commit()
+        prefs.edit()
+            .clear()
+            .remove("MODEL_STORE_config") // Specifically clear the config model store
+            .commit()
+
+        // Set up a legacy appId in SharedPreferences to simulate a previous test scenario
+        // This simulates the case where a previous test has set an appId that can be resolved
+        prefs.edit()
+            .putString("GT_APP_ID", "testAppId") // Set legacy appId
+            .commit()
 
         // When
         val accessorThread =

@@ -8,7 +8,7 @@ import android.os.Bundle
 import android.os.Handler
 import androidx.core.app.ActivityCompat
 import com.onesignal.OneSignal
-import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.common.threading.suspendifyOnDefault
 import com.onesignal.core.R
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
@@ -32,7 +32,7 @@ class PermissionsActivity : Activity() {
         }
 
         // init in background
-        suspendifyOnThread {
+        suspendifyOnDefault {
             val initialized = OneSignal.initWithContext(this)
 
             // finishActivity() and handleBundleParams must be called from main
