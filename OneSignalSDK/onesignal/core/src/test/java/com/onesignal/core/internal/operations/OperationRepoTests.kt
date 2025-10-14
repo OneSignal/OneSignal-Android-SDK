@@ -801,28 +801,22 @@ class OperationRepoTests : FunSpec({
             mocks.executor.execute(any())
         } answers {
             val operations = firstArg<List<Operation>>()
-            when {
-                operations.size == 1 && operations.contains(translationSource) -> {
-                    executionOrder.add("execute-translation-source")
-                    ExecutionResponse(ExecutionResult.SUCCESS, mapOf("source-local-id" to "target-id"))
-                }
-                operations.size == 2 && operations.contains(groupableOp1) && operations.contains(groupableOp2) -> {
-                    executionOrder.add("execute-grouped-operations")
-                    ExecutionResponse(ExecutionResult.SUCCESS)
-                }
-                operations.size == 1 && operations.contains(groupableOp1) -> {
-                    executionOrder.add("execute-single-groupable-1")
-                    ExecutionResponse(ExecutionResult.SUCCESS)
-                }
-                operations.size == 1 && operations.contains(groupableOp2) -> {
-                    executionOrder.add("execute-single-groupable-2")
-                    ExecutionResponse(ExecutionResult.SUCCESS)
-                }
-                else -> {
-                    executionOrder.add("execute-other-${operations.size}")
-                    ExecutionResponse(ExecutionResult.SUCCESS)
-                }
+
+            // Handle translation source (single operation that generates mappings)
+            if (operations.size == 1 && operations.contains(translationSource)) {
+                executionOrder.add("execute-translation-source")
+                return@answers ExecutionResponse(ExecutionResult.SUCCESS, mapOf("source-local-id" to "target-id"))
             }
+
+            // Handle grouped operations (both operations together)
+            if (operations.size == 2 && operations.contains(groupableOp1) && operations.contains(groupableOp2)) {
+                executionOrder.add("execute-grouped-operations")
+                return@answers ExecutionResponse(ExecutionResult.SUCCESS)
+            }
+
+            // Handle any other cases
+            executionOrder.add("execute-other-${operations.size}")
+            ExecutionResponse(ExecutionResult.SUCCESS)
         }
 
         // When

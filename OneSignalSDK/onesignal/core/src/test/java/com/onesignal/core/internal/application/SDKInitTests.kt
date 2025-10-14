@@ -29,8 +29,10 @@ class SDKInitTests : FunSpec({
         val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
         prefs.edit()
             .clear()
-            .remove("MODEL_STORE_config") // Specifically clear the config model store
             .commit()
+
+        // Wait longer to ensure cleanup is complete
+        Thread.sleep(50)
     }
 
     test("OneSignal accessors throw before calling initWithContext") {
