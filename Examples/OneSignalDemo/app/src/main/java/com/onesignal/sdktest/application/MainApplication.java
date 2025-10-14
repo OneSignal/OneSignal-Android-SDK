@@ -34,13 +34,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * @deprecated This Java implementation is deprecated. Use {@link MainApplicationKT} instead.
+ * This Java implementation is not used any more. Use {@link MainApplicationKT} instead.
  * The Kotlin version provides better async handling and modern coroutines support.
  * 
- * NOTE: This file is excluded from compilation in build.gradle to prevent conflicts.
- * It's kept for reference only and will be removed in a future version.
  */
-@Deprecated(since = "5.4.0", forRemoval = true)
 public class MainApplication extends MultiDexApplication {
     private static final int SLEEP_TIME_TO_MIMIC_ASYNC_OPERATION = 2000;
 

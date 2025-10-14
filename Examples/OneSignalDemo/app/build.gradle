@@ -49,6 +49,18 @@ android {
 //            signingConfig null
 //            productFlavors.huawei.signingConfig signingConfigs.huawei
             debuggable true
+            // Note: profileable is automatically enabled when debuggable=true
+            // Enable method tracing for detailed performance analysis
+            testCoverageEnabled false
+        }
+        // Profileable release build for performance testing
+        profileable {
+            initWith release
+            debuggable false
+            profileable true
+            minifyEnabled false
+            signingConfig signingConfigs.debug
+            matchingFallbacks = ['release']
         }
     }
 
@@ -60,20 +72,6 @@ android {
 
     packagingOptions {
         exclude 'androidsupportmultidexversion.txt'
-    }
-
-    // Exclude deprecated Java MainApplication from compilation to prevent conflicts
-    sourceSets {
-        main {
-            java {
-                exclude '**/MainApplication.java'
-            }
-        }
-    }
-
-    // Alternative approach: exclude from all source sets
-    android.sourceSets.all { sourceSet ->
-        sourceSet.java.exclude '**/MainApplication.java'
     }
 
     task flavorSelection() {

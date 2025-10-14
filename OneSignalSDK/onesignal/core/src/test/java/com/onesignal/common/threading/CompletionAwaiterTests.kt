@@ -268,7 +268,7 @@ class CompletionAwaiterTests : FunSpec({
 
             // All should have completed
             blockingResults.size shouldBe 2
-            blockingResults.all { it } shouldBe true
+            blockingResults shouldBe arrayOf(true, true)
         }
     }
 

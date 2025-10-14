@@ -56,7 +56,7 @@ class LoginHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
-                loginLock = loginLock,
+                lock = loginLock,
             )
 
         // When
@@ -108,7 +108,7 @@ class LoginHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
-                loginLock = loginLock,
+                lock = loginLock,
             )
 
         // When
@@ -173,7 +173,7 @@ class LoginHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
-                loginLock = loginLock,
+                lock = loginLock,
             )
 
         // When
@@ -234,7 +234,7 @@ class LoginHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
-                loginLock = loginLock,
+                lock = loginLock,
             )
 
         // When

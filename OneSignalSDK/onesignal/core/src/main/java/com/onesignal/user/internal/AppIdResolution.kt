@@ -15,25 +15,22 @@ fun resolveAppId(
     configModel: ConfigModel,
     preferencesService: IPreferencesService,
 ): AppIdResolution {
-    var forceCreateUser = false
-    var resolvedAppId: String? = inputAppId
-
+    // Case 1: AppId provided as input
     if (inputAppId != null) {
-        if (!configModel.hasProperty(ConfigModel::appId.name) || configModel.appId != inputAppId) {
-            forceCreateUser = true
-        }
-    } else {
-        if (!configModel.hasProperty(ConfigModel::appId.name)) {
-            val legacyAppId = preferencesService.getLegacyAppId()
-            if (legacyAppId == null) {
-                return AppIdResolution(null, false, true)
-            }
-            forceCreateUser = true
-            resolvedAppId = legacyAppId
-        } else {
-            // configModel already has an appId, use it
-            resolvedAppId = configModel.appId
-        }
+        val forceCreateUser = !configModel.hasProperty(ConfigModel::appId.name) || configModel.appId != inputAppId
+        return AppIdResolution(appId = inputAppId, forceCreateUser = forceCreateUser, failed = false)
     }
-    return AppIdResolution(resolvedAppId, forceCreateUser, false)
+
+    // Case 2: No appId provided, but configModel has one
+    if (configModel.hasProperty(ConfigModel::appId.name)) {
+        return AppIdResolution(appId = configModel.appId, forceCreateUser = false, failed = false)
+    }
+
+    // Case 3: No appId provided, no configModel appId - try legacy
+    val legacyAppId = preferencesService.getLegacyAppId()
+    if (legacyAppId == null) {
+        return AppIdResolution(appId = null, forceCreateUser = false, failed = true)
+    }
+
+    return AppIdResolution(appId = legacyAppId, forceCreateUser = true, failed = false)
 }

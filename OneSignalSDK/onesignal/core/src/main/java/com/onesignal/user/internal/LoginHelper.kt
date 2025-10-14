@@ -11,7 +11,7 @@ class LoginHelper(
     private val userSwitcher: UserSwitcher,
     private val operationRepo: IOperationRepo,
     private val configModel: ConfigModel,
-    private val loginLock: Any,
+    private val lock: Any,
 ) {
     suspend fun login(
         externalId: String,
@@ -21,7 +21,7 @@ class LoginHelper(
         var currentIdentityOneSignalId: String? = null
         var newIdentityOneSignalId: String = ""
 
-        synchronized(loginLock) {
+        synchronized(lock) {
             currentIdentityExternalId = identityModelStore.model.externalId
             currentIdentityOneSignalId = identityModelStore.model.onesignalId
 

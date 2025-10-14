@@ -170,8 +170,7 @@ internal class OneSignalImp(
     private var _consentGiven: Boolean? = null
     private var _disableGMSMissingPrompt: Boolean? = null
     private val initLock: Any = Any()
-    private val loginLock: Any = Any()
-    private val logoutLock: Any = Any()
+    private val loginLogoutLock: Any = Any()
     private val userSwitcher by lazy {
         val appContext = services.getService<IApplicationService>().appContext
         UserSwitcher(
@@ -194,13 +193,13 @@ internal class OneSignalImp(
             userSwitcher = userSwitcher,
             operationRepo = operationRepo,
             configModel = configModel,
-            loginLock = loginLock,
+            lock = loginLogoutLock,
         )
     }
 
     private val logoutHelper by lazy {
         LogoutHelper(
-            logoutLock = logoutLock,
+            lock = loginLogoutLock,
             identityModelStore = identityModelStore,
             userSwitcher = userSwitcher,
             operationRepo = operationRepo,

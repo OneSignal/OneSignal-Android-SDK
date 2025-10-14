@@ -45,7 +45,7 @@ class LogoutHelperTests : FunSpec({
 
         val logoutHelper =
             LogoutHelper(
-                logoutLock = logoutLock,
+                lock = logoutLock,
                 identityModelStore = mockIdentityModelStore,
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
@@ -75,7 +75,7 @@ class LogoutHelperTests : FunSpec({
 
         val logoutHelper =
             LogoutHelper(
-                logoutLock = logoutLock,
+                lock = logoutLock,
                 identityModelStore = mockIdentityModelStore,
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
@@ -114,7 +114,7 @@ class LogoutHelperTests : FunSpec({
 
         val logoutHelper =
             LogoutHelper(
-                logoutLock = logoutLock,
+                lock = logoutLock,
                 identityModelStore = mockIdentityModelStore,
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
@@ -146,7 +146,7 @@ class LogoutHelperTests : FunSpec({
 
         val logoutHelper =
             LogoutHelper(
-                logoutLock = logoutLock,
+                lock = logoutLock,
                 identityModelStore = mockIdentityModelStore,
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
