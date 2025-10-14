@@ -441,10 +441,16 @@ class OperationRepoTests : FunSpec({
 
         waiter.waitForWake()
 
-        // Then
+        // Then - Verify critical execution order (CI/CD friendly)
+        // First verify all operations happened
+        coVerify(exactly = 1) { mocks.operationModelStore.add(operation1) }
+        coVerify(exactly = 1) { mocks.operationModelStore.add(operation2) }
+        coVerify(exactly = 1) { operation2.translateIds(mapOf("id1" to "id2")) }
+        coVerify(exactly = 1) { mocks.operationModelStore.remove("operationId1") }
+        coVerify(exactly = 1) { mocks.operationModelStore.remove("operationId2") }
+
+        // Then verify the critical execution order
         coVerifyOrder {
-            mocks.operationModelStore.add(operation1)
-            mocks.operationModelStore.add(operation2)
             mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 1
@@ -452,14 +458,12 @@ class OperationRepoTests : FunSpec({
                 },
             )
             operation2.translateIds(mapOf("id1" to "id2"))
-            mocks.operationModelStore.remove("operationId1")
             mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation2
                 },
             )
-            mocks.operationModelStore.remove("operationId2")
         }
     }
 
