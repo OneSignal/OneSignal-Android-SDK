@@ -70,21 +70,16 @@ class MainApplicationKT : MultiDexApplication() {
 
         // Initialize OneSignal asynchronously on background thread to avoid ANR
         applicationScope.launch {
-            try {
-                OneSignal.initWithContextSuspend(this@MainApplicationKT, appId)
-                Log.d(Tag.LOG_TAG, "OneSignal async init completed")
+            OneSignal.initWithContextSuspend(this@MainApplicationKT, appId)
+            Log.d(Tag.LOG_TAG, "OneSignal async init completed")
 
-                // Set up all OneSignal listeners after successful async initialization
-                setupOneSignalListeners()
+            // Set up all OneSignal listeners after successful async initialization
+            setupOneSignalListeners()
 
-                // Request permission - this will internally switch to Main thread for UI operations
-                OneSignal.Notifications.requestPermission(true)
+            // Request permission - this will internally switch to Main thread for UI operations
+            OneSignal.Notifications.requestPermission(true)
 
-                Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT)
-
-            } catch (e: Exception) {
-                Log.e(Tag.LOG_TAG, "OneSignal initialization error", e)
-            }
+            Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT)
         }
     }
 

@@ -624,7 +624,7 @@ class OperationRepoTests : FunSpec({
         operation1.id = "local-id1"
         val operation2 = mockOperation(groupComparisonType = GroupComparisonType.NONE, applyToRecordId = "local-id1")
         val operation3 = mockOperation(groupComparisonType = GroupComparisonType.NONE)
-        
+
         coEvery {
             mocks.executor.execute(listOf(operation1))
         } returns ExecutionResponse(ExecutionResult.SUCCESS, mapOf("local-id1" to "id2"))
