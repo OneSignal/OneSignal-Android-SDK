@@ -29,8 +29,8 @@ fun resolveAppId(
     // Case 3: No appId provided, no configModel appId - try legacy
     val legacyAppId = preferencesService.getLegacyAppId()
     if (legacyAppId != null) {
-        return AppIdResolution(appId = legacyAppId, forceCreateUser = false, failed = true)
+        return AppIdResolution(appId = legacyAppId, forceCreateUser = true, failed = false)
     }
 
-    return AppIdResolution(appId = null, forceCreateUser = true, failed = false)
+    return AppIdResolution(appId = null, forceCreateUser = false, failed = true)
 }
