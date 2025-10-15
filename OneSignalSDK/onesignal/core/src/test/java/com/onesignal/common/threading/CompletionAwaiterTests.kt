@@ -267,7 +267,6 @@ class CompletionAwaiterTests : FunSpec({
             blockingThreads.forEach { it.join(1000) }
 
             // All should have completed
-            blockingResults.size shouldBe 2
             blockingResults shouldBe arrayOf(true, true)
         }
     }

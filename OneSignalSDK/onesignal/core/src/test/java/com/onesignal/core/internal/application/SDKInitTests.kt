@@ -69,7 +69,6 @@ class SDKInitTests : FunSpec({
         val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
         prefs.edit()
             .clear()
-//            .remove("MODEL_STORE_config") // Specifically clear the config model store
             .commit()
 
         // Set up a legacy appId in SharedPreferences to simulate a previous test scenario
