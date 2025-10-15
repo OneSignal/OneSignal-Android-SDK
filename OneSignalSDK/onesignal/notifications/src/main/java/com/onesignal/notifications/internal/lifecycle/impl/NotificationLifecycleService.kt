@@ -7,7 +7,7 @@ import com.onesignal.common.JSONUtils
 import com.onesignal.common.events.CallbackProducer
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.exceptions.BackendException
-import com.onesignal.common.threading.OSPrimaryCoroutineScope
+import com.onesignal.common.threading.suspendifyWithErrorHandling
 import com.onesignal.core.internal.application.AppEntryAction
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -141,18 +141,25 @@ internal class NotificationLifecycleService(
 
             postedOpenedNotifIds.add(notificationId)
 
-            OSPrimaryCoroutineScope.execute {
-                try {
+            suspendifyWithErrorHandling(
+                useIO = true,
+                // or false for CPU operations
+                block = {
                     _backend.updateNotificationAsOpened(
                         appId,
                         notificationId,
                         subscriptionId,
                         deviceType,
                     )
-                } catch (ex: BackendException) {
-                    Logging.error("Notification opened confirmation failed with statusCode: ${ex.statusCode} response: ${ex.response}")
-                }
-            }
+                },
+                onError = { ex ->
+                    if (ex is BackendException) {
+                        Logging.error("Notification opened confirmation failed with statusCode: ${ex.statusCode} response: ${ex.response}")
+                    } else {
+                        Logging.error("Unexpected error in notification opened confirmation", ex)
+                    }
+                },
+            )
         }
 
         val openResult = NotificationHelper.generateNotificationOpenedResult(data, _time)

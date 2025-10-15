@@ -3,6 +3,7 @@ package com.onesignal.notifications.internal.generation.impl
 import android.content.Context
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.safeString
+import com.onesignal.common.threading.launchOnIO
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.time.ITime
@@ -17,11 +18,8 @@ import com.onesignal.notifications.internal.display.INotificationDisplayer
 import com.onesignal.notifications.internal.generation.INotificationGenerationProcessor
 import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleService
 import com.onesignal.notifications.internal.summary.INotificationSummaryManager
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import org.json.JSONException
 import org.json.JSONObject
@@ -70,7 +68,7 @@ internal class NotificationGenerationProcessor(
         try {
             val notificationReceivedEvent = NotificationReceivedEvent(context, notification)
             withTimeout(30000L) {
-                GlobalScope.launch(Dispatchers.IO) {
+                launchOnIO {
                     _lifecycleService.externalRemoteNotificationReceived(notificationReceivedEvent)
 
                     if (notificationReceivedEvent.discard) {
@@ -103,7 +101,7 @@ internal class NotificationGenerationProcessor(
                 try {
                     val notificationWillDisplayEvent = NotificationWillDisplayEvent(notificationJob.notification)
                     withTimeout(30000L) {
-                        GlobalScope.launch(Dispatchers.IO) {
+                        launchOnIO {
                             _lifecycleService.externalNotificationWillShowInForeground(notificationWillDisplayEvent)
 
                             if (notificationWillDisplayEvent.discard) {

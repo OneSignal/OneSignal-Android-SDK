@@ -33,6 +33,7 @@ import com.onesignal.common.AndroidUtils
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.threading.Waiter
 import com.onesignal.common.threading.WaiterWithValue
+import com.onesignal.common.threading.launchOnIO
 import com.onesignal.core.internal.application.ApplicationLifecycleHandlerBase
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -45,9 +46,6 @@ import com.onesignal.notifications.R
 import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.permissions.INotificationPermissionChangedHandler
 import com.onesignal.notifications.internal.permissions.INotificationPermissionController
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.yield
 
@@ -64,7 +62,6 @@ internal class NotificationPermissionController(
     private var pollingWaitInterval: Long
     private val events = EventProducer<INotificationPermissionChangedHandler>()
     private var enabled: Boolean
-    private val coroutineScope = CoroutineScope(newSingleThreadContext(name = "NotificationPermissionController"))
 
     override val canRequestPermission: Boolean
         get() =
@@ -79,7 +76,7 @@ internal class NotificationPermissionController(
         _requestPermission.registerAsCallback(PERMISSION_TYPE, this)
         pollingWaitInterval = _configModelStore.model.backgroundFetchNotificationPermissionInterval
         registerPollingLifecycleListener()
-        coroutineScope.launch {
+        launchOnIO {
             pollForPermission()
         }
     }

@@ -5,7 +5,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.threading.WaiterWithValue
-import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -221,7 +221,7 @@ class ApplicationServiceTests : FunSpec({
         val waiter = WaiterWithValue<Boolean>()
 
         // When
-        suspendifyOnThread {
+        suspendifyOnIO {
             val response = applicationService.waitUntilSystemConditionsAvailable()
             waiter.wake(response)
         }
@@ -247,7 +247,7 @@ class ApplicationServiceTests : FunSpec({
         val waiter = WaiterWithValue<Boolean>()
 
         // When
-        suspendifyOnThread {
+        suspendifyOnIO {
             val response = applicationService.waitUntilSystemConditionsAvailable()
             waiter.wake(response)
         }

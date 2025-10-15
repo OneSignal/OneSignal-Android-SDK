@@ -4,7 +4,7 @@ import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
-import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.backend.IParamsBackendService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -60,7 +60,7 @@ internal class ConfigModelStoreListener(
             return
         }
 
-        suspendifyOnThread {
+        suspendifyOnIO {
             Logging.debug("ConfigModelListener: fetching parameters for appId: $appId")
 
             var androidParamsRetries = 0
@@ -108,7 +108,7 @@ internal class ConfigModelStoreListener(
                 } catch (ex: BackendException) {
                     if (ex.statusCode == HttpURLConnection.HTTP_FORBIDDEN) {
                         Logging.fatal("403 error getting OneSignal params, omitting further retries!")
-                        return@suspendifyOnThread
+                        return@suspendifyOnIO
                     } else {
                         var sleepTime = MIN_WAIT_BETWEEN_RETRIES + androidParamsRetries * INCREASE_BETWEEN_RETRIES
                         if (sleepTime > MAX_WAIT_BETWEEN_RETRIES) {

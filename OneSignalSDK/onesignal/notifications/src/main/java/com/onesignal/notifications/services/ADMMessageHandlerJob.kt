@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.Intent
 import com.amazon.device.messaging.ADMMessageHandlerJobBase
 import com.onesignal.OneSignal
-import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
 import com.onesignal.notifications.internal.registration.impl.IPushRegistratorCallback
@@ -22,10 +22,10 @@ class ADMMessageHandlerJob : ADMMessageHandlerJobBase() {
 
         val safeContext = context.applicationContext
 
-        suspendifyOnThread {
+        suspendifyOnIO {
             if (!OneSignal.initWithContext(safeContext)) {
                 Logging.warn("onMessage skipped due to failed OneSignal init")
-                return@suspendifyOnThread
+                return@suspendifyOnIO
             }
 
             val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
@@ -39,8 +39,8 @@ class ADMMessageHandlerJob : ADMMessageHandlerJobBase() {
     ) {
         Logging.info("ADM registration ID: $newRegistrationId")
 
-        var registerer = OneSignal.getService<IPushRegistratorCallback>()
-        suspendifyOnThread {
+        suspendifyOnIO {
+            val registerer = OneSignal.getService<IPushRegistratorCallback>()
             registerer.fireCallback(newRegistrationId)
         }
     }
@@ -63,8 +63,8 @@ class ADMMessageHandlerJob : ADMMessageHandlerJobBase() {
             )
         }
 
-        var registerer = OneSignal.getService<IPushRegistratorCallback>()
-        suspendifyOnThread {
+        suspendifyOnIO {
+            val registerer = OneSignal.getService<IPushRegistratorCallback>()
             registerer.fireCallback(null)
         }
     }
