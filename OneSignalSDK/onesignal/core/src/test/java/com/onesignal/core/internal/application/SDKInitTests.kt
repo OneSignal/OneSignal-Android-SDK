@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.threading.CompletionAwaiter
+import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.internal.OneSignalImp
@@ -68,13 +69,13 @@ class SDKInitTests : FunSpec({
         val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
         prefs.edit()
             .clear()
-            .remove("MODEL_STORE_config") // Specifically clear the config model store
+//            .remove("MODEL_STORE_config") // Specifically clear the config model store
             .commit()
 
         // Set up a legacy appId in SharedPreferences to simulate a previous test scenario
         // This simulates the case where a previous test has set an appId that can be resolved
         prefs.edit()
-            .putString("GT_APP_ID", "testAppId") // Set legacy appId
+            .putString(PREFS_LEGACY_APP_ID, "testAppId") // Set legacy appId
             .commit()
 
         // When
@@ -224,7 +225,7 @@ class SDKInitTests : FunSpec({
         prefs.edit()
             .clear()
             .remove("MODEL_STORE_config") // Clear config model store
-            .remove("GT_APP_ID") // Clear legacy app ID explicitly
+            .remove(PREFS_LEGACY_APP_ID) // Clear legacy app ID explicitly
             .commit()
 
         // Also clear any other potential SharedPreferences files
