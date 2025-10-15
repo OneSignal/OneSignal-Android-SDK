@@ -11,7 +11,6 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 
 internal class PreferencesService(
@@ -23,13 +22,11 @@ internal class PreferencesService(
             PreferenceStores.ONESIGNAL to mutableMapOf(),
             PreferenceStores.PLAYER_PURCHASES to mutableMapOf(),
         )
-    private var queueJob: Job? = null
-
     private val waiter = Waiter()
 
     override fun start() {
         // fire up an async job that will run "forever" so we don't hold up the other startable services.
-        queueJob = doWorkAsync()
+        doWorkAsync()
     }
 
     override fun getString(
