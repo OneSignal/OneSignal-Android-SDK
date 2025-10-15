@@ -218,6 +218,21 @@ class SDKInitTests : FunSpec({
     test("externalId retrieved correctly when login right after init") {
         // Given
         val context = getApplicationContext<Context>()
+
+        // Ensure completely clean state - clear ALL SharedPreferences and any cached state
+        val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
+        prefs.edit()
+            .clear()
+            .remove("MODEL_STORE_config") // Clear config model store
+            .remove("GT_APP_ID") // Clear legacy app ID explicitly
+            .commit()
+
+        // Also clear any other potential SharedPreferences files
+        val otherPrefs = context.getSharedPreferences("com.onesignal", Context.MODE_PRIVATE)
+        otherPrefs.edit().clear().commit()
+
+        Thread.sleep(100) // Ensure cleanup is complete
+
         val os = OneSignalImp()
         val testExternalId = "testUser"
 

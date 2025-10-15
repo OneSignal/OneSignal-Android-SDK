@@ -2,7 +2,8 @@ package com.onesignal.user.internal
 
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.preferences.IPreferencesService
-import com.onesignal.core.internal.preferences.getLegacyAppId
+import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
+import com.onesignal.core.internal.preferences.PreferenceStores
 
 data class AppIdResolution(
     val appId: String?,
@@ -27,7 +28,7 @@ fun resolveAppId(
     }
 
     // Case 3: No appId provided, no configModel appId - try legacy
-    val legacyAppId = preferencesService.getLegacyAppId()
+    val legacyAppId = preferencesService.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID)
     if (legacyAppId != null) {
         return AppIdResolution(appId = legacyAppId, forceCreateUser = true, failed = false)
     }
