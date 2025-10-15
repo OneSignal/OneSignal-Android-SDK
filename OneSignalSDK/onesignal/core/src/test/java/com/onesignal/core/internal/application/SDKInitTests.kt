@@ -249,6 +249,10 @@ class SDKInitTests : FunSpec({
             // State contamination detected - log it but don't fail
             println("⚠️  State contamination: initial externalId was '$initialExternalId' (expected empty)")
         }
+
+        // Clean up after ourselves to avoid polluting subsequent tests
+        os.logout()
+        Thread.sleep(100) // Wait for logout to complete
     }
 
     test("accessor instances after multiple initWithContext calls are consistent") {
