@@ -12,12 +12,13 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.preferences.IPreferencesService
-import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
-import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.core.internal.preferences.clearLegacyPlayerId
+import com.onesignal.core.internal.preferences.getLegacyPlayerId
+import com.onesignal.core.internal.preferences.getLegacyUserSyncValues
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.identity.hasOneSignalId
 import com.onesignal.user.internal.operations.LoginUserFromSubscriptionOperation
 import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.properties.PropertiesModel
@@ -117,66 +118,65 @@ class UserSwitcher(
     }
 
     fun initUser(forceCreateUser: Boolean) {
-        // create a new local user
-        if (forceCreateUser ||
-            !identityModelStore.model.hasProperty(IdentityConstants.ONESIGNAL_ID)
-        ) {
-            val legacyPlayerId =
-                preferencesService.getString(
-                    PreferenceStores.ONESIGNAL,
-                    PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID,
-                )
+        if (forceCreateUser || !identityModelStore.hasOneSignalId()) {
+            val legacyPlayerId = preferencesService.getLegacyPlayerId()
+
             if (legacyPlayerId == null) {
-                Logging.debug("initWithContext: creating new device-scoped user")
-                createAndSwitchToNewUser()
-                operationRepo.enqueue(
-                    LoginUserOperation(
-                        configModel.appId,
-                        identityModelStore.model.onesignalId,
-                        identityModelStore.model.externalId,
-                    ),
-                )
+                createNewUser()
             } else {
-                Logging.debug("initWithContext: creating user linked to subscription $legacyPlayerId")
-
-                // Converting a 4.x SDK to the 5.x SDK.  We pull the legacy user sync values to create the subscription model, then enqueue
-                // a specialized `LoginUserFromSubscriptionOperation`, which will drive fetching/refreshing of the local user
-                // based on the subscription ID we do have.
-                val legacyUserSyncString =
-                    preferencesService.getString(
-                        PreferenceStores.ONESIGNAL,
-                        PreferenceOneSignalKeys.PREFS_LEGACY_USER_SYNCVALUES,
-                    )
-                var suppressBackendOperation = false
-
-                if (legacyUserSyncString != null) {
-                    createPushSubscriptionFromLegacySync(
-                        legacyPlayerId = legacyPlayerId,
-                        legacyUserSyncJSON = JSONObject(legacyUserSyncString),
-                        configModel = configModel,
-                        subscriptionModelStore = subscriptionModelStore,
-                        appContext = services.getService<IApplicationService>().appContext,
-                    )
-                    suppressBackendOperation = true
-                }
-
-                createAndSwitchToNewUser(suppressBackendOperation = suppressBackendOperation)
-
-                operationRepo.enqueue(
-                    LoginUserFromSubscriptionOperation(
-                        configModel.appId,
-                        identityModelStore.model.onesignalId,
-                        legacyPlayerId,
-                    ),
-                )
-                preferencesService.saveString(
-                    PreferenceStores.ONESIGNAL,
-                    PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID,
-                    null,
-                )
+                migrateFromLegacyUser(legacyPlayerId)
             }
         } else {
             Logging.debug("initWithContext: using cached user ${identityModelStore.model.onesignalId}")
         }
+    }
+
+    /**
+     * Creates a new device-scoped user with no legacy data.
+     */
+    private fun createNewUser() {
+        Logging.debug("initWithContext: creating new device-scoped user")
+        createAndSwitchToNewUser()
+        operationRepo.enqueue(
+            LoginUserOperation(
+                configModel.appId,
+                identityModelStore.model.onesignalId,
+                identityModelStore.model.externalId,
+            ),
+        )
+    }
+
+    /**
+     * Migrates from a v4 SDK user by creating a new user linked to the legacy subscription.
+     * This handles the conversion from 4.x SDK to 5.x SDK format.
+     */
+    private fun migrateFromLegacyUser(legacyPlayerId: String) {
+        Logging.debug("initWithContext: creating user linked to subscription $legacyPlayerId")
+
+        val legacyUserSyncString = preferencesService.getLegacyUserSyncValues()
+        var suppressBackendOperation = false
+
+        if (legacyUserSyncString != null) {
+            createPushSubscriptionFromLegacySync(
+                legacyPlayerId = legacyPlayerId,
+                legacyUserSyncJSON = JSONObject(legacyUserSyncString),
+                configModel = configModel,
+                subscriptionModelStore = subscriptionModelStore,
+                appContext = services.getService<IApplicationService>().appContext,
+            )
+            suppressBackendOperation = true
+        }
+
+        createAndSwitchToNewUser(suppressBackendOperation = suppressBackendOperation)
+
+        operationRepo.enqueue(
+            LoginUserFromSubscriptionOperation(
+                configModel.appId,
+                identityModelStore.model.onesignalId,
+                legacyPlayerId,
+            ),
+        )
+
+        preferencesService.clearLegacyPlayerId()
     }
 }

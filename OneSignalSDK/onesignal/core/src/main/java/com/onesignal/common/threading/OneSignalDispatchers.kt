@@ -4,6 +4,7 @@ import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.isActive
@@ -122,12 +123,12 @@ internal object OneSignalDispatchers {
         CoroutineScope(SupervisorJob() + Default)
     }
 
-    fun launchOnIO(block: suspend () -> Unit) {
-        IOScope.launch { block() }
+    fun launchOnIO(block: suspend () -> Unit): Job {
+        return IOScope.launch { block() }
     }
 
-    fun launchOnDefault(block: suspend () -> Unit) {
-        DefaultScope.launch { block() }
+    fun launchOnDefault(block: suspend () -> Unit): Job {
+        return DefaultScope.launch { block() }
     }
 
     internal fun getPerformanceMetrics(): String {

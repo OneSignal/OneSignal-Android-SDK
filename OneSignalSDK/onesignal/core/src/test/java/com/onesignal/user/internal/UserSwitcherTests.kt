@@ -10,14 +10,15 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.preferences.IPreferencesService
-import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
-import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.core.internal.preferences.getLegacyPlayerId
+import com.onesignal.core.internal.preferences.getLegacyUserSyncValues
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.operations.LoginUserFromSubscriptionOperation
 import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -119,7 +120,8 @@ private class Mocks {
         every { mockOneSignalUtils.sdkVersion } returns "5.0.0"
         every { mockAndroidUtils.getAppVersion(any()) } returns testAppVersion
         every { mockPreferencesService.getString(any(), any()) } returns null
-        every { mockPreferencesService.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_USER_SYNCVALUES) } returns legacyUserSyncJson
+        every { mockPreferencesService.getLegacyPlayerId() } returns null
+        every { mockPreferencesService.getLegacyUserSyncValues() } returns legacyUserSyncJson
         every { mockOperationRepo.enqueue(any()) } just runs
     }
 
@@ -300,14 +302,118 @@ class UserSwitcherTests : FunSpec({
     test("initUser with legacy player ID creates user from legacy data") {
         // Given
         val mocks = Mocks()
-        every { mocks.mockPreferencesService.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID) } returns mocks.legacyPlayerId
-        every { mocks.mockPreferencesService.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_USER_SYNCVALUES) } returns mocks.legacyUserSyncJson
+        every { mocks.mockPreferencesService.getLegacyPlayerId() } returns mocks.legacyPlayerId
+        every { mocks.mockPreferencesService.getLegacyUserSyncValues() } returns mocks.legacyUserSyncJson
         val userSwitcher = mocks.createUserSwitcher()
 
         // When
         userSwitcher.initUser(forceCreateUser = true)
 
         // Then - should handle legacy migration path
-        verify(exactly = 1) { mocks.mockPreferencesService.getString(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID) }
+        verify(exactly = 1) { mocks.mockPreferencesService.getLegacyPlayerId() }
+        verify(exactly = 1) { mocks.mockOperationRepo.enqueue(any<LoginUserFromSubscriptionOperation>()) }
+    }
+
+    // New focused tests for decomposed methods
+
+    test("createNewUser creates device-scoped user and enqueues LoginUserOperation") {
+        // Given
+        val mocks = Mocks()
+        val userSwitcher = mocks.createUserSwitcher()
+        // Remove existing OneSignal ID to trigger user creation
+        mocks.identityModelStore!!.model.remove(IdentityConstants.ONESIGNAL_ID)
+
+        // When
+        userSwitcher.initUser(forceCreateUser = false)
+
+        // Then - should create new user and enqueue standard login operation
+        verify(atLeast = 1) { mocks.mockIdManager.createLocalId() }
+        verify(exactly = 1) { mocks.identityModelStore!!.replace(any()) }
+        verify(exactly = 1) { mocks.propertiesModelStore!!.replace(any()) }
+        verify(exactly = 1) { mocks.mockOperationRepo.enqueue(any()) }
+    }
+
+    test("migrateFromLegacyUser handles v4 to v5 migration with legacy sync data") {
+        // Given
+        val mocks = Mocks()
+        every { mocks.mockPreferencesService.getLegacyPlayerId() } returns mocks.legacyPlayerId
+        every { mocks.mockPreferencesService.getLegacyUserSyncValues() } returns mocks.legacyUserSyncJson
+        every { mocks.mockPreferencesService.saveString(any(), any(), any()) } just runs
+        val userSwitcher = mocks.createUserSwitcher()
+
+        // When
+        userSwitcher.initUser(forceCreateUser = true)
+
+        // Then - should migrate legacy data and enqueue subscription-based login
+        verify(exactly = 1) { mocks.mockPreferencesService.getLegacyPlayerId() }
+        verify(exactly = 1) { mocks.mockPreferencesService.getLegacyUserSyncValues() }
+        verify(exactly = 1) { mocks.mockOperationRepo.enqueue(any()) }
+        // Should clear legacy player ID after migration
+        verify(exactly = 1) { mocks.mockPreferencesService.saveString(any(), any(), null) }
+    }
+
+    test("migrateFromLegacyUser handles v4 to v5 migration without legacy sync data") {
+        // Given
+        val mocks = Mocks()
+        every { mocks.mockPreferencesService.getLegacyPlayerId() } returns mocks.legacyPlayerId
+        every { mocks.mockPreferencesService.getLegacyUserSyncValues() } returns null
+        every { mocks.mockPreferencesService.saveString(any(), any(), any()) } just runs
+        val userSwitcher = mocks.createUserSwitcher()
+
+        // When
+        userSwitcher.initUser(forceCreateUser = true)
+
+        // Then - should still migrate but without creating subscription from sync data
+        verify(exactly = 1) { mocks.mockPreferencesService.getLegacyPlayerId() }
+        verify(exactly = 1) { mocks.mockPreferencesService.getLegacyUserSyncValues() }
+        verify(exactly = 1) { mocks.mockOperationRepo.enqueue(any()) }
+        // Should still clear legacy player ID
+        verify(exactly = 1) { mocks.mockPreferencesService.saveString(any(), any(), null) }
+    }
+
+    test("initUser with forceCreateUser=true always creates new user even with existing OneSignal ID") {
+        // Given
+        val mocks = Mocks()
+        val userSwitcher = mocks.createUserSwitcher()
+        // Set up existing OneSignal ID
+        mocks.identityModelStore!!.model.onesignalId = mocks.testOneSignalId
+
+        // When
+        userSwitcher.initUser(forceCreateUser = true)
+
+        // Then - should create new user despite existing ID
+        verify(exactly = 1) { mocks.mockOperationRepo.enqueue(any()) }
+        verify(atLeast = 1) { mocks.mockIdManager.createLocalId() }
+    }
+
+    test("initUser delegates to createNewUser when no legacy player ID exists") {
+        // Given
+        val mocks = Mocks()
+        every { mocks.mockPreferencesService.getLegacyPlayerId() } returns null
+        val userSwitcher = mocks.createUserSwitcher()
+        mocks.identityModelStore!!.model.remove(IdentityConstants.ONESIGNAL_ID)
+
+        // When
+        userSwitcher.initUser(forceCreateUser = false)
+
+        // Then - should follow new user creation path
+        verify(exactly = 1) { mocks.mockPreferencesService.getLegacyPlayerId() }
+        verify(exactly = 1) { mocks.mockOperationRepo.enqueue(any()) }
+    }
+
+    test("initUser delegates to migrateFromLegacyUser when legacy player ID exists") {
+        // Given
+        val mocks = Mocks()
+        every { mocks.mockPreferencesService.getLegacyPlayerId() } returns mocks.legacyPlayerId
+        every { mocks.mockPreferencesService.getLegacyUserSyncValues() } returns null
+        every { mocks.mockPreferencesService.saveString(any(), any(), any()) } just runs
+        val userSwitcher = mocks.createUserSwitcher()
+
+        // When
+        userSwitcher.initUser(forceCreateUser = true)
+
+        // Then - should follow legacy migration path
+        verify(exactly = 1) { mocks.mockPreferencesService.getLegacyPlayerId() }
+        verify(exactly = 1) { mocks.mockOperationRepo.enqueue(any()) }
     }
 })

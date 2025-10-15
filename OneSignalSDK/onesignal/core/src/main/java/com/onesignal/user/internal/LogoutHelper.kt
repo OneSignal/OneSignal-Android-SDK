@@ -6,11 +6,11 @@ import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.LoginUserOperation
 
 class LogoutHelper(
-    private val lock: Any,
     private val identityModelStore: IdentityModelStore,
     private val userSwitcher: UserSwitcher,
     private val operationRepo: IOperationRepo,
     private val configModel: ConfigModel,
+    private val lock: Any,
 ) {
     fun logout() {
         synchronized(lock) {

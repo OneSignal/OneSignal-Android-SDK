@@ -2,6 +2,7 @@ package com.onesignal.common.threading
 
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
 
 /**
@@ -142,4 +143,26 @@ fun suspendifyWithErrorHandling(
             }
         }
     }
+}
+
+/**
+ * Launch suspending code on IO dispatcher and return a Job for waiting.
+ * This is useful when you need to wait for the background work to complete.
+ *
+ * @param block The suspending code to execute
+ * @return Job that can be used to wait for completion with .join()
+ */
+fun launchOnIO(block: suspend () -> Unit): Job {
+    return OneSignalDispatchers.launchOnIO(block)
+}
+
+/**
+ * Launch suspending code on Default dispatcher and return a Job for waiting.
+ * This is useful when you need to wait for the background work to complete.
+ *
+ * @param block The suspending code to execute
+ * @return Job that can be used to wait for completion with .join()
+ */
+fun launchOnDefault(block: suspend () -> Unit): kotlinx.coroutines.Job {
+    return OneSignalDispatchers.launchOnDefault(block)
 }

@@ -13,6 +13,7 @@ import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.common.threading.suspendifyOnDefault
 import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.suspendifyOnMain
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModel
@@ -52,9 +53,6 @@ import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.subscriptions.IPushSubscription
 import com.onesignal.user.subscriptions.ISubscription
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -156,7 +154,7 @@ internal class InAppMessagesManager(
 
             // If paused is true and an In-App Message is showing, dismiss it
             if (value && _state.inAppMessageIdShowing != null) {
-                GlobalScope.launch(Dispatchers.Main) {
+                suspendifyOnMain {
                     _displayer.dismissCurrentInAppMessage()
                 }
             }

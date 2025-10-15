@@ -199,11 +199,11 @@ internal class OneSignalImp(
 
     private val logoutHelper by lazy {
         LogoutHelper(
-            lock = loginLogoutLock,
             identityModelStore = identityModelStore,
             userSwitcher = userSwitcher,
             operationRepo = operationRepo,
             configModel = configModel,
+            lock = loginLogoutLock,
         )
     }
 

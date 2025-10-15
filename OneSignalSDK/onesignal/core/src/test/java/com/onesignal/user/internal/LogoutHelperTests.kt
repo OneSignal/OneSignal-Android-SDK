@@ -45,11 +45,11 @@ class LogoutHelperTests : FunSpec({
 
         val logoutHelper =
             LogoutHelper(
-                lock = logoutLock,
                 identityModelStore = mockIdentityModelStore,
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                lock = logoutLock,
             )
 
         // When
@@ -75,11 +75,11 @@ class LogoutHelperTests : FunSpec({
 
         val logoutHelper =
             LogoutHelper(
-                lock = logoutLock,
                 identityModelStore = mockIdentityModelStore,
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                lock = logoutLock,
             )
 
         // When
@@ -114,11 +114,11 @@ class LogoutHelperTests : FunSpec({
 
         val logoutHelper =
             LogoutHelper(
-                lock = logoutLock,
                 identityModelStore = mockIdentityModelStore,
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                lock = logoutLock,
             )
 
         // When
@@ -146,11 +146,11 @@ class LogoutHelperTests : FunSpec({
 
         val logoutHelper =
             LogoutHelper(
-                lock = logoutLock,
                 identityModelStore = mockIdentityModelStore,
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                lock = logoutLock,
             )
 
         // When - call logout multiple times concurrently
