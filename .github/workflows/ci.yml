@@ -19,10 +19,6 @@ jobs:
         with:
           cmdline-tools-version: 10406996
           log-accepted-android-sdk-licenses: false
-      - name: "[Test] Linting"
-        working-directory: OneSignalSDK
-        run: |
-          ./gradlew ktlintCheck --console=plain
       - name: "[Test] SDK Unit Tests"
         working-directory: OneSignalSDK
         run: |

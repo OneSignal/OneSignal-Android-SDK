@@ -15,10 +15,9 @@ buildscript {
         huaweiHMSLocationVersion = '4.0.0.300'
         kotlinVersion = '1.7.10'
         kotestVersion = '5.8.0'
-        ktlintPluginVersion = '11.6.1'
-        ktlintVersion = '1.0.1'
-        // DO NOT upgrade for tests, using an old version so it matches AOSP
-        tdunningJsonForTest = '1.0'
+        ktlintVersion = '1.0.1' // Used by Spotless for Kotlin formatting
+        spotlessVersion = '6.25.0'
+        tdunningJsonForTest = '1.0' // DO NOT upgrade for tests, using an old version so it matches AOSP
 
         sharedRepos = {
             google()
@@ -32,7 +31,7 @@ buildscript {
             "com.google.gms:google-services:$googleServicesGradlePluginVersion",
             "com.huawei.agconnect:agcp:$huaweiAgconnectVersion",
             "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion",
-            "org.jlleitschuh.gradle:ktlint-gradle:$ktlintPluginVersion",
+            "com.diffplug.spotless:spotless-plugin-gradle:$spotlessVersion",
             "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin:0.32.0"
         ]
     }
