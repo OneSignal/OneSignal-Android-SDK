@@ -1,5 +1,9 @@
 name: Create Release PR
 
+# Note: The "Use workflow from" dropdown selects which version of THIS workflow to run.
+# Always select "main" unless you're testing workflow changes from another branch.
+# The "base_branch" input below determines where the release PR will be targeted.
+
 on:
   workflow_dispatch:
     inputs:
@@ -7,6 +11,11 @@ on:
         description: 'New SDK version (e.g. 5.1.38 or 5.2.0-beta1)'
         type: string
         required: true
+      base_branch:
+        description: 'Target branch for the PR (e.g. main for regular releases, 5.4-main for 5.4.x releases)'
+        type: string
+        required: false
+        default: 'main'
 
 permissions:
   contents: write
@@ -18,17 +27,26 @@ jobs:
 
     env:
       VERSION: ${{ github.event.inputs.version }}
+      BASE_BRANCH: ${{ github.event.inputs.base_branch || 'main' }}
       BRANCH: rel/${{ github.event.inputs.version }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
+      - name: 📋 Display Configuration
+        run: |
+          echo "============================================"
+          echo "📦 Release Version: $VERSION"
+          echo "🎯 Base Branch (PR Target): $BASE_BRANCH"
+          echo "🌿 Release Branch (to create): $BRANCH"
+          echo "============================================"
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
             fetch-depth: 0 # Ensure full history for git log
             fetch-tags: true
 
-      - name: Create release branch from main
+      - name: Create release branch from base
         run: |
           
           if git ls-remote --exit-code --heads origin "$BRANCH"; then
@@ -36,7 +54,8 @@ jobs:
             git push origin --delete "$BRANCH"
           fi
 
-          git checkout -b "$BRANCH" origin/main
+          echo "Creating release branch $BRANCH from $BASE_BRANCH"
+          git checkout -b "$BRANCH" origin/$BASE_BRANCH
 
       - name: Update SDK_VERSION in gradle.properties
         run: |
@@ -141,4 +160,4 @@ jobs:
             --title "Release SDK v$VERSION" \
             --body-file pr_body.md \
             --head "$BRANCH" \
-            --base main
+            --base "$BASE_BRANCH"
