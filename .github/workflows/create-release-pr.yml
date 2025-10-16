@@ -40,6 +40,29 @@ jobs:
           echo "🌿 Release Branch (to create): $BRANCH"
           echo "============================================"
 
+      - name: ✅ Validate Base Branch
+        run: |
+          if [[ "$BASE_BRANCH" == "main" ]]; then
+            echo "✅ Valid base branch: main"
+          elif [[ "$BASE_BRANCH" =~ ^[0-9]+\.[0-9]+-main$ ]]; then
+            echo "✅ Valid base branch: $BASE_BRANCH"
+          else
+            echo "❌ ERROR: Invalid base branch '$BASE_BRANCH'"
+            echo ""
+            echo "Base branch must be either:"
+            echo "  - 'main' (for regular releases)"
+            echo "  - 'X.Y-main' (for version-specific releases, e.g., 5.4-main, 5.5-main)"
+            echo ""
+            echo "Examples:"
+            echo "  ✅ main"
+            echo "  ✅ 5.4-main"
+            echo "  ✅ 5.10-main"
+            echo "  ❌ master"
+            echo "  ❌ 5.4"
+            echo "  ❌ 5.4-develop"
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
