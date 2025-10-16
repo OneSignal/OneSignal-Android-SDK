@@ -3,7 +3,6 @@ package com.onesignal.notifications.internal.badges.impl.shortcutbadger;
 
 import android.content.ComponentName;
 import android.content.Context;
-
 import java.util.List;
 
 public interface Badger {

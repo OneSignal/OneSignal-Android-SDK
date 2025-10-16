@@ -5,13 +5,10 @@ import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
 import android.net.Uri;
-
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.Badger;
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.ShortcutBadgeException;
-
 import java.util.Arrays;
 import java.util.List;
-
 
 /**
  * @author Radko Roman
@@ -25,7 +22,8 @@ public class EverythingMeHomeBadger implements Badger {
     private static final String COLUMN_COUNT = "count";
 
     @Override
-    public void executeBadge(Context context, ComponentName componentName, int badgeCount) throws ShortcutBadgeException {
+    public void executeBadge(Context context, ComponentName componentName, int badgeCount)
+            throws ShortcutBadgeException {
         ContentValues contentValues = new ContentValues();
         contentValues.put(COLUMN_PACKAGE_NAME, componentName.getPackageName());
         contentValues.put(COLUMN_ACTIVITY_NAME, componentName.getClassName());

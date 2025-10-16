@@ -9,7 +9,6 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.os.Build;
 import android.util.Log;
-
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.impl.AdwHomeBadger;
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.impl.ApexHomeBadger;
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.impl.AsusHomeBadger;
@@ -23,12 +22,10 @@ import com.onesignal.notifications.internal.badges.impl.shortcutbadger.impl.Sams
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.impl.SonyHomeBadger;
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.impl.VivoHomeBadger;
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.impl.ZukHomeBadger;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.LinkedList;
 import java.util.List;
-
 
 /**
  * @author Leo Lin
@@ -40,8 +37,8 @@ public final class ShortcutBadger {
 
     private static final List<Class<? extends Badger>> BADGERS = new LinkedList<Class<? extends Badger>>();
 
-    private volatile static Boolean sIsBadgeCounterSupported;
-    private final static Object sCounterSupportedLock = new Object();
+    private static volatile Boolean sIsBadgeCounterSupported;
+    private static final Object sCounterSupportedLock = new Object();
 
     static {
         BADGERS.add(AdwHomeBadger.class);
@@ -90,8 +87,7 @@ public final class ShortcutBadger {
         if (sShortcutBadger == null) {
             boolean launcherReady = initBadger(context);
 
-            if (!launcherReady)
-                throw new ShortcutBadgeException("No default launcher available");
+            if (!launcherReady) throw new ShortcutBadgeException("No default launcher available");
         }
 
         try {
@@ -135,8 +131,10 @@ public final class ShortcutBadger {
                     String lastErrorMessage = null;
                     for (int i = 0; i < SUPPORTED_CHECK_ATTEMPTS; i++) {
                         try {
-                            Log.i(LOG_TAG, "Checking if platform supports badge counters, attempt "
-                                    + String.format("%d/%d.", i + 1, SUPPORTED_CHECK_ATTEMPTS));
+                            Log.i(
+                                    LOG_TAG,
+                                    "Checking if platform supports badge counters, attempt "
+                                            + String.format("%d/%d.", i + 1, SUPPORTED_CHECK_ATTEMPTS));
                             if (initBadger(context)) {
                                 sShortcutBadger.executeBadge(context, sComponentName, 0);
                                 sIsBadgeCounterSupported = true;
@@ -154,8 +152,7 @@ public final class ShortcutBadger {
                     }
 
                     if (sIsBadgeCounterSupported == null) {
-                        Log.w(LOG_TAG, "Badge counter seems not supported for this platform: "
-                                + lastErrorMessage);
+                        Log.w(LOG_TAG, "Badge counter seems not supported for this platform: " + lastErrorMessage);
                         sIsBadgeCounterSupported = false;
                     }
                 }
@@ -185,7 +182,8 @@ public final class ShortcutBadger {
     }
 
     // Initialize Badger if a launcher is availalble (eg. set as default on the device)
-    // Returns true if a launcher is available, in this case, the Badger will be set and sShortcutBadger will be non null.
+    // Returns true if a launcher is available, in this case, the Badger will be set and sShortcutBadger will be non
+    // null.
     private static boolean initBadger(Context context) {
         Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         if (launchIntent == null) {
@@ -197,10 +195,10 @@ public final class ShortcutBadger {
 
         Intent intent = new Intent(Intent.ACTION_MAIN);
         intent.addCategory(Intent.CATEGORY_HOME);
-        ResolveInfo resolveInfo = context.getPackageManager().resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY);
+        ResolveInfo resolveInfo =
+                context.getPackageManager().resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY);
 
-        if (resolveInfo == null || resolveInfo.activityInfo.name.toLowerCase().contains("resolver"))
-            return false;
+        if (resolveInfo == null || resolveInfo.activityInfo.name.toLowerCase().contains("resolver")) return false;
 
         String currentHomePackage = resolveInfo.activityInfo.packageName;
 
@@ -217,21 +215,15 @@ public final class ShortcutBadger {
         }
 
         if (sShortcutBadger == null) {
-            if (Build.MANUFACTURER.equalsIgnoreCase("ZUK"))
-                sShortcutBadger = new ZukHomeBadger();
-            else if (Build.MANUFACTURER.equalsIgnoreCase("OPPO"))
-                sShortcutBadger = new OPPOHomeBader();
-            else if (Build.MANUFACTURER.equalsIgnoreCase("VIVO"))
-                sShortcutBadger = new VivoHomeBadger();
-            else
-                sShortcutBadger = new DefaultBadger();
+            if (Build.MANUFACTURER.equalsIgnoreCase("ZUK")) sShortcutBadger = new ZukHomeBadger();
+            else if (Build.MANUFACTURER.equalsIgnoreCase("OPPO")) sShortcutBadger = new OPPOHomeBader();
+            else if (Build.MANUFACTURER.equalsIgnoreCase("VIVO")) sShortcutBadger = new VivoHomeBadger();
+            else sShortcutBadger = new DefaultBadger();
         }
 
         return true;
     }
 
     // Avoid anybody to instantiate this class
-    private ShortcutBadger() {
-
-    }
+    private ShortcutBadger() {}
 }
