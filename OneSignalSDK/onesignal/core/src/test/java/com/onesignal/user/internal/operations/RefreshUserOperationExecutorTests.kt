@@ -1,5 +1,6 @@
 package com.onesignal.user.internal.operations
 
+import com.onesignal.common.TimeUtils
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -27,7 +28,9 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.runs
+import io.mockk.unmockkObject
 
 class RefreshUserOperationExecutorTests : FunSpec({
     val appId = "appId"
@@ -325,6 +328,73 @@ class RefreshUserOperationExecutorTests : FunSpec({
         response.result shouldBe ExecutionResult.FAIL_RETRY
         coVerify(exactly = 1) {
             mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId)
+        }
+    }
+
+    test("refresh user sets local timezone via propertiesModel update") {
+        // Given
+        val mockTimeZone = "America/New_York"
+        mockkObject(TimeUtils)
+        every { TimeUtils.getTimeZoneId() } returns mockTimeZone
+
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId) } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(country = "US"),
+                listOf(),
+            )
+
+        val mockIdentityModelStore = MockHelper.identityModelStore()
+        val mockIdentityModel = IdentityModel()
+        mockIdentityModel.onesignalId = remoteOneSignalId
+        every { mockIdentityModelStore.model } returns mockIdentityModel
+        every { mockIdentityModelStore.replace(any(), any()) } just runs
+
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockPropertiesModel = PropertiesModel()
+        mockPropertiesModel.onesignalId = remoteOneSignalId
+        every { mockPropertiesModelStore.model } returns mockPropertiesModel
+        every { mockPropertiesModelStore.replace(any(), any()) } just runs
+
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        every { mockSubscriptionsModelStore.replaceAll(any(), any()) } just runs
+
+        val mockConfigModelStore = MockHelper.configModelStore()
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
+        val refreshUserOperationExecutor =
+            RefreshUserOperationExecutor(
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                mockConfigModelStore,
+                mockBuildUserService,
+                getNewRecordState(),
+            )
+
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+
+        try {
+            // When
+            val response = refreshUserOperationExecutor.execute(operations)
+
+            // Then - Verify success and that timezone is set to our mocked value (via update() call)
+            response.result shouldBe ExecutionResult.SUCCESS
+            coVerify(exactly = 1) {
+                mockPropertiesModelStore.replace(
+                    withArg {
+                        it.country shouldBe "US"
+                        // Verify timezone is set to our mocked timezone (what update() does)
+                        it.timezone shouldBe mockTimeZone
+                    },
+                    ModelChangeTags.HYDRATE,
+                )
+            }
+        } finally {
+            // Clean up the mock
+            unmockkObject(TimeUtils)
         }
     }
 })
