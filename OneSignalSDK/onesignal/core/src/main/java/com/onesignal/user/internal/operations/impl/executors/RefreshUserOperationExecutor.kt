@@ -1,6 +1,7 @@
 package com.onesignal.user.internal.operations.impl.executors
 
 import com.onesignal.common.NetworkUtils
+import com.onesignal.common.TimeUtils
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.config.ConfigModelStore
@@ -90,7 +91,7 @@ internal class RefreshUserOperationExecutor(
             }
 
             // No longer hydrate timezone from remote, set locally
-            propertiesModel.update()
+            propertiesModel.timezone = TimeUtils.getTimeZoneId()
 
             val subscriptionModels = mutableListOf<SubscriptionModel>()
             for (subscription in response.subscriptions) {

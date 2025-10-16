@@ -11,7 +11,6 @@ import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.TrackSessionEndOperation
 import com.onesignal.user.internal.operations.TrackSessionStartOperation
-import com.onesignal.user.internal.properties.PropertiesModelStore
 
 /**
  * The [SessionListener] is responsible for subscribing itself as an [ISessionLifecycleHandler]
@@ -34,7 +33,6 @@ internal class SessionListener(
     private val _sessionService: ISessionService,
     private val _configModelStore: ConfigModelStore,
     private val _identityModelStore: IdentityModelStore,
-    private val _propertiesModelStore: PropertiesModelStore,
     private val _outcomeEventsController: IOutcomeEventsController,
 ) : IStartableService, ISessionLifecycleHandler {
     override fun start() {
@@ -42,8 +40,6 @@ internal class SessionListener(
     }
 
     override fun onSessionStarted() {
-        // Detect any user updates to send with the TrackSessionStartOperation
-        _propertiesModelStore.model.update()
         _operationRepo.enqueue(TrackSessionStartOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId), true)
     }
 

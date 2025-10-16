@@ -1,6 +1,5 @@
 package com.onesignal.user.internal.properties
 
-import com.onesignal.common.TimeUtils
 import com.onesignal.common.modeling.MapModel
 import com.onesignal.common.modeling.Model
 import org.json.JSONObject
@@ -122,9 +121,5 @@ class PropertiesModel : Model() {
         }
 
         return null
-    }
-
-    fun update() {
-        timezone = TimeUtils.getTimeZoneId()
     }
 }
