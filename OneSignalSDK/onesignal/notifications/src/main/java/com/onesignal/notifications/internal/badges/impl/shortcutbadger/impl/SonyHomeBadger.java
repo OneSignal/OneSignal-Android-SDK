@@ -9,13 +9,10 @@ import android.content.Intent;
 import android.content.pm.ProviderInfo;
 import android.net.Uri;
 import android.os.Looper;
-
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.Badger;
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.ShortcutBadgeException;
-
 import java.util.Arrays;
 import java.util.List;
-
 
 /**
  * @author Leo Lin
@@ -38,8 +35,8 @@ public class SonyHomeBadger implements Badger {
     private AsyncQueryHandler mQueryHandler;
 
     @Override
-    public void executeBadge(Context context, ComponentName componentName,
-                             int badgeCount) throws ShortcutBadgeException {
+    public void executeBadge(Context context, ComponentName componentName, int badgeCount)
+            throws ShortcutBadgeException {
         if (sonyBadgeContentProviderExists(context)) {
             executeBadgeByContentProvider(context, componentName, badgeCount);
         } else {
@@ -52,8 +49,7 @@ public class SonyHomeBadger implements Badger {
         return Arrays.asList("com.sonyericsson.home", "com.sonymobile.home");
     }
 
-    private static void executeBadgeByBroadcast(Context context, ComponentName componentName,
-                                                int badgeCount) {
+    private static void executeBadgeByBroadcast(Context context, ComponentName componentName, int badgeCount) {
         Intent intent = new Intent(INTENT_ACTION);
         intent.putExtra(INTENT_EXTRA_PACKAGE_NAME, componentName.getPackageName());
         intent.putExtra(INTENT_EXTRA_ACTIVITY_NAME, componentName.getClassName());
@@ -69,8 +65,7 @@ public class SonyHomeBadger implements Badger {
      * @param componentName the componentName to use
      * @param badgeCount    the badge count
      */
-    private void executeBadgeByContentProvider(Context context, ComponentName componentName,
-                                               int badgeCount) {
+    private void executeBadgeByContentProvider(Context context, ComponentName componentName, int badgeCount) {
         if (badgeCount < 0) {
             return;
         }
@@ -80,9 +75,8 @@ public class SonyHomeBadger implements Badger {
             // We're in the main thread. Let's ensure the badge update happens in a background
             // thread by using an AsyncQueryHandler and an async update.
             if (mQueryHandler == null) {
-                mQueryHandler = new AsyncQueryHandler(
-                        context.getApplicationContext().getContentResolver()) {
-                };
+                mQueryHandler =
+                        new AsyncQueryHandler(context.getApplicationContext().getContentResolver()) {};
             }
             insertBadgeAsync(contentValues);
         } else {
@@ -109,8 +103,7 @@ public class SonyHomeBadger implements Badger {
      * @param contentValues Content values containing the badge count, package and activity names
      */
     private void insertBadgeSync(final Context context, final ContentValues contentValues) {
-        context.getApplicationContext().getContentResolver()
-                .insert(BADGE_CONTENT_URI, contentValues);
+        context.getApplicationContext().getContentResolver().insert(BADGE_CONTENT_URI, contentValues);
     }
 
     /**
@@ -128,8 +121,7 @@ public class SonyHomeBadger implements Badger {
      * @param componentName the component name from which package and class name will be extracted
      *
      */
-    private ContentValues createContentValues(final int badgeCount,
-            final ComponentName componentName) {
+    private ContentValues createContentValues(final int badgeCount, final ComponentName componentName) {
         final ContentValues contentValues = new ContentValues();
         contentValues.put(PROVIDER_COLUMNS_BADGE_COUNT, badgeCount);
         contentValues.put(PROVIDER_COLUMNS_PACKAGE_NAME, componentName.getPackageName());

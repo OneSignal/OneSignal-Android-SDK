@@ -1,7 +1,7 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
-    id 'org.jlleitschuh.gradle.ktlint'
+    id 'com.diffplug.spotless'
     id 'com.vanniktech.maven.publish'
     id 'io.gitlab.arturbosch.detekt'
 }
@@ -101,18 +101,6 @@ dependencies {
     testImplementation("com.tdunning:json:$tdunningJsonForTest")
 }
 
-ktlint {
-    version = "$ktlintVersion"
-    additionalEditorconfig = [
-        "max_line_length": "500",
-    ]
-}
-
-detekt {
-    config = files("$rootDir/detekt/detekt-config.yml")
-    baseline = file("$rootDir/detekt/detekt-baseline-location.xml")
-    buildUponDefaultConfig = true
-    allRules = false
-}
-
+apply from: '../detekt.gradle'
+apply from: '../spotless.gradle'
 apply from: '../maven-push.gradle'

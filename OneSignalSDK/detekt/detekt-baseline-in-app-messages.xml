@@ -91,60 +91,6 @@
     <ID>MagicNumber:InAppRepository.kt$InAppRepository$1000L</ID>
     <ID>MagicNumber:OneSignalAnimate.kt$OneSignalAnimate$0.5f</ID>
     <ID>MagicNumber:WebViewManager.kt$WebViewManager$3</ID>
-    <ID>MaxLineLength:DraggableRelativeLayout.kt$DraggableRelativeLayout$MotionEvent.ACTION_DOWN</ID>
-    <ID>MaxLineLength:DraggableRelativeLayout.kt$DraggableRelativeLayout$params.messageHeight + params.posY + (Resources.getSystem().displayMetrics.heightPixels - params.messageHeight - params.posY) + EXTRA_PX_DISMISS</ID>
-    <ID>MaxLineLength:DynamicTriggerController.kt$DynamicTriggerController$Logging.error("Attempted to apply an invalid operator on a time-based in-app-message trigger: $operator")</ID>
-    <ID>MaxLineLength:DynamicTriggerController.kt$DynamicTriggerController$Trigger.OSTriggerOperator.GREATER_THAN</ID>
-    <ID>MaxLineLength:IInAppBackendService.kt$IInAppBackendService$*</ID>
-    <ID>MaxLineLength:IInAppDisplayer.kt$IInAppDisplayer$*</ID>
-    <ID>MaxLineLength:InAppBackendService.kt$InAppBackendService$return</ID>
-    <ID>MaxLineLength:InAppDisplayer.kt$InAppDisplayer$// Handles exception "MissingWebViewPackageException: Failed to load WebView provider: No WebView installed"</ID>
-    <ID>MaxLineLength:InAppDisplayer.kt$InAppDisplayer$val webViewManager = WebViewManager(message, currentActivity, content, _lifecycle, _applicationService, _promptFactory)</ID>
-    <ID>MaxLineLength:InAppMessageLifecycleEvent.kt$InAppMessageLifecycleEvent : IInAppMessageWillDisplayEventIInAppMessageWillDismissEventIInAppMessageDidDisplayEventIInAppMessageDidDismissEvent</ID>
-    <ID>MaxLineLength:InAppMessageRedisplayStats.kt$InAppMessageRedisplayStats$"OSInAppMessage lastDisplayTime: $lastDisplayTime currentTimeInSeconds: $currentTimeInSeconds diffInSeconds: $diffInSeconds displayDelay: $displayDelay"</ID>
-    <ID>MaxLineLength:InAppMessageView.kt$InAppMessageView$Logging.warn("WebView height update skipped because of null layoutParams, new height will be used once it is displayed.")</ID>
-    <ID>MaxLineLength:InAppMessageView.kt$InAppMessageView$WebViewManager.Position.CENTER_MODAL, WebViewManager.Position.FULL_SCREEN -&gt; Gravity.CENTER_HORIZONTAL</ID>
-    <ID>MaxLineLength:InAppMessageView.kt$InAppMessageView$if (displayLocation == WebViewManager.Position.TOP_BANNER) DraggableRelativeLayout.Params.DRAGGABLE_DIRECTION_UP else DraggableRelativeLayout.Params.DRAGGABLE_DIRECTION_DOWN</ID>
-    <ID>MaxLineLength:InAppMessageView.kt$InAppMessageView$if (displayPosition == WebViewManager.Position.FULL_SCREEN) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT</ID>
-    <ID>MaxLineLength:InAppMessageView.kt$InAppMessageView$if (messageContent.isFullBleed) WindowManager.LayoutParams.TYPE_APPLICATION_PANEL else WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG</ID>
-    <ID>MaxLineLength:InAppMessageView.kt$InAppMessageView$private val displayDuration: Double = if (messageContent.displayDuration == null) 0.0 else messageContent.displayDuration!!</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager$"InAppMessagesManager.attemptToShowInAppMessage: In app messaging is currently paused, in app messages will not be shown!"</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager$"InAppMessagesManager.logInAppMessagePreviewActions: Outcomes detected inside of the action click payload, ignoring because action came from IAM preview: "</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager$"InAppMessagesManager.logInAppMessagePreviewActions: Tags detected inside of the action click payload, ignoring because action came from IAM preview:: "</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager$"InAppMessagesManager.messageWasDismissed: Stop evaluateMessageDisplayQueue because prompt is currently displayed"</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager$"InAppMessagesManager.queueMessageForDisplay: In app message with id: " + message.messageId + ", added to the queue"</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager$.</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager$// Never send multiple page impressions for the same message UUID unless that page change is from an IAM with redisplay</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager$Logging.debug("InAppMessagesManager.attemptToShowInAppMessage: No IAM showing currently, showing first item in the queue!")</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager$Logging.debug("InAppMessagesManager.makeRedisplayMessagesAvailableWithTriggers: Trigger changed for message: $message")</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager$Logging.debug("InAppMessagesManager.messageWasDismissed: In app message on queue available, attempting to show")</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager$Logging.debug("InAppMessagesManager.persistInAppMessage: $message with msg array data: $redisplayedInAppMessages")</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager$Logging.debug("InAppMessagesManager.setDataForRedisplay message available for redisplay: " + message.messageId)</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager$Logging.debug("InAppMessagesManager.showMultiplePrompts: IAM prompt to handle finished with result: $result")</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager$Logging.debug("InAppMessagesManager.showMultiplePrompts: IAM prompt to handle: " + _state.currentPrompt.toString())</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager$Logging.debug("InAppMessagesManager.showMultiplePrompts: No IAM prompt to handle, dismiss message: " + inAppMessage.messageId)</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager$Logging.warn("InAppMessagesManager.attemptToShowInAppMessage: In app message not showing due to system condition not correct")</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager$if</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager$val clickAvailableByRedisplay = message.redisplayStats.isRedisplayEnabled &amp;&amp; clickId != null &amp;&amp; message.isClickAvailable(clickId)</ID>
-    <ID>MaxLineLength:InAppMessagesManager.kt$InAppMessagesManager.&lt;no name provided&gt;$_consistencyManager.getRywDataFromAwaitableCondition(IamFetchReadyCondition(newOneSignalId))</ID>
-    <ID>MaxLineLength:InAppPreferencesController.kt$InAppPreferencesController$_prefs.saveStringSet(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_DISMISSED_IAMS, mutDismissedMessages)</ID>
-    <ID>MaxLineLength:InAppPreferencesController.kt$InAppPreferencesController$get() = _prefs.getLong(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_IAM_LAST_DISMISSED_TIME, null)</ID>
-    <ID>MaxLineLength:InAppPreferencesController.kt$InAppPreferencesController$get() = _prefs.getStringSet(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_CLICKED_CLICK_IDS_IAMS, null)</ID>
-    <ID>MaxLineLength:InAppPreferencesController.kt$InAppPreferencesController$get() = _prefs.getStringSet(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_IMPRESSIONED_IAMS, null)</ID>
-    <ID>MaxLineLength:InAppPreferencesController.kt$InAppPreferencesController$get() = _prefs.getStringSet(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_PAGE_IMPRESSIONED_IAMS, null)</ID>
-    <ID>MaxLineLength:InAppPreferencesController.kt$InAppPreferencesController$set(value) = _prefs.saveLong(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_IAM_LAST_DISMISSED_TIME, value)</ID>
-    <ID>MaxLineLength:InAppPreferencesController.kt$InAppPreferencesController$set(value) = _prefs.saveStringSet(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_CLICKED_CLICK_IDS_IAMS, value)</ID>
-    <ID>MaxLineLength:InAppPreferencesController.kt$InAppPreferencesController$set(value) = _prefs.saveStringSet(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_DISMISSED_IAMS, value)</ID>
-    <ID>MaxLineLength:InAppPreferencesController.kt$InAppPreferencesController$set(value) = _prefs.saveStringSet(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_IMPRESSIONED_IAMS, value)</ID>
-    <ID>MaxLineLength:InAppPreferencesController.kt$InAppPreferencesController$set(value) = _prefs.saveStringSet(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_PAGE_IMPRESSIONED_IAMS, value)</ID>
-    <ID>MaxLineLength:OneSignalAnimate.kt$OneSignalAnimate$backgroundAnimation.addUpdateListener { valueAnimator -&gt; view.setBackgroundColor((valueAnimator.animatedValue as Int)) }</ID>
-    <ID>MaxLineLength:TriggerController.kt$TriggerController$Trigger.OSTriggerOperator.EXISTS</ID>
-    <ID>MaxLineLength:TriggerController.kt$TriggerController$Trigger.OSTriggerOperator.GREATER_THAN_OR_EQUAL_TO -&gt; deviceDoubleValue &gt; triggerDoubleValue || deviceDoubleValue == triggerDoubleValue</ID>
-    <ID>MaxLineLength:TriggerController.kt$TriggerController$Trigger.OSTriggerOperator.LESS_THAN_OR_EQUAL_TO -&gt; deviceDoubleValue &lt; triggerDoubleValue || deviceDoubleValue == triggerDoubleValue</ID>
-    <ID>MaxLineLength:TriggerController.kt$TriggerController$return if (operatorType == Trigger.OSTriggerOperator.NOT_EXISTS) true else operatorType == Trigger.OSTriggerOperator.NOT_EQUAL_TO &amp;&amp; trigger.value != null</ID>
-    <ID>MaxLineLength:WebViewManager.kt$WebViewManager$Logging.debug("In app message activity available currentActivityName: $currentActivityName lastActivityName: $lastActivityName")</ID>
-    <ID>MaxLineLength:WebViewManager.kt$WebViewManager$val hideGrayOverlay = AndroidUtils.getManifestMetaBoolean(_applicationService.appContext, "com.onesignal.inAppMessageHideGrayOverlay")</ID>
-    <ID>MaxLineLength:WebViewManager.kt$WebViewManager.OSJavaScriptInterface$EVENT_TYPE_ACTION_TAKEN</ID>
     <ID>NestedBlockDepth:TriggerController.kt$TriggerController$override fun isTriggerOnMessage( message: InAppMessage, triggersKeys: Collection&lt;String&gt;, ): Boolean</ID>
     <ID>PrintStackTrace:InAppMessage.kt$InAppMessage$e</ID>
     <ID>PrintStackTrace:InAppMessage.kt$InAppMessage$exception</ID>

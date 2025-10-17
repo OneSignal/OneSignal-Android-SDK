@@ -25,11 +25,7 @@ style:
     ignoreNamedArgument: true
 
   MaxLineLength:
-    active: true
-    maxLineLength: 120
-    excludePackageStatements: true
-    excludeImportStatements: true
-    excludeCommentStatements: false
+    active: false
 
   OptionalUnit:
     active: true

@@ -16,11 +16,10 @@ buildscript {
         huaweiHMSLocationVersion = '4.0.0.300'
         kotlinVersion = '1.7.10'
         kotestVersion = '5.8.0'
-        ktlintPluginVersion = '11.6.1'
-        ktlintVersion = '1.0.1'
         ioMockVersion = '1.13.2'
-        // DO NOT upgrade for tests, using an old version so it matches AOSP
-        tdunningJsonForTest = '1.0'
+        ktlintVersion = '1.0.1' // Used by Spotless for Kotlin formatting
+        spotlessVersion = '6.25.0'
+        tdunningJsonForTest = '1.0' // DO NOT upgrade for tests, using an old version so it matches AOSP
 
         sharedRepos = {
             google()
@@ -34,10 +33,9 @@ buildscript {
             "com.google.gms:google-services:$googleServicesGradlePluginVersion",
             "com.huawei.agconnect:agcp:$huaweiAgconnectVersion",
             "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion",
-            "org.jlleitschuh.gradle:ktlint-gradle:$ktlintPluginVersion",
-            "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin:0.32.0",
-            "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:$detektVersion"
-
+            "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:$detektVersion",
+            "com.diffplug.spotless:spotless-plugin-gradle:$spotlessVersion",
+            "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin:0.32.0"
         ]
     }
 
@@ -59,7 +57,6 @@ allprojects {
         // Huawei maven
         maven { url 'https://developer.huawei.com/repo/' }
     }
-
 }
 
 subprojects {
@@ -68,13 +65,13 @@ subprojects {
             def configureDetektTask = { task ->
                 // Only analyze main source sets
                 task.source = files(
-                        "$projectDir/src/main/java",
-                        "$projectDir/src/main/kotlin"
+                    "$projectDir/src/main/java",
+                    "$projectDir/src/main/kotlin"
                 )
                 // Exclude all test-related files and directories
                 task.exclude "**/test/**", "**/androidTest/**", "**/src/test/**", "**/src/androidTest/**",
-                        "**/*Test.kt", "**/*Tests.kt", "**/*Spec.kt",
-                        "**/*Test.java", "**/*Tests.java", "**/*Spec.java"
+                    "**/*Test.kt", "**/*Tests.kt", "**/*Spec.kt",
+                    "**/*Test.java", "**/*Tests.java", "**/*Spec.java"
                 
                 // Enable type resolution to catch !! operator
                 task.jvmTarget = "1.8"

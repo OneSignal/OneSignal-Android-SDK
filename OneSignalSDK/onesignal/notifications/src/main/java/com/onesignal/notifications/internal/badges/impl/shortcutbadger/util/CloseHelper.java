@@ -2,7 +2,6 @@
 package com.onesignal.notifications.internal.badges.impl.shortcutbadger.util;
 
 import android.database.Cursor;
-
 import java.io.Closeable;
 import java.io.IOException;
 
@@ -16,7 +15,6 @@ public class CloseHelper {
             cursor.close();
         }
     }
-
 
     public static void closeQuietly(Closeable closeable) {
         try {
