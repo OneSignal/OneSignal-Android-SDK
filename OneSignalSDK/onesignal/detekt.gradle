@@ -1,0 +1,34 @@
+apply plugin: 'io.gitlab.arturbosch.detekt'
+
+detekt {
+    // Use the config file from the detekt directory
+    config.setFrom(files("$rootDir/detekt/detekt-config.yml"))
+    
+    // Enable building a baseline in the common detekt/ folder
+    baseline = file("$rootDir/detekt/detekt-baseline-${project.name}.xml")
+    
+    // Parallel execution for better performance
+    parallel = true
+    
+    // Report configuration
+    reports {
+        html.required = true
+        xml.required = false
+        txt.required = false
+        sarif.required = false
+        md.required = false
+    }
+    
+    // Only analyze main source sets (exclude tests)
+    source.setFrom(files(
+        "$projectDir/src/main/java",
+        "$projectDir/src/main/kotlin"
+    ))
+    
+    // Exclude test files
+    disableDefaultRuleSets = false
+    buildUponDefaultConfig = true
+    
+    // Ignore generated files
+    ignoredBuildTypes = ["release"]
+}

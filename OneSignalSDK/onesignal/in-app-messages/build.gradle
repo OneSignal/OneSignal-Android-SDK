@@ -3,6 +3,7 @@ plugins {
     id 'kotlin-android'
     id 'com.diffplug.spotless'
     id 'com.vanniktech.maven.publish'
+    id 'io.gitlab.arturbosch.detekt'
 }
 
 android {
@@ -100,5 +101,6 @@ dependencies {
     testImplementation("com.tdunning:json:$tdunningJsonForTest")
 }
 
+apply from: '../detekt.gradle'
 apply from: '../spotless.gradle'
 apply from: '../maven-push.gradle'
