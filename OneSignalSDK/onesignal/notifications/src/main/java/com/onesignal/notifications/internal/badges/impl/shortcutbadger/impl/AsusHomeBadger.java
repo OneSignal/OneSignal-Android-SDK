@@ -4,11 +4,9 @@ package com.onesignal.notifications.internal.badges.impl.shortcutbadger.impl;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.Badger;
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.ShortcutBadgeException;
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.util.BroadcastHelper;
-
 import java.util.Arrays;
 import java.util.List;
 
@@ -23,7 +21,8 @@ public class AsusHomeBadger implements Badger {
     private static final String INTENT_EXTRA_ACTIVITY_NAME = "badge_count_class_name";
 
     @Override
-    public void executeBadge(Context context, ComponentName componentName, int badgeCount) throws ShortcutBadgeException {
+    public void executeBadge(Context context, ComponentName componentName, int badgeCount)
+            throws ShortcutBadgeException {
         Intent intent = new Intent(INTENT_ACTION);
         intent.putExtra(INTENT_EXTRA_BADGE_COUNT, badgeCount);
         intent.putExtra(INTENT_EXTRA_PACKAGENAME, componentName.getPackageName());

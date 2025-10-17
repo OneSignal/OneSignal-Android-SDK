@@ -4,11 +4,9 @@ package com.onesignal.notifications.internal.badges.impl.shortcutbadger.impl;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.Badger;
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.ShortcutBadgeException;
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.util.BroadcastHelper;
-
 import java.util.Arrays;
 import java.util.List;
 
@@ -23,7 +21,8 @@ public class AdwHomeBadger implements Badger {
     public static final String COUNT = "COUNT";
 
     @Override
-    public void executeBadge(Context context, ComponentName componentName, int badgeCount) throws ShortcutBadgeException {
+    public void executeBadge(Context context, ComponentName componentName, int badgeCount)
+            throws ShortcutBadgeException {
 
         Intent intent = new Intent(INTENT_UPDATE_COUNTER);
         intent.putExtra(PACKAGENAME, componentName.getPackageName());
@@ -38,9 +37,6 @@ public class AdwHomeBadger implements Badger {
 
     @Override
     public List<String> getSupportLaunchers() {
-        return Arrays.asList(
-                "org.adw.launcher",
-                "org.adwfreak.launcher"
-        );
+        return Arrays.asList("org.adw.launcher", "org.adwfreak.launcher");
     }
 }

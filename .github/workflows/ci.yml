@@ -22,7 +22,7 @@ jobs:
       - name: "[Test] Linting"
         working-directory: OneSignalSDK
         run: |
-          ./gradlew ktlintCheck --console=plain
+          ./gradlew spotlessCheck --console=plain
       - name: "[Test] SDK Unit Tests"
         working-directory: OneSignalSDK
         run: |

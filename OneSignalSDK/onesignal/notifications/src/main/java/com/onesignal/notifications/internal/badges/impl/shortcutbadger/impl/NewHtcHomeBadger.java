@@ -4,11 +4,9 @@ package com.onesignal.notifications.internal.badges.impl.shortcutbadger.impl;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.Badger;
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.ShortcutBadgeException;
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.util.BroadcastHelper;
-
 import java.util.Arrays;
 import java.util.List;
 
@@ -25,7 +23,8 @@ public class NewHtcHomeBadger implements Badger {
     public static final String EXTRA_COUNT = "com.htc.launcher.extra.COUNT";
 
     @Override
-    public void executeBadge(Context context, ComponentName componentName, int badgeCount) throws ShortcutBadgeException {
+    public void executeBadge(Context context, ComponentName componentName, int badgeCount)
+            throws ShortcutBadgeException {
 
         Intent intent1 = new Intent(INTENT_SET_NOTIFICATION);
         intent1.putExtra(EXTRA_COMPONENT, componentName.flattenToShortString());
@@ -35,7 +34,8 @@ public class NewHtcHomeBadger implements Badger {
         intent.putExtra(PACKAGENAME, componentName.getPackageName());
         intent.putExtra(COUNT, badgeCount);
 
-        if(BroadcastHelper.canResolveBroadcast(context, intent1) || BroadcastHelper.canResolveBroadcast(context, intent)) {
+        if (BroadcastHelper.canResolveBroadcast(context, intent1)
+                || BroadcastHelper.canResolveBroadcast(context, intent)) {
             context.sendBroadcast(intent1);
             context.sendBroadcast(intent);
         } else {

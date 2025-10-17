@@ -147,7 +147,7 @@ internal class OutcomeEventsController(
             if (uniqueInfluences == null) {
                 Logging.debug(
                     """
-                    Measure endpoint will not send because unique outcome already sent for: 
+                    Measure endpoint will not send because unique outcome already sent for:
                     SessionInfluences: $influences
                     Outcome name: $name
                     """.trimIndent(),
@@ -162,7 +162,7 @@ internal class OutcomeEventsController(
             if (unattributedUniqueOutcomeEventsSentOnSession.contains(name)) {
                 Logging.debug(
                     """
-                    Measure endpoint will not send because unique outcome already sent for: 
+                    Measure endpoint will not send because unique outcome already sent for:
                     Session: ${InfluenceType.UNATTRIBUTED}
                     Outcome name: $name
                     """.trimIndent(),
