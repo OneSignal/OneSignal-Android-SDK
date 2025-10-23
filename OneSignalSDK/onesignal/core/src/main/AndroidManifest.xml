@@ -11,7 +11,7 @@
           android:exported="false" />
 
         <activity android:name="com.onesignal.core.activities.PermissionsActivity"
-                  android:theme="@android:style/Theme.Translucent.NoTitleBar"
+                  android:theme="@style/NoToolBarTheme"
                   android:exported="false" />
     </application>
 
