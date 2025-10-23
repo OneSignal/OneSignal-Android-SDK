@@ -4,6 +4,7 @@ import android.app.Activity
 import com.onesignal.OneSignal
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
+import com.onesignal.core.internal.viewmodel.PermissionsViewModel
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
@@ -103,5 +104,63 @@ class PermissionsViewModelTests : FunSpec({
         viewModel.recordRationaleState(true)
 
         verify { mockRequestService.shouldShowRequestPermissionRationaleBeforeRequest = true }
+    }
+
+    test("resetWaitingState resets waiting flag to false") {
+        val viewModel = PermissionsViewModel()
+
+        // First set waiting to true
+        viewModel.shouldRequestPermission()
+        runBlocking {
+            viewModel.waiting.first() shouldBe true
+        }
+
+        // Reset the waiting state (simulating activity pause)
+        viewModel.resetWaitingState()
+
+        // Verify waiting is now false
+        runBlocking {
+            viewModel.waiting.first() shouldBe false
+        }
+    }
+
+    test("resetWaitingState allows permission request after reset") {
+        val viewModel = PermissionsViewModel()
+
+        // First request should succeed
+        val firstResult = viewModel.shouldRequestPermission()
+        firstResult shouldBe true
+
+        // Reset the waiting state (simulating activity pause)
+        viewModel.resetWaitingState()
+
+        // Second request should now succeed again
+        val secondResult = viewModel.shouldRequestPermission()
+        secondResult shouldBe true
+    }
+
+    test("resetWaitingState simulates activity pause scenario") {
+        val viewModel = PermissionsViewModel()
+
+        // Simulate: User sees permission dialog
+        val firstResult = viewModel.shouldRequestPermission()
+        firstResult shouldBe true
+        runBlocking {
+            viewModel.waiting.first() shouldBe true
+        }
+
+        // Simulate: Another activity comes on top (phone call, notification, etc.)
+        // Activity's onPause() calls resetWaitingState()
+        viewModel.resetWaitingState()
+        runBlocking {
+            viewModel.waiting.first() shouldBe false
+        }
+
+        // Simulate: User returns to app, permission dialog can be shown again
+        val secondResult = viewModel.shouldRequestPermission()
+        secondResult shouldBe true
+        runBlocking {
+            viewModel.waiting.first() shouldBe true
+        }
     }
 })
