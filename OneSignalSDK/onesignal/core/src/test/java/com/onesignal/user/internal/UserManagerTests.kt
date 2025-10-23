@@ -1,5 +1,6 @@
 package com.onesignal.user.internal
 
+import com.onesignal.common.TimeUtils
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
@@ -10,8 +11,10 @@ import io.kotest.matchers.shouldNotBe
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.runs
 import io.mockk.slot
+import io.mockk.unmockkObject
 import io.mockk.verify
 
 class UserManagerTests : FunSpec({
@@ -191,5 +194,37 @@ class UserManagerTests : FunSpec({
         verify(exactly = 1) { mockSubscriptionManager.removeEmailSubscription("email@co.com") }
         verify(exactly = 1) { mockSubscriptionManager.addSmsSubscription("+15558675309") }
         verify(exactly = 1) { mockSubscriptionManager.removeSmsSubscription("+15558675309") }
+    }
+
+    test("onFocus updates timezone") {
+        // Given
+        val mockTimeZone = "Europe/Foo"
+        mockkObject(TimeUtils)
+        every { TimeUtils.getTimeZoneId() } returns mockTimeZone
+
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+
+        val userManager =
+            UserManager(
+                mockk<ISubscriptionManager>(),
+                MockHelper.identityModelStore(),
+                mockPropertiesModelStore,
+                MockHelper.languageContext(),
+                MockHelper.applicationService(),
+            )
+
+        val propertiesModel = mockPropertiesModelStore.model
+        propertiesModel.timezone shouldNotBe mockTimeZone
+
+        try {
+            // When
+            userManager.onFocus(firedOnSubscribe = false)
+
+            // Then
+            propertiesModel.timezone shouldBe mockTimeZone
+        } finally {
+            // Clean up the mock
+            unmockkObject(TimeUtils)
+        }
     }
 })
