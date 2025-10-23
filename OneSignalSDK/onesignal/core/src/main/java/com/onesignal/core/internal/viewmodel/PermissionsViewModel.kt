@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
  * ViewModel that handles the business logic for permission requests.
  * This separates the permission handling logic from the Activity lifecycle.
  * Uses AndroidX ViewModel with StateFlow for lifecycle-aware state management.
- * 
+ *
  * Responsibilities:
  * - Store permission request state (survives configuration changes)
  * - Handle permission result business logic
@@ -27,7 +27,6 @@ import kotlinx.coroutines.launch
  * - Does NOT hold Activity references or call Activity APIs directly
  */
 class PermissionsViewModel : ViewModel() {
-
     // Lazy initialization to ensure OneSignal is ready before accessing services
     private val requestPermissionService: RequestPermissionService by lazy { OneSignal.getService() }
     private val preferenceService: IPreferencesService by lazy { OneSignal.getService() }
@@ -93,7 +92,7 @@ class PermissionsViewModel : ViewModel() {
     /**
      * Handle the permission request result.
      * Activity should call this with the result from onRequestPermissionsResult.
-     * 
+     *
      * @param shouldShowRationaleAfter The result of shouldShowRequestPermissionRationale AFTER the user responded
      */
     fun onRequestPermissionsResult(
@@ -102,21 +101,21 @@ class PermissionsViewModel : ViewModel() {
         shouldShowRationaleAfter: Boolean = false,
     ) {
         _waiting.value = false
-        
+
         // Use viewModelScope with delay for smooth transition
         viewModelScope.launch {
             delay(DELAY_TIME_CALLBACK_CALL.toLong())
-            
+
             val granted: Boolean
             val showSettings: Boolean
-            
+
             if (permissions.isEmpty()) {
                 granted = false
                 showSettings = false
             } else {
                 val permission = permissions[0]
                 granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
-                
+
                 if (granted) {
                     preferenceService.saveBool(
                         PreferenceStores.ONESIGNAL,
@@ -128,19 +127,23 @@ class PermissionsViewModel : ViewModel() {
                     showSettings = shouldShowSettings(permission, shouldShowRationaleAfter)
                 }
             }
-            
+
             // Execute the callback
             executeCallback(granted, showSettings)
-            
+
             // Signal the activity to finish
             _shouldFinish.value = true
         }
     }
 
-    private fun executeCallback(granted: Boolean, showSettings: Boolean) {
-        val callback = requestPermissionService.getCallback(permissionRequestType!!)
-            ?: throw RuntimeException("Missing handler for permissionRequestType: $permissionRequestType")
-        
+    private fun executeCallback(
+        granted: Boolean,
+        showSettings: Boolean,
+    ) {
+        val callback =
+            requestPermissionService.getCallback(permissionRequestType!!)
+                ?: throw RuntimeException("Missing handler for permissionRequestType: $permissionRequestType")
+
         if (granted) {
             callback.onAccept()
         } else {
@@ -151,17 +154,20 @@ class PermissionsViewModel : ViewModel() {
     /**
      * Determine if we should show the settings fallback.
      * This matches the original logic from the Activity.
-     * 
+     *
      * We want to show settings after the user has clicked "Don't Allow" 2 times.
      * After the first time shouldShowRequestPermissionRationale becomes true, after
      * the second time shouldShowRequestPermissionRationale becomes false again. We
      * look for the change from `true` -> `false`. When this happens we remember this
      * rejection, as the user will never be prompted again.
-     * 
+     *
      * @param permission The permission string
      * @param shouldShowRationaleAfter The result of shouldShowRequestPermissionRationale AFTER the user responded
      */
-    private fun shouldShowSettings(permission: String, shouldShowRationaleAfter: Boolean): Boolean {
+    private fun shouldShowSettings(
+        permission: String,
+        shouldShowRationaleAfter: Boolean,
+    ): Boolean {
         if (!requestPermissionService.fallbackToSettings) {
             return false
         }
