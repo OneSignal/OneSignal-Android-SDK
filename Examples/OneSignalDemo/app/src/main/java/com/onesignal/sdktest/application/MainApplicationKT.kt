@@ -43,6 +43,7 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlin.concurrent.thread
 
 class MainApplicationKT : MultiDexApplication() {
 
@@ -70,16 +71,20 @@ class MainApplicationKT : MultiDexApplication() {
 
         // Initialize OneSignal asynchronously on background thread to avoid ANR
         applicationScope.launch {
-            OneSignal.initWithContextSuspend(this@MainApplicationKT, appId)
-            Log.d(Tag.LOG_TAG, "OneSignal async init completed")
+            repeat(1) {
+                OneSignal.initWithContextSuspend(this@MainApplicationKT, appId)
+                Log.d(Tag.LOG_TAG, "OneSignal async init completed")
 
-            // Set up all OneSignal listeners after successful async initialization
-            setupOneSignalListeners()
+                // Set up all OneSignal listeners after successful async initialization
+                setupOneSignalListeners()
 
-            // Request permission - this will internally switch to Main thread for UI operations
-            OneSignal.Notifications.requestPermission(true)
+                // Request permission - this will internally switch to Main thread for UI operations
+                // OneSignal.Notifications.requestPermission(true)
 
-            Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT)
+                Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT)
+
+               // throw RuntimeException("test 2025-10-22")
+            }
         }
     }
 

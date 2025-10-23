@@ -100,7 +100,7 @@ internal class DeviceService(private val _applicationService: IApplicationServic
         return try {
             val pm = _applicationService.appContext.packageManager
             val info = pm.getPackageInfo(packageName, PackageManager.GET_META_DATA)
-            info.applicationInfo.enabled
+            info.applicationInfo?.enabled ?: false
         } catch (e: PackageManager.NameNotFoundException) {
             false
         }

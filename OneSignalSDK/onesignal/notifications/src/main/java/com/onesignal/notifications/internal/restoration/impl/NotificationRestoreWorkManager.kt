@@ -14,6 +14,7 @@ import com.onesignal.notifications.internal.restoration.INotificationRestoreWork
 import java.util.concurrent.TimeUnit
 
 internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager {
+    private val lock = Any()
     // Notifications will never be force removed when the app's process is running,
     //   so we only need to restore at most once per cold start of the app.
     private var restored = false
@@ -23,7 +24,7 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
         shouldDelay: Boolean,
     ) {
         // Only allow one piece of work to be enqueued.
-        synchronized(restored) {
+        synchronized(lock) {
             if (restored) {
                 return
             }

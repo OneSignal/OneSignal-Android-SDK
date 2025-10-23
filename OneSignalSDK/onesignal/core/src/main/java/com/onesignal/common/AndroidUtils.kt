@@ -214,7 +214,7 @@ object AndroidUtils {
                         applicationService.appContext.packageName,
                         PackageManager.GET_PERMISSIONS,
                     )
-            val permissionList = listOf(*packageInfo.requestedPermissions)
+            val permissionList = packageInfo.requestedPermissions ?: return false
 
             return if (!permissionList.contains(permission)) {
                 false
@@ -251,8 +251,8 @@ object AndroidUtils {
             applicationService.appContext
                 .packageManager
                 .getPackageInfo(applicationService.appContext.packageName, PackageManager.GET_PERMISSIONS)
-        val permissionList = listOf(*packageInfo.requestedPermissions)
 
+        val permissionList = packageInfo.requestedPermissions ?: return listOf()
         return permissions.filter { permissionList.contains(it) }
     }
 

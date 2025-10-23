@@ -27,7 +27,7 @@ internal class GooglePlayServicesUpgradePrompt(
                         GoogleApiAvailability.GOOGLE_PLAY_SERVICES_PACKAGE,
                         PackageManager.GET_META_DATA,
                     )
-                val label = info.applicationInfo.loadLabel(pm) as String
+                val label = info.applicationInfo?.loadLabel(pm) as String
                 return label != "Market"
             } catch (e: PackageManager.NameNotFoundException) {
                 // Google Play Store might not be installed, ignore exception if so

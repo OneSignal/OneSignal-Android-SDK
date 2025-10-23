@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
@@ -5,7 +7,7 @@ plugins {
 
 android {
     namespace 'com.onesignal.sdktest'
-    compileSdkVersion 34
+    compileSdkVersion 36
     defaultConfig {
         minSdkVersion 21
         targetSdkVersion 34
@@ -65,10 +67,13 @@ android {
     }
 
     // Forced downgrade to Java 1.8 for compiling the application due to Android N error when building
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_1_8)
+            javaParameters.set(true)
+        }
     }
+
 
     packagingOptions {
         exclude 'androidsupportmultidexversion.txt'
@@ -99,7 +104,9 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:4.12.0'
 
     /** START - Google Play Builds **/
-    gmsImplementation("com.onesignal:OneSignal:$SDK_VERSION")
+    annotationProcessor implementation(project(":OneSignal"))
+//    annotationProcessor gmsImplementation("com.onesignal:OneSignal:$SDK_VERSION")
+    annotationProcessor implementation(project(':OneSignal:core'))
     /** END - Google Play Builds **/
 
     /** START - Huawei Builds **/

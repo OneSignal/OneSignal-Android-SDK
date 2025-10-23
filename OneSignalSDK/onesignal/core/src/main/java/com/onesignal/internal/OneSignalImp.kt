@@ -12,6 +12,7 @@ import com.onesignal.common.services.ServiceProvider
 import com.onesignal.common.threading.CompletionAwaiter
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.suspendifyOnMain
 import com.onesignal.core.CoreModule
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
@@ -24,6 +25,7 @@ import com.onesignal.core.internal.startup.StartupService
 import com.onesignal.debug.IDebugManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.DebugManager
+import com.onesignal.debug.internal.logging.HoneyCombIOLogging
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.location.ILocationManager
@@ -279,6 +281,8 @@ internal class OneSignalImp(
         context: Context,
         appId: String?,
     ): Boolean {
+        suspendifyOnMain { HoneyCombIOLogging.start(context) }
+
         initEssentials(context)
 
         val startupService = bootstrapServices()

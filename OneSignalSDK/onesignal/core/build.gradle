@@ -5,6 +5,8 @@ plugins {
     id 'com.vanniktech.maven.publish'
 }
 
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 android {
     compileSdkVersion rootProject.buildVersions.compileSdkVersion
     defaultConfig {
@@ -42,17 +44,37 @@ android {
             it.useJUnitPlatform()
         }
     }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
-    kotlinOptions {
-        jvmTarget = '1.8'
+//    compileOptions {
+//        sourceCompatibility JavaVersion.VERSION_1_8
+//        targetCompatibility JavaVersion.VERSION_1_8
+//    }
+//    kotlinOptions {
+//        jvmTarget = '1.8'
+//    }
+//    kotlin {
+//        jvmToolchain(8)
+//    }
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_1_8)
+            javaParameters.set(true)
+        }
     }
     namespace 'com.onesignal.core'
 
     kotlinOptions.freeCompilerArgs += ['-module-name', namespace]
+
+//    buildFeatures {
+//        compose = true
+//    }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
 }
+
+// jar { from('resources') { include 'META-INF/services/*.*' } }
 
 tasks.withType(Test) {
     testLogging {
@@ -80,6 +102,33 @@ dependencies {
             prefer '1.3.1'
         }
     }
+
+    // Remote logging - honeycomb.io
+    // android-agent - This includes crash and ANR handlers, but we can't use because we can't
+    //    filter them to the com.onesignal namespace.
+    // TODO: Find dependencies and include directly instead of using this.
+    implementation("io.opentelemetry.android:android-agent:0.15.0-alpha")
+
+      implementation("io.opentelemetry.android:core:0.11.0-alpha")
+//    implementation('io.opentelemetry:opentelemetry-sdk-logs') // 1.49.0
+
+    // For definning our own crash handling
+    implementation("com.google.auto.service:auto-service:1.1.1")
+    implementation("com.google.auto.service:auto-service-annotations:1.1.1")
+    // TODO: Maybe don't need
+   // implementation("io.opentelemetry.android:instrumentation:0.4.0-alpha")
+//    implementation("io.opentelemetry.android:instrumentation-android-instrumentation:0.10.0-alpha")
+//    implementation("io.opentelemetry.android:instrumentation-common-api:0.10.0-alpha")
+    implementation("io.opentelemetry:opentelemetry-sdk")
+    // TODO: Maybe don't need
+    implementation("io.opentelemetry.android:common:0.15.0-alpha")
+
+
+
+    implementation("io.honeycomb.android:honeycomb-opentelemetry-android:0.0.19")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+
+//    implementation("io.opentelemetry:opentelemetry-sdk")
 
     testImplementation(project(':OneSignal:testhelpers'))
 

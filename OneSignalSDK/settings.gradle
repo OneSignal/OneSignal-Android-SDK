@@ -1,24 +1,24 @@
 // Allows running the :app project above with the local source for development of the SDK.
 // This means we can keep the example app as-is so it stays as a real world example.
-gradle.rootProject {
-    allprojects {
-        group = 'com.onesignal'
-        if (!gradle.rootProject.hasProperty("SDK_VERSION") ||
-                gradle.rootProject.getProperty("SDK_VERSION").toString().trim().isEmpty()) {
-            throw new RuntimeException("SDK_VERSION is not defined. Please pass -PSDK_VERSION=X.Y.Z to the build or update gradle.properties.")
-        }
-        version = gradle.rootProject.getProperty("SDK_VERSION")
-        configurations.all {
-            resolutionStrategy.dependencySubstitution {
-                substitute(module('com.onesignal:OneSignal')).using(project(':OneSignal'))
-                substitute(module('com.onesignal:core')).using(project(':OneSignal:core'))
-                substitute(module('com.onesignal:notifications')).using(project(':OneSignal:notifications'))
-                substitute(module('com.onesignal:location')).using(project(':OneSignal:location'))
-                substitute(module('com.onesignal:in-app-messages')).using(project(':OneSignal:in-app-messages'))
-            }
-        }
-    }
-}
+//gradle.rootProject {
+//    allprojects {
+//        group = 'com.onesignal'
+//        if (!gradle.rootProject.hasProperty("SDK_VERSION") ||
+//                gradle.rootProject.getProperty("SDK_VERSION").toString().trim().isEmpty()) {
+//            throw new RuntimeException("SDK_VERSION is not defined. Please pass -PSDK_VERSION=X.Y.Z to the build or update gradle.properties.")
+//        }
+//        version = gradle.rootProject.getProperty("SDK_VERSION")
+//        configurations.all {
+//            resolutionStrategy.dependencySubstitution {
+//                substitute(module('com.onesignal:OneSignal')).using(project(':OneSignal'))
+//                substitute(module('com.onesignal:core')).using(project(':OneSignal:core'))
+//                substitute(module('com.onesignal:notifications')).using(project(':OneSignal:notifications'))
+//                substitute(module('com.onesignal:location')).using(project(':OneSignal:location'))
+//                substitute(module('com.onesignal:in-app-messages')).using(project(':OneSignal:in-app-messages'))
+//            }
+//        }
+//    }
+//}
 
 include ':app'
 project(':app').projectDir = new File(settingsDir, '../examples/OneSignalDemo/app')

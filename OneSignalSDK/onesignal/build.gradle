@@ -25,10 +25,10 @@ android {
         }
     }
     // Forced downgrade to Java 8 so SDK is backwards compatible in consuming projects
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
+//    compileOptions {
+//        sourceCompatibility JavaVersion.VERSION_1_8
+//        targetCompatibility JavaVersion.VERSION_1_8
+//    }
     namespace 'com.onesignal'
 
     kotlinOptions.freeCompilerArgs += ['-module-name', namespace]
@@ -41,6 +41,7 @@ ext {
 
 dependencies {
     api project(':OneSignal:core')
+    annotationProcessor project(':OneSignal:core')
     api project(':OneSignal:notifications')
     api project(':OneSignal:in-app-messages')
     api project(':OneSignal:location')
