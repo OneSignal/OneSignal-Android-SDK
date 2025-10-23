@@ -82,6 +82,15 @@ class PermissionsViewModel : ViewModel() {
     }
 
     /**
+     * Reset the waiting flag. This should be called when the activity is interrupted
+     * or destroyed without completing the permission request flow.
+     * This ensures the permission dialog can be shown again.
+     */
+    fun resetWaitingState() {
+        _waiting.value = false
+    }
+
+    /**
      * Record the rationale state before the permission request.
      * Activity calls this with the result of shouldShowRequestPermissionRationale().
      */
