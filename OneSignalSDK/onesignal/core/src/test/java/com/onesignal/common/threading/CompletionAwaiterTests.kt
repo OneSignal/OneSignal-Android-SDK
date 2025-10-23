@@ -16,7 +16,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 
 class CompletionAwaiterTests : FunSpec({
 
@@ -133,7 +133,7 @@ class CompletionAwaiterTests : FunSpec({
     context("suspend await functionality") {
 
         test("awaitSuspend completes immediately when already completed") {
-            runTest {
+            runBlocking {
                 // Given
                 awaiter.complete()
 
@@ -146,7 +146,7 @@ class CompletionAwaiterTests : FunSpec({
         }
 
         test("awaitSuspend waits for delayed completion") {
-            runTest {
+            runBlocking {
                 val completionDelay = 100L
 
                 // Start delayed completion
@@ -165,7 +165,7 @@ class CompletionAwaiterTests : FunSpec({
         }
 
         test("multiple suspend callers are all unblocked") {
-            runTest {
+            runBlocking {
                 val numCallers = 5
                 val results = mutableListOf<String>()
 
@@ -193,7 +193,7 @@ class CompletionAwaiterTests : FunSpec({
         }
 
         test("awaitSuspend can be cancelled") {
-            runTest {
+            runBlocking {
                 val job =
                     launch {
                         awaiter.awaitSuspend()
@@ -216,7 +216,7 @@ class CompletionAwaiterTests : FunSpec({
             // We'll test blocking and suspend separately since mixing them in runTest is problematic
 
             // Test suspend callers first
-            runTest {
+            runBlocking {
                 val suspendResults = mutableListOf<String>()
 
                 // Start suspend callers
@@ -285,7 +285,7 @@ class CompletionAwaiterTests : FunSpec({
         }
 
         test("waiting after completion returns immediately") {
-            runTest {
+            runBlocking {
                 // Complete first
                 awaiter.complete()
 
@@ -299,7 +299,7 @@ class CompletionAwaiterTests : FunSpec({
         }
 
         test("concurrent access is safe") {
-            runTest {
+            runBlocking {
                 val numOperations = 10 // Reduced for test stability
                 val jobs = mutableListOf<Job>()
 
