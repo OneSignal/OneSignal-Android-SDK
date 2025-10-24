@@ -8,11 +8,11 @@ import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
 import com.onesignal.core.R
-import com.onesignal.core.internal.viewmodel.PermissionsViewModel
-import com.onesignal.core.internal.viewmodel.PermissionsViewModel.Companion.INTENT_EXTRA_ANDROID_PERMISSION_STRING
-import com.onesignal.core.internal.viewmodel.PermissionsViewModel.Companion.INTENT_EXTRA_CALLBACK_CLASS
-import com.onesignal.core.internal.viewmodel.PermissionsViewModel.Companion.INTENT_EXTRA_PERMISSION_TYPE
-import com.onesignal.core.internal.viewmodel.PermissionsViewModel.Companion.ONESIGNAL_PERMISSION_REQUEST_CODE
+import com.onesignal.core.internal.permissions.PermissionsViewModel
+import com.onesignal.core.internal.permissions.PermissionsViewModel.Companion.INTENT_EXTRA_ANDROID_PERMISSION_STRING
+import com.onesignal.core.internal.permissions.PermissionsViewModel.Companion.INTENT_EXTRA_CALLBACK_CLASS
+import com.onesignal.core.internal.permissions.PermissionsViewModel.Companion.INTENT_EXTRA_PERMISSION_TYPE
+import com.onesignal.core.internal.permissions.PermissionsViewModel.Companion.ONESIGNAL_PERMISSION_REQUEST_CODE
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 

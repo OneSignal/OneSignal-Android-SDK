@@ -4,7 +4,6 @@ import android.app.Activity
 import com.onesignal.OneSignal
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
-import com.onesignal.core.internal.viewmodel.PermissionsViewModel
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery

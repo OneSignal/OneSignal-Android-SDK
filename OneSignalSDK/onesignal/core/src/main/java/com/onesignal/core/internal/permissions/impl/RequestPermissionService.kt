@@ -7,7 +7,7 @@ import com.onesignal.core.activities.PermissionsActivity
 import com.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.permissions.IRequestPermissionService
-import com.onesignal.core.internal.viewmodel.PermissionsViewModel
+import com.onesignal.core.internal.permissions.PermissionsViewModel
 
 internal class RequestPermissionService(
     private val _application: IApplicationService,

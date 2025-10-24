@@ -1,4 +1,4 @@
-package com.onesignal.core.internal.viewmodel
+package com.onesignal.core.internal.permissions
 
 import android.app.Activity
 import android.content.pm.PackageManager
