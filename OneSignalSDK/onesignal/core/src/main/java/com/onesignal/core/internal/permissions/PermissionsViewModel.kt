@@ -1,4 +1,4 @@
-package com.onesignal.core.internal.permissions
+package com.onesignal.core.internal.viewmodel
 
 import android.app.Activity
 import android.content.pm.PackageManager
@@ -79,6 +79,15 @@ class PermissionsViewModel : ViewModel() {
         }
         _waiting.value = true
         return true
+    }
+
+    /**
+     * Reset the waiting flag. This should be called when the activity is interrupted
+     * or destroyed without completing the permission request flow.
+     * This ensures the permission dialog can be shown again.
+     */
+    fun resetWaitingState() {
+        _waiting.value = false
     }
 
     /**
