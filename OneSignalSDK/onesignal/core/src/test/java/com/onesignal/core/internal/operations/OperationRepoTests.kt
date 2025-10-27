@@ -642,29 +642,29 @@ class OperationRepoTests : FunSpec({
         mocks.operationRepo.enqueueAndWait(operation3)
 
         // Then - Verify critical operations happened, but be flexible about exact order for CI/CD
-        coVerify(exactly = 1) { 
+        coVerify(exactly = 1) {
             mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation1
-                }
+                },
             )
         }
         coVerify(exactly = 1) { operation2.translateIds(mapOf("local-id1" to "id2")) }
-        coVerify(exactly = 1) { 
+        coVerify(exactly = 1) {
             mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation2
-                }
+                },
             )
         }
-        coVerify(exactly = 1) { 
+        coVerify(exactly = 1) {
             mocks.executor.execute(
                 withArg {
                     it.count() shouldBe 1
                     it[0] shouldBe operation3
-                }
+                },
             )
         }
     }
