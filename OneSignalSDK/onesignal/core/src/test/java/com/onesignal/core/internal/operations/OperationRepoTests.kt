@@ -628,6 +628,12 @@ class OperationRepoTests : FunSpec({
         coEvery {
             mocks.executor.execute(listOf(operation1))
         } returns ExecutionResponse(ExecutionResult.SUCCESS, mapOf("local-id1" to "id2"))
+        coEvery {
+            mocks.executor.execute(listOf(operation2))
+        } returns ExecutionResponse(ExecutionResult.SUCCESS)
+        coEvery {
+            mocks.executor.execute(listOf(operation3))
+        } returns ExecutionResponse(ExecutionResult.SUCCESS)
 
         // When
         mocks.operationRepo.start()
@@ -636,10 +642,31 @@ class OperationRepoTests : FunSpec({
         mocks.operationRepo.enqueueAndWait(operation3)
 
         // Then - Verify critical operations happened, but be flexible about exact order for CI/CD
-        coVerify(exactly = 1) { mocks.executor.execute(listOf(operation1)) }
+        coVerify(exactly = 1) { 
+            mocks.executor.execute(
+                withArg {
+                    it.count() shouldBe 1
+                    it[0] shouldBe operation1
+                }
+            )
+        }
         coVerify(exactly = 1) { operation2.translateIds(mapOf("local-id1" to "id2")) }
-        coVerify(exactly = 1) { mocks.executor.execute(listOf(operation2)) }
-        coVerify(exactly = 1) { mocks.executor.execute(listOf(operation3)) }
+        coVerify(exactly = 1) { 
+            mocks.executor.execute(
+                withArg {
+                    it.count() shouldBe 1
+                    it[0] shouldBe operation2
+                }
+            )
+        }
+        coVerify(exactly = 1) { 
+            mocks.executor.execute(
+                withArg {
+                    it.count() shouldBe 1
+                    it[0] shouldBe operation3
+                }
+            )
+        }
     }
 
     // operations not removed from the queue may get stuck in the queue if app is force closed within the delay
@@ -804,13 +831,13 @@ class OperationRepoTests : FunSpec({
             val operations = firstArg<List<Operation>>()
 
             // Handle translation source (single operation that generates mappings)
-            if (operations.size == 1 && operations.contains(translationSource)) {
+            if (operations.size == 1 && operations[0].id == translationSource.id) {
                 executionOrder.add("execute-translation-source")
                 return@answers ExecutionResponse(ExecutionResult.SUCCESS, mapOf("source-local-id" to "target-id"))
             }
 
             // Handle grouped operations (both operations together)
-            if (operations.size == 2 && operations.contains(groupableOp1) && operations.contains(groupableOp2)) {
+            if (operations.size == 2 && operations.any { it.id == groupableOp1.id } && operations.any { it.id == groupableOp2.id }) {
                 executionOrder.add("execute-grouped-operations")
                 return@answers ExecutionResponse(ExecutionResult.SUCCESS)
             }
