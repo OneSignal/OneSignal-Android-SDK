@@ -79,24 +79,25 @@ object AlertDialogPrepromptForAndroidSettings {
 
         // Try displaying the dialog while handling cases where execution is not possible.
         try {
-            val dialog = AlertDialog.Builder(activity)
-                .setTitle(title)
-                .setMessage(message)
-                .setPositiveButton(R.string.permission_not_available_open_settings_option) { _, _ ->
-                    callback.onAccept()
-                }
-                .setNegativeButton(android.R.string.no) { _, _ ->
-                    callback.onDecline()
-                }
-                .setOnCancelListener {
-                    callback.onDecline()
-                }
-                .setOnDismissListener {
-                    currentDialog = null
-                    dismissCallback?.invoke()
-                }
-                .show()
-            
+            val dialog =
+                AlertDialog.Builder(activity)
+                    .setTitle(title)
+                    .setMessage(message)
+                    .setPositiveButton(R.string.permission_not_available_open_settings_option) { _, _ ->
+                        callback.onAccept()
+                    }
+                    .setNegativeButton(android.R.string.no) { _, _ ->
+                        callback.onDecline()
+                    }
+                    .setOnCancelListener {
+                        callback.onDecline()
+                    }
+                    .setOnDismissListener {
+                        currentDialog = null
+                        dismissCallback?.invoke()
+                    }
+                    .show()
+
             currentDialog = dialog
         } catch (ex: BadTokenException) {
             // If Android is unable to display the dialog, trigger the onDecline callback to maintain
