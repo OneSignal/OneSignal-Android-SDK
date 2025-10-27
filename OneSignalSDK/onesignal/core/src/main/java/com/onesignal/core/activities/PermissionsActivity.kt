@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
 import com.onesignal.core.R
+import com.onesignal.core.internal.permissions.AlertDialogPrepromptForAndroidSettings
 import com.onesignal.core.internal.permissions.PermissionsViewModel
 import com.onesignal.core.internal.permissions.PermissionsViewModel.Companion.INTENT_EXTRA_ANDROID_PERMISSION_STRING
 import com.onesignal.core.internal.permissions.PermissionsViewModel.Companion.INTENT_EXTRA_CALLBACK_CLASS
@@ -62,6 +63,12 @@ class PermissionsActivity : ComponentActivity() {
         // Reset waiting state when activity loses focus
         // This ensures permission dialog can be shown again if activity was interrupted
         viewModel.resetWaitingState()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Dismiss any active dialogs to prevent WindowLeaked errors
+        AlertDialogPrepromptForAndroidSettings.dismissCurrentDialog()
     }
 
     private fun finishActivity() {
