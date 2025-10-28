@@ -1,15 +1,17 @@
 name: Publish Release
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       ref:
         description: "Branch or commit SHA to run on"
         required: false
         default: "main"
+      release_on_maven:
+        description: "Release on Maven Central"
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: write
@@ -18,11 +20,6 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-
-    # Auto-run only if this is a rel/* merge commit into main, OR manual dispatch
-    if: github.event_name == 'workflow_dispatch' ||
-      (startsWith(github.event.head_commit.message, 'Merge pull request') &&
-      contains(github.event.head_commit.message, 'rel/'))
 
     env:
       MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
@@ -82,12 +79,30 @@ jobs:
             -Psigning.password="$SDK_SIGNING_PASSWORD" \
             -Psigning.secretKeyRingFile="$GPG_FILE_PATH"
 
+      - name: Determine Publishing Method
+        run: |
+          if [[ "${{ github.event.inputs.release_on_maven }}" == "true" ]]; then
+            echo "✅ Publishing to Maven Central And Release"
+          else
+            echo "🏠 Publishing to Maven Central - Not Releasing"
+          fi
+
       - name: Publish to Maven Central
+        if: github.event.inputs.release_on_maven == 'true'
         working-directory: OneSignalSDK
         run: |
           ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache \
             -PmavenCentralUsername="$MAVEN_USERNAME" \
             -PmavenCentralPassword="$MAVEN_PASSWORD" \
+            -Psigning.keyId="$SDK_SIGNING_KEY_ID" \
+            -Psigning.password="$SDK_SIGNING_PASSWORD" \
+            -Psigning.secretKeyRingFile="$GPG_FILE_PATH"
+
+      - name: Publish to Maven Local
+        if: github.event.inputs.release_on_maven != 'false'
+        working-directory: OneSignalSDK
+        run: |
+          ./gradlew publishToMavenCentral --no-configuration-cache \
             -Psigning.keyId="$SDK_SIGNING_KEY_ID" \
             -Psigning.password="$SDK_SIGNING_PASSWORD" \
             -Psigning.secretKeyRingFile="$GPG_FILE_PATH"
