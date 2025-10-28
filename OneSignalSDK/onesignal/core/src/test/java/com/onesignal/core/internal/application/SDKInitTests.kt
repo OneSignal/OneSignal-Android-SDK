@@ -289,7 +289,7 @@ class SDKInitTests : FunSpec({
 
         // Clean up after ourselves to avoid polluting subsequent tests
         os.logout()
-        
+
         // Wait for logout to complete with polling
         var logoutAttempts = 0
         while (os.user.externalId.isNotEmpty() && logoutAttempts < 50) {
