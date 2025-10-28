@@ -99,7 +99,7 @@ jobs:
             -Psigning.secretKeyRingFile="$GPG_FILE_PATH"
 
       - name: Publish to Maven Local
-        if: github.event.inputs.release_on_maven != 'false'
+        if: github.event.inputs.release_on_maven != 'true'
         working-directory: OneSignalSDK
         run: |
           ./gradlew publishToMavenCentral --no-configuration-cache \
