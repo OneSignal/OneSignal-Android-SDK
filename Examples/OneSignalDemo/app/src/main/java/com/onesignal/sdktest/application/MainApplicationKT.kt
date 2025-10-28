@@ -77,6 +77,7 @@ class MainApplicationKT : MultiDexApplication() {
             setupOneSignalListeners()
 
             // Request permission - this will internally switch to Main thread for UI operations
+            // Even though the MainActivity comes on top of this, we can still request permission by tapping the prompt push button.
             OneSignal.Notifications.requestPermission(true)
 
             Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT)
