@@ -1,5 +1,6 @@
 package com.onesignal.user.internal
 
+import com.onesignal.common.TimeUtils
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
@@ -10,8 +11,10 @@ import io.kotest.matchers.shouldNotBe
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.mockkObject
 import io.mockk.runs
 import io.mockk.slot
+import io.mockk.unmockkObject
 import io.mockk.verify
 
 class UserManagerTests : FunSpec({
@@ -26,7 +29,7 @@ class UserManagerTests : FunSpec({
         every { languageContext.language = capture(languageSlot) } answers { }
 
         val userManager =
-            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), languageContext)
+            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), languageContext, MockHelper.applicationService())
 
         // When
         userManager.setLanguage("new-language")
@@ -44,7 +47,7 @@ class UserManagerTests : FunSpec({
             }
 
         val userManager =
-            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.languageContext())
+            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.languageContext(), MockHelper.applicationService())
 
         // When
         val externalId = userManager.externalId
@@ -63,7 +66,7 @@ class UserManagerTests : FunSpec({
             }
 
         val userManager =
-            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.languageContext())
+            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.languageContext(), MockHelper.applicationService())
 
         // When
         val alias1 = userManager.aliases["my-alias-key1"]
@@ -102,7 +105,7 @@ class UserManagerTests : FunSpec({
             }
 
         val userManager =
-            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext())
+            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext(), MockHelper.applicationService())
 
         // When
         val tag1 = propertiesModelStore.model.tags["my-tag-key1"]
@@ -141,7 +144,7 @@ class UserManagerTests : FunSpec({
                 it.tags["my-tag-key1"] = "my-tag-value1"
             }
 
-        val userManager = UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext())
+        val userManager = UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext(), MockHelper.applicationService())
 
         // When
         val tagSnapshot1 = userManager.getTags()
@@ -174,6 +177,7 @@ class UserManagerTests : FunSpec({
                 MockHelper.identityModelStore(),
                 MockHelper.propertiesModelStore(),
                 MockHelper.languageContext(),
+                MockHelper.applicationService(),
             )
 
         // When
@@ -190,5 +194,37 @@ class UserManagerTests : FunSpec({
         verify(exactly = 1) { mockSubscriptionManager.removeEmailSubscription("email@co.com") }
         verify(exactly = 1) { mockSubscriptionManager.addSmsSubscription("+15558675309") }
         verify(exactly = 1) { mockSubscriptionManager.removeSmsSubscription("+15558675309") }
+    }
+
+    test("onFocus updates timezone") {
+        // Given
+        val mockTimeZone = "Europe/Foo"
+        mockkObject(TimeUtils)
+        every { TimeUtils.getTimeZoneId() } returns mockTimeZone
+
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+
+        val userManager =
+            UserManager(
+                mockk<ISubscriptionManager>(),
+                MockHelper.identityModelStore(),
+                mockPropertiesModelStore,
+                MockHelper.languageContext(),
+                MockHelper.applicationService(),
+            )
+
+        val propertiesModel = mockPropertiesModelStore.model
+        propertiesModel.timezone shouldNotBe mockTimeZone
+
+        try {
+            // When
+            userManager.onFocus(firedOnSubscribe = false)
+
+            // Then
+            propertiesModel.timezone shouldBe mockTimeZone
+        } finally {
+            // Clean up the mock
+            unmockkObject(TimeUtils)
+        }
     }
 })
