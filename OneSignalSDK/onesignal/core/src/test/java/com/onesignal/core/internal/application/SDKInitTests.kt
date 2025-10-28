@@ -213,8 +213,12 @@ class SDKInitTests : FunSpec({
                 os.initWithContext(blockingPrefContext, "appId")
                 os.login(externalId)
 
-                // Wait for background login operation to complete
-                Thread.sleep(100)
+                // Wait for background login operation to complete with polling
+                var attempts = 0
+                while (os.user.externalId != externalId && attempts < 50) {
+                    Thread.sleep(20)
+                    attempts++
+                }
             }
 
         accessorThread.start()
@@ -256,8 +260,12 @@ class SDKInitTests : FunSpec({
         val initialExternalId = os.user.externalId
         os.login(testExternalId)
 
-        // Wait for background login operation to complete
-        Thread.sleep(100)
+        // Wait for background login operation to complete with polling
+        var attempts = 0
+        while (os.user.externalId != testExternalId && attempts < 50) {
+            Thread.sleep(20)
+            attempts++
+        }
 
         val finalExternalId = os.user.externalId
 
@@ -281,7 +289,13 @@ class SDKInitTests : FunSpec({
 
         // Clean up after ourselves to avoid polluting subsequent tests
         os.logout()
-        Thread.sleep(100) // Wait for logout to complete
+        
+        // Wait for logout to complete with polling
+        var logoutAttempts = 0
+        while (os.user.externalId.isNotEmpty() && logoutAttempts < 50) {
+            Thread.sleep(20)
+            logoutAttempts++
+        }
     }
 
     test("accessor instances after multiple initWithContext calls are consistent") {
