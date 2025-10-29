@@ -91,7 +91,7 @@ jobs:
             echo "🏠 Publishing to Maven Central - Not Releasing"
           fi
 
-      - name: Publish to Maven Central
+      - name: Publish and Release to Maven Central
         if: github.event.inputs.release_on_maven == 'true'
         working-directory: OneSignalSDK
         run: |
@@ -102,7 +102,7 @@ jobs:
             -Psigning.password="$SDK_SIGNING_PASSWORD" \
             -Psigning.secretKeyRingFile="$GPG_FILE_PATH"
 
-      - name: Publish to Maven Local
+      - name: Publish Only to Maven Central
         if: github.event.inputs.release_on_maven != 'true'
         working-directory: OneSignalSDK
         run: |
