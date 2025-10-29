@@ -182,6 +182,6 @@ internal object OneSignalDispatchers {
             - Default Executor: $defaultExecutorStatus
             - IO Scope: $ioScopeStatus
             - Default Scope: $defaultScopeStatus
-            """.trimIndent()
+        """.trimIndent()
     }
 }
