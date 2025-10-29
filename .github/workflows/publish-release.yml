@@ -1,29 +1,29 @@
 name: Publish Release
 
 on:
-  push:
-    branches:
-      - main
-      - '*-main'  # Matches 5.4-main, 5.5-main, etc.
   workflow_dispatch:
     inputs:
       ref:
         description: "Branch or commit SHA to run on"
         required: false
         default: "main"
+      release_on_maven:
+        description: "Release on Maven Central"
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: write
   pull-requests: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   publish:
     runs-on: ubuntu-latest
-
-    # Auto-run only if this is a rel/* merge commit, OR manual dispatch
-    if: github.event_name == 'workflow_dispatch' ||
-      (startsWith(github.event.head_commit.message, 'Merge pull request') &&
-      contains(github.event.head_commit.message, 'rel/'))
 
     env:
       MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
@@ -39,17 +39,6 @@ jobs:
         uses: actions/checkout@v5
         with:
           ref: ${{ github.event.inputs.ref || github.sha }}
-
-      - name: Detect current branch
-        id: detect_branch
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            BRANCH="${{ github.event.inputs.ref }}"
-          else
-            BRANCH="${{ github.ref_name }}"
-          fi
-          echo "CURRENT_BRANCH=$BRANCH" >> $GITHUB_ENV
-          echo "Publishing from branch: $BRANCH"
 
       - name: Ensure Java 11 or 17
         run: |
@@ -94,7 +83,16 @@ jobs:
             -Psigning.password="$SDK_SIGNING_PASSWORD" \
             -Psigning.secretKeyRingFile="$GPG_FILE_PATH"
 
-      - name: Publish to Maven Central
+      - name: Determine Publishing Method
+        run: |
+          if [[ "${{ github.event.inputs.release_on_maven }}" == "true" ]]; then
+            echo "✅ Publishing to Maven Central And Release"
+          else
+            echo "🏠 Publishing to Maven Central - Not Releasing"
+          fi
+
+      - name: Publish and Release to Maven Central
+        if: github.event.inputs.release_on_maven == 'true'
         working-directory: OneSignalSDK
         run: |
           ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache \
@@ -104,19 +102,28 @@ jobs:
             -Psigning.password="$SDK_SIGNING_PASSWORD" \
             -Psigning.secretKeyRingFile="$GPG_FILE_PATH"
 
-      - name: Get latest merged rel/* PR
+      - name: Publish Only to Maven Central
+        if: github.event.inputs.release_on_maven != 'true'
+        working-directory: OneSignalSDK
+        run: |
+          ./gradlew publishToMavenCentral --no-configuration-cache \
+            -PmavenCentralUsername="$MAVEN_USERNAME" \
+            -PmavenCentralPassword="$MAVEN_PASSWORD" \
+            -Psigning.keyId="$SDK_SIGNING_KEY_ID" \
+            -Psigning.password="$SDK_SIGNING_PASSWORD" \
+            -Psigning.secretKeyRingFile="$GPG_FILE_PATH"
+
+      - name: Get latest merged rel/* PR into main
         id: fetch_pr
         run: |
-          echo "Looking for merged release PRs into base branch: $CURRENT_BRANCH"
-          
           PR_JSON=$(gh pr list \
             --state merged \
-            --base "$CURRENT_BRANCH" \
+            --base main \
             --json number,title,body,headRefName,mergedAt \
             --jq '[.[] | select(.headRefName | startswith("rel/"))] | sort_by(.mergedAt) | last')
 
           if [[ -z "$PR_JSON" || "$PR_JSON" == "null" ]]; then
-            echo "❌ No merged release PR found for base branch: $CURRENT_BRANCH"
+            echo "❌ No merged release PR found."
             exit 1
           fi
 
