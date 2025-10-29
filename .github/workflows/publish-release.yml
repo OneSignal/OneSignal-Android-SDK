@@ -40,6 +40,17 @@ jobs:
         with:
           ref: ${{ github.event.inputs.ref || github.sha }}
 
+      - name: Detect current branch
+        id: detect_branch
+        run: |
+            if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            BRANCH="${{ github.event.inputs.ref }}"
+          else
+            BRANCH="${{ github.ref_name }}"
+          fi
+          echo "CURRENT_BRANCH=$BRANCH" >> $GITHUB_ENV
+          echo "Publishing from branch: $BRANCH"
+
       - name: Ensure Java 11 or 17
         run: |
           CURRENT_JAVA=$(java -version 2>&1 | head -n 1 | awk -F '"' '{print $2}')
@@ -118,12 +129,12 @@ jobs:
         run: |
           PR_JSON=$(gh pr list \
             --state merged \
-            --base main \
+            --base "$CURRENT_BRANCH" \
             --json number,title,body,headRefName,mergedAt \
             --jq '[.[] | select(.headRefName | startswith("rel/"))] | sort_by(.mergedAt) | last')
 
           if [[ -z "$PR_JSON" || "$PR_JSON" == "null" ]]; then
-            echo "❌ No merged release PR found."
+            echo "❌ No merged release PR found for base branch: $CURRENT_BRANCH"
             exit 1
           fi
 
