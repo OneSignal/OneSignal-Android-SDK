@@ -56,8 +56,8 @@ internal class NotificationRepository(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
                 columns = retColumn,
                 whereClause =
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED.toString() + " = 0 AND " +
-                        OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0",
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED.toString() + " = 0 AND " +
+                    OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0",
             ) {
                 if (it.moveToFirst()) {
                     do {
@@ -384,9 +384,9 @@ internal class NotificationRepository(
                 // retColumn
                 columns = arrayOf(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID),
                 whereClause =
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_COLLAPSE_ID + " = ? AND " +
-                        OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                        OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 ",
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_COLLAPSE_ID + " = ? AND " +
+                    OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+                    OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 ",
                 whereArgs = arrayOf(collapseKey),
             ) {
                 if (it.moveToFirst()) {
@@ -444,10 +444,10 @@ internal class NotificationRepository(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
                 columns = COLUMNS_FOR_LIST_NOTIFICATIONS,
                 whereClause =
-                    OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " + // Where String
-                        OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
-                        OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
-                        OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0",
+                OneSignalDbContract.NotificationTable.COLUMN_NAME_GROUP_ID + " = ? AND " + // Where String
+                    OneSignalDbContract.NotificationTable.COLUMN_NAME_DISMISSED + " = 0 AND " +
+                    OneSignalDbContract.NotificationTable.COLUMN_NAME_OPENED + " = 0 AND " +
+                    OneSignalDbContract.NotificationTable.COLUMN_NAME_IS_SUMMARY + " = 0",
                 whereArgs = whereArgs,
                 // sort order, new to old);
                 orderBy = BaseColumns._ID + " DESC",

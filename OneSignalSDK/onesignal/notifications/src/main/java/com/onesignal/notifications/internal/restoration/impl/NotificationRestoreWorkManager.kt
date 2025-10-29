@@ -6,6 +6,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkerParameters
 import com.onesignal.OneSignal
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.common.OSWorkManagerHelper
 import com.onesignal.notifications.internal.restoration.INotificationRestoreProcessor
@@ -48,16 +49,18 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
         override suspend fun doWork(): Result {
             val context = applicationContext
 
-            if (!OneSignal.initWithContext(context)) {
+            val initialized = OneSignal.initWithContext(context)
+            if (!initialized) {
+                Logging.warn("NotificationRestoreWorker skipped due to failed OneSignal init")
                 return Result.success()
             }
 
             if (!NotificationHelper.areNotificationsEnabled(context)) {
+                Logging.debug("NotificationRestoreWorker failed: Notifications disabled")
                 return Result.failure()
             }
 
             val processor = OneSignal.getService<INotificationRestoreProcessor>()
-
             processor.process()
 
             return Result.success()

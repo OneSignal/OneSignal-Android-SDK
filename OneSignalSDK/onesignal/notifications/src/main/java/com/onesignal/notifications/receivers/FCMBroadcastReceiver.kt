@@ -5,6 +5,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.onesignal.OneSignal
+import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
 
 // This is the entry point when a FCM payload is received from the Google Play services app
@@ -23,26 +25,35 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
             return
         }
 
-        if (!OneSignal.initWithContext(context.applicationContext)) {
-            return
-        }
+        val pendingResult = goAsync()
+        // process in background
+        suspendifyOnIO {
+            if (!OneSignal.initWithContext(context.applicationContext)) {
+                Logging.warn("FCMBroadcastReceiver skipped due to failed OneSignal init")
+                pendingResult.finish()
+                return@suspendifyOnIO
+            }
 
-        val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
+            val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
 
-        if (!isFCMMessage(intent)) {
+            if (!isFCMMessage(intent)) {
+                setSuccessfulResultCode()
+                pendingResult.finish()
+                return@suspendifyOnIO
+            }
+
+            val processedResult = bundleProcessor.processBundleFromReceiver(context, bundle)
+
+            // Prevent other FCM receivers from firing if work manager is processing the notification
+            if (processedResult?.isWorkManagerProcessing == true) {
+                setAbort()
+                pendingResult.finish()
+                return@suspendifyOnIO
+            }
+
             setSuccessfulResultCode()
-            return
+            pendingResult.finish()
         }
-
-        val processedResult = bundleProcessor.processBundleFromReceiver(context, bundle)
-
-        // Prevent other FCM receivers from firing if work manager is processing the notification
-        if (processedResult!!.isWorkManagerProcessing) {
-            setAbort()
-            return
-        }
-
-        setSuccessfulResultCode()
     }
 
     private fun setSuccessfulResultCode() {

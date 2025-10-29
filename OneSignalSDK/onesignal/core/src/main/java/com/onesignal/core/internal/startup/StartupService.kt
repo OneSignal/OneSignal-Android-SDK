@@ -1,6 +1,7 @@
 package com.onesignal.core.internal.startup
 
 import com.onesignal.common.services.ServiceProvider
+import com.onesignal.common.threading.OneSignalDispatchers
 
 internal class StartupService(
     private val services: ServiceProvider,
@@ -9,10 +10,10 @@ internal class StartupService(
         services.getAllServices<IBootstrapService>().forEach { it.bootstrap() }
     }
 
-    // schedule to start all startable services in a separate thread
+    // schedule to start all startable services using OneSignal dispatcher
     fun scheduleStart() {
-        Thread {
+        OneSignalDispatchers.launchOnDefault {
             services.getAllServices<IStartableService>().forEach { it.start() }
-        }.start()
+        }
     }
 }

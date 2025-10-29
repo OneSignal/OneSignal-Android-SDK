@@ -334,10 +334,10 @@ class UserBackendServiceTests : FunSpec({
             PropertiesDeltasObject(
                 amountSpent = BigDecimal(1111),
                 purchases =
-                    listOf(
-                        PurchaseObject("sku1", "iso1", BigDecimal(2222)),
-                        PurchaseObject("sku2", "iso2", BigDecimal(4444)),
-                    ),
+                listOf(
+                    PurchaseObject("sku1", "iso1", BigDecimal(2222)),
+                    PurchaseObject("sku2", "iso2", BigDecimal(4444)),
+                ),
             )
 
         // When
