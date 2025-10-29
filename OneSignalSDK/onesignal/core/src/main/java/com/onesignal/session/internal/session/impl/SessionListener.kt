@@ -1,7 +1,7 @@
 package com.onesignal.session.internal.session.impl
 
 import com.onesignal.common.TimeUtils
-import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.startup.IStartableService
@@ -63,7 +63,7 @@ internal class SessionListener(
             TrackSessionEndOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, durationInSeconds),
         )
 
-        suspendifyOnThread {
+        suspendifyOnIO {
             _outcomeEventsController.sendSessionEndOutcomeEvent(durationInSeconds)
         }
     }
