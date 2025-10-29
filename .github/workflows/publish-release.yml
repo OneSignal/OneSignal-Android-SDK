@@ -43,7 +43,7 @@ jobs:
       - name: Detect current branch
         id: detect_branch
         run: |
-            if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             BRANCH="${{ github.event.inputs.ref }}"
           else
             BRANCH="${{ github.ref_name }}"
