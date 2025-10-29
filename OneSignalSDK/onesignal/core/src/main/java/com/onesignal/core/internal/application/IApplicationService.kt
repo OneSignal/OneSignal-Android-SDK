@@ -25,6 +25,13 @@ interface IApplicationService {
     val isInForeground: Boolean
 
     /**
+     * Whether the device storage for the user data is accessible.
+     *
+     * Always return true for API 23 and below as the device booted into an unlocked state by default
+     */
+    val isDeviceStorageUnlocked: Boolean
+
+    /**
      * How the application was entered.  This is writeable to allow for the setting
      * to [AppEntryAction.NOTIFICATION_CLICK] when it is determined a notification
      * drove the app entry.
