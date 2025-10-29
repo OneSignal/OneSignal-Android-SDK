@@ -16,13 +16,12 @@ buildscript {
         kotlinVersion = '1.7.10'
         coroutinesVersion = '1.7.3'
         kotestVersion = '5.8.0'
-        ktlintPluginVersion = '11.6.1'
-        ktlintVersion = '1.0.1'
-        // DO NOT upgrade for tests, using an old version so it matches AOSP
-        tdunningJsonForTest = '1.0'
         // AndroidX Lifecycle and Activity versions
         lifecycleVersion = '2.6.2'
         activityVersion = '1.7.2'
+        ktlintVersion = '1.0.1' // Used by Spotless for Kotlin formatting
+        spotlessVersion = '6.25.0'
+        tdunningJsonForTest = '1.0' // DO NOT upgrade for tests, using an old version so it matches AOSP
 
         sharedRepos = {
             google()
@@ -36,7 +35,7 @@ buildscript {
             "com.google.gms:google-services:$googleServicesGradlePluginVersion",
             "com.huawei.agconnect:agcp:$huaweiAgconnectVersion",
             "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion",
-            "org.jlleitschuh.gradle:ktlint-gradle:$ktlintPluginVersion",
+            "com.diffplug.spotless:spotless-plugin-gradle:$spotlessVersion",
             "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin:0.32.0"
         ]
     }
@@ -59,17 +58,17 @@ allprojects {
         // Huawei maven
         maven { url 'https://developer.huawei.com/repo/' }
     }
-    
+
     // Force all modules to use the same Kotlin version
     configurations.all {
         resolutionStrategy {
             force "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
             force "org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion"
-            
+
             // Exclude deprecated jdk7/jdk8 variants
             eachDependency { details ->
                 if (details.requested.group == 'org.jetbrains.kotlin') {
-                    if (details.requested.name == 'kotlin-stdlib-jdk7' || 
+                    if (details.requested.name == 'kotlin-stdlib-jdk7' ||
                         details.requested.name == 'kotlin-stdlib-jdk8') {
                         details.useTarget "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
                     }

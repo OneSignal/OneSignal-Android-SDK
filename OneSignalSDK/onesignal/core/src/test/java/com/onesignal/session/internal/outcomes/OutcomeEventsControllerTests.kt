@@ -723,4 +723,105 @@ class OutcomeEventsControllerTests : FunSpec({
         }
         coVerify(exactly = 0) { mockOutcomeEventsRepository.deleteOldOutcomeEvent(any()) }
     }
+
+    test("send saved outcome event with 400 error deletes event and does not retry") {
+        // Given
+        val now = 111111L
+        val mockSessionService = mockk<ISessionService>()
+        every { mockSessionService.subscribe(any()) } just Runs
+
+        val subscriptionModel = createTestSubscriptionModel()
+
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
+
+        val mockInfluenceManager = mockk<IInfluenceManager>()
+        val mockOutcomeEventsRepository = mockk<IOutcomeEventsRepository>()
+        coEvery { mockOutcomeEventsRepository.cleanCachedUniqueOutcomeEventNotifications() } just runs
+        coEvery { mockOutcomeEventsRepository.deleteOldOutcomeEvent(any()) } just runs
+        coEvery { mockOutcomeEventsRepository.getAllEventsToSend() } returns
+            listOf(
+                OutcomeEventParams("outcomeId1", OutcomeSource(OutcomeSourceBody(JSONArray().put("notificationId1")), null), .4f, 0, 1111),
+            )
+        val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
+        val mockOutcomeEventsBackend = mockk<IOutcomeEventsBackendService>()
+        coEvery { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any(), any(), any()) } throws BackendException(400, "Bad Request")
+
+        val outcomeEventsController =
+            OutcomeEventsController(
+                mockSessionService,
+                mockInfluenceManager,
+                mockOutcomeEventsRepository,
+                mockOutcomeEventsPreferences,
+                mockOutcomeEventsBackend,
+                MockHelper.configModelStore(),
+                MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
+                mockSubscriptionManager,
+                MockHelper.deviceService(),
+                MockHelper.time(now),
+            )
+
+        // When
+        outcomeEventsController.start()
+        delay(1000)
+
+        // Then
+        coVerify(exactly = 1) {
+            mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any(), any(), any())
+        }
+        coVerify(exactly = 1) {
+            mockOutcomeEventsRepository.deleteOldOutcomeEvent(any())
+        }
+    }
+
+    test("send outcome event with 400 error deletes event and returns null") {
+        // Given
+        val now = 111L
+        val mockSessionService = mockk<ISessionService>()
+        every { mockSessionService.subscribe(any()) } just Runs
+
+        val mockInfluenceManager = mockk<IInfluenceManager>()
+        every { mockInfluenceManager.influences } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.UNATTRIBUTED, null))
+
+        val subscriptionModel = createTestSubscriptionModel()
+
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
+
+        val mockOutcomeEventsRepository = spyk<IOutcomeEventsRepository>()
+        val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
+        val mockOutcomeEventsBackend = mockk<IOutcomeEventsBackendService>()
+        coEvery { mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any(), any(), any()) } throws BackendException(400, "Bad Request")
+
+        val outcomeEventsController =
+            OutcomeEventsController(
+                mockSessionService,
+                mockInfluenceManager,
+                mockOutcomeEventsRepository,
+                mockOutcomeEventsPreferences,
+                mockOutcomeEventsBackend,
+                MockHelper.configModelStore(),
+                MockHelper.identityModelStore(),
+                mockSubscriptionManager,
+                MockHelper.deviceService(),
+                MockHelper.time(now),
+            )
+
+        // When
+        val evnt = outcomeEventsController.sendOutcomeEvent("OUTCOME_1")
+
+        // Then
+        evnt shouldBe null
+
+        coVerify(exactly = 1) {
+            mockOutcomeEventsBackend.sendOutcomeEvent(any(), any(), any(), any(), any(), any())
+        }
+        coVerify(exactly = 1) {
+            mockOutcomeEventsRepository.deleteOldOutcomeEvent(any())
+        }
+        // Verify event is NOT saved for retry (unlike other error codes)
+        coVerify(exactly = 0) {
+            mockOutcomeEventsRepository.saveOutcomeEvent(any())
+        }
+    }
 })

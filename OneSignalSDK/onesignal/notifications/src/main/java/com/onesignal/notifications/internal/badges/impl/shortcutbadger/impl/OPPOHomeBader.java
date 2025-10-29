@@ -7,11 +7,9 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.Badger;
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.ShortcutBadgeException;
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.util.BroadcastHelper;
-
 import java.util.Collections;
 import java.util.List;
 
@@ -21,7 +19,6 @@ import java.util.List;
  * @author: NingSo
  * Email: ningso.ping@gmail.com
  */
-
 public class OPPOHomeBader implements Badger {
 
     private static final String PROVIDER_CONTENT_URI = "content://com.android.badge/badge";
@@ -33,12 +30,13 @@ public class OPPOHomeBader implements Badger {
     private int mCurrentTotalCount = -1;
 
     @Override
-    public void executeBadge(Context context, ComponentName componentName, int badgeCount) throws ShortcutBadgeException {
+    public void executeBadge(Context context, ComponentName componentName, int badgeCount)
+            throws ShortcutBadgeException {
         if (mCurrentTotalCount == badgeCount) {
             return;
         }
         mCurrentTotalCount = badgeCount;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
             executeBadgeByContentProvider(context, badgeCount);
         } else {
             executeBadgeByBroadcast(context, componentName, badgeCount);
@@ -50,8 +48,8 @@ public class OPPOHomeBader implements Badger {
         return Collections.singletonList("com.oppo.launcher");
     }
 
-    private void executeBadgeByBroadcast(Context context, ComponentName componentName,
-                                         int badgeCount) throws ShortcutBadgeException {
+    private void executeBadgeByBroadcast(Context context, ComponentName componentName, int badgeCount)
+            throws ShortcutBadgeException {
         if (badgeCount == 0) {
             badgeCount = -1;
         }

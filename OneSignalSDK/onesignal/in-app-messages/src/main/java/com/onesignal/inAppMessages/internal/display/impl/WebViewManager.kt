@@ -5,6 +5,7 @@ import android.app.Activity
 import android.os.Build
 import android.view.View
 import android.webkit.JavascriptInterface
+import android.webkit.WebSettings
 import android.webkit.WebView
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.ViewUtils
@@ -300,7 +301,6 @@ internal class WebViewManager(
         }
     }
 
-    @SuppressLint("SetJavaScriptEnabled", "AddJavascriptInterface")
     suspend fun setupWebView(
         currentActivity: Activity,
         base64Message: String,
@@ -311,7 +311,7 @@ internal class WebViewManager(
         webView!!.overScrollMode = View.OVER_SCROLL_NEVER
         webView!!.isVerticalScrollBarEnabled = false
         webView!!.isHorizontalScrollBarEnabled = false
-        webView!!.settings.javaScriptEnabled = true
+        secureSetup(webView!!)
 
         // Setup receiver for page events / data from JS
         webView!!.addJavascriptInterface(OSJavaScriptInterface(), JS_OBJ_NAME)
@@ -329,6 +329,33 @@ internal class WebViewManager(
         setWebViewToMaxSize(currentActivity)
         webView!!.loadData(base64Message, "text/html; charset=utf-8", "base64")
     }
+
+    /**
+     * Applies security hardening to the WebView to prevent common vulnerabilities.
+     *
+     * Security measures:
+     * - JavaScript is enabled for IAM functionality but file access is completely blocked
+     * - Prevents file:// URL access to mitigate local file inclusion attacks
+     * - Blocks cross-origin access from file URLs to prevent data exfiltration
+     * - Disables mixed content (HTTP resources on HTTPS pages) to prevent MITM attacks
+     *
+     * This configuration protects against:
+     * 1. Malicious JavaScript accessing local device files
+     * 2. Cross-site scripting (XSS) attacks via file:// protocol
+     * 3. Man-in-the-middle attacks via downgraded HTTP content
+     *
+     * @SuppressLint is used because JavaScript is required for IAM functionality,
+     * but we mitigate the risk through strict file access controls.
+     */
+    @SuppressLint("SetJavaScriptEnabled")
+    fun secureSetup(webView: WebView) =
+        with(webView.settings) {
+            javaScriptEnabled = true
+            allowFileAccess = false
+            allowFileAccessFromFileURLs = false
+            allowUniversalAccessFromFileURLs = false
+            mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+        }
 
     // This sets the WebView view port sizes to the max screen sizes so the initialize
     //   max content height can be calculated.
