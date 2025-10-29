@@ -305,10 +305,34 @@ class SDKInitTests : FunSpec({
 
         // When
         os.initWithContext(context, "appId")
+
+        // Wait for initialization to complete before accessing user
+        var attempts = 0
+        while (!os.isInitialized && attempts < 100) {
+            Thread.sleep(20)
+            attempts++
+        }
+        os.isInitialized shouldBe true
+
+        // Give additional time for coroutines to settle, especially in CI/CD
+        Thread.sleep(50)
+
         val oldUser = os.user
 
         // Second init from some internal class
         os.initWithContext(context)
+
+        // Wait for second initialization to complete
+        attempts = 0
+        while (!os.isInitialized && attempts < 100) {
+            Thread.sleep(20)
+            attempts++
+        }
+        os.isInitialized shouldBe true
+
+        // Give additional time for coroutines to settle after second init
+        Thread.sleep(50)
+
         val newUser = os.user
 
         // Then
