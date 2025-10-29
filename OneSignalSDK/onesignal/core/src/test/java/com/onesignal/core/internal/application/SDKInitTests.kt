@@ -348,8 +348,15 @@ class SDKInitTests : FunSpec({
         // login
         os.login(testExternalId)
 
-        // Wait for background login operation to complete
-        Thread.sleep(100)
+        // Wait for background login operation to complete with polling (CI-safe)
+        run {
+            var attempts = 0
+            val maxAttempts = 200 // 4 seconds total at 20ms intervals
+            while (os.user.externalId != testExternalId && attempts < maxAttempts) {
+                Thread.sleep(20)
+                attempts++
+            }
+        }
 
         os.user.externalId shouldBe testExternalId
 
