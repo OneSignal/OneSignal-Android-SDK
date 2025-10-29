@@ -145,7 +145,7 @@ jobs:
           echo "$PR_BODY" > release_notes.md
 
       - name: Tag and create GitHub Release
-        if: github.event.inputs.release_on_maven != 'true'
+        if: github.event.inputs.release_on_maven == 'true'
         run: |
           VERSION="${{ env.SDK_VERSION }}"
 
