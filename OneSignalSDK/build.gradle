@@ -9,6 +9,7 @@ buildscript {
                 minSdkVersion: 21
         ]
         androidGradlePluginVersion = '8.8.2'
+        detektVersion = '1.21.0'
         googleServicesGradlePluginVersion = '4.3.10'
         huaweiAgconnectVersion = '1.9.1.304'
         huaweiHMSPushVersion = '6.3.0.304'
@@ -35,6 +36,7 @@ buildscript {
             "com.google.gms:google-services:$googleServicesGradlePluginVersion",
             "com.huawei.agconnect:agcp:$huaweiAgconnectVersion",
             "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion",
+            "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:$detektVersion",
             "com.diffplug.spotless:spotless-plugin-gradle:$spotlessVersion",
             "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin:0.32.0"
         ]
@@ -75,5 +77,32 @@ allprojects {
                 }
             }
         }
+    }
+}
+
+// Aggregate Detekt tasks at the root so CI can call them once
+gradle.projectsEvaluated {
+    def moduleDetektTasks = []
+    def moduleDetektBaselineTasks = []
+
+    subprojects.each { p ->
+        if (p.plugins.hasPlugin('io.gitlab.arturbosch.detekt')) {
+            def detektTask = p.tasks.findByName('detekt')
+            if (detektTask != null) moduleDetektTasks << detektTask.path
+            def detektBaselineTask = p.tasks.findByName('detektBaseline')
+            if (detektBaselineTask != null) moduleDetektBaselineTasks << detektBaselineTask.path
+        }
+    }
+
+    tasks.register('detekt') {
+        if (!moduleDetektTasks.isEmpty()) dependsOn moduleDetektTasks
+        group = 'verification'
+        description = 'Runs Detekt on all modules.'
+    }
+
+    tasks.register('detektBaseline') {
+        if (!moduleDetektBaselineTasks.isEmpty()) dependsOn moduleDetektBaselineTasks
+        group = 'verification'
+        description = 'Creates/updates Detekt baselines for all modules.'
     }
 }
