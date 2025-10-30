@@ -21,20 +21,33 @@ jobs:
         run: |
           ./gradlew --no-daemon clean testDebugUnitTest jacocoTestReportAll jacocoMergedReport
 
-      - name: Diff lines coverage
-        uses: zgosalvez/github-actions-diff-lines-coverage@v0.2.0
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          jacoco-paths: |
-            OneSignalSDK/build/reports/jacoco/merged/jacocoMergedReport.xml
-          min-coverage: ${{ env.DIFF_COVERAGE_THRESHOLD }}
-          # Set to false to not fail the job but still post results; we want failure on miss
-          fail-under-coverage: true
+          python-version: '3.x'
 
-      - name: Upload Diff Coverage Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: diff-coverage-report
-          path: OneSignalSDK/diff_coverage.html
+      - name: Install diff-cover
+        run: |
+          python -m pip install --upgrade pip diff-cover
+
+      - name: Diff Coverage (fail under threshold)
+        working-directory: OneSignalSDK
+        run: |
+          REPORT=build/reports/jacoco/merged/jacocoMergedReport.xml
+          test -f "$REPORT" || { echo "Merged JaCoCo report not found at $REPORT" >&2; exit 1; }
+          python -m diff_cover.diff_cover_tool "$REPORT" \
+            --compare-branch=origin/main \
+            --fail-under=$DIFF_COVERAGE_THRESHOLD
+
+      - name: Generate HTML Diff Report
+        if: always()
+        working-directory: OneSignalSDK
+        run: |
+          REPORT=build/reports/jacoco/merged/jacocoMergedReport.xml
+          test -f "$REPORT" || { echo "Merged JaCoCo report not found at $REPORT" >&2; exit 1; }
+          python -m diff_cover.diff_cover_tool "$REPORT" \
+            --compare-branch=origin/main \
+            --html-report diff_coverage.html || true
 
       - name: Upload JaCoCo Reports
         if: always()
@@ -43,3 +56,9 @@ jobs:
           name: jacoco-full-report
           path: OneSignalSDK/build/reports/jacoco/
 
+      - name: Upload Diff Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diff-coverage-report
+          path: OneSignalSDK/diff_coverage.html
