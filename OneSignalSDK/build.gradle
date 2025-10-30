@@ -81,26 +81,29 @@ allprojects {
     }
 }
 
-subprojects {
-    plugins.withId("io.gitlab.arturbosch.detekt") {
-        afterEvaluate {
-            def configureDetektTask = { task ->
-                // Only analyze main source sets
-                task.source = files(
-                    "$projectDir/src/main/java",
-                    "$projectDir/src/main/kotlin"
-                )
-                // Exclude all test-related files and directories
-                task.exclude "**/test/**", "**/androidTest/**", "**/src/test/**", "**/src/androidTest/**",
-                    "**/*Test.kt", "**/*Tests.kt", "**/*Spec.kt",
-                    "**/*Test.java", "**/*Tests.java", "**/*Spec.java"
+// Aggregate Detekt tasks at the root so CI can call them once
+gradle.projectsEvaluated {
+    def moduleDetektTasks = []
+    def moduleDetektBaselineTasks = []
 
-                // Enable type resolution to catch !! operator
-                task.jvmTarget = "1.8"
-            }
-
-            tasks.withType(io.gitlab.arturbosch.detekt.Detekt).configureEach(configureDetektTask)
-            tasks.withType(io.gitlab.arturbosch.detekt.DetektCreateBaselineTask).configureEach(configureDetektTask)
+    subprojects.each { p ->
+        if (p.plugins.hasPlugin('io.gitlab.arturbosch.detekt')) {
+            def detektTask = p.tasks.findByName('detekt')
+            if (detektTask != null) moduleDetektTasks << detektTask.path
+            def detektBaselineTask = p.tasks.findByName('detektBaseline')
+            if (detektBaselineTask != null) moduleDetektBaselineTasks << detektBaselineTask.path
         }
+    }
+
+    tasks.register('detekt') {
+        if (!moduleDetektTasks.isEmpty()) dependsOn moduleDetektTasks
+        group = 'verification'
+        description = 'Runs Detekt on all modules.'
+    }
+
+    tasks.register('detektBaseline') {
+        if (!moduleDetektBaselineTasks.isEmpty()) dependsOn moduleDetektBaselineTasks
+        group = 'verification'
+        description = 'Creates/updates Detekt baselines for all modules.'
     }
 }
