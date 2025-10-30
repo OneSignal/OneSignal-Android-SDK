@@ -1,0 +1,45 @@
+name: Diff Coverage
+
+on:
+  pull_request:
+    branches: "**"
+  workflow_dispatch:
+
+env:
+  DIFF_COVERAGE_THRESHOLD: '80'
+
+jobs:
+  diff-coverage:
+    name: Run Diff Coverage Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: "[Setup] Project"
+        uses: ./.github/actions/project-setup
+
+      - name: Run Unit Tests with Coverage
+        working-directory: OneSignalSDK
+        run: |
+          ./gradlew --no-daemon clean testDebugUnitTest jacocoTestReportAll jacocoMergedReport
+
+      - name: Diff lines coverage
+        uses: zgosalvez/github-actions-diff-lines-coverage@v0.2.0
+        with:
+          jacoco-paths: |
+            OneSignalSDK/build/reports/jacoco/merged/jacocoMergedReport.xml
+          min-coverage: ${{ env.DIFF_COVERAGE_THRESHOLD }}
+          # Set to false to not fail the job but still post results; we want failure on miss
+          fail-under-coverage: true
+
+      - name: Upload Diff Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: diff-coverage-report
+          path: OneSignalSDK/diff_coverage.html
+
+      - name: Upload JaCoCo Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-full-report
+          path: OneSignalSDK/build/reports/jacoco/
+

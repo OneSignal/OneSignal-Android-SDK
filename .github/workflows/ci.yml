@@ -1,4 +1,4 @@
-name: Test
+name: Build and Test SDK
 
 on:
   pull_request:
@@ -8,21 +8,16 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - name: "[Setup] Java"
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-      - name: "[Setup] Android"
-        uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: 10406996
-          log-accepted-android-sdk-licenses: false
-      - name: "[Test] Linting"
+      - name: "[Setup] Project"
+        uses: ./.github/actions/project-setup
+      - name: "[Code Formatting] Spotless"
         working-directory: OneSignalSDK
         run: |
-          ./gradlew ktlintCheck --console=plain
+          ./gradlew spotlessCheck --console=plain
+      - name: "[Static Code Analysis] Detekt"
+        working-directory: OneSignalSDK
+        run: |
+          ./gradlew detekt --console=plain
       - name: "[Test] SDK Unit Tests"
         working-directory: OneSignalSDK
         run: |

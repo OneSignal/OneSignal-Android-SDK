@@ -154,6 +154,55 @@ tasks.register('jacocoTestCoverageVerificationAll') {
     }
 }
 
+// Merged XML report across all Android library modules for CI tools (e.g., diff-cover)
+tasks.register('jacocoMergedReport', JacocoReport) {
+    group = 'verification'
+    description = 'Generate a single merged JaCoCo XML report across all modules'
+
+    dependsOn 'jacocoTestReportAll'
+
+    reports {
+        xml.required = true
+        html.required = false
+        csv.required = false
+        xml.outputLocation = file("${buildDir}/reports/jacoco/merged/jacocoMergedReport.xml")
+    }
+
+    def allClassDirs = []
+    def allSourceDirs = []
+    def allExecData = []
+
+    subprojects.each { subproject ->
+        subproject.plugins.withId('com.android.library') {
+            // Class and source directories
+            def javaClasses = subproject.fileTree(dir: "${subproject.buildDir}/intermediates/javac/debug", excludes: [
+                '**/R.class','**/R$*.class','**/BuildConfig.*','**/Manifest*.*','android/**/*.*',
+                '**/*Test*.*','**/*Mock*.*','**/test/**/*.*','**/androidTest/**/*.*',
+                '**/*$ViewInjector*.*','**/*$ViewBinder*.*','**/*Binding.*',
+                '**/Lambda$*.class','**/Lambda.class','**/*Lambda.class','**/*Lambda*.class','**/*$inlined$*.class',
+                '**/*_MembersInjector.class','**/Dagger*.*','**/*_Factory.*','**/*_Provide*Factory.*','**/*Module.*','**/*Module_*.*','**/*Component.*','**/*Component$*.*','**/*Subcomponent*.*','**/Hilt_*.*','**/*_HiltModules*.*',
+                '**/*$Companion.class','**/*$WhenMappings.class'
+            ])
+            def kotlinClasses = subproject.fileTree(dir: "${subproject.buildDir}/tmp/kotlin-classes/debug", excludes: javaClasses.excludes)
+            allClassDirs << javaClasses
+            allClassDirs << kotlinClasses
+
+            allSourceDirs << subproject.file("${subproject.projectDir}/src/main/java")
+            allSourceDirs << subproject.file("${subproject.projectDir}/src/main/kotlin")
+
+            // Exec data from unit tests
+            allExecData << subproject.fileTree(dir: subproject.buildDir, includes: [
+                'outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec',
+                'jacoco/testDebugUnitTest.exec'
+            ])
+        }
+    }
+
+    classDirectories.from = files(allClassDirs)
+    sourceDirectories.from = files(allSourceDirs)
+    executionData.from = files(allExecData)
+}
+
 // Task to print coverage summary for CI/CD
 tasks.register('jacocoTestReportSummary') {
     group = 'verification'
