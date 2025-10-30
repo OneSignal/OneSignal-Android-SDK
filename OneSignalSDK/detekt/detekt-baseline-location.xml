@@ -1,7 +1,8 @@
 <?xml version="1.0" ?>
 <SmellBaseline>
-  <ManuallySuppressedIssues/>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
   <CurrentIssues>
+    <ID>ComplexMethod:LocationManager.kt$LocationManager$override suspend fun requestPermission(): Boolean</ID>
     <ID>ConstructorParameterNaming:GmsLocationController.kt$GmsLocationController$private val _applicationService: IApplicationService</ID>
     <ID>ConstructorParameterNaming:GmsLocationController.kt$GmsLocationController$private val _fusedLocationApiWrapper: IFusedLocationApiWrapper</ID>
     <ID>ConstructorParameterNaming:GmsLocationController.kt$GmsLocationController.GoogleApiClientListener$private val _parent: GmsLocationController</ID>
@@ -29,7 +30,6 @@
     <ID>ConstructorParameterNaming:LocationPermissionController.kt$LocationPermissionController$private val _applicationService: IApplicationService</ID>
     <ID>ConstructorParameterNaming:LocationPermissionController.kt$LocationPermissionController$private val _requestPermission: IRequestPermissionService</ID>
     <ID>ConstructorParameterNaming:LocationPreferencesService.kt$LocationPreferencesService$private val _prefs: IPreferencesService</ID>
-    <ID>CyclomaticComplexMethod:LocationManager.kt$LocationManager$override suspend fun requestPermission(): Boolean</ID>
     <ID>ForbiddenComment:GmsLocationController.kt$GmsLocationController$// TODO: google api client has a blocking connect with timeout, use that instead of our withTimeout?</ID>
     <ID>LongMethod:GmsLocationController.kt$GmsLocationController$override suspend fun start(): Boolean</ID>
     <ID>LongMethod:HmsLocationController.kt$HmsLocationController$override suspend fun start(): Boolean</ID>

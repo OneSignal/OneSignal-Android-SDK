@@ -9,7 +9,7 @@ buildscript {
                 minSdkVersion: 21
         ]
         androidGradlePluginVersion = '8.8.2'
-        detektVersion = '1.23.8'
+        detektVersion = '1.21.0'
         googleServicesGradlePluginVersion = '4.3.10'
         huaweiAgconnectVersion = '1.9.1.304'
         huaweiHMSPushVersion = '6.3.0.304'

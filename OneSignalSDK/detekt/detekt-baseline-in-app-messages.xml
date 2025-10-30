@@ -1,8 +1,9 @@
 <?xml version="1.0" ?>
 <SmellBaseline>
-  <ManuallySuppressedIssues/>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
   <CurrentIssues>
     <ID>ComplexCondition:InAppMessagesManager.kt$InAppMessagesManager$!message.isTriggerChanged &amp;&amp; isMessageDisplayed &amp;&amp; (isTriggerOnMessage || isNewTriggerAdded &amp;&amp; isOnlyDynamicTriggers)</ID>
+    <ID>ComplexMethod:TriggerController.kt$TriggerController$private fun evaluateTrigger(trigger: Trigger): Boolean</ID>
     <ID>ConstructorParameterNaming:DynamicTriggerController.kt$DynamicTriggerController$private val _session: ISessionService</ID>
     <ID>ConstructorParameterNaming:DynamicTriggerController.kt$DynamicTriggerController$private val _state: InAppStateService</ID>
     <ID>ConstructorParameterNaming:DynamicTriggerController.kt$DynamicTriggerController$private val _time: ITime</ID>
@@ -58,13 +59,11 @@
     <ID>ConstructorParameterNaming:WebViewManager.kt$WebViewManager$private val _applicationService: IApplicationService</ID>
     <ID>ConstructorParameterNaming:WebViewManager.kt$WebViewManager$private val _lifecycle: IInAppLifecycleService</ID>
     <ID>ConstructorParameterNaming:WebViewManager.kt$WebViewManager$private val _promptFactory: IInAppMessagePromptFactory</ID>
-    <ID>CyclomaticComplexMethod:TriggerController.kt$TriggerController$private fun evaluateTrigger(trigger: Trigger): Boolean</ID>
     <ID>EmptyDefaultConstructor:IAMLifecycleService.kt$IAMLifecycleService$()</ID>
     <ID>EmptyDefaultConstructor:InAppMessagePrompt.kt$InAppMessagePrompt$()</ID>
     <ID>ForbiddenComment:InAppMessageTag.kt$InAppMessageTag.Companion$// TODO when backend is ready check if key match</ID>
     <ID>ForbiddenComment:InAppMessagesManager.kt$InAppMessagesManager$// TODO until we don't fix the activity going forward or back dismissing the IAM, we need to auto dismiss</ID>
     <ID>ForbiddenComment:InAppMessagesManager.kt$InAppMessagesManager$// TODO: Add more action payload preview logs here in future</ID>
-    <ID>GlobalCoroutineUsage:InAppMessagesManager.kt$InAppMessagesManager$GlobalScope.launch(Dispatchers.Main) { _displayer.dismissCurrentInAppMessage() }</ID>
     <ID>LongMethod:DynamicTriggerController.kt$DynamicTriggerController$fun dynamicTriggerShouldFire(trigger: Trigger): Boolean</ID>
     <ID>LongMethod:InAppRepository.kt$InAppRepository$override suspend fun cleanCachedInAppMessages()</ID>
     <ID>LongParameterList:IInAppBackendService.kt$IInAppBackendService$( appId: String, subscriptionId: String, variantId: String?, messageId: String, clickId: String?, isFirstClick: Boolean, )</ID>

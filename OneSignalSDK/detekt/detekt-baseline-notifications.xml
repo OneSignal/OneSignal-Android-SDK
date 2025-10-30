@@ -1,8 +1,11 @@
 <?xml version="1.0" ?>
 <SmellBaseline>
-  <ManuallySuppressedIssues/>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
   <CurrentIssues>
     <ID>ComplexCondition:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$updateSummary &amp;&amp; summaryList.size &gt; 1 || !updateSummary &amp;&amp; summaryList.size &gt; 0</ID>
+    <ID>ComplexMethod:NotificationChannelManager.kt$NotificationChannelManager$@RequiresApi(api = Build.VERSION_CODES.O) @Throws( JSONException::class, ) private fun createChannel( context: Context, notificationManager: NotificationManager, payload: JSONObject, ): String</ID>
+    <ID>ComplexMethod:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$override suspend fun processNotificationData( context: Context, androidNotificationId: Int, jsonPayload: JSONObject, isRestoring: Boolean, timestamp: Long, )</ID>
+    <ID>ComplexMethod:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$override suspend fun createSummaryNotification( notificationJob: NotificationGenerationJob, notifBuilder: NotificationDisplayBuilder.OneSignalNotificationBuilder?, groupAlertBehavior: Int, )</ID>
     <ID>ConstructorParameterNaming:BadgeCountUpdater.kt$BadgeCountUpdater$private val _applicationService: IApplicationService</ID>
     <ID>ConstructorParameterNaming:BadgeCountUpdater.kt$BadgeCountUpdater$private val _databaseProvider: IDatabaseProvider</ID>
     <ID>ConstructorParameterNaming:BadgeCountUpdater.kt$BadgeCountUpdater$private val _queryHelper: INotificationQueryHelper</ID>
@@ -100,9 +103,6 @@
     <ID>ConstructorParameterNaming:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$private val _applicationService: IApplicationService</ID>
     <ID>ConstructorParameterNaming:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$private val _dataController: INotificationRepository</ID>
     <ID>ConstructorParameterNaming:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$private val _notificationDisplayBuilder: INotificationDisplayBuilder</ID>
-    <ID>CyclomaticComplexMethod:NotificationChannelManager.kt$NotificationChannelManager$@RequiresApi(api = Build.VERSION_CODES.O) @Throws( JSONException::class, ) private fun createChannel( context: Context, notificationManager: NotificationManager, payload: JSONObject, ): String</ID>
-    <ID>CyclomaticComplexMethod:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$override suspend fun processNotificationData( context: Context, androidNotificationId: Int, jsonPayload: JSONObject, isRestoring: Boolean, timestamp: Long, )</ID>
-    <ID>CyclomaticComplexMethod:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$override suspend fun createSummaryNotification( notificationJob: NotificationGenerationJob, notifBuilder: NotificationDisplayBuilder.OneSignalNotificationBuilder?, groupAlertBehavior: Int, )</ID>
     <ID>EmptyCatchBlock:NotificationDisplayBuilder.kt$NotificationDisplayBuilder${ }</ID>
     <ID>EmptyCatchBlock:NotificationDisplayer.kt$NotificationDisplayer${ }</ID>
     <ID>EmptyCatchBlock:NotificationHelper.kt$NotificationHelper${ }</ID>
@@ -115,9 +115,7 @@
     <ID>ForbiddenComment:NotificationOpenedProcessor.kt$NotificationOpenedProcessor$// TODO: Could most likely be simplified checking if BUNDLE_KEY_ONESIGNAL_DATA is present</ID>
     <ID>ForbiddenComment:PushRegistratorAbstractGoogle.kt$PushRegistratorAbstractGoogle$// TODO: New error?</ID>
     <ID>ForbiddenComment:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$// TODO: We are re-using the notifBuilder from the normal notification so if a developer as an</ID>
-    <ID>ForbiddenComment:UpgradeReceiver.kt$UpgradeReceiver$// TODO: Now that we arent restoring like we use to, think we can remove this? Ill do some</ID>
-    <ID>GlobalCoroutineUsage:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$GlobalScope.launch(Dispatchers.IO) { _lifecycleService.externalNotificationWillShowInForeground(notificationWillDisplayEvent) if (notificationWillDisplayEvent.discard) { wantsToDisplay = false } else if (notificationWillDisplayEvent.isPreventDefault) { wantsToDisplay = false // wait on display waiter. If the caller calls `display` or `preventDefault(true)` on the notification, // we will exit `waitForWake` and set `wantsToDisplay` to true or false respectively. If the callback // never calls `display` or `preventDefault(true)`, we will timeout and never update `wantsToDisplay`. wantsToDisplay = notification.displayWaiter.waitForWake() } }</ID>
-    <ID>GlobalCoroutineUsage:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$GlobalScope.launch(Dispatchers.IO) { _lifecycleService.externalRemoteNotificationReceived(notificationReceivedEvent) if (notificationReceivedEvent.discard) { wantsToDisplay = false } else if (notificationReceivedEvent.isPreventDefault) { wantsToDisplay = false // wait on display waiter. If the caller calls `display` or `preventDefault(true)` on the notification, // we will exit `waitForWake` and set `wantsToDisplay` to true or false respectively. If the callback // never calls `display` or `preventDefault(true)`, we will timeout and never update `wantsToDisplay`. wantsToDisplay = notification.displayWaiter.waitForWake() } }</ID>
+    <ID>ForbiddenComment:UpgradeReceiver.kt$UpgradeReceiver$// TODO: Now that we aren't restoring like we used to, think we can remove this?</ID>
     <ID>LongMethod:GooglePlayServicesUpgradePrompt.kt$GooglePlayServicesUpgradePrompt$suspend fun showUpdateGPSDialog()</ID>
     <ID>LongMethod:Notification.kt$Notification$fun toJSONObject(): JSONObject</ID>
     <ID>LongMethod:Notification.kt$Notification$private fun initPayloadData( currentJsonPayload: JSONObject, time: ITime, )</ID>
@@ -139,7 +137,7 @@
     <ID>LongParameterList:INotificationGenerationWorkManager.kt$INotificationGenerationWorkManager$( context: Context, osNotificationId: String, androidNotificationId: Int, jsonPayload: JSONObject?, timestamp: Long, isRestoring: Boolean, isHighPriority: Boolean, )</ID>
     <ID>LongParameterList:INotificationRepository.kt$INotificationRepository$( id: String, groupId: String?, collapseKey: String?, shouldDismissIdenticals: Boolean, isOpened: Boolean, androidId: Int, title: String?, body: String?, expireTime: Long, jsonPayload: String, )</ID>
     <ID>LongParameterList:NotificationLifecycleService.kt$NotificationLifecycleService$( private val _applicationService: IApplicationService, private val _time: ITime, private val _configModelStore: ConfigModelStore, private val _influenceManager: IInfluenceManager, private val _subscriptionManager: ISubscriptionManager, private val _deviceService: IDeviceService, private val _backend: INotificationBackendService, private val _receiveReceiptWorkManager: IReceiveReceiptWorkManager, private val _analyticsTracker: IAnalyticsTracker, )</ID>
-    <ID>LoopWithTooManyJumpStatements:NotificationLifecycleService.kt$NotificationLifecycleService$for</ID>
+    <ID>LoopWithTooManyJumpStatements:NotificationLifecycleService.kt$NotificationLifecycleService$for (i in 0 until data.length()) { val notificationId = NotificationFormatHelper.getOSNotificationIdFromJson(data[i] as JSONObject?) ?: continue if (postedOpenedNotifIds.contains(notificationId)) { continue } postedOpenedNotifIds.add(notificationId) suspendifyWithErrorHandling( useIO = true, // or false for CPU operations block = { _backend.updateNotificationAsOpened( appId, notificationId, subscriptionId, deviceType, ) }, onError = { ex -&gt; if (ex is BackendException) { Logging.error("Notification opened confirmation failed with statusCode: ${ex.statusCode} response: ${ex.response}") } else { Logging.error("Unexpected error in notification opened confirmation", ex) } }, ) }</ID>
     <ID>MagicNumber:FirebaseAnalyticsTracker.kt$FirebaseAnalyticsTracker$1000</ID>
     <ID>MagicNumber:FirebaseAnalyticsTracker.kt$FirebaseAnalyticsTracker$30</ID>
     <ID>MagicNumber:FirebaseAnalyticsTracker.kt$FirebaseAnalyticsTracker$60</ID>
@@ -193,7 +191,6 @@
     <ID>PrintStackTrace:NotificationOpenedProcessor.kt$NotificationOpenedProcessor$e</ID>
     <ID>PrintStackTrace:NotificationOpenedProcessorHMS.kt$NotificationOpenedProcessorHMS$e</ID>
     <ID>PrintStackTrace:NotificationSummaryManager.kt$NotificationSummaryManager$e</ID>
-    <ID>ReturnCount:FCMBroadcastReceiver.kt$FCMBroadcastReceiver$override fun onReceive( context: Context, intent: Intent, )</ID>
     <ID>ReturnCount:FirebaseAnalyticsTracker.kt$FirebaseAnalyticsTracker$override fun trackInfluenceOpenEvent()</ID>
     <ID>ReturnCount:GenerateNotificationOpenIntent.kt$GenerateNotificationOpenIntent$private fun getIntentAppOpen(): Intent?</ID>
     <ID>ReturnCount:NotificationChannelManager.kt$NotificationChannelManager$override fun createNotificationChannel(notificationJob: NotificationGenerationJob): String</ID>
@@ -220,10 +217,10 @@
     <ID>ReturnCount:NotificationRestoreProcessor.kt$NotificationRestoreProcessor$private fun getVisibleNotifications(): List&lt;Int&gt;?</ID>
     <ID>ReturnCount:NotificationRestoreWorkManager.kt$NotificationRestoreWorkManager.NotificationRestoreWorker$override suspend fun doWork(): Result</ID>
     <ID>ReturnCount:NotificationSummaryManager.kt$NotificationSummaryManager$private suspend fun internalUpdateSummaryNotificationAfterChildRemoved( group: String, dismissed: Boolean, )</ID>
-    <ID>ReturnCount:OneSignalHmsEventBridge.kt$OneSignalHmsEventBridge$fun onMessageReceived( context: Context, message: RemoteMessage, )</ID>
     <ID>ReturnCount:PushRegistratorAbstractGoogle.kt$PushRegistratorAbstractGoogle$override suspend fun registerForPush(): IPushRegistrator.RegisterResult</ID>
     <ID>ReturnCount:PushRegistratorAbstractGoogle.kt$PushRegistratorAbstractGoogle$private suspend fun attemptRegistration( senderId: String, currentRetry: Int, ): IPushRegistrator.RegisterResult?</ID>
     <ID>ReturnCount:PushRegistratorHMS.kt$PushRegistratorHMS$@Synchronized @Throws(ApiException::class) private suspend fun getHMSTokenTask(context: Context): IPushRegistrator.RegisterResult</ID>
+    <ID>ReturnCount:ReceiveReceiptWorkManager.kt$ReceiveReceiptWorkManager.ReceiveReceiptWorker$override suspend fun doWork(): Result</ID>
     <ID>StringLiteralDuplication:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$"collapse_key"</ID>
     <ID>StringLiteralDuplication:NotificationRepository.kt$NotificationRepository$" = 0 AND "</ID>
     <ID>SwallowedException:ADMMessageReceiver.kt$ADMMessageReceiver$e: ClassNotFoundException</ID>
@@ -262,17 +259,15 @@
     <ID>TooManyFunctions:NotificationDisplayBuilder.kt$NotificationDisplayBuilder : INotificationDisplayBuilder</ID>
     <ID>TooManyFunctions:NotificationDisplayer.kt$NotificationDisplayer : INotificationDisplayer</ID>
     <ID>TooManyFunctions:NotificationGenerationProcessor.kt$NotificationGenerationProcessor : INotificationGenerationProcessor</ID>
-    <ID>TooManyFunctions:NotificationHelper.kt$NotificationHelper</ID>
+    <ID>TooManyFunctions:NotificationHelper.kt$NotificationHelper$NotificationHelper</ID>
     <ID>TooManyFunctions:NotificationLifecycleService.kt$NotificationLifecycleService : INotificationLifecycleServiceINotificationActivityOpener</ID>
     <ID>TooManyFunctions:NotificationRepository.kt$NotificationRepository : INotificationRepository</ID>
     <ID>TooManyFunctions:NotificationsManager.kt$NotificationsManager : INotificationsManagerINotificationPermissionChangedHandlerIApplicationLifecycleHandler</ID>
     <ID>UndocumentedPublicClass:ADMMessageHandler.kt$ADMMessageHandler : ADMMessageHandlerBase</ID>
     <ID>UndocumentedPublicClass:ADMMessageHandlerJob.kt$ADMMessageHandlerJob : ADMMessageHandlerJobBase</ID>
     <ID>UndocumentedPublicClass:ADMMessageReceiver.kt$ADMMessageReceiver : ADMMessageReceiver</ID>
-    <ID>UndocumentedPublicClass:ADMMessageReceiver.kt$ADMMessageReceiver$Companion</ID>
     <ID>UndocumentedPublicClass:BootUpReceiver.kt$BootUpReceiver : BroadcastReceiver</ID>
     <ID>UndocumentedPublicClass:FCMBroadcastReceiver.kt$FCMBroadcastReceiver : BroadcastReceiver</ID>
-    <ID>UndocumentedPublicClass:FCMBroadcastReceiver.kt$FCMBroadcastReceiver$Companion</ID>
     <ID>UndocumentedPublicClass:INotificationDisplayer.kt$INotificationDisplayer</ID>
     <ID>UndocumentedPublicClass:INotificationLifecycleCallback.kt$INotificationLifecycleCallback</ID>
     <ID>UndocumentedPublicClass:NotificationConstants.kt$NotificationConstants</ID>
@@ -285,9 +280,9 @@
     <ID>UndocumentedPublicClass:NotificationsManager.kt$INotificationActivityOpener</ID>
     <ID>UndocumentedPublicClass:OSWorkManagerHelper.kt$OSWorkManagerHelper</ID>
     <ID>UndocumentedPublicClass:UpgradeReceiver.kt$UpgradeReceiver : BroadcastReceiver</ID>
-    <ID>UnusedParameter:OneSignalHmsEventBridge.kt$OneSignalHmsEventBridge$context: Context</ID>
+    <ID>UnusedPrivateMember:DeviceRegistrationListener.kt$DeviceRegistrationListener$val pushSubscription = _subscriptionManager.subscriptions.push</ID>
     <ID>UnusedPrivateMember:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$private fun addAlertButtons( context: Context, fcmJson: JSONObject, buttonsLabels: MutableList&lt;String&gt;, buttonsIds: MutableList&lt;String&gt;, )</ID>
     <ID>UnusedPrivateMember:NotificationOpenedProcessor.kt$NotificationOpenedProcessor$private fun newContentValuesWithConsumed(intent: Intent): ContentValues</ID>
-    <ID>UnusedPrivateProperty:DeviceRegistrationListener.kt$DeviceRegistrationListener$val pushSubscription = _subscriptionManager.subscriptions.push</ID>
+    <ID>UnusedPrivateMember:OneSignalHmsEventBridge.kt$OneSignalHmsEventBridge$context: Context</ID>
   </CurrentIssues>
 </SmellBaseline>

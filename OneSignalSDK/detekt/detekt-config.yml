@@ -36,9 +36,10 @@ style:
 
   ForbiddenComment:
     active: true
-    comments: ["TODO", "FIXME", "STOPSHIP"]
+    values: ["TODO", "FIXME", "STOPSHIP"]
 
 # ───────────── NAMING (moved from style) ─────────────
+
 naming:
   VariableNaming:
     active: true
