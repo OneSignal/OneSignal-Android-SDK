@@ -5,7 +5,8 @@ import android.os.Bundle
 import com.huawei.hms.push.RemoteMessage
 import com.onesignal.OneSignal
 import com.onesignal.common.JSONUtils
-import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.common.threading.suspendifyOnDefault
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
@@ -38,8 +39,8 @@ object OneSignalHmsEventBridge {
     ) {
         if (firstToken.compareAndSet(true, false)) {
             Logging.info("OneSignalHmsEventBridge onNewToken - HMS token: $token Bundle: $bundle")
-            var registerer = OneSignal.getService<IPushRegistratorCallback>()
-            suspendifyOnThread {
+            suspendifyOnIO {
+                val registerer = OneSignal.getService<IPushRegistratorCallback>()
                 registerer.fireCallback(token)
             }
         } else {
@@ -63,42 +64,44 @@ object OneSignalHmsEventBridge {
         context: Context,
         message: RemoteMessage,
     ) {
-        if (!OneSignal.initWithContext(context)) {
-            return
-        }
-
-        var time = OneSignal.getService<ITime>()
-        val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
-
-        var data = message.data
-        try {
-            val messageDataJSON = JSONObject(message.data)
-            if (message.ttl == 0) {
-                messageDataJSON.put(HMS_TTL_KEY, NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD)
-            } else {
-                messageDataJSON.put(HMS_TTL_KEY, message.ttl)
+        suspendifyOnDefault {
+            if (!OneSignal.initWithContext(context)) {
+                return@suspendifyOnDefault
             }
 
-            if (message.sentTime == 0L) {
-                messageDataJSON.put(HMS_SENT_TIME_KEY, time.currentTimeMillis)
-            } else {
-                messageDataJSON.put(HMS_SENT_TIME_KEY, message.sentTime)
+            val time = OneSignal.getService<ITime>()
+            val bundleProcessor = OneSignal.getService<INotificationBundleProcessor>()
+
+            var data = message.data
+            try {
+                val messageDataJSON = JSONObject(message.data)
+                if (message.ttl == 0) {
+                    messageDataJSON.put(HMS_TTL_KEY, NotificationConstants.DEFAULT_TTL_IF_NOT_IN_PAYLOAD)
+                } else {
+                    messageDataJSON.put(HMS_TTL_KEY, message.ttl)
+                }
+
+                if (message.sentTime == 0L) {
+                    messageDataJSON.put(HMS_SENT_TIME_KEY, time.currentTimeMillis)
+                } else {
+                    messageDataJSON.put(HMS_SENT_TIME_KEY, message.sentTime)
+                }
+
+                data = messageDataJSON.toString()
+            } catch (e: JSONException) {
+                Logging.error("OneSignalHmsEventBridge error when trying to create RemoteMessage data JSON")
             }
 
-            data = messageDataJSON.toString()
-        } catch (e: JSONException) {
-            Logging.error("OneSignalHmsEventBridge error when trying to create RemoteMessage data JSON")
-        }
+            // HMS notification with Message Type being Message won't trigger Activity reverse trampolining logic
+            // for this case OneSignal rely on NotificationOpenedActivityHMS activity
+            // Last EMUI (12 to the date) is based on Android 10, so no
+            // Activity trampolining restriction exist for HMS devices
+            if (data == null) {
+                return@suspendifyOnDefault
+            }
 
-        // HMS notification with Message Type being Message won't trigger Activity reverse trampolining logic
-        // for this case OneSignal rely on NotificationOpenedActivityHMS activity
-        // Last EMUI (12 to the date) is based on Android 10, so no
-        // Activity trampolining restriction exist for HMS devices
-        if (data == null) {
-            return
+            val bundle = JSONUtils.jsonStringToBundle(data) ?: return@suspendifyOnDefault
+            bundleProcessor.processBundleFromReceiver(context, bundle)
         }
-
-        val bundle = JSONUtils.jsonStringToBundle(data) ?: return
-        bundleProcessor.processBundleFromReceiver(context, bundle)
     }
 }

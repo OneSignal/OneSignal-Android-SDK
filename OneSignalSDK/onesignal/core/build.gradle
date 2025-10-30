@@ -1,8 +1,9 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
-    id 'org.jlleitschuh.gradle.ktlint'
+    id 'com.diffplug.spotless'
     id 'com.vanniktech.maven.publish'
+    id 'io.gitlab.arturbosch.detekt'
 }
 
 android {
@@ -33,7 +34,8 @@ android {
     testOptions {
         unitTests.all {
             maxParallelForks 1
-            maxHeapSize '2048m'
+            maxHeapSize '3072m'
+            jvmArgs '-XX:MaxMetaspaceSize=256m', '-XX:+UseG1GC', '-XX:+UseStringDeduplication'
         }
         unitTests {
             includeAndroidResources = true
@@ -68,9 +70,14 @@ ext {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
+
+    // AndroidX Lifecycle and Activity
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycleVersion"
+    implementation "androidx.activity:activity-ktx:$activityVersion"
 
     compileOnly('com.amazon.device:amazon-appstore-sdk:[3.0.1, 3.0.99]')
 
@@ -87,23 +94,19 @@ dependencies {
     testImplementation("io.kotest:kotest-runner-junit5-jvm:$kotestVersion")
     testImplementation("io.kotest:kotest-assertions-core:$kotestVersion")
     testImplementation("io.kotest:kotest-property:$kotestVersion")
-    testImplementation("org.robolectric:robolectric:4.8.1")
+    testImplementation("org.robolectric:robolectric:4.10.3")
     // kotest-extensions-android allows Robolectric to work with Kotest via @RobolectricTest
     testImplementation("br.com.colman:kotest-extensions-android:0.1.1")
     testImplementation("androidx.test:core-ktx:1.4.0")
     testImplementation("androidx.test:core:1.4.0")
-    testImplementation("io.mockk:mockk:1.13.2")
+    testImplementation("io.mockk:mockk:$ioMockVersion")
     testImplementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
 
     // com.tdunning:json is needed for non-Robolectric tests.
     testImplementation("com.tdunning:json:$tdunningJsonForTest")
 }
 
-ktlint {
-    version = "$ktlintVersion"
-    additionalEditorconfig = [
-        "max_line_length": "500",
-    ]
-}
-
+apply from: '../detekt.gradle'
+apply from: '../spotless.gradle'
 apply from: '../maven-push.gradle'

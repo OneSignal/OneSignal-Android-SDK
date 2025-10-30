@@ -28,6 +28,6 @@ internal object LocationUtils {
         return (
             ContextCompat.checkSelfPermission(context, "android.permission.ACCESS_FINE_LOCATION") === PackageManager.PERMISSION_GRANTED ||
                 ContextCompat.checkSelfPermission(context, "android.permission.ACCESS_COARSE_LOCATION") === PackageManager.PERMISSION_GRANTED
-        )
+            )
     }
 }

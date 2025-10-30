@@ -1,0 +1,288 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <CurrentIssues>
+    <ID>ComplexCondition:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$updateSummary &amp;&amp; summaryList.size &gt; 1 || !updateSummary &amp;&amp; summaryList.size &gt; 0</ID>
+    <ID>ComplexMethod:NotificationChannelManager.kt$NotificationChannelManager$@RequiresApi(api = Build.VERSION_CODES.O) @Throws( JSONException::class, ) private fun createChannel( context: Context, notificationManager: NotificationManager, payload: JSONObject, ): String</ID>
+    <ID>ComplexMethod:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$override suspend fun processNotificationData( context: Context, androidNotificationId: Int, jsonPayload: JSONObject, isRestoring: Boolean, timestamp: Long, )</ID>
+    <ID>ComplexMethod:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$override suspend fun createSummaryNotification( notificationJob: NotificationGenerationJob, notifBuilder: NotificationDisplayBuilder.OneSignalNotificationBuilder?, groupAlertBehavior: Int, )</ID>
+    <ID>ConstructorParameterNaming:BadgeCountUpdater.kt$BadgeCountUpdater$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:BadgeCountUpdater.kt$BadgeCountUpdater$private val _databaseProvider: IDatabaseProvider</ID>
+    <ID>ConstructorParameterNaming:BadgeCountUpdater.kt$BadgeCountUpdater$private val _queryHelper: INotificationQueryHelper</ID>
+    <ID>ConstructorParameterNaming:DeviceRegistrationListener.kt$DeviceRegistrationListener$private val _channelManager: INotificationChannelManager</ID>
+    <ID>ConstructorParameterNaming:DeviceRegistrationListener.kt$DeviceRegistrationListener$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:DeviceRegistrationListener.kt$DeviceRegistrationListener$private val _notificationsManager: INotificationsManager</ID>
+    <ID>ConstructorParameterNaming:DeviceRegistrationListener.kt$DeviceRegistrationListener$private val _pushTokenManager: IPushTokenManager</ID>
+    <ID>ConstructorParameterNaming:DeviceRegistrationListener.kt$DeviceRegistrationListener$private val _subscriptionManager: ISubscriptionManager</ID>
+    <ID>ConstructorParameterNaming:FirebaseAnalyticsTracker.kt$FirebaseAnalyticsTracker$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:FirebaseAnalyticsTracker.kt$FirebaseAnalyticsTracker$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:FirebaseAnalyticsTracker.kt$FirebaseAnalyticsTracker$private val _time: ITime</ID>
+    <ID>ConstructorParameterNaming:GooglePlayServicesUpgradePrompt.kt$GooglePlayServicesUpgradePrompt$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:GooglePlayServicesUpgradePrompt.kt$GooglePlayServicesUpgradePrompt$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:GooglePlayServicesUpgradePrompt.kt$GooglePlayServicesUpgradePrompt$private val _deviceService: IDeviceService</ID>
+    <ID>ConstructorParameterNaming:NotificationBackendService.kt$NotificationBackendService$private val _httpClient: IHttpClient</ID>
+    <ID>ConstructorParameterNaming:NotificationBundleProcessor.kt$NotificationBundleProcessor$private val _time: ITime</ID>
+    <ID>ConstructorParameterNaming:NotificationBundleProcessor.kt$NotificationBundleProcessor$private val _workManager: INotificationGenerationWorkManager</ID>
+    <ID>ConstructorParameterNaming:NotificationChannelManager.kt$NotificationChannelManager$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:NotificationChannelManager.kt$NotificationChannelManager$private val _languageContext: ILanguageContext</ID>
+    <ID>ConstructorParameterNaming:NotificationClickEvent.kt$NotificationClickEvent$private val _notification: Notification</ID>
+    <ID>ConstructorParameterNaming:NotificationClickEvent.kt$NotificationClickEvent$private val _result: NotificationClickResult</ID>
+    <ID>ConstructorParameterNaming:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$private val _notificationChannelManager: INotificationChannelManager</ID>
+    <ID>ConstructorParameterNaming:NotificationDisplayer.kt$NotificationDisplayer$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:NotificationDisplayer.kt$NotificationDisplayer$private val _notificationDisplayBuilder: INotificationDisplayBuilder</ID>
+    <ID>ConstructorParameterNaming:NotificationDisplayer.kt$NotificationDisplayer$private val _notificationLimitManager: INotificationLimitManager</ID>
+    <ID>ConstructorParameterNaming:NotificationDisplayer.kt$NotificationDisplayer$private val _summaryNotificationDisplayer: ISummaryNotificationDisplayer</ID>
+    <ID>ConstructorParameterNaming:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$private val _dataController: INotificationRepository</ID>
+    <ID>ConstructorParameterNaming:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$private val _lifecycleService: INotificationLifecycleService</ID>
+    <ID>ConstructorParameterNaming:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$private val _notificationDisplayer: INotificationDisplayer</ID>
+    <ID>ConstructorParameterNaming:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$private val _notificationSummaryManager: INotificationSummaryManager</ID>
+    <ID>ConstructorParameterNaming:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$private val _time: ITime</ID>
+    <ID>ConstructorParameterNaming:NotificationLifecycleService.kt$NotificationLifecycleService$private val _analyticsTracker: IAnalyticsTracker</ID>
+    <ID>ConstructorParameterNaming:NotificationLifecycleService.kt$NotificationLifecycleService$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:NotificationLifecycleService.kt$NotificationLifecycleService$private val _backend: INotificationBackendService</ID>
+    <ID>ConstructorParameterNaming:NotificationLifecycleService.kt$NotificationLifecycleService$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:NotificationLifecycleService.kt$NotificationLifecycleService$private val _deviceService: IDeviceService</ID>
+    <ID>ConstructorParameterNaming:NotificationLifecycleService.kt$NotificationLifecycleService$private val _influenceManager: IInfluenceManager</ID>
+    <ID>ConstructorParameterNaming:NotificationLifecycleService.kt$NotificationLifecycleService$private val _receiveReceiptWorkManager: IReceiveReceiptWorkManager</ID>
+    <ID>ConstructorParameterNaming:NotificationLifecycleService.kt$NotificationLifecycleService$private val _subscriptionManager: ISubscriptionManager</ID>
+    <ID>ConstructorParameterNaming:NotificationLifecycleService.kt$NotificationLifecycleService$private val _time: ITime</ID>
+    <ID>ConstructorParameterNaming:NotificationLimitManager.kt$NotificationLimitManager$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:NotificationLimitManager.kt$NotificationLimitManager$private val _dataController: INotificationRepository</ID>
+    <ID>ConstructorParameterNaming:NotificationLimitManager.kt$NotificationLimitManager$private val _notificationSummaryManager: INotificationSummaryManager</ID>
+    <ID>ConstructorParameterNaming:NotificationOpenedProcessor.kt$NotificationOpenedProcessor$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:NotificationOpenedProcessor.kt$NotificationOpenedProcessor$private val _dataController: INotificationRepository</ID>
+    <ID>ConstructorParameterNaming:NotificationOpenedProcessor.kt$NotificationOpenedProcessor$private val _lifecycleService: INotificationLifecycleService</ID>
+    <ID>ConstructorParameterNaming:NotificationOpenedProcessor.kt$NotificationOpenedProcessor$private val _summaryManager: INotificationSummaryManager</ID>
+    <ID>ConstructorParameterNaming:NotificationOpenedProcessorHMS.kt$NotificationOpenedProcessorHMS$private val _lifecycleService: INotificationLifecycleService</ID>
+    <ID>ConstructorParameterNaming:NotificationPermissionController.kt$NotificationPermissionController$private val _application: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:NotificationPermissionController.kt$NotificationPermissionController$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:NotificationPermissionController.kt$NotificationPermissionController$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:NotificationPermissionController.kt$NotificationPermissionController$private val _preferenceService: IPreferencesService</ID>
+    <ID>ConstructorParameterNaming:NotificationPermissionController.kt$NotificationPermissionController$private val _requestPermission: IRequestPermissionService</ID>
+    <ID>ConstructorParameterNaming:NotificationQueryHelper.kt$NotificationQueryHelper$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:NotificationQueryHelper.kt$NotificationQueryHelper$private val _time: ITime</ID>
+    <ID>ConstructorParameterNaming:NotificationRepository.kt$NotificationRepository$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:NotificationRepository.kt$NotificationRepository$private val _badgeCountUpdater: IBadgeCountUpdater</ID>
+    <ID>ConstructorParameterNaming:NotificationRepository.kt$NotificationRepository$private val _databaseProvider: IDatabaseProvider</ID>
+    <ID>ConstructorParameterNaming:NotificationRepository.kt$NotificationRepository$private val _queryHelper: INotificationQueryHelper</ID>
+    <ID>ConstructorParameterNaming:NotificationRepository.kt$NotificationRepository$private val _time: ITime</ID>
+    <ID>ConstructorParameterNaming:NotificationRestoreProcessor.kt$NotificationRestoreProcessor$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:NotificationRestoreProcessor.kt$NotificationRestoreProcessor$private val _badgeCountUpdater: IBadgeCountUpdater</ID>
+    <ID>ConstructorParameterNaming:NotificationRestoreProcessor.kt$NotificationRestoreProcessor$private val _dataController: INotificationRepository</ID>
+    <ID>ConstructorParameterNaming:NotificationRestoreProcessor.kt$NotificationRestoreProcessor$private val _workManager: INotificationGenerationWorkManager</ID>
+    <ID>ConstructorParameterNaming:NotificationSummaryManager.kt$NotificationSummaryManager$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:NotificationSummaryManager.kt$NotificationSummaryManager$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:NotificationSummaryManager.kt$NotificationSummaryManager$private val _dataController: INotificationRepository</ID>
+    <ID>ConstructorParameterNaming:NotificationSummaryManager.kt$NotificationSummaryManager$private val _notificationRestoreProcessor: INotificationRestoreProcessor</ID>
+    <ID>ConstructorParameterNaming:NotificationSummaryManager.kt$NotificationSummaryManager$private val _summaryNotificationDisplayer: ISummaryNotificationDisplayer</ID>
+    <ID>ConstructorParameterNaming:NotificationSummaryManager.kt$NotificationSummaryManager$private val _time: ITime</ID>
+    <ID>ConstructorParameterNaming:NotificationsManager.kt$NotificationsManager$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:NotificationsManager.kt$NotificationsManager$private val _notificationDataController: INotificationRepository</ID>
+    <ID>ConstructorParameterNaming:NotificationsManager.kt$NotificationsManager$private val _notificationLifecycleService: INotificationLifecycleService</ID>
+    <ID>ConstructorParameterNaming:NotificationsManager.kt$NotificationsManager$private val _notificationPermissionController: INotificationPermissionController</ID>
+    <ID>ConstructorParameterNaming:NotificationsManager.kt$NotificationsManager$private val _notificationRestoreWorkManager: INotificationRestoreWorkManager</ID>
+    <ID>ConstructorParameterNaming:NotificationsManager.kt$NotificationsManager$private val _summaryManager: INotificationSummaryManager</ID>
+    <ID>ConstructorParameterNaming:PushRegistratorADM.kt$PushRegistratorADM$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:PushRegistratorAbstractGoogle.kt$PushRegistratorAbstractGoogle$private val _deviceService: IDeviceService</ID>
+    <ID>ConstructorParameterNaming:PushRegistratorAbstractGoogle.kt$PushRegistratorAbstractGoogle$private val _upgradePrompt: GooglePlayServicesUpgradePrompt</ID>
+    <ID>ConstructorParameterNaming:PushRegistratorAbstractGoogle.kt$PushRegistratorAbstractGoogle$private var _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:PushRegistratorFCM.kt$PushRegistratorFCM$val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:PushRegistratorFCM.kt$PushRegistratorFCM$var _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:PushRegistratorHMS.kt$PushRegistratorHMS$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:PushRegistratorHMS.kt$PushRegistratorHMS$private val _deviceService: IDeviceService</ID>
+    <ID>ConstructorParameterNaming:PushTokenManager.kt$PushTokenManager$private val _deviceService: IDeviceService</ID>
+    <ID>ConstructorParameterNaming:PushTokenManager.kt$PushTokenManager$private val _pushRegistrator: IPushRegistrator</ID>
+    <ID>ConstructorParameterNaming:ReceiveReceiptProcessor.kt$ReceiveReceiptProcessor$private val _backend: INotificationBackendService</ID>
+    <ID>ConstructorParameterNaming:ReceiveReceiptProcessor.kt$ReceiveReceiptProcessor$private val _deviceService: IDeviceService</ID>
+    <ID>ConstructorParameterNaming:ReceiveReceiptWorkManager.kt$ReceiveReceiptWorkManager$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:ReceiveReceiptWorkManager.kt$ReceiveReceiptWorkManager$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:ReceiveReceiptWorkManager.kt$ReceiveReceiptWorkManager$private val _subscriptionManager: ISubscriptionManager</ID>
+    <ID>ConstructorParameterNaming:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$private val _dataController: INotificationRepository</ID>
+    <ID>ConstructorParameterNaming:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$private val _notificationDisplayBuilder: INotificationDisplayBuilder</ID>
+    <ID>EmptyCatchBlock:NotificationDisplayBuilder.kt$NotificationDisplayBuilder${ }</ID>
+    <ID>EmptyCatchBlock:NotificationDisplayer.kt$NotificationDisplayer${ }</ID>
+    <ID>EmptyCatchBlock:NotificationHelper.kt$NotificationHelper${ }</ID>
+    <ID>EmptyDefaultConstructor:PushRegistratorNone.kt$PushRegistratorNone$()</ID>
+    <ID>EmptySecondaryConstructor:Notification.kt$Notification${}</ID>
+    <ID>ForbiddenComment:FCMBroadcastReceiver.kt$FCMBroadcastReceiver$// TODO: Previous error and related to this Github issue ticket</ID>
+    <ID>ForbiddenComment:NotificationChannelManager.kt$NotificationChannelManager$// TODO: Remove this try-catch once it is figured out which argument is causing Issue #895</ID>
+    <ID>ForbiddenComment:NotificationGenerationWorkManager.kt$NotificationGenerationWorkManager$// TODO: Need to figure out how to implement the isHighPriority param</ID>
+    <ID>ForbiddenComment:NotificationLifecycleService.kt$NotificationLifecycleService$// TODO: This can have late binding issues too</ID>
+    <ID>ForbiddenComment:NotificationOpenedProcessor.kt$NotificationOpenedProcessor$// TODO: Could most likely be simplified checking if BUNDLE_KEY_ONESIGNAL_DATA is present</ID>
+    <ID>ForbiddenComment:PushRegistratorAbstractGoogle.kt$PushRegistratorAbstractGoogle$// TODO: New error?</ID>
+    <ID>ForbiddenComment:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$// TODO: We are re-using the notifBuilder from the normal notification so if a developer as an</ID>
+    <ID>ForbiddenComment:UpgradeReceiver.kt$UpgradeReceiver$// TODO: Now that we aren't restoring like we used to, think we can remove this?</ID>
+    <ID>LongMethod:GooglePlayServicesUpgradePrompt.kt$GooglePlayServicesUpgradePrompt$suspend fun showUpdateGPSDialog()</ID>
+    <ID>LongMethod:Notification.kt$Notification$fun toJSONObject(): JSONObject</ID>
+    <ID>LongMethod:Notification.kt$Notification$private fun initPayloadData( currentJsonPayload: JSONObject, time: ITime, )</ID>
+    <ID>LongMethod:NotificationBundleProcessor.kt$NotificationBundleProcessor$private fun maximizeButtonsFromBundle(fcmBundle: Bundle)</ID>
+    <ID>LongMethod:NotificationChannelManager.kt$NotificationChannelManager$@RequiresApi(api = Build.VERSION_CODES.O) @Throws( JSONException::class, ) private fun createChannel( context: Context, notificationManager: NotificationManager, payload: JSONObject, ): String</ID>
+    <ID>LongMethod:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$override fun getBaseOneSignalNotificationBuilder(notificationJob: NotificationGenerationJob): OneSignalNotificationBuilder</ID>
+    <ID>LongMethod:NotificationDisplayer.kt$NotificationDisplayer$@Throws(Throwable::class) private fun addBackgroundImage( fcmJson: JSONObject, notifBuilder: NotificationCompat.Builder?, )</ID>
+    <ID>LongMethod:NotificationDisplayer.kt$NotificationDisplayer$private suspend fun showNotification(notificationJob: NotificationGenerationJob): Boolean</ID>
+    <ID>LongMethod:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$override suspend fun processNotificationData( context: Context, androidNotificationId: Int, jsonPayload: JSONObject, isRestoring: Boolean, timestamp: Long, )</ID>
+    <ID>LongMethod:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$private suspend fun saveNotification( notificationJob: NotificationGenerationJob, opened: Boolean, )</ID>
+    <ID>LongMethod:NotificationLifecycleService.kt$NotificationLifecycleService$override suspend fun notificationOpened( activity: Activity, data: JSONArray, )</ID>
+    <ID>LongMethod:NotificationRepository.kt$NotificationRepository$override suspend fun createNotification( id: String, groupId: String?, collapseKey: String?, shouldDismissIdenticals: Boolean, isOpened: Boolean, androidId: Int, title: String?, body: String?, expireTime: Long, jsonPayload: String, )</ID>
+    <ID>LongMethod:NotificationRepository.kt$NotificationRepository$override suspend fun listNotificationsForGroup(summaryGroup: String): List&lt;INotificationRepository.NotificationData&gt;</ID>
+    <ID>LongMethod:NotificationRepository.kt$NotificationRepository$override suspend fun listNotificationsForOutstanding(excludeAndroidIds: List&lt;Int&gt;?): List&lt;INotificationRepository.NotificationData&gt;</ID>
+    <ID>LongMethod:NotificationRepository.kt$NotificationRepository$override suspend fun markAsConsumed( androidId: Int, dismissed: Boolean, summaryGroup: String?, clearGroupOnSummaryClick: Boolean, )</ID>
+    <ID>LongMethod:NotificationsModule.kt$NotificationsModule$override fun register(builder: ServiceBuilder)</ID>
+    <ID>LongMethod:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$@RequiresApi(api = Build.VERSION_CODES.M) override suspend fun createGrouplessSummaryNotification( notificationJob: NotificationGenerationJob, intentGenerator: IntentGeneratorForAttachingToNotifications, grouplessNotifCount: Int, groupAlertBehavior: Int, )</ID>
+    <ID>LongMethod:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$override suspend fun createSummaryNotification( notificationJob: NotificationGenerationJob, notifBuilder: NotificationDisplayBuilder.OneSignalNotificationBuilder?, groupAlertBehavior: Int, )</ID>
+    <ID>LongParameterList:INotificationGenerationWorkManager.kt$INotificationGenerationWorkManager$( context: Context, osNotificationId: String, androidNotificationId: Int, jsonPayload: JSONObject?, timestamp: Long, isRestoring: Boolean, isHighPriority: Boolean, )</ID>
+    <ID>LongParameterList:INotificationRepository.kt$INotificationRepository$( id: String, groupId: String?, collapseKey: String?, shouldDismissIdenticals: Boolean, isOpened: Boolean, androidId: Int, title: String?, body: String?, expireTime: Long, jsonPayload: String, )</ID>
+    <ID>LongParameterList:NotificationLifecycleService.kt$NotificationLifecycleService$( private val _applicationService: IApplicationService, private val _time: ITime, private val _configModelStore: ConfigModelStore, private val _influenceManager: IInfluenceManager, private val _subscriptionManager: ISubscriptionManager, private val _deviceService: IDeviceService, private val _backend: INotificationBackendService, private val _receiveReceiptWorkManager: IReceiveReceiptWorkManager, private val _analyticsTracker: IAnalyticsTracker, )</ID>
+    <ID>LoopWithTooManyJumpStatements:NotificationLifecycleService.kt$NotificationLifecycleService$for (i in 0 until data.length()) { val notificationId = NotificationFormatHelper.getOSNotificationIdFromJson(data[i] as JSONObject?) ?: continue if (postedOpenedNotifIds.contains(notificationId)) { continue } postedOpenedNotifIds.add(notificationId) suspendifyWithErrorHandling( useIO = true, // or false for CPU operations block = { _backend.updateNotificationAsOpened( appId, notificationId, subscriptionId, deviceType, ) }, onError = { ex -&gt; if (ex is BackendException) { Logging.error("Notification opened confirmation failed with statusCode: ${ex.statusCode} response: ${ex.response}") } else { Logging.error("Unexpected error in notification opened confirmation", ex) } }, ) }</ID>
+    <ID>MagicNumber:FirebaseAnalyticsTracker.kt$FirebaseAnalyticsTracker$1000</ID>
+    <ID>MagicNumber:FirebaseAnalyticsTracker.kt$FirebaseAnalyticsTracker$30</ID>
+    <ID>MagicNumber:FirebaseAnalyticsTracker.kt$FirebaseAnalyticsTracker$60</ID>
+    <ID>MagicNumber:Notification.kt$Notification$1000</ID>
+    <ID>MagicNumber:NotificationBundleProcessor.kt$NotificationBundleProcessor$1000L</ID>
+    <ID>MagicNumber:NotificationBundleProcessor.kt$NotificationBundleProcessor$9</ID>
+    <ID>MagicNumber:NotificationChannelManager.kt$NotificationChannelManager$16</ID>
+    <ID>MagicNumber:NotificationChannelManager.kt$NotificationChannelManager$3</ID>
+    <ID>MagicNumber:NotificationChannelManager.kt$NotificationChannelManager$5</ID>
+    <ID>MagicNumber:NotificationChannelManager.kt$NotificationChannelManager$6</ID>
+    <ID>MagicNumber:NotificationChannelManager.kt$NotificationChannelManager$7</ID>
+    <ID>MagicNumber:NotificationChannelManager.kt$NotificationChannelManager$9</ID>
+    <ID>MagicNumber:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$1000L</ID>
+    <ID>MagicNumber:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$16</ID>
+    <ID>MagicNumber:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$2000</ID>
+    <ID>MagicNumber:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$3</ID>
+    <ID>MagicNumber:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$4</ID>
+    <ID>MagicNumber:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$5000</ID>
+    <ID>MagicNumber:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$6</ID>
+    <ID>MagicNumber:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$7</ID>
+    <ID>MagicNumber:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$9</ID>
+    <ID>MagicNumber:NotificationDisplayer.kt$NotificationDisplayer$16</ID>
+    <ID>MagicNumber:NotificationDisplayer.kt$NotificationDisplayer$3</ID>
+    <ID>MagicNumber:NotificationDisplayer.kt$NotificationDisplayer$5000</ID>
+    <ID>MagicNumber:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$1000</ID>
+    <ID>MagicNumber:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$1000L</ID>
+    <ID>MagicNumber:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$30000L</ID>
+    <ID>MagicNumber:NotificationGenerationWorkManager.kt$NotificationGenerationWorkManager.NotificationGenerationWorker$1000L</ID>
+    <ID>MagicNumber:NotificationHelper.kt$NotificationHelper$10</ID>
+    <ID>MagicNumber:NotificationQueryHelper.kt$NotificationQueryHelper$1000L</ID>
+    <ID>MagicNumber:NotificationQueryHelper.kt$NotificationQueryHelper$604800L</ID>
+    <ID>MagicNumber:NotificationRepository.kt$NotificationRepository$1000L</ID>
+    <ID>MagicNumber:NotificationRestoreWorkManager.kt$NotificationRestoreWorkManager$15</ID>
+    <ID>MagicNumber:PushRegistratorADM.kt$PushRegistratorADM$30000</ID>
+    <ID>MagicNumber:PushRegistratorHMS.kt$PushRegistratorHMS$30000</ID>
+    <ID>MagicNumber:PushTokenManager.kt$PushTokenManager$6</ID>
+    <ID>MayBeConst:INotificationLimitManager.kt$INotificationLimitManager.Constants$/** * The maximum number of notifications an app is allowed to have in the Android shade. */ val maxNumberOfNotifications: Int = 49</ID>
+    <ID>NestedBlockDepth:PushRegistratorAbstractGoogle.kt$PushRegistratorAbstractGoogle$private suspend fun attemptRegistration( senderId: String, currentRetry: Int, ): IPushRegistrator.RegisterResult?</ID>
+    <ID>PrintStackTrace:FirebaseAnalyticsTracker.kt$FirebaseAnalyticsTracker$e</ID>
+    <ID>PrintStackTrace:FirebaseAnalyticsTracker.kt$FirebaseAnalyticsTracker$t</ID>
+    <ID>PrintStackTrace:FirebaseAnalyticsTracker.kt$FirebaseAnalyticsTracker.Companion$e</ID>
+    <ID>PrintStackTrace:GooglePlayServicesUpgradePrompt.kt$GooglePlayServicesUpgradePrompt$e</ID>
+    <ID>PrintStackTrace:Notification.kt$Notification$e</ID>
+    <ID>PrintStackTrace:Notification.kt$Notification.ActionButton$t</ID>
+    <ID>PrintStackTrace:NotificationBundleProcessor.kt$NotificationBundleProcessor$e</ID>
+    <ID>PrintStackTrace:NotificationChannelManager.kt$NotificationChannelManager$e</ID>
+    <ID>PrintStackTrace:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$t</ID>
+    <ID>PrintStackTrace:NotificationDisplayer.kt$NotificationDisplayer$t</ID>
+    <ID>PrintStackTrace:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$e</ID>
+    <ID>PrintStackTrace:NotificationLifecycleService.kt$NotificationLifecycleService$e</ID>
+    <ID>PrintStackTrace:NotificationOpenedProcessor.kt$NotificationOpenedProcessor$e</ID>
+    <ID>PrintStackTrace:NotificationOpenedProcessorHMS.kt$NotificationOpenedProcessorHMS$e</ID>
+    <ID>PrintStackTrace:NotificationSummaryManager.kt$NotificationSummaryManager$e</ID>
+    <ID>ReturnCount:FirebaseAnalyticsTracker.kt$FirebaseAnalyticsTracker$override fun trackInfluenceOpenEvent()</ID>
+    <ID>ReturnCount:GenerateNotificationOpenIntent.kt$GenerateNotificationOpenIntent$private fun getIntentAppOpen(): Intent?</ID>
+    <ID>ReturnCount:NotificationChannelManager.kt$NotificationChannelManager$override fun createNotificationChannel(notificationJob: NotificationGenerationJob): String</ID>
+    <ID>ReturnCount:NotificationChannelManager.kt$NotificationChannelManager$override fun processChannelList(list: JSONArray?)</ID>
+    <ID>ReturnCount:NotificationChannelManager.kt$NotificationChannelManager$private fun priorityToImportance(priority: Int): Int</ID>
+    <ID>ReturnCount:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$private fun convertOSToAndroidPriority(priority: Int): Int</ID>
+    <ID>ReturnCount:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$private fun getAccentColor(fcmJson: JSONObject): BigInteger?</ID>
+    <ID>ReturnCount:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$private fun getBitmapFromAssetsOrResourceName(bitmapStr: String): Bitmap?</ID>
+    <ID>ReturnCount:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$private fun getResourceIcon(iconName: String?): Int</ID>
+    <ID>ReturnCount:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$private fun resizeBitmapForLargeIconArea(bitmap: Bitmap?): Bitmap?</ID>
+    <ID>ReturnCount:NotificationDisplayer.kt$NotificationDisplayer$private fun getBitmapFromAssetsOrResourceName(bitmapStr: String): Bitmap?</ID>
+    <ID>ReturnCount:NotificationDisplayer.kt$NotificationDisplayer$private fun getResourceIcon(iconName: String?): Int</ID>
+    <ID>ReturnCount:NotificationFormatHelper.kt$NotificationFormatHelper$private fun getOSNotificationIdFromBundle(bundle: Bundle?): String?</ID>
+    <ID>ReturnCount:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$override suspend fun processNotificationData( context: Context, androidNotificationId: Int, jsonPayload: JSONObject, isRestoring: Boolean, timestamp: Long, )</ID>
+    <ID>ReturnCount:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$private fun shouldFireForegroundHandlers(notificationJob: NotificationGenerationJob): Boolean</ID>
+    <ID>ReturnCount:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$private suspend fun processHandlerResponse( notificationJob: NotificationGenerationJob, wantsToDisplay: Boolean, isRestoring: Boolean, ): Boolean?</ID>
+    <ID>ReturnCount:NotificationGenerationWorkManager.kt$NotificationGenerationWorkManager$override fun beginEnqueueingWork( context: Context, osNotificationId: String, androidNotificationId: Int, jsonPayload: JSONObject?, timestamp: Long, isRestoring: Boolean, isHighPriority: Boolean, ): Boolean</ID>
+    <ID>ReturnCount:NotificationGenerationWorkManager.kt$NotificationGenerationWorkManager.NotificationGenerationWorker$override suspend fun doWork(): Result</ID>
+    <ID>ReturnCount:NotificationHelper.kt$NotificationHelper$fun areNotificationsEnabled( context: Context, channelId: String? = null, ): Boolean</ID>
+    <ID>ReturnCount:NotificationHelper.kt$NotificationHelper$fun getCampaignNameFromNotification(notification: INotification): String</ID>
+    <ID>ReturnCount:NotificationHelper.kt$NotificationHelper$fun getNotificationIdFromFCMJson(fcmJson: JSONObject?): String?</ID>
+    <ID>ReturnCount:NotificationLifecycleService.kt$NotificationLifecycleService$private fun shouldInitDirectSessionFromNotificationOpen(context: Activity): Boolean</ID>
+    <ID>ReturnCount:NotificationPermissionController.kt$NotificationPermissionController$override suspend fun prompt(fallbackToSettings: Boolean): Boolean</ID>
+    <ID>ReturnCount:NotificationRestoreProcessor.kt$NotificationRestoreProcessor$private fun getVisibleNotifications(): List&lt;Int&gt;?</ID>
+    <ID>ReturnCount:NotificationRestoreWorkManager.kt$NotificationRestoreWorkManager.NotificationRestoreWorker$override suspend fun doWork(): Result</ID>
+    <ID>ReturnCount:NotificationSummaryManager.kt$NotificationSummaryManager$private suspend fun internalUpdateSummaryNotificationAfterChildRemoved( group: String, dismissed: Boolean, )</ID>
+    <ID>ReturnCount:PushRegistratorAbstractGoogle.kt$PushRegistratorAbstractGoogle$override suspend fun registerForPush(): IPushRegistrator.RegisterResult</ID>
+    <ID>ReturnCount:PushRegistratorAbstractGoogle.kt$PushRegistratorAbstractGoogle$private suspend fun attemptRegistration( senderId: String, currentRetry: Int, ): IPushRegistrator.RegisterResult?</ID>
+    <ID>ReturnCount:PushRegistratorHMS.kt$PushRegistratorHMS$@Synchronized @Throws(ApiException::class) private suspend fun getHMSTokenTask(context: Context): IPushRegistrator.RegisterResult</ID>
+    <ID>ReturnCount:ReceiveReceiptWorkManager.kt$ReceiveReceiptWorkManager.ReceiveReceiptWorker$override suspend fun doWork(): Result</ID>
+    <ID>StringLiteralDuplication:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$"collapse_key"</ID>
+    <ID>StringLiteralDuplication:NotificationRepository.kt$NotificationRepository$" = 0 AND "</ID>
+    <ID>SwallowedException:ADMMessageReceiver.kt$ADMMessageReceiver$e: ClassNotFoundException</ID>
+    <ID>SwallowedException:BadgeCountUpdater.kt$BadgeCountUpdater$e: ShortcutBadgeException</ID>
+    <ID>SwallowedException:FirebaseAnalyticsTracker.kt$FirebaseAnalyticsTracker.Companion$e: ClassNotFoundException</ID>
+    <ID>SwallowedException:GooglePlayServicesUpgradePrompt.kt$GooglePlayServicesUpgradePrompt$e: PackageManager.NameNotFoundException</ID>
+    <ID>SwallowedException:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$t: Throwable</ID>
+    <ID>SwallowedException:NotificationDisplayer.kt$NotificationDisplayer$t: Throwable</ID>
+    <ID>SwallowedException:NotificationFormatHelper.kt$NotificationFormatHelper$e: JSONException</ID>
+    <ID>SwallowedException:NotificationHelper.kt$NotificationHelper$e: JSONException</ID>
+    <ID>SwallowedException:NotificationHelper.kt$NotificationHelper$e: Throwable</ID>
+    <ID>SwallowedException:NotificationHelper.kt$NotificationHelper$t: Throwable</ID>
+    <ID>SwallowedException:NotificationLimitManager.kt$NotificationLimitManager$t: Throwable</ID>
+    <ID>SwallowedException:NotificationRepository.kt$NotificationRepository$e: JSONException</ID>
+    <ID>SwallowedException:OneSignalHmsEventBridge.kt$OneSignalHmsEventBridge$e: JSONException</ID>
+    <ID>SwallowedException:PushRegistratorAbstractGoogle.kt$PushRegistratorAbstractGoogle$t: Throwable</ID>
+    <ID>SwallowedException:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:FirebaseAnalyticsTracker.kt$FirebaseAnalyticsTracker$e: Throwable</ID>
+    <ID>TooGenericExceptionCaught:FirebaseAnalyticsTracker.kt$FirebaseAnalyticsTracker$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:Notification.kt$Notification$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:Notification.kt$Notification.ActionButton$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:NotificationChannelManager.kt$NotificationChannelManager$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:NotificationDisplayer.kt$NotificationDisplayer$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:NotificationGenerationProcessor.kt$NotificationGenerationProcessor$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:NotificationHelper.kt$NotificationHelper$e: Throwable</ID>
+    <ID>TooGenericExceptionCaught:NotificationHelper.kt$NotificationHelper$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:NotificationLimitManager.kt$NotificationLimitManager$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:NotificationRepository.kt$NotificationRepository$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:NotificationRestoreProcessor.kt$NotificationRestoreProcessor$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:PushRegistratorAbstractGoogle.kt$PushRegistratorAbstractGoogle$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:SummaryNotificationDisplayer.kt$SummaryNotificationDisplayer$t: Throwable</ID>
+    <ID>TooGenericExceptionThrown:PushRegistratorAbstractGoogle.kt$PushRegistratorAbstractGoogle$throw Exception("Google has no callback mechanism for push registration!")</ID>
+    <ID>TooManyFunctions:INotificationLifecycleService.kt$INotificationLifecycleService</ID>
+    <ID>TooManyFunctions:INotificationRepository.kt$INotificationRepository</ID>
+    <ID>TooManyFunctions:NotificationDisplayBuilder.kt$NotificationDisplayBuilder : INotificationDisplayBuilder</ID>
+    <ID>TooManyFunctions:NotificationDisplayer.kt$NotificationDisplayer : INotificationDisplayer</ID>
+    <ID>TooManyFunctions:NotificationGenerationProcessor.kt$NotificationGenerationProcessor : INotificationGenerationProcessor</ID>
+    <ID>TooManyFunctions:NotificationHelper.kt$NotificationHelper$NotificationHelper</ID>
+    <ID>TooManyFunctions:NotificationLifecycleService.kt$NotificationLifecycleService : INotificationLifecycleServiceINotificationActivityOpener</ID>
+    <ID>TooManyFunctions:NotificationRepository.kt$NotificationRepository : INotificationRepository</ID>
+    <ID>TooManyFunctions:NotificationsManager.kt$NotificationsManager : INotificationsManagerINotificationPermissionChangedHandlerIApplicationLifecycleHandler</ID>
+    <ID>UndocumentedPublicClass:ADMMessageHandler.kt$ADMMessageHandler : ADMMessageHandlerBase</ID>
+    <ID>UndocumentedPublicClass:ADMMessageHandlerJob.kt$ADMMessageHandlerJob : ADMMessageHandlerJobBase</ID>
+    <ID>UndocumentedPublicClass:ADMMessageReceiver.kt$ADMMessageReceiver : ADMMessageReceiver</ID>
+    <ID>UndocumentedPublicClass:BootUpReceiver.kt$BootUpReceiver : BroadcastReceiver</ID>
+    <ID>UndocumentedPublicClass:FCMBroadcastReceiver.kt$FCMBroadcastReceiver : BroadcastReceiver</ID>
+    <ID>UndocumentedPublicClass:INotificationDisplayer.kt$INotificationDisplayer</ID>
+    <ID>UndocumentedPublicClass:INotificationLifecycleCallback.kt$INotificationLifecycleCallback</ID>
+    <ID>UndocumentedPublicClass:NotificationConstants.kt$NotificationConstants</ID>
+    <ID>UndocumentedPublicClass:NotificationDismissReceiver.kt$NotificationDismissReceiver : BroadcastReceiver</ID>
+    <ID>UndocumentedPublicClass:NotificationGenerationJob.kt$NotificationGenerationJob</ID>
+    <ID>UndocumentedPublicClass:NotificationHelper.kt$NotificationHelper</ID>
+    <ID>UndocumentedPublicClass:NotificationOpenedActivity.kt$NotificationOpenedActivity : NotificationOpenedActivityBase</ID>
+    <ID>UndocumentedPublicClass:NotificationOpenedActivityBase.kt$NotificationOpenedActivityBase : Activity</ID>
+    <ID>UndocumentedPublicClass:NotificationOpenedActivityHMS.kt$NotificationOpenedActivityHMS : Activity</ID>
+    <ID>UndocumentedPublicClass:NotificationsManager.kt$INotificationActivityOpener</ID>
+    <ID>UndocumentedPublicClass:OSWorkManagerHelper.kt$OSWorkManagerHelper</ID>
+    <ID>UndocumentedPublicClass:UpgradeReceiver.kt$UpgradeReceiver : BroadcastReceiver</ID>
+    <ID>UnusedPrivateMember:DeviceRegistrationListener.kt$DeviceRegistrationListener$val pushSubscription = _subscriptionManager.subscriptions.push</ID>
+    <ID>UnusedPrivateMember:NotificationDisplayBuilder.kt$NotificationDisplayBuilder$private fun addAlertButtons( context: Context, fcmJson: JSONObject, buttonsLabels: MutableList&lt;String&gt;, buttonsIds: MutableList&lt;String&gt;, )</ID>
+    <ID>UnusedPrivateMember:NotificationOpenedProcessor.kt$NotificationOpenedProcessor$private fun newContentValuesWithConsumed(intent: Intent): ContentValues</ID>
+    <ID>UnusedPrivateMember:OneSignalHmsEventBridge.kt$OneSignalHmsEventBridge$context: Context</ID>
+  </CurrentIssues>
+</SmellBaseline>

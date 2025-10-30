@@ -1,9 +1,8 @@
 package com.onesignal.session.internal.outcomes.impl
 
-import android.os.Process
 import com.onesignal.common.NetworkUtils
 import com.onesignal.common.exceptions.BackendException
-import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.startup.IStartableService
@@ -42,7 +41,7 @@ internal class OutcomeEventsController(
     }
 
     override fun start() {
-        suspendifyOnThread {
+        suspendifyOnIO {
             sendSavedOutcomes()
             _outcomeEventsCache.cleanCachedUniqueOutcomeEventNotifications()
         }
@@ -147,7 +146,7 @@ internal class OutcomeEventsController(
             if (uniqueInfluences == null) {
                 Logging.debug(
                     """
-                    Measure endpoint will not send because unique outcome already sent for: 
+                    Measure endpoint will not send because unique outcome already sent for:
                     SessionInfluences: $influences
                     Outcome name: $name
                     """.trimIndent(),
@@ -162,7 +161,7 @@ internal class OutcomeEventsController(
             if (unattributedUniqueOutcomeEventsSentOnSession.contains(name)) {
                 Logging.debug(
                     """
-                    Measure endpoint will not send because unique outcome already sent for: 
+                    Measure endpoint will not send because unique outcome already sent for:
                     Session: ${InfluenceType.UNATTRIBUTED}
                     Outcome name: $name
                     """.trimIndent(),
@@ -283,7 +282,7 @@ internal class OutcomeEventsController(
      * Save the ATTRIBUTED JSONArray of notification ids with unique outcome names to SQL
      */
     private fun saveAttributedUniqueOutcomeNotifications(eventParams: OutcomeEventParams) {
-        suspendifyOnThread(Process.THREAD_PRIORITY_BACKGROUND) {
+        suspendifyOnIO {
             _outcomeEventsCache.saveUniqueOutcomeEventParams(eventParams)
         }
     }

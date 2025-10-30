@@ -9,16 +9,21 @@ buildscript {
                 minSdkVersion: 21
         ]
         androidGradlePluginVersion = '8.8.2'
+        detektVersion = '1.21.0'
         googleServicesGradlePluginVersion = '4.3.10'
         huaweiAgconnectVersion = '1.9.1.304'
         huaweiHMSPushVersion = '6.3.0.304'
         huaweiHMSLocationVersion = '4.0.0.300'
         kotlinVersion = '1.7.10'
+        coroutinesVersion = '1.7.3'
         kotestVersion = '5.8.0'
-        ktlintPluginVersion = '11.6.1'
-        ktlintVersion = '1.0.1'
-        // DO NOT upgrade for tests, using an old version so it matches AOSP
-        tdunningJsonForTest = '1.0'
+        ioMockVersion = '1.13.2'
+        // AndroidX Lifecycle and Activity versions
+        lifecycleVersion = '2.6.2'
+        activityVersion = '1.7.2'
+        ktlintVersion = '0.50.0' // Used by Spotless for Kotlin formatting (compatible with Kotlin 1.7.10)
+        spotlessVersion = '6.25.0'
+        tdunningJsonForTest = '1.0' // DO NOT upgrade for tests, using an old version so it matches AOSP
 
         sharedRepos = {
             google()
@@ -32,7 +37,8 @@ buildscript {
             "com.google.gms:google-services:$googleServicesGradlePluginVersion",
             "com.huawei.agconnect:agcp:$huaweiAgconnectVersion",
             "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion",
-            "org.jlleitschuh.gradle:ktlint-gradle:$ktlintPluginVersion",
+            "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:$detektVersion",
+            "com.diffplug.spotless:spotless-plugin-gradle:$spotlessVersion",
             "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin:0.32.0"
         ]
     }
@@ -54,6 +60,51 @@ allprojects {
         }
         // Huawei maven
         maven { url 'https://developer.huawei.com/repo/' }
+    }
+
+    // Force all modules to use the same Kotlin version
+    configurations.all {
+        resolutionStrategy {
+            force "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+            force "org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion"
+
+            // Exclude deprecated jdk7/jdk8 variants
+            eachDependency { details ->
+                if (details.requested.group == 'org.jetbrains.kotlin') {
+                    if (details.requested.name == 'kotlin-stdlib-jdk7' ||
+                        details.requested.name == 'kotlin-stdlib-jdk8') {
+                        details.useTarget "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Aggregate Detekt tasks at the root so CI can call them once
+gradle.projectsEvaluated {
+    def moduleDetektTasks = []
+    def moduleDetektBaselineTasks = []
+
+    subprojects.each { p ->
+        if (p.plugins.hasPlugin('io.gitlab.arturbosch.detekt')) {
+            def detektTask = p.tasks.findByName('detekt')
+            if (detektTask != null) moduleDetektTasks << detektTask.path
+            def detektBaselineTask = p.tasks.findByName('detektBaseline')
+            if (detektBaselineTask != null) moduleDetektBaselineTasks << detektBaselineTask.path
+        }
+    }
+
+    tasks.register('detekt') {
+        if (!moduleDetektTasks.isEmpty()) dependsOn moduleDetektTasks
+        group = 'verification'
+        description = 'Runs Detekt on all modules.'
+    }
+
+    tasks.register('detektBaseline') {
+        if (!moduleDetektBaselineTasks.isEmpty()) dependsOn moduleDetektBaselineTasks
+        group = 'verification'
+        description = 'Creates/updates Detekt baselines for all modules.'
     }
 }
 
