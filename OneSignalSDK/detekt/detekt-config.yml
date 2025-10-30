@@ -1,0 +1,152 @@
+build:
+  maxIssues: 10
+  weights:
+    complexity: 2
+    LongParameterList: 1
+    style: 1
+    comments: 1
+
+processors:
+  active: true
+  exclude:
+    - DetektProgressListener
+
+config:
+  validation: true
+
+# ───────────── STYLE ─────────────
+style:
+  MagicNumber:
+    active: true
+    ignoreNumbers: ["-1", "0", "1", "2", "100", "200"]
+    ignoreHashCodeFunction: true
+    ignorePropertyDeclaration: true
+    ignoreAnnotation: true
+    ignoreNamedArgument: true
+
+  MaxLineLength:
+    active: false
+
+  OptionalUnit:
+    active: true
+
+  WildcardImport:
+    active: true
+    excludeImports: ["java.util.*", "kotlinx.coroutines.*"]
+
+  ForbiddenComment:
+    active: true
+    values: ["TODO", "FIXME", "STOPSHIP"]
+
+# ───────────── NAMING (moved from style) ─────────────
+
+naming:
+  VariableNaming:
+    active: true
+    variablePattern: '^[a-z][A-Za-z0-9]*$'
+    privateVariablePattern: '^(_)?[a-z][A-Za-z0-9]*$'
+
+  ClassNaming:
+    active: true
+    classPattern: '[A-Z][a-zA-Z0-9]*'
+
+  FunctionNaming:
+    active: true
+    functionPattern: '^[a-z][A-Za-z0-9]*$'
+
+# ───────────── COMPLEXITY ─────────────
+complexity:
+  LongMethod:
+    active: true
+    threshold: 40
+
+  LargeClass:
+    active: true
+    threshold: 800
+
+  LongParameterList:
+    active: true
+    functionThreshold: 6
+    constructorThreshold: 8
+
+  ComplexCondition:
+    active: true
+    threshold: 4
+
+  NestedBlockDepth:
+    active: true
+    threshold: 4
+
+  StringLiteralDuplication:
+    active: true
+    threshold: 5
+    ignoreAnnotation: true
+
+# ───────────── COMMENTS ─────────────
+comments:
+  UndocumentedPublicClass:
+    active: true
+    excludes: ['**/R.class', '**/BuildConfig.*']
+
+  UndocumentedPublicFunction:
+    active: false
+  EndOfSentenceFormat:
+    active: false
+    endOfSentenceFormat: ([.?!][ \t\n\r\f<])|([.?!:]$)
+
+# ───────────── POTENTIAL BUGS ─────────────
+potential-bugs:
+  UnsafeCast:
+    active: true
+
+  UnreachableCode:
+    active: true
+
+  IteratorHasNextCallsNextMethod:
+    active: true
+
+  LateinitUsage:
+    active: true
+    ignoreAnnotated: ["Inject"]
+
+  UnsafeCallOnNullableType:
+    active: true
+
+# ───────────── COROUTINES ─────────────
+coroutines:
+  GlobalCoroutineUsage:
+    active: true
+
+  RedundantSuspendModifier:
+    active: true
+
+# ───────────── PERFORMANCE ─────────────
+performance:
+  UnnecessaryTemporaryInstantiation:
+    active: true
+
+  SpreadOperator:
+    active: true
+
+# ───────────── EMPTY BLOCKS ─────────────
+empty-blocks:
+  EmptyCatchBlock:
+    active: true
+
+  EmptyFunctionBlock:
+    active: false
+
+  EmptyIfBlock:
+    active: true
+
+  EmptyElseBlock:
+    active: true
+
+# ───────────── EXCEPTIONS ─────────────
+exceptions:
+  TooGenericExceptionCaught:
+    active: true
+    exceptionNames: ['Exception', 'Throwable']
+
+  ThrowingExceptionsWithoutMessageOrCause:
+    active: true

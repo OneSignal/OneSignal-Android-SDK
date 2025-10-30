@@ -7,10 +7,8 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.Badger;
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.ShortcutBadgeException;
-
 import java.util.Collections;
 import java.util.List;
 
@@ -18,14 +16,14 @@ import java.util.List;
  * Created by wuxuejian on 2016/10/9.
  * 需在设置 -- 通知和状态栏 -- 应用角标管理 中开启应用
  */
-
 public class ZukHomeBadger implements Badger {
 
     private final Uri CONTENT_URI = Uri.parse("content://com.android.badge/badge");
 
     @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     @Override
-    public void executeBadge(Context context, ComponentName componentName, int badgeCount) throws ShortcutBadgeException {
+    public void executeBadge(Context context, ComponentName componentName, int badgeCount)
+            throws ShortcutBadgeException {
         Bundle extra = new Bundle();
         extra.putInt("app_badge_count", badgeCount);
         context.getContentResolver().call(CONTENT_URI, "setAppBadgeCount", null, extra);

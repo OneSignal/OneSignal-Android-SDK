@@ -17,6 +17,10 @@ jobs:
       - name: "[Static Code Analysis] Detekt"
         working-directory: OneSignalSDK
         run: |
+          ./gradlew spotlessCheck --console=plain
+      - name: "[Test] Detekt"
+        working-directory: OneSignalSDK
+        run: |
           ./gradlew detekt --console=plain
       - name: "[Test] SDK Unit Tests"
         working-directory: OneSignalSDK

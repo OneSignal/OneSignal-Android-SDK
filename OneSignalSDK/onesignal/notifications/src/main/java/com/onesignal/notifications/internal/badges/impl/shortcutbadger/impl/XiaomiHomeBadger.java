@@ -10,16 +10,13 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.os.Build;
-
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.Badger;
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.ShortcutBadgeException;
 import com.onesignal.notifications.internal.badges.impl.shortcutbadger.util.BroadcastHelper;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
-
 
 /**
  * @author leolin
@@ -28,12 +25,14 @@ import java.util.List;
 public class XiaomiHomeBadger implements Badger {
 
     public static final String INTENT_ACTION = "android.intent.action.APPLICATION_MESSAGE_UPDATE";
-    public static final String EXTRA_UPDATE_APP_COMPONENT_NAME = "android.intent.extra.update_application_component_name";
+    public static final String EXTRA_UPDATE_APP_COMPONENT_NAME =
+            "android.intent.extra.update_application_component_name";
     public static final String EXTRA_UPDATE_APP_MSG_TEXT = "android.intent.extra.update_application_message_text";
     private ResolveInfo resolveInfo;
 
     @Override
-    public void executeBadge(Context context, ComponentName componentName, int badgeCount) throws ShortcutBadgeException {
+    public void executeBadge(Context context, ComponentName componentName, int badgeCount)
+            throws ShortcutBadgeException {
         try {
             Class miuiNotificationClass = Class.forName("android.app.MiuiNotification");
             Object miuiNotification = miuiNotificationClass.newInstance();
@@ -45,9 +44,10 @@ public class XiaomiHomeBadger implements Badger {
                 field.set(miuiNotification, badgeCount);
             }
         } catch (Exception e) {
-            Intent localIntent = new Intent(
-                    INTENT_ACTION);
-            localIntent.putExtra(EXTRA_UPDATE_APP_COMPONENT_NAME, componentName.getPackageName() + "/" + componentName.getClassName());
+            Intent localIntent = new Intent(INTENT_ACTION);
+            localIntent.putExtra(
+                    EXTRA_UPDATE_APP_COMPONENT_NAME,
+                    componentName.getPackageName() + "/" + componentName.getClassName());
             localIntent.putExtra(EXTRA_UPDATE_APP_MSG_TEXT, String.valueOf(badgeCount == 0 ? "" : badgeCount));
             if (BroadcastHelper.canResolveBroadcast(context, localIntent)) {
                 context.sendBroadcast(localIntent);
@@ -67,8 +67,8 @@ public class XiaomiHomeBadger implements Badger {
         }
 
         if (resolveInfo != null) {
-            NotificationManager mNotificationManager = (NotificationManager) context
-                    .getSystemService(Context.NOTIFICATION_SERVICE);
+            NotificationManager mNotificationManager =
+                    (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             Notification.Builder builder = new Notification.Builder(context)
                     .setContentTitle("")
                     .setContentText("")
@@ -95,7 +95,6 @@ public class XiaomiHomeBadger implements Badger {
                 "com.miui.miuihome2",
                 "com.miui.mihome",
                 "com.miui.mihome2",
-                "com.i.miui.launcher"
-        );
+                "com.i.miui.launcher");
     }
 }

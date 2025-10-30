@@ -5,7 +5,7 @@
     package="com.onesignal.sdktest">
 
     <application
-        android:name=".application.MainApplication">
+        android:name=".application.MainApplicationKT">
 
         <service
           android:name="com.onesignal.sdktest.notification.HmsMessageServiceAppLevel"

@@ -42,8 +42,8 @@ class StartupServiceTests : FunSpec({
 
     test("bootstrap will call all IBootstrapService dependencies successfully") {
         // Given
-        val mockBootstrapService1 = spyk<IBootstrapService>()
-        val mockBootstrapService2 = spyk<IBootstrapService>()
+        val mockBootstrapService1 = mockk<IBootstrapService>(relaxed = true)
+        val mockBootstrapService2 = mockk<IBootstrapService>(relaxed = true)
 
         val startupService = StartupService(setupServiceProvider(listOf(mockBootstrapService1, mockBootstrapService2), listOf()))
 

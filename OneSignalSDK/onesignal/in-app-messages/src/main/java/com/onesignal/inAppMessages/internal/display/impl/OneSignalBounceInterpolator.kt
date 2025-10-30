@@ -13,7 +13,7 @@ internal class OneSignalBounceInterpolator(amplitude: Double, frequency: Double)
                     Math.E,
                     -time / mAmplitude,
                 ) * Math.cos(mFrequency * time) + 1
-        ).toFloat()
+            ).toFloat()
     }
 
     init {

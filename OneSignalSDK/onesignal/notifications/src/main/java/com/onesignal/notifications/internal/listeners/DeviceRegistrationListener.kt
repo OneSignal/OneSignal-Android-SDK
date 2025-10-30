@@ -3,7 +3,7 @@ package com.onesignal.notifications.internal.listeners
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
-import com.onesignal.common.threading.suspendifyOnThread
+import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.startup.IStartableService
@@ -67,7 +67,7 @@ internal class DeviceRegistrationListener(
     private fun retrievePushTokenAndUpdateSubscription() {
         val pushSubscription = _subscriptionManager.subscriptions.push
 
-        suspendifyOnThread {
+        suspendifyOnIO {
             val pushTokenAndStatus = _pushTokenManager.retrievePushToken()
             val permission = _notificationsManager.permission
             _subscriptionManager.addOrUpdatePushSubscriptionToken(
@@ -88,7 +88,7 @@ internal class DeviceRegistrationListener(
         // when setting optedIn=true and there aren't permissions, automatically drive
         // permission request.
         if (args.path == SubscriptionModel::optedIn.name && args.newValue == true && !_notificationsManager.permission) {
-            suspendifyOnThread {
+            suspendifyOnIO {
                 _notificationsManager.requestPermission(true)
             }
         }

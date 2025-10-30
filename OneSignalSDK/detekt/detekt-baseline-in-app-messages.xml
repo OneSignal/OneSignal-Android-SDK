@@ -1,0 +1,133 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <CurrentIssues>
+    <ID>ComplexCondition:InAppMessagesManager.kt$InAppMessagesManager$!message.isTriggerChanged &amp;&amp; isMessageDisplayed &amp;&amp; (isTriggerOnMessage || isNewTriggerAdded &amp;&amp; isOnlyDynamicTriggers)</ID>
+    <ID>ComplexMethod:TriggerController.kt$TriggerController$private fun evaluateTrigger(trigger: Trigger): Boolean</ID>
+    <ID>ConstructorParameterNaming:DynamicTriggerController.kt$DynamicTriggerController$private val _session: ISessionService</ID>
+    <ID>ConstructorParameterNaming:DynamicTriggerController.kt$DynamicTriggerController$private val _state: InAppStateService</ID>
+    <ID>ConstructorParameterNaming:DynamicTriggerController.kt$DynamicTriggerController$private val _time: ITime</ID>
+    <ID>ConstructorParameterNaming:InAppBackendService.kt$InAppBackendService$private val _deviceService: IDeviceService</ID>
+    <ID>ConstructorParameterNaming:InAppBackendService.kt$InAppBackendService$private val _httpClient: IHttpClient</ID>
+    <ID>ConstructorParameterNaming:InAppBackendService.kt$InAppBackendService$private val _hydrator: InAppHydrator</ID>
+    <ID>ConstructorParameterNaming:InAppDisplayer.kt$InAppDisplayer$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:InAppDisplayer.kt$InAppDisplayer$private val _backend: IInAppBackendService</ID>
+    <ID>ConstructorParameterNaming:InAppDisplayer.kt$InAppDisplayer$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:InAppDisplayer.kt$InAppDisplayer$private val _influenceManager: IInfluenceManager</ID>
+    <ID>ConstructorParameterNaming:InAppDisplayer.kt$InAppDisplayer$private val _languageContext: ILanguageContext</ID>
+    <ID>ConstructorParameterNaming:InAppDisplayer.kt$InAppDisplayer$private val _lifecycle: IInAppLifecycleService</ID>
+    <ID>ConstructorParameterNaming:InAppDisplayer.kt$InAppDisplayer$private val _promptFactory: IInAppMessagePromptFactory</ID>
+    <ID>ConstructorParameterNaming:InAppDisplayer.kt$InAppDisplayer$private val _time: ITime</ID>
+    <ID>ConstructorParameterNaming:InAppHydrator.kt$InAppHydrator$private val _propertiesModelStore: PropertiesModelStore</ID>
+    <ID>ConstructorParameterNaming:InAppHydrator.kt$InAppHydrator$private val _time: ITime</ID>
+    <ID>ConstructorParameterNaming:InAppMessageLocationPrompt.kt$InAppMessageLocationPrompt$private val _locationManager: ILocationManager</ID>
+    <ID>ConstructorParameterNaming:InAppMessagePreviewHandler.kt$InAppMessagePreviewHandler$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:InAppMessagePreviewHandler.kt$InAppMessagePreviewHandler$private val _iamDisplayer: IInAppDisplayer</ID>
+    <ID>ConstructorParameterNaming:InAppMessagePreviewHandler.kt$InAppMessagePreviewHandler$private val _notificationActivityOpener: INotificationActivityOpener</ID>
+    <ID>ConstructorParameterNaming:InAppMessagePreviewHandler.kt$InAppMessagePreviewHandler$private val _notificationDisplayer: INotificationDisplayer</ID>
+    <ID>ConstructorParameterNaming:InAppMessagePreviewHandler.kt$InAppMessagePreviewHandler$private val _notificationLifeCycle: INotificationLifecycleService</ID>
+    <ID>ConstructorParameterNaming:InAppMessagePreviewHandler.kt$InAppMessagePreviewHandler$private val _state: InAppStateService</ID>
+    <ID>ConstructorParameterNaming:InAppMessagePreviewHandler.kt$InAppMessagePreviewHandler$private val _time: ITime</ID>
+    <ID>ConstructorParameterNaming:InAppMessagePromptFactory.kt$InAppMessagePromptFactory$private val _locationManager: ILocationManager</ID>
+    <ID>ConstructorParameterNaming:InAppMessagePromptFactory.kt$InAppMessagePromptFactory$private val _notificationsManager: INotificationsManager</ID>
+    <ID>ConstructorParameterNaming:InAppMessagePushPrompt.kt$InAppMessagePushPrompt$private val _notificationsManager: INotificationsManager</ID>
+    <ID>ConstructorParameterNaming:InAppMessageRedisplayStats.kt$InAppMessageRedisplayStats$private val _time: ITime</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _backend: IInAppBackendService</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _consistencyManager: IConsistencyManager</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _displayer: IInAppDisplayer</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _identityModelStore: IdentityModelStore</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _influenceManager: IInfluenceManager</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _languageContext: ILanguageContext</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _lifecycle: IInAppLifecycleService</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _outcomeEventsController: IOutcomeEventsController</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _prefs: IInAppPreferencesController</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _repository: IInAppRepository</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _sessionService: ISessionService</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _state: InAppStateService</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _subscriptionManager: ISubscriptionManager</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _time: ITime</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _triggerController: ITriggerController</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _triggerModelStore: TriggerModelStore</ID>
+    <ID>ConstructorParameterNaming:InAppMessagesManager.kt$InAppMessagesManager$private val _userManager: IUserManager</ID>
+    <ID>ConstructorParameterNaming:InAppPreferencesController.kt$InAppPreferencesController$private val _prefs: IPreferencesService</ID>
+    <ID>ConstructorParameterNaming:InAppRepository.kt$InAppRepository$private val _databaseProvider: IDatabaseProvider</ID>
+    <ID>ConstructorParameterNaming:InAppRepository.kt$InAppRepository$private val _prefs: IInAppPreferencesController</ID>
+    <ID>ConstructorParameterNaming:InAppRepository.kt$InAppRepository$private val _time: ITime</ID>
+    <ID>ConstructorParameterNaming:TriggerController.kt$TriggerController$private var _dynamicTriggerController: DynamicTriggerController</ID>
+    <ID>ConstructorParameterNaming:WebViewManager.kt$WebViewManager$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:WebViewManager.kt$WebViewManager$private val _lifecycle: IInAppLifecycleService</ID>
+    <ID>ConstructorParameterNaming:WebViewManager.kt$WebViewManager$private val _promptFactory: IInAppMessagePromptFactory</ID>
+    <ID>EmptyDefaultConstructor:IAMLifecycleService.kt$IAMLifecycleService$()</ID>
+    <ID>EmptyDefaultConstructor:InAppMessagePrompt.kt$InAppMessagePrompt$()</ID>
+    <ID>ForbiddenComment:InAppMessageTag.kt$InAppMessageTag.Companion$// TODO when backend is ready check if key match</ID>
+    <ID>ForbiddenComment:InAppMessagesManager.kt$InAppMessagesManager$// TODO until we don't fix the activity going forward or back dismissing the IAM, we need to auto dismiss</ID>
+    <ID>ForbiddenComment:InAppMessagesManager.kt$InAppMessagesManager$// TODO: Add more action payload preview logs here in future</ID>
+    <ID>LongMethod:DynamicTriggerController.kt$DynamicTriggerController$fun dynamicTriggerShouldFire(trigger: Trigger): Boolean</ID>
+    <ID>LongMethod:InAppRepository.kt$InAppRepository$override suspend fun cleanCachedInAppMessages()</ID>
+    <ID>LongParameterList:IInAppBackendService.kt$IInAppBackendService$( appId: String, subscriptionId: String, variantId: String?, messageId: String, clickId: String?, isFirstClick: Boolean, )</ID>
+    <ID>LongParameterList:InAppDisplayer.kt$InAppDisplayer$( private val _applicationService: IApplicationService, private val _lifecycle: IInAppLifecycleService, private val _promptFactory: IInAppMessagePromptFactory, private val _backend: IInAppBackendService, private val _influenceManager: IInfluenceManager, private val _configModelStore: ConfigModelStore, private val _languageContext: ILanguageContext, private val _time: ITime, )</ID>
+    <ID>LongParameterList:InAppMessagesManager.kt$InAppMessagesManager$( private val _applicationService: IApplicationService, private val _sessionService: ISessionService, private val _influenceManager: IInfluenceManager, private val _configModelStore: ConfigModelStore, private val _userManager: IUserManager, private val _identityModelStore: IdentityModelStore, private val _subscriptionManager: ISubscriptionManager, private val _outcomeEventsController: IOutcomeEventsController, private val _state: InAppStateService, private val _prefs: IInAppPreferencesController, private val _repository: IInAppRepository, private val _backend: IInAppBackendService, private val _triggerController: ITriggerController, private val _triggerModelStore: TriggerModelStore, private val _displayer: IInAppDisplayer, private val _lifecycle: IInAppLifecycleService, private val _languageContext: ILanguageContext, private val _time: ITime, private val _consistencyManager: IConsistencyManager, )</ID>
+    <ID>LongParameterList:OneSignalAnimate.kt$OneSignalAnimate$( view: View, deltaFromY: Float, deltaToY: Float, duration: Int, interpolator: Interpolator?, animCallback: Animation.AnimationListener?, )</ID>
+    <ID>MagicNumber:DraggableRelativeLayout.kt$DraggableRelativeLayout$3</ID>
+    <ID>MagicNumber:DraggableRelativeLayout.kt$DraggableRelativeLayout$3000</ID>
+    <ID>MagicNumber:DynamicTriggerController.kt$DynamicTriggerController$1000</ID>
+    <ID>MagicNumber:InAppBackendService.kt$InAppBackendService$1_000L</ID>
+    <ID>MagicNumber:InAppBackendService.kt$InAppBackendService$425</ID>
+    <ID>MagicNumber:InAppBackendService.kt$InAppBackendService$429</ID>
+    <ID>MagicNumber:InAppBackendService.kt$InAppBackendService$500</ID>
+    <ID>MagicNumber:InAppBackendService.kt$InAppBackendService$599</ID>
+    <ID>MagicNumber:InAppMessageRedisplayStats.kt$InAppMessageRedisplayStats$1000</ID>
+    <ID>MagicNumber:InAppMessageView.kt$InAppMessageView$0.1</ID>
+    <ID>MagicNumber:InAppMessageView.kt$InAppMessageView$1000</ID>
+    <ID>MagicNumber:InAppMessageView.kt$InAppMessageView$24</ID>
+    <ID>MagicNumber:InAppMessageView.kt$InAppMessageView$5</ID>
+    <ID>MagicNumber:InAppMessageView.kt$InAppMessageView$8</ID>
+    <ID>MagicNumber:InAppMessageView.kt$InAppMessageView$8.0</ID>
+    <ID>MagicNumber:InAppMessageView.kt$InAppMessageView.&lt;no name provided&gt;$5</ID>
+    <ID>MagicNumber:InAppMessagesManager.kt$InAppMessagesManager$1000</ID>
+    <ID>MagicNumber:InAppRepository.kt$InAppRepository$1000L</ID>
+    <ID>MagicNumber:OneSignalAnimate.kt$OneSignalAnimate$0.5f</ID>
+    <ID>MagicNumber:WebViewManager.kt$WebViewManager$3</ID>
+    <ID>NestedBlockDepth:TriggerController.kt$TriggerController$override fun isTriggerOnMessage( message: InAppMessage, triggersKeys: Collection&lt;String&gt;, ): Boolean</ID>
+    <ID>PrintStackTrace:InAppMessage.kt$InAppMessage$e</ID>
+    <ID>PrintStackTrace:InAppMessage.kt$InAppMessage$exception</ID>
+    <ID>PrintStackTrace:InAppMessageClickResult.kt$InAppMessageClickResult$e</ID>
+    <ID>PrintStackTrace:InAppMessageOutcome.kt$InAppMessageOutcome$e</ID>
+    <ID>PrintStackTrace:InAppMessagePage.kt$InAppMessagePage$e</ID>
+    <ID>PrintStackTrace:InAppMessageRedisplayStats.kt$InAppMessageRedisplayStats$exception</ID>
+    <ID>PrintStackTrace:InAppMessageTag.kt$InAppMessageTag$e</ID>
+    <ID>PrintStackTrace:Trigger.kt$Trigger$exception</ID>
+    <ID>PrintStackTrace:WebViewManager.kt$WebViewManager.OSJavaScriptInterface$e</ID>
+    <ID>ReturnCount:DraggableRelativeLayout.kt$DraggableRelativeLayout.&lt;no name provided&gt;$override fun clampViewPositionVertical( child: View, top: Int, dy: Int, ): Int</ID>
+    <ID>ReturnCount:DynamicTriggerController.kt$DynamicTriggerController$fun dynamicTriggerShouldFire(trigger: Trigger): Boolean</ID>
+    <ID>ReturnCount:InAppBackendService.kt$InAppBackendService$override suspend fun getIAMData( appId: String, messageId: String, variantId: String?, ): GetIAMDataResponse</ID>
+    <ID>ReturnCount:InAppBackendService.kt$InAppBackendService$private suspend fun attemptFetchWithRetries( baseUrl: String, rywData: RywData, sessionDurationProvider: () -&gt; Long, ): List&lt;InAppMessage&gt;?</ID>
+    <ID>ReturnCount:InAppHydrator.kt$InAppHydrator$fun hydrateIAMMessageContent(jsonObject: JSONObject): InAppMessageContent?</ID>
+    <ID>ReturnCount:InAppMessage.kt$InAppMessage$private fun parseEndTimeJson(json: JSONObject): Date?</ID>
+    <ID>ReturnCount:InAppMessagePreviewHandler.kt$InAppMessagePreviewHandler$private fun inAppPreviewPushUUID(payload: JSONObject): String?</ID>
+    <ID>ReturnCount:InAppMessagesManager.kt$InAppMessagesManager$override fun onMessageWasDisplayed(message: InAppMessage)</ID>
+    <ID>ReturnCount:InAppMessagesManager.kt$InAppMessagesManager$private suspend fun fetchMessages(rywData: RywData)</ID>
+    <ID>ReturnCount:TriggerController.kt$TriggerController$override fun evaluateMessageTriggers(message: InAppMessage): Boolean</ID>
+    <ID>ReturnCount:TriggerController.kt$TriggerController$override fun isTriggerOnMessage( message: InAppMessage, triggersKeys: Collection&lt;String&gt;, ): Boolean</ID>
+    <ID>ReturnCount:TriggerController.kt$TriggerController$override fun messageHasOnlyDynamicTriggers(message: InAppMessage): Boolean</ID>
+    <ID>ReturnCount:TriggerController.kt$TriggerController$private fun evaluateTrigger(trigger: Trigger): Boolean</ID>
+    <ID>ReturnCount:TriggerController.kt$TriggerController$private fun triggerMatchesFlex( triggerValue: Any?, deviceValue: Any, operator: Trigger.OSTriggerOperator, ): Boolean</ID>
+    <ID>SwallowedException:InAppMessage.kt$InAppMessage$e: JSONException</ID>
+    <ID>SwallowedException:InAppMessagePreviewHandler.kt$InAppMessagePreviewHandler$e: JSONException</ID>
+    <ID>SwallowedException:InAppMessagesManager.kt$InAppMessagesManager$ex: BackendException</ID>
+    <ID>SwallowedException:OneSignalChromeTab.kt$OneSignalChromeTab$e: Throwable</ID>
+    <ID>SwallowedException:WebViewManager.kt$WebViewManager.OSJavaScriptInterface$e: JSONException</ID>
+    <ID>TooGenericExceptionCaught:InAppDisplayer.kt$InAppDisplayer$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:OneSignalChromeTab.kt$OneSignalChromeTab$e: Throwable</ID>
+    <ID>TooManyFunctions:InAppBackendService.kt$InAppBackendService : IInAppBackendService</ID>
+    <ID>TooManyFunctions:InAppMessage.kt$InAppMessage : IInAppMessage</ID>
+    <ID>TooManyFunctions:InAppMessageView.kt$InAppMessageView</ID>
+    <ID>TooManyFunctions:InAppMessagesManager.kt$InAppMessagesManager : IInAppMessagesManagerIStartableServiceISubscriptionChangedHandlerISingletonModelStoreChangeHandlerIInAppLifecycleEventHandlerITriggerHandlerISessionLifecycleHandlerIApplicationLifecycleHandler</ID>
+    <ID>TooManyFunctions:TriggerController.kt$TriggerController : ITriggerControllerIModelStoreChangeHandler</ID>
+    <ID>TooManyFunctions:WebViewManager.kt$WebViewManager : IActivityLifecycleHandler</ID>
+    <ID>UndocumentedPublicClass:TriggerModel.kt$TriggerModel : Model</ID>
+    <ID>UndocumentedPublicClass:TriggerModelStore.kt$TriggerModelStore : SimpleModelStore</ID>
+  </CurrentIssues>
+</SmellBaseline>
