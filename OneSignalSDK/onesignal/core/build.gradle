@@ -3,6 +3,7 @@ plugins {
     id 'kotlin-android'
     id 'com.diffplug.spotless'
     id 'com.vanniktech.maven.publish'
+    id 'io.gitlab.arturbosch.detekt'
 }
 
 android {
@@ -98,7 +99,7 @@ dependencies {
     testImplementation("br.com.colman:kotest-extensions-android:0.1.1")
     testImplementation("androidx.test:core-ktx:1.4.0")
     testImplementation("androidx.test:core:1.4.0")
-    testImplementation("io.mockk:mockk:1.13.2")
+    testImplementation("io.mockk:mockk:$ioMockVersion")
     testImplementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
 
@@ -106,5 +107,6 @@ dependencies {
     testImplementation("com.tdunning:json:$tdunningJsonForTest")
 }
 
+apply from: '../detekt.gradle'
 apply from: '../spotless.gradle'
 apply from: '../maven-push.gradle'

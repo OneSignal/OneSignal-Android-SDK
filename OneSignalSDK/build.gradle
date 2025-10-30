@@ -9,6 +9,7 @@ buildscript {
                 minSdkVersion: 21
         ]
         androidGradlePluginVersion = '8.8.2'
+        detektVersion = '1.21.0'
         googleServicesGradlePluginVersion = '4.3.10'
         huaweiAgconnectVersion = '1.9.1.304'
         huaweiHMSPushVersion = '6.3.0.304'
@@ -16,6 +17,7 @@ buildscript {
         kotlinVersion = '1.7.10'
         coroutinesVersion = '1.7.3'
         kotestVersion = '5.8.0'
+        ioMockVersion = '1.13.2'
         // AndroidX Lifecycle and Activity versions
         lifecycleVersion = '2.6.2'
         activityVersion = '1.7.2'
@@ -35,6 +37,7 @@ buildscript {
             "com.google.gms:google-services:$googleServicesGradlePluginVersion",
             "com.huawei.agconnect:agcp:$huaweiAgconnectVersion",
             "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion",
+            "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:$detektVersion",
             "com.diffplug.spotless:spotless-plugin-gradle:$spotlessVersion",
             "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin:0.32.0"
         ]
@@ -74,6 +77,30 @@ allprojects {
                     }
                 }
             }
+        }
+    }
+}
+
+subprojects {
+    plugins.withId("io.gitlab.arturbosch.detekt") {
+        afterEvaluate {
+            def configureDetektTask = { task ->
+                // Only analyze main source sets
+                task.source = files(
+                    "$projectDir/src/main/java",
+                    "$projectDir/src/main/kotlin"
+                )
+                // Exclude all test-related files and directories
+                task.exclude "**/test/**", "**/androidTest/**", "**/src/test/**", "**/src/androidTest/**",
+                    "**/*Test.kt", "**/*Tests.kt", "**/*Spec.kt",
+                    "**/*Test.java", "**/*Tests.java", "**/*Spec.java"
+
+                // Enable type resolution to catch !! operator
+                task.jvmTarget = "1.8"
+            }
+
+            tasks.withType(io.gitlab.arturbosch.detekt.Detekt).configureEach(configureDetektTask)
+            tasks.withType(io.gitlab.arturbosch.detekt.DetektCreateBaselineTask).configureEach(configureDetektTask)
         }
     }
 }
