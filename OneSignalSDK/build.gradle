@@ -17,6 +17,7 @@ buildscript {
         kotlinVersion = '1.7.10'
         coroutinesVersion = '1.7.3'
         kotestVersion = '5.8.0'
+        ioMockVersion = '1.13.2'
         // AndroidX Lifecycle and Activity versions
         lifecycleVersion = '2.6.2'
         activityVersion = '1.7.2'
