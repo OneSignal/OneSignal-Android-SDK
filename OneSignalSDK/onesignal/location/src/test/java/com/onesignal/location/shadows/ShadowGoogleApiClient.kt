@@ -63,7 +63,7 @@ class ShadowGoogleApiClient : GoogleApiClient() {
         connected = true
     }
 
-    override fun <C : Api.Client?> getClient(p0: Api.AnyClientKey<C>): C {
+    override fun <C : Api.Client> getClient(p0: Api.AnyClientKey<C>): C {
         return object : Api.Client {
             override fun connect(p0: BaseGmsClient.ConnectionProgressReportCallbacks) { }
 
