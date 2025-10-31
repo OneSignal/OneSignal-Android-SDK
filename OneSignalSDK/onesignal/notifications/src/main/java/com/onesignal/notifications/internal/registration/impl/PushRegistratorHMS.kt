@@ -47,7 +47,6 @@ internal class PushRegistratorHMS(
         return result!!
     }
 
-    @Synchronized
     @Throws(ApiException::class)
     private suspend fun getHMSTokenTask(context: Context): IPushRegistrator.RegisterResult {
         // Check required to prevent AGConnectServicesConfig or HmsInstanceId used below
