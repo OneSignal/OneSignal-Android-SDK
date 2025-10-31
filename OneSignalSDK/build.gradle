@@ -107,3 +107,6 @@ gradle.projectsEvaluated {
         description = 'Creates/updates Detekt baselines for all modules.'
     }
 }
+
+// Apply JaCoCo configuration from separate file
+apply from: 'jacoco.gradle'
