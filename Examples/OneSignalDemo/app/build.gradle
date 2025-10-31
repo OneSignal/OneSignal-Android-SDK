@@ -64,6 +64,10 @@ android {
         }
     }
 
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
     // Forced downgrade to Java 1.8 for compiling the application due to Android N error when building
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
