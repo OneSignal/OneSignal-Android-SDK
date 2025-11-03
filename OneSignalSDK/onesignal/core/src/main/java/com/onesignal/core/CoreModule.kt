@@ -33,6 +33,12 @@ import com.onesignal.core.internal.purchases.impl.TrackGooglePurchase
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.core.internal.time.impl.Time
+import com.onesignal.debug.internal.crash.IOneSignalCrashHandler
+import com.onesignal.debug.internal.crash.IOneSignalCrashReporter
+import com.onesignal.debug.internal.crash.OneSignalCrashHandler
+import com.onesignal.debug.internal.logging.otel.IOneSignalOpenTelemetry
+import com.onesignal.debug.internal.logging.otel.OneSignalCrashReporterOtel
+import com.onesignal.debug.internal.logging.otel.OneSignalOpenTelemetry
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.inAppMessages.internal.MisconfiguredIAMManager
 import com.onesignal.location.ILocationManager
@@ -80,6 +86,12 @@ internal class CoreModule : IModule {
 
         // Purchase Tracking
         builder.register<TrackGooglePurchase>().provides<IStartableService>()
+
+        // TODO: Should be a startable service instead (but we need to wait for the app id...)
+        builder.register<OneSignalCrashReporterOtel>().provides<IOneSignalCrashReporter>()
+        builder.register<OneSignalOpenTelemetry>().provides<IOneSignalOpenTelemetry>()
+        builder.register<OneSignalCrashHandler>().provides<IOneSignalCrashHandler>()
+
 
         // Register dummy services in the event they are not configured. These dummy services
         // will throw an error message if the associated functionality is attempted to be used.
