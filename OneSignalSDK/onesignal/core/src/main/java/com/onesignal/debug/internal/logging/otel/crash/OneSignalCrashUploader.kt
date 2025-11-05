@@ -1,7 +1,6 @@
 package com.onesignal.debug.internal.logging.otel.crash
 
 import com.onesignal.core.internal.startup.IStartableService
-import com.onesignal.debug.internal.logging.otel.crash.IOneSignalCrashConfigProvider
 import com.onesignal.debug.internal.logging.otel.IOneSignalOpenTelemetryRemote
 import com.onesignal.debug.internal.logging.otel.config.OtelConfigCrashFile
 import io.opentelemetry.sdk.logs.data.LogRecordData

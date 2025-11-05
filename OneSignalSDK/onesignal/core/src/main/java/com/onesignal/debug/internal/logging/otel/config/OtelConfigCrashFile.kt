@@ -10,7 +10,7 @@ import io.opentelemetry.sdk.resources.Resource
 import java.io.File
 import kotlin.time.Duration.Companion.hours
 
-class OtelConfigCrashFile {
+internal class OtelConfigCrashFile {
     internal object SdkLoggerProviderConfig {
         fun getFileLogRecordStorage(
             rootDir: String,

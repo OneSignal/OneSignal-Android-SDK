@@ -1,41 +1,38 @@
 package com.onesignal.debug.internal.logging.otel.crash
 
-import android.util.Log
 import com.onesignal.debug.internal.crash.IOneSignalCrashReporter
 import com.onesignal.debug.internal.logging.otel.IOneSignalOpenTelemetryCrash
+import com.onesignal.debug.internal.logging.otel.attributes.OS_OTEL_NAMESPACE
 import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.api.logs.Severity
 
 internal class OneSignalCrashReporterOtel(
     val _openTelemetry: IOneSignalOpenTelemetryCrash
 ) : IOneSignalCrashReporter {
     companion object {
-        private const val EXCEPTION_TYPE = "exception.type"
-        private const val EXCEPTION_MESSAGE = "exception.message"
-        private const val EXCEPTION_STACKTRACE = "exception.stacktrace"
+        private const val OTEL_EXCEPTION_TYPE = "exception.type"
+        private const val OTEL_EXCEPTION_MESSAGE = "exception.message"
+        private const val OTEL_EXCEPTION_STACKTRACE = "exception.stacktrace"
+
     }
 
     override suspend fun sendCrash(thread: Thread, throwable: Throwable) {
-        Log.e("OSCrashHandling", "sendCrash TOP")
         val attributesBuilder =
             Attributes
                 .builder()
-                .put(EXCEPTION_MESSAGE, throwable.message)
-                .put(EXCEPTION_STACKTRACE, throwable.stackTraceToString())
-                .put(EXCEPTION_TYPE, throwable.javaClass.name)
+                .put(OTEL_EXCEPTION_MESSAGE, throwable.message)
+                .put(OTEL_EXCEPTION_STACKTRACE, throwable.stackTraceToString())
+                .put(OTEL_EXCEPTION_TYPE, throwable.javaClass.name)
+                // This matches the top level thread.name today, but it may not
+                // always if things are refactored to use a different thread.
+                .put("$OS_OTEL_NAMESPACE.exception.thread.name", thread.name)
                 .build()
-        // TODO:1: Remaining attributes
-        // TODO:1.1: process name:
-//        final String processName = ActivityThread.currentProcessName();
-//        if (processName != null) {
-//            message.append("Process: ").append(processName).append(", ");
-//        }
 
         _openTelemetry.getLogger()
-            .logRecordBuilder()
             .setAllAttributes(attributesBuilder)
+            .setSeverity(Severity.FATAL)
             .emit()
 
         _openTelemetry.forceFlush()
-        Log.e("OSCrashHandling", "sendCrash BOTTOM")
     }
 }

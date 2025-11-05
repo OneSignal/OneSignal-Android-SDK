@@ -10,4 +10,9 @@ interface ITime {
      * current time and midnight, January 1, 1970 UTC).
      */
     val currentTimeMillis: Long
+
+    /**
+     * Returns how long the app has been running.
+     */
+    val processUptimeMillis: Long
 }
