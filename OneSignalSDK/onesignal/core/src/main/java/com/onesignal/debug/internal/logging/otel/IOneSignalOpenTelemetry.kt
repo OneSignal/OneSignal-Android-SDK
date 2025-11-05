@@ -5,7 +5,7 @@ import io.opentelemetry.sdk.common.CompletableResultCode
 import io.opentelemetry.sdk.logs.export.LogRecordExporter
 
 internal interface IOneSignalOpenTelemetry {
-    val logger: Logger
+    suspend fun getLogger(): Logger
 
     suspend fun forceFlush(): CompletableResultCode
 }

@@ -1,14 +1,10 @@
-package com.onesignal.debug.internal.logging.otel
+package com.onesignal.debug.internal.logging.otel.crash
 
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import com.onesignal.debug.internal.crash.IOneSignalCrashReporter
+import com.onesignal.debug.internal.logging.otel.IOneSignalOpenTelemetryCrash
 import io.opentelemetry.api.common.Attributes
-import java.io.PrintWriter
-import java.io.StringWriter
 
-@RequiresApi(Build.VERSION_CODES.O)
 internal class OneSignalCrashReporterOtel(
     val _openTelemetry: IOneSignalOpenTelemetryCrash
 ) : IOneSignalCrashReporter {
@@ -18,11 +14,12 @@ internal class OneSignalCrashReporterOtel(
         private const val EXCEPTION_STACKTRACE = "exception.stacktrace"
     }
 
-    override suspend fun sendCrash(therad: Thread, throwable: Throwable) {
+    override suspend fun sendCrash(thread: Thread, throwable: Throwable) {
         Log.e("OSCrashHandling", "sendCrash TOP")
         val attributesBuilder =
             Attributes
                 .builder()
+                .put(EXCEPTION_MESSAGE, throwable.message)
                 .put(EXCEPTION_STACKTRACE, throwable.stackTraceToString())
                 .put(EXCEPTION_TYPE, throwable.javaClass.name)
                 .build()
@@ -33,22 +30,12 @@ internal class OneSignalCrashReporterOtel(
 //            message.append("Process: ").append(processName).append(", ");
 //        }
 
-        _openTelemetry.logger
+        _openTelemetry.getLogger()
             .logRecordBuilder()
             .setAllAttributes(attributesBuilder)
             .emit()
 
         _openTelemetry.forceFlush()
         Log.e("OSCrashHandling", "sendCrash BOTTOM")
-    }
-
-    private fun stackTraceToString(throwable: Throwable): String {
-        val stringWriter = StringWriter(256)
-        val printWriter = PrintWriter(stringWriter)
-
-        throwable.printStackTrace(printWriter)
-        printWriter.flush()
-
-        return stringWriter.toString()
     }
 }

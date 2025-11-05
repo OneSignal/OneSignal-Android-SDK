@@ -1,9 +1,6 @@
 package com.onesignal.debug.internal.logging.otel.config
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import com.onesignal.debug.internal.logging.otel.config.OtelConfigShared.LogLimitsConfig
-import com.onesignal.debug.internal.logging.otel.config.OtelConfigShared.LogLimitsConfig.logLimits
 import io.opentelemetry.contrib.disk.buffering.exporters.LogRecordToDiskExporter
 import io.opentelemetry.contrib.disk.buffering.storage.impl.FileLogRecordStorage
 import io.opentelemetry.contrib.disk.buffering.storage.impl.FileStorageConfiguration
@@ -25,7 +22,7 @@ class OtelConfigCrashFile {
                     .builder()
                     // NOTE: Only use such as small maxFileAgeForWrite for
                     // crashes, as we want to send them as soon as possible
-                    // without have to wait too long for buffers.
+                    // without having to wait too long for buffers.
                     .setMaxFileAgeForWriteMillis(2_000)
                     .setMinFileAgeForReadMillis(minFileAgeForReadMillis)
                     .setMaxFileAgeForReadMillis(72.hours.inWholeMilliseconds)

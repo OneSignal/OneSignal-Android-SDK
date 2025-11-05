@@ -1,4 +1,4 @@
-package com.onesignal.debug.internal.logging.otel
+package com.onesignal.debug.internal.logging.otel.crash
 
 interface IOneSignalCrashConfigProvider {
     val path: String
