@@ -22,8 +22,7 @@ internal class OtelConfigShared {
             Resource
                 .getDefault()
                 .toBuilder()
-                //            .put(ServiceAttributes.SERVICE_NAME, "OneSignalDeviceSDK")
-                .put(ServiceAttributes.SERVICE_NAME, "OS-Android-SDK-Test")
+                .put(ServiceAttributes.SERVICE_NAME, "OneSignalDeviceSDK")
                 .putAll(attributes)
                 .build()
     }

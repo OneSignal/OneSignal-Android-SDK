@@ -44,7 +44,8 @@ import com.onesignal.debug.internal.logging.otel.crash.OneSignalCrashReporterOte
 import com.onesignal.debug.internal.logging.otel.crash.OneSignalCrashUploader
 import com.onesignal.debug.internal.logging.otel.OneSignalOpenTelemetryCrashLocal
 import com.onesignal.debug.internal.logging.otel.OneSignalOpenTelemetryRemote
-import com.onesignal.debug.internal.logging.otel.attributes.OneSignalOtelTopLevelFields
+import com.onesignal.debug.internal.logging.otel.attributes.OneSignalOtelFieldsPerEvent
+import com.onesignal.debug.internal.logging.otel.attributes.OneSignalOtelFieldsTopLevel
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.inAppMessages.internal.MisconfiguredIAMManager
 import com.onesignal.location.ILocationManager
@@ -104,7 +105,8 @@ internal class CoreModule : IModule {
         builder.register<OneSignalCrashHandler>().provides<IStartableService>()
         builder.register<OneSignalCrashUploader>().provides<IStartableService>()
 
-        builder.register<OneSignalOtelTopLevelFields>().provides<OneSignalOtelTopLevelFields>()
+        builder.register<OneSignalOtelFieldsTopLevel>().provides<OneSignalOtelFieldsTopLevel>()
+        builder.register<OneSignalOtelFieldsPerEvent>().provides<OneSignalOtelFieldsPerEvent>()
 
         // Register dummy services in the event they are not configured. These dummy services
         // will throw an error message if the associated functionality is attempted to be used.

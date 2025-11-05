@@ -3,7 +3,7 @@ package com.onesignal.debug.internal.logging.otel.crash
 import com.onesignal.core.internal.application.IApplicationService
 import java.io.File
 
-class OneSignalCrashConfigProvider(
+internal class OneSignalCrashConfigProvider(
     private val _applicationService: IApplicationService
 ) : IOneSignalCrashConfigProvider {
     override val path: String by lazy {

@@ -1,6 +1,5 @@
 package com.onesignal.debug.internal.crash
 
-import android.util.Log
 import com.onesignal.core.internal.startup.IStartableService
 import kotlinx.coroutines.runBlocking
 
@@ -24,7 +23,7 @@ internal class OneSignalCrashHandler(
     override fun uncaughtException(thread: Thread, throwable: Throwable) {
         // Ensure we never attempt to process the same throwable instance
         // more than once. This would only happen if there was another crash
-        // handler faulty in a specific way.
+        // handler and was faulty in a specific way.
         synchronized(seenThrowables) {
             if (seenThrowables.contains(throwable))
                 return
@@ -36,7 +35,6 @@ internal class OneSignalCrashHandler(
         //   give a bit of time to finish and then call existingHandler.
         //   * This way the app doesn't have to open a 2nd time to get the
         //     crash report and should help prevent duplicated reports.
-        Log.e("OSCrashHandling", "uncaughtException TOP")
         if (!isOneSignalAtFault(throwable)) {
             existingHandler?.uncaughtException(thread, throwable)
             return
