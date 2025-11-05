@@ -1,26 +1,41 @@
 package com.onesignal.debug.internal.crash
 
 import android.util.Log
+import com.onesignal.core.internal.startup.IStartableService
 import kotlinx.coroutines.runBlocking
 
-// NOTE: For future refactors, code is written assuming this is a singleton
+/**
+ * Purpose: Writes any crashes involving OneSignal to a file where they can
+ *          later be send to OneSignal to help improve reliability.
+ * NOTE: For future refactors, code is written assuming this is a singleton
+ */
 internal class OneSignalCrashHandler(
     private val _crashReporter: IOneSignalCrashReporter,
-) : IOneSignalCrashHandler,
+) : IStartableService,
     Thread.UncaughtExceptionHandler {
-    private val existingHandler: Thread.UncaughtExceptionHandler? =
-        Thread.getDefaultUncaughtExceptionHandler()
+    private var existingHandler: Thread.UncaughtExceptionHandler? = null
+    private val seenThrowables: MutableList<Throwable> = mutableListOf()
 
-    // TODO: Write the code to call this after we get the appId
-    // Recommend we only create an instance after getting a appId, otherwise there
-    // is no point setting up the handler.
-    init {
+    override fun start() {
+        existingHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler(this)
     }
 
     override fun uncaughtException(thread: Thread, throwable: Throwable) {
-        // TODO: Catch anything we may throw and silence it (print only to logcat)
-        // TODO: Add stackoverflow loop prevention
+        // Ensure we never attempt to process the same throwable instance
+        // more than once. This would only happen if there was another crash
+        // handler faulty in a specific way.
+        synchronized(seenThrowables) {
+            if (seenThrowables.contains(throwable))
+                return
+            seenThrowables.add(throwable)
+        }
+
+        // TODO: Catch anything we may throw and print only to logcat
+        // TODO: Also send a stop command to OneSignalCrashUploader,
+        //   give a bit of time to finish and then call existingHandler.
+        //   * This way the app doesn't have to open a 2nd time to get the
+        //     crash report and should help prevent duplicated reports.
         Log.e("OSCrashHandling", "uncaughtException TOP")
         if (!isOneSignalAtFault(throwable)) {
             existingHandler?.uncaughtException(thread, throwable)

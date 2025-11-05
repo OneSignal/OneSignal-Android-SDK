@@ -83,8 +83,8 @@ class MainApplicationKT : MultiDexApplication() {
 
             Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT)
 
-            delay(5000)
-            throw RuntimeException("test crash 2025-10-31")
+            delay(3000)
+            //throw RuntimeException("test crash 2025-11-04 18")
         }
     }
 

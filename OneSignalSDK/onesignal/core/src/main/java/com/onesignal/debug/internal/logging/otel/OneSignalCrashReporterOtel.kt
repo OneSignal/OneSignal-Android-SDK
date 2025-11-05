@@ -10,7 +10,7 @@ import java.io.StringWriter
 
 @RequiresApi(Build.VERSION_CODES.O)
 internal class OneSignalCrashReporterOtel(
-    val _openTelemetry: IOneSignalOpenTelemetry
+    val _openTelemetry: IOneSignalOpenTelemetryCrash
 ) : IOneSignalCrashReporter {
     companion object {
         private const val EXCEPTION_TYPE = "exception.type"
