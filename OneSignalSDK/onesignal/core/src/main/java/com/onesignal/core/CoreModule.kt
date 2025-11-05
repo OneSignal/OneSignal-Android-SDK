@@ -35,15 +35,16 @@ import com.onesignal.core.internal.time.ITime
 import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.internal.crash.IOneSignalCrashReporter
 import com.onesignal.debug.internal.crash.OneSignalCrashHandler
-import com.onesignal.debug.internal.logging.otel.IOneSignalCrashConfigProvider
+import com.onesignal.debug.internal.logging.otel.crash.IOneSignalCrashConfigProvider
 import com.onesignal.debug.internal.logging.otel.IOneSignalOpenTelemetry
 import com.onesignal.debug.internal.logging.otel.IOneSignalOpenTelemetryCrash
 import com.onesignal.debug.internal.logging.otel.IOneSignalOpenTelemetryRemote
-import com.onesignal.debug.internal.logging.otel.OneSignalCrashConfigProvider
-import com.onesignal.debug.internal.logging.otel.OneSignalCrashReporterOtel
-import com.onesignal.debug.internal.logging.otel.OneSignalCrashUploader
+import com.onesignal.debug.internal.logging.otel.crash.OneSignalCrashConfigProvider
+import com.onesignal.debug.internal.logging.otel.crash.OneSignalCrashReporterOtel
+import com.onesignal.debug.internal.logging.otel.crash.OneSignalCrashUploader
 import com.onesignal.debug.internal.logging.otel.OneSignalOpenTelemetryCrashLocal
 import com.onesignal.debug.internal.logging.otel.OneSignalOpenTelemetryRemote
+import com.onesignal.debug.internal.logging.otel.attributes.OneSignalOtelTopLevelFields
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.inAppMessages.internal.MisconfiguredIAMManager
 import com.onesignal.location.ILocationManager
@@ -92,7 +93,7 @@ internal class CoreModule : IModule {
         // Purchase Tracking
         builder.register<TrackGooglePurchase>().provides<IStartableService>()
 
-        // TODO: Should be a startable service instead (but we need to wait for the app id...)
+        // Remote Crash and error logging
         builder.register<OneSignalOpenTelemetryRemote>().provides<IOneSignalOpenTelemetry>()
         builder.register<OneSignalCrashReporterOtel>().provides<IOneSignalCrashReporter>()
         builder.register<OneSignalOpenTelemetryRemote>().provides<IOneSignalOpenTelemetryRemote>()
@@ -102,6 +103,8 @@ internal class CoreModule : IModule {
 
         builder.register<OneSignalCrashHandler>().provides<IStartableService>()
         builder.register<OneSignalCrashUploader>().provides<IStartableService>()
+
+        builder.register<OneSignalOtelTopLevelFields>().provides<OneSignalOtelTopLevelFields>()
 
         // Register dummy services in the event they are not configured. These dummy services
         // will throw an error message if the associated functionality is attempted to be used.

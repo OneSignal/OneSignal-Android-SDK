@@ -1,12 +1,13 @@
-package com.onesignal.debug.internal.logging.otel
+package com.onesignal.debug.internal.logging.otel.crash
 
 import com.onesignal.core.internal.startup.IStartableService
+import com.onesignal.debug.internal.logging.otel.crash.IOneSignalCrashConfigProvider
+import com.onesignal.debug.internal.logging.otel.IOneSignalOpenTelemetryRemote
 import com.onesignal.debug.internal.logging.otel.config.OtelConfigCrashFile
 import io.opentelemetry.sdk.logs.data.LogRecordData
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.TimeUnit
-
 
 /**
  * Purpose: This reads a local crash report files created by OneSignal's

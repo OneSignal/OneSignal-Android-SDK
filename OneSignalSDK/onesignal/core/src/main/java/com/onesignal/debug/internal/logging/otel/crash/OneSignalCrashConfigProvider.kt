@@ -1,4 +1,4 @@
-package com.onesignal.debug.internal.logging.otel
+package com.onesignal.debug.internal.logging.otel.crash
 
 import com.onesignal.core.internal.application.IApplicationService
 import java.io.File
