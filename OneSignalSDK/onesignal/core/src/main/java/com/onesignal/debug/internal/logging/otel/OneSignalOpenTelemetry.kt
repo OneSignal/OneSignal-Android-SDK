@@ -3,6 +3,8 @@ package com.onesignal.debug.internal.logging.otel
 import android.os.Build
 import androidx.annotation.RequiresApi
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.http.impl.HTTP_SDK_VERSION_HEADER_KEY
+import com.onesignal.core.internal.http.impl.HTTP_SDK_VERSION_HEADER_VALUE
 import com.onesignal.debug.internal.logging.otel.attributes.OneSignalOtelFieldsPerEvent
 import com.onesignal.debug.internal.logging.otel.attributes.OneSignalOtelFieldsTopLevel
 import com.onesignal.debug.internal.logging.otel.config.OtelConfigCrashFile
@@ -71,7 +73,8 @@ internal class OneSignalOpenTelemetryRemote(
     IOneSignalOpenTelemetryRemote {
     val extraHttpHeaders by lazy {
         mapOf(
-            "OS-App-Id" to _configModelStore.model.appId,
+            "X-OneSignal-App-Id" to _configModelStore.model.appId,
+            HTTP_SDK_VERSION_HEADER_KEY to HTTP_SDK_VERSION_HEADER_VALUE,
             "x-honeycomb-team" to "", // TODO: REMOVE
         )
     }
