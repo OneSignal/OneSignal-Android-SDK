@@ -26,22 +26,23 @@ internal abstract class OneSignalOpenTelemetryBase(
     private val _osPerEventFields: OneSignalOtelFieldsPerEvent,
 ) : IOneSignalOpenTelemetry {
     private val lock = Any()
-    private var sdk: OpenTelemetrySdk? = null
+    private var sdkCachedValue: OpenTelemetrySdk? = null
+
     protected suspend fun getSdk(): OpenTelemetrySdk {
         val attributes = _osTopLevelFields.getAttributes()
         synchronized(lock) {
-            var localSdk = sdk
+            var localSdk = sdkCachedValue
             if (localSdk != null) {
                 return localSdk
             }
 
             localSdk = getSdkInstance(attributes)
-            sdk = localSdk
+            sdkCachedValue = localSdk
             return localSdk
         }
     }
 
-     protected abstract fun getSdkInstance(attributes: Map<String, String>): OpenTelemetrySdk
+    protected abstract fun getSdkInstance(attributes: Map<String, String>): OpenTelemetrySdk
 
     override suspend fun forceFlush(): CompletableResultCode {
         val sdkLoggerProvider = getSdk().sdkLoggerProvider
@@ -53,7 +54,8 @@ internal abstract class OneSignalOpenTelemetryBase(
     }
 
     override suspend fun getLogger(): LogRecordBuilder =
-        getSdk().sdkLoggerProvider
+        getSdk()
+            .sdkLoggerProvider
             .loggerBuilder("loggerBuilder")
             .build()
             .logRecordBuilder()
@@ -106,6 +108,5 @@ internal class OneSignalOpenTelemetryCrashLocal(
                     _crashPathProvider.path,
                     _crashPathProvider.minFileAgeForReadMillis,
                 )
-            )
-            .build()
+            ).build()
 }
