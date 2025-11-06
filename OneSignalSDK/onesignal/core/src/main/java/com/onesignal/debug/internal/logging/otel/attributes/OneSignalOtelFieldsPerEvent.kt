@@ -6,6 +6,7 @@ import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.squareup.wire.internal.toUnmodifiableMap
+import java.util.UUID
 
 internal class OneSignalOtelFieldsPerEvent(
     private val _applicationService: IApplicationService,
@@ -15,6 +16,8 @@ internal class OneSignalOtelFieldsPerEvent(
 ) {
     fun getAttributes(): Map<String, String> {
         val attributes: MutableMap<String, String> = mutableMapOf()
+
+        attributes.put("log.record.uid", recordId.toString())
 
         attributes
             .putIfValueNotNull(
@@ -60,4 +63,9 @@ internal class OneSignalOtelFieldsPerEvent(
     // https://opentelemetry.io/docs/specs/semconv/general/attributes/#general-thread-attributes
     private val currentThreadName: String get() =
         Thread.currentThread().name
+
+    // idempotency so the backend can filter on duplicate events
+    // https://opentelemetry.io/docs/specs/semconv/general/logs/#general-log-identification-attributes
+    private val recordId: UUID get() =
+        UUID.randomUUID()
 }
