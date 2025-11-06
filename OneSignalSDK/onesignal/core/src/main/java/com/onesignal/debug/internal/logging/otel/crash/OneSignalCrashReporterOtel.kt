@@ -13,10 +13,9 @@ internal class OneSignalCrashReporterOtel(
         private const val OTEL_EXCEPTION_TYPE = "exception.type"
         private const val OTEL_EXCEPTION_MESSAGE = "exception.message"
         private const val OTEL_EXCEPTION_STACKTRACE = "exception.stacktrace"
-
     }
 
-    override suspend fun sendCrash(thread: Thread, throwable: Throwable) {
+    override suspend fun saveCrash(thread: Thread, throwable: Throwable) {
         val attributesBuilder =
             Attributes
                 .builder()
@@ -28,7 +27,8 @@ internal class OneSignalCrashReporterOtel(
                 .put("$OS_OTEL_NAMESPACE.exception.thread.name", thread.name)
                 .build()
 
-        _openTelemetry.getLogger()
+        _openTelemetry
+            .getLogger()
             .setAllAttributes(attributesBuilder)
             .setSeverity(Severity.FATAL)
             .emit()

@@ -20,8 +20,7 @@ internal class OneSignalOtelFieldsPerEvent(
             .putIfValueNotNull(
                 "$OS_OTEL_NAMESPACE.onesignal_id",
                 onesignalId
-            )
-            .putIfValueNotNull(
+            ).putIfValueNotNull(
                 "$OS_OTEL_NAMESPACE.push_subscription_id",
                 subscriptionId
             )

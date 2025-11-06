@@ -25,8 +25,9 @@ internal class OneSignalCrashHandler(
         // more than once. This would only happen if there was another crash
         // handler and was faulty in a specific way.
         synchronized(seenThrowables) {
-            if (seenThrowables.contains(throwable))
+            if (seenThrowables.contains(throwable)) {
                 return
+            }
             seenThrowables.add(throwable)
         }
 
@@ -55,8 +56,8 @@ internal class OneSignalCrashHandler(
          *
          * NOTE: addShutdownHook() isn't a workaround as it doesn't fire for
          * Process.killProcess, which KillApplicationHandler calls.
-        */
-        runBlocking { _crashReporter.sendCrash(thread, throwable) }
+         */
+        runBlocking { _crashReporter.saveCrash(thread, throwable) }
         existingHandler?.uncaughtException(thread, throwable)
     }
 }

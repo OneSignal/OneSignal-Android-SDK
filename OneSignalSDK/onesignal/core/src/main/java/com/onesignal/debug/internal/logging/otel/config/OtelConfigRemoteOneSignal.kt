@@ -27,7 +27,7 @@ internal class OtelConfigRemoteOneSignal {
     }
 
     object SdkLoggerProviderConfig {
-        // TODO: Switch to sdklogs.onesignal.com
+        // TODO: Switch to https://sdklogs.onesignal.com:443/sdk/otel
         const val BASE_URL = "https://api.honeycomb.io:443"
 
         @RequiresApi(Build.VERSION_CODES.O)
@@ -40,7 +40,7 @@ internal class OtelConfigRemoteOneSignal {
                 .setResource(resource)
                 .addLogRecordProcessor(
                     OtelConfigShared.LogRecordProcessorConfig.batchLogRecordProcessor(
-                    HttpRecordBatchExporter.create(extraHttpHeaders)
+                        HttpRecordBatchExporter.create(extraHttpHeaders)
                     )
                 ).setLogLimits(LogLimitsConfig::logLimits)
                 .build()
