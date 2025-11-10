@@ -37,7 +37,9 @@ class LoginHelperTests : FunSpec({
         Logging.logLevel = LogLevel.NONE
     }
 
-    test("login with same external id returns early without creating user") {
+    // in the event of externalId being removed in the backend, SDK needs to send a CreateUser request
+    // to restore the externalId for the subscription
+    test("login with same external id still creates a user") {
         // Given
         val mockIdentityModelStore =
             MockHelper.identityModelStore { model ->
@@ -64,9 +66,9 @@ class LoginHelperTests : FunSpec({
             loginHelper.login(currentExternalId)
         }
 
-        // Then - should return early without any operations
-        verify(exactly = 0) { mockUserSwitcher.createAndSwitchToNewUser(suppressBackendOperation = any(), modify = any()) }
-        coVerify(exactly = 0) { mockOperationRepo.enqueueAndWait(any()) }
+        // Then - should create a user and send a request
+        verify(exactly = 1) { mockUserSwitcher.createAndSwitchToNewUser(suppressBackendOperation = any(), modify = any()) }
+        coVerify(exactly = 1) { mockOperationRepo.enqueueAndWait(any()) }
     }
 
     test("login with different external id creates and switches to new user") {

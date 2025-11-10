@@ -25,10 +25,7 @@ class LoginHelper(
             currentIdentityExternalId = identityModelStore.model.externalId
             currentIdentityOneSignalId = identityModelStore.model.onesignalId
 
-            if (currentIdentityExternalId == externalId) {
-                return
-            }
-
+            // always create a user on login in case of externalId being removed in backend
             // TODO: Set JWT Token for all future requests.
             userSwitcher.createAndSwitchToNewUser { identityModel, _ ->
                 identityModel.externalId = externalId
