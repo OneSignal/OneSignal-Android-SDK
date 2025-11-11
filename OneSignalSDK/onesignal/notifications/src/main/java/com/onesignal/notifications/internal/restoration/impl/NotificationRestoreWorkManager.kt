@@ -17,13 +17,14 @@ internal class NotificationRestoreWorkManager : INotificationRestoreWorkManager 
     // Notifications will never be force removed when the app's process is running,
     //   so we only need to restore at most once per cold start of the app.
     private var restored = false
+    private val lock = Any()
 
     override fun beginEnqueueingWork(
         context: Context,
         shouldDelay: Boolean,
     ) {
         // Only allow one piece of work to be enqueued.
-        synchronized(restored) {
+        synchronized(lock) {
             if (restored) {
                 return
             }
