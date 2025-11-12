@@ -150,8 +150,19 @@ class SDKInitTests : FunSpec({
         accessorThread.join(500)
 
         // Then
-        // should complete even SharedPreferences is unavailable
+        // should complete even SharedPreferences is unavailable (non-blocking)
         accessorThread.isAlive shouldBe false
+
+        // Release the SharedPreferences lock so internalInit can complete
+        trigger.complete()
+
+        // Wait for initialization to complete (internalInit runs asynchronously)
+        var attempts = 0
+        while (!os.isInitialized && attempts < 50) {
+            Thread.sleep(20)
+            attempts++
+        }
+
         os.isInitialized shouldBe true
     }
 
@@ -224,11 +235,22 @@ class SDKInitTests : FunSpec({
         accessorThread.start()
         accessorThread.join(500)
 
-        os.isInitialized shouldBe true
+        // initWithContext should return immediately (non-blocking)
+        // but isInitialized won't be true until internalInit completes
+        // which requires SharedPreferences to be unblocked
         accessorThread.isAlive shouldBe true
 
-        // release the lock on SharedPreferences
+        // release the lock on SharedPreferences so internalInit can complete
         trigger.complete()
+
+        // Wait for initialization to complete (internalInit runs asynchronously)
+        var initAttempts = 0
+        while (!os.isInitialized && initAttempts < 50) {
+            Thread.sleep(20)
+            initAttempts++
+        }
+
+        os.isInitialized shouldBe true
 
         accessorThread.join(500)
         accessorThread.isAlive shouldBe false
