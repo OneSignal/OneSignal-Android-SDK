@@ -263,7 +263,6 @@ internal class OneSignalImp(
         suspendifyOnIO {
             internalInit(context, appId)
         }
-        initState = InitState.SUCCESS
         return true
     }
 
@@ -306,22 +305,48 @@ internal class OneSignalImp(
     ) {
         Logging.log(LogLevel.DEBUG, "Calling deprecated login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
-        if (!initState.isSDKAccessible()) {
-            throw IllegalStateException("Must call 'initWithContext' before 'login'")
+        // Check state and provide appropriate error messages
+        when (initState) {
+            InitState.FAILED -> {
+                throw IllegalStateException("Initialization failed. Cannot proceed.")
+            }
+            InitState.NOT_STARTED -> {
+                throw IllegalStateException("Must call 'initWithContext' before 'login'")
+            }
+            InitState.IN_PROGRESS, InitState.SUCCESS -> {
+                // Continue - these states allow proceeding (will wait if needed)
+            }
         }
 
         waitForInit()
+        // Re-check state after waiting - init might have failed during the wait
+        if (initState == InitState.FAILED) {
+            throw IllegalStateException("Initialization failed. Cannot proceed.")
+        }
         suspendifyOnIO { loginHelper.login(externalId, jwtBearerToken) }
     }
 
     override fun logout() {
         Logging.log(LogLevel.DEBUG, "Calling deprecated logout()")
 
-        if (!initState.isSDKAccessible()) {
-            throw IllegalStateException("Must call 'initWithContext' before 'logout'")
+        // Check state and provide appropriate error messages
+        when (initState) {
+            InitState.FAILED -> {
+                throw IllegalStateException("Initialization failed. Cannot proceed.")
+            }
+            InitState.NOT_STARTED -> {
+                throw IllegalStateException("Must call 'initWithContext' before 'logout'")
+            }
+            InitState.IN_PROGRESS, InitState.SUCCESS -> {
+                // Continue - these states allow proceeding (will wait if needed)
+            }
         }
 
         waitForInit()
+        // Re-check state after waiting - init might have failed during the wait
+        if (initState == InitState.FAILED) {
+            throw IllegalStateException("Initialization failed. Cannot proceed.")
+        }
         suspendifyOnIO { logoutHelper.logout() }
     }
 
@@ -358,6 +383,10 @@ internal class OneSignalImp(
                     withTimeout(MAX_TIMEOUT_TO_INIT) {
                         initAwaiter.awaitSuspend()
                     }
+                    // Re-check state after waiting - init might have failed during the wait
+                    if (initState == InitState.FAILED) {
+                        throw IllegalStateException("Initialization failed. Cannot proceed.")
+                    }
                 } catch (e: TimeoutCancellationException) {
                     throw IllegalStateException("initWithContext was timed out after $MAX_TIMEOUT_TO_INIT ms")
                 }
@@ -384,6 +413,10 @@ internal class OneSignalImp(
             InitState.IN_PROGRESS -> {
                 Logging.debug("Waiting for init to complete...")
                 waitForInit()
+                // Re-check state after waiting - init might have failed during the wait
+                if (initState == InitState.FAILED) {
+                    throw IllegalStateException("Initialization failed. Cannot proceed.")
+                }
             }
             InitState.FAILED -> {
                 throw IllegalStateException("Initialization failed. Cannot proceed.")
@@ -391,6 +424,10 @@ internal class OneSignalImp(
             else -> {
                 // SUCCESS
                 waitForInit()
+                // Re-check state after waiting - init might have failed during the wait
+                if (initState == InitState.FAILED) {
+                    throw IllegalStateException("Initialization failed. Cannot proceed.")
+                }
             }
         }
 
