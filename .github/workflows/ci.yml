@@ -26,7 +26,7 @@ jobs:
       - name: "[Test] SDK Unit Tests"
         working-directory: OneSignalSDK
         run: |
-          ./gradlew testReleaseUnitTest --console=plain --continue
+          ./gradlew testDebugUnitTest --console=plain --continue
       - name: "[Coverage] Generate JaCoCo merged XML"
         working-directory: OneSignalSDK
         run: |
