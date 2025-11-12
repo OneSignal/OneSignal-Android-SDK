@@ -7,6 +7,11 @@ on:
 env:
   DIFF_COVERAGE_THRESHOLD: '80'
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -49,6 +54,50 @@ jobs:
           python -m diff_cover.diff_cover_tool "$REPORT" \
             --compare-branch=origin/main \
             --html-report diff_coverage.html || true
+          # Generate markdown summary for PR comment
+          python -m diff_cover.diff_cover_tool "$REPORT" \
+            --compare-branch=origin/main \
+            --markdown-report diff_coverage.md || true
+      - name: Comment PR with coverage summary
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'OneSignalSDK/diff_coverage.md';
+            if (fs.existsSync(path)) {
+              const content = fs.readFileSync(path, 'utf8');
+              const body = `## 📊 Diff Coverage Report\n\n${content}\n\n📥 [Download detailed HTML report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+              
+              // Find existing comment
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+              });
+              
+              const botComment = comments.data.find(comment => 
+                comment.user.type === 'Bot' && comment.body.includes('Diff Coverage Report')
+              );
+              
+              if (botComment) {
+                // Update existing comment
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: body
+                });
+              } else {
+                // Create new comment
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: body
+                });
+              }
+            }
       - name: Upload diff coverage HTML
         if: always()
         uses: actions/upload-artifact@v4
