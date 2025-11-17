@@ -1,6 +1,5 @@
 package com.onesignal.debug.internal.crash
 
-import com.onesignal.core.internal.startup.IStartableService
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -10,12 +9,11 @@ import kotlinx.coroutines.runBlocking
  */
 internal class OneSignalCrashHandler(
     private val _crashReporter: IOneSignalCrashReporter,
-) : IStartableService,
-    Thread.UncaughtExceptionHandler {
+) : Thread.UncaughtExceptionHandler {
     private var existingHandler: Thread.UncaughtExceptionHandler? = null
     private val seenThrowables: MutableList<Throwable> = mutableListOf()
 
-    override fun start() {
+    init {
         existingHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler(this)
     }

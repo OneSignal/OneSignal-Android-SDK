@@ -102,7 +102,7 @@ internal class CoreModule : IModule {
         builder.register<OneSignalOpenTelemetryCrashLocal>().provides<IOneSignalOpenTelemetryCrash>()
         builder.register<OneSignalCrashConfigProvider>().provides<IOneSignalCrashConfigProvider>()
 
-        builder.register<OneSignalCrashHandler>().provides<IStartableService>()
+        builder.register<OneSignalCrashHandler>().provides<OneSignalCrashHandler>()
         builder.register<OneSignalCrashUploader>().provides<IStartableService>()
 
         builder.register<OneSignalOtelFieldsTopLevel>().provides<OneSignalOtelFieldsTopLevel>()
