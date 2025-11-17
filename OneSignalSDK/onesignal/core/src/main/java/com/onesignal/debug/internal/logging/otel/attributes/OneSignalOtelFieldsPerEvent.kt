@@ -4,6 +4,7 @@ import com.onesignal.common.IDManager
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.time.ITime
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.squareup.wire.internal.toUnmodifiableMap
 import java.util.UUID
@@ -17,10 +18,13 @@ internal class OneSignalOtelFieldsPerEvent(
     fun getAttributes(): Map<String, String> {
         val attributes: MutableMap<String, String> = mutableMapOf()
 
-        attributes.put("log.record.uid", recordId.toString())
+        attributes["log.record.uid"] = recordId.toString()
 
         attributes
             .putIfValueNotNull(
+                "$OS_OTEL_NAMESPACE.app_id",
+                appId
+            ).putIfValueNotNull(
                 "$OS_OTEL_NAMESPACE.onesignal_id",
                 onesignalId
             ).putIfValueNotNull(
@@ -28,28 +32,47 @@ internal class OneSignalOtelFieldsPerEvent(
                 subscriptionId
             )
 
-        attributes.put("android.app.state", appState)
-        attributes.put("process.uptime", processUptime.toString())
-        attributes.put("thread.name", currentThreadName)
+        attributes["android.app.state"] = appState
+        attributes["process.uptime"] = processUptime.toString()
+        attributes["thread.name"] = currentThreadName
 
         return attributes.toUnmodifiableMap()
     }
 
-    private val onesignalId: String? get() {
-        val onesignalId = _identityModelStore.model.onesignalId
-        if (IDManager.isLocalId(onesignalId)) {
+    private val appId: String? get() {
+        try {
+            return _configModelStore.model.appId
+        } catch (_: NullPointerException) {
+            Logging.warn("app_id not available to add to crash log")
             return null
         }
-        return onesignalId
+    }
+
+    private val onesignalId: String? get() {
+        try {
+            val onesignalId = _identityModelStore.model.onesignalId
+            if (IDManager.isLocalId(onesignalId)) {
+                return null
+            }
+            return onesignalId
+        } catch (_: NullPointerException) {
+            Logging.warn("onesignalId not available to add to crash log")
+            return null
+        }
     }
 
     private val subscriptionId: String? get() {
-        val pushSubscriptionId = _configModelStore.model.pushSubscriptionId
-        if (pushSubscriptionId == null ||
-            IDManager.isLocalId(pushSubscriptionId)) {
+        try {
+            val pushSubscriptionId = _configModelStore.model.pushSubscriptionId
+            if (pushSubscriptionId == null ||
+                IDManager.isLocalId(pushSubscriptionId)) {
+                return null
+            }
+            return pushSubscriptionId
+        } catch (_: NullPointerException) {
+            Logging.warn("subscriptionId not available to add to crash log")
             return null
         }
-        return pushSubscriptionId
     }
 
     // https://opentelemetry.io/docs/specs/semconv/registry/attributes/android/
