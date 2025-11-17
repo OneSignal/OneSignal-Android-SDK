@@ -5,6 +5,7 @@ import androidx.annotation.RequiresApi
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.http.impl.HTTP_SDK_VERSION_HEADER_KEY
 import com.onesignal.core.internal.http.impl.HTTP_SDK_VERSION_HEADER_VALUE
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.debug.internal.logging.otel.attributes.OneSignalOtelFieldsPerEvent
 import com.onesignal.debug.internal.logging.otel.attributes.OneSignalOtelFieldsTopLevel
 import com.onesignal.debug.internal.logging.otel.config.OtelConfigCrashFile
@@ -71,9 +72,17 @@ internal class OneSignalOpenTelemetryRemote(
     _osPerEventFields: OneSignalOtelFieldsPerEvent,
 ) : OneSignalOpenTelemetryBase(_osTopLevelFields, _osPerEventFields),
     IOneSignalOpenTelemetryRemote {
-    val extraHttpHeaders by lazy {
+    private val appId: String get() =
+        try {
+            _configModelStore.model.appId
+        } catch (_: NullPointerException) {
+            Logging.error("Auth missing for crash log reporting!")
+            ""
+        }
+
+    val extraHttpHeaders: Map<String, String> by lazy {
         mapOf(
-            "X-OneSignal-App-Id" to _configModelStore.model.appId,
+            "X-OneSignal-App-Id" to appId,
             HTTP_SDK_VERSION_HEADER_KEY to HTTP_SDK_VERSION_HEADER_VALUE,
             "x-honeycomb-team" to "", // TODO: REMOVE
         )

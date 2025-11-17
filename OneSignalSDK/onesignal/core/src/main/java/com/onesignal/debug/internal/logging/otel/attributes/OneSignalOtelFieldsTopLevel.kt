@@ -5,7 +5,6 @@ import com.onesignal.common.AndroidUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.OneSignalWrapper
 import com.onesignal.core.internal.application.IApplicationService
-import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IInstallIdService
 import com.squareup.wire.internal.toUnmodifiableMap
 
@@ -20,14 +19,11 @@ internal const val OS_OTEL_NAMESPACE: String = "ossdk"
  */
 internal class OneSignalOtelFieldsTopLevel(
     private val _applicationService: IApplicationService,
-    private val _configModelStore: ConfigModelStore,
     private val _installIdService: IInstallIdService,
 ) {
     suspend fun getAttributes(): Map<String, String> {
         val attributes: MutableMap<String, String> =
             mutableMapOf(
-                "$OS_OTEL_NAMESPACE.app_id" to
-                    _configModelStore.model.appId,
                 "$OS_OTEL_NAMESPACE.install_id" to
                     _installIdService.getId().toString(),
                 "$OS_OTEL_NAMESPACE.sdk_base"
