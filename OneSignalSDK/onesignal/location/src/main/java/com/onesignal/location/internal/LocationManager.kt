@@ -2,7 +2,7 @@ package com.onesignal.location.internal
 
 import android.os.Build
 import com.onesignal.common.AndroidUtils
-import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
@@ -41,7 +41,7 @@ internal class LocationManager(
     override fun start() {
         _locationPermissionController.subscribe(this)
         if (LocationUtils.hasLocationPermission(_applicationService.appContext)) {
-            suspendifyOnIO {
+            suspendifyOnThread {
                 startGetLocation()
             }
         }
@@ -49,7 +49,7 @@ internal class LocationManager(
 
     override fun onLocationPermissionChanged(enabled: Boolean) {
         if (enabled) {
-            suspendifyOnIO {
+            suspendifyOnThread {
                 startGetLocation()
             }
         }

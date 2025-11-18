@@ -79,7 +79,7 @@ object NotificationHelper {
             val isGroupless = (
                 notification.group == null ||
                     notification.group == GROUPLESS_SUMMARY_KEY
-                )
+            )
             if (!isGroupSummary && isGroupless) {
                 grouplessStatusBarNotifications.add(
                     statusBarNotification,

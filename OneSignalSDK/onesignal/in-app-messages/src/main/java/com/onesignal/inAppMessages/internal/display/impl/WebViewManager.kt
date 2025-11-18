@@ -10,9 +10,8 @@ import android.webkit.WebView
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.ViewUtils
 import com.onesignal.common.safeString
-import com.onesignal.common.threading.suspendifyOnDefault
-import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.common.threading.suspendifyOnMain
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.LogLevel
@@ -236,7 +235,7 @@ internal class WebViewManager(
             try {
                 val pagePxHeight = pageRectToViewHeight(activity, JSONObject(value))
 
-                suspendifyOnIO {
+                suspendifyOnThread {
                     showMessageView(pagePxHeight)
                 }
             } catch (e: JSONException) {
@@ -411,7 +410,7 @@ internal class WebViewManager(
     }
 
     fun backgroundDismissAndAwaitNextMessage() {
-        suspendifyOnDefault {
+        suspendifyOnThread {
             dismissAndAwaitNextMessage()
         }
     }

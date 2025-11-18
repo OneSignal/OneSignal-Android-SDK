@@ -216,17 +216,17 @@ internal class SubscriptionOperationExecutor(
                     ExecutionResponse(
                         ExecutionResult.FAIL_NORETRY,
                         operations =
-                        listOf(
-                            CreateSubscriptionOperation(
-                                lastOperation.appId,
-                                lastOperation.onesignalId,
-                                lastOperation.subscriptionId,
-                                lastOperation.type,
-                                lastOperation.enabled,
-                                lastOperation.address,
-                                lastOperation.status,
+                            listOf(
+                                CreateSubscriptionOperation(
+                                    lastOperation.appId,
+                                    lastOperation.onesignalId,
+                                    lastOperation.subscriptionId,
+                                    lastOperation.type,
+                                    lastOperation.enabled,
+                                    lastOperation.address,
+                                    lastOperation.status,
+                                ),
                             ),
-                        ),
                     )
                 }
                 else ->

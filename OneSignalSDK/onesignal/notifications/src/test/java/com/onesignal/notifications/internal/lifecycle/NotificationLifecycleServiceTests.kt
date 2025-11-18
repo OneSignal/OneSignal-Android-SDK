@@ -28,6 +28,7 @@ import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import org.json.JSONObject
 import org.robolectric.Robolectric
+import org.robolectric.android.controller.ActivityController
 
 private class Mocks {
     val context = ApplicationProvider.getApplicationContext<Context>()
@@ -75,8 +76,11 @@ private class Mocks {
 
     val activity: Activity =
         run {
-            val activityController = Robolectric.buildActivity(Activity::class.java)
-            activityController.setup() // Moves Activity to RESUMED state
+            val activityController: ActivityController<Activity>
+            Robolectric.buildActivity(Activity::class.java).use { controller ->
+                controller.setup() // Moves Activity to RESUMED state
+                activityController = controller
+            }
             activityController.get()
         }
 }

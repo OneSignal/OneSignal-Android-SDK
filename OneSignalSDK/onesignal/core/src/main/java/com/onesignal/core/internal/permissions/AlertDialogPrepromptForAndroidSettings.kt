@@ -38,38 +38,17 @@ import com.onesignal.debug.internal.logging.Logging
  * A singleton helper which will display the fallback-to-settings alert dialog.
  */
 object AlertDialogPrepromptForAndroidSettings {
-    private var currentDialog: AlertDialog? = null
-
     interface Callback {
         fun onAccept()
 
         fun onDecline()
     }
 
-    /**
-     * Dismiss the current dialog if it exists.
-     * This should be called when the Activity is destroyed to prevent WindowLeaked errors.
-     */
-    fun dismissCurrentDialog() {
-        currentDialog?.dismiss()
-        currentDialog = null
-    }
-
     fun show(
         activity: Activity,
         titlePrefix: String,
         previouslyDeniedPostfix: String,
         callback: Callback,
-    ) {
-        show(activity, titlePrefix, previouslyDeniedPostfix, callback, null)
-    }
-
-    fun show(
-        activity: Activity,
-        titlePrefix: String,
-        previouslyDeniedPostfix: String,
-        callback: Callback,
-        dismissCallback: (() -> Unit)?,
     ) {
         val titleTemplate = activity.getString(R.string.permission_not_available_title)
         val title = titleTemplate.format(titlePrefix)
@@ -79,26 +58,19 @@ object AlertDialogPrepromptForAndroidSettings {
 
         // Try displaying the dialog while handling cases where execution is not possible.
         try {
-            val dialog =
-                AlertDialog.Builder(activity)
-                    .setTitle(title)
-                    .setMessage(message)
-                    .setPositiveButton(R.string.permission_not_available_open_settings_option) { _, _ ->
-                        callback.onAccept()
-                    }
-                    .setNegativeButton(android.R.string.no) { _, _ ->
-                        callback.onDecline()
-                    }
-                    .setOnCancelListener {
-                        callback.onDecline()
-                    }
-                    .setOnDismissListener {
-                        currentDialog = null
-                        dismissCallback?.invoke()
-                    }
-                    .show()
-
-            currentDialog = dialog
+            AlertDialog.Builder(activity)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(R.string.permission_not_available_open_settings_option) { dialog, which ->
+                    callback.onAccept()
+                }
+                .setNegativeButton(android.R.string.no) { dialog, which ->
+                    callback.onDecline()
+                }
+                .setOnCancelListener {
+                    callback.onDecline()
+                }
+                .show()
         } catch (ex: BadTokenException) {
             // If Android is unable to display the dialog, trigger the onDecline callback to maintain
             // consistency with the behavior when the dialog is canceled or dismissed without a response.

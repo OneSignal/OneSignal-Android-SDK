@@ -5,7 +5,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.common.threading.WaiterWithValue
-import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -38,9 +38,12 @@ class ApplicationServiceTests : FunSpec({
 
     test("start application service with activity shows entry state as closed") {
         // Given
-        val controller1 = Robolectric.buildActivity(Activity::class.java)
-        controller1.setup() // Moves Activity to RESUMED state
-        val activity = controller1.get()
+        val activity: Activity
+
+        Robolectric.buildActivity(Activity::class.java).use { controller ->
+            controller.setup() // Moves Activity to RESUMED state
+            activity = controller.get()
+        }
         val applicationService = ApplicationService()
 
         // When
@@ -53,12 +56,17 @@ class ApplicationServiceTests : FunSpec({
 
     test("current activity is established when activity is started") {
         // Given
-        val controller1 = Robolectric.buildActivity(Activity::class.java)
-        controller1.setup() // Moves Activity to RESUMED state
-        val activity1 = controller1.get()
-        val controller2 = Robolectric.buildActivity(Activity::class.java)
-        controller2.setup() // Moves Activity to RESUMED state
-        val activity2 = controller2.get()
+        val activity1: Activity
+        val activity2: Activity
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        Robolectric.buildActivity(Activity::class.java).use { controller ->
+            controller.setup() // Moves Activity to RESUMED state
+            activity1 = controller.get()
+        }
+        Robolectric.buildActivity(Activity::class.java).use { controller ->
+            controller.setup() // Moves Activity to RESUMED state
+            activity2 = controller.get()
+        }
 
         val applicationService = ApplicationService()
 
@@ -76,12 +84,17 @@ class ApplicationServiceTests : FunSpec({
 
     test("current activity is established when activity is stopped") {
         // Given
-        val controller1 = Robolectric.buildActivity(Activity::class.java)
-        controller1.setup() // Moves Activity to RESUMED state
-        val activity1 = controller1.get()
-        val controller2 = Robolectric.buildActivity(Activity::class.java)
-        controller2.setup() // Moves Activity to RESUMED state
-        val activity2 = controller2.get()
+        val activity1: Activity
+        val activity2: Activity
+
+        Robolectric.buildActivity(Activity::class.java).use { controller ->
+            controller.setup() // Moves Activity to RESUMED state
+            activity1 = controller.get()
+        }
+        Robolectric.buildActivity(Activity::class.java).use { controller ->
+            controller.setup() // Moves Activity to RESUMED state
+            activity2 = controller.get()
+        }
 
         val applicationService = ApplicationService()
 
@@ -99,12 +112,17 @@ class ApplicationServiceTests : FunSpec({
 
     test("unfocus will occur when when all activities are stopped") {
         // Given
-        val controller1 = Robolectric.buildActivity(Activity::class.java)
-        controller1.setup() // Moves Activity to RESUMED state
-        val activity1 = controller1.get()
-        val controller2 = Robolectric.buildActivity(Activity::class.java)
-        controller2.setup() // Moves Activity to RESUMED state
-        val activity2 = controller2.get()
+        val activity1: Activity
+        val activity2: Activity
+
+        Robolectric.buildActivity(Activity::class.java).use { controller ->
+            controller.setup() // Moves Activity to RESUMED state
+            activity1 = controller.get()
+        }
+        Robolectric.buildActivity(Activity::class.java).use { controller ->
+            controller.setup() // Moves Activity to RESUMED state
+            activity2 = controller.get()
+        }
 
         val mockApplicationLifecycleHandler = spyk<IApplicationLifecycleHandler>()
         val applicationService = ApplicationService()
@@ -126,12 +144,17 @@ class ApplicationServiceTests : FunSpec({
 
     test("focus will occur when when the first activity is started") {
         // Given
-        val controller1 = Robolectric.buildActivity(Activity::class.java)
-        controller1.setup() // Moves Activity to RESUMED state
-        val activity1 = controller1.get()
-        val controller2 = Robolectric.buildActivity(Activity::class.java)
-        controller2.setup() // Moves Activity to RESUMED state
-        val activity2 = controller2.get()
+        val activity1: Activity
+        val activity2: Activity
+
+        Robolectric.buildActivity(Activity::class.java).use { controller ->
+            controller.setup() // Moves Activity to RESUMED state
+            activity1 = controller.get()
+        }
+        Robolectric.buildActivity(Activity::class.java).use { controller ->
+            controller.setup() // Moves Activity to RESUMED state
+            activity2 = controller.get()
+        }
 
         val mockApplicationLifecycleHandler = spyk<IApplicationLifecycleHandler>()
         val applicationService = ApplicationService()
@@ -157,9 +180,12 @@ class ApplicationServiceTests : FunSpec({
 
     test("focus will occur on subscribe when activity is already started") {
         // Given
-        val controller1 = Robolectric.buildActivity(Activity::class.java)
-        controller1.setup() // Moves Activity to RESUMED state
-        val activity = controller1.get()
+        val activity: Activity
+
+        Robolectric.buildActivity(Activity::class.java).use { controller ->
+            controller.setup() // Moves Activity to RESUMED state
+            activity = controller.get()
+        }
 
         val applicationService = ApplicationService()
         val mockApplicationLifecycleHandler = spyk<IApplicationLifecycleHandler>()
@@ -185,16 +211,17 @@ class ApplicationServiceTests : FunSpec({
 
     test("wait until system condition returns false if activity not started within 5 seconds") {
         // Given
-        val controller1 = Robolectric.buildActivity(Activity::class.java)
-        controller1.setup() // Moves Activity to RESUMED state
-        val activity = controller1.get()
-
+        val activity: Activity
+        Robolectric.buildActivity(Activity::class.java).use { controller ->
+            controller.setup() // Moves Activity to RESUMED state
+            activity = controller.get()
+        }
         val applicationService = ApplicationService()
 
         val waiter = WaiterWithValue<Boolean>()
 
         // When
-        suspendifyOnIO {
+        suspendifyOnThread {
             val response = applicationService.waitUntilSystemConditionsAvailable()
             waiter.wake(response)
         }
@@ -210,16 +237,17 @@ class ApplicationServiceTests : FunSpec({
 
     test("wait until system condition returns true when an activity is started within 5 seconds") {
         // Given
-        val controller1 = Robolectric.buildActivity(Activity::class.java)
-        controller1.setup() // Moves Activity to RESUMED state
-        val activity = controller1.get()
-
+        val activity: Activity
+        Robolectric.buildActivity(Activity::class.java).use { controller ->
+            controller.setup() // Moves Activity to RESUMED state
+            activity = controller.get()
+        }
         val applicationService = ApplicationService()
 
         val waiter = WaiterWithValue<Boolean>()
 
         // When
-        suspendifyOnIO {
+        suspendifyOnThread {
             val response = applicationService.waitUntilSystemConditionsAvailable()
             waiter.wake(response)
         }
@@ -235,9 +263,12 @@ class ApplicationServiceTests : FunSpec({
 
     test("wait until system condition returns true when there is no system condition") {
         // Given
-        val controller1 = Robolectric.buildActivity(Activity::class.java)
-        controller1.setup() // Moves Activity to RESUMED state
-        val activity = controller1.get()
+        val activity: Activity
+
+        Robolectric.buildActivity(Activity::class.java).use { controller ->
+            controller.setup() // Moves Activity to RESUMED state
+            activity = controller.get()
+        }
         val applicationService = ApplicationService()
 
         // When
