@@ -41,7 +41,7 @@ internal class PushTokenManager(
                         (
                             pushTokenStatus == SubscriptionStatus.NO_PERMISSION ||
                                 pushStatusRuntimeError(pushTokenStatus)
-                            )
+                        )
                     ) {
                         pushTokenStatus = registerResult.status
                     }

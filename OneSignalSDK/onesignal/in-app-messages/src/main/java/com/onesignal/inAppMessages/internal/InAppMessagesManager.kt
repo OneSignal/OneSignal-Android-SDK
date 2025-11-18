@@ -11,9 +11,7 @@ import com.onesignal.common.events.EventProducer
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
-import com.onesignal.common.threading.suspendifyOnDefault
-import com.onesignal.common.threading.suspendifyOnIO
-import com.onesignal.common.threading.suspendifyOnMain
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModel
@@ -53,6 +51,9 @@ import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.subscriptions.IPushSubscription
 import com.onesignal.user.subscriptions.ISubscription
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -133,7 +134,7 @@ internal class InAppMessagesManager(
 
                     // Create a IAM fetch condition when a backend OneSignalID is retrieved for the first time
                     if (IDManager.isLocalId(oldOneSignalId) && !IDManager.isLocalId(newOneSignalId)) {
-                        suspendifyOnIO {
+                        suspendifyOnThread {
                             val updateConditionDeferred =
                                 _consistencyManager.getRywDataFromAwaitableCondition(IamFetchReadyCondition(newOneSignalId))
                             val rywToken = updateConditionDeferred.await()
@@ -154,13 +155,13 @@ internal class InAppMessagesManager(
 
             // If paused is true and an In-App Message is showing, dismiss it
             if (value && _state.inAppMessageIdShowing != null) {
-                suspendifyOnMain {
+                GlobalScope.launch(Dispatchers.Main) {
                     _displayer.dismissCurrentInAppMessage()
                 }
             }
 
             if (!value) {
-                suspendifyOnDefault {
+                suspendifyOnThread {
                     evaluateInAppMessages()
                 }
             }
@@ -185,7 +186,7 @@ internal class InAppMessagesManager(
         _applicationService.addApplicationLifecycleHandler(this)
         _identityModelStore.subscribe(identityModelChangeHandler)
 
-        suspendifyOnIO {
+        suspendifyOnThread {
             _repository.cleanCachedInAppMessages()
 
             // get saved IAMs from database
@@ -264,7 +265,7 @@ internal class InAppMessagesManager(
     override fun onSessionEnded(duration: Long) { }
 
     private fun fetchMessagesWhenConditionIsMet() {
-        suspendifyOnIO {
+        suspendifyOnThread {
             val onesignalId = _userManager.onesignalId
             val iamFetchCondition =
                 _consistencyManager.getRywDataFromAwaitableCondition(IamFetchReadyCondition(onesignalId))
@@ -624,7 +625,7 @@ internal class InAppMessagesManager(
 
         val variantId = InAppHelper.variantIdForMessage(message, _languageContext) ?: return
 
-        suspendifyOnIO {
+        suspendifyOnThread {
             try {
                 _backend.sendIAMImpression(
                     _configModelStore.model.appId,
@@ -645,7 +646,7 @@ internal class InAppMessagesManager(
         message: InAppMessage,
         action: InAppMessageClickResult,
     ) {
-        suspendifyOnIO {
+        suspendifyOnThread {
             action.isFirstClick = message.takeActionAsUnique()
 
             firePublicClickHandler(message, action)
@@ -659,7 +660,7 @@ internal class InAppMessagesManager(
         message: InAppMessage,
         action: InAppMessageClickResult,
     ) {
-        suspendifyOnIO {
+        suspendifyOnThread {
             action.isFirstClick = message.takeActionAsUnique()
             firePublicClickHandler(message, action)
             beginProcessingPrompts(message, action.prompts)
@@ -678,7 +679,7 @@ internal class InAppMessagesManager(
             return
         }
 
-        suspendifyOnIO {
+        suspendifyOnThread {
             fireRESTCallForPageChange(message, page)
         }
     }
@@ -692,7 +693,7 @@ internal class InAppMessagesManager(
     }
 
     override fun onMessageWasDismissed(message: InAppMessage) {
-        suspendifyOnIO {
+        suspendifyOnThread {
             messageWasDismissed(message)
         }
     }
@@ -726,7 +727,7 @@ internal class InAppMessagesManager(
 
         makeRedisplayMessagesAvailableWithTriggers(listOf(triggerId), false)
 
-        suspendifyOnDefault {
+        suspendifyOnThread {
             // This method is called when a time-based trigger timer fires, meaning the message can
             //  probably be shown now. So the current message conditions should be re-evaluated
             evaluateInAppMessages()
@@ -738,7 +739,7 @@ internal class InAppMessagesManager(
 
         makeRedisplayMessagesAvailableWithTriggers(listOf(newTriggerKey), true)
 
-        suspendifyOnDefault {
+        suspendifyOnThread {
             // This method is called when a time-based trigger timer fires, meaning the message can
             //  probably be shown now. So the current message conditions should be re-evaluated
             evaluateInAppMessages()
@@ -950,7 +951,7 @@ internal class InAppMessagesManager(
             .Builder(_applicationService.current)
             .setTitle(messageTitle)
             .setMessage(message)
-            .setPositiveButton(android.R.string.ok) { _, _ -> suspendifyOnIO { showMultiplePrompts(inAppMessage, prompts) } }
+            .setPositiveButton(android.R.string.ok) { _, _ -> suspendifyOnThread { showMultiplePrompts(inAppMessage, prompts) } }
             .show()
     }
 

@@ -20,7 +20,7 @@ import androidx.core.widget.PopupWindowCompat
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.ViewUtils
 import com.onesignal.common.threading.Waiter
-import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.inAppMessages.internal.InAppMessageContent
 import kotlinx.coroutines.Dispatchers
@@ -347,7 +347,7 @@ internal class InAppMessageView(
                         messageController!!.onMessageWillDismiss()
                     }
 
-                    suspendifyOnIO {
+                    suspendifyOnThread {
                         finishAfterDelay()
                     }
                 }
@@ -579,7 +579,7 @@ internal class InAppMessageView(
             messageView,
             (
                 -height - marginPxSizeTop
-                ).toFloat(),
+            ).toFloat(),
             0f,
             IN_APP_BANNER_ANIMATION_DURATION_MS,
             OneSignalBounceInterpolator(0.1, 8.0),
@@ -598,7 +598,7 @@ internal class InAppMessageView(
             messageView,
             (
                 height + marginPxSizeBottom
-                ).toFloat(),
+            ).toFloat(),
             0f,
             IN_APP_BANNER_ANIMATION_DURATION_MS,
             OneSignalBounceInterpolator(0.1, 8.0),

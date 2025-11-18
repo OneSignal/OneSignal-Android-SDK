@@ -1,6 +1,5 @@
 plugins {
     id 'com.android.application'
-    id 'kotlin-android'
 }
 
 android {
@@ -49,18 +48,6 @@ android {
 //            signingConfig null
 //            productFlavors.huawei.signingConfig signingConfigs.huawei
             debuggable true
-            // Note: profileable is automatically enabled when debuggable=true
-            // Enable method tracing for detailed performance analysis
-            testCoverageEnabled false
-        }
-        // Profileable release build for performance testing
-        profileable {
-            initWith release
-            debuggable false
-            profileable true
-            minifyEnabled false
-            signingConfig signingConfigs.debug
-            matchingFallbacks = ['release']
         }
     }
 
@@ -87,7 +74,6 @@ android {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4'
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'androidx.appcompat:appcompat:1.5.1'

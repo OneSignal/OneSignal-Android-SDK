@@ -64,7 +64,6 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
     class NotificationGenerationWorker(context: Context, workerParams: WorkerParameters) : CoroutineWorker(context, workerParams) {
         override suspend fun doWork(): Result {
             if (!OneSignal.initWithContext(applicationContext)) {
-                Logging.warn("NotificationWorker skipped due to failed OneSignal initialization")
                 return Result.success()
             }
 
@@ -72,16 +71,11 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
             val inputData = inputData
             val id = inputData.getString(OS_ID_DATA_PARAM) ?: return Result.failure()
 
-            return try {
+            try {
                 Logging.debug("NotificationWorker running doWork with data: $inputData")
-
                 val androidNotificationId = inputData.getInt(ANDROID_NOTIF_ID_WORKER_DATA_PARAM, 0)
                 val jsonPayload = JSONObject(inputData.getString(JSON_PAYLOAD_WORKER_DATA_PARAM))
-                val timestamp =
-                    inputData.getLong(
-                        TIMESTAMP_WORKER_DATA_PARAM,
-                        System.currentTimeMillis() / 1000L,
-                    )
+                val timestamp = inputData.getLong(TIMESTAMP_WORKER_DATA_PARAM, System.currentTimeMillis() / 1000L)
                 val isRestoring = inputData.getBoolean(IS_RESTORING_WORKER_DATA_PARAM, false)
 
                 notificationProcessor.processNotificationData(
@@ -91,13 +85,13 @@ internal class NotificationGenerationWorkManager : INotificationGenerationWorkMa
                     isRestoring,
                     timestamp,
                 )
-                Result.success()
             } catch (e: JSONException) {
                 Logging.error("Error occurred doing work for job with id: $id", e)
-                Result.failure()
+                return Result.failure()
             } finally {
                 removeNotificationIdProcessed(id!!)
             }
+            return Result.success()
         }
     }
 

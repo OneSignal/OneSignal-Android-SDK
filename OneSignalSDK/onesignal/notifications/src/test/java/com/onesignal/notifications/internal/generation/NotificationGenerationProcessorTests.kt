@@ -3,7 +3,6 @@ package com.onesignal.notifications.internal.generation
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
-import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.AndroidMockHelper
@@ -22,7 +21,9 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import org.robolectric.annotation.Config
@@ -281,7 +282,7 @@ class NotificationGenerationProcessorTests : FunSpec({
         coEvery { mocks.notificationLifecycleService.externalNotificationWillShowInForeground(any()) } coAnswers {
             val willDisplayEvent = firstArg<INotificationWillDisplayEvent>()
             willDisplayEvent.preventDefault(false)
-            suspendifyOnIO {
+            GlobalScope.launch {
                 delay(100)
                 willDisplayEvent.preventDefault(true)
                 delay(100)
@@ -306,7 +307,7 @@ class NotificationGenerationProcessorTests : FunSpec({
         coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } coAnswers {
             val receivedEvent = firstArg<INotificationReceivedEvent>()
             receivedEvent.preventDefault(false)
-            suspendifyOnIO {
+            GlobalScope.launch {
                 delay(100)
                 receivedEvent.preventDefault(true)
                 delay(100)

@@ -2,7 +2,6 @@ package com.onesignal.core.internal.preferences.impl
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.Waiter
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.preferences.IPreferencesService
@@ -11,6 +10,10 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 
 internal class PreferencesService(
@@ -22,11 +25,13 @@ internal class PreferencesService(
             PreferenceStores.ONESIGNAL to mutableMapOf(),
             PreferenceStores.PLAYER_PURCHASES to mutableMapOf(),
         )
+    private var queueJob: Deferred<Unit>? = null
+
     private val waiter = Waiter()
 
     override fun start() {
         // fire up an async job that will run "forever" so we don't hold up the other startable services.
-        doWorkAsync()
+        queueJob = doWorkAsync()
     }
 
     override fun getString(
@@ -170,7 +175,7 @@ internal class PreferencesService(
     }
 
     private fun doWorkAsync() =
-        OneSignalDispatchers.launchOnIO {
+        GlobalScope.async(Dispatchers.IO) {
             var lastSyncTime = _time.currentTimeMillis
 
             while (true) {

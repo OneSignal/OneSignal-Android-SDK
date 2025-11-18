@@ -136,23 +136,6 @@ object OneSignal {
     }
 
     /**
-     * Initialize the OneSignal SDK asynchronously. This should be called during startup of the application.
-     * This method provides a suspended version that returns a boolean indicating success.
-     * Uses Dispatchers.IO internally to prevent ANRs and optimize for I/O operations.
-     *
-     * @param context Application context is recommended for SDK operations
-     * @param appId The application ID the OneSignal SDK is bound to.
-     * @return Boolean indicating if initialization was successful.
-     */
-    @JvmStatic
-    suspend fun initWithContextSuspend(
-        context: Context,
-        appId: String? = null,
-    ): Boolean {
-        return oneSignal.initWithContextSuspend(context, appId)
-    }
-
-    /**
      * Login to OneSignal under the user identified by the [externalId] provided. The act of
      * logging a user into the OneSignal SDK will switch the [User] context to that specific user.
      *
@@ -221,29 +204,8 @@ object OneSignal {
      * THIS IS AN INTERNAL INTERFACE AND SHOULD NOT BE USED DIRECTLY.
      */
     @JvmStatic
-    suspend fun initWithContext(context: Context): Boolean {
-        return oneSignal.initWithContext(context)
-    }
-
-    /**
-     * Login a user with external ID and optional JWT token (suspend version).
-     *
-     * @param externalId External user ID for login
-     * @param jwtBearerToken Optional JWT token for authentication
-     */
-    @JvmStatic
-    suspend fun loginSuspend(
-        externalId: String,
-        jwtBearerToken: String? = null,
-    ) {
-        oneSignal.login(externalId, jwtBearerToken)
-    }
-
-    /**
-     * Logout the current user (suspend version).
-     */
-    suspend fun logoutSuspend() {
-        oneSignal.logout()
+    fun initWithContext(context: Context): Boolean {
+        return oneSignal.initWithContext(context, null)
     }
 
     /**

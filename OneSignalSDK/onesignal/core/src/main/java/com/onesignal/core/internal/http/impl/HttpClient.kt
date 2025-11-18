@@ -5,7 +5,6 @@ import android.os.Build
 import com.onesignal.common.JSONUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.OneSignalWrapper
-import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IInstallIdService
 import com.onesignal.core.internal.http.HttpResponse
@@ -15,8 +14,12 @@ import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.Logging
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import java.net.ConnectException
@@ -97,6 +100,7 @@ internal class HttpClient(
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private suspend fun makeRequestIODispatcher(
         url: String,
         method: String?,
@@ -107,7 +111,7 @@ internal class HttpClient(
         var retVal: HttpResponse? = null
 
         val job =
-            OneSignalDispatchers.launchOnIO {
+            GlobalScope.launch(Dispatchers.IO) {
                 var httpResponse = -1
                 var con: HttpURLConnection? = null
 

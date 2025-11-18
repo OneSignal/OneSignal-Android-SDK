@@ -193,9 +193,11 @@ class InAppMessagePreviewHandlerTests : FunSpec({
                         ),
                 )
 
-        val controller1 = Robolectric.buildActivity(Activity::class.java)
-        controller1.setup() // Moves Activity to RESUMED state
-        val activity = controller1.get()
+        val activity: Activity
+        Robolectric.buildActivity(Activity::class.java).use { controller ->
+            controller.setup() // Moves Activity to RESUMED state
+            activity = controller.get()
+        }
 
         // When
         val response = inAppMessagePreviewHandler.canOpenNotification(activity, jsonObject)
@@ -246,9 +248,11 @@ class InAppMessagePreviewHandlerTests : FunSpec({
                         ),
                 )
 
-        val controller1 = Robolectric.buildActivity(Activity::class.java)
-        controller1.setup() // Moves Activity to RESUMED state
-        val activity = controller1.get()
+        val activity: Activity
+        Robolectric.buildActivity(Activity::class.java).use { controller ->
+            controller.setup() // Moves Activity to RESUMED state
+            activity = controller.get()
+        }
 
         // When
         val response = inAppMessagePreviewHandler.canOpenNotification(activity, jsonObject)

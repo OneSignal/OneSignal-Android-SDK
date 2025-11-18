@@ -1,17 +1,20 @@
 package com.onesignal.internal
 
 import android.content.Context
+import android.os.Build
 import com.onesignal.IOneSignal
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
+import com.onesignal.common.IDManager
 import com.onesignal.common.OneSignalUtils
+import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modules.IModule
+import com.onesignal.common.safeInt
+import com.onesignal.common.safeString
 import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
-import com.onesignal.common.threading.CompletionAwaiter
-import com.onesignal.common.threading.OneSignalDispatchers
-import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.CoreModule
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
@@ -19,7 +22,9 @@ import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.preferences.IPreferencesService
+import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStoreFix
+import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.core.internal.startup.StartupService
 import com.onesignal.debug.IDebugManager
 import com.onesignal.debug.LogLevel
@@ -30,299 +35,466 @@ import com.onesignal.location.ILocationManager
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.session.ISessionManager
 import com.onesignal.session.SessionModule
+import com.onesignal.session.internal.session.SessionModel
+import com.onesignal.session.internal.session.SessionModelStore
 import com.onesignal.user.IUserManager
 import com.onesignal.user.UserModule
-import com.onesignal.user.internal.LoginHelper
-import com.onesignal.user.internal.LogoutHelper
-import com.onesignal.user.internal.UserSwitcher
+import com.onesignal.user.internal.backend.IdentityConstants
+import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.operations.LoginUserFromSubscriptionOperation
+import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.properties.PropertiesModelStore
-import com.onesignal.user.internal.resolveAppId
+import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
+import com.onesignal.user.internal.subscriptions.SubscriptionStatus
+import com.onesignal.user.internal.subscriptions.SubscriptionType
+import org.json.JSONObject
 
-private const val MAX_TIMEOUT_TO_INIT = 30_000L // 30 seconds
-
-internal class OneSignalImp(
-    private val ioDispatcher: CoroutineDispatcher = OneSignalDispatchers.IO,
-) : IOneSignal, IServiceProvider {
-    @Volatile
-    private var initAwaiter = CompletionAwaiter("OneSignalImp")
-
-    @Volatile
-    private var initState: InitState = InitState.NOT_STARTED
-
+internal class OneSignalImp : IOneSignal, IServiceProvider {
     override val sdkVersion: String = OneSignalUtils.sdkVersion
-
-    override val isInitialized: Boolean
-        get() = initState == InitState.SUCCESS
+    override var isInitialized: Boolean = false
 
     override var consentRequired: Boolean
-        get() =
-            if (isInitialized) {
-                blockingGet { configModel.consentRequired ?: (_consentRequired == true) }
-            } else {
-                _consentRequired == true
-            }
+        get() = configModel?.consentRequired ?: (_consentRequired == true)
         set(value) {
             _consentRequired = value
-            if (isInitialized) {
-                configModel.consentRequired = value
-            }
+            configModel?.consentRequired = value
         }
 
     override var consentGiven: Boolean
-        get() =
-            if (isInitialized) {
-                blockingGet { configModel.consentGiven ?: (_consentGiven == true) }
-            } else {
-                _consentGiven == true
-            }
+        get() = configModel?.consentGiven ?: (_consentGiven == true)
         set(value) {
             val oldValue = _consentGiven
             _consentGiven = value
-            if (isInitialized) {
-                configModel.consentGiven = value
-                if (oldValue != value && value) {
-                    operationRepo.forceExecuteOperations()
-                }
+            configModel?.consentGiven = value
+            if (oldValue != value && value) {
+                operationRepo?.forceExecuteOperations()
             }
         }
 
     override var disableGMSMissingPrompt: Boolean
-        get() =
-            if (isInitialized) {
-                blockingGet { configModel.disableGMSMissingPrompt ?: (_disableGMSMissingPrompt == true) }
-            } else {
-                _disableGMSMissingPrompt == true
-            }
+        get() = configModel?.disableGMSMissingPrompt ?: (_disableGMSMissingPrompt == true)
         set(value) {
             _disableGMSMissingPrompt = value
-            if (isInitialized) {
-                configModel.disableGMSMissingPrompt = value
-            }
+            configModel?.disableGMSMissingPrompt = value
         }
 
     // we hardcode the DebugManager implementation so it can be used prior to calling `initWithContext`
     override val debug: IDebugManager = DebugManager()
-
-    override val session: ISessionManager
-        get() =
-            waitAndReturn { services.getService() }
-
-    override val notifications: INotificationsManager
-        get() =
-            waitAndReturn { services.getService() }
-
-    override val location: ILocationManager
-        get() =
-            waitAndReturn { services.getService() }
-
-    override val inAppMessages: IInAppMessagesManager
-        get() =
-            waitAndReturn { services.getService() }
-
-    override val user: IUserManager
-        get() =
-            waitAndReturn { services.getService() }
+    override val session: ISessionManager get() =
+        if (isInitialized) {
+            services.getService()
+        } else {
+            throw Exception(
+                "Must call 'initWithContext' before use",
+            )
+        }
+    override val notifications: INotificationsManager get() =
+        if (isInitialized) {
+            services.getService()
+        } else {
+            throw Exception(
+                "Must call 'initWithContext' before use",
+            )
+        }
+    override val location: ILocationManager get() =
+        if (isInitialized) {
+            services.getService()
+        } else {
+            throw Exception(
+                "Must call 'initWithContext' before use",
+            )
+        }
+    override val inAppMessages: IInAppMessagesManager get() =
+        if (isInitialized) {
+            services.getService()
+        } else {
+            throw Exception(
+                "Must call 'initWithContext' before use",
+            )
+        }
+    override val user: IUserManager get() =
+        if (isInitialized) {
+            services.getService()
+        } else {
+            throw Exception(
+                "Must call 'initWithContext' before use",
+            )
+        }
 
     // Services required by this class
     // WARNING: OperationRepo depends on OperationModelStore which in-turn depends
     // on ApplicationService.appContext being non-null.
-    private val operationRepo: IOperationRepo by lazy { services.getService<IOperationRepo>() }
-    private val identityModelStore: IdentityModelStore by lazy { services.getService<IdentityModelStore>() }
-    private val propertiesModelStore: PropertiesModelStore by lazy { services.getService<PropertiesModelStore>() }
-    private val subscriptionModelStore: SubscriptionModelStore by lazy { services.getService<SubscriptionModelStore>() }
-    private val preferencesService: IPreferencesService by lazy { services.getService<IPreferencesService>() }
+    private var operationRepo: IOperationRepo? = null
+    private val identityModelStore: IdentityModelStore
+        get() = services.getService()
+    private val propertiesModelStore: PropertiesModelStore
+        get() = services.getService()
+    private val subscriptionModelStore: SubscriptionModelStore
+        get() = services.getService()
+    private val preferencesService: IPreferencesService
+        get() = services.getService()
+
+    // Other State
+    private val services: ServiceProvider
+    private var configModel: ConfigModel? = null
+    private var sessionModel: SessionModel? = null
+    private var _consentRequired: Boolean? = null
+    private var _consentGiven: Boolean? = null
+    private var _disableGMSMissingPrompt: Boolean? = null
+    private val initLock: Any = Any()
+    private val loginLock: Any = Any()
+
     private val listOfModules =
         listOf(
             "com.onesignal.notifications.NotificationsModule",
             "com.onesignal.inAppMessages.InAppMessagesModule",
             "com.onesignal.location.LocationModule",
         )
-    private val services: ServiceProvider =
-        ServiceBuilder().apply {
-            val modules = mutableListOf<IModule>()
-            modules.add(CoreModule())
-            modules.add(SessionModule())
-            modules.add(UserModule())
-            for (moduleClassName in listOfModules) {
-                try {
-                    val moduleClass = Class.forName(moduleClassName)
-                    val moduleInstance = moduleClass.newInstance() as IModule
-                    modules.add(moduleInstance)
-                } catch (e: ClassNotFoundException) {
-                    e.printStackTrace()
-                }
+
+    init {
+        val serviceBuilder = ServiceBuilder()
+
+        val modules = mutableListOf<IModule>()
+
+        modules.add(CoreModule())
+        modules.add(SessionModule())
+        modules.add(UserModule())
+        for (moduleClassName in listOfModules) {
+            try {
+                val moduleClass = Class.forName(moduleClassName)
+                val moduleInstance = moduleClass.newInstance() as IModule
+                modules.add(moduleInstance)
+            } catch (e: ClassNotFoundException) {
+                e.printStackTrace()
             }
-            for (module in modules) {
-                module.register(this)
-            }
-        }.build()
-
-    // get the current config model, if there is one
-    private val configModel: ConfigModel by lazy { services.getService<ConfigModelStore>().model }
-    private var _consentRequired: Boolean? = null
-    private var _consentGiven: Boolean? = null
-    private var _disableGMSMissingPrompt: Boolean? = null
-    private val initLock: Any = Any()
-    private val loginLogoutLock: Any = Any()
-    private val userSwitcher by lazy {
-        val appContext = services.getService<IApplicationService>().appContext
-        UserSwitcher(
-            identityModelStore = identityModelStore,
-            propertiesModelStore = propertiesModelStore,
-            subscriptionModelStore = subscriptionModelStore,
-            configModel = configModel,
-            carrierName = DeviceUtils.getCarrierName(appContext),
-            deviceOS = android.os.Build.VERSION.RELEASE,
-            appContextProvider = { appContext },
-            preferencesService = preferencesService,
-            operationRepo = operationRepo,
-            services = services,
-        )
-    }
-
-    private val loginHelper by lazy {
-        LoginHelper(
-            identityModelStore = identityModelStore,
-            userSwitcher = userSwitcher,
-            operationRepo = operationRepo,
-            configModel = configModel,
-            lock = loginLogoutLock,
-        )
-    }
-
-    private val logoutHelper by lazy {
-        LogoutHelper(
-            identityModelStore = identityModelStore,
-            userSwitcher = userSwitcher,
-            operationRepo = operationRepo,
-            configModel = configModel,
-            lock = loginLogoutLock,
-        )
-    }
-
-    private fun initEssentials(context: Context) {
-        PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
-
-        // start the application service. This is called explicitly first because we want
-        // to make sure it has the context provided on input, for all other startable services
-        // to depend on if needed.
-        val applicationService = services.getService<IApplicationService>()
-        (applicationService as ApplicationService).start(context)
-
-        // Give the logging singleton access to the application service to support visual logging.
-        Logging.applicationService = applicationService
-    }
-
-    private fun updateConfig() {
-        // if requires privacy consent was set prior to init, set it in the model now
-        if (_consentRequired != null) {
-            configModel.consentRequired = _consentRequired!!
         }
 
-        // if privacy consent was set prior to init, set it in the model now
-        if (_consentGiven != null) {
-            configModel.consentGiven = _consentGiven!!
+        for (module in modules) {
+            module.register(serviceBuilder)
         }
 
-        if (_disableGMSMissingPrompt != null) {
-            configModel.disableGMSMissingPrompt = _disableGMSMissingPrompt!!
-        }
-    }
-
-    private fun bootstrapServices(): StartupService {
-        val startupService = StartupService(services)
-        // bootstrap all services
-        startupService.bootstrap()
-        return startupService
+        services = serviceBuilder.build()
     }
 
     override fun initWithContext(
         context: Context,
-        appId: String,
+        appId: String?,
     ): Boolean {
-        Logging.log(LogLevel.DEBUG, "Calling deprecated initWithContextSuspend(context: $context, appId: $appId)")
+        Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
-        // do not do this again if already initialized or init is in progress
         synchronized(initLock) {
-            if (initState.isSDKAccessible()) {
-                Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized or in progress")
+            // do not do this again if already initialized
+            if (isInitialized) {
+                Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized")
                 return true
             }
 
-            initState = InitState.IN_PROGRESS
+            Logging.log(LogLevel.DEBUG, "initWithContext: SDK initializing")
+
+            PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
+
+            // start the application service. This is called explicitly first because we want
+            // to make sure it has the context provided on input, for all other startable services
+            // to depend on if needed.
+            val applicationService = services.getService<IApplicationService>()
+            (applicationService as ApplicationService).start(context)
+
+            // Give the logging singleton access to the application service to support visual logging.
+            Logging.applicationService = applicationService
+
+            // get the current config model, if there is one
+            configModel = services.getService<ConfigModelStore>().model
+            sessionModel = services.getService<SessionModelStore>().model
+            operationRepo = services.getService<IOperationRepo>()
+
+            var forceCreateUser = false
+
+            // initWithContext is called by our internal services/receivers/activities but they do not provide
+            // an appId (they don't know it).  If the app has never called the external initWithContext
+            // prior to our services/receivers/activities we will blow up, as no appId has been established.
+            if (appId == null && !configModel!!.hasProperty(ConfigModel::appId.name)) {
+                val legacyAppId = getLegacyAppId()
+                if (legacyAppId == null) {
+                    Logging.warn("initWithContext called without providing appId, and no appId has been established!")
+                    return false
+                } else {
+                    Logging.debug("initWithContext: using cached legacy appId $legacyAppId")
+                    forceCreateUser = true
+                    configModel!!.appId = legacyAppId
+                }
+            }
+
+            // if the app id was specified as input, update the config model with it
+            if (appId != null) {
+                if (!configModel!!.hasProperty(ConfigModel::appId.name) || configModel!!.appId != appId) {
+                    forceCreateUser = true
+                }
+                configModel!!.appId = appId
+            }
+
+            // if requires privacy consent was set prior to init, set it in the model now
+            if (_consentRequired != null) {
+                configModel!!.consentRequired = _consentRequired!!
+            }
+
+            // if privacy consent was set prior to init, set it in the model now
+            if (_consentGiven != null) {
+                configModel!!.consentGiven = _consentGiven!!
+            }
+
+            if (_disableGMSMissingPrompt != null) {
+                configModel!!.disableGMSMissingPrompt = _disableGMSMissingPrompt!!
+            }
+
+            val startupService = StartupService(services)
+
+            // bootstrap services
+            startupService.bootstrap()
+
+            if (forceCreateUser || !identityModelStore!!.model.hasProperty(IdentityConstants.ONESIGNAL_ID)) {
+                val legacyPlayerId =
+                    preferencesService!!.getString(
+                        PreferenceStores.ONESIGNAL,
+                        PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID,
+                    )
+                if (legacyPlayerId == null) {
+                    Logging.debug("initWithContext: creating new device-scoped user")
+                    createAndSwitchToNewUser()
+                    operationRepo!!.enqueue(
+                        LoginUserOperation(
+                            configModel!!.appId,
+                            identityModelStore!!.model.onesignalId,
+                            identityModelStore!!.model.externalId,
+                        ),
+                    )
+                } else {
+                    Logging.debug("initWithContext: creating user linked to subscription $legacyPlayerId")
+
+                    // Converting a 4.x SDK to the 5.x SDK.  We pull the legacy user sync values to create the subscription model, then enqueue
+                    // a specialized `LoginUserFromSubscriptionOperation`, which will drive fetching/refreshing of the local user
+                    // based on the subscription ID we do have.
+                    val legacyUserSyncString =
+                        preferencesService!!.getString(
+                            PreferenceStores.ONESIGNAL,
+                            PreferenceOneSignalKeys.PREFS_LEGACY_USER_SYNCVALUES,
+                        )
+                    var suppressBackendOperation = false
+
+                    if (legacyUserSyncString != null) {
+                        val legacyUserSyncJSON = JSONObject(legacyUserSyncString)
+                        val notificationTypes = legacyUserSyncJSON.safeInt("notification_types")
+
+                        val pushSubscriptionModel = SubscriptionModel()
+                        pushSubscriptionModel.id = legacyPlayerId
+                        pushSubscriptionModel.type = SubscriptionType.PUSH
+                        pushSubscriptionModel.optedIn =
+                            notificationTypes != SubscriptionStatus.NO_PERMISSION.value && notificationTypes != SubscriptionStatus.UNSUBSCRIBE.value
+                        pushSubscriptionModel.address =
+                            legacyUserSyncJSON.safeString("identifier") ?: ""
+                        if (notificationTypes != null) {
+                            pushSubscriptionModel.status = SubscriptionStatus.fromInt(notificationTypes) ?: SubscriptionStatus.NO_PERMISSION
+                        } else {
+                            pushSubscriptionModel.status = SubscriptionStatus.SUBSCRIBED
+                        }
+
+                        pushSubscriptionModel.sdk = OneSignalUtils.sdkVersion
+                        pushSubscriptionModel.deviceOS = Build.VERSION.RELEASE
+                        pushSubscriptionModel.carrier = DeviceUtils.getCarrierName(
+                            services.getService<IApplicationService>().appContext,
+                        ) ?: ""
+                        pushSubscriptionModel.appVersion = AndroidUtils.getAppVersion(
+                            services.getService<IApplicationService>().appContext,
+                        ) ?: ""
+
+                        configModel!!.pushSubscriptionId = legacyPlayerId
+                        subscriptionModelStore!!.add(
+                            pushSubscriptionModel,
+                            ModelChangeTags.NO_PROPOGATE,
+                        )
+                        suppressBackendOperation = true
+                    }
+
+                    createAndSwitchToNewUser(suppressBackendOperation = suppressBackendOperation)
+
+                    operationRepo!!.enqueue(
+                        LoginUserFromSubscriptionOperation(
+                            configModel!!.appId,
+                            identityModelStore!!.model.onesignalId,
+                            legacyPlayerId,
+                        ),
+                    )
+                    preferencesService!!.saveString(
+                        PreferenceStores.ONESIGNAL,
+                        PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID,
+                        null,
+                    )
+                }
+            } else {
+                Logging.debug("initWithContext: using cached user ${identityModelStore!!.model.onesignalId}")
+            }
+
+            // schedule service starts out of main thread
+            startupService.scheduleStart()
+
+            isInitialized = true
+            return true
         }
-
-        // init in background and return immediately to ensure non-blocking
-        suspendifyOnIO {
-            internalInit(context, appId)
-        }
-        initState = InitState.SUCCESS
-        return true
-    }
-
-    /**
-     * Called from internal classes only. Remain suspend until initialization is fully completed.
-     */
-    override suspend fun initWithContext(context: Context): Boolean {
-        Logging.log(LogLevel.DEBUG, "initWithContext(context: $context)")
-        return initWithContextSuspend(context, null)
-    }
-
-    private fun internalInit(
-        context: Context,
-        appId: String?,
-    ): Boolean {
-        initEssentials(context)
-
-        val startupService = bootstrapServices()
-        val result = resolveAppId(appId, configModel, preferencesService)
-        if (result.failed) {
-            Logging.warn("suspendInitInternal: no appId provided or found in legacy config.")
-            initState = InitState.FAILED
-            notifyInitComplete()
-            return false
-        }
-        configModel.appId = result.appId!! // safe because failed is false
-        val forceCreateUser = result.forceCreateUser
-
-        updateConfig()
-        userSwitcher.initUser(forceCreateUser)
-        startupService.scheduleStart()
-        initState = InitState.SUCCESS
-        notifyInitComplete()
-        return true
     }
 
     override fun login(
         externalId: String,
         jwtBearerToken: String?,
     ) {
-        Logging.log(LogLevel.DEBUG, "Calling deprecated login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
+        Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
-        if (!initState.isSDKAccessible()) {
-            throw IllegalStateException("Must call 'initWithContext' before 'login'")
+        if (!isInitialized) {
+            throw Exception("Must call 'initWithContext' before 'login'")
         }
 
-        waitForInit()
-        suspendifyOnIO { loginHelper.login(externalId, jwtBearerToken) }
+        var currentIdentityExternalId: String? = null
+        var currentIdentityOneSignalId: String? = null
+        var newIdentityOneSignalId: String = ""
+
+        // only allow one login/logout at a time
+        synchronized(loginLock) {
+            currentIdentityExternalId = identityModelStore!!.model.externalId
+            currentIdentityOneSignalId = identityModelStore!!.model.onesignalId
+
+            if (currentIdentityExternalId == externalId) {
+                return
+            }
+
+            // TODO: Set JWT Token for all future requests.
+            createAndSwitchToNewUser { identityModel, _ ->
+                identityModel.externalId = externalId
+            }
+
+            newIdentityOneSignalId = identityModelStore!!.model.onesignalId
+        }
+
+        // on a background thread enqueue the login/fetch of the new user
+        suspendifyOnThread {
+            // We specify an "existingOneSignalId" here when the current user is anonymous to
+            // allow this login to attempt a "conversion" of the anonymous user.  We also
+            // wait for the LoginUserOperation operation to execute, which can take a *very* long
+            // time if network conditions prevent the operation to succeed.  This allows us to
+            // provide a callback to the caller when we can absolutely say the user is logged
+            // in, so they may take action on their own backend.
+            val result =
+                operationRepo!!.enqueueAndWait(
+                    LoginUserOperation(
+                        configModel!!.appId,
+                        newIdentityOneSignalId,
+                        externalId,
+                        if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
+                    ),
+                )
+
+            if (!result) {
+                Logging.log(LogLevel.ERROR, "Could not login user")
+            }
+        }
     }
 
     override fun logout() {
-        Logging.log(LogLevel.DEBUG, "Calling deprecated logout()")
+        Logging.log(LogLevel.DEBUG, "logout()")
 
-        if (!initState.isSDKAccessible()) {
-            throw IllegalStateException("Must call 'initWithContext' before 'logout'")
+        if (!isInitialized) {
+            throw Exception("Must call 'initWithContext' before 'logout'")
         }
 
-        waitForInit()
-        suspendifyOnIO { logoutHelper.logout() }
+        // only allow one login/logout at a time
+        synchronized(loginLock) {
+            if (identityModelStore!!.model.externalId == null) {
+                return
+            }
+
+            createAndSwitchToNewUser()
+            operationRepo!!.enqueue(
+                LoginUserOperation(
+                    configModel!!.appId,
+                    identityModelStore!!.model.onesignalId,
+                    identityModelStore!!.model.externalId,
+                ),
+            )
+
+            // TODO: remove JWT Token for all future requests.
+        }
+    }
+
+    /**
+     * Returns the cached app ID from v4 of the SDK, if available.
+     */
+    private fun getLegacyAppId(): String? {
+        return preferencesService.getString(
+            PreferenceStores.ONESIGNAL,
+            PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID,
+        )
+    }
+
+    private fun createAndSwitchToNewUser(
+        suppressBackendOperation: Boolean = false,
+        modify: (
+            (identityModel: IdentityModel, propertiesModel: PropertiesModel) -> Unit
+        )? = null,
+    ) {
+        Logging.debug("createAndSwitchToNewUser()")
+
+        // create a new identity and properties model locally
+        val sdkId = IDManager.createLocalId()
+
+        val identityModel = IdentityModel()
+        identityModel.onesignalId = sdkId
+
+        val propertiesModel = PropertiesModel()
+        propertiesModel.onesignalId = sdkId
+
+        if (modify != null) {
+            modify(identityModel, propertiesModel)
+        }
+
+        val subscriptions = mutableListOf<SubscriptionModel>()
+
+        // Create the push subscription for this device under the new user, copying the current
+        // user's push subscription if one exists.  We also copy the ID. If the ID is local there
+        // will already be a CreateSubscriptionOperation on the queue.  If the ID is remote the subscription
+        // will be automatically transferred over to this new user being created.  If there is no
+        // current push subscription we do a "normal" replace which will drive adding a CreateSubscriptionOperation
+        // to the queue.
+        val currentPushSubscription = subscriptionModelStore!!.list().firstOrNull { it.id == configModel!!.pushSubscriptionId }
+        val newPushSubscription = SubscriptionModel()
+
+        newPushSubscription.id = currentPushSubscription?.id ?: IDManager.createLocalId()
+        newPushSubscription.type = SubscriptionType.PUSH
+        newPushSubscription.optedIn = currentPushSubscription?.optedIn ?: true
+        newPushSubscription.address = currentPushSubscription?.address ?: ""
+        newPushSubscription.status = currentPushSubscription?.status ?: SubscriptionStatus.NO_PERMISSION
+        newPushSubscription.sdk = OneSignalUtils.sdkVersion
+        newPushSubscription.deviceOS = Build.VERSION.RELEASE
+        newPushSubscription.carrier = DeviceUtils.getCarrierName(services.getService<IApplicationService>().appContext) ?: ""
+        newPushSubscription.appVersion = AndroidUtils.getAppVersion(services.getService<IApplicationService>().appContext) ?: ""
+
+        // ensure we always know this devices push subscription ID
+        configModel!!.pushSubscriptionId = newPushSubscription.id
+
+        subscriptions.add(newPushSubscription)
+
+        // The next 4 lines makes this user the effective user locally.  We clear the subscriptions
+        // first as a `NO_PROPOGATE` change because we don't want to drive deleting the cleared subscriptions
+        // on the backend.  Once cleared we can then setup the new identity/properties model, and add
+        // the new user's subscriptions as a `NORMAL` change, which will drive changes to the backend.
+        subscriptionModelStore!!.clear(ModelChangeTags.NO_PROPOGATE)
+        identityModelStore!!.replace(identityModel)
+        propertiesModelStore!!.replace(propertiesModel)
+
+        if (suppressBackendOperation) {
+            subscriptionModelStore!!.replaceAll(subscriptions, ModelChangeTags.NO_PROPOGATE)
+        } else {
+            subscriptionModelStore!!.replaceAll(subscriptions)
+        }
     }
 
     override fun <T> hasService(c: Class<T>): Boolean = services.hasService(c)
@@ -332,200 +504,4 @@ internal class OneSignalImp(
     override fun <T> getServiceOrNull(c: Class<T>): T? = services.getServiceOrNull(c)
 
     override fun <T> getAllServices(c: Class<T>): List<T> = services.getAllServices(c)
-
-    private fun waitForInit() {
-        val completed = initAwaiter.await()
-        if (!completed) {
-            throw IllegalStateException("initWithContext was not called or timed out")
-        }
-    }
-
-    /**
-     * Notifies both blocking and suspend callers that initialization is complete
-     */
-    private fun notifyInitComplete() {
-        initAwaiter.complete()
-    }
-
-    private suspend fun suspendUntilInit() {
-        when (initState) {
-            InitState.NOT_STARTED -> {
-                throw IllegalStateException("Must call 'initWithContext' before use")
-            }
-            InitState.IN_PROGRESS -> {
-                Logging.debug("Suspend waiting for init to complete...")
-                try {
-                    withTimeout(MAX_TIMEOUT_TO_INIT) {
-                        initAwaiter.awaitSuspend()
-                    }
-                } catch (e: TimeoutCancellationException) {
-                    throw IllegalStateException("initWithContext was timed out after $MAX_TIMEOUT_TO_INIT ms")
-                }
-            }
-            InitState.FAILED -> {
-                throw IllegalStateException("Initialization failed. Cannot proceed.")
-            }
-            else -> {
-                // SUCCESS - already initialized, no need to wait
-            }
-        }
-    }
-
-    private suspend fun <T> suspendAndReturn(getter: () -> T): T {
-        suspendUntilInit()
-        return getter()
-    }
-
-    private fun <T> waitAndReturn(getter: () -> T): T {
-        when (initState) {
-            InitState.NOT_STARTED -> {
-                throw IllegalStateException("Must call 'initWithContext' before use")
-            }
-            InitState.IN_PROGRESS -> {
-                Logging.debug("Waiting for init to complete...")
-                waitForInit()
-            }
-            InitState.FAILED -> {
-                throw IllegalStateException("Initialization failed. Cannot proceed.")
-            }
-            else -> {
-                // SUCCESS
-                waitForInit()
-            }
-        }
-
-        return getter()
-    }
-
-    private fun <T> blockingGet(getter: () -> T): T {
-        try {
-            if (AndroidUtils.isRunningOnMainThread()) {
-                Logging.warn("This is called on main thread. This is not recommended.")
-            }
-        } catch (e: RuntimeException) {
-            // In test environments, AndroidUtils.isRunningOnMainThread() may fail
-            // because Looper.getMainLooper() is not mocked. This is safe to ignore.
-            Logging.debug("Could not check main thread status (likely in test environment): ${e.message}")
-        }
-        return runBlocking(ioDispatcher) {
-            waitAndReturn(getter)
-        }
-    }
-
-    // ===============================
-    // Suspend API Implementation
-    // ===============================
-
-    override suspend fun getSession(): ISessionManager =
-        withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
-        }
-
-    override suspend fun getNotifications(): INotificationsManager =
-        withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
-        }
-
-    override suspend fun getLocation(): ILocationManager =
-        withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
-        }
-
-    override suspend fun getInAppMessages(): IInAppMessagesManager =
-        withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
-        }
-
-    override suspend fun getUser(): IUserManager =
-        withContext(ioDispatcher) {
-            suspendAndReturn { services.getService() }
-        }
-
-    override suspend fun getConsentRequired(): Boolean =
-        withContext(ioDispatcher) {
-            configModel.consentRequired ?: (_consentRequired == true)
-        }
-
-    override suspend fun setConsentRequired(required: Boolean) =
-        withContext(ioDispatcher) {
-            _consentRequired = required
-            configModel.consentRequired = required
-        }
-
-    override suspend fun getConsentGiven(): Boolean =
-        withContext(ioDispatcher) {
-            configModel.consentGiven ?: (_consentGiven == true)
-        }
-
-    override suspend fun setConsentGiven(value: Boolean) =
-        withContext(ioDispatcher) {
-            val oldValue = _consentGiven
-            _consentGiven = value
-            configModel.consentGiven = value
-            if (oldValue != value && value) {
-                operationRepo.forceExecuteOperations()
-            }
-        }
-
-    override suspend fun getDisableGMSMissingPrompt(): Boolean =
-        withContext(ioDispatcher) {
-            configModel.disableGMSMissingPrompt
-        }
-
-    override suspend fun setDisableGMSMissingPrompt(value: Boolean) =
-        withContext(ioDispatcher) {
-            _disableGMSMissingPrompt = value
-            configModel.disableGMSMissingPrompt = value
-        }
-
-    override suspend fun initWithContextSuspend(
-        context: Context,
-        appId: String?,
-    ): Boolean {
-        Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
-
-        // Use IO dispatcher for initialization to prevent ANRs and optimize for I/O operations
-        return withContext(ioDispatcher) {
-            // do not do this again if already initialized or init is in progress
-            synchronized(initLock) {
-                if (initState.isSDKAccessible()) {
-                    Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized or in progress")
-                    return@withContext true
-                }
-
-                initState = InitState.IN_PROGRESS
-            }
-
-            val result = internalInit(context, appId)
-            // initState is already set correctly in internalInit, no need to overwrite it
-            result
-        }
-    }
-
-    override suspend fun loginSuspend(
-        externalId: String,
-        jwtBearerToken: String?,
-    ) = withContext(ioDispatcher) {
-        Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
-
-        suspendUntilInit()
-        if (!isInitialized) {
-            throw IllegalStateException("'initWithContext failed' before 'login'")
-        }
-
-        loginHelper.login(externalId, jwtBearerToken)
-    }
-
-    override suspend fun logoutSuspend() =
-        withContext(ioDispatcher) {
-            Logging.log(LogLevel.DEBUG, "logoutSuspend()")
-
-            suspendUntilInit()
-
-            if (!isInitialized) {
-                throw IllegalStateException("'initWithContext failed' before 'logout'")
-            }
-
-            logoutHelper.logout()
-        }
 }

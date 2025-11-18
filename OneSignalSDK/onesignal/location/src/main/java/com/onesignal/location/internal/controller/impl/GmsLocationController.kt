@@ -10,7 +10,7 @@ import com.google.android.gms.location.LocationListener
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
 import com.onesignal.common.events.EventProducer
-import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.LogLevel
@@ -152,7 +152,7 @@ internal class GmsLocationController(
         override fun onConnectionFailed(connectionResult: ConnectionResult) {
             Logging.debug("GMSLocationController GoogleApiClientListener onConnectionSuspended connectionResult: $connectionResult")
 
-            suspendifyOnIO {
+            suspendifyOnThread {
                 _parent.stop()
             }
         }
@@ -229,13 +229,13 @@ internal class GmsLocationController(
 
     protected class LocationHandlerThread internal constructor() :
         HandlerThread("OSH_LocationHandlerThread") {
-        var mHandler: Handler
+            var mHandler: Handler
 
-        init {
-            start()
-            mHandler = Handler(looper)
+            init {
+                start()
+                mHandler = Handler(looper)
+            }
         }
-    }
 
     companion object {
         val API_FALLBACK_TIME = 30000

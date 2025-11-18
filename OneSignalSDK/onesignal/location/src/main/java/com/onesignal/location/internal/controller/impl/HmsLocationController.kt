@@ -11,7 +11,7 @@ import com.huawei.hms.location.LocationResult
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.threading.Waiter
 import com.onesignal.common.threading.WaiterWithValue
-import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.LogLevel
@@ -116,7 +116,7 @@ internal class HmsLocationController(
 
         var retVal: Location? = null
 
-        suspendifyOnIO {
+        suspendifyOnThread {
             var waiter = Waiter()
             locationClient.lastLocation
                 .addOnSuccessListener(
@@ -212,11 +212,11 @@ internal class HmsLocationController(
 
     class LocationHandlerThread internal constructor() :
         HandlerThread("OSH_LocationHandlerThread") {
-        var mHandler: Handler
+            var mHandler: Handler
 
-        init {
-            start()
-            mHandler = Handler(looper)
+            init {
+                start()
+                mHandler = Handler(looper)
+            }
         }
-    }
 }

@@ -6,7 +6,7 @@ import com.onesignal.common.consistency.models.ICondition
 import com.onesignal.common.consistency.models.IConsistencyKeyEnum
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 
 class ConsistencyManagerTests : FunSpec({
 
@@ -17,7 +17,7 @@ class ConsistencyManagerTests : FunSpec({
     }
 
     test("setRywToken updates the token correctly") {
-        runBlocking {
+        runTest {
             // Given
             val id = "test_id"
             val key = IamFetchRywTokenKey.USER
@@ -36,7 +36,7 @@ class ConsistencyManagerTests : FunSpec({
     }
 
     test("registerCondition completes when condition is met") {
-        runBlocking {
+        runTest {
             // Given
             val id = "test_id"
             val key = IamFetchRywTokenKey.USER
@@ -56,7 +56,7 @@ class ConsistencyManagerTests : FunSpec({
     }
 
     test("registerCondition does not complete when condition is not met") {
-        runBlocking {
+        runTest {
             val condition = TestUnmetCondition()
             val deferred = consistencyManager.getRywDataFromAwaitableCondition(condition)
 
@@ -66,7 +66,7 @@ class ConsistencyManagerTests : FunSpec({
     }
 
     test("resolveConditionsWithID resolves conditions based on ID") {
-        runBlocking {
+        runTest {
             val condition = TestUnmetCondition()
             val deferred = consistencyManager.getRywDataFromAwaitableCondition(condition)
             consistencyManager.resolveConditionsWithID(TestUnmetCondition.ID)

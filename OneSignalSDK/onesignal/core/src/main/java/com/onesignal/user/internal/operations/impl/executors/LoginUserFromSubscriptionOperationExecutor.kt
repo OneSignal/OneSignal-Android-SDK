@@ -47,7 +47,7 @@ internal class LoginUserFromSubscriptionOperationExecutor(
                     loginUserOp.appId,
                     loginUserOp.subscriptionId,
                 )
-            val backendOneSignalId = identities[IdentityConstants.ONESIGNAL_ID] ?: null
+            val backendOneSignalId = identities.getOrDefault(IdentityConstants.ONESIGNAL_ID, null)
 
             if (backendOneSignalId == null) {
                 Logging.warn("Subscription ${loginUserOp.subscriptionId} has no ${IdentityConstants.ONESIGNAL_ID}!")

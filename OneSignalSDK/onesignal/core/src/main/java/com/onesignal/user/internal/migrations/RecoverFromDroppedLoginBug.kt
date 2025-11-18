@@ -1,7 +1,6 @@
 package com.onesignal.user.internal.migrations
 
 import com.onesignal.common.IDManager
-import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.containsInstanceOf
@@ -9,6 +8,9 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.LoginUserOperation
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 /**
  * Purpose: Automatically recovers a stalled User in the OperationRepo due
@@ -33,7 +35,7 @@ class RecoverFromDroppedLoginBug(
     private val _configModelStore: ConfigModelStore,
 ) : IStartableService {
     override fun start() {
-        suspendifyOnIO {
+        GlobalScope.launch(Dispatchers.IO) {
             _operationRepo.awaitInitialized()
             if (isInBadState()) {
                 Logging.warn(

@@ -2,7 +2,7 @@ package com.onesignal.notifications.internal
 
 import android.app.Activity
 import com.onesignal.common.events.EventProducer
-import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.internal.logging.Logging
@@ -53,7 +53,7 @@ internal class NotificationsManager(
         _applicationService.addApplicationLifecycleHandler(this)
         _notificationPermissionController.subscribe(this)
 
-        suspendifyOnIO {
+        suspendifyOnThread {
             _notificationDataController.deleteExpiredNotifications()
         }
     }
@@ -104,7 +104,7 @@ internal class NotificationsManager(
     override fun removeNotification(id: Int) {
         Logging.debug("NotificationsManager.removeNotification(id: $id)")
 
-        suspendifyOnIO {
+        suspendifyOnThread {
             if (_notificationDataController.markAsDismissed(id)) {
                 _summaryManager.updatePossibleDependentSummaryOnDismiss(id)
             }
@@ -114,7 +114,7 @@ internal class NotificationsManager(
     override fun removeGroupedNotifications(group: String) {
         Logging.debug("NotificationsManager.removeGroupedNotifications(group: $group)")
 
-        suspendifyOnIO {
+        suspendifyOnThread {
             _notificationDataController.markAsDismissedForGroup(group)
         }
     }
@@ -122,7 +122,7 @@ internal class NotificationsManager(
     override fun clearAllNotifications() {
         Logging.debug("NotificationsManager.clearAllNotifications()")
 
-        suspendifyOnIO {
+        suspendifyOnThread {
             _notificationDataController.markAsDismissedForOutstanding()
         }
     }

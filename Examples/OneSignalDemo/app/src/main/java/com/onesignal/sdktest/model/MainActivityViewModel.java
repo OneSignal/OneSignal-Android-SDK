@@ -1,6 +1,5 @@
 package com.onesignal.sdktest.model;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import com.google.android.material.appbar.AppBarLayout;
@@ -55,9 +54,6 @@ import com.onesignal.user.subscriptions.PushSubscriptionChangedState;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 @RequiresApi(api = Build.VERSION_CODES.N)
 public class MainActivityViewModel implements ActivityViewModel, IPushSubscriptionObserver {
@@ -795,6 +791,12 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
 
     private void setupSubscriptionSwitch() {
         refreshSubscriptionState();
+
+        pushSubscriptionEnabledRelativeLayout.setOnClickListener(v -> {
+            boolean isSubscriptionEnabled = !pushSubscriptionEnabledSwitch.isChecked();
+            pushSubscriptionEnabledSwitch.setChecked(isSubscriptionEnabled);
+        });
+
         // Add a listener to toggle the push notification enablement for the push subscription.
         pushSubscriptionEnabledSwitch.setOnClickListener(v -> {
             IPushSubscription subscription = OneSignal.getUser().getPushSubscription();
@@ -809,12 +811,7 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
 
     private void setupPromptPushButton() {
         promptPushButton.setOnClickListener(v -> {
-            ExecutorService executor = Executors.newSingleThreadExecutor();
-            @SuppressLint({"NewApi", "LocalSuppress"}) CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-                OneSignal.getNotifications().requestPermission(true, Continue.none());
-            }, executor);
-            future.join(); // Waits for the task to complete
-            executor.shutdown();
+            OneSignal.getUser().getPushSubscription().optIn();
         });
     }
 

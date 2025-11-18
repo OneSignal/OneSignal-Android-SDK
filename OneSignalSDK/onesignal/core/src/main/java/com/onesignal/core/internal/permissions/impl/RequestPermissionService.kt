@@ -7,7 +7,6 @@ import com.onesignal.core.activities.PermissionsActivity
 import com.onesignal.core.internal.application.IActivityLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.permissions.IRequestPermissionService
-import com.onesignal.core.internal.permissions.PermissionsViewModel
 
 internal class RequestPermissionService(
     private val _application: IApplicationService,
@@ -53,9 +52,9 @@ internal class RequestPermissionService(
                     } else {
                         val intent = Intent(activity, PermissionsActivity::class.java)
                         intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                        intent.putExtra(PermissionsViewModel.INTENT_EXTRA_PERMISSION_TYPE, permissionRequestType)
-                            .putExtra(PermissionsViewModel.INTENT_EXTRA_ANDROID_PERMISSION_STRING, androidPermissionString)
-                            .putExtra(PermissionsViewModel.INTENT_EXTRA_CALLBACK_CLASS, callbackClass.name)
+                        intent.putExtra(PermissionsActivity.INTENT_EXTRA_PERMISSION_TYPE, permissionRequestType)
+                            .putExtra(PermissionsActivity.INTENT_EXTRA_ANDROID_PERMISSION_STRING, androidPermissionString)
+                            .putExtra(PermissionsActivity.INTENT_EXTRA_CALLBACK_CLASS, callbackClass.name)
                         activity.startActivity(intent)
                         activity.overridePendingTransition(
                             R.anim.onesignal_fade_in,
