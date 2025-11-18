@@ -57,27 +57,26 @@ class CompletionAwaiter(
     }
 
     /**
-     * Wait for completion using blocking approach with an optional timeout.
+     * Wait for completion using blocking approach
      *
-     * @param timeoutMs Timeout in milliseconds, defaults to context-appropriate timeout
-     * @return true if completed before timeout, false otherwise.
+     * @param timeoutToLog Timeout in milliseconds to log a message if not
+     *   completed in time. Does NOT have any effect on logic.
      */
-    fun await(timeoutMs: Long = getDefaultTimeout()): Boolean {
-        val completed =
+    fun awaitAndLogIfOverTimeout(timeoutToLog: Long = getDefaultTimeout()) {
+        logIfOverTimeout(timeoutToLog)
+        latch.await()
+    }
+
+    private fun logIfOverTimeout(timeoutMs: Long) {
+        launchOnDefault {
             try {
                 latch.await(timeoutMs, TimeUnit.MILLISECONDS)
             } catch (e: InterruptedException) {
-                Logging.warn("Interrupted while waiting for $componentName", e)
+                Logging.warn("$componentName is taking longer that normal!", e)
                 logAllThreads()
-                false
+                Logging.warn(createTimeoutMessage(timeoutMs))
             }
-
-        if (!completed) {
-            val message = createTimeoutMessage(timeoutMs)
-            Logging.warn(message)
         }
-
-        return completed
     }
 
     /**
@@ -88,18 +87,15 @@ class CompletionAwaiter(
         suspendCompletion.await()
     }
 
-    private fun getDefaultTimeout(): Long {
-        return if (AndroidUtils.isRunningOnMainThread()) ANDROID_ANR_TIMEOUT_MS else DEFAULT_TIMEOUT_MS
-    }
+    private fun getDefaultTimeout(): Long = if (AndroidUtils.isRunningOnMainThread()) ANDROID_ANR_TIMEOUT_MS else DEFAULT_TIMEOUT_MS
 
-    private fun createTimeoutMessage(timeoutMs: Long): String {
-        return if (AndroidUtils.isRunningOnMainThread()) {
+    private fun createTimeoutMessage(timeoutMs: Long): String =
+        if (AndroidUtils.isRunningOnMainThread()) {
             "Timeout waiting for $componentName after ${timeoutMs}ms on the main thread. " +
                 "This can cause ANRs. Consider calling from a background thread."
         } else {
             "Timeout waiting for $componentName after ${timeoutMs}ms."
         }
-    }
 
     private fun logAllThreads(): String {
         val sb = StringBuilder()
