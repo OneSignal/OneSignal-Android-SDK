@@ -334,10 +334,7 @@ internal class OneSignalImp(
     override fun <T> getAllServices(c: Class<T>): List<T> = services.getAllServices(c)
 
     private fun waitForInit() {
-        val completed = initAwaiter.await()
-        if (!completed) {
-            throw IllegalStateException("initWithContext was not called or timed out")
-        }
+        initAwaiter.awaitAndLogIfOverTimeout()
     }
 
     /**

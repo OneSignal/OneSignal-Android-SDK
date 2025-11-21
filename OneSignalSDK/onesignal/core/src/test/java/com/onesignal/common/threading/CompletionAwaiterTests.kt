@@ -17,6 +17,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlin.concurrent.thread
 
 class CompletionAwaiterTests : FunSpec({
 
@@ -39,11 +40,10 @@ class CompletionAwaiterTests : FunSpec({
 
             // When
             val startTime = System.currentTimeMillis()
-            val completed = awaiter.await(1000)
+            awaiter.awaitAndLogIfOverTimeout(1000)
             val duration = System.currentTimeMillis() - startTime
 
             // Then
-            completed shouldBe true
             duration shouldBeLessThan 50L // Should be very fast
         }
 
@@ -59,57 +59,37 @@ class CompletionAwaiterTests : FunSpec({
                 awaiter.complete()
             }
 
-            val result = awaiter.await(timeoutMs)
+            awaiter.awaitAndLogIfOverTimeout(timeoutMs)
             val duration = System.currentTimeMillis() - startTime
 
-            result shouldBe true
             duration shouldBeGreaterThan (completionDelay - 50)
             duration shouldBeLessThan (completionDelay + 150) // buffer
         }
 
-        test("await returns false when timeout expires") {
+        test("timeout input should only effect logging") {
             mockkObject(AndroidUtils)
             every { AndroidUtils.isRunningOnMainThread() } returns false
 
-            val timeoutMs = 200L
-            val startTime = System.currentTimeMillis()
+            val timeoutMs = 1L
 
-            val completed = awaiter.await(timeoutMs)
-            val duration = System.currentTimeMillis() - startTime
+            val thread = thread { awaiter.awaitAndLogIfOverTimeout(timeoutMs) }
 
-            completed shouldBe false
-            duration shouldBeGreaterThan (timeoutMs - 50)
-            duration shouldBeLessThan (timeoutMs + 150)
-        }
+            delay(100)
 
-        test("await timeout of 0 returns false immediately when not completed") {
-            // Mock AndroidUtils to avoid Looper.getMainLooper() issues
-            mockkObject(AndroidUtils)
-            every { AndroidUtils.isRunningOnMainThread() } returns false
+            thread.isAlive shouldBe true
 
-            val startTime = System.currentTimeMillis()
-            val completed = awaiter.await(0)
-            val duration = System.currentTimeMillis() - startTime
-
-            completed shouldBe false
-            duration shouldBeLessThan 20L
-
-            unmockkObject(AndroidUtils)
+            thread.interrupt()
         }
 
         test("multiple blocking callers are all unblocked") {
             val numCallers = 5
-            val results = mutableListOf<Boolean>()
             val jobs = mutableListOf<Thread>()
 
             // Start multiple blocking callers
-            repeat(numCallers) { index ->
+            repeat(numCallers) {
                 val thread =
                     Thread {
-                        val result = awaiter.await(2000)
-                        synchronized(results) {
-                            results.add(result)
-                        }
+                        awaiter.awaitAndLogIfOverTimeout(2000)
                     }
                 thread.start()
                 jobs.add(thread)
@@ -122,11 +102,8 @@ class CompletionAwaiterTests : FunSpec({
             awaiter.complete()
 
             // Wait for all threads to complete
-            jobs.forEach { it.join(1000) }
-
-            // All should have completed successfully
-            results.size shouldBe numCallers
-            results.all { it } shouldBe true
+            // If this stalls on this test then it is considered failed
+            jobs.forEach { it.join() }
         }
     }
 
@@ -245,14 +222,10 @@ class CompletionAwaiterTests : FunSpec({
             awaiter = CompletionAwaiter("TestComponent")
 
             // Test blocking callers
-            val blockingResults = mutableListOf<Boolean>()
             val blockingThreads =
-                (1..2).map { index ->
+                (1..2).map {
                     Thread {
-                        val result = awaiter.await(2000)
-                        synchronized(blockingResults) {
-                            blockingResults.add(result)
-                        }
+                        awaiter.awaitAndLogIfOverTimeout(2000)
                     }
                 }
             blockingThreads.forEach { it.start() }
@@ -264,10 +237,8 @@ class CompletionAwaiterTests : FunSpec({
             awaiter.complete()
 
             // Wait for all to complete
-            blockingThreads.forEach { it.join(1000) }
-
-            // All should have completed
-            blockingResults shouldBe arrayOf(true, true)
+            // Test considered failed if we hang here forever
+            blockingThreads.forEach { it.join() }
         }
     }
 
@@ -280,8 +251,7 @@ class CompletionAwaiterTests : FunSpec({
             awaiter.complete()
 
             // Should still work normally
-            val completed = awaiter.await(100)
-            completed shouldBe true
+            awaiter.awaitAndLogIfOverTimeout(100)
         }
 
         test("waiting after completion returns immediately") {
@@ -331,33 +301,18 @@ class CompletionAwaiterTests : FunSpec({
 
     context("timeout behavior") {
 
-        test("uses shorter timeout on main thread") {
+        test("uses shorter timeout on main thread").config(enabled = false) {
             mockkObject(AndroidUtils)
             every { AndroidUtils.isRunningOnMainThread() } returns true
 
-            val startTime = System.currentTimeMillis()
-            val completed = awaiter.await() // Default timeout
-            val duration = System.currentTimeMillis() - startTime
-
-            completed shouldBe false
-            // Should use ANDROID_ANR_TIMEOUT_MS (4800ms) instead of DEFAULT_TIMEOUT_MS (30000ms)
-            duration shouldBeLessThan 6000L // Much less than 30 seconds
-            duration shouldBeGreaterThan 4000L // But around 4.8 seconds
+            // NOTE: Reintroduce test once we use Otel with non-fatal errors
         }
 
-        test("uses longer timeout on background thread") {
+        test("uses longer timeout on background thread").config(enabled = false) {
             mockkObject(AndroidUtils)
             every { AndroidUtils.isRunningOnMainThread() } returns false
 
-            // We can't actually wait 30 seconds in a test, so just verify it would use the longer timeout
-            // by checking the timeout logic doesn't kick in quickly
-            val startTime = System.currentTimeMillis()
-            val completed = awaiter.await(1000) // Force shorter timeout for test
-            val duration = System.currentTimeMillis() - startTime
-
-            completed shouldBe false
-            duration shouldBeGreaterThan 900L
-            duration shouldBeLessThan 1200L
+            // NOTE: Reintroduce test once we use Otel with non-fatal errors
         }
     }
 })
