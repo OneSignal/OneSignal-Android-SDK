@@ -37,6 +37,9 @@ internal class NotificationGenerationProcessor(
     private val _lifecycleService: INotificationLifecycleService,
     private val _time: ITime,
 ) : INotificationGenerationProcessor {
+
+    private val EXTERNAL_CALLBACKS_TIMEOUT get() = 30_000L
+
     override suspend fun processNotificationData(
         context: Context,
         androidNotificationId: Int,
@@ -67,7 +70,7 @@ internal class NotificationGenerationProcessor(
 
         try {
             val notificationReceivedEvent = NotificationReceivedEvent(context, notification)
-            withTimeout(30000L) {
+            withTimeout(EXTERNAL_CALLBACKS_TIMEOUT) {
                 launchOnIO {
                     _lifecycleService.externalRemoteNotificationReceived(notificationReceivedEvent)
 
@@ -100,7 +103,7 @@ internal class NotificationGenerationProcessor(
 
                 try {
                     val notificationWillDisplayEvent = NotificationWillDisplayEvent(notificationJob.notification)
-                    withTimeout(30000L) {
+                    withTimeout(EXTERNAL_CALLBACKS_TIMEOUT) {
                         launchOnIO {
                             _lifecycleService.externalNotificationWillShowInForeground(notificationWillDisplayEvent)
 
