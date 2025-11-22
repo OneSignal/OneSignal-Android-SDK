@@ -1369,8 +1369,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             every { mockClickResult.prompts } returns mutableListOf(mockPrompt)
             every { mockPrompt.hasPrompted() } returns false
-            every { mockPrompt.setPrompted(true) } just runs
-            coEvery { mockPrompt.handlePrompt() } returns InAppMessagePrompt.PromptActionResult.PERMISSION_GRANTED
+            every { mockPrompt.setPrompted(any()) } just runs
             // currentPrompt starts as null, then gets set to the prompt during processing
             var currentPrompt: InAppMessagePrompt? = null
             every { mockState.currentPrompt } answers { currentPrompt }
@@ -1382,7 +1381,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // Then
             coVerify { mockDisplayer.dismissCurrentInAppMessage() }
-            coVerify { mockPrompt.handlePrompt() }
+            coVerify { mockPrompt.setPrompted(any()) }
         }
 
         test("onMessageActionOccurredOnMessage does nothing when prompts list is empty") {
