@@ -12,6 +12,8 @@ import com.onesignal.location.internal.common.LocationConstants
 import com.onesignal.location.internal.common.LocationUtils
 import com.onesignal.location.internal.controller.ILocationController
 import com.onesignal.location.internal.permissions.LocationPermissionController
+import com.onesignal.mocks.IOMockHelper
+import com.onesignal.mocks.IOMockHelper.awaitIO
 import com.onesignal.mocks.MockHelper
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -23,15 +25,13 @@ import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 
 private class Mocks {
-    val capturer = mockk<ILocationCapturer>(relaxed = true)
+    val locationCapture = mockk<ILocationCapturer>(relaxed = true)
     val locationController = mockk<ILocationController>(relaxed = true)
     val permissionController = mockk<LocationPermissionController>(relaxed = true)
     val mockAppService = MockHelper.applicationService()
@@ -54,7 +54,7 @@ private class Mocks {
 
     val locationManager = LocationManager(
         mockAppService,
-        capturer,
+        locationCapture,
         locationController,
         permissionController,
         mockPrefs,
@@ -82,11 +82,20 @@ private class Mocks {
 }
 
 class LocationManagerTests : FunSpec({
-    val testDispatcher: TestDispatcher = UnconfinedTestDispatcher()
+
+    lateinit var mocks: Mocks
+
+    // register to access awaitIO()
+    listener(IOMockHelper)
 
     beforeAny {
         Logging.logLevel = LogLevel.NONE
-        Dispatchers.setMain(testDispatcher)
+        mocks = Mocks() // fresh instance for each test
+    }
+
+    beforeSpec {
+        // required when testing functions that internally call suspendifyOnMain
+        Dispatchers.setMain(UnconfinedTestDispatcher())
         mockkObject(LocationUtils)
         mockkObject(AndroidUtils)
         every { LocationUtils.hasLocationPermission(any()) } returns false
@@ -94,16 +103,15 @@ class LocationManagerTests : FunSpec({
         every { AndroidUtils.filterManifestPermissions(any(), any()) } returns emptyList()
     }
 
-    afterAny {
+    afterSpec {
+        Dispatchers.resetMain()
         unmockkObject(LocationUtils)
         unmockkObject(AndroidUtils)
-        Dispatchers.resetMain()
     }
 
     context("isShared Property") {
         test("isShared getter returns value from preferences") {
             // Given
-            val mocks = Mocks()
             val mockPrefs = mocks.mockPrefs
             val locationManager = mocks.locationManager
 
@@ -119,7 +127,6 @@ class LocationManagerTests : FunSpec({
 
         test("isShared setter saves value to preferences and triggers permission change") {
             // Given
-            val mocks = Mocks()
             val mockPrefs = mocks.mockPrefs
             val mockLocationController = mocks.locationController
             coEvery { mockLocationController.start() } returns true
@@ -138,7 +145,6 @@ class LocationManagerTests : FunSpec({
 
         test("isShared setter to false does not start location when permission changed") {
             // Given
-            val mocks = Mocks()
             val mockLocationController = mocks.locationController
             val locationManager = mocks.locationManager
 
@@ -154,7 +160,6 @@ class LocationManagerTests : FunSpec({
     context("start() Method") {
         test("start subscribes to location permission controller") {
             // Given
-            val mocks = Mocks()
             every { LocationUtils.hasLocationPermission(mocks.mockAppService.appContext) } returns false
             val locationManager = mocks.locationManager
 
@@ -167,7 +172,6 @@ class LocationManagerTests : FunSpec({
 
         test("start calls startGetLocation when location permission is granted") {
             // Given
-            val mocks = Mocks()
             every { LocationUtils.hasLocationPermission(mocks.mockAppService.appContext) } returns true
             coEvery { mocks.locationController.start() } returns true
 
@@ -175,7 +179,7 @@ class LocationManagerTests : FunSpec({
 
             // When
             locationManager.start()
-            delay(50)
+            awaitIO()
 
             // Then
             coVerify { mocks.locationController.start() }
@@ -183,7 +187,6 @@ class LocationManagerTests : FunSpec({
 
         test("start does not call startGetLocation when location permission is not granted") {
             // Given
-            val mocks = Mocks()
             val mockLocationController = mockk<ILocationController>(relaxed = true)
             every { LocationUtils.hasLocationPermission(mocks.mockContext) } returns false
 
@@ -191,7 +194,6 @@ class LocationManagerTests : FunSpec({
 
             // When
             locationManager.start()
-            Thread.sleep(200) // Wait for suspendifyOnIO coroutine to complete
 
             // Then
             coVerify(exactly = 0) { mockLocationController.start() }
@@ -201,7 +203,6 @@ class LocationManagerTests : FunSpec({
     context("onLocationPermissionChanged() Method") {
         test("onLocationPermissionChanged calls startGetLocation when enabled is true") {
             // Given
-            val mocks = Mocks()
             val mockLocationController = mocks.locationController
             coEvery { mockLocationController.start() } returns true
 
@@ -209,7 +210,7 @@ class LocationManagerTests : FunSpec({
 
             // When
             locationManager.onLocationPermissionChanged(true)
-            Thread.sleep(200) // Wait for suspendifyOnIO coroutine to complete
+            awaitIO()
 
             // Then
             coVerify { mockLocationController.start() }
@@ -217,12 +218,10 @@ class LocationManagerTests : FunSpec({
 
         test("onLocationPermissionChanged does not call startGetLocation when enabled is false") {
             // Given
-            val mocks = Mocks()
             val locationManager = mocks.locationManager
 
             // When
             locationManager.onLocationPermissionChanged(false)
-            Thread.sleep(200) // Wait for suspendifyOnIO coroutine to complete
 
             // Then
             coVerify(exactly = 0) { mocks.locationController.start() }
@@ -230,14 +229,13 @@ class LocationManagerTests : FunSpec({
 
         test("onLocationPermissionChanged does not call startGetLocation when isShared is false") {
             // Given
-            val mocks = Mocks()
             every {
                 mocks.mockPrefs.getBool(PreferenceStores.ONESIGNAL, PreferenceOneSignalKeys.PREFS_OS_LOCATION_SHARED, false)
             } returns false
             // Create a new LocationManager with isShared = false
             val locationManager = LocationManager(
                 mocks.mockAppService,
-                mocks.capturer,
+                mocks.locationCapture,
                 mocks.locationController,
                 mocks.permissionController,
                 mocks.mockPrefs,
@@ -245,7 +243,7 @@ class LocationManagerTests : FunSpec({
 
             // When
             locationManager.onLocationPermissionChanged(true)
-            delay(50)
+            awaitIO()
 
             // Then
             coVerify(exactly = 0) { mocks.locationController.start() }
@@ -257,7 +255,6 @@ class LocationManagerTests : FunSpec({
             // Set SDK version to 22 using reflection
             setSdkVersion(22)
             // Given
-            val mocks = Mocks()
             mocks.set_fine_location_permission(true)
             val locationManager = mocks.locationManager
 
@@ -273,7 +270,6 @@ class LocationManagerTests : FunSpec({
         test("requestPermission returns true when coarse permission granted on API < 23") {
             setSdkVersion(22)
             // Given
-            val mocks = Mocks()
             mocks.set_fine_location_permission(false)
             mocks.set_coarse_location_permission(true)
             coEvery { mocks.locationController.start() } returns true
@@ -294,7 +290,6 @@ class LocationManagerTests : FunSpec({
             setSdkVersion(22)
 
             // Given
-            val mocks = Mocks()
             val mockApplicationService = mocks.mockAppService
             mocks.set_fine_location_permission(false)
             mocks.set_coarse_location_permission(false)
@@ -319,7 +314,6 @@ class LocationManagerTests : FunSpec({
             // Set SDK version to 23 using reflection
             setSdkVersion(23)
             // Given
-            val mocks = Mocks()
             mocks.set_fine_location_permission(true)
             coEvery { mocks.locationController.start() } returns true
             val locationManager = mocks.locationManager
@@ -345,7 +339,6 @@ class LocationManagerTests : FunSpec({
             }
 
             // Given
-            val mocks = Mocks()
             val mockApplicationService = mocks.mockAppService
             val mockPermissionController = mockk<LocationPermissionController>(relaxed = true)
             mocks.set_fine_location_permission(false)
@@ -383,7 +376,6 @@ class LocationManagerTests : FunSpec({
             }
 
             // Given
-            val mocks = Mocks()
             val mockApplicationService = mocks.mockAppService
             val mockPermissionController = mockk<LocationPermissionController>(relaxed = true)
             mocks.set_fine_location_permission(false)
@@ -417,7 +409,6 @@ class LocationManagerTests : FunSpec({
 
         test("requestPermission returns false when permissions not in manifest") {
             // Given
-            val mocks = Mocks()
             mocks.set_fine_location_permission(false)
             val locationManager = mocks.locationManager
 
@@ -432,7 +423,6 @@ class LocationManagerTests : FunSpec({
 
         test("requestPermission returns true when coarse permission already granted") {
             // Given
-            val mocks = Mocks()
             mocks.set_fine_location_permission(false)
             mocks.set_coarse_location_permission(true)
 
@@ -460,7 +450,6 @@ class LocationManagerTests : FunSpec({
             }
 
             // Given
-            val mocks = Mocks()
             val mockApplicationService = mocks.mockAppService
             val mockPermissionController = mockk<LocationPermissionController>(relaxed = true)
             mocks.set_fine_location_permission(true)
@@ -499,7 +488,6 @@ class LocationManagerTests : FunSpec({
 
         test("requestPermission starts location when all permissions granted") {
             // Given
-            val mocks = Mocks()
             val mockApplicationService = mocks.mockAppService
             mocks.set_fine_location_permission(true)
             every {
@@ -526,7 +514,6 @@ class LocationManagerTests : FunSpec({
     context("requestPermission() Method - Edge Cases") {
         test("requestPermission warns when isShared is false") {
             // Given
-            val mocks = Mocks()
             mocks.set_fine_location_permission(true)
 
             val locationManager = mocks.locationManager
@@ -543,7 +530,6 @@ class LocationManagerTests : FunSpec({
 
         test("requestPermission handles location controller start failure gracefully") {
             // Given
-            val mocks = Mocks()
             mocks.set_fine_location_permission(true)
             coEvery { mocks.locationController.start() } returns false
 
@@ -561,7 +547,6 @@ class LocationManagerTests : FunSpec({
 
         test("requestPermission handles location controller exception gracefully") {
             // Given
-            val mocks = Mocks()
             val mockLocationController = mockk<ILocationController>(relaxed = true)
             mocks.set_fine_location_permission(true)
             coEvery { mockLocationController.start() } throws RuntimeException("Location error")
@@ -582,13 +567,12 @@ class LocationManagerTests : FunSpec({
     context("startGetLocation() Method") {
         test("startGetLocation does nothing when isShared is false") {
             // Given
-            val mocks = Mocks()
             val mockLocationController = mockk<ILocationController>(relaxed = true)
             val locationManager = mocks.locationManager
 
             // When - trigger startGetLocation indirectly via onLocationPermissionChanged
             locationManager.onLocationPermissionChanged(true)
-            delay(50) // Wait for suspendifyOnIO coroutine to complete
+            awaitIO()
 
             // Then
             coVerify(exactly = 0) { mockLocationController.start() }
@@ -596,14 +580,13 @@ class LocationManagerTests : FunSpec({
 
         test("startGetLocation calls location controller start when isShared is true") {
             // Given
-            val mocks = Mocks()
             val mockLocationController = mocks.locationController
             coEvery { mockLocationController.start() } returns true
             val locationManager = mocks.locationManager
 
             // When - trigger startGetLocation indirectly via onLocationPermissionChanged
             locationManager.onLocationPermissionChanged(true)
-            Thread.sleep(200) // Wait for suspendifyOnIO coroutine to complete
+            awaitIO()
 
             // Then
             coVerify { mockLocationController.start() }
