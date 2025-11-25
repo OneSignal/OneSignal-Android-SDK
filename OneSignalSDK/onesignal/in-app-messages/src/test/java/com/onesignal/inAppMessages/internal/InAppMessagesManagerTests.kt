@@ -66,26 +66,26 @@ private class Mocks {
     val identityModelStore = MockHelper.identityModelStore()
     val pushSubscription = mockk<IPushSubscription>(relaxed = true)
     val outcomeEventsController = mockk<IOutcomeEventsController>(relaxed = true)
-    val state = mockk<InAppStateService>(relaxed = true)
-    val prefs = mockk<IInAppPreferencesController>(relaxed = true)
+    val inAppStateService = mockk<InAppStateService>(relaxed = true)
+    val inAppPreferencesController = mockk<IInAppPreferencesController>(relaxed = true)
     val repository = mockk<IInAppRepository>(relaxed = true)
     val backend = mockk<IInAppBackendService>(relaxed = true)
     val triggerController = mockk<ITriggerController>(relaxed = true)
     val triggerModelStore = mockk<TriggerModelStore>(relaxed = true)
-    val inAppDisplay = mockk<IInAppDisplayer>(relaxed = true)
-    val lifecycle = mockk<IInAppLifecycleService>(relaxed = true)
+    val inAppDisplayer = mockk<IInAppDisplayer>(relaxed = true)
+    val inAppLifecycleService = mockk<IInAppLifecycleService>(relaxed = true)
     val languageContext = MockHelper.languageContext()
     val time = MockHelper.time(1000)
     val inAppMessageLifecycleListener = spyk<IInAppMessageLifecycleListener>()
     val inAppMessageClickListener = spyk<IInAppMessageClickListener>()
     val rywData = RywData("token", 100L)
 
-    val deferred = mockk<CompletableDeferred<RywData?>>() {
+    val rywDeferred = mockk<CompletableDeferred<RywData?>> {
         coEvery { await() } returns rywData
     }
 
     val consistencyManager = mockk<IConsistencyManager>(relaxed = true) {
-        coEvery { getRywDataFromAwaitableCondition(any<IamFetchReadyCondition>()) } returns deferred
+        coEvery { getRywDataFromAwaitableCondition(any<IamFetchReadyCondition>()) } returns rywDeferred
     }
 
     val subscriptionManager = mockk<ISubscriptionManager>(relaxed = true) {
@@ -94,7 +94,7 @@ private class Mocks {
         }
     }
 
-    val outcome =
+    val testOutcome =
         run {
             val outcome = mockk<InAppMessageOutcome>(relaxed = true)
             every { outcome.name } returns "outcome-name"
@@ -105,7 +105,7 @@ private class Mocks {
         run {
             val result = mockk<InAppMessageClickResult>(relaxed = true)
             every { result.prompts } returns mutableListOf()
-            every { result.outcomes } returns mutableListOf(outcome)
+            every { result.outcomes } returns mutableListOf(testOutcome)
             every { result.tags } returns null
             every { result.url } returns null
             every { result.clickId } returns "click-id"
@@ -140,14 +140,14 @@ private class Mocks {
         identityModelStore,
         subscriptionManager,
         outcomeEventsController,
-        state,
-        prefs,
+        inAppStateService,
+        inAppPreferencesController,
         repository,
         backend,
         triggerController,
         triggerModelStore,
-        inAppDisplay,
-        lifecycle,
+        inAppDisplayer,
+        inAppLifecycleService,
         languageContext,
         time,
         consistencyManager,
@@ -194,13 +194,9 @@ class InAppMessagesManagerTests : FunSpec({
             iamManager.clearTriggers()
 
             // Then
-            triggerModelSlots[0].key shouldBe "trigger-key1"
-            triggerModelSlots[0].value shouldBe "trigger-value1"
-            triggerModelSlots[1].key shouldBe "trigger-key2"
-            triggerModelSlots[1].value shouldBe "trigger-value2"
-            triggerModelSlots[2].key shouldBe "trigger-key3"
-            triggerModelSlots[2].value shouldBe "trigger-value3"
-
+            with(triggerModelSlots[0]) { key to value } shouldBe ("trigger-key1" to "trigger-value1")
+            with(triggerModelSlots[1]) { key to value } shouldBe ("trigger-key2" to "trigger-value2")
+            with(triggerModelSlots[2]) { key to value } shouldBe ("trigger-key3" to "trigger-value3")
             verify(exactly = 1) { mockTriggerModelStore.remove("trigger-key4") }
             verify(exactly = 1) { mockTriggerModelStore.remove("trigger-key5") }
             verify(exactly = 1) { mockTriggerModelStore.remove("trigger-key6") }
@@ -238,15 +234,14 @@ class InAppMessagesManagerTests : FunSpec({
 
             // Then
             triggerModelSlots.size shouldBe 1
-            triggerModelSlots[0].key shouldBe "new-key"
-            triggerModelSlots[0].value shouldBe "new-value"
+            with(triggerModelSlots[0]) { key to value } shouldBe ("new-key" to "new-value")
         }
     }
 
     context("Initialization and Start") {
         test("start loads dismissed messages from preferences") {
             // Given
-            val mockPrefs = mocks.prefs
+            val mockPrefs = mocks.inAppPreferencesController
             val dismissedSet = setOf("dismissed-1", "dismissed-2")
             val mockRepository = mocks.repository
             every { mockPrefs.dismissedMessagesId } returns dismissedSet
@@ -264,8 +259,8 @@ class InAppMessagesManagerTests : FunSpec({
 
         test("start loads last dismissal time from preferences") {
             // Given
-            val mockPrefs = mocks.prefs
-            val mockState = mocks.state
+            val mockPrefs = mocks.inAppPreferencesController
+            val mockState = mocks.inAppStateService
             val lastDismissalTime = 5000L
             every { mockPrefs.dismissedMessagesId } returns null
             every { mockPrefs.lastTimeInAppDismissed } returns lastDismissalTime
@@ -310,7 +305,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // Then
             verify { mocks.subscriptionManager.subscribe(any()) }
-            verify { mocks.lifecycle.subscribe(any()) }
+            verify { mocks.inAppLifecycleService.subscribe(any()) }
             verify { mocks.triggerController.subscribe(any()) }
             verify { mocks.sessionService.subscribe(any()) }
             verify { mocks.applicationService.addApplicationLifecycleHandler(any()) }
@@ -320,7 +315,7 @@ class InAppMessagesManagerTests : FunSpec({
     context("Paused Property") {
         test("paused getter returns state paused value") {
             // Given
-            every { mocks.state.paused } returns true
+            every { mocks.inAppStateService.paused } returns true
 
             // When
             val result = mocks.inAppMessagesManager.paused
@@ -331,11 +326,11 @@ class InAppMessagesManagerTests : FunSpec({
 
         test("setting paused to true does nothing when no message showing") {
             // Given
-            val mockState = mocks.state
-            val mockDisplayer = mocks.inAppDisplay
+            val mockState = mocks.inAppStateService
+            val mockDisplayer = mocks.inAppDisplayer
             val iamManager = mocks.inAppMessagesManager
             every { mockState.paused } returns false
-            every { mocks.state.inAppMessageIdShowing } returns null
+            every { mocks.inAppStateService.inAppMessageIdShowing } returns null
 
             // When
             iamManager.paused = true
@@ -413,7 +408,7 @@ class InAppMessagesManagerTests : FunSpec({
     context("Config Model Changes") {
         test("onModelUpdated fetches messages when appId property changes") {
             // Given
-            val mockDeferred = mocks.deferred
+            val mockDeferred = mocks.rywDeferred
             every { mocks.userManager.onesignalId } returns "onesignal-id"
             every { mocks.applicationService.isInForeground } returns true
             every { mocks.pushSubscription.id } returns "subscription-id"
@@ -462,6 +457,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onModelReplaced(ConfigModel(), "tag")
+            awaitIO()
 
             // Then
             coVerify {
@@ -473,7 +469,7 @@ class InAppMessagesManagerTests : FunSpec({
     context("Subscription Changes") {
         test("onSubscriptionChanged fetches messages when push subscription id changes") {
             // Given
-            val mockDeferred = mocks.deferred
+            val mockDeferred = mocks.rywDeferred
             val subscriptionModel = SubscriptionModel()
             val args = ModelChangedArgs(
                 subscriptionModel,
@@ -566,7 +562,7 @@ class InAppMessagesManagerTests : FunSpec({
             val message1 = mocks.testInAppMessage
             val message2 = mocks.testInAppMessage
             val mockRywData = mocks.rywData
-            val mockDeferred = mocks.deferred
+            val mockDeferred = mocks.rywDeferred
             val mockRepository = mocks.repository
 
             message1.isDisplayedInSession = true
@@ -698,7 +694,7 @@ class InAppMessagesManagerTests : FunSpec({
 
         test("onMessageWasDismissed calls messageWasDismissed") {
             // Given
-            every { mocks.state.inAppMessageIdShowing } returns null
+            every { mocks.inAppStateService.inAppMessageIdShowing } returns null
 
             // When
             mocks.inAppMessagesManager.onMessageWasDismissed(mocks.testInAppMessage)
@@ -786,7 +782,7 @@ class InAppMessagesManagerTests : FunSpec({
             val mockPrompt = mockk<InAppMessagePrompt>(relaxed = true)
             every { mockPrompt.hasPrompted() } returns false
             coEvery { mockPrompt.handlePrompt() } returns InAppMessagePrompt.PromptActionResult.PERMISSION_GRANTED
-            every { mocks.state.currentPrompt } returns null
+            every { mocks.inAppStateService.currentPrompt } returns null
             mocks.inAppMessagesManager.addClickListener(mockClickListener)
 
             // When
@@ -950,14 +946,14 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.triggerController.evaluateMessageTriggers(message) } returns true
             every { mocks.triggerController.isTriggerOnMessage(any(), any()) } returns false
             every { mocks.triggerController.messageHasOnlyDynamicTriggers(any()) } returns false
-            every { mocks.state.inAppMessageIdShowing } returns null
-            every { mocks.state.paused } returns true
+            every { mocks.inAppStateService.inAppMessageIdShowing } returns null
+            every { mocks.inAppStateService.paused } returns true
 
             // When - fetch messages while paused
             mocks.inAppMessagesManager.onSessionStarted()
 
             // Then - should not display
-            coVerify(exactly = 0) { mocks.inAppDisplay.displayMessage(any()) }
+            coVerify(exactly = 0) { mocks.inAppDisplayer.displayMessage(any()) }
         }
     }
 
@@ -971,11 +967,11 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.triggerController.evaluateMessageTriggers(message) } returns true
             every { mocks.triggerController.isTriggerOnMessage(any(), any()) } returns false
             every { mocks.triggerController.messageHasOnlyDynamicTriggers(any()) } returns false
-            every { mocks.state.inAppMessageIdShowing } returns null
-            every { mocks.state.paused } returns true
+            every { mocks.inAppStateService.inAppMessageIdShowing } returns null
+            every { mocks.inAppStateService.paused } returns true
             coEvery { mocks.applicationService.waitUntilSystemConditionsAvailable() } returns true
             coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any()) } returns listOf(message)
-            coEvery { mocks.inAppDisplay.displayMessage(any()) } returns true
+            coEvery { mocks.inAppDisplayer.displayMessage(any()) } returns true
 
             // Fetch messages first
             mocks.inAppMessagesManager.onSessionStarted()
@@ -996,7 +992,7 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.triggerController.evaluateMessageTriggers(message) } returns true
             every { mocks.triggerController.isTriggerOnMessage(any(), any()) } returns false
             every { mocks.triggerController.messageHasOnlyDynamicTriggers(any()) } returns false
-            every { mocks.state.paused } returns false
+            every { mocks.inAppStateService.paused } returns false
 
             // Fetch messages
             mocks.inAppMessagesManager.onSessionStarted()
@@ -1008,7 +1004,7 @@ class InAppMessagesManagerTests : FunSpec({
             mocks.inAppMessagesManager.paused = false
 
             // Then - should not display dismissed message
-            coVerify(exactly = 0) { mocks.inAppDisplay.displayMessage(message) }
+            coVerify(exactly = 0) { mocks.inAppDisplayer.displayMessage(message) }
         }
     }
 
@@ -1026,7 +1022,7 @@ class InAppMessagesManagerTests : FunSpec({
         test("onMessageActionOccurredOnMessage fires outcomes with weight") {
             // Given
             val weight = 5.0f
-            every { mocks.outcome.weight } returns weight
+            every { mocks.testOutcome.weight } returns weight
 
             // When
             mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
@@ -1063,6 +1059,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
+            awaitIO()
 
             // Then - wait for async operations
             coVerify { mocks.userManager.removeTags(any()) }
@@ -1121,14 +1118,14 @@ class InAppMessagesManagerTests : FunSpec({
             every { mockPrompt.setPrompted(any()) } just runs
             // currentPrompt starts as null, then gets set to the prompt during processing
             var currentPrompt: InAppMessagePrompt? = null
-            every { mocks.state.currentPrompt } answers { currentPrompt }
-            every { mocks.state.currentPrompt = any() } answers { currentPrompt = firstArg() }
+            every { mocks.inAppStateService.currentPrompt } answers { currentPrompt }
+            every { mocks.inAppStateService.currentPrompt = any() } answers { currentPrompt = firstArg() }
 
             // When
             mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
 
             // Then
-            coVerify { mocks.inAppDisplay.dismissCurrentInAppMessage() }
+            coVerify { mocks.inAppDisplayer.dismissCurrentInAppMessage() }
             coVerify { mockPrompt.setPrompted(any()) }
         }
 
@@ -1139,7 +1136,7 @@ class InAppMessagesManagerTests : FunSpec({
             mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
 
             // Then
-            coVerify(exactly = 0) { mocks.inAppDisplay.dismissCurrentInAppMessage() }
+            coVerify(exactly = 0) { mocks.inAppDisplayer.dismissCurrentInAppMessage() }
         }
     }
 
@@ -1148,8 +1145,8 @@ class InAppMessagesManagerTests : FunSpec({
             // Given
             val message = mocks.testInAppMessage
             coEvery { mocks.repository.saveInAppMessage(any()) } just runs
-            every { mocks.state.lastTimeInAppDismissed } returns 500L
-            every { mocks.state.currentPrompt } returns null
+            every { mocks.inAppStateService.lastTimeInAppDismissed } returns 500L
+            every { mocks.inAppStateService.currentPrompt } returns null
 
             // When
             mocks.inAppMessagesManager.onMessageWasDismissed(message)

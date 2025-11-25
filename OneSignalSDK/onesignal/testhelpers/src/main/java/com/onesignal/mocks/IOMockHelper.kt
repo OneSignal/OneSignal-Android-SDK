@@ -12,7 +12,7 @@ import io.mockk.every
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.runBlocking
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Test helper that makes OneSignal’s `suspendifyOnIO` behavior deterministic in unit tests.
@@ -43,41 +43,71 @@ import kotlinx.coroutines.runBlocking
  */
 object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener, TestListener {
 
+    private const val THREADUTILS_PATH = "com.onesignal.common.threading.ThreadUtilsKt"
+
+    // How many IO blocks are currently running
+    private val pendingIo = AtomicInteger(0)
+
+    // Completed when all in-flight IO blocks for the current "wave" are done
+    @Volatile
     private var ioWaiter: CompletableDeferred<Unit> = CompletableDeferred()
 
     /**
-     * Wait for the current suspendifyOnIO work to finish.
-     * Can be called from tests instead of delay/Thread.sleep.
+     * Wait for suspendifyOnIO work to finish.
+     * Can be called multiple times in a test.
+     *  1. If multiple IO tasks are added before the first task finishes, the waiter will wait until ALL tasks are finished
+     *  2. If async work is triggered after an awaitIO() has already returned, just call awaitIO() again to wait for the new work.
      */
-    fun awaitIO() {
-        if (!ioWaiter.isCompleted) {
-            runBlocking {
-                ioWaiter.await()
-            }
-        }
-        ioWaiter = CompletableDeferred()
+    suspend fun awaitIO() {
+        // Nothing to wait for in this case
+        if (pendingIo.get() == 0) return
+
+        ioWaiter.await()
     }
 
     override suspend fun beforeSpec(spec: Spec) {
         // ThreadUtilsKt = file that contains suspendifyOnIO
-        mockkStatic("com.onesignal.common.threading.ThreadUtilsKt")
+        mockkStatic(THREADUTILS_PATH)
+
+        every {
+            suspendifyWithCompletion(
+                useIO = any(),
+                block = any<suspend () -> Unit>(),
+                onComplete = any()
+            )
+        } answers { callOriginal() }
 
         every { suspendifyOnIO(any<suspend () -> Unit>()) } answers {
             val block = firstArg<suspend () -> Unit>()
+
+            // New IO wave: if we are going from 0 -> 1, create a new waiter
+            val previous = pendingIo.getAndIncrement()
+            if (previous == 0) {
+                ioWaiter = CompletableDeferred()
+            }
+
             suspendifyWithCompletion(
                 useIO = true,
                 block = block,
-                onComplete = { ioWaiter.complete(Unit) },
+                onComplete = {
+                    // When each block finishes, decrement; if all done, complete waiter
+                    if (pendingIo.decrementAndGet() == 0) {
+                        if (!ioWaiter.isCompleted) {
+                            ioWaiter.complete(Unit)
+                        }
+                    }
+                },
             )
         }
     }
 
     override suspend fun beforeTest(testCase: TestCase) {
-        // fresh waiter for each test
+        // Fresh waiter for each test
+        pendingIo.set(0)
         ioWaiter = CompletableDeferred()
     }
 
     override suspend fun afterSpec(spec: Spec) {
-        unmockkStatic("com.onesignal.common.threading.ThreadUtilsKt")
+        unmockkStatic(THREADUTILS_PATH)
     }
 }

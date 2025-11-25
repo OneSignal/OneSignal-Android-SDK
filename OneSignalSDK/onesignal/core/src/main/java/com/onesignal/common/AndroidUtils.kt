@@ -68,6 +68,9 @@ object AndroidUtils {
         return appVersion?.toString()
     }
 
+    // return Build.VERSION.SDK_INT; can be mocked to test specific functionalities under different SDK levels
+    val androidSDKInt: Int = Build.VERSION.SDK_INT
+
     fun getManifestMeta(
         context: Context,
         metaName: String?,
