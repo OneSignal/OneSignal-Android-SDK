@@ -49,7 +49,6 @@ import io.mockk.unmockkObject
 import io.mockk.verify
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -485,6 +484,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onSubscriptionChanged(mocks.pushSubscription, args)
+            awaitIO()
 
             // Then
             coVerify {
@@ -617,6 +617,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onMessageWillDisplay(mocks.testInAppMessage)
+            awaitIO()
 
             // Then
             // Verify callback was fired
@@ -640,6 +641,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onMessageWasDisplayed(mocks.testInAppMessage)
+            awaitIO()
 
             // Then
             coVerify { mocks.backend.sendIAMImpression(any(), any(), any(), any()) }
@@ -650,6 +652,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onMessageWasDisplayed(mocks.testInAppMessagePreview)
+            awaitIO()
 
             // Then
             coVerify(exactly = 0) { mocks.backend.sendIAMImpression(any(), any(), any(), any()) }
@@ -662,10 +665,9 @@ class InAppMessagesManagerTests : FunSpec({
             coEvery { mocks.backend.sendIAMImpression(any(), any(), any(), any()) } just runs
 
             // When - send impression twice
-            runBlocking {
-                mocks.inAppMessagesManager.onMessageWasDisplayed(message)
-                mocks.inAppMessagesManager.onMessageWasDisplayed(message)
-            }
+            mocks.inAppMessagesManager.onMessageWasDisplayed(message)
+            mocks.inAppMessagesManager.onMessageWasDisplayed(message)
+            awaitIO()
 
             // Then - should only send once
             coVerify(exactly = 1) { mocks.backend.sendIAMImpression(any(), any(), any(), any()) }
@@ -677,6 +679,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onMessageWillDismiss(mocks.testInAppMessage)
+            awaitIO()
 
             // Then
             // Verify callback was fired
@@ -787,6 +790,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onMessageActionOccurredOnPreview(mocks.testInAppMessagePreview, mocks.inAppMessageClickResult)
+            awaitIO()
 
             // Then
             verify { mocks.inAppMessageClickResult.isFirstClick = any() }
@@ -801,6 +805,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onMessagePageChanged(mocks.testInAppMessage, mockPage)
+            awaitIO()
 
             // Then
             coVerify { mocks.backend.sendIAMPageImpression(any(), any(), any(), any(), any()) }
@@ -812,6 +817,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onMessagePageChanged(mocks.testInAppMessagePreview, mockPage)
+            awaitIO()
 
             // Then
             coVerify(exactly = 0) { mocks.backend.sendIAMPageImpression(any(), any(), any(), any(), any()) }
@@ -887,6 +893,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When - trigger fetch via onSessionStarted
             mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
 
             // Then
             coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any()) }
@@ -900,6 +907,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
 
             // Then
             coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any()) }
@@ -913,6 +921,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
 
             // Then
             coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any()) }
@@ -929,6 +938,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
 
             // Then
             coVerify { mocks.backend.listInAppMessages(any(), any(), any(), any()) }
@@ -951,6 +961,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When - fetch messages while paused
             mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
 
             // Then - should not display
             coVerify(exactly = 0) { mocks.inAppDisplayer.displayMessage(any()) }
@@ -975,6 +986,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // Fetch messages first
             mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
 
             // When - set paused to false, which triggers evaluateInAppMessages
             mocks.inAppMessagesManager.paused = false
@@ -996,6 +1008,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // Fetch messages
             mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
 
             // Dismiss the message
             mocks.inAppMessagesManager.onMessageWasDismissed(message)
@@ -1026,6 +1039,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
+            awaitIO()
 
             // Then - wait for async operations
             coVerify { mocks.outcomeEventsController.sendOutcomeEventWithValue("outcome-name", weight) }
@@ -1077,6 +1091,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
+            awaitIO()
 
             // Then
             coVerify { AndroidUtils.openURLInBrowser(any<Context>(), url) }
@@ -1095,6 +1110,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
+            awaitIO()
 
             // Then
             coVerify { OneSignalChromeTab.open("https://example.com", true, any()) }
@@ -1123,6 +1139,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
+            awaitIO()
 
             // Then
             coVerify { mocks.inAppDisplayer.dismissCurrentInAppMessage() }
