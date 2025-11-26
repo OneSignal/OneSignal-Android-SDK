@@ -27,8 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger
  *  - Completing a `CompletableDeferred` when the async block finishes
  *  - Providing `awaitIO()` so tests can explicitly wait for all IO work without sleeps
  *
- * Usage in a Kotest spec:
- *
+ * Usage example in a Kotest spec:
  *   class InAppMessagesManagerTests : FunSpec({
  *
  *     // register to access awaitIO()
@@ -57,6 +56,22 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
      * Can be called multiple times in a test.
      *  1. If multiple IO tasks are added before the first task finishes, the waiter will wait until ALL tasks are finished
      *  2. If async work is triggered after an awaitIO() has already returned, just call awaitIO() again to wait for the new work.
+     *
+     *  *** NOTE ABOUT COVERAGE:
+     *  * This helper intentionally mocks *only* the top-level `suspendifyOnIO(block)` function.
+     *    It does NOT intercept every threading entry point defined in ThreadUtils.kt or
+     *    OneSignalDispatchers — e.g. `suspendifyWithCompletion`, `suspendifyOnDefault`,
+     *    `launchOnIO`, and `launchOnDefault` will continue to run using the real dispatcher
+     *    behavior.
+     *
+     *  * This design keeps the helper focused on stabilizing existing tests that specifically
+     *    depend on `suspendifyOnIO`, without altering unrelated threading paths across the SDK.
+     *
+     *  * If future tests rely on other threading helpers (e.g., direct calls to
+     *    `suspendifyWithCompletion` or `launchOnIO`), this helper can be extended, or a separate
+     *    test helper can be introduced to cover those cases. For now, this keeps the
+     *    interception surface minimal and avoids unintentionally changing more concurrency
+     *    behavior than necessary.
      */
     suspend fun awaitIO() {
         // Nothing to wait for in this case
