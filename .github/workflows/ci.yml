@@ -35,13 +35,13 @@ jobs:
       - name: "[Diff Coverage] Check for bypass"
         id: coverage_bypass
         run: |
-          # Check if PR has skip-coverage-check label
+          # Check if PR has Skip Coverage Check label
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             LABELS="${{ toJson(github.event.pull_request.labels.*.name) }}"
-            if echo "$LABELS" | grep -q "skip-coverage-check"; then
+            if echo "$LABELS" | grep -qiE "Skip Coverage Check|skip-coverage-check"; then
               echo "bypass=true" >> $GITHUB_OUTPUT
-              echo "reason=PR has 'skip-coverage-check' label" >> $GITHUB_OUTPUT
-              echo "⚠️ Coverage check will not fail build (PR has 'skip-coverage-check' label)"
+              echo "reason=PR has 'Skip Coverage Check' label" >> $GITHUB_OUTPUT
+              echo "⚠️ Coverage check will not fail build (PR has 'Skip Coverage Check' label)"
               echo "   Coverage will still be checked and reported"
             else
               echo "bypass=false" >> $GITHUB_OUTPUT

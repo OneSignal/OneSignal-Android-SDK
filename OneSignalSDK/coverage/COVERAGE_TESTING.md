@@ -44,14 +44,14 @@ In some cases, you may need to merge a PR without adequate test coverage (e.g., 
 There are three ways to bypass the coverage check:
 
 #### 1. PR Label (Recommended for CI/CD)
-Add the `skip-coverage-check` label to your PR. This is the recommended method as it's:
+Add the `Skip Coverage Check` label to your PR. This is the recommended method as it's:
 - ✅ Visible and auditable
 - ✅ Easy to add/remove
 - ✅ Works automatically in CI/CD
 - ✅ Still shows coverage results in PR comment
 
 **How it works:**
-1. Add the `skip-coverage-check` label to your PR
+1. Add the `Skip Coverage Check` label to your PR
 2. CI/CD will run the coverage check as normal
 3. Coverage results will be posted in the PR comment
 4. If coverage is below threshold, a bypass notice will be added
@@ -80,7 +80,7 @@ Files below 80% threshold:
 ---
 ⚠️ **Coverage check bypassed - build will not fail**
 
-**Reason:** PR has 'skip-coverage-check' label
+**Reason:** PR has 'Skip Coverage Check' label
 
 **Note:** Coverage results are shown above. Please ensure adequate test coverage is added in a follow-up PR when possible.
 ```
