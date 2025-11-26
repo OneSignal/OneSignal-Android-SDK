@@ -193,13 +193,17 @@ class InAppMessagesManagerTests : FunSpec({
             iamManager.clearTriggers()
 
             // Then
-            with(triggerModelSlots[0]) { key to value } shouldBe ("trigger-key1" to "trigger-value1")
-            with(triggerModelSlots[1]) { key to value } shouldBe ("trigger-key2" to "trigger-value2")
-            with(triggerModelSlots[2]) { key to value } shouldBe ("trigger-key3" to "trigger-value3")
-            verify(exactly = 1) { mockTriggerModelStore.remove("trigger-key4") }
-            verify(exactly = 1) { mockTriggerModelStore.remove("trigger-key5") }
-            verify(exactly = 1) { mockTriggerModelStore.remove("trigger-key6") }
-            verify(exactly = 1) { mockTriggerModelStore.clear() }
+            triggerModelSlots.map { it.key to it.value } shouldBe listOf(
+                "trigger-key1" to "trigger-value1",
+                "trigger-key2" to "trigger-value2",
+                "trigger-key3" to "trigger-value3",
+            )
+            verify(exactly = 1) {
+                mockTriggerModelStore.remove("trigger-key4")
+                mockTriggerModelStore.remove("trigger-key5")
+                mockTriggerModelStore.remove("trigger-key6")
+                mockTriggerModelStore.clear()
+            }
         }
 
         test("addTrigger updates existing trigger model when trigger already exists") {
