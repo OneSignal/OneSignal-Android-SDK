@@ -32,13 +32,35 @@ jobs:
         working-directory: OneSignalSDK
         run: |
           ./gradlew testDebugUnitTest --console=plain --continue
+      - name: "[Diff Coverage] Check for bypass"
+        id: coverage_bypass
+        run: |
+          # Check if PR has skip-coverage-check label
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            LABELS="${{ toJson(github.event.pull_request.labels.*.name) }}"
+            if echo "$LABELS" | grep -q "skip-coverage-check"; then
+              echo "bypass=true" >> $GITHUB_OUTPUT
+              echo "reason=PR has 'skip-coverage-check' label" >> $GITHUB_OUTPUT
+              echo "⚠️ Coverage check will not fail build (PR has 'skip-coverage-check' label)"
+              echo "   Coverage will still be checked and reported"
+            else
+              echo "bypass=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "bypass=false" >> $GITHUB_OUTPUT
+          fi
       - name: "[Diff Coverage] Check coverage"
         working-directory: OneSignalSDK
         run: |
           # Use the shared coverage check script for consistency
           # Generate markdown report for PR comments
+          # If bypassed, still run the check but don't fail the build
           set +e  # Don't exit on error - we want to generate the report even if coverage fails
-          GENERATE_MARKDOWN=true DIFF_COVERAGE_THRESHOLD=$DIFF_COVERAGE_THRESHOLD ./coverage/checkCoverage.sh
+          if [ "${{ steps.coverage_bypass.outputs.bypass }}" = "true" ]; then
+            SKIP_COVERAGE_CHECK=true GENERATE_MARKDOWN=true DIFF_COVERAGE_THRESHOLD=$DIFF_COVERAGE_THRESHOLD ./coverage/checkCoverage.sh
+          else
+            GENERATE_MARKDOWN=true DIFF_COVERAGE_THRESHOLD=$DIFF_COVERAGE_THRESHOLD ./coverage/checkCoverage.sh
+          fi
           COVERAGE_EXIT_CODE=$?
           set -e  # Re-enable exit on error
           
@@ -49,8 +71,17 @@ jobs:
             echo "⚠️ Coverage report not generated"
           fi
           
-          # Exit with the script's exit code (fail the build if coverage is below threshold)
-          exit $COVERAGE_EXIT_CODE
+          # Only fail the build if coverage is below threshold AND not bypassed
+          if [ "${{ steps.coverage_bypass.outputs.bypass }}" != "true" ] && [ $COVERAGE_EXIT_CODE -ne 0 ]; then
+            echo "❌ Coverage check failed - build will fail"
+            exit $COVERAGE_EXIT_CODE
+          elif [ "${{ steps.coverage_bypass.outputs.bypass }}" = "true" ]; then
+            echo "⚠️ Coverage check completed (bypassed - build will not fail)"
+            exit 0
+          else
+            echo "✅ Coverage check passed"
+            exit 0
+          fi
       - name: Comment PR with coverage summary
         if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@v7

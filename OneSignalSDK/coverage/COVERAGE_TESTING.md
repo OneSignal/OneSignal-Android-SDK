@@ -23,17 +23,130 @@ You can customize the script behavior with environment variables:
 
 ```bash
 # Set custom coverage threshold (default: 80%)
-DIFF_COVERAGE_THRESHOLD=90 ./coverage/checkCoverage.sh
+DIFF_COVERAGE_THRESHOLD=80 ./coverage/checkCoverage.sh
 
 # Compare against a different branch (default: origin/main)
-BASE_BRANCH=origin/develop ./coverage/checkCoverage.sh
+BASE_BRANCH=origin/main ./coverage/checkCoverage.sh
 
 # Generate markdown report (for CI/CD compatibility)
 GENERATE_MARKDOWN=true ./coverage/checkCoverage.sh
+
+# Bypass coverage check (local use only)
+SKIP_COVERAGE_CHECK=true ./coverage/checkCoverage.sh
 ```
+
+### Bypassing Coverage Check
+
+In some cases, you may need to merge a PR without adequate test coverage (e.g., emergency fixes, refactoring, or intentionally untested code). 
+
+**Important:** When bypassed, the coverage check **still runs** and shows results in the PR comment. The build simply won't fail if coverage is below the threshold. This ensures visibility into coverage even when bypassing the requirement.
+
+There are three ways to bypass the coverage check:
+
+#### 1. PR Label (Recommended for CI/CD)
+Add the `skip-coverage-check` label to your PR. This is the recommended method as it's:
+- ✅ Visible and auditable
+- ✅ Easy to add/remove
+- ✅ Works automatically in CI/CD
+- ✅ Still shows coverage results in PR comment
+
+**How it works:**
+1. Add the `skip-coverage-check` label to your PR
+2. CI/CD will run the coverage check as normal
+3. Coverage results will be posted in the PR comment
+4. If coverage is below threshold, a bypass notice will be added
+5. The build will **not fail** even if coverage is low
+
+**Example PR Comment (when bypassed):**
+```
+## Diff Coverage Report
+
+**Threshold:** 80%
+
+### Changed Files Coverage
+
+- ❌ IDManager.kt: 2/11 lines (18.2%)
+  - ⚠️ Below threshold: 9 uncovered lines
+
+### Overall Coverage
+
+**2/11** lines covered (18.2%)
+
+### ❌ Coverage Check Failed
+
+Files below 80% threshold:
+- **IDManager.kt**: 18.2% (9 uncovered lines)
+
+---
+⚠️ **Coverage check bypassed - build will not fail**
+
+**Reason:** PR has 'skip-coverage-check' label
+
+**Note:** Coverage results are shown above. Please ensure adequate test coverage is added in a follow-up PR when possible.
+```
+
+#### 2. Commit Message Keyword
+Include one of these keywords in your commit message:
+- `[skip coverage]`
+- `[bypass coverage]`
+- `[no coverage]`
+
+Example:
+```bash
+git commit -m "Emergency fix for critical bug [skip coverage]"
+```
+
+**How it works:**
+- The script checks commit messages for these keywords
+- If found, coverage check runs but build won't fail
+- Coverage results are still shown in PR comment
+
+#### 3. Environment Variable (Local Testing Only)
+For local testing, you can bypass the check:
+```bash
+SKIP_COVERAGE_CHECK=true ./coverage/checkCoverage.sh
+```
+
+**Note:** The environment variable method only works locally. In CI/CD, use the PR label or commit message method.
+
+### When to Use Bypass
+
+Use the bypass mechanism for:
+- 🚨 **Emergency fixes** that need to be deployed immediately
+- 🔄 **Refactoring** where code is moved but not changed
+- 📝 **Documentation-only** changes
+- 🧪 **Test infrastructure** changes
+- ⚠️ **Intentionally untested code** (with follow-up plan)
+
+**Best Practice:** Always add a follow-up issue or comment explaining why coverage was bypassed and when it will be addressed.
 
 ### Example Output
 
+#### Normal Run (Coverage Passes)
+```
+========================================
+Diff Coverage Check
+========================================
+
+[1/3] Generating coverage reports...
+✓ Coverage report generated
+
+[2/3] Checking diff coverage against origin/main...
+Threshold: 80%
+
+Changed files:
+  OneSignalSDK/onesignal/core/src/main/java/com/onesignal/common/IDManager.kt
+
+  ✓ IDManager.kt: 10/11 lines (90.9%)
+
+  Overall: 10/11 lines covered (90.9%)
+
+  ✓ All files meet 80% threshold
+
+✓ Coverage check passed!
+```
+
+#### Normal Run (Coverage Fails)
 ```
 ========================================
 Diff Coverage Check
@@ -56,6 +169,40 @@ Changed files:
     • IDManager.kt: 18.2% (9 uncovered lines)
 
 ✗ Coverage check failed (files below 80% threshold)
+```
+
+#### Bypassed Run (Coverage Check Still Runs)
+```
+========================================
+Diff Coverage Check
+========================================
+
+⚠ Coverage check will not fail build
+  Reason: SKIP_COVERAGE_CHECK environment variable set
+  Coverage will still be checked and reported
+
+[1/3] Generating coverage reports...
+✓ Coverage report generated
+
+[2/3] Checking diff coverage against origin/main...
+Threshold: 80%
+
+Changed files:
+  OneSignalSDK/onesignal/core/src/main/java/com/onesignal/common/IDManager.kt
+
+  ✗ IDManager.kt: 2/11 lines (18.2%)
+
+  Overall: 2/11 lines covered (18.2%)
+
+  Files below 80% threshold:
+    • IDManager.kt: 18.2% (9 uncovered lines)
+
+⚠ Coverage below threshold (files below 80%)
+  Build will not fail due to bypass: SKIP_COVERAGE_CHECK environment variable set
+
+========================================
+Coverage check complete!
+========================================
 ```
 
 ### What the Script Does
@@ -86,6 +233,8 @@ The script uses a **manual coverage check** that reliably matches JaCoCo coverag
 ## Manual Coverage Testing
 
 If you want to manually test coverage for specific modules or view detailed reports:
+
+### Quick Test - Single Module (Core)
 
 To test coverage for just the core module where we added the new `IDManager` methods:
 
@@ -204,7 +353,7 @@ The same `checkCoverage.sh` script is used in CI/CD to ensure consistency:
 The CI/CD pipeline will:
 1. Run the script with `GENERATE_MARKDOWN=true`
 2. Post a coverage summary as a PR comment
-3. Fail the build if coverage is below the threshold (80%)
+3. Fail the build if coverage is below the threshold (80%), unless bypassed (see [Bypassing Coverage Check](#bypassing-coverage-check) above)
 
 This ensures that code coverage is checked consistently whether you're testing locally or in CI/CD.
 

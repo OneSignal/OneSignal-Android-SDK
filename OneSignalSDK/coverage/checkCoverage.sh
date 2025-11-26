@@ -21,6 +21,7 @@ NC='\033[0m' # No Color
 COVERAGE_THRESHOLD=${DIFF_COVERAGE_THRESHOLD:-80}
 BASE_BRANCH=${BASE_BRANCH:-origin/main}
 GENERATE_MARKDOWN=${GENERATE_MARKDOWN:-false}  # Set to 'true' for CI/CD to generate markdown report
+SKIP_COVERAGE_CHECK=${SKIP_COVERAGE_CHECK:-false}  # Set to 'true' to bypass coverage check (still runs but doesn't fail)
 
 # Get script directory and project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -34,6 +35,25 @@ MARKDOWN_REPORT="$PROJECT_ROOT/diff_coverage.md"
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}Diff Coverage Check${NC}"
 echo -e "${BLUE}========================================${NC}\n"
+
+# Check for bypass conditions (still run coverage check, but don't fail)
+BYPASS_REASON=""
+if [ "$SKIP_COVERAGE_CHECK" = "true" ]; then
+    BYPASS_REASON="SKIP_COVERAGE_CHECK environment variable set"
+elif [ -n "$GITHUB_EVENT_NAME" ] && [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+    # Check commit messages for bypass keyword
+    cd "$PROJECT_ROOT"
+    COMMIT_MESSAGES=$(git log --format=%B origin/main..HEAD 2>/dev/null || git log --format=%B "$BASE_BRANCH"..HEAD 2>/dev/null || echo "")
+    if echo "$COMMIT_MESSAGES" | grep -qiE "\[skip coverage\]|\[bypass coverage\]|\[no coverage\]"; then
+        BYPASS_REASON="Commit message contains [skip coverage] keyword"
+    fi
+fi
+
+if [ -n "$BYPASS_REASON" ]; then
+    echo -e "${YELLOW}⚠ Coverage check will not fail build${NC}"
+    echo -e "${YELLOW}  Reason: $BYPASS_REASON${NC}"
+    echo -e "${YELLOW}  Coverage will still be checked and reported${NC}\n"
+fi
 
 # Step 1: Generate coverage reports
 echo -e "${YELLOW}[1/3] Generating coverage reports...${NC}"
@@ -221,13 +241,36 @@ PYEOF
     CHECK_RESULT=$?
     if [ $CHECK_RESULT -eq 1 ]; then
         if [ "$GENERATE_MARKDOWN" != "true" ]; then
-            echo -e "\n${RED}✗ Coverage check failed (files below ${COVERAGE_THRESHOLD}% threshold)${NC}\n"
+            if [ -n "$BYPASS_REASON" ]; then
+                echo -e "\n${YELLOW}⚠ Coverage below threshold (files below ${COVERAGE_THRESHOLD}%)${NC}"
+                echo -e "${YELLOW}  Build will not fail due to bypass: $BYPASS_REASON${NC}\n"
+            else
+                echo -e "\n${RED}✗ Coverage check failed (files below ${COVERAGE_THRESHOLD}% threshold)${NC}\n"
+            fi
+        else
+            # In markdown mode, update the report to indicate bypass if applicable
+            if [ -n "$BYPASS_REASON" ] && [ -f "$PROJECT_ROOT/diff_coverage.md" ]; then
+                # Append bypass notice to existing markdown
+                echo "" >> "$PROJECT_ROOT/diff_coverage.md"
+                echo "---" >> "$PROJECT_ROOT/diff_coverage.md"
+                echo "⚠️ **Coverage check bypassed - build will not fail**" >> "$PROJECT_ROOT/diff_coverage.md"
+                echo "" >> "$PROJECT_ROOT/diff_coverage.md"
+                echo "**Reason:** $BYPASS_REASON" >> "$PROJECT_ROOT/diff_coverage.md"
+                echo "" >> "$PROJECT_ROOT/diff_coverage.md"
+                echo "**Note:** Coverage results are shown above. Please ensure adequate test coverage is added in a follow-up PR when possible." >> "$PROJECT_ROOT/diff_coverage.md"
+            fi
         fi
-        exit 1
+        # Only exit with error if not bypassed
+        if [ -z "$BYPASS_REASON" ]; then
+            exit 1
+        else
+            exit 0
+        fi
     elif [ $CHECK_RESULT -eq 0 ]; then
         if [ "$GENERATE_MARKDOWN" != "true" ]; then
             echo -e "\n${GREEN}✓ Coverage check passed!${NC}\n"
         fi
+        exit 0
     fi
 fi
 
