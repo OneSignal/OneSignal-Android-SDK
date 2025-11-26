@@ -305,6 +305,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.start()
+            awaitIO()
 
             // Then
             verify { mocks.subscriptionManager.subscribe(any()) }
@@ -384,6 +385,7 @@ class InAppMessagesManagerTests : FunSpec({
             // When
             iamManager.addClickListener(mockListener)
             iamManager.onMessageActionOccurredOnMessage(message, mockClickResult)
+            awaitIO()
 
             // Then
             // Verify listener callback was called
@@ -401,6 +403,7 @@ class InAppMessagesManagerTests : FunSpec({
             iamManager.addClickListener(mockListener)
             iamManager.removeClickListener(mockListener)
             iamManager.onMessageActionOccurredOnMessage(message, mockClickResult)
+            awaitIO()
 
             // Then
             // Listener should not be called after removal
@@ -445,6 +448,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onModelUpdated(args, "tag")
+            awaitIO()
 
             // Then
             coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any()) }
@@ -511,6 +515,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             iamManager.onSubscriptionChanged(mockSubscription, args)
+            awaitIO()
 
             // Then
             coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any()) }
@@ -530,6 +535,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             iamManager.onSubscriptionChanged(mocks.pushSubscription, args)
+            awaitIO()
 
             // Then
             coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any()) }
@@ -740,7 +746,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // Then
             // Should trigger re-evaluation
-            verify { mocks.triggerController.evaluateMessageTriggers(any()) }
+            coVerify { mocks.triggerController.evaluateMessageTriggers(any()) }
         }
 
         test("onTriggerChanged makes redisplay messages available and re-evaluates") {
@@ -1012,10 +1018,10 @@ class InAppMessagesManagerTests : FunSpec({
 
             // Fetch messages
             mocks.inAppMessagesManager.onSessionStarted()
-            awaitIO()
 
             // Dismiss the message
             mocks.inAppMessagesManager.onMessageWasDismissed(message)
+            awaitIO()
 
             // When - trigger evaluation
             mocks.inAppMessagesManager.paused = false
@@ -1031,6 +1037,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
+            awaitIO()
 
             // Then - wait for async operations
             coVerify { mocks.outcomeEventsController.sendOutcomeEvent("outcome-name") }
@@ -1155,6 +1162,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
+            awaitIO()
 
             // Then
             coVerify(exactly = 0) { mocks.inAppDisplayer.dismissCurrentInAppMessage() }
@@ -1171,6 +1179,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             mocks.inAppMessagesManager.onMessageWasDismissed(message)
+            awaitIO()
 
             // Then
             coVerify { mocks.repository.saveInAppMessage(message) }
