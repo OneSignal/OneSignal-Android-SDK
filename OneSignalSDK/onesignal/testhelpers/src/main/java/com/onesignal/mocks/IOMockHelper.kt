@@ -87,14 +87,6 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
         // ThreadUtilsKt = file that contains suspendifyOnIO
         mockkStatic(THREADUTILS_PATH)
 
-        every {
-            suspendifyWithCompletion(
-                useIO = any(),
-                block = any<suspend () -> Unit>(),
-                onComplete = any()
-            )
-        } answers { callOriginal() }
-
         every { suspendifyOnIO(any<suspend () -> Unit>()) } answers {
             val block = firstArg<suspend () -> Unit>()
 
