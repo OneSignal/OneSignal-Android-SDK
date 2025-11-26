@@ -33,7 +33,7 @@ android {
     }
     testOptions {
         unitTests.all {
-            maxParallelForks 1
+            maxParallelForks Math.max(2, Runtime.runtime.availableProcessors().intdiv(2))
             maxHeapSize '3072m'
             jvmArgs '-XX:MaxMetaspaceSize=256m', '-XX:+UseG1GC', '-XX:+UseStringDeduplication'
         }
