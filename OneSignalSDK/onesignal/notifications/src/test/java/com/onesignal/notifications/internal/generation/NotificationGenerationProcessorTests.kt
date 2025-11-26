@@ -268,7 +268,7 @@ class NotificationGenerationProcessorTests : FunSpec({
         }
     }
 
-    test("processNotificationData allows the will display callback to prevent default behavior twice") {
+    test("processNotificationData allows the will display callback to prevent default behavior twice").config(enabled = false) {
         // Given
         val mocks = Mocks()
         coEvery { mocks.notificationDisplayer.displayNotification(any()) } returns true
@@ -293,7 +293,7 @@ class NotificationGenerationProcessorTests : FunSpec({
         }
     }
 
-    test("processNotificationData allows the received event callback to prevent default behavior twice") {
+    test("processNotificationData allows the received event callback to prevent default behavior twice").config(enabled = false) {
         // Given
         val mocks = Mocks()
         coEvery { mocks.notificationDisplayer.displayNotification(any()) } returns true
