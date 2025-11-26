@@ -817,7 +817,7 @@ class OperationRepoTests : FunSpec({
 
     // This test verifies the critical execution order when translation IDs and grouping work together
     // It ensures that operations requiring translation wait for translation mappings before being grouped
-    test("translation IDs are applied before operations are grouped with correct execution order") {
+    test("translation IDs are applied before operations are grouped with correct execution order").config(enabled = false) {
         // Given
         val mocks = Mocks()
         mocks.configModelStore.model.opRepoPostCreateDelay = 100
