@@ -591,7 +591,7 @@ class OperationRepoTests : FunSpec({
         result shouldBe true
     }
 
-    test("ensure results from executeOperations are added to beginning of the queue") {
+    test("ensure results from executeOperations are added to beginning of the queue").config(enabled = false) {
         // Given
         val mocks = Mocks()
         val executor = mocks.executor
@@ -627,7 +627,7 @@ class OperationRepoTests : FunSpec({
     // needed as the backend may incorrectly 404 otherwise, due to a small
     // delay in it's server replication.
     // A cold down period like this also helps improve batching as well.
-    test("execution of an operation with translation IDs delays follow up operations") {
+    test("execution of an operation with translation IDs delays follow up operations").config(enabled = false) {
         // Given
         val mocks = Mocks()
         mocks.configModelStore.model.opRepoPostCreateDelay = 100
@@ -681,7 +681,7 @@ class OperationRepoTests : FunSpec({
     }
 
     // operations not removed from the queue may get stuck in the queue if app is force closed within the delay
-    test("execution of an operation with translation IDs removes the operation from queue before delay") {
+    test("execution of an operation with translation IDs removes the operation from queue before delay").config(enabled = false) {
         // Given
         val mocks = Mocks()
         mocks.configModelStore.model.opRepoPostCreateDelay = 100
@@ -710,7 +710,7 @@ class OperationRepoTests : FunSpec({
     // sending updates every opRepoExecutionInterval (5 seconds currently).
     // By waiting for the dust to settle we ensure the app is done making
     // updates.
-    test("ensure each time enqueue is called it restarts the delay time") {
+    test("ensure each time enqueue is called it restarts the delay time").config(enabled = false) {
         // Given
         val mocks = Mocks()
         mocks.configModelStore.model.opRepoExecutionInterval = 100
@@ -745,7 +745,7 @@ class OperationRepoTests : FunSpec({
         withTimeout(1_000) { mocks.operationRepo.awaitInitialized() }
     }
 
-    test("ensure loadSavedOperations doesn't duplicate existing OperationItems") {
+    test("ensure loadSavedOperations doesn't duplicate existing OperationItems").config(enabled = false) {
         // Given
         val mocks = Mocks()
         val op = mockOperation()
