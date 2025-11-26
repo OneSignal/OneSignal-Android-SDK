@@ -12,6 +12,7 @@ import io.mockk.every
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeout
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -73,11 +74,13 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
      *    interception surface minimal and avoids unintentionally changing more concurrency
      *    behavior than necessary.
      */
-    suspend fun awaitIO() {
+    suspend fun awaitIO(timeoutMs: Long = 5_000) {
         // Nothing to wait for in this case
         if (pendingIo.get() == 0) return
 
-        ioWaiter.await()
+        withTimeout(timeoutMs) {
+            ioWaiter.await()
+        }
     }
 
     override suspend fun beforeSpec(spec: Spec) {
