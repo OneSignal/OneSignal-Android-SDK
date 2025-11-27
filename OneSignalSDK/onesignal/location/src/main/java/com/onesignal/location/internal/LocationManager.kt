@@ -95,11 +95,12 @@ internal class LocationManager(
                 _capturer.locationCoarse = true
             }
 
-            if (Build.VERSION.SDK_INT >= 29) {
+            val androidSDKInt = AndroidUtils.androidSDKInt
+            if (androidSDKInt >= 29) {
                 hasBackgroundPermissionGranted = AndroidUtils.hasPermission(LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING, true, _applicationService)
             }
 
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            if (androidSDKInt < Build.VERSION_CODES.M) {
                 if (!hasFinePermissionGranted && !hasCoarsePermissionGranted) {
                     // Permission missing on manifest
                     Logging.error("Location permissions not added on AndroidManifest file < M")
@@ -130,7 +131,7 @@ internal class LocationManager(
                             // ACCESS_COARSE_LOCATION permission defined on Manifest, prompt for permission
                             // If permission already given prompt will return positive, otherwise will prompt again or show settings
                             requestPermission = LocationConstants.ANDROID_COARSE_LOCATION_PERMISSION_STRING
-                        } else if (Build.VERSION.SDK_INT >= 29 && permissionList.contains(LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING)) {
+                        } else if (androidSDKInt >= 29 && permissionList.contains(LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING)) {
                             // ACCESS_BACKGROUND_LOCATION permission defined on Manifest, prompt for permission
                             requestPermission = LocationConstants.ANDROID_BACKGROUND_LOCATION_PERMISSION_STRING
                         }
@@ -151,7 +152,7 @@ internal class LocationManager(
                         } else {
                             hasCoarsePermissionGranted
                         }
-                } else if (Build.VERSION.SDK_INT >= 29 && !hasBackgroundPermissionGranted) {
+                } else if (androidSDKInt >= 29 && !hasBackgroundPermissionGranted) {
                     result = backgroundLocationPermissionLogic(true)
                 } else {
                     result = true
