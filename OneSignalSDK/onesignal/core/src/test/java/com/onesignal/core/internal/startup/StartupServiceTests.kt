@@ -4,14 +4,15 @@ import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.mocks.IOMockHelper
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
-import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
 
 class StartupServiceTests : FunSpec({
     fun setupServiceProvider(
@@ -25,6 +26,8 @@ class StartupServiceTests : FunSpec({
             serviceBuilder.register(reg).provides<IStartableService>()
         return serviceBuilder.build()
     }
+
+    listener(IOMockHelper)
 
     beforeAny {
         Logging.logLevel = LogLevel.NONE
@@ -97,21 +100,22 @@ class StartupServiceTests : FunSpec({
         // Given
         val mockStartableService1 = spyk<IStartableService>()
         val mockStartableService2 = spyk<IStartableService>()
-        val mockStartableService3 = spyk<IStartableService>()
+        val startupService = StartupService(setupServiceProvider(listOf(), listOf(mockStartableService1)))
 
-        val startupService = StartupService(setupServiceProvider(listOf(), listOf(mockStartableService1, mockStartableService2)))
+        // Block the scheduled services until we're ready
+        val blockTrigger = CompletableDeferred<Unit>()
+        every { mockStartableService1.start() } coAnswers {
+            blockTrigger.await() // Block until released
+        }
 
         // When
         startupService.scheduleStart()
-        mockStartableService3.start()
+        mockStartableService2.start()
 
         // Then
-        Thread.sleep(10)
-        coVerifyOrder {
-            // service3 will call start() first even though service1 and service2 are scheduled first
-            mockStartableService3.start()
-            mockStartableService1.start()
-            mockStartableService2.start()
-        }
+        // service2 does not block even though service1 is blocked
+        verify(exactly = 1) { mockStartableService2.start() }
+        blockTrigger.complete(Unit)
+        verify { mockStartableService1.start() }
     }
 })
