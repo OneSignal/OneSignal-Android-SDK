@@ -10,6 +10,7 @@ import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
 import com.onesignal.common.threading.CompletionAwaiter
+import com.onesignal.common.threading.CompletionAwaiter.Companion.ANDROID_ANR_TIMEOUT_MS
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.CoreModule
@@ -305,48 +306,16 @@ internal class OneSignalImp(
     ) {
         Logging.log(LogLevel.DEBUG, "Calling deprecated login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
-        // Check state and provide appropriate error messages
-        when (initState) {
-            InitState.FAILED -> {
-                throw IllegalStateException("Initialization failed. Cannot proceed.")
-            }
-            InitState.NOT_STARTED -> {
-                throw IllegalStateException("Must call 'initWithContext' before 'login'")
-            }
-            InitState.IN_PROGRESS, InitState.SUCCESS -> {
-                // Continue - these states allow proceeding (will wait if needed)
-            }
-        }
+        waitForInit(operationName = "login")
 
-        waitForInit()
-        // Re-check state after waiting - init might have failed during the wait
-        if (initState == InitState.FAILED) {
-            throw IllegalStateException("Initialization failed. Cannot proceed.")
-        }
         suspendifyOnIO { loginHelper.login(externalId, jwtBearerToken) }
     }
 
     override fun logout() {
         Logging.log(LogLevel.DEBUG, "Calling deprecated logout()")
 
-        // Check state and provide appropriate error messages
-        when (initState) {
-            InitState.FAILED -> {
-                throw IllegalStateException("Initialization failed. Cannot proceed.")
-            }
-            InitState.NOT_STARTED -> {
-                throw IllegalStateException("Must call 'initWithContext' before 'logout'")
-            }
-            InitState.IN_PROGRESS, InitState.SUCCESS -> {
-                // Continue - these states allow proceeding (will wait if needed)
-            }
-        }
+        waitForInit(operationName = "logout")
 
-        waitForInit()
-        // Re-check state after waiting - init might have failed during the wait
-        if (initState == InitState.FAILED) {
-            throw IllegalStateException("Initialization failed. Cannot proceed.")
-        }
         suspendifyOnIO { logoutHelper.logout() }
     }
 
@@ -358,29 +327,45 @@ internal class OneSignalImp(
 
     override fun <T> getAllServices(c: Class<T>): List<T> = services.getAllServices(c)
 
-    private fun waitForInit() {
-        val completed = initAwaiter.await()
-        if (!completed) {
-            throw IllegalStateException("initWithContext was not called or timed out")
+    /**
+     * Gets the appropriate timeout based on the current thread context.
+     * Uses shorter timeout on main thread to prevent ANRs.
+     */
+    private fun getTimeoutForCurrentThread(): Long {
+        return try {
+            if (AndroidUtils.isRunningOnMainThread()) {
+                ANDROID_ANR_TIMEOUT_MS
+            } else {
+                MAX_TIMEOUT_TO_INIT
+            }
+        } catch (e: RuntimeException) {
+            // In test environments, AndroidUtils.isRunningOnMainThread() may fail
+            // because Looper.getMainLooper() is not mocked. Default to longer timeout.
+            MAX_TIMEOUT_TO_INIT
         }
     }
 
     /**
-     * Notifies both blocking and suspend callers that initialization is complete
+     * Common implementation for waiting until initialization completes.
+     * Handles all state checks and timeout logic.
+     *
+     * @param timeoutMs Timeout in milliseconds
+     * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
      */
-    private fun notifyInitComplete() {
-        initAwaiter.complete()
-    }
-
-    private suspend fun suspendUntilInit() {
+    private suspend fun waitUntilInitInternal(timeoutMs: Long, operationName: String? = null) {
         when (initState) {
             InitState.NOT_STARTED -> {
-                throw IllegalStateException("Must call 'initWithContext' before use")
+                val message = if (operationName != null) {
+                    "Must call 'initWithContext' before '$operationName'"
+                } else {
+                    "Must call 'initWithContext' before use"
+                }
+                throw IllegalStateException(message)
             }
             InitState.IN_PROGRESS -> {
-                Logging.debug("Suspend waiting for init to complete...")
+                Logging.debug("Waiting for init to complete...")
                 try {
-                    withTimeout(MAX_TIMEOUT_TO_INIT) {
+                    withTimeout(timeoutMs) {
                         initAwaiter.awaitSuspend()
                     }
                     // Re-check state after waiting - init might have failed during the wait
@@ -388,7 +373,11 @@ internal class OneSignalImp(
                         throw IllegalStateException("Initialization failed. Cannot proceed.")
                     }
                 } catch (e: TimeoutCancellationException) {
-                    throw IllegalStateException("initWithContext was timed out after $MAX_TIMEOUT_TO_INIT ms")
+                    Logging.warn("OneSignalImp is taking longer than normal! (timeout: ${timeoutMs}ms). Proceeding anyway, but operations may fail if initialization is not complete.", e)
+                    // Re-check state after timeout - init might have failed during the wait
+                    if (initState == InitState.FAILED) {
+                        throw IllegalStateException("Initialization failed. Cannot proceed.")
+                    }
                 }
             }
             InitState.FAILED -> {
@@ -400,37 +389,47 @@ internal class OneSignalImp(
         }
     }
 
+    /**
+     * Blocking version that waits for initialization to complete.
+     * Uses runBlocking to bridge to the suspend implementation.
+     * Preserves context-aware timeout behavior (shorter on main thread to prevent ANRs).
+     *
+     * @param timeoutMs Optional timeout in milliseconds. If not provided, uses context-aware timeout.
+     * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
+     */
+    private fun waitForInit(timeoutMs: Long? = null, operationName: String? = null) {
+        val actualTimeout = timeoutMs ?: getTimeoutForCurrentThread()
+        runBlocking(ioDispatcher) {
+            waitUntilInitInternal(actualTimeout, operationName)
+        }
+    }
+
+    /**
+     * Suspend version that waits for initialization to complete.
+     * Uses context-aware timeout (shorter on main thread to prevent ANRs).
+     *
+     * @param timeoutMs Optional timeout in milliseconds. If not provided, uses context-aware timeout.
+     * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
+     */
+    private suspend fun suspendUntilInit(timeoutMs: Long? = null, operationName: String? = null) {
+        val actualTimeout = timeoutMs ?: getTimeoutForCurrentThread()
+        waitUntilInitInternal(actualTimeout, operationName)
+    }
+
+    /**
+     * Notifies both blocking and suspend callers that initialization is complete
+     */
+    private fun notifyInitComplete() {
+        initAwaiter.complete()
+    }
+
     private suspend fun <T> suspendAndReturn(getter: () -> T): T {
         suspendUntilInit()
         return getter()
     }
 
     private fun <T> waitAndReturn(getter: () -> T): T {
-        when (initState) {
-            InitState.NOT_STARTED -> {
-                throw IllegalStateException("Must call 'initWithContext' before use")
-            }
-            InitState.IN_PROGRESS -> {
-                Logging.debug("Waiting for init to complete...")
-                waitForInit()
-                // Re-check state after waiting - init might have failed during the wait
-                if (initState == InitState.FAILED) {
-                    throw IllegalStateException("Initialization failed. Cannot proceed.")
-                }
-            }
-            InitState.FAILED -> {
-                throw IllegalStateException("Initialization failed. Cannot proceed.")
-            }
-            else -> {
-                // SUCCESS
-                waitForInit()
-                // Re-check state after waiting - init might have failed during the wait
-                if (initState == InitState.FAILED) {
-                    throw IllegalStateException("Initialization failed. Cannot proceed.")
-                }
-            }
-        }
-
+        waitForInit()
         return getter()
     }
 
@@ -444,8 +443,9 @@ internal class OneSignalImp(
             // because Looper.getMainLooper() is not mocked. This is safe to ignore.
             Logging.debug("Could not check main thread status (likely in test environment): ${e.message}")
         }
+        // Call suspendAndReturn directly to avoid nested runBlocking (waitAndReturn -> waitForInit -> runBlocking)
         return runBlocking(ioDispatcher) {
-            waitAndReturn(getter)
+            suspendAndReturn(getter)
         }
     }
 
@@ -545,7 +545,7 @@ internal class OneSignalImp(
     ) = withContext(ioDispatcher) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
-        suspendUntilInit()
+        suspendUntilInit(operationName = "login")
         if (!isInitialized) {
             throw IllegalStateException("'initWithContext failed' before 'login'")
         }
@@ -557,7 +557,7 @@ internal class OneSignalImp(
         withContext(ioDispatcher) {
             Logging.log(LogLevel.DEBUG, "logoutSuspend()")
 
-            suspendUntilInit()
+            suspendUntilInit(operationName = "logout")
 
             if (!isInitialized) {
                 throw IllegalStateException("'initWithContext failed' before 'logout'")

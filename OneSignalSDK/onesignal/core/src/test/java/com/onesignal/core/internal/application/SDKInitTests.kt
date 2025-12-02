@@ -137,7 +137,7 @@ class SDKInitTests : FunSpec({
         // block SharedPreference before calling init
         val trigger = CompletionAwaiter("Test")
         val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, trigger, 1000)
+        val blockingPrefContext = BlockingPrefsContext(context, trigger, 2000)
         val os = OneSignalImp()
 
         // When
