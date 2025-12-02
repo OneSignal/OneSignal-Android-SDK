@@ -88,8 +88,19 @@ class CompletionAwaiter(
         suspendCompletion.await()
     }
 
-    private fun getDefaultTimeout(): Long {
-        return if (AndroidUtils.isRunningOnMainThread()) ANDROID_ANR_TIMEOUT_MS else DEFAULT_TIMEOUT_MS
+    /**
+     * Gets the appropriate timeout based on the current thread context.
+     * Uses shorter timeout on main thread to prevent ANRs.
+     * Made internal so it can be reused by other classes.
+     */
+    internal fun getDefaultTimeout(): Long {
+        return try {
+            if (AndroidUtils.isRunningOnMainThread()) ANDROID_ANR_TIMEOUT_MS else DEFAULT_TIMEOUT_MS
+        } catch (e: RuntimeException) {
+            // In test environments, AndroidUtils.isRunningOnMainThread() may fail
+            // because Looper.getMainLooper() is not mocked. Default to longer timeout.
+            DEFAULT_TIMEOUT_MS
+        }
     }
 
     private fun createTimeoutMessage(timeoutMs: Long): String {

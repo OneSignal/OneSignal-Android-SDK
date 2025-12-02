@@ -10,7 +10,6 @@ import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
 import com.onesignal.common.threading.CompletionAwaiter
-import com.onesignal.common.threading.CompletionAwaiter.Companion.ANDROID_ANR_TIMEOUT_MS
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.CoreModule
@@ -45,8 +44,6 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-
-private const val MAX_TIMEOUT_TO_INIT = 30_000L // 30 seconds
 
 internal class OneSignalImp(
     private val ioDispatcher: CoroutineDispatcher = OneSignalDispatchers.IO,
@@ -328,21 +325,37 @@ internal class OneSignalImp(
     override fun <T> getAllServices(c: Class<T>): List<T> = services.getAllServices(c)
 
     /**
-     * Gets the appropriate timeout based on the current thread context.
-     * Uses shorter timeout on main thread to prevent ANRs.
+     * Notifies both blocking and suspend callers that initialization is complete
      */
-    private fun getTimeoutForCurrentThread(): Long {
-        return try {
-            if (AndroidUtils.isRunningOnMainThread()) {
-                ANDROID_ANR_TIMEOUT_MS
-            } else {
-                MAX_TIMEOUT_TO_INIT
-            }
-        } catch (e: RuntimeException) {
-            // In test environments, AndroidUtils.isRunningOnMainThread() may fail
-            // because Looper.getMainLooper() is not mocked. Default to longer timeout.
-            MAX_TIMEOUT_TO_INIT
+    private fun notifyInitComplete() {
+        initAwaiter.complete()
+    }
+
+    /**
+     * Blocking version that waits for initialization to complete.
+     * Uses runBlocking to bridge to the suspend implementation.
+     * Preserves context-aware timeout behavior (shorter on main thread to prevent ANRs).
+     *
+     * @param timeoutMs Optional timeout in milliseconds. If not provided, uses context-aware timeout.
+     * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
+     */
+    private fun waitForInit(timeoutMs: Long? = null, operationName: String? = null) {
+        val actualTimeout = timeoutMs ?: initAwaiter.getDefaultTimeout()
+        runBlocking(ioDispatcher) {
+            waitUntilInitInternal(actualTimeout, operationName)
         }
+    }
+
+    /**
+     * Suspend version that waits for initialization to complete.
+     * Uses context-aware timeout (shorter on main thread to prevent ANRs).
+     *
+     * @param timeoutMs Optional timeout in milliseconds. If not provided, uses context-aware timeout.
+     * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
+     */
+    private suspend fun suspendUntilInit(timeoutMs: Long? = null, operationName: String? = null) {
+        val actualTimeout = timeoutMs ?: initAwaiter.getDefaultTimeout()
+        waitUntilInitInternal(actualTimeout, operationName)
     }
 
     /**
@@ -387,40 +400,6 @@ internal class OneSignalImp(
                 // SUCCESS - already initialized, no need to wait
             }
         }
-    }
-
-    /**
-     * Blocking version that waits for initialization to complete.
-     * Uses runBlocking to bridge to the suspend implementation.
-     * Preserves context-aware timeout behavior (shorter on main thread to prevent ANRs).
-     *
-     * @param timeoutMs Optional timeout in milliseconds. If not provided, uses context-aware timeout.
-     * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
-     */
-    private fun waitForInit(timeoutMs: Long? = null, operationName: String? = null) {
-        val actualTimeout = timeoutMs ?: getTimeoutForCurrentThread()
-        runBlocking(ioDispatcher) {
-            waitUntilInitInternal(actualTimeout, operationName)
-        }
-    }
-
-    /**
-     * Suspend version that waits for initialization to complete.
-     * Uses context-aware timeout (shorter on main thread to prevent ANRs).
-     *
-     * @param timeoutMs Optional timeout in milliseconds. If not provided, uses context-aware timeout.
-     * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
-     */
-    private suspend fun suspendUntilInit(timeoutMs: Long? = null, operationName: String? = null) {
-        val actualTimeout = timeoutMs ?: getTimeoutForCurrentThread()
-        waitUntilInitInternal(actualTimeout, operationName)
-    }
-
-    /**
-     * Notifies both blocking and suspend callers that initialization is complete
-     */
-    private fun notifyInitComplete() {
-        initAwaiter.complete()
     }
 
     private suspend fun <T> suspendAndReturn(getter: () -> T): T {
