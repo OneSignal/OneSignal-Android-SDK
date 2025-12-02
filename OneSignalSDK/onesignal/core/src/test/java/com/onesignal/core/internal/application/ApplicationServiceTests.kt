@@ -9,15 +9,18 @@ import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.mocks.IOMockHelper
+import com.onesignal.mocks.IOMockHelper.awaitIO
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.spyk
 import io.mockk.verify
-import kotlinx.coroutines.delay
 import org.robolectric.Robolectric
 
 @RobolectricTest
 class ApplicationServiceTests : FunSpec({
+
+    listener(IOMockHelper)
 
     beforeAny {
         Logging.logLevel = LogLevel.NONE
@@ -199,7 +202,7 @@ class ApplicationServiceTests : FunSpec({
             waiter.wake(response)
         }
 
-        delay(7000)
+        awaitIO(7_000)
 
         applicationService.onActivityStarted(activity)
         val response = waiter.waitForWake()
@@ -223,8 +226,6 @@ class ApplicationServiceTests : FunSpec({
             val response = applicationService.waitUntilSystemConditionsAvailable()
             waiter.wake(response)
         }
-
-        delay(3000)
 
         applicationService.onActivityStarted(activity)
         val response = waiter.waitForWake()
