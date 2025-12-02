@@ -5,6 +5,8 @@ import com.onesignal.core.internal.operations.impl.OperationRepo
 import com.onesignal.core.internal.time.impl.Time
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.mocks.IOMockHelper
+import com.onesignal.mocks.IOMockHelper.awaitIO
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.operations.ExecutorMocks
 import com.onesignal.user.internal.operations.LoginUserOperation
@@ -16,7 +18,6 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.spyk
 import io.mockk.verify
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 
 private class Mocks {
@@ -76,6 +77,9 @@ private class Mocks {
 }
 
 class RecoverFromDroppedLoginBugTests : FunSpec({
+
+    listener(IOMockHelper)
+
     beforeAny {
         Logging.logLevel = LogLevel.NONE
     }
@@ -100,7 +104,7 @@ class RecoverFromDroppedLoginBugTests : FunSpec({
         // When
         mocks.operationRepo.start()
         // give operation repo some time to fully initialize
-        delay(200)
+        awaitIO()
 
         mocks.recovery.start()
         withTimeout(1_000) { mocks.operationRepo.awaitInitialized() }

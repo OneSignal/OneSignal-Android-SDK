@@ -5,6 +5,7 @@ import com.onesignal.common.services.ServiceProvider
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.IOMockHelper
+import com.onesignal.mocks.IOMockHelper.awaitIO
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -89,9 +90,9 @@ class StartupServiceTests : FunSpec({
 
         // When
         startupService.scheduleStart()
+        awaitIO()
 
         // Then
-        Thread.sleep(10)
         verify(exactly = 1) { mockStartupService1.start() }
         verify(exactly = 1) { mockStartupService2.start() }
     }

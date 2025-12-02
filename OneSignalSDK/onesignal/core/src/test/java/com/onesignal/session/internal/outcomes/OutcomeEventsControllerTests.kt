@@ -4,6 +4,8 @@ import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.threading.Waiter
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.mocks.IOMockHelper
+import com.onesignal.mocks.IOMockHelper.awaitIO
 import com.onesignal.mocks.MockHelper
 import com.onesignal.session.internal.influence.IInfluenceManager
 import com.onesignal.session.internal.influence.Influence
@@ -32,10 +34,12 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.spyk
-import kotlinx.coroutines.delay
 import org.json.JSONArray
 
 class OutcomeEventsControllerTests : FunSpec({
+
+    listener(IOMockHelper)
+
     beforeAny {
         Logging.logLevel = LogLevel.NONE
     }
@@ -595,7 +599,7 @@ class OutcomeEventsControllerTests : FunSpec({
         // When
         outcomeEventsController.start()
 
-        delay(1000)
+        awaitIO()
 
         // Then
         coVerify(exactly = 1) {
@@ -687,7 +691,7 @@ class OutcomeEventsControllerTests : FunSpec({
         // When
         outcomeEventsController.start()
 
-        delay(1000)
+        awaitIO()
 
         // Then
         coVerify(exactly = 1) {
@@ -763,7 +767,7 @@ class OutcomeEventsControllerTests : FunSpec({
 
         // When
         outcomeEventsController.start()
-        delay(1000)
+        awaitIO()
 
         // Then
         coVerify(exactly = 1) {
