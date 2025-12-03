@@ -7,8 +7,6 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.longs.shouldBeGreaterThan
 import io.kotest.matchers.longs.shouldBeLessThan
 import io.kotest.matchers.shouldBe
-import io.mockk.every
-import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -39,7 +37,7 @@ class CompletionAwaiterTests : FunSpec({
 
             // When
             val startTime = System.currentTimeMillis()
-            val completed = awaiter.await(1000)
+            val completed = awaiter.await()
             val duration = System.currentTimeMillis() - startTime
 
             // Then
@@ -49,7 +47,6 @@ class CompletionAwaiterTests : FunSpec({
 
         test("await waits for delayed completion") {
             val completionDelay = 300L
-            val timeoutMs = 2000L
 
             val startTime = System.currentTimeMillis()
 
@@ -59,42 +56,12 @@ class CompletionAwaiterTests : FunSpec({
                 awaiter.complete()
             }
 
-            val result = awaiter.await(timeoutMs)
+            val result = awaiter.await()
             val duration = System.currentTimeMillis() - startTime
 
             result shouldBe true
             duration shouldBeGreaterThan (completionDelay - 50)
             duration shouldBeLessThan (completionDelay + 150) // buffer
-        }
-
-        test("await returns false when timeout expires") {
-            mockkObject(AndroidUtils)
-            every { AndroidUtils.isRunningOnMainThread() } returns false
-
-            val timeoutMs = 200L
-            val startTime = System.currentTimeMillis()
-
-            val completed = awaiter.await(timeoutMs)
-            val duration = System.currentTimeMillis() - startTime
-
-            completed shouldBe false
-            duration shouldBeGreaterThan (timeoutMs - 50)
-            duration shouldBeLessThan (timeoutMs + 150)
-        }
-
-        test("await timeout of 0 returns false immediately when not completed") {
-            // Mock AndroidUtils to avoid Looper.getMainLooper() issues
-            mockkObject(AndroidUtils)
-            every { AndroidUtils.isRunningOnMainThread() } returns false
-
-            val startTime = System.currentTimeMillis()
-            val completed = awaiter.await(0)
-            val duration = System.currentTimeMillis() - startTime
-
-            completed shouldBe false
-            duration shouldBeLessThan 20L
-
-            unmockkObject(AndroidUtils)
         }
 
         test("multiple blocking callers are all unblocked") {
@@ -106,7 +73,7 @@ class CompletionAwaiterTests : FunSpec({
             repeat(numCallers) { index ->
                 val thread =
                     Thread {
-                        val result = awaiter.await(2000)
+                        val result = awaiter.await()
                         synchronized(results) {
                             results.add(result)
                         }
@@ -249,7 +216,7 @@ class CompletionAwaiterTests : FunSpec({
             val blockingThreads =
                 (1..2).map { index ->
                     Thread {
-                        val result = awaiter.await(2000)
+                        val result = awaiter.await()
                         synchronized(blockingResults) {
                             blockingResults.add(result)
                         }
@@ -280,7 +247,7 @@ class CompletionAwaiterTests : FunSpec({
             awaiter.complete()
 
             // Should still work normally
-            val completed = awaiter.await(100)
+            val completed = awaiter.await()
             completed shouldBe true
         }
 
@@ -329,35 +296,6 @@ class CompletionAwaiterTests : FunSpec({
         }
     }
 
-    context("timeout behavior") {
-
-        test("uses shorter timeout on main thread") {
-            mockkObject(AndroidUtils)
-            every { AndroidUtils.isRunningOnMainThread() } returns true
-
-            val startTime = System.currentTimeMillis()
-            val completed = awaiter.await() // Default timeout
-            val duration = System.currentTimeMillis() - startTime
-
-            completed shouldBe false
-            // Should use ANDROID_ANR_TIMEOUT_MS (4800ms) instead of DEFAULT_TIMEOUT_MS (30000ms)
-            duration shouldBeLessThan 6000L // Much less than 30 seconds
-            duration shouldBeGreaterThan 4000L // But around 4.8 seconds
-        }
-
-        test("uses longer timeout on background thread") {
-            mockkObject(AndroidUtils)
-            every { AndroidUtils.isRunningOnMainThread() } returns false
-
-            // We can't actually wait 30 seconds in a test, so just verify it would use the longer timeout
-            // by checking the timeout logic doesn't kick in quickly
-            val startTime = System.currentTimeMillis()
-            val completed = awaiter.await(1000) // Force shorter timeout for test
-            val duration = System.currentTimeMillis() - startTime
-
-            completed shouldBe false
-            duration shouldBeGreaterThan 900L
-            duration shouldBeLessThan 1200L
-        }
-    }
+    // Note: Timeout behavior tests removed - await() now waits indefinitely per PR #2412
+    // to ensure consistent state. Logging of slow operations is handled by callers.
 })

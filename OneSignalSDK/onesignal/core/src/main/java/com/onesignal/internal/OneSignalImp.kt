@@ -531,6 +531,7 @@ internal class OneSignalImp(
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
         suspendUntilInit(operationName = "login")
+
         if (!isInitialized) {
             throw IllegalStateException("'initWithContext failed' before 'login'")
         }

@@ -1,11 +1,9 @@
 package com.onesignal.common.threading
 
-import com.onesignal.common.AndroidUtils
 import com.onesignal.common.threading.OneSignalDispatchers.BASE_THREAD_NAME
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.CompletableDeferred
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 
 /**
  * A unified completion awaiter that supports both blocking and suspend-based waiting.
@@ -40,10 +38,6 @@ import java.util.concurrent.TimeUnit
 class CompletionAwaiter(
     private val componentName: String = "Component",
 ) {
-    companion object {
-        const val DEFAULT_TIMEOUT_MS = 30_000L // 30 seconds
-        const val ANDROID_ANR_TIMEOUT_MS = 4_800L // Conservative ANR threshold
-    }
 
     private val latch = CountDownLatch(1)
     private val suspendCompletion = CompletableDeferred<Unit>()
@@ -57,27 +51,32 @@ class CompletionAwaiter(
     }
 
     /**
-     * Wait for completion using blocking approach with an optional timeout.
+     * Wait for completion using blocking approach.
+     * Waits indefinitely until completion to ensure consistent state.
      *
-     * @param timeoutMs Timeout in milliseconds, defaults to context-appropriate timeout
-     * @return true if completed before timeout, false otherwise.
+     * @return Always returns true when completion occurs (never times out).
      */
-    fun await(timeoutMs: Long = getDefaultTimeout()): Boolean {
-        val completed =
-            try {
-                latch.await(timeoutMs, TimeUnit.MILLISECONDS)
-            } catch (e: InterruptedException) {
+    fun await(): Boolean {
+        // Wait indefinitely until completion - ensures consistent state
+        // This can cause ANRs if called from main thread, but that's acceptable
+        // as it's better than returning with inconsistent state
+        try {
+            latch.await()
+        } catch (e: InterruptedException) {
+            // Check if the latch was actually completed before interruption
+            // If completed, return true to maintain consistent state
+            // If not completed, re-throw to indicate interruption
+            if (latch.count == 0L) {
+                // Latch was completed, return true even though we were interrupted
+                return true
+            } else {
+                // Latch was not completed, re-throw to indicate interruption
                 Logging.warn("Interrupted while waiting for $componentName", e)
                 logAllThreads()
-                false
+                throw e
             }
-
-        if (!completed) {
-            val message = createTimeoutMessage(timeoutMs)
-            Logging.warn(message)
         }
-
-        return completed
+        return true
     }
 
     /**
@@ -86,30 +85,6 @@ class CompletionAwaiter(
      */
     suspend fun awaitSuspend() {
         suspendCompletion.await()
-    }
-
-    /**
-     * Gets the appropriate timeout based on the current thread context.
-     * Uses shorter timeout on main thread to prevent ANRs.
-     * Made internal so it can be reused by other classes.
-     */
-    internal fun getDefaultTimeout(): Long {
-        return try {
-            if (AndroidUtils.isRunningOnMainThread()) ANDROID_ANR_TIMEOUT_MS else DEFAULT_TIMEOUT_MS
-        } catch (e: RuntimeException) {
-            // In test environments, AndroidUtils.isRunningOnMainThread() may fail
-            // because Looper.getMainLooper() is not mocked. Default to longer timeout.
-            DEFAULT_TIMEOUT_MS
-        }
-    }
-
-    private fun createTimeoutMessage(timeoutMs: Long): String {
-        return if (AndroidUtils.isRunningOnMainThread()) {
-            "Timeout waiting for $componentName after ${timeoutMs}ms on the main thread. " +
-                "This can cause ANRs. Consider calling from a background thread."
-        } else {
-            "Timeout waiting for $componentName after ${timeoutMs}ms."
-        }
     }
 
     private fun logAllThreads(): String {

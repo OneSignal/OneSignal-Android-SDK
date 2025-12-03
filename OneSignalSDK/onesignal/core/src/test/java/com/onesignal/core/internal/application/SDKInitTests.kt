@@ -467,7 +467,7 @@ class BlockingPrefsContext(
         mode: Int,
     ): SharedPreferences {
         try {
-            unblockTrigger.await(timeoutInMillis)
+            unblockTrigger.await()
         } catch (e: InterruptedException) {
             throw e
         } catch (e: TimeoutCancellationException) {
