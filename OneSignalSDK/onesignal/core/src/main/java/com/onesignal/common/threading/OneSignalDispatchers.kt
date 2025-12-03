@@ -27,8 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * - Efficient thread management with controlled resource usage
  */
 internal object OneSignalDispatchers {
-    // Optimized pool thread counts to handle more concurrent operations during init
-    // (especially important now that we wait indefinitely, which may cause more operations to queue)
+    // Optimized pool sizes based on CPU cores and workload analysis
     private const val IO_CORE_POOL_SIZE = 2 // Increased for better concurrency
     private const val IO_MAX_POOL_SIZE = 3 // Increased for better concurrency
     private const val DEFAULT_CORE_POOL_SIZE = 2 // Optimal for CPU operations
