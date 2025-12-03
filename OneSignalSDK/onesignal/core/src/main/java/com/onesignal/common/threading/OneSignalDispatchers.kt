@@ -29,8 +29,8 @@ import java.util.concurrent.atomic.AtomicInteger
 internal object OneSignalDispatchers {
     // Optimized pool thread counts to handle more concurrent operations during init
     // (especially important now that we wait indefinitely, which may cause more operations to queue)
-    private const val IO_CORE_POOL_SIZE = 2 // Increased for better concurrency during init
-    private const val IO_MAX_POOL_SIZE = 3 // Increased to handle bursts of operations
+    private const val IO_CORE_POOL_SIZE = 2 // Increased for better concurrency
+    private const val IO_MAX_POOL_SIZE = 3 // Increased for better concurrency
     private const val DEFAULT_CORE_POOL_SIZE = 2 // Optimal for CPU operations
     private const val DEFAULT_MAX_POOL_SIZE = 3 // Slightly larger for CPU operations
     private const val KEEP_ALIVE_TIME_SECONDS =

@@ -323,13 +323,6 @@ internal class OneSignalImp(
     override fun <T> getAllServices(c: Class<T>): List<T> = services.getAllServices(c)
 
     /**
-     * Notifies both blocking and suspend callers that initialization is complete
-     */
-    private fun notifyInitComplete() {
-        initAwaiter.complete()
-    }
-
-    /**
      * Blocking version that waits for initialization to complete.
      * Uses runBlocking to bridge to the suspend implementation.
      * Waits indefinitely until init completes and logs how long it took.
@@ -340,6 +333,13 @@ internal class OneSignalImp(
         runBlocking(ioDispatcher) {
             waitUntilInitInternal(operationName)
         }
+    }
+
+    /**
+     * Notifies both blocking and suspend callers that initialization is complete
+     */
+    private fun notifyInitComplete() {
+        initAwaiter.complete()
     }
 
     /**
