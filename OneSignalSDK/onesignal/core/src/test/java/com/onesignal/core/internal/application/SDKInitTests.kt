@@ -21,6 +21,21 @@ import kotlinx.coroutines.runBlocking
 @RobolectricTest
 class SDKInitTests : FunSpec({
 
+    /**
+     * Helper function to wait for OneSignal initialization to complete.
+     * @param oneSignalImp The OneSignalImp instance to wait for
+     * @param maxAttempts Maximum number of attempts (default: 100)
+     * @param sleepMs Sleep duration between attempts in milliseconds (default: 20)
+     */
+    fun waitForInitialization(oneSignalImp: OneSignalImp, maxAttempts: Int = 100, sleepMs: Long = 20) {
+        var attempts = 0
+        while (!oneSignalImp.isInitialized && attempts < maxAttempts) {
+            Thread.sleep(sleepMs)
+            attempts++
+        }
+        oneSignalImp.isInitialized shouldBe true
+    }
+
     beforeAny {
         Logging.logLevel = LogLevel.NONE
 
@@ -157,13 +172,7 @@ class SDKInitTests : FunSpec({
         trigger.complete()
 
         // Wait for initialization to complete (internalInit runs asynchronously)
-        var attempts = 0
-        while (!os.isInitialized && attempts < 50) {
-            Thread.sleep(20)
-            attempts++
-        }
-
-        os.isInitialized shouldBe true
+        waitForInitialization(os, maxAttempts = 50)
     }
 
     test("accessors will be blocked if call too early after initWithContext with appId") {
@@ -329,12 +338,7 @@ class SDKInitTests : FunSpec({
         os.initWithContext(context, "appId")
 
         // Wait for initialization to complete before accessing user
-        var attempts = 0
-        while (!os.isInitialized && attempts < 100) {
-            Thread.sleep(20)
-            attempts++
-        }
-        os.isInitialized shouldBe true
+        waitForInitialization(os)
 
         // Give additional time for coroutines to settle, especially in CI/CD
         Thread.sleep(50)
@@ -345,12 +349,7 @@ class SDKInitTests : FunSpec({
         os.initWithContext(context)
 
         // Wait for second initialization to complete
-        attempts = 0
-        while (!os.isInitialized && attempts < 100) {
-            Thread.sleep(20)
-            attempts++
-        }
-        os.isInitialized shouldBe true
+        waitForInitialization(os)
 
         // Give additional time for coroutines to settle after second init
         Thread.sleep(50)
