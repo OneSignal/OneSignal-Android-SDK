@@ -40,10 +40,8 @@ import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.resolveAppId
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 
 internal class OneSignalImp(
     private val ioDispatcher: CoroutineDispatcher = OneSignalDispatchers.IO,
@@ -334,38 +332,34 @@ internal class OneSignalImp(
     /**
      * Blocking version that waits for initialization to complete.
      * Uses runBlocking to bridge to the suspend implementation.
-     * Preserves context-aware timeout behavior (shorter on main thread to prevent ANRs).
+     * Waits indefinitely until init completes and logs how long it took.
      *
-     * @param timeoutMs Optional timeout in milliseconds. If not provided, uses context-aware timeout.
      * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
      */
-    private fun waitForInit(timeoutMs: Long? = null, operationName: String? = null) {
-        val actualTimeout = timeoutMs ?: initAwaiter.getDefaultTimeout()
+    private fun waitForInit(operationName: String? = null) {
         runBlocking(ioDispatcher) {
-            waitUntilInitInternal(actualTimeout, operationName)
+            waitUntilInitInternal(operationName)
         }
     }
 
     /**
      * Suspend version that waits for initialization to complete.
-     * Uses context-aware timeout (shorter on main thread to prevent ANRs).
+     * Waits indefinitely until init completes and logs how long it took.
      *
-     * @param timeoutMs Optional timeout in milliseconds. If not provided, uses context-aware timeout.
      * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
      */
-    private suspend fun suspendUntilInit(timeoutMs: Long? = null, operationName: String? = null) {
-        val actualTimeout = timeoutMs ?: initAwaiter.getDefaultTimeout()
-        waitUntilInitInternal(actualTimeout, operationName)
+    private suspend fun suspendUntilInit(operationName: String? = null) {
+        waitUntilInitInternal(operationName)
     }
 
     /**
      * Common implementation for waiting until initialization completes.
-     * Handles all state checks and timeout logic.
+     * Waits indefinitely until init completes (SUCCESS or FAILED) to ensure consistent state.
+     * Logs how long initialization took when it completes.
      *
-     * @param timeoutMs Timeout in milliseconds
      * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
      */
-    private suspend fun waitUntilInitInternal(timeoutMs: Long, operationName: String? = null) {
+    private suspend fun waitUntilInitInternal(operationName: String? = null) {
         when (initState) {
             InitState.NOT_STARTED -> {
                 val message = if (operationName != null) {
@@ -377,21 +371,33 @@ internal class OneSignalImp(
             }
             InitState.IN_PROGRESS -> {
                 Logging.debug("Waiting for init to complete...")
-                try {
-                    withTimeout(timeoutMs) {
-                        initAwaiter.awaitSuspend()
-                    }
-                    // Re-check state after waiting - init might have failed during the wait
-                    if (initState == InitState.FAILED) {
-                        throw IllegalStateException("Initialization failed. Cannot proceed.")
-                    }
-                } catch (e: TimeoutCancellationException) {
-                    Logging.warn("OneSignalImp is taking longer than normal! (timeout: ${timeoutMs}ms). Proceeding anyway, but operations may fail if initialization is not complete.", e)
-                    // Re-check state after timeout - init might have failed during the wait
-                    if (initState == InitState.FAILED) {
-                        throw IllegalStateException("Initialization failed. Cannot proceed.")
-                    }
+
+                val startTime = System.currentTimeMillis()
+
+                // Wait indefinitely until init actually completes - ensures consistent state
+                // Function only returns when initState is SUCCESS or FAILED
+                // NOTE: This is a suspend function, so it's non-blocking when called from coroutines.
+                // However, if waitForInit() (which uses runBlocking) is called from the main thread,
+                // it will block the main thread indefinitely until init completes, which can cause ANRs.
+                // This is intentional per PR #2412: "ANR is the lesser of two evils and the app can recover,
+                // where an uncaught throw it can not." To avoid ANRs, call SDK methods from background threads
+                // or use the suspend API from coroutines.
+                initAwaiter.awaitSuspend()
+
+                // Log how long initialization took
+                val elapsed = System.currentTimeMillis() - startTime
+                val message = if (operationName != null) {
+                    "OneSignalImp initialization completed before '$operationName' (took ${elapsed}ms)"
+                } else {
+                    "OneSignalImp initialization completed (took ${elapsed}ms)"
                 }
+                Logging.debug(message)
+
+                // Re-check state after waiting - init might have failed during the wait
+                if (initState == InitState.FAILED) {
+                    throw IllegalStateException("Initialization failed. Cannot proceed.")
+                }
+                // initState is guaranteed to be SUCCESS here - consistent state
             }
             InitState.FAILED -> {
                 throw IllegalStateException("Initialization failed. Cannot proceed.")

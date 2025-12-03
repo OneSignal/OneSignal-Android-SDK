@@ -27,15 +27,16 @@ import java.util.concurrent.atomic.AtomicInteger
  * - Efficient thread management with controlled resource usage
  */
 internal object OneSignalDispatchers {
-    // Optimized pool sizes based on CPU cores and workload analysis
-    private const val IO_CORE_POOL_SIZE = 2 // Increased for better concurrency
-    private const val IO_MAX_POOL_SIZE = 3 // Increased for better concurrency
+    // Optimized pool thread counts to handle more concurrent operations during init
+    // (especially important now that we wait indefinitely, which may cause more operations to queue)
+    private const val IO_CORE_POOL_SIZE = 4 // Increased for better concurrency during init
+    private const val IO_MAX_POOL_SIZE = 6 // Increased to handle bursts of operations
     private const val DEFAULT_CORE_POOL_SIZE = 2 // Optimal for CPU operations
     private const val DEFAULT_MAX_POOL_SIZE = 3 // Slightly larger for CPU operations
     private const val KEEP_ALIVE_TIME_SECONDS =
         30L // Keep threads alive longer to reduce recreation
     private const val QUEUE_CAPACITY =
-        10 // Small queue that allows up to 10 tasks to wait in queue when all threads are busy
+        200 // Increased to handle more queued operations during init, while still preventing memory bloat
     internal const val BASE_THREAD_NAME = "OneSignal" // Base thread name prefix
     private const val IO_THREAD_NAME_PREFIX =
         "$BASE_THREAD_NAME-IO" // Thread name prefix for I/O operations
@@ -69,6 +70,7 @@ internal object OneSignalDispatchers {
                     priority = Thread.NORM_PRIORITY - 1,
                     // Slightly lower priority for I/O tasks
                 ),
+                ThreadPoolExecutor.CallerRunsPolicy(), // Execute on calling thread if queue is full (prevents rejection)
             ).apply {
                 allowCoreThreadTimeOut(false) // Keep core threads alive
             }
@@ -87,6 +89,7 @@ internal object OneSignalDispatchers {
                 TimeUnit.SECONDS,
                 LinkedBlockingQueue(QUEUE_CAPACITY),
                 OptimizedThreadFactory(DEFAULT_THREAD_NAME_PREFIX),
+                ThreadPoolExecutor.CallerRunsPolicy(), // Execute on calling thread if queue is full (prevents rejection)
             ).apply {
                 allowCoreThreadTimeOut(false) // Keep core threads alive
             }
