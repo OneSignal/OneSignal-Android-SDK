@@ -71,6 +71,19 @@ class SyncJobServiceTests : FunSpec({
         verify { syncJobService.jobFinished(jobParameters, false) }
     }
 
+    test("onStartJob calls jobFinished with false when initWithContext failed") {
+        // Given
+        val syncJobService = mocks.syncJobService
+        val jobParameters = mocks.jobParameters
+        coEvery { OneSignal.initWithContext(any()) } returns false
+
+        // When
+        syncJobService.onStartJob(jobParameters)
+
+        // Then
+        verify { syncJobService.jobFinished(jobParameters, false) }
+    }
+
     test("onStartJob calls jobFinished with false when needsJobReschedule is false") {
         // Given
         val syncJobService = mocks.syncJobService
