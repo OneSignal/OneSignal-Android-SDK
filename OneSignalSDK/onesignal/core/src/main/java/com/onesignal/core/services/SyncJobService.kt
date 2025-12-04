@@ -36,20 +36,26 @@ import com.onesignal.debug.internal.logging.Logging
 class SyncJobService : JobService() {
     override fun onStartJob(jobParameters: JobParameters): Boolean {
         suspendifyOnIO {
-            // init OneSignal in background
-            if (!OneSignal.initWithContext(this)) {
-                return@suspendifyOnIO
+            var reschedule = false
+
+            try {
+                // Init OneSignal in background
+                if (!OneSignal.initWithContext(this)) {
+                    return@suspendifyOnIO
+                }
+
+                val backgroundService = OneSignal.getService<IBackgroundManager>()
+                backgroundService.runBackgroundServices()
+
+                Logging.debug("LollipopSyncRunnable:JobFinished needsJobReschedule: " + backgroundService.needsJobReschedule)
+
+                // Reschedule if needed
+                reschedule = backgroundService.needsJobReschedule
+                backgroundService.needsJobReschedule = false
+            } finally {
+                // Always call jobFinished to finish the job; onStopJob will handle the case when init failed
+                jobFinished(jobParameters, reschedule)
             }
-
-            val backgroundService = OneSignal.getService<IBackgroundManager>()
-            backgroundService.runBackgroundServices()
-
-            Logging.debug("LollipopSyncRunnable:JobFinished needsJobReschedule: " + backgroundService.needsJobReschedule)
-
-            // Reschedule if needed
-            val reschedule = backgroundService.needsJobReschedule
-            backgroundService.needsJobReschedule = false
-            jobFinished(jobParameters, reschedule)
         }
 
         // Returning true means the job will always continue running and do everything else in IO thread
