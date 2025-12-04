@@ -38,7 +38,6 @@ class SyncJobService : JobService() {
         suspendifyOnIO {
             // init OneSignal in background
             if (!OneSignal.initWithContext(this)) {
-                jobFinished(jobParameters, false)
                 return@suspendifyOnIO
             }
 
@@ -53,14 +52,29 @@ class SyncJobService : JobService() {
             jobFinished(jobParameters, reschedule)
         }
 
+        // Returning true means the job will always continue running and do everything else in IO thread
+        // When initWithContext failed, the background task will simply end
         return true
     }
 
     override fun onStopJob(jobParameters: JobParameters): Boolean {
-        // We assume init has been called via onStartJob
-        var backgroundService = OneSignal.getService<IBackgroundManager>()
-        val reschedule = backgroundService.cancelRunBackgroundServices()
-        Logging.debug("SyncJobService onStopJob called, system conditions not available reschedule: $reschedule")
-        return reschedule
+        /*
+         * After 5.4, onStartJob calls initWithContext in background. That introduced a small possibility
+         * when onStopJob is called before the initialization completes in the background. When that happens,
+         * OneSignal.getService will run into a NPE. In that case, we just need to omit the job and do not
+         * reschedule.
+         */
+
+        // Additional hardening in the event of getService failure
+        try {
+            // We assume init has been called via onStartJob\
+            val backgroundService = OneSignal.getService<IBackgroundManager>()
+            val reschedule = backgroundService.cancelRunBackgroundServices()
+            Logging.debug("SyncJobService onStopJob called, system conditions not available reschedule: $reschedule")
+            return reschedule
+        } catch (e: Exception) {
+            Logging.error("SyncJobService onStopJob failed, omit and do not reschedule")
+            return false
+        }
     }
 }
