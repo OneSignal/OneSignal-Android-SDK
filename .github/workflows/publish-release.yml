@@ -15,7 +15,7 @@ on:
 
 permissions:
   contents: write
-  pull-requests: read
+  pull-requests: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -24,6 +24,8 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    outputs:
+      sdk_version: ${{ steps.extract_version.outputs.version }}
 
     env:
       MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
@@ -80,6 +82,7 @@ jobs:
         run: |
           VERSION=$(grep '^SDK_VERSION=' OneSignalSDK/gradle.properties | cut -d '=' -f2)
           echo "SDK_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Resolved version: $VERSION"
 
       - name: Assemble Release
@@ -174,3 +177,11 @@ jobs:
             --title "$VERSION" \
             --notes-file release_notes.md \
             $PRERELEASE
+
+  wrapper_prs:
+    needs: publish
+    uses: OneSignal/sdk-actions/.github/workflows/create-wrapper-prs.yml@main
+    secrets:
+      GH_PUSH_TOKEN: ${{ secrets.GH_PUSH_TOKEN }}
+    with:
+      android_version: ${{ needs.publish.outputs.sdk_version }}
