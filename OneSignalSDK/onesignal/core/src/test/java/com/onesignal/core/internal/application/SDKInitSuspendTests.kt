@@ -287,7 +287,7 @@ class SDKInitSuspendTests : FunSpec({
                 }
 
             // Should throw immediately because isInitialized is false
-            exception.message shouldBe "Must call 'initWithContext' before use"
+            exception.message shouldBe "Must call 'initWithContext' before 'login'"
         }
     }
 
@@ -303,7 +303,7 @@ class SDKInitSuspendTests : FunSpec({
                 }
 
             // Should throw immediately because isInitialized is false
-            exception.message shouldBe "Must call 'initWithContext' before use"
+            exception.message shouldBe "Must call 'initWithContext' before 'logout'"
         }
     }
 })
