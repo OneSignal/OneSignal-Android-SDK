@@ -90,9 +90,9 @@ class StartupServiceTests : FunSpec({
 
         // When
         startupService.scheduleStart()
+        awaitIO()
 
         // Then
-        Thread.sleep(10)
         verify(exactly = 1) { mockStartupService1.start() }
         verify(exactly = 1) { mockStartupService2.start() }
     }

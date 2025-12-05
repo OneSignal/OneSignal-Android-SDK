@@ -115,9 +115,6 @@ class CompletionAwaiterTests : FunSpec({
                 jobs.add(thread)
             }
 
-            // Wait a bit to ensure all threads are waiting
-            Thread.sleep(100)
-
             // Complete the awaiter
             awaiter.complete()
 
@@ -256,9 +253,6 @@ class CompletionAwaiterTests : FunSpec({
                     }
                 }
             blockingThreads.forEach { it.start() }
-
-            // Wait a bit to ensure all are waiting
-            Thread.sleep(100)
 
             // Complete the awaiter
             awaiter.complete()
