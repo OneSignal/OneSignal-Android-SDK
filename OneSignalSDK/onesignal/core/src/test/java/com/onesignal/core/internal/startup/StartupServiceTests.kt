@@ -5,6 +5,7 @@ import com.onesignal.common.services.ServiceProvider
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.IOMockHelper
+import com.onesignal.mocks.IOMockHelper.awaitIO
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -109,13 +110,20 @@ class StartupServiceTests : FunSpec({
         }
 
         // When
-        startupService.scheduleStart()
-        mockStartableService2.start()
+        val thread =
+            Thread {
+                startupService.scheduleStart()
+                mockStartableService2.start()
+            }
+        thread.start()
 
         // Then
         // service2 does not block even though service1 is blocked
         verify(exactly = 1) { mockStartableService2.start() }
+
+        // unblock the trigger and wait for scheduled service to complete
         blockTrigger.complete(Unit)
+        awaitIO()
         verify { mockStartableService1.start() }
     }
 })
