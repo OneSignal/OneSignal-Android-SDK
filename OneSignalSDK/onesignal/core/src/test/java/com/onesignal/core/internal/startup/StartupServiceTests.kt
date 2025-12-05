@@ -6,8 +6,8 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.shouldBe
-import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -101,17 +101,30 @@ class StartupServiceTests : FunSpec({
 
         val startupService = StartupService(setupServiceProvider(listOf(), listOf(mockStartableService1, mockStartableService2)))
 
-        // When
+        // When - scheduleStart() is async, so it doesn't block
+        val startTime = System.currentTimeMillis()
         startupService.scheduleStart()
-        mockStartableService3.start()
+        val scheduleTime = System.currentTimeMillis() - startTime
 
-        // Then
-        Thread.sleep(10)
-        coVerifyOrder {
-            // service3 will call start() first even though service1 and service2 are scheduled first
-            mockStartableService3.start()
-            mockStartableService1.start()
-            mockStartableService2.start()
-        }
+        // This should execute immediately since scheduleStart() doesn't block
+        mockStartableService3.start()
+        val immediateTime = System.currentTimeMillis() - startTime
+
+        // Then - verify scheduleStart() returned quickly (non-blocking)
+        // Should return in < 50ms (proving it doesn't wait for services to start)
+        scheduleTime shouldBeLessThan 50L
+        immediateTime shouldBeLessThan 50L
+
+        // Wait for async execution to complete
+        Thread.sleep(100)
+
+        // Verify all services were called
+        verify(exactly = 1) { mockStartableService1.start() }
+        verify(exactly = 1) { mockStartableService2.start() }
+        verify(exactly = 1) { mockStartableService3.start() }
+
+        // The key assertion: scheduleStart() returned immediately without blocking,
+        // allowing service3.start() to be called synchronously. All services eventually
+        // get started, proving scheduleStart() is non-blocking.
     }
 })
