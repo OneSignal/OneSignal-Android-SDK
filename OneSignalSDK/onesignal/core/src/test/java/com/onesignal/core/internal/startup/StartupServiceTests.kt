@@ -4,6 +4,8 @@ import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.mocks.IOMockHelper
+import com.onesignal.mocks.IOMockHelper.awaitIO
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.comparables.shouldBeLessThan
@@ -12,6 +14,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import kotlinx.coroutines.CompletableDeferred
 
 class StartupServiceTests : FunSpec({
     fun setupServiceProvider(
@@ -25,6 +28,8 @@ class StartupServiceTests : FunSpec({
             serviceBuilder.register(reg).provides<IStartableService>()
         return serviceBuilder.build()
     }
+
+    listener(IOMockHelper)
 
     beforeAny {
         Logging.logLevel = LogLevel.NONE
@@ -97,9 +102,13 @@ class StartupServiceTests : FunSpec({
         // Given
         val mockStartableService1 = spyk<IStartableService>()
         val mockStartableService2 = spyk<IStartableService>()
-        val mockStartableService3 = spyk<IStartableService>()
+        val startupService = StartupService(setupServiceProvider(listOf(), listOf(mockStartableService1)))
 
-        val startupService = StartupService(setupServiceProvider(listOf(), listOf(mockStartableService1, mockStartableService2)))
+        // Block the scheduled services until we're ready
+        val blockTrigger = CompletableDeferred<Unit>()
+        every { mockStartableService1.start() } coAnswers {
+            blockTrigger.await() // Block until released
+        }
 
         // When - scheduleStart() is async, so it doesn't block
         val startTime = System.currentTimeMillis()
