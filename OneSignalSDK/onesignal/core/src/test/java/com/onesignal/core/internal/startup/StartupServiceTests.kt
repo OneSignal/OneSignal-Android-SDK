@@ -5,7 +5,6 @@ import com.onesignal.common.services.ServiceProvider
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.IOMockHelper
-import com.onesignal.mocks.IOMockHelper.awaitIO
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.comparables.shouldBeLessThan
@@ -102,9 +101,11 @@ class StartupServiceTests : FunSpec({
         // Given
         val mockStartableService1 = spyk<IStartableService>()
         val mockStartableService2 = spyk<IStartableService>()
-        val startupService = StartupService(setupServiceProvider(listOf(), listOf(mockStartableService1)))
+        val mockStartableService3 = spyk<IStartableService>()
+        // Only service1 and service2 are scheduled - service3 is NOT scheduled
+        val startupService = StartupService(setupServiceProvider(listOf(), listOf(mockStartableService1, mockStartableService2)))
 
-        // Block the scheduled services until we're ready
+        // Block service1 to prove scheduleStart() doesn't wait for it
         val blockTrigger = CompletableDeferred<Unit>()
         every { mockStartableService1.start() } coAnswers {
             blockTrigger.await() // Block until released
@@ -116,6 +117,7 @@ class StartupServiceTests : FunSpec({
         val scheduleTime = System.currentTimeMillis() - startTime
 
         // This should execute immediately since scheduleStart() doesn't block
+        // service3 is NOT part of scheduled services, so this is a direct call
         mockStartableService3.start()
         val immediateTime = System.currentTimeMillis() - startTime
 
@@ -124,16 +126,21 @@ class StartupServiceTests : FunSpec({
         scheduleTime shouldBeLessThan 50L
         immediateTime shouldBeLessThan 50L
 
-        // Wait for async execution to complete
-        Thread.sleep(100)
-
-        // Verify all services were called
-        verify(exactly = 1) { mockStartableService1.start() }
-        verify(exactly = 1) { mockStartableService2.start() }
+        // Verify service3 was called immediately (proving main thread wasn't blocked)
         verify(exactly = 1) { mockStartableService3.start() }
 
+        // Wait a bit for async execution to start
+        Thread.sleep(50)
+
+        // Verify scheduled services were called (even though service1 is blocked)
+        verify(exactly = 1) { mockStartableService1.start() }
+        verify(exactly = 1) { mockStartableService2.start() }
+
+        // Unblock service1 to allow test cleanup
+        blockTrigger.complete(Unit)
+
         // The key assertion: scheduleStart() returned immediately without blocking,
-        // allowing service3.start() to be called synchronously. All services eventually
-        // get started, proving scheduleStart() is non-blocking.
+        // allowing service3.start() to be called synchronously before scheduled services
+        // complete. This proves scheduleStart() is non-blocking.
     }
 })
