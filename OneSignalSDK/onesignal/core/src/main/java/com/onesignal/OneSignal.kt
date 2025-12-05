@@ -153,6 +153,140 @@ object OneSignal {
     }
 
     /**
+     * Get the user manager without blocking the calling thread.
+     * Suspends until the SDK is initialized if initialization is in progress.
+     * This is the suspend-safe version of the [User] property accessor.
+     *
+     * @return The user manager for accessing user-scoped management.
+     */
+    @JvmStatic
+    suspend fun getUserSuspend(): IUserManager {
+        return oneSignal.getUser()
+    }
+
+    /**
+     * Get the session manager without blocking the calling thread.
+     * Suspends until the SDK is initialized if initialization is in progress.
+     * This is the suspend-safe version of the [Session] property accessor.
+     *
+     * @return The session manager for accessing session-scoped management.
+     */
+    @JvmStatic
+    suspend fun getSessionSuspend(): ISessionManager {
+        return oneSignal.getSession()
+    }
+
+    /**
+     * Get the notifications manager without blocking the calling thread.
+     * Suspends until the SDK is initialized if initialization is in progress.
+     * This is the suspend-safe version of the [Notifications] property accessor.
+     *
+     * @return The notification manager for accessing device-scoped notification management.
+     */
+    @JvmStatic
+    suspend fun getNotificationsSuspend(): INotificationsManager {
+        return oneSignal.getNotifications()
+    }
+
+    /**
+     * Get the location manager without blocking the calling thread.
+     * Suspends until the SDK is initialized if initialization is in progress.
+     * This is the suspend-safe version of the [Location] property accessor.
+     *
+     * @return The location manager for accessing device-scoped location management.
+     */
+    @JvmStatic
+    suspend fun getLocationSuspend(): ILocationManager {
+        return oneSignal.getLocation()
+    }
+
+    /**
+     * Get the in-app messages manager without blocking the calling thread.
+     * Suspends until the SDK is initialized if initialization is in progress.
+     * This is the suspend-safe version of the [InAppMessages] property accessor.
+     *
+     * @return The in-app messaging manager for accessing device-scoped IAM management.
+     */
+    @JvmStatic
+    suspend fun getInAppMessagesSuspend(): IInAppMessagesManager {
+        return oneSignal.getInAppMessages()
+    }
+
+    /**
+     * Get the consent required flag in a thread-safe manner without blocking the calling thread.
+     * Suspends until the SDK is initialized if initialization is in progress.
+     * This is the suspend-safe version of the [consentRequired] property accessor.
+     *
+     * @return Whether a user must consent to privacy prior to their user data being sent to OneSignal.
+     */
+    @JvmStatic
+    suspend fun getConsentRequiredSuspend(): Boolean {
+        return oneSignal.getConsentRequired()
+    }
+
+    /**
+     * Set the consent required flag in a thread-safe manner without blocking the calling thread.
+     * Suspends until the SDK is initialized if initialization is in progress.
+     * This is the suspend-safe version of the [consentRequired] property setter.
+     *
+     * @param required Whether a user must consent to privacy prior to their user data being sent to OneSignal.
+     *                 Should be set to `true` prior to the invocation of [initWithContext] to ensure compliance.
+     */
+    @JvmStatic
+    suspend fun setConsentRequiredSuspend(required: Boolean) {
+        oneSignal.setConsentRequired(required)
+    }
+
+    /**
+     * Get the consent given flag in a thread-safe manner without blocking the calling thread.
+     * Suspends until the SDK is initialized if initialization is in progress.
+     * This is the suspend-safe version of the [consentGiven] property accessor.
+     *
+     * @return Whether privacy consent has been granted. This field is only relevant when
+     *         the application has opted into data privacy protections. See [consentRequired].
+     */
+    @JvmStatic
+    suspend fun getConsentGivenSuspend(): Boolean {
+        return oneSignal.getConsentGiven()
+    }
+
+    /**
+     * Set the consent given flag in a thread-safe manner without blocking the calling thread.
+     * Suspends until the SDK is initialized if initialization is in progress.
+     * This is the suspend-safe version of the [consentGiven] property setter.
+     *
+     * @param value Whether privacy consent has been granted.
+     */
+    @JvmStatic
+    suspend fun setConsentGivenSuspend(value: Boolean) {
+        oneSignal.setConsentGiven(value)
+    }
+
+    /**
+     * Get the disable GMS missing prompt flag in a thread-safe manner without blocking the calling thread.
+     * Suspends until the SDK is initialized if initialization is in progress.
+     * This is the suspend-safe version of the [disableGMSMissingPrompt] property accessor.
+     *
+     * @return Whether to disable the "GMS is missing" prompt to the user.
+     */
+    @JvmStatic
+    suspend fun getDisableGMSMissingPromptSuspend(): Boolean {
+        return oneSignal.getDisableGMSMissingPrompt()
+    }
+
+    /**
+     * Set the disable GMS missing prompt flag in a thread-safe manner without blocking the calling thread.
+     * Suspends until the SDK is initialized if initialization is in progress.
+     * This is the suspend-safe version of the [disableGMSMissingPrompt] property setter.
+     *
+     * @param value Whether to disable the "GMS is missing" prompt to the user.
+     */
+    @JvmStatic
+    suspend fun setDisableGMSMissingPromptSuspend(value: Boolean) {
+        oneSignal.setDisableGMSMissingPrompt(value)
+    }
+
+    /**
      * Login to OneSignal under the user identified by the [externalId] provided. The act of
      * logging a user into the OneSignal SDK will switch the [User] context to that specific user.
      *
@@ -226,24 +360,49 @@ object OneSignal {
     }
 
     /**
-     * Login a user with external ID and optional JWT token (suspend version).
+     * Login a user with external ID and optional JWT token without blocking the calling thread.
+     * Suspends until the SDK is initialized if initialization is in progress.
+     * This is the suspend-safe version of the [login] method.
      *
-     * @param externalId External user ID for login
-     * @param jwtBearerToken Optional JWT token for authentication
+     * The act of logging a user into the OneSignal SDK will switch the [User] context to that specific user.
+     *
+     * * If the [externalId] exists the user will be retrieved and the context set from that
+     *   user information. If operations have already been performed under a guest user, they
+     *   *will not* be applied to the now logged in user (they will be lost).
+     * * If the [externalId] does not exist the user will be created and the context set from
+     *   the current local state. If operations have already been performed under a guest user
+     *   those operations *will* be applied to the newly created user.
+     *
+     * *Push Notifications and In App Messaging*
+     * Logging in a new user will automatically transfer push notification and in app messaging
+     * subscriptions from the current user (if there is one) to the newly logged in user.  This is
+     * because both Push and IAM are owned by the device.
+     *
+     * @param externalId The external ID of the user that is to be logged in.
+     * @param jwtBearerToken The optional JWT bearer token generated by your backend to establish
+     * trust for the login operation.  Required when identity verification has been enabled. See
+     * [Identity Verification | OneSignal](https://documentation.onesignal.com/docs/identity-verification)
      */
     @JvmStatic
     suspend fun loginSuspend(
         externalId: String,
         jwtBearerToken: String? = null,
     ) {
-        oneSignal.login(externalId, jwtBearerToken)
+        oneSignal.loginSuspend(externalId, jwtBearerToken)
     }
 
     /**
-     * Logout the current user (suspend version).
+     * Logout the current user without blocking the calling thread.
+     * Suspends until the SDK is initialized if initialization is in progress.
+     * This is the suspend-safe version of the [logout] method.
+     *
+     * The [User] property now references a new device-scoped user. A device-scoped user has no
+     * user identity that can later be retrieved, except through this device as long as the app
+     * remains installed and the app data is not cleared.
      */
+    @JvmStatic
     suspend fun logoutSuspend() {
-        oneSignal.logout()
+        oneSignal.logoutSuspend()
     }
 
     /**

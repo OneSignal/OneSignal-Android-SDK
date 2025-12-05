@@ -39,7 +39,6 @@ import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.state.UserChangedState
 import com.onesignal.user.state.UserState
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
