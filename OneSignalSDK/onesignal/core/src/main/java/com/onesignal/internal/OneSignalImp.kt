@@ -9,7 +9,6 @@ import com.onesignal.common.modules.IModule
 import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
-import com.onesignal.common.threading.CompletionAwaiter
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.CoreModule
@@ -39,6 +38,7 @@ import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.resolveAppId
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -46,8 +46,8 @@ import kotlinx.coroutines.withContext
 internal class OneSignalImp(
     private val ioDispatcher: CoroutineDispatcher = OneSignalDispatchers.IO,
 ) : IOneSignal, IServiceProvider {
-    @Volatile
-    private var initAwaiter = CompletionAwaiter("OneSignalImp")
+
+    private val suspendCompletion = CompletableDeferred<Unit>()
 
     @Volatile
     private var initState: InitState = InitState.NOT_STARTED
@@ -339,7 +339,7 @@ internal class OneSignalImp(
      * Notifies both blocking and suspend callers that initialization is complete
      */
     private fun notifyInitComplete() {
-        initAwaiter.complete()
+        suspendCompletion.complete(Unit)
     }
 
     /**
@@ -382,7 +382,7 @@ internal class OneSignalImp(
                 // This is intentional per PR #2412: "ANR is the lesser of two evils and the app can recover,
                 // where an uncaught throw it can not." To avoid ANRs, call SDK methods from background threads
                 // or use the suspend API from coroutines.
-                initAwaiter.awaitSuspend()
+                suspendCompletion.await()
 
                 // Log how long initialization took
                 val elapsed = System.currentTimeMillis() - startTime

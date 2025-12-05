@@ -224,27 +224,23 @@ class OneSignalImpTests : FunSpec({
         // which uses withTimeout() to wait for up to 30 seconds (or 4.8 seconds on main thread)
         // before logging a warning and proceeding
 
-        // NOTE: We don't actually test the 30-second timeout here because:
-        // 1. It would make tests too slow (30 seconds per test)
-        // 2. The timeout is tested in CompletionAwaiterTests
-        // 3. This test documents the behavior for developers
+        // NOTE: We don't test waiting indefinitely here because:
+        // 1. It would make tests hang forever
+        // 2. This test documents the behavior for developers
 
         oneSignalImp.isInitialized shouldBe false
     }
 
-    test("waitForInit timeout mechanism exists - CompletionAwaiter integration") {
-        // This test verifies that the timeout mechanism is properly integrated
-        // by checking that waitUntilInitInternal has timeout capabilities
+    test("waitForInit waits indefinitely until init completes") {
+        // This test verifies that waitUntilInitInternal waits indefinitely
+        // until initialization completes (per PR #2412)
 
         // Given
         val oneSignalImp = OneSignalImp()
 
-        // The timeout behavior is implemented through waitUntilInitInternal()
-        // which uses withTimeout() with a default timeout of 30 seconds (or 4.8 seconds on main thread)
-
-        // We can verify the timeout mechanism exists by checking:
-        // 1. The CompletionAwaiter is properly initialized
-        // 2. The initState is NOT_STARTED (which would trigger timeout)
+        // We can verify the wait behavior by checking:
+        // 1. The suspendCompletion (CompletableDeferred) is properly initialized
+        // 2. The initState is NOT_STARTED (which would throw immediately)
         // 3. The isInitialized property correctly reflects the state
 
         oneSignalImp.isInitialized shouldBe false
@@ -252,10 +248,9 @@ class OneSignalImpTests : FunSpec({
         // In a real scenario where initWithContext is never called:
         // - waitForInit() would call waitUntilInitInternal()
         // - waitUntilInitInternal() would check initState == NOT_STARTED and throw immediately
-        // - If initState was IN_PROGRESS, it would use withTimeout() to wait up to 30 seconds
-        // - After timeout during IN_PROGRESS, it would log "OneSignalImp is taking longer than normal!" and proceed
-        // - waitForInit() throws for NOT_STARTED/FAILED states, but only logs (doesn't throw) on timeout during IN_PROGRESS
+        // - If initState was IN_PROGRESS, it would wait indefinitely using suspendCompletion.await()
+        // - waitForInit() throws for NOT_STARTED/FAILED states, waits indefinitely for IN_PROGRESS
 
-        // This test documents this behavior without actually waiting 30 seconds
+        // This test documents this behavior without actually waiting indefinitely
     }
 })

@@ -5,7 +5,6 @@ import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
-import com.onesignal.common.threading.CompletionAwaiter
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -15,8 +14,8 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.maps.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.CountDownLatch
 
 @RobolectricTest
 class SDKInitTests : FunSpec({
@@ -104,9 +103,9 @@ class SDKInitTests : FunSpec({
     test("initWithContext with no appId succeeds when configModel has appId") {
         // Given
         // block SharedPreference before calling init
-        val trigger = CompletionAwaiter("Test")
+        val trigger = CountDownLatch(1)
         val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, trigger, 2000)
+        val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
         var initSuccess = true
 
@@ -137,7 +136,7 @@ class SDKInitTests : FunSpec({
         accessorThread.isAlive shouldBe true
 
         // release SharedPreferences
-        trigger.complete()
+        trigger.countDown()
 
         accessorThread.join(500)
         accessorThread.isAlive shouldBe false
@@ -150,9 +149,9 @@ class SDKInitTests : FunSpec({
     test("initWithContext with appId does not block") {
         // Given
         // block SharedPreference before calling init
-        val trigger = CompletionAwaiter("Test")
+        val trigger = CountDownLatch(1)
         val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, trigger, 2000)
+        val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
 
         // When
@@ -169,7 +168,7 @@ class SDKInitTests : FunSpec({
         accessorThread.isAlive shouldBe false
 
         // Release the SharedPreferences lock so internalInit can complete
-        trigger.complete()
+        trigger.countDown()
 
         // Wait for initialization to complete (internalInit runs asynchronously)
         waitForInitialization(os, maxAttempts = 50)
@@ -178,9 +177,9 @@ class SDKInitTests : FunSpec({
     test("accessors will be blocked if call too early after initWithContext with appId") {
         // Given
         // block SharedPreference before calling init
-        val trigger = CompletionAwaiter("Test")
+        val trigger = CountDownLatch(1)
         val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, trigger, 2000)
+        val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
 
         val accessorThread =
@@ -195,7 +194,7 @@ class SDKInitTests : FunSpec({
         accessorThread.isAlive shouldBe true
 
         // release the lock on SharedPreferences
-        trigger.complete()
+        trigger.countDown()
 
         accessorThread.join(1000)
         accessorThread.isAlive shouldBe false
@@ -222,9 +221,9 @@ class SDKInitTests : FunSpec({
     test("ensure login called right after initWithContext can set externalId correctly") {
         // Given
         // block SharedPreference before calling init
-        val trigger = CompletionAwaiter("Test")
+        val trigger = CountDownLatch(1)
         val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, trigger, 2000)
+        val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
         val externalId = "testUser"
 
@@ -250,7 +249,7 @@ class SDKInitTests : FunSpec({
         accessorThread.isAlive shouldBe true
 
         // release the lock on SharedPreferences so internalInit can complete
-        trigger.complete()
+        trigger.countDown()
 
         // Wait for initialization to complete (internalInit runs asynchronously)
         var initAttempts = 0
@@ -458,20 +457,13 @@ class SDKInitTests : FunSpec({
  */
 class BlockingPrefsContext(
     context: Context,
-    private val unblockTrigger: CompletionAwaiter,
-    private val timeoutInMillis: Long,
+    private val unblockTrigger: CountDownLatch,
 ) : ContextWrapper(context) {
     override fun getSharedPreferences(
         name: String,
         mode: Int,
     ): SharedPreferences {
-        try {
-            unblockTrigger.await()
-        } catch (e: InterruptedException) {
-            throw e
-        } catch (e: TimeoutCancellationException) {
-            throw e
-        }
+        unblockTrigger.await()
 
         return super.getSharedPreferences(name, mode)
     }
