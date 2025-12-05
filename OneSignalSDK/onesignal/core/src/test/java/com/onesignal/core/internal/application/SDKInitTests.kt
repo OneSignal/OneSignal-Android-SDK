@@ -91,7 +91,7 @@ class SDKInitTests : FunSpec({
         // block SharedPreference before calling init
         val trigger = CompletionAwaiter("Test")
         val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, trigger, 2000)
+        val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
         var initSuccess = true
 
@@ -137,7 +137,7 @@ class SDKInitTests : FunSpec({
         // block SharedPreference before calling init
         val trigger = CompletionAwaiter("Test")
         val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, trigger, 1000)
+        val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
 
         // When
@@ -160,7 +160,7 @@ class SDKInitTests : FunSpec({
         // block SharedPreference before calling init
         val trigger = CompletionAwaiter("Test")
         val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, trigger, 2000)
+        val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
 
         val accessorThread =
@@ -204,7 +204,7 @@ class SDKInitTests : FunSpec({
         // block SharedPreference before calling init
         val trigger = CompletionAwaiter("Test")
         val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, trigger, 2000)
+        val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
         val externalId = "testUser"
 
@@ -438,14 +438,13 @@ class SDKInitTests : FunSpec({
 class BlockingPrefsContext(
     context: Context,
     private val unblockTrigger: CompletionAwaiter,
-    private val timeoutInMillis: Long,
 ) : ContextWrapper(context) {
     override fun getSharedPreferences(
         name: String,
         mode: Int,
     ): SharedPreferences {
         try {
-            unblockTrigger.await(timeoutInMillis)
+            unblockTrigger.awaitAndLogIfOverTimeout()
         } catch (e: InterruptedException) {
             throw e
         } catch (e: TimeoutCancellationException) {
