@@ -28,7 +28,7 @@ android {
     }
     testOptions {
         unitTests.all {
-            maxParallelForks 1
+            maxParallelForks Math.max(2, Runtime.runtime.availableProcessors().intdiv(2))
             maxHeapSize '2048m'
         }
         unitTests {
