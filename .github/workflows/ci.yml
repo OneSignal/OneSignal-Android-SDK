@@ -7,6 +7,11 @@ on:
 env:
   DIFF_COVERAGE_THRESHOLD: '80'
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -26,35 +31,97 @@ jobs:
       - name: "[Test] SDK Unit Tests"
         working-directory: OneSignalSDK
         run: |
-          ./gradlew testReleaseUnitTest --console=plain --continue
-      - name: "[Coverage] Generate JaCoCo merged XML"
+          ./gradlew testDebugUnitTest --console=plain --continue
+      - name: "[Diff Coverage] Check for bypass"
+        id: coverage_bypass
+        run: |
+          # Check if PR has Skip Coverage Check label
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            LABELS="${{ toJson(github.event.pull_request.labels.*.name) }}"
+            if echo "$LABELS" | grep -qiE "Skip Coverage Check|skip-coverage-check"; then
+              echo "bypass=true" >> $GITHUB_OUTPUT
+              echo "reason=PR has 'Skip Coverage Check' label" >> $GITHUB_OUTPUT
+              echo "⚠️ Coverage check will not fail build (PR has 'Skip Coverage Check' label)"
+              echo "   Coverage will still be checked and reported"
+            else
+              echo "bypass=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "bypass=false" >> $GITHUB_OUTPUT
+          fi
+      - name: "[Diff Coverage] Check coverage"
         working-directory: OneSignalSDK
         run: |
-          ./gradlew jacocoTestReportAll jacocoMergedReport --console=plain --continue
-      - name: "[Setup] Python"
-        uses: actions/setup-python@v5
+          # Use the shared coverage check script for consistency
+          # Generate markdown report for PR comments
+          # If bypassed, still run the check but don't fail the build
+          set +e  # Don't exit on error - we want to generate the report even if coverage fails
+          if [ "${{ steps.coverage_bypass.outputs.bypass }}" = "true" ]; then
+            SKIP_COVERAGE_CHECK=true GENERATE_MARKDOWN=true DIFF_COVERAGE_THRESHOLD=$DIFF_COVERAGE_THRESHOLD ./coverage/checkCoverage.sh
+          else
+            GENERATE_MARKDOWN=true DIFF_COVERAGE_THRESHOLD=$DIFF_COVERAGE_THRESHOLD ./coverage/checkCoverage.sh
+          fi
+          COVERAGE_EXIT_CODE=$?
+          set -e  # Re-enable exit on error
+          
+          # Check if markdown report was generated
+          if [ -f "diff_coverage.md" ]; then
+            echo "✅ Coverage report generated"
+          else
+            echo "⚠️ Coverage report not generated"
+          fi
+          
+          # Only fail the build if coverage is below threshold AND not bypassed
+          if [ "${{ steps.coverage_bypass.outputs.bypass }}" != "true" ] && [ $COVERAGE_EXIT_CODE -ne 0 ]; then
+            echo "❌ Coverage check failed - build will fail"
+            exit $COVERAGE_EXIT_CODE
+          elif [ "${{ steps.coverage_bypass.outputs.bypass }}" = "true" ]; then
+            echo "⚠️ Coverage check completed (bypassed - build will not fail)"
+            exit 0
+          else
+            echo "✅ Coverage check passed"
+            exit 0
+          fi
+      - name: Comment PR with coverage summary
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
         with:
-          python-version: '3.x'
-      - name: "[Diff Coverage] Install diff-cover"
-        run: |
-          python -m pip install --upgrade pip diff-cover
-      - name: "[Diff Coverage] Check and HTML report"
-        working-directory: OneSignalSDK
-        run: |
-          REPORT=build/reports/jacoco/merged/jacocoMergedReport.xml
-          test -f "$REPORT" || { echo "Merged JaCoCo report not found at $REPORT" >&2; exit 1; }
-          python -m diff_cover.diff_cover_tool "$REPORT" \
-            --compare-branch=origin/main \
-            --fail-under=$DIFF_COVERAGE_THRESHOLD
-          python -m diff_cover.diff_cover_tool "$REPORT" \
-            --compare-branch=origin/main \
-            --html-report diff_coverage.html || true
-      - name: Upload diff coverage HTML
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: diff-coverage-report
-          path: OneSignalSDK/diff_coverage.html
+          script: |
+            const fs = require('fs');
+            const path = 'OneSignalSDK/diff_coverage.md';
+            if (fs.existsSync(path)) {
+              const content = fs.readFileSync(path, 'utf8');
+              const body = `## 📊 Diff Coverage Report\n\n${content}\n\n📥 [View workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+              
+              // Find existing comment
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+              });
+              
+              const botComment = comments.data.find(comment => 
+                comment.user.type === 'Bot' && comment.body.includes('Diff Coverage Report')
+              );
+              
+              if (botComment) {
+                // Update existing comment
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: body
+                });
+              } else {
+                // Create new comment
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: body
+                });
+              }
+            }
       - name: Unit tests results
         if: failure()
         uses: actions/upload-artifact@v4
