@@ -8,14 +8,14 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'New SDK version (e.g. 5.1.38 or 5.2.0-beta1)'
+        description: "New SDK version (e.g. 5.1.38 or 5.2.0-beta1)"
         type: string
         required: true
       base_branch:
-        description: 'Target branch for the PR (e.g. main for regular releases, 5.4-main for 5.4.x releases)'
+        description: "Target branch for the PR (e.g. main for regular releases, 5.4-main for 5.4.x releases)"
         type: string
         required: false
-        default: 'main'
+        default: "main"
 
 permissions:
   contents: write
@@ -64,14 +64,17 @@ jobs:
           fi
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
-            fetch-depth: 0 # Ensure full history for git log
-            fetch-tags: true
+          fetch-depth: 0 # Ensure full history for git log
+          fetch-tags: true
+
+      - name: Setup Git User
+        uses: OneSignal/sdk-actions/.github/actions/setup-git-user@main
 
       - name: Create release branch from base
         run: |
-          
+
           if git ls-remote --exit-code --heads origin "$BRANCH"; then
             echo "Deleting remote branch $BRANCH"
             git push origin --delete "$BRANCH"
@@ -87,9 +90,6 @@ jobs:
 
       - name: Commit and Push changes
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
           git commit -am "chore: bump SDK_VERSION to $VERSION"
           git push origin "$BRANCH"
 
