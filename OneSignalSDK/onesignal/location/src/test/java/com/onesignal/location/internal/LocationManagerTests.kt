@@ -11,6 +11,7 @@ import com.onesignal.location.internal.common.LocationConstants
 import com.onesignal.location.internal.common.LocationUtils
 import com.onesignal.location.internal.controller.ILocationController
 import com.onesignal.location.internal.permissions.LocationPermissionController
+import com.onesignal.mocks.IOMockHelper
 import com.onesignal.mocks.IOMockHelper.awaitIO
 import com.onesignal.mocks.MockHelper
 import io.kotest.core.spec.style.FunSpec
@@ -83,6 +84,8 @@ private class Mocks {
 }
 
 class LocationManagerTests : FunSpec({
+
+    listener(IOMockHelper)
 
     lateinit var mocks: Mocks
 
