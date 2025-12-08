@@ -5,7 +5,6 @@ import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
-import com.onesignal.common.threading.CompletionAwaiter
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -15,11 +14,26 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.maps.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
+import java.util.concurrent.CountDownLatch
 
 @RobolectricTest
 class SDKInitTests : FunSpec({
+
+    /**
+     * Helper function to wait for OneSignal initialization to complete.
+     * @param oneSignalImp The OneSignalImp instance to wait for
+     * @param maxAttempts Maximum number of attempts (default: 100)
+     * @param sleepMs Sleep duration between attempts in milliseconds (default: 20)
+     */
+    fun waitForInitialization(oneSignalImp: OneSignalImp, maxAttempts: Int = 100, sleepMs: Long = 20) {
+        var attempts = 0
+        while (!oneSignalImp.isInitialized && attempts < maxAttempts) {
+            Thread.sleep(sleepMs)
+            attempts++
+        }
+        oneSignalImp.isInitialized shouldBe true
+    }
 
     beforeAny {
         Logging.logLevel = LogLevel.NONE
@@ -89,9 +103,9 @@ class SDKInitTests : FunSpec({
     test("initWithContext with no appId succeeds when configModel has appId") {
         // Given
         // block SharedPreference before calling init
-        val trigger = CompletionAwaiter("Test")
+        val trigger = CountDownLatch(1)
         val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, trigger, 2000)
+        val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
         var initSuccess = true
 
@@ -122,7 +136,7 @@ class SDKInitTests : FunSpec({
         accessorThread.isAlive shouldBe true
 
         // release SharedPreferences
-        trigger.complete()
+        trigger.countDown()
 
         accessorThread.join(500)
         accessorThread.isAlive shouldBe false
@@ -135,9 +149,9 @@ class SDKInitTests : FunSpec({
     test("initWithContext with appId does not block") {
         // Given
         // block SharedPreference before calling init
-        val trigger = CompletionAwaiter("Test")
+        val trigger = CountDownLatch(1)
         val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, trigger, 1000)
+        val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
 
         // When
@@ -150,17 +164,22 @@ class SDKInitTests : FunSpec({
         accessorThread.join(500)
 
         // Then
-        // should complete even SharedPreferences is unavailable
+        // should complete even SharedPreferences is unavailable (non-blocking)
         accessorThread.isAlive shouldBe false
-        os.isInitialized shouldBe true
+
+        // Release the SharedPreferences lock so internalInit can complete
+        trigger.countDown()
+
+        // Wait for initialization to complete (internalInit runs asynchronously)
+        waitForInitialization(os, maxAttempts = 50)
     }
 
     test("accessors will be blocked if call too early after initWithContext with appId") {
         // Given
         // block SharedPreference before calling init
-        val trigger = CompletionAwaiter("Test")
+        val trigger = CountDownLatch(1)
         val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, trigger, 2000)
+        val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
 
         val accessorThread =
@@ -175,7 +194,7 @@ class SDKInitTests : FunSpec({
         accessorThread.isAlive shouldBe true
 
         // release the lock on SharedPreferences
-        trigger.complete()
+        trigger.countDown()
 
         accessorThread.join(1000)
         accessorThread.isAlive shouldBe false
@@ -202,9 +221,9 @@ class SDKInitTests : FunSpec({
     test("ensure login called right after initWithContext can set externalId correctly") {
         // Given
         // block SharedPreference before calling init
-        val trigger = CompletionAwaiter("Test")
+        val trigger = CountDownLatch(1)
         val context = getApplicationContext<Context>()
-        val blockingPrefContext = BlockingPrefsContext(context, trigger, 2000)
+        val blockingPrefContext = BlockingPrefsContext(context, trigger)
         val os = OneSignalImp()
         val externalId = "testUser"
 
@@ -224,11 +243,22 @@ class SDKInitTests : FunSpec({
         accessorThread.start()
         accessorThread.join(500)
 
-        os.isInitialized shouldBe true
+        // initWithContext should return immediately (non-blocking)
+        // but isInitialized won't be true until internalInit completes
+        // which requires SharedPreferences to be unblocked
         accessorThread.isAlive shouldBe true
 
-        // release the lock on SharedPreferences
-        trigger.complete()
+        // release the lock on SharedPreferences so internalInit can complete
+        trigger.countDown()
+
+        // Wait for initialization to complete (internalInit runs asynchronously)
+        var initAttempts = 0
+        while (!os.isInitialized && initAttempts < 50) {
+            Thread.sleep(20)
+            initAttempts++
+        }
+
+        os.isInitialized shouldBe true
 
         accessorThread.join(500)
         accessorThread.isAlive shouldBe false
@@ -307,12 +337,7 @@ class SDKInitTests : FunSpec({
         os.initWithContext(context, "appId")
 
         // Wait for initialization to complete before accessing user
-        var attempts = 0
-        while (!os.isInitialized && attempts < 100) {
-            Thread.sleep(20)
-            attempts++
-        }
-        os.isInitialized shouldBe true
+        waitForInitialization(os)
 
         // Give additional time for coroutines to settle, especially in CI/CD
         Thread.sleep(50)
@@ -323,12 +348,7 @@ class SDKInitTests : FunSpec({
         os.initWithContext(context)
 
         // Wait for second initialization to complete
-        attempts = 0
-        while (!os.isInitialized && attempts < 100) {
-            Thread.sleep(20)
-            attempts++
-        }
-        os.isInitialized shouldBe true
+        waitForInitialization(os)
 
         // Give additional time for coroutines to settle after second init
         Thread.sleep(50)
@@ -437,20 +457,13 @@ class SDKInitTests : FunSpec({
  */
 class BlockingPrefsContext(
     context: Context,
-    private val unblockTrigger: CompletionAwaiter,
-    private val timeoutInMillis: Long,
+    private val unblockTrigger: CountDownLatch,
 ) : ContextWrapper(context) {
     override fun getSharedPreferences(
         name: String,
         mode: Int,
     ): SharedPreferences {
-        try {
-            unblockTrigger.await(timeoutInMillis)
-        } catch (e: InterruptedException) {
-            throw e
-        } catch (e: TimeoutCancellationException) {
-            throw e
-        }
+        unblockTrigger.await()
 
         return super.getSharedPreferences(name, mode)
     }
