@@ -50,7 +50,9 @@ class NotificationSummaryManagerTests : FunSpec({
             )
 
         // When
-        notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(1)
+        runBlocking {
+            notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(1)
+        }
 
         // Then
         coVerify(exactly = 1) { mockNotificationRepository.getGroupId(1) }
@@ -77,7 +79,9 @@ class NotificationSummaryManagerTests : FunSpec({
             )
 
         // When
-        notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(1)
+        runBlocking {
+            notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(1)
+        }
 
         // Then
         coVerify(exactly = 1) { mockNotificationRepository.getGroupId(1) }
@@ -113,7 +117,9 @@ class NotificationSummaryManagerTests : FunSpec({
             )
 
         // When
-        notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(1)
+        runBlocking {
+            notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(1)
+        }
 
         // Then
         coVerify(exactly = 1) { mockNotificationRepository.getGroupId(1) }
@@ -146,7 +152,9 @@ class NotificationSummaryManagerTests : FunSpec({
             )
 
         // When
-        notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(1)
+        runBlocking {
+            notificationSummaryManager.updatePossibleDependentSummaryOnDismiss(1)
+        }
 
         // Then
         coVerify(exactly = 1) { mockNotificationRepository.getGroupId(1) }
