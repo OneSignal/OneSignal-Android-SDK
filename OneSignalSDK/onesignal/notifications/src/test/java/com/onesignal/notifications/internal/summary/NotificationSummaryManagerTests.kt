@@ -17,6 +17,7 @@ import io.mockk.coVerify
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import kotlinx.coroutines.runBlocking
 import org.robolectric.annotation.Config
 
 @Config(
@@ -182,7 +183,9 @@ class NotificationSummaryManagerTests : FunSpec({
             )
 
         // When
-        notificationSummaryManager.clearNotificationOnSummaryClick("groupId")
+        runBlocking {
+            notificationSummaryManager.clearNotificationOnSummaryClick("groupId")
+        }
 
         // Then
         coVerify(exactly = 1) { mockNotificationRepository.getAndroidIdForGroup("groupId", false) }
@@ -211,7 +214,9 @@ class NotificationSummaryManagerTests : FunSpec({
             )
 
         // When
-        notificationSummaryManager.clearNotificationOnSummaryClick("groupId")
+        runBlocking {
+            notificationSummaryManager.clearNotificationOnSummaryClick("groupId")
+        }
 
         // Then
         coVerify(exactly = 1) { mockNotificationRepository.getAndroidIdForGroup("groupId", false) }
