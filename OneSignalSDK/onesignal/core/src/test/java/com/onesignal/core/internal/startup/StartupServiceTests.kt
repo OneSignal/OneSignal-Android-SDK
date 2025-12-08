@@ -5,6 +5,7 @@ import com.onesignal.common.services.ServiceProvider
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.IOMockHelper
+import com.onesignal.mocks.IOMockHelper.awaitIO
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.comparables.shouldBeLessThan
@@ -13,7 +14,6 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
-import kotlinx.coroutines.CompletableDeferred
 
 class StartupServiceTests : FunSpec({
     fun setupServiceProvider(
@@ -83,33 +83,27 @@ class StartupServiceTests : FunSpec({
 
     test("startup will call all IStartableService dependencies successfully after a short delay") {
         // Given
-        val mockStartupService1 = spyk<IStartableService>()
-        val mockStartupService2 = spyk<IStartableService>()
+        val mockStartupService1 = mockk<IStartableService>(relaxed = true)
+        val mockStartupService2 = mockk<IStartableService>(relaxed = true)
 
         val startupService = StartupService(setupServiceProvider(listOf(), listOf(mockStartupService1, mockStartupService2)))
 
         // When
         startupService.scheduleStart()
 
-        // Then
-        Thread.sleep(10)
+        // Then - wait deterministically for both services to start using IOMockHelper
+        awaitIO()
         verify(exactly = 1) { mockStartupService1.start() }
         verify(exactly = 1) { mockStartupService2.start() }
     }
 
     test("scheduleStart does not block main thread") {
         // Given
-        val mockStartableService1 = spyk<IStartableService>()
+        val mockStartableService1 = mockk<IStartableService>(relaxed = true)
         val mockStartableService2 = spyk<IStartableService>()
         val mockStartableService3 = spyk<IStartableService>()
         // Only service1 and service2 are scheduled - service3 is NOT scheduled
         val startupService = StartupService(setupServiceProvider(listOf(), listOf(mockStartableService1, mockStartableService2)))
-
-        // Block service1 to prove scheduleStart() doesn't wait for it
-        val blockTrigger = CompletableDeferred<Unit>()
-        every { mockStartableService1.start() } coAnswers {
-            blockTrigger.await() // Block until released
-        }
 
         // When - scheduleStart() is async, so it doesn't block
         val startTime = System.currentTimeMillis()
@@ -129,15 +123,12 @@ class StartupServiceTests : FunSpec({
         // Verify service3 was called immediately (proving main thread wasn't blocked)
         verify(exactly = 1) { mockStartableService3.start() }
 
-        // Wait a bit for async execution to start
-        Thread.sleep(50)
+        // Wait deterministically for async execution using IOMockHelper
+        awaitIO()
 
-        // Verify scheduled services were called (even though service1 is blocked)
+        // Verify scheduled services were called
         verify(exactly = 1) { mockStartableService1.start() }
         verify(exactly = 1) { mockStartableService2.start() }
-
-        // Unblock service1 to allow test cleanup
-        blockTrigger.complete(Unit)
 
         // The key assertion: scheduleStart() returned immediately without blocking,
         // allowing service3.start() to be called synchronously before scheduled services

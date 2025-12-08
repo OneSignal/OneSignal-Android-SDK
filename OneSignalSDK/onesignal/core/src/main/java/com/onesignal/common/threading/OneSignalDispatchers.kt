@@ -25,8 +25,10 @@ import java.util.concurrent.atomic.AtomicInteger
  * - Small bounded queues (10 tasks) to prevent memory bloat
  * - Reduced context switching overhead
  * - Efficient thread management with controlled resource usage
+ *
+ * Made public to allow mocking in tests via IOMockHelper.
  */
-internal object OneSignalDispatchers {
+object OneSignalDispatchers {
     // Optimized pool sizes based on CPU cores and workload analysis
     private const val IO_CORE_POOL_SIZE = 2 // Increased for better concurrency
     private const val IO_MAX_POOL_SIZE = 3 // Increased for better concurrency
