@@ -578,7 +578,7 @@ class OperationRepoTests : FunSpec({
         }
     }
 
-    test("ensure results from executeOperations are added to beginning of the queue").config(enabled = false) {
+    test("ensure results from executeOperations are added to beginning of the queue") {
         // Given
         val mocks = Mocks()
         val executor = mocks.executor
@@ -614,7 +614,7 @@ class OperationRepoTests : FunSpec({
     // needed as the backend may incorrectly 404 otherwise, due to a small
     // delay in it's server replication.
     // A cold down period like this also helps improve batching as well.
-    test("execution of an operation with translation IDs delays follow up operations").config(enabled = false) {
+    test("execution of an operation with translation IDs delays follow up operations") {
         // Given
         val mocks = Mocks()
         val operation1 = mockOperation(groupComparisonType = GroupComparisonType.NONE)
@@ -667,7 +667,7 @@ class OperationRepoTests : FunSpec({
     }
 
     // operations not removed from the queue may get stuck in the queue if app is force closed within the delay
-    test("execution of an operation with translation IDs removes the operation from queue before delay").config(enabled = false) {
+    test("execution of an operation with translation IDs removes the operation from queue before delay") {
         // Given
         val mocks = Mocks()
         val operation = mockOperation(groupComparisonType = GroupComparisonType.NONE)
@@ -695,7 +695,7 @@ class OperationRepoTests : FunSpec({
     // sending updates every opRepoExecutionInterval (5 seconds currently).
     // By waiting for the dust to settle we ensure the app is done making
     // updates.
-    test("ensure each time enqueue is called it restarts the delay time").config(enabled = false) {
+    test("ensure each time enqueue is called it restarts the delay time") {
         // Given
         val mocks = Mocks()
         mocks.configModelStore.model.opRepoExecutionInterval = 100
@@ -730,7 +730,7 @@ class OperationRepoTests : FunSpec({
         withTimeout(1_000) { mocks.operationRepo.awaitInitialized() }
     }
 
-    test("ensure loadSavedOperations doesn't duplicate existing OperationItems").config(enabled = false) {
+    test("ensure loadSavedOperations doesn't duplicate existing OperationItems") {
         // Given
         val mocks = Mocks()
         val op = mockOperation()
@@ -796,7 +796,7 @@ class OperationRepoTests : FunSpec({
 
     // This test verifies the critical execution order when translation IDs and grouping work together
     // It ensures that operations requiring translation wait for translation mappings before being grouped
-    test("translation IDs are applied before operations are grouped with correct execution order").config(enabled = false) {
+    test("translation IDs are applied before operations are grouped with correct execution order") {
         // Given
         val mocks = Mocks()
 

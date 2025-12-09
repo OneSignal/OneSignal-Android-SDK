@@ -156,7 +156,7 @@ class NotificationGenerationProcessorTests : FunSpec({
         }
     }
 
-    test("processNotificationData should not display notification when external callback indicates not to").config(enabled = false) {
+    test("processNotificationData should not display notification when external callback indicates not to") {
         // Given
         val mocks = Mocks()
         coEvery { mocks.notificationLifecycleService.externalRemoteNotificationReceived(any()) } answers {
@@ -268,7 +268,7 @@ class NotificationGenerationProcessorTests : FunSpec({
         }
     }
 
-    test("processNotificationData allows the will display callback to prevent default behavior twice").config(enabled = false) {
+    test("processNotificationData allows the will display callback to prevent default behavior twice") {
         // Given
         val mocks = Mocks()
         coEvery { mocks.notificationDisplayer.displayNotification(any()) } returns true
@@ -293,7 +293,7 @@ class NotificationGenerationProcessorTests : FunSpec({
         }
     }
 
-    test("processNotificationData allows the received event callback to prevent default behavior twice").config(enabled = false) {
+    test("processNotificationData allows the received event callback to prevent default behavior twice") {
         // Given
         val mocks = Mocks()
         coEvery { mocks.notificationDisplayer.displayNotification(any()) } returns true
