@@ -15,11 +15,9 @@ import io.mockk.mockkStatic
 import io.mockk.unmockkObject
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -82,7 +80,7 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
         mockkObject(OneSignalDispatchers)
 
         // Helper function to track async work (suspendifyOnIO, launchOnIO, launchOnDefault)
-        // Note: We use Dispatchers.Unconfined to execute immediately and deterministically
+        // Note: We use runBlocking with Dispatchers.Unconfined to execute synchronously and deterministically
         // instead of suspendifyWithCompletion to avoid circular dependency
         // (suspendifyWithCompletion calls OneSignalDispatchers.launchOnIO which we're mocking)
         fun trackAsyncWork(block: suspend () -> Unit) {
@@ -92,9 +90,10 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
                 ioWaiter = CompletableDeferred()
             }
 
-            // Execute the block using Unconfined dispatcher to run immediately and deterministically
-            // This makes tests deterministic and avoids the need for delays
-            CoroutineScope(SupervisorJob() + Dispatchers.Unconfined).launch {
+            // Execute the block synchronously using runBlocking with Dispatchers.Unconfined
+            // Unconfined executes on the current thread, making tests deterministic
+            // runBlocking ensures the block completes before returning
+            runBlocking(Dispatchers.Unconfined) {
                 try {
                     block()
                 } catch (e: Exception) {
