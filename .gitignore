@@ -35,3 +35,6 @@ node_modules/
 # Android Studio
 *.apk
 *.ap_
+
+# Coverage report
+coverage/diff_coverage.html
