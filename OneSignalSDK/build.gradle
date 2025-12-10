@@ -111,4 +111,4 @@ gradle.projectsEvaluated {
 }
 
 // Apply JaCoCo configuration from separate file
-apply from: 'jacoco.gradle'
+apply from: 'coverage/jacoco.gradle'
