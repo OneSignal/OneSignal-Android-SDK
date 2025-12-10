@@ -1,15 +1,11 @@
 name: Build and Test SDK
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 on:
   pull_request:
-    branches: ["**"]
+    branches: "**"
 
 env:
-  DIFF_COVERAGE_THRESHOLD: "80"
+  DIFF_COVERAGE_THRESHOLD: '80'
 
 permissions:
   contents: read
@@ -18,7 +14,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: "[Checkout] Repo"
         uses: actions/checkout@v4
@@ -67,14 +63,14 @@ jobs:
           fi
           COVERAGE_EXIT_CODE=$?
           set -e  # Re-enable exit on error
-
+          
           # Check if markdown report was generated
           if [ -f "diff_coverage.md" ]; then
             echo "✅ Coverage report generated"
           else
             echo "⚠️ Coverage report not generated"
           fi
-
+          
           # Only fail the build if coverage is below threshold AND not bypassed
           if [ "${{ steps.coverage_bypass.outputs.bypass }}" != "true" ] && [ $COVERAGE_EXIT_CODE -ne 0 ]; then
             echo "❌ Coverage check failed - build will fail"
