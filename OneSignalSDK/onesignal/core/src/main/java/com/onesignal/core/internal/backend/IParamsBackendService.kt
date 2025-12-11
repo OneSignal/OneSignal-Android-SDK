@@ -36,6 +36,7 @@ class ParamsObject(
     var opRepoExecutionInterval: Long? = null,
     var influenceParams: InfluenceParamsObject,
     var fcmParams: FCMParamsObject,
+    val remoteLoggingParams: RemoteLoggingParamsObject,
 )
 
 class InfluenceParamsObject(
@@ -52,4 +53,8 @@ class FCMParamsObject(
     val projectId: String? = null,
     val appId: String? = null,
     val apiKey: String? = null,
+)
+
+class RemoteLoggingParamsObject(
+    val enable: Boolean? = null,
 )

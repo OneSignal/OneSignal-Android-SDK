@@ -301,6 +301,9 @@ class ConfigModel : Model() {
     val fcmParams: FCMConfigModel
         get() = getAnyProperty(::fcmParams.name) { FCMConfigModel(this, ::fcmParams.name) } as FCMConfigModel
 
+    val remoteLoggingParams: RemoteLoggingConfigModel
+        get() = getAnyProperty(::remoteLoggingParams.name) { RemoteLoggingConfigModel(this, ::remoteLoggingParams.name) } as RemoteLoggingConfigModel
+
     override fun createModelForProperty(
         property: String,
         jsonObject: JSONObject,
@@ -313,6 +316,12 @@ class ConfigModel : Model() {
 
         if (property == ::fcmParams.name) {
             val model = FCMConfigModel(this, ::influenceParams.name)
+            model.initializeFromJson(jsonObject)
+            return model
+        }
+
+        if (property == ::remoteLoggingParams.name) {
+            val model = RemoteLoggingConfigModel(this, ::remoteLoggingParams.name)
             model.initializeFromJson(jsonObject)
             return model
         }
@@ -423,5 +432,19 @@ class FCMConfigModel(parentModel: Model, parentProperty: String) : Model(parentM
         get() = getOptStringProperty(::apiKey.name) { null }
         set(value) {
             setOptStringProperty(::apiKey.name, value)
+        }
+}
+
+class RemoteLoggingConfigModel(
+    parentModel: Model,
+    parentProperty: String,
+) : Model(parentModel, parentProperty) {
+    /**
+     * Do we send OneSignal related logs to OneSignal's server.
+     */
+    var enable: Boolean?
+        get() = getOptBooleanProperty(::enable.name) { null }
+        set(value) {
+            setOptBooleanProperty(::enable.name, value)
         }
 }

@@ -1,6 +1,8 @@
 package com.onesignal.debug.internal.logging.otel.crash
 
+import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.startup.IStartableService
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.debug.internal.logging.otel.IOneSignalOpenTelemetryRemote
 import com.onesignal.debug.internal.logging.otel.config.OtelConfigCrashFile
 import io.opentelemetry.sdk.logs.data.LogRecordData
@@ -15,6 +17,7 @@ import java.util.concurrent.TimeUnit
 internal class OneSignalCrashUploader(
     private val _openTelemetryRemote: IOneSignalOpenTelemetryRemote,
     private val _crashPathProvider: IOneSignalCrashConfigProvider,
+    _configModelStore: ConfigModelStore,
 ) : IStartableService {
     companion object {
         const val SEND_TIMEOUT_SECONDS = 30L
@@ -27,7 +30,14 @@ internal class OneSignalCrashUploader(
                 _crashPathProvider.minFileAgeForReadMillis
             ).iterator()
 
+    private val enable =
+        _configModelStore.model.remoteLoggingParams.enable ?: false
+
     override fun start() {
+        Logging.info("OneSignalCrashUploader.enable: $enable")
+        if (!enable) {
+            return
+        }
         runBlocking { internalStart() }
     }
 
@@ -53,8 +63,10 @@ internal class OneSignalCrashUploader(
         // another one if there isn't an issue making network calls.
         while (reports.hasNext() && !failed) {
             val future = networkExporter.export(reports.next())
+            Logging.debug("Sending OneSignal crash report")
             val result = future.join(SEND_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             failed = !result.isSuccess
+            Logging.debug("Done OneSignal crash report, failed: $failed")
         }
     }
 }
