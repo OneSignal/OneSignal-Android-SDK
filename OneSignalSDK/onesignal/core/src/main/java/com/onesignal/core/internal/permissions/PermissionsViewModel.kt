@@ -149,21 +149,20 @@ class PermissionsViewModel : ViewModel() {
         granted: Boolean,
         showSettings: Boolean,
     ) {
-        if (permissionRequestType == null) {
+        permissionRequestType?.let { type ->
+            val callback =
+                requestPermissionService.getCallback(type)
+                    ?: throw RuntimeException("Missing handler for permissionRequestType: $type")
+
+            if (granted) {
+                callback.onAccept()
+            } else {
+                callback.onReject(showSettings)
+            }
+        } ?: run {
             // There is a small chance ViewModel was never fully initialized (e.g. process death or OneSignal init hanging while prompting).
             // We can't safely resolve a callback in this state, so just finish the flow.
             _shouldFinish.value = true
-            return
-        }
-
-        val callback =
-            requestPermissionService.getCallback(permissionRequestType!!)
-                ?: throw RuntimeException("Missing handler for permissionRequestType: $permissionRequestType")
-
-        if (granted) {
-            callback.onAccept()
-        } else {
-            callback.onReject(showSettings)
         }
     }
 

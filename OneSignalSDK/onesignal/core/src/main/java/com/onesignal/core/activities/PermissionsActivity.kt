@@ -42,11 +42,18 @@ class PermissionsActivity : ComponentActivity() {
             }
         }
 
-        // Always handle bundle params even on config changes
-        // If app process is killed before a permission result is captured, the new view model may not
-        // be initialized if we skip handleBundleParams
+        // Handle bundle params if ViewModel is not already initialized
+        // This covers:
+        // 1. Process death: savedInstanceState == null, ViewModel is recreated, needs initialization
+        // 2. Config change: savedInstanceState != null, ViewModel survives, but we check if already initialized
+        // 3. Race condition: onRequestPermissionsResult might arrive before initialization completes
+        //    (handled by null check in executeCallback)
         lifecycleScope.launch {
-            handleBundleParams(intent.extras)
+            // Only initialize if ViewModel is not already initialized
+            // On config changes, ViewModel survives with its state, so we skip re-initialization
+            if (viewModel.permissionRequestType == null) {
+                handleBundleParams(intent.extras)
+            }
         }
     }
 
@@ -83,19 +90,22 @@ class PermissionsActivity : ComponentActivity() {
             return
         }
 
-        reregisterCallbackHandlers(extras)
+        extras?.let { bundle ->
+            reregisterCallbackHandlers(bundle)
+            val permissionType = bundle.getString(INTENT_EXTRA_PERMISSION_TYPE)
+            val androidPermissionString = bundle.getString(INTENT_EXTRA_ANDROID_PERMISSION_STRING)
 
-        val permissionType = extras!!.getString(INTENT_EXTRA_PERMISSION_TYPE)
-        val androidPermissionString = extras.getString(INTENT_EXTRA_ANDROID_PERMISSION_STRING)
+            // Initialize OneSignal and ViewModel (handles initialization in one place)
+            if (!viewModel.initialize(this, permissionType, androidPermissionString)) {
+                finishActivity()
+                return@let
+            }
 
-        // Initialize OneSignal and ViewModel (handles initialization in one place)
-        if (!viewModel.initialize(this, permissionType, androidPermissionString)) {
-            finishActivity()
-            return
+            // Request permission - this is Activity-layer logic
+            androidPermissionString?.let { permission ->
+                requestPermission(permission)
+            }
         }
-
-        // Request permission - this is Activity-layer logic
-        requestPermission(androidPermissionString!!)
     }
 
     // Required if the app was killed while this prompt was showing

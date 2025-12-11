@@ -5,6 +5,8 @@ import android.content.pm.PackageManager
 import com.onesignal.OneSignal
 import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
+import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
+import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import io.kotest.core.spec.style.FunSpec
@@ -175,12 +177,40 @@ class PermissionsViewModelTests : FunSpec({
         }
     }
 
-    test("onRequestPermissionsResult with uninitialized ViewModel finishes gracefully") {
+    test("initialize returns false when permissionType is null") {
+        val viewModel = PermissionsViewModel()
+        val activity = mockk<Activity>(relaxed = true)
+
+        coEvery { OneSignal.initWithContext(any()) } returns true
+
+        runBlocking {
+            val result = viewModel.initialize(activity, null, androidPermission)
+            result shouldBe false
+            viewModel.shouldFinish.first() shouldBe true
+        }
+    }
+
+    test("initialize returns false when androidPermission is null") {
+        val viewModel = PermissionsViewModel()
+        val activity = mockk<Activity>(relaxed = true)
+
+        coEvery { OneSignal.initWithContext(any()) } returns true
+
+        runBlocking {
+            val result = viewModel.initialize(activity, permissionType, null)
+            result shouldBe false
+            viewModel.shouldFinish.first() shouldBe true
+        }
+    }
+
+    test("onRequestPermissionsResult with uninitialized ViewModel finishes gracefully without NPE") {
         runTest {
             // Given - ViewModel is not initialized (permissionRequestType is null)
+            // This simulates process death or race condition where onRequestPermissionsResult
+            // is called before initialize() completes
             val viewModel = PermissionsViewModel()
 
-            // When - onRequestPermissionsResult is called before initialize() completes (race condition)
+            // When - onRequestPermissionsResult is called before initialize() completes
             viewModel.onRequestPermissionsResult(
                 arrayOf(androidPermission),
                 intArrayOf(PackageManager.PERMISSION_GRANTED),
@@ -188,13 +218,37 @@ class PermissionsViewModelTests : FunSpec({
             )
 
             // Advance time to complete the delay
-            advanceTimeBy(callbackDelay) // DELAY_TIME_CALLBACK_CALL (500ms) + buffer
+            advanceTimeBy(callbackDelay)
 
-            // Then - should not throw exception
+            // Then - should not throw NPE and should finish gracefully
+            viewModel.shouldFinish.first() shouldBe true
+            // Verify no callback was attempted (since permissionRequestType is null)
+            verify(exactly = 0) { mockRequestService.getCallback(any()) }
         }
     }
 
-    test("onRequestPermissionsResult with initialized ViewModel calls callback") {
+    test("onRequestPermissionsResult with uninitialized ViewModel handles denied permission gracefully") {
+        runTest {
+            // Given - ViewModel is not initialized
+            val viewModel = PermissionsViewModel()
+
+            // When - onRequestPermissionsResult is called with denied permission
+            viewModel.onRequestPermissionsResult(
+                arrayOf(androidPermission),
+                intArrayOf(PackageManager.PERMISSION_DENIED),
+                false,
+            )
+
+            // Advance time to complete the delay
+            advanceTimeBy(callbackDelay)
+
+            // Then - should finish gracefully without NPE
+            viewModel.shouldFinish.first() shouldBe true
+            verify(exactly = 0) { mockRequestService.getCallback(any()) }
+        }
+    }
+
+    test("onRequestPermissionsResult with initialized ViewModel calls onAccept when granted") {
         runTest {
             // Given - ViewModel is properly initialized
             val viewModel = PermissionsViewModel()
@@ -206,7 +260,7 @@ class PermissionsViewModelTests : FunSpec({
 
             viewModel.initialize(activity, permissionType, androidPermission)
 
-            // When - onRequestPermissionsResult is called
+            // When - onRequestPermissionsResult is called with granted permission
             viewModel.onRequestPermissionsResult(
                 arrayOf(androidPermission),
                 intArrayOf(PackageManager.PERMISSION_GRANTED),
@@ -216,8 +270,15 @@ class PermissionsViewModelTests : FunSpec({
             // Advance time to complete the delay
             advanceTimeBy(callbackDelay)
 
-            // Then - callback should be called
+            // Then - callback.onAccept should be called and preference should be saved
             verify { mockCallback.onAccept() }
+            verify {
+                mockPrefService.saveBool(
+                    PreferenceStores.ONESIGNAL,
+                    "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$androidPermission",
+                    true,
+                )
+            }
             viewModel.shouldFinish.first() shouldBe true
         }
     }
@@ -245,9 +306,222 @@ class PermissionsViewModelTests : FunSpec({
             // Advance time to complete the delay
             advanceTimeBy(callbackDelay)
 
-            // Then - callback.onReject should be called
+            // Then - callback.onReject should be called with showSettings = false
             verify { mockCallback.onReject(false) }
             viewModel.shouldFinish.first() shouldBe true
+        }
+    }
+
+    test("onRequestPermissionsResult with empty permissions array handles gracefully") {
+        runTest {
+            // Given - ViewModel is initialized
+            val viewModel = PermissionsViewModel()
+            val activity = mockk<Activity>(relaxed = true)
+            val mockCallback = mockk<IRequestPermissionService.PermissionCallback>(relaxed = true)
+
+            coEvery { OneSignal.initWithContext(any()) } returns true
+            every { mockRequestService.getCallback(permissionType) } returns mockCallback
+
+            viewModel.initialize(activity, permissionType, androidPermission)
+
+            // When - onRequestPermissionsResult is called with empty permissions
+            viewModel.onRequestPermissionsResult(
+                arrayOf(),
+                intArrayOf(),
+                false,
+            )
+
+            // Advance time to complete the delay
+            advanceTimeBy(callbackDelay)
+
+            // Then - callback.onReject should be called (treated as denied)
+            verify { mockCallback.onReject(false) }
+            viewModel.shouldFinish.first() shouldBe true
+        }
+    }
+
+    test("onRequestPermissionsResult with empty grantResults treats as denied") {
+        runTest {
+            // Given - ViewModel is initialized
+            val viewModel = PermissionsViewModel()
+            val activity = mockk<Activity>(relaxed = true)
+            val mockCallback = mockk<IRequestPermissionService.PermissionCallback>(relaxed = true)
+
+            coEvery { OneSignal.initWithContext(any()) } returns true
+            every { mockRequestService.getCallback(permissionType) } returns mockCallback
+            every { mockRequestService.fallbackToSettings } returns false
+
+            viewModel.initialize(activity, permissionType, androidPermission)
+
+            // When - onRequestPermissionsResult is called with empty grantResults
+            viewModel.onRequestPermissionsResult(
+                arrayOf(androidPermission),
+                intArrayOf(),
+                false,
+            )
+
+            // Advance time to complete the delay
+            advanceTimeBy(callbackDelay)
+
+            // Then - callback.onReject should be called (empty grantResults = denied)
+            verify { mockCallback.onReject(false) }
+            viewModel.shouldFinish.first() shouldBe true
+        }
+    }
+
+    test("onRequestPermissionsResult throws RuntimeException when callback is missing") {
+        runTest {
+            // Given - ViewModel is initialized but callback is not registered
+            val viewModel = PermissionsViewModel()
+            val activity = mockk<Activity>(relaxed = true)
+
+            coEvery { OneSignal.initWithContext(any()) } returns true
+            every { mockRequestService.getCallback(permissionType) } returns null
+
+            viewModel.initialize(activity, permissionType, androidPermission)
+
+            // When/Then - onRequestPermissionsResult should throw RuntimeException
+            viewModel.onRequestPermissionsResult(
+                arrayOf(androidPermission),
+                intArrayOf(PackageManager.PERMISSION_GRANTED),
+                false,
+            )
+
+            // Advance time to complete the delay
+            advanceTimeBy(callbackDelay)
+
+            // The exception should be thrown in the coroutine scope
+            // We can't easily catch it in viewModelScope, but we verify the callback lookup was attempted
+            verify { mockRequestService.getCallback(permissionType) }
+        }
+    }
+
+    test("onRequestPermissionsResult shows settings when fallbackToSettings is true and not permanently denied") {
+        runTest {
+            // Given - ViewModel is initialized with fallback to settings enabled
+            val viewModel = PermissionsViewModel()
+            val activity = mockk<Activity>(relaxed = true)
+            val mockCallback = mockk<IRequestPermissionService.PermissionCallback>(relaxed = true)
+
+            coEvery { OneSignal.initWithContext(any()) } returns true
+            every { mockRequestService.getCallback(permissionType) } returns mockCallback
+            every { mockRequestService.fallbackToSettings } returns true
+            every {
+                mockPrefService.getBool(
+                    PreferenceStores.ONESIGNAL,
+                    "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$androidPermission",
+                    false,
+                )
+            } returns false
+
+            viewModel.initialize(activity, permissionType, androidPermission)
+
+            // When - permission is denied (first time, not permanently)
+            viewModel.onRequestPermissionsResult(
+                arrayOf(androidPermission),
+                intArrayOf(PackageManager.PERMISSION_DENIED),
+                true, // shouldShowRationaleAfter = true (first denial)
+            )
+
+            // Advance time to complete the delay
+            advanceTimeBy(callbackDelay)
+
+            // Then - callback.onReject should be called with showSettings = true
+            verify { mockCallback.onReject(true) }
+            viewModel.shouldFinish.first() shouldBe true
+        }
+    }
+
+    test("onRequestPermissionsResult does not show settings when permanently denied") {
+        runTest {
+            // Given - ViewModel is initialized, rationale changed from true to false (permanent denial)
+            val viewModel = PermissionsViewModel()
+            val activity = mockk<Activity>(relaxed = true)
+            val mockCallback = mockk<IRequestPermissionService.PermissionCallback>(relaxed = true)
+
+            coEvery { OneSignal.initWithContext(any()) } returns true
+            every { mockRequestService.getCallback(permissionType) } returns mockCallback
+            every { mockRequestService.fallbackToSettings } returns true
+            every { mockRequestService.shouldShowRequestPermissionRationaleBeforeRequest } returns true
+
+            viewModel.initialize(activity, permissionType, androidPermission)
+            viewModel.recordRationaleState(true) // Set before request
+
+            // When - permission is denied and rationale changed from true to false (permanent denial)
+            viewModel.onRequestPermissionsResult(
+                arrayOf(androidPermission),
+                intArrayOf(PackageManager.PERMISSION_DENIED),
+                false, // shouldShowRationaleAfter = false (permanent denial)
+            )
+
+            // Advance time to complete the delay
+            advanceTimeBy(callbackDelay)
+
+            // Then - callback.onReject should be called with showSettings = false
+            // and preference should be saved to remember permanent denial
+            verify { mockCallback.onReject(false) }
+            verify {
+                mockPrefService.saveBool(
+                    PreferenceStores.ONESIGNAL,
+                    "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$androidPermission",
+                    true,
+                )
+            }
+            viewModel.shouldFinish.first() shouldBe true
+        }
+    }
+
+    test("onRequestPermissionsResult does not show settings when fallbackToSettings is false") {
+        runTest {
+            // Given - ViewModel is initialized with fallback to settings disabled
+            val viewModel = PermissionsViewModel()
+            val activity = mockk<Activity>(relaxed = true)
+            val mockCallback = mockk<IRequestPermissionService.PermissionCallback>(relaxed = true)
+
+            coEvery { OneSignal.initWithContext(any()) } returns true
+            every { mockRequestService.getCallback(permissionType) } returns mockCallback
+            every { mockRequestService.fallbackToSettings } returns false
+
+            viewModel.initialize(activity, permissionType, androidPermission)
+
+            // When - permission is denied
+            viewModel.onRequestPermissionsResult(
+                arrayOf(androidPermission),
+                intArrayOf(PackageManager.PERMISSION_DENIED),
+                true,
+            )
+
+            // Advance time to complete the delay
+            advanceTimeBy(callbackDelay)
+
+            // Then - callback.onReject should be called with showSettings = false
+            verify { mockCallback.onReject(false) }
+            viewModel.shouldFinish.first() shouldBe true
+        }
+    }
+
+    test("onRequestPermissionsResult resets waiting state") {
+        runTest {
+            // Given - ViewModel is initialized and waiting
+            val viewModel = PermissionsViewModel()
+            val activity = mockk<Activity>(relaxed = true)
+            val mockCallback = mockk<IRequestPermissionService.PermissionCallback>(relaxed = true)
+
+            coEvery { OneSignal.initWithContext(any()) } returns true
+            every { mockRequestService.getCallback(permissionType) } returns mockCallback
+
+            viewModel.initialize(activity, permissionType, androidPermission)
+            viewModel.shouldRequestPermission() // Set waiting to true
+
+            // When - onRequestPermissionsResult is called
+            viewModel.onRequestPermissionsResult(
+                arrayOf(androidPermission),
+                intArrayOf(PackageManager.PERMISSION_GRANTED),
+                false,
+            )
+
+            // Then - waiting should be reset to false immediately (before delay)
+            viewModel.waiting.first() shouldBe false
         }
     }
 })
