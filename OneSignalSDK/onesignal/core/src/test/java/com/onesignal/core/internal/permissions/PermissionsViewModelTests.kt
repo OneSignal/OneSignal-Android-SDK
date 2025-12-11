@@ -9,6 +9,7 @@ import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
@@ -35,8 +36,10 @@ class PermissionsViewModelTests : FunSpec({
     val mockPrefService = mockk<IPreferencesService>(relaxed = true)
     val callbackDelay = (PermissionsViewModel.DELAY_TIME_CALLBACK_CALL + 50).toLong()
 
+    val testDispatcher = StandardTestDispatcher()
+
     beforeTest {
-        Dispatchers.setMain(StandardTestDispatcher())
+        Dispatchers.setMain(testDispatcher)
         mockkObject(OneSignal)
         every { OneSignal.getService<RequestPermissionService>() } returns mockRequestService
         every { OneSignal.getService<IPreferencesService>() } returns mockPrefService
@@ -370,35 +373,41 @@ class PermissionsViewModelTests : FunSpec({
     }
 
     test("onRequestPermissionsResult throws RuntimeException when callback is missing") {
-        runTest {
-            // Given - ViewModel is initialized but callback is not registered
-            val viewModel = PermissionsViewModel()
-            val activity = mockk<Activity>(relaxed = true)
+        // runTest will catch uncaught exceptions from coroutines
+        val exception = shouldThrow<RuntimeException> {
+            runTest(testDispatcher) {
+                // Given - ViewModel is initialized but callback is not registered
+                val viewModel = PermissionsViewModel()
+                val activity = mockk<Activity>(relaxed = true)
 
-            coEvery { OneSignal.initWithContext(any()) } returns true
-            every { mockRequestService.getCallback(permissionType) } returns null
+                coEvery { OneSignal.initWithContext(any()) } returns true
+                every { mockRequestService.getCallback(permissionType) } returns null
 
-            viewModel.initialize(activity, permissionType, androidPermission)
+                viewModel.initialize(activity, permissionType, androidPermission)
 
-            // When/Then - onRequestPermissionsResult should throw RuntimeException
-            viewModel.onRequestPermissionsResult(
-                arrayOf(androidPermission),
-                intArrayOf(PackageManager.PERMISSION_GRANTED),
-                false,
-            )
+                // When - onRequestPermissionsResult is called
+                viewModel.onRequestPermissionsResult(
+                    arrayOf(androidPermission),
+                    intArrayOf(PackageManager.PERMISSION_GRANTED),
+                    false,
+                )
 
-            // Advance time to complete the delay
-            advanceTimeBy(callbackDelay)
-
-            // The exception should be thrown in the coroutine scope
-            // We can't easily catch it in viewModelScope, but we verify the callback lookup was attempted
-            verify { mockRequestService.getCallback(permissionType) }
+                // Then - advancing time should trigger the RuntimeException in the coroutine
+                // The exception will be thrown in viewModelScope and caught by runTest
+                advanceTimeBy(callbackDelay)
+            }
         }
+
+        exception.message shouldBe "Missing handler for permissionRequestType: $permissionType"
+
+        // Verify the callback lookup was attempted
+        verify { mockRequestService.getCallback(permissionType) }
     }
 
-    test("onRequestPermissionsResult shows settings when fallbackToSettings is true and not permanently denied") {
+    test("onRequestPermissionsResult shows settings when fallbackToSettings is true and preference indicates previous denial") {
         runTest {
             // Given - ViewModel is initialized with fallback to settings enabled
+            // and preference indicates user previously denied (so we should show settings)
             val viewModel = PermissionsViewModel()
             val activity = mockk<Activity>(relaxed = true)
             val mockCallback = mockk<IRequestPermissionService.PermissionCallback>(relaxed = true)
@@ -412,15 +421,15 @@ class PermissionsViewModelTests : FunSpec({
                     "${PreferenceOneSignalKeys.PREFS_OS_USER_RESOLVED_PERMISSION_PREFIX}$androidPermission",
                     false,
                 )
-            } returns false
+            } returns true // Preference indicates previous denial, so show settings
 
             viewModel.initialize(activity, permissionType, androidPermission)
 
-            // When - permission is denied (first time, not permanently)
+            // When - permission is denied again
             viewModel.onRequestPermissionsResult(
                 arrayOf(androidPermission),
                 intArrayOf(PackageManager.PERMISSION_DENIED),
-                true, // shouldShowRationaleAfter = true (first denial)
+                true, // shouldShowRationaleAfter = true
             )
 
             // Advance time to complete the delay
