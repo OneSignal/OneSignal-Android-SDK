@@ -42,12 +42,11 @@ class PermissionsActivity : ComponentActivity() {
             }
         }
 
-        // Only handle bundle params on first creation, not on config changes
-        // ViewModel retains state across config changes, so permission state survives rotation
-        if (savedInstanceState == null) {
-            lifecycleScope.launch {
-                handleBundleParams(intent.extras)
-            }
+        // Always handle bundle params even on config changes
+        // If app process is killed before a permission result is captured, the new view model may not
+        // be initialized if we skip handleBundleParams
+        lifecycleScope.launch {
+            handleBundleParams(intent.extras)
         }
     }
 
