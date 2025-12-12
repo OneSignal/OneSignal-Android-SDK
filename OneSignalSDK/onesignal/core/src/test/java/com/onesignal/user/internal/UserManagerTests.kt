@@ -3,6 +3,7 @@ package com.onesignal.user.internal
 import com.onesignal.common.TimeUtils
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.mocks.MockHelper
+import com.onesignal.user.internal.properties.PropertiesModel
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionList
 import io.kotest.core.spec.style.FunSpec
@@ -196,7 +197,7 @@ class UserManagerTests : FunSpec({
         verify(exactly = 1) { mockSubscriptionManager.removeSmsSubscription("+15558675309") }
     }
 
-    test("onFocus updates timezone") {
+    test("onFocus updates timezone when onesignalId exists in property model") {
         // Given
         val mockTimeZone = "Europe/Foo"
         mockkObject(TimeUtils)
@@ -222,6 +223,38 @@ class UserManagerTests : FunSpec({
 
             // Then
             propertiesModel.timezone shouldBe mockTimeZone
+        } finally {
+            // Clean up the mock
+            unmockkObject(TimeUtils)
+        }
+    }
+
+    test("onFocus does not update timezone when onesignalId is missing in property model") {
+        // Given
+        val mockTimeZone = "Europe/Foo"
+        mockkObject(TimeUtils)
+        every { TimeUtils.getTimeZoneId() } returns mockTimeZone
+
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        every { mockPropertiesModelStore.model.hasProperty(PropertiesModel::onesignalId.name) } returns false
+
+        val userManager =
+            UserManager(
+                mockk<ISubscriptionManager>(),
+                MockHelper.identityModelStore(),
+                mockPropertiesModelStore,
+                MockHelper.languageContext(),
+                MockHelper.applicationService(),
+            )
+
+        val propertiesModel = mockPropertiesModelStore.model
+
+        try {
+            // When
+            userManager.onFocus(firedOnSubscribe = false)
+
+            // Then
+            verify(exactly = 0) { propertiesModel.timezone = mockTimeZone }
         } finally {
             // Clean up the mock
             unmockkObject(TimeUtils)
