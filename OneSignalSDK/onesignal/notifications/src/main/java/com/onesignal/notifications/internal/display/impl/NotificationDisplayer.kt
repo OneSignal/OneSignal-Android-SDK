@@ -202,6 +202,8 @@ internal class NotificationDisplayer(
             var mNotification = mNotificationField[notificationBuilder] as Notification
             notificationJob.orgFlags = mNotification.flags
             notificationJob.orgSound = mNotification.sound
+            notificationJob.orgColor = mNotification.color
+
             notificationBuilder!!.extend(notificationJob.notification!!.notificationExtender!!)
             mNotification = mNotificationField[notificationBuilder] as Notification
             val mContentTextField =
@@ -214,6 +216,15 @@ internal class NotificationDisplayer(
             val mContentTitle = mContentTitleField[notificationBuilder] as CharSequence?
             notificationJob.overriddenBodyFromExtender = mContentText
             notificationJob.overriddenTitleFromExtender = mContentTitle
+
+            val mColor =
+                NotificationCompat.Builder::class.java.getDeclaredField("mColor")
+            mColor.isAccessible = true
+            val color = mColor[notificationBuilder] as Int?
+            if (color != notificationJob.orgColor) {
+                notificationJob.overriddenColor = color
+            }
+
             if (!notificationJob.isRestoring) {
                 notificationJob.overriddenFlags = mNotification.flags
                 notificationJob.overriddenSound = mNotification.sound
