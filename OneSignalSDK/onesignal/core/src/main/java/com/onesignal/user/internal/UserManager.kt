@@ -268,7 +268,10 @@ internal open class UserManager(
 
     override fun onFocus(firedOnSubscribe: Boolean) {
         // Detect any user properties updates that changed
-        _propertiesModel.timezone = TimeUtils.getTimeZoneId()
+        // Skip updating timezone when onesignalId is not set in the property model
+        if (_propertiesModel.hasProperty(PropertiesModel::onesignalId.name)) {
+            _propertiesModel.timezone = TimeUtils.getTimeZoneId()
+        }
     }
 
     override fun onUnfocused() { }
