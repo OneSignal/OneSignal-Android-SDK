@@ -23,6 +23,7 @@ import com.onesignal.core.internal.startup.StartupService
 import com.onesignal.debug.IDebugManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.DebugManager
+import com.onesignal.debug.internal.crash.OneSignalCrashHandler
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.location.ILocationManager
@@ -214,6 +215,11 @@ internal class OneSignalImp(
 
         // Give the logging singleton access to the application service to support visual logging.
         Logging.applicationService = applicationService
+
+        // Crash handler needs to be one of the first things we setup,
+        // otherwise we'll not report some crashes, resulting in a false sense
+        // of stability.
+        services.getService<OneSignalCrashHandler>()
     }
 
     private fun updateConfig() {
