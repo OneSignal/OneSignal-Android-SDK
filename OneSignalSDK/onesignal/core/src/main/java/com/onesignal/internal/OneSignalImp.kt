@@ -52,6 +52,9 @@ internal class OneSignalImp(
     @Volatile
     private var initState: InitState = InitState.NOT_STARTED
 
+    @Volatile
+    private var initFailureMessage: String? = null
+
     override val sdkVersion: String = OneSignalUtils.sdkVersion
 
     override val isInitialized: Boolean
@@ -279,7 +282,9 @@ internal class OneSignalImp(
         val startupService = bootstrapServices()
         val result = resolveAppId(appId, configModel, preferencesService)
         if (result.failed) {
-            Logging.warn("suspendInitInternal: no appId provided or found in legacy config.")
+            val message = "suspendInitInternal: no appId provided or found in local storage. Please pass a valid appId to initWithContext()."
+            initFailureMessage = message
+            Logging.warn(message)
             initState = InitState.FAILED
             notifyInitComplete()
             return false
@@ -360,6 +365,8 @@ internal class OneSignalImp(
      * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
      */
     private suspend fun waitUntilInitInternal(operationName: String? = null) {
+        val failureMessage = initFailureMessage ?: "Initialization failed. Cannot proceed."
+
         when (initState) {
             InitState.NOT_STARTED -> {
                 val message = if (operationName != null) {
@@ -395,12 +402,12 @@ internal class OneSignalImp(
 
                 // Re-check state after waiting - init might have failed during the wait
                 if (initState == InitState.FAILED) {
-                    throw IllegalStateException("Initialization failed. Cannot proceed.")
+                    throw IllegalStateException(failureMessage)
                 }
                 // initState is guaranteed to be SUCCESS here - consistent state
             }
             InitState.FAILED -> {
-                throw IllegalStateException("Initialization failed. Cannot proceed.")
+                throw IllegalStateException(failureMessage)
             }
             else -> {
                 // SUCCESS - already initialized, no need to wait

@@ -37,20 +37,6 @@ class SDKInitTests : FunSpec({
 
     beforeAny {
         Logging.logLevel = LogLevel.NONE
-
-        // Aggressive pre-test cleanup to avoid state leakage across tests
-        val context = getApplicationContext<Context>()
-        val prefs = context.getSharedPreferences("OneSignal", Context.MODE_PRIVATE)
-        prefs.edit()
-            .clear()
-            .commit()
-
-        val otherPrefs = context.getSharedPreferences("com.onesignal", Context.MODE_PRIVATE)
-        otherPrefs.edit()
-            .clear()
-            .commit()
-
-        Thread.sleep(100)
     }
 
     afterAny {
@@ -65,19 +51,27 @@ class SDKInitTests : FunSpec({
         otherPrefs.edit()
             .clear()
             .commit()
+    }
 
-        // Wait longer to ensure cleanup is complete
-        Thread.sleep(100)
+    test("accessor instances after initWithContext without appID shows the failure reason") {
+        // Given
+        val context = getApplicationContext<Context>()
+        val os = OneSignalImp()
 
-        // Clear any in-memory state by initializing and logging out a fresh instance
-        try {
-            val os = OneSignalImp()
-            os.initWithContext(context, "appId")
-            os.logout()
-            Thread.sleep(100)
-        } catch (ignored: Exception) {
-            // ignore cleanup exceptions
+        // When
+        os.initWithContext(context)
+
+        // Then
+        val ex = shouldThrow<IllegalStateException> {
+            os.user.onesignalId // Should trigger waitUntilInitInternal → throw failure message
         }
+        ex.message shouldBe "suspendInitInternal: no appId provided or found in local storage. Please pass a valid appId to initWithContext()."
+
+        // Calling initWithContext with an appID after the failure should not throw anymore
+        val result = os.initWithContext(context, "appID")
+        waitForInitialization(os)
+        result shouldBe true
+        os.isInitialized shouldBe true
     }
 
     test("OneSignal accessors throw before calling initWithContext") {
