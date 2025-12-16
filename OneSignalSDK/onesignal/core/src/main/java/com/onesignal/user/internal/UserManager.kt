@@ -2,7 +2,6 @@ package com.onesignal.user.internal
 
 import com.onesignal.common.IDManager
 import com.onesignal.common.OneSignalUtils
-import com.onesignal.common.TimeUtils
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
@@ -266,13 +265,7 @@ internal open class UserManager(
         }
     }
 
-    override fun onFocus(firedOnSubscribe: Boolean) {
-        // Detect any user properties updates that changed
-        // Skip updating timezone when onesignalId is not set in the property model
-        if (_propertiesModel.hasProperty(PropertiesModel::onesignalId.name)) {
-            _propertiesModel.timezone = TimeUtils.getTimeZoneId()
-        }
-    }
+    override fun onFocus(firedOnSubscribe: Boolean) { }
 
     override fun onUnfocused() { }
 }
