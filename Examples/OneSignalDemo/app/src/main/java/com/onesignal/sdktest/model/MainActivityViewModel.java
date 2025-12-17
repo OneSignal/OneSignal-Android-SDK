@@ -851,7 +851,7 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
 
         pauseInAppMessagesSwitch.setChecked(SharedPreferenceUtil.getCachedInAppMessagingPausedStatus(context));
         pauseInAppMessagesSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            OneSignal.getInAppMessages().setPaused(isChecked);
+//            OneSignal.getInAppMessages().setPaused(isChecked);
             SharedPreferenceUtil.cacheInAppMessagingPausedStatus(context, isChecked);
         });
     }

@@ -146,7 +146,7 @@ public class MainApplication extends MultiDexApplication {
             }
         });
 
-        OneSignal.getInAppMessages().setPaused(true);
+//        OneSignal.getInAppMessages().setPaused(true);
         OneSignal.getLocation().setShared(false);
 
         Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT);
