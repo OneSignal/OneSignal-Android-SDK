@@ -282,7 +282,7 @@ internal class OneSignalImp(
         val startupService = bootstrapServices()
         val result = resolveAppId(appId, configModel, preferencesService)
         if (result.failed) {
-            val message = "No OneSignal appId provided or found in local storage. Please pass a valid appId to initWithContext()."
+            val message = "suspendInitInternal: no appId provided or found in local storage. Please pass a valid appId to initWithContext()."
             val exception = IllegalStateException(message)
             // attach the real crash cause to the init failure exception that will be throw shortly after
             initFailureException?.addSuppressed(exception)

@@ -65,7 +65,11 @@ class SDKInitTests : FunSpec({
         val ex = shouldThrow<IllegalStateException> {
             os.user.onesignalId // Should trigger waitUntilInitInternal → throw failure message
         }
-        ex.message shouldBe "suspendInitInternal: no appId provided or found in local storage. Please pass a valid appId to initWithContext()."
+        // The main exception preserves the caller's stack trace
+        ex.message shouldBe "OneSignal initWithContext failed."
+        // The detailed failure reason is in the suppressed exception
+        ex.suppressed.size shouldBe 1
+        ex.suppressed[0].message shouldBe "suspendInitInternal: no appId provided or found in local storage. Please pass a valid appId to initWithContext()."
 
         // Calling initWithContext with an appID after the failure should not throw anymore
         val result = os.initWithContext(context, "appID")
