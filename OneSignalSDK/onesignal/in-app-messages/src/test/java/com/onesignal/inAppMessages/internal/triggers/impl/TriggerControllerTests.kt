@@ -1,7 +1,6 @@
 package com.onesignal.inAppMessages.internal.triggers.impl
 
 import com.onesignal.common.modeling.ModelChangedArgs
-import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.inAppMessages.internal.InAppMessage
@@ -1081,4 +1080,3 @@ class TriggerControllerTests : FunSpec({
         }
     }
 })
-
