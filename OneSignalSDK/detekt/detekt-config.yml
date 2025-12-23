@@ -89,7 +89,8 @@ comments:
     excludes: ['**/R.class', '**/BuildConfig.*']
 
   UndocumentedPublicFunction:
-    active: false
+    active: true
+  
   EndOfSentenceFormat:
     active: false
     endOfSentenceFormat: ([.?!][ \t\n\r\f<])|([.?!:]$)
