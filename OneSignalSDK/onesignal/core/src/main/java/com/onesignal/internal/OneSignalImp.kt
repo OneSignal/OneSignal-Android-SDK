@@ -52,6 +52,9 @@ internal class OneSignalImp(
     @Volatile
     private var initState: InitState = InitState.NOT_STARTED
 
+    // Save the exception pointing to the caller that triggered init, not the async worker thread.
+    private var initFailureException: Exception? = null
+
     override val sdkVersion: String = OneSignalUtils.sdkVersion
 
     override val isInitialized: Boolean
@@ -279,7 +282,11 @@ internal class OneSignalImp(
         val startupService = bootstrapServices()
         val result = resolveAppId(appId, configModel, preferencesService)
         if (result.failed) {
-            Logging.warn("suspendInitInternal: no appId provided or found in legacy config.")
+            val message = "suspendInitInternal: no appId provided or found in local storage. Please pass a valid appId to initWithContext()."
+            val exception = IllegalStateException(message)
+            // attach the real crash cause to the init failure exception that will be throw shortly after
+            initFailureException?.addSuppressed(exception)
+            Logging.warn(message)
             initState = InitState.FAILED
             notifyInitComplete()
             return false
@@ -395,12 +402,12 @@ internal class OneSignalImp(
 
                 // Re-check state after waiting - init might have failed during the wait
                 if (initState == InitState.FAILED) {
-                    throw IllegalStateException("Initialization failed. Cannot proceed.")
+                    throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")
                 }
                 // initState is guaranteed to be SUCCESS here - consistent state
             }
             InitState.FAILED -> {
-                throw IllegalStateException("Initialization failed. Cannot proceed.")
+                throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")
             }
             else -> {
                 // SUCCESS - already initialized, no need to wait
@@ -505,6 +512,9 @@ internal class OneSignalImp(
         appId: String?,
     ): Boolean {
         Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
+
+        // This ensures the stack trace points to the caller that triggered init, not the async worker thread.
+        initFailureException = IllegalStateException("OneSignal initWithContext failed.")
 
         // Use IO dispatcher for initialization to prevent ANRs and optimize for I/O operations
         return withContext(ioDispatcher) {
