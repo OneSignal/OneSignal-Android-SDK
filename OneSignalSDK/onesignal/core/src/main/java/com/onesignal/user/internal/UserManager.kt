@@ -260,8 +260,4 @@ internal open class UserManager(
             }
         }
     }
-
-    override fun onFocus(firedOnSubscribe: Boolean) { }
-
-    override fun onUnfocused() { }
 }

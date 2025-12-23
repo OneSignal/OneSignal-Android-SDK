@@ -26,7 +26,7 @@ class UserManagerTests : FunSpec({
         every { languageContext.language = capture(languageSlot) } answers { }
 
         val userManager =
-            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), languageContext, MockHelper.applicationService())
+            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), languageContext)
 
         // When
         userManager.setLanguage("new-language")
@@ -44,7 +44,7 @@ class UserManagerTests : FunSpec({
             }
 
         val userManager =
-            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.languageContext(), MockHelper.applicationService())
+            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.languageContext())
 
         // When
         val externalId = userManager.externalId
@@ -63,7 +63,7 @@ class UserManagerTests : FunSpec({
             }
 
         val userManager =
-            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.languageContext(), MockHelper.applicationService())
+            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.languageContext())
 
         // When
         val alias1 = userManager.aliases["my-alias-key1"]
@@ -102,7 +102,7 @@ class UserManagerTests : FunSpec({
             }
 
         val userManager =
-            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext(), MockHelper.applicationService())
+            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext())
 
         // When
         val tag1 = propertiesModelStore.model.tags["my-tag-key1"]
@@ -141,7 +141,7 @@ class UserManagerTests : FunSpec({
                 it.tags["my-tag-key1"] = "my-tag-value1"
             }
 
-        val userManager = UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext(), MockHelper.applicationService())
+        val userManager = UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext())
 
         // When
         val tagSnapshot1 = userManager.getTags()
@@ -174,7 +174,6 @@ class UserManagerTests : FunSpec({
                 MockHelper.identityModelStore(),
                 MockHelper.propertiesModelStore(),
                 MockHelper.languageContext(),
-                MockHelper.applicationService(),
             )
 
         // When
