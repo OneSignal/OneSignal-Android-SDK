@@ -86,10 +86,11 @@ complexity:
 comments:
   UndocumentedPublicClass:
     active: true
-    excludes: ['**/R.class', '**/BuildConfig.*']
+    excludes: ['**/R.class', '**/BuildConfig.*', '**/test/**', '**/androidTest/**', '**/testhelpers/**']
 
   UndocumentedPublicFunction:
     active: true
+    excludes: ['**/test/**', '**/androidTest/**', '**/testhelpers/**']
   
   EndOfSentenceFormat:
     active: false

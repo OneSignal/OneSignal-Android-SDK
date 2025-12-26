@@ -102,6 +102,7 @@
     <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _identityModelStore: IdentityModelStore</ID>
     <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _operationRepo: IOperationRepo</ID>
     <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _outcomeEventsController: IOutcomeEventsController</ID>
+    <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _propertiesModelStore: PropertiesModelStore</ID>
     <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _sessionService: ISessionService</ID>
     <ID>ConstructorParameterNaming:SessionManager.kt$SessionManager$private val _outcomeController: IOutcomeEventsController</ID>
     <ID>ConstructorParameterNaming:SessionService.kt$SessionService$private val _applicationService: IApplicationService</ID>
@@ -137,7 +138,6 @@
     <ID>ConstructorParameterNaming:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$private val _propertiesModelStore: PropertiesModelStore</ID>
     <ID>ConstructorParameterNaming:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$private val _userBackend: IUserBackendService</ID>
     <ID>ConstructorParameterNaming:UserBackendService.kt$UserBackendService$private val _httpClient: IHttpClient</ID>
-    <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _applicationService: IApplicationService</ID>
     <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _identityModelStore: IdentityModelStore</ID>
     <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _languageContext: ILanguageContext</ID>
     <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _propertiesModelStore: PropertiesModelStore</ID>
@@ -380,7 +380,7 @@
     <ID>TooManyFunctions:OutcomeEventsController.kt$OutcomeEventsController : IOutcomeEventsControllerIStartableServiceISessionLifecycleHandler</ID>
     <ID>TooManyFunctions:PreferencesService.kt$PreferencesService : IPreferencesServiceIStartableService</ID>
     <ID>TooManyFunctions:SubscriptionManager.kt$SubscriptionManager : ISubscriptionManagerIModelStoreChangeHandlerISessionLifecycleHandler</ID>
-    <ID>TooManyFunctions:UserManager.kt$UserManager : IUserManagerIApplicationLifecycleHandlerISingletonModelStoreChangeHandler</ID>
+    <ID>TooManyFunctions:UserManager.kt$UserManager : IUserManagerISingletonModelStoreChangeHandler</ID>
     <ID>UndocumentedPublicClass:AlertDialogPrepromptForAndroidSettings.kt$AlertDialogPrepromptForAndroidSettings$Callback</ID>
     <ID>UndocumentedPublicClass:AndroidUtils.kt$AndroidUtils</ID>
     <ID>UndocumentedPublicClass:AndroidUtils.kt$AndroidUtils$SchemaType</ID>
@@ -605,6 +605,6 @@
     <ID>UnusedPrivateMember:OperationRepo.kt$OperationRepo$private val _time: ITime</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'login'")</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'logout'")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Initialization failed. Cannot proceed.")</ID>
+    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")</ID>
   </CurrentIssues>
 </SmellBaseline>

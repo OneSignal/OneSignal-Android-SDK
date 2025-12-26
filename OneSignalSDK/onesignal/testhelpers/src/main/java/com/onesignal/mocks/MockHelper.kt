@@ -23,14 +23,14 @@ import java.util.UUID
  * Singleton which provides common mock services.
  */
 object MockHelper {
-    internal fun time(time: Long): ITime {
+    fun time(time: Long): ITime {
         val mockTime = mockk<ITime>()
         every { mockTime.currentTimeMillis } returns time
 
         return mockTime
     }
 
-    internal fun applicationService(): IApplicationService {
+    fun applicationService(): IApplicationService {
         val mockAppService = mockk<IApplicationService>()
 
         every { mockAppService.addApplicationLifecycleHandler(any()) } just Runs
@@ -41,7 +41,7 @@ object MockHelper {
 
     const val DEFAULT_APP_ID = "appId"
 
-    internal fun configModelStore(action: ((ConfigModel) -> Unit)? = null): ConfigModelStore {
+    fun configModelStore(action: ((ConfigModel) -> Unit)? = null): ConfigModelStore {
         val configModel = ConfigModel()
 
         configModel.opRepoExecutionInterval = 1
@@ -65,7 +65,7 @@ object MockHelper {
         return mockConfigStore
     }
 
-    internal fun identityModelStore(action: ((IdentityModel) -> Unit)? = null): IdentityModelStore {
+    fun identityModelStore(action: ((IdentityModel) -> Unit)? = null): IdentityModelStore {
         val identityModel = IdentityModel()
 
         identityModel.id = "-singleton"
@@ -82,7 +82,7 @@ object MockHelper {
         return mockIdentityStore
     }
 
-    internal fun propertiesModelStore(action: ((PropertiesModel) -> Unit)? = null): PropertiesModelStore {
+    fun propertiesModelStore(action: ((PropertiesModel) -> Unit)? = null): PropertiesModelStore {
         val propertiesModel = PropertiesModel()
 
         propertiesModel.id = "-singleton"
@@ -99,7 +99,7 @@ object MockHelper {
         return mockPropertiesStore
     }
 
-    internal fun sessionModelStore(action: ((SessionModel) -> Unit)? = null): SessionModelStore {
+    fun sessionModelStore(action: ((SessionModel) -> Unit)? = null): SessionModelStore {
         val sessionModel = SessionModel()
 
         if (action != null) {
@@ -113,7 +113,7 @@ object MockHelper {
         return mockSessionStore
     }
 
-    internal fun languageContext(language: String = "en"): ILanguageContext {
+    fun languageContext(language: String = "en"): ILanguageContext {
         val mockLanguageContext = mockk<ILanguageContext>()
 
         every { mockLanguageContext.language } returns language
@@ -121,7 +121,7 @@ object MockHelper {
         return mockLanguageContext
     }
 
-    internal fun deviceService(): IDeviceService {
+    fun deviceService(): IDeviceService {
         val deviceService = mockk<IDeviceService>()
         every { deviceService.deviceType } returns IDeviceService.DeviceType.Android
         return deviceService
