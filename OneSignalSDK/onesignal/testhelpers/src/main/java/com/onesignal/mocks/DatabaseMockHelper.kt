@@ -11,7 +11,7 @@ import io.mockk.spyk
  * Singleton which provides common mock services.
  */
 object DatabaseMockHelper {
-    internal fun databaseProvider(
+    fun databaseProvider(
         tableName: String,
         records: List<Map<String, Any>>? = null,
     ): Pair<IDatabaseProvider, IDatabase> {
@@ -32,7 +32,7 @@ object DatabaseMockHelper {
         return Pair(mockDatabaseProvider, mockOneSignalDatabase)
     }
 
-    internal fun cursor(records: List<Map<String, Any>>): ICursor {
+    fun cursor(records: List<Map<String, Any>>): ICursor {
         val mockCursor = mockk<ICursor>()
         var index = 0
         every { mockCursor.count } returns records.count()
