@@ -7,6 +7,8 @@ concurrency:
 on:
   pull_request:
     branches: ["main"]
+    paths-ignore:
+      - "Examples/**"
   schedule:
     - cron: "27 1 * * 0"
 
@@ -38,7 +40,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Add any setup steps before running the `github/codeql-action/init` action.
       # This includes steps like installing compilers or runtimes (`actions/setup-node`
@@ -53,6 +55,7 @@ jobs:
           dependency-caching: ${{ matrix.dependency-caching }}
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
+          config-file: ./.github/codeql/codeql-config.yml
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
