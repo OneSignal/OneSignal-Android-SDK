@@ -2,12 +2,9 @@ package com.onesignal.user.internal
 
 import com.onesignal.common.IDManager
 import com.onesignal.common.OneSignalUtils
-import com.onesignal.common.TimeUtils
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
-import com.onesignal.core.internal.application.IApplicationLifecycleHandler
-import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -29,8 +26,7 @@ internal open class UserManager(
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
     private val _languageContext: ILanguageContext,
-    private val _applicationService: IApplicationService,
-) : IUserManager, IApplicationLifecycleHandler, ISingletonModelStoreChangeHandler<IdentityModel> {
+) : IUserManager, ISingletonModelStoreChangeHandler<IdentityModel> {
     override val onesignalId: String
         get() = if (IDManager.isLocalId(_identityModel.onesignalId)) "" else _identityModel.onesignalId
 
@@ -59,7 +55,6 @@ internal open class UserManager(
     }
 
     init {
-        _applicationService.addApplicationLifecycleHandler(this)
         _identityModelStore.subscribe(this)
     }
 
@@ -265,11 +260,4 @@ internal open class UserManager(
             }
         }
     }
-
-    override fun onFocus(firedOnSubscribe: Boolean) {
-        // Detect any user properties updates that changed
-        _propertiesModel.timezone = TimeUtils.getTimeZoneId()
-    }
-
-    override fun onUnfocused() { }
 }
