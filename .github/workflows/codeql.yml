@@ -1,5 +1,9 @@
 name: "CodeQL"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:
     branches: ["main"]
@@ -30,6 +34,8 @@ jobs:
             build-mode: none
           - language: java-kotlin
             build-mode: none
+            dependency-caching: true
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -44,6 +50,7 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
+          dependency-caching: ${{ matrix.dependency-caching }}
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
 
