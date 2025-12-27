@@ -8,11 +8,50 @@ buildscript {
 import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
 import com.vanniktech.maven.publish.SonatypeHost
 
+// Apply Dokka plugin for Kotlin documentation (KDoc)
+// This is needed for generating javadoc/kdoc JARs for Kotlin projects
+if (project.plugins.hasPlugin('org.jetbrains.kotlin.android')) {
+    apply plugin: 'org.jetbrains.dokka'
+    
+    // Configure Dokka to generate Javadoc format (for compatibility with IDEs)
+    // Dokka 1.9.x uses a different API
+    afterEvaluate {
+        tasks.named('dokkaJavadoc') {
+            outputDirectory.set(file("$buildDir/dokka/javadoc"))
+            dokkaSourceSets {
+                configureEach {
+                    jvmTarget.set("1.8")
+                    // Include Android source sets
+                    sourceRoots.from(android.sourceSets.main.java.srcDirs)
+                    sourceRoots.from(android.sourceSets.main.kotlin.srcDirs)
+                }
+            }
+        }
+    }
+}
+
 mavenPublishing {
+    // Configure AndroidSingleVariantLibrary to publish the release variant
+    // Parameters:
+    //   1. "release" - the Android build variant to publish
+    //   2. true - include sources JAR (contains .java and .kt source files)
+    //   3. true - include javadoc/kdoc JAR (contains API documentation)
+    // The plugin will automatically use Dokka for Kotlin projects if available
     configure(new AndroidSingleVariantLibrary("release", true, true))
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
 
-    signAllPublications()
+    // Only sign publications if signing credentials are available
+    // This allows publishToMavenLocal to work without signing, while Maven Central publishing still signs
+    afterEvaluate {
+        // Check if signing is configured (either via properties or extension)
+        def hasSigningConfig = project.hasProperty('signing.keyId') || 
+                              project.hasProperty('signing.secretKeyRingFile') ||
+                              (project.extensions.findByName('signing') != null)
+        
+        if (hasSigningConfig) {
+            signAllPublications()
+        }
+    }
 
     coordinates(project.group, project.name, project.version)
 
