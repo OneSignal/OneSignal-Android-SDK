@@ -59,12 +59,12 @@ internal class TriggerController(
         }
 
         val operatorType = trigger.operatorType
+        // If trigger is type of NOT_EQUAL_TO, true if only there exists a trigger with the same key and different value.
+        // In that case, do not return early so it will evaluate later.
         val deviceValue =
             triggers[trigger.property]
-                ?: // If we don't have a local value for this trigger, can only be true in two cases;
-                // 1. If operator is Not Exists
-                // 2. Checking to make sure the key doesn't equal a specific value, other than null of course.
-                return if (operatorType == Trigger.OSTriggerOperator.NOT_EXISTS) true else operatorType == Trigger.OSTriggerOperator.NOT_EQUAL_TO && trigger.value != null
+                ?: // If we don't have a local value for this trigger, can only be true if operator is Not Exists
+                return operatorType == Trigger.OSTriggerOperator.NOT_EXISTS
 
         // We have local value at this point, we can evaluate existence checks
         if (operatorType == Trigger.OSTriggerOperator.EXISTS) {
