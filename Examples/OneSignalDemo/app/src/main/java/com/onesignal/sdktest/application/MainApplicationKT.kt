@@ -41,6 +41,7 @@ import com.onesignal.user.state.UserState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainApplicationKT : MultiDexApplication() {
@@ -80,6 +81,9 @@ class MainApplicationKT : MultiDexApplication() {
             OneSignal.Notifications.requestPermission(true)
 
             Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT)
+
+            delay(3000)
+            //throw RuntimeException("test crash 2025-11-04 18")
         }
     }
 

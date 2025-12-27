@@ -11,6 +11,7 @@ import com.onesignal.core.internal.backend.FCMParamsObject
 import com.onesignal.core.internal.backend.IParamsBackendService
 import com.onesignal.core.internal.backend.InfluenceParamsObject
 import com.onesignal.core.internal.backend.ParamsObject
+import com.onesignal.core.internal.backend.RemoteLoggingParamsObject
 import com.onesignal.core.internal.http.CacheKeys
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.http.impl.OptionalHeaders
@@ -57,6 +58,15 @@ internal class ParamsBackendService(
                 )
         }
 
+        // Process Remote Logging params
+        var remoteLoggingParams: RemoteLoggingParamsObject? = null
+        responseJson.expandJSONObject("remote_logging") {
+            remoteLoggingParams =
+                RemoteLoggingParamsObject(
+                    enable = it.safeBool("enable"),
+                )
+        }
+
         return ParamsObject(
             googleProjectNumber = responseJson.safeString("android_sender_id"),
             enterprise = responseJson.safeBool("enterp"),
@@ -75,6 +85,7 @@ internal class ParamsBackendService(
             opRepoExecutionInterval = responseJson.safeLong("oprepo_execution_interval"),
             influenceParams = influenceParams ?: InfluenceParamsObject(),
             fcmParams = fcmParams ?: FCMParamsObject(),
+            remoteLoggingParams = remoteLoggingParams ?: RemoteLoggingParamsObject(),
         )
     }
 
