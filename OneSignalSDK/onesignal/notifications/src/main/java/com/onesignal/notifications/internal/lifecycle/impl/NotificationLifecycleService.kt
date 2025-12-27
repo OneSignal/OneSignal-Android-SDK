@@ -1,6 +1,7 @@
 package com.onesignal.notifications.internal.lifecycle.impl
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.JSONUtils
@@ -282,6 +283,13 @@ internal class NotificationLifecycleService(
                 Logging.info("SDK not showing an Activity automatically due to it's settings.")
             }
         } catch (e: JSONException) {
+            Logging.error("Could not parse JSON to open notification activity.")
+            e.printStackTrace()
+        } catch (e: ActivityNotFoundException) {
+            Logging.error("No activity found to handle notification open intent.")
+            e.printStackTrace()
+        } catch (e: Exception) {
+            Logging.error("Could not open notification activity.")
             e.printStackTrace()
         }
     }
