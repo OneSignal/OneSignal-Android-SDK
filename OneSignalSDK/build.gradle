@@ -14,8 +14,8 @@ buildscript {
         huaweiAgconnectVersion = '1.9.1.304'
         huaweiHMSPushVersion = '6.3.0.304'
         huaweiHMSLocationVersion = '4.0.0.300'
-        kotlinVersion = '1.9.25'
-        dokkaVersion = '1.9.10' // Dokka version compatible with Kotlin 1.9.25
+        kotlinVersion = '2.2.0'
+        dokkaVersion = '1.9.10'
         coroutinesVersion = '1.7.3'
         kotestVersion = '5.8.0'
         ioMockVersion = '1.13.2'
