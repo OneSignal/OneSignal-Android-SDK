@@ -88,18 +88,8 @@ dependencies {
         }
     }
 
-    implementation platform("io.opentelemetry:opentelemetry-bom:1.55.0")
-
-    implementation('io.opentelemetry:opentelemetry-api')
-    implementation('io.opentelemetry:opentelemetry-sdk')
-
-    implementation('io.opentelemetry:opentelemetry-exporter-otlp') // includes okhttp
-    implementation('io.opentelemetry.semconv:opentelemetry-semconv:1.37.0')
-    implementation('io.opentelemetry.contrib:opentelemetry-disk-buffering:1.51.0-alpha')
-    // TODO: Make sure by adding Android OTel that it doesn't auto send stuff to us
-
-
-
+    // Otel module dependency
+    implementation(project(':OneSignal:otel'))
     testImplementation(project(':OneSignal:testhelpers'))
 
     testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")

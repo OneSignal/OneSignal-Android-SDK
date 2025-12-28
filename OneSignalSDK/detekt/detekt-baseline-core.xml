@@ -16,6 +16,11 @@
     <ID>ComplexMethod:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse</ID>
     <ID>ComplexMethod:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private suspend fun createSubscription( createOperation: CreateSubscriptionOperation, operations: List&lt;Operation&gt;, ): ExecutionResponse</ID>
     <ID>ComplexMethod:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$override suspend fun execute(operations: List&lt;Operation&gt;): ExecutionResponse</ID>
+    <ID>ConstructorParameterNaming:AndroidOtelPlatformProvider.kt$AndroidOtelPlatformProvider$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:AndroidOtelPlatformProvider.kt$AndroidOtelPlatformProvider$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:AndroidOtelPlatformProvider.kt$AndroidOtelPlatformProvider$private val _identityModelStore: IdentityModelStore</ID>
+    <ID>ConstructorParameterNaming:AndroidOtelPlatformProvider.kt$AndroidOtelPlatformProvider$private val _installIdService: IInstallIdService</ID>
+    <ID>ConstructorParameterNaming:AndroidOtelPlatformProvider.kt$AndroidOtelPlatformProvider$private val _time: ITime</ID>
     <ID>ConstructorParameterNaming:BackgroundManager.kt$BackgroundManager$private val _applicationService: IApplicationService</ID>
     <ID>ConstructorParameterNaming:BackgroundManager.kt$BackgroundManager$private val _backgroundServices: List&lt;(IBackgroundService)&gt;</ID>
     <ID>ConstructorParameterNaming:BackgroundManager.kt$BackgroundManager$private val _time: ITime</ID>
@@ -61,6 +66,11 @@
     <ID>ConstructorParameterNaming:NewRecordsState.kt$NewRecordsState$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:NewRecordsState.kt$NewRecordsState$private val _time: ITime</ID>
     <ID>ConstructorParameterNaming:OSDatabase.kt$OSDatabase$private val _outcomeTableProvider: OutcomeTableProvider</ID>
+    <ID>ConstructorParameterNaming:OneSignalCrashUploaderWrapper.kt$OneSignalCrashUploaderWrapper$private val _applicationService: IApplicationService</ID>
+    <ID>ConstructorParameterNaming:OneSignalCrashUploaderWrapper.kt$OneSignalCrashUploaderWrapper$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:OneSignalCrashUploaderWrapper.kt$OneSignalCrashUploaderWrapper$private val _identityModelStore: IdentityModelStore</ID>
+    <ID>ConstructorParameterNaming:OneSignalCrashUploaderWrapper.kt$OneSignalCrashUploaderWrapper$private val _installIdService: IInstallIdService</ID>
+    <ID>ConstructorParameterNaming:OneSignalCrashUploaderWrapper.kt$OneSignalCrashUploaderWrapper$private val _time: ITime</ID>
     <ID>ConstructorParameterNaming:OperationRepo.kt$OperationRepo$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:OperationRepo.kt$OperationRepo$private val _newRecordState: NewRecordsState</ID>
     <ID>ConstructorParameterNaming:OperationRepo.kt$OperationRepo$private val _operationModelStore: OperationModelStore</ID>
@@ -102,6 +112,7 @@
     <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _identityModelStore: IdentityModelStore</ID>
     <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _operationRepo: IOperationRepo</ID>
     <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _outcomeEventsController: IOutcomeEventsController</ID>
+    <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _propertiesModelStore: PropertiesModelStore</ID>
     <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _sessionService: ISessionService</ID>
     <ID>ConstructorParameterNaming:SessionManager.kt$SessionManager$private val _outcomeController: IOutcomeEventsController</ID>
     <ID>ConstructorParameterNaming:SessionService.kt$SessionService$private val _applicationService: IApplicationService</ID>
@@ -137,7 +148,6 @@
     <ID>ConstructorParameterNaming:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$private val _propertiesModelStore: PropertiesModelStore</ID>
     <ID>ConstructorParameterNaming:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$private val _userBackend: IUserBackendService</ID>
     <ID>ConstructorParameterNaming:UserBackendService.kt$UserBackendService$private val _httpClient: IHttpClient</ID>
-    <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _applicationService: IApplicationService</ID>
     <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _identityModelStore: IdentityModelStore</ID>
     <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _languageContext: ILanguageContext</ID>
     <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _propertiesModelStore: PropertiesModelStore</ID>
@@ -192,9 +202,6 @@
     <ID>LongMethod:TrackGooglePurchase.kt$TrackGooglePurchase$private fun sendPurchases( skusToAdd: ArrayList&lt;String&gt;, newPurchaseTokens: ArrayList&lt;String&gt;, )</ID>
     <ID>LongMethod:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$override suspend fun execute(operations: List&lt;Operation&gt;): ExecutionResponse</ID>
     <ID>LongParameterList:IDatabase.kt$IDatabase$( table: String, columns: Array&lt;String&gt;? = null, whereClause: String? = null, whereArgs: Array&lt;String&gt;? = null, groupBy: String? = null, having: String? = null, orderBy: String? = null, limit: String? = null, action: (ICursor) -&gt; Unit, )</ID>
-    <ID>LongParameterList:IOutcomeEventsBackendService.kt$IOutcomeEventsBackendService$( appId: String, userId: String, subscriptionId: String, deviceType: String, direct: Boolean?, event: OutcomeEvent, )</ID>
-    <ID>LongParameterList:IParamsBackendService.kt$ParamsObject$( var googleProjectNumber: String? = null, var enterprise: Boolean? = null, var useIdentityVerification: Boolean? = null, var notificationChannels: JSONArray? = null, var firebaseAnalytics: Boolean? = null, var restoreTTLFilter: Boolean? = null, var clearGroupOnSummaryClick: Boolean? = null, var receiveReceiptEnabled: Boolean? = null, var disableGMSMissingPrompt: Boolean? = null, var unsubscribeWhenNotificationsDisabled: Boolean? = null, var locationShared: Boolean? = null, var requiresUserPrivacyConsent: Boolean? = null, var opRepoExecutionInterval: Long? = null, var influenceParams: InfluenceParamsObject, var fcmParams: FCMParamsObject, )</ID>
-    <ID>LongParameterList:IUserBackendService.kt$IUserBackendService$( appId: String, aliasLabel: String, aliasValue: String, properties: PropertiesObject, refreshDeviceMetadata: Boolean, propertyiesDelta: PropertiesDeltasObject, )</ID>
     <ID>LongParameterList:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$( private val _identityOperationExecutor: IdentityOperationExecutor, private val _application: IApplicationService, private val _deviceService: IDeviceService, private val _userBackend: IUserBackendService, private val _identityModelStore: IdentityModelStore, private val _propertiesModelStore: PropertiesModelStore, private val _subscriptionsModelStore: SubscriptionModelStore, private val _configModelStore: ConfigModelStore, private val _languageContext: ILanguageContext, )</ID>
     <ID>LongParameterList:OutcomeEventsController.kt$OutcomeEventsController$( private val _session: ISessionService, private val _influenceManager: IInfluenceManager, private val _outcomeEventsCache: IOutcomeEventsRepository, private val _outcomeEventsPreferences: IOutcomeEventsPreferences, private val _outcomeEventsBackend: IOutcomeEventsBackendService, private val _configModelStore: ConfigModelStore, private val _identityModelStore: IdentityModelStore, private val _subscriptionManager: ISubscriptionManager, private val _deviceService: IDeviceService, private val _time: ITime, )</ID>
     <ID>LongParameterList:SubscriptionObject.kt$SubscriptionObject$( val id: String? = null, val type: SubscriptionObjectType? = null, val token: String? = null, val enabled: Boolean? = null, val notificationTypes: Int? = null, val sdk: String? = null, val deviceModel: String? = null, val deviceOS: String? = null, val rooted: Boolean? = null, val netType: Int? = null, val carrier: String? = null, val appVersion: String? = null, )</ID>
@@ -205,7 +212,6 @@
     <ID>MagicNumber:BackgroundManager.kt$BackgroundManager$5000</ID>
     <ID>MagicNumber:ChannelTracker.kt$ChannelTracker$1000L</ID>
     <ID>MagicNumber:ChannelTracker.kt$ChannelTracker$60</ID>
-    <ID>MagicNumber:CompletionAwaiter.kt$CompletionAwaiter$10</ID>
     <ID>MagicNumber:ConfigModelStoreListener.kt$ConfigModelStoreListener$1000</ID>
     <ID>MagicNumber:HttpClient.kt$HttpClient$1_000</ID>
     <ID>MagicNumber:HttpClient.kt$HttpClient$429</ID>
@@ -284,6 +290,7 @@
     <ID>ReturnCount:HttpClient.kt$HttpClient$private suspend fun makeRequest( url: String, method: String?, jsonBody: JSONObject?, timeout: Int, headers: OptionalHeaders?, ): HttpResponse</ID>
     <ID>ReturnCount:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation&gt;): ExecutionResponse</ID>
     <ID>ReturnCount:JSONUtils.kt$JSONUtils$fun compareJSONArrays( jsonArray1: JSONArray?, jsonArray2: JSONArray?, ): Boolean</ID>
+    <ID>ReturnCount:Logging.kt$Logging$private fun logToOtel( level: LogLevel, message: String, throwable: Throwable?, )</ID>
     <ID>ReturnCount:LoginUserFromSubscriptionOperationExecutor.kt$LoginUserFromSubscriptionOperationExecutor$private suspend fun loginUser(loginUserOp: LoginUserFromSubscriptionOperation): ExecutionResponse</ID>
     <ID>ReturnCount:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun loginUser( loginUserOp: LoginUserOperation, operations: List&lt;Operation&gt;, ): ExecutionResponse</ID>
     <ID>ReturnCount:Model.kt$Model$protected fun getOptBigDecimalProperty( name: String, create: (() -&gt; BigDecimal?)? = null, ): BigDecimal?</ID>
@@ -316,22 +323,25 @@
     <ID>SwallowedException:DeviceService.kt$DeviceService$e: ClassNotFoundException</ID>
     <ID>SwallowedException:DeviceService.kt$DeviceService$e: PackageManager.NameNotFoundException</ID>
     <ID>SwallowedException:JSONUtils.kt$JSONUtils$t: Throwable</ID>
-    <ID>SwallowedException:OneSignalImp.kt$OneSignalImp$e: TimeoutCancellationException</ID>
     <ID>SwallowedException:PermissionsActivity.kt$PermissionsActivity$e: ClassNotFoundException</ID>
     <ID>SwallowedException:PreferencesService.kt$PreferencesService$ex: Exception</ID>
+    <ID>SwallowedException:SyncJobService.kt$SyncJobService$e: Exception</ID>
     <ID>SwallowedException:TrackGooglePurchase.kt$TrackGooglePurchase.Companion$t: Throwable</ID>
-    <ID>ThrowsCount:OneSignalImp.kt$OneSignalImp$private suspend fun suspendUntilInit()</ID>
+    <ID>ThrowsCount:OneSignalImp.kt$OneSignalImp$private suspend fun waitUntilInitInternal(operationName: String? = null)</ID>
     <ID>TooGenericExceptionCaught:AndroidUtils.kt$AndroidUtils$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:DeviceUtils.kt$DeviceUtils$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:HttpClient.kt$HttpClient$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:HttpClient.kt$HttpClient$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:JSONUtils.kt$JSONUtils$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:Logging.kt$Logging$e: Exception</ID>
     <ID>TooGenericExceptionCaught:Logging.kt$Logging$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:OneSignalDispatchers.kt$OneSignalDispatchers$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:OneSignalImp.kt$OneSignalImp$e: Exception</ID>
     <ID>TooGenericExceptionCaught:OperationRepo.kt$OperationRepo$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:PreferenceStoreFix.kt$PreferenceStoreFix$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:PreferencesService.kt$PreferencesService$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:PreferencesService.kt$PreferencesService$ex: Exception</ID>
+    <ID>TooGenericExceptionCaught:SyncJobService.kt$SyncJobService$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ThreadUtils.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:TrackGooglePurchase.kt$TrackGooglePurchase$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:TrackGooglePurchase.kt$TrackGooglePurchase$t: Throwable</ID>
@@ -349,7 +359,7 @@
     <ID>TooGenericExceptionThrown:OperationRepo.kt$OperationRepo$throw Exception("Both comparison keys can not be blank!")</ID>
     <ID>TooGenericExceptionThrown:OperationRepo.kt$OperationRepo$throw Exception("Could not find executor for operation ${startingOp.operation.name}")</ID>
     <ID>TooGenericExceptionThrown:PermissionsActivity.kt$PermissionsActivity$throw RuntimeException( "Could not find callback class for PermissionActivity: $className", )</ID>
-    <ID>TooGenericExceptionThrown:PermissionsViewModel.kt$PermissionsViewModel$throw RuntimeException("Missing handler for permissionRequestType: $permissionRequestType")</ID>
+    <ID>TooGenericExceptionThrown:PermissionsViewModel.kt$PermissionsViewModel$throw RuntimeException("Missing handler for permissionRequestType: $type")</ID>
     <ID>TooGenericExceptionThrown:PreferencesService.kt$PreferencesService$throw Exception("Store not found: $store")</ID>
     <ID>TooGenericExceptionThrown:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$throw Exception("Unrecognized operation(s)! Attempted operations:\n$operations")</ID>
     <ID>TooGenericExceptionThrown:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$throw Exception("Unrecognized operation: $startingOp")</ID>
@@ -374,12 +384,13 @@
     <ID>TooManyFunctions:Model.kt$Model : IEventNotifier</ID>
     <ID>TooManyFunctions:ModelStore.kt$ModelStore&lt;TModel&gt; : IEventNotifierIModelStoreIModelChangedHandler</ID>
     <ID>TooManyFunctions:OSDatabase.kt$OSDatabase : SQLiteOpenHelperIDatabase</ID>
+    <ID>TooManyFunctions:OneSignal.kt$OneSignal$OneSignal</ID>
     <ID>TooManyFunctions:OneSignalImp.kt$OneSignalImp : IOneSignalIServiceProvider</ID>
     <ID>TooManyFunctions:OperationRepo.kt$OperationRepo : IOperationRepoIStartableService</ID>
     <ID>TooManyFunctions:OutcomeEventsController.kt$OutcomeEventsController : IOutcomeEventsControllerIStartableServiceISessionLifecycleHandler</ID>
     <ID>TooManyFunctions:PreferencesService.kt$PreferencesService : IPreferencesServiceIStartableService</ID>
     <ID>TooManyFunctions:SubscriptionManager.kt$SubscriptionManager : ISubscriptionManagerIModelStoreChangeHandlerISessionLifecycleHandler</ID>
-    <ID>TooManyFunctions:UserManager.kt$UserManager : IUserManagerIApplicationLifecycleHandlerISingletonModelStoreChangeHandler</ID>
+    <ID>TooManyFunctions:UserManager.kt$UserManager : IUserManagerISingletonModelStoreChangeHandler</ID>
     <ID>UndocumentedPublicClass:AlertDialogPrepromptForAndroidSettings.kt$AlertDialogPrepromptForAndroidSettings$Callback</ID>
     <ID>UndocumentedPublicClass:AndroidUtils.kt$AndroidUtils</ID>
     <ID>UndocumentedPublicClass:AndroidUtils.kt$AndroidUtils$SchemaType</ID>
@@ -413,6 +424,7 @@
     <ID>UndocumentedPublicClass:IParamsBackendService.kt$IParamsBackendService</ID>
     <ID>UndocumentedPublicClass:IParamsBackendService.kt$InfluenceParamsObject</ID>
     <ID>UndocumentedPublicClass:IParamsBackendService.kt$ParamsObject</ID>
+    <ID>UndocumentedPublicClass:IParamsBackendService.kt$RemoteLoggingParamsObject</ID>
     <ID>UndocumentedPublicClass:IPreferencesService.kt$PreferenceOneSignalKeys</ID>
     <ID>UndocumentedPublicClass:IPreferencesService.kt$PreferencePlayerPurchasesKeys</ID>
     <ID>UndocumentedPublicClass:IPreferencesService.kt$PreferenceStores</ID>
@@ -477,11 +489,6 @@
     <ID>UnusedPrivateMember:OperationRepo.kt$OperationRepo$private val _time: ITime</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'login'")</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'logout'")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Initialization failed. Cannot proceed.")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before 'login'")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before 'logout'")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before use")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("initWithContext was not called or timed out")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("initWithContext was timed out after $MAX_TIMEOUT_TO_INIT ms")</ID>
+    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")</ID>
   </CurrentIssues>
 </SmellBaseline>

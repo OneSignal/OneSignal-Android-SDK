@@ -1,17 +1,10 @@
-package com.onesignal.debug.internal.logging.otel
+package com.onesignal.otel
 
-import android.os.Build
-import androidx.annotation.RequiresApi
-import com.onesignal.core.internal.config.ConfigModelStore
-import com.onesignal.core.internal.http.impl.HTTP_SDK_VERSION_HEADER_KEY
-import com.onesignal.core.internal.http.impl.HTTP_SDK_VERSION_HEADER_VALUE
-import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.debug.internal.logging.otel.attributes.OneSignalOtelFieldsPerEvent
-import com.onesignal.debug.internal.logging.otel.attributes.OneSignalOtelFieldsTopLevel
-import com.onesignal.debug.internal.logging.otel.config.OtelConfigCrashFile
-import com.onesignal.debug.internal.logging.otel.config.OtelConfigRemoteOneSignal
-import com.onesignal.debug.internal.logging.otel.config.OtelConfigShared
-import com.onesignal.debug.internal.logging.otel.crash.IOneSignalCrashConfigProvider
+import com.onesignal.otel.attributes.OtelFieldsPerEvent
+import com.onesignal.otel.attributes.OtelFieldsTopLevel
+import com.onesignal.otel.config.OtelConfigCrashFile
+import com.onesignal.otel.config.OtelConfigRemoteOneSignal
+import com.onesignal.otel.config.OtelConfigShared
 import io.opentelemetry.api.logs.LogRecordBuilder
 import io.opentelemetry.sdk.OpenTelemetrySdk
 import io.opentelemetry.sdk.common.CompletableResultCode
@@ -24,15 +17,33 @@ internal fun LogRecordBuilder.setAllAttributes(attributes: Map<String, String>):
     return this
 }
 
+/**
+ * Extension function to set all attributes from an Attributes object.
+ * Made public so it can be used from other modules (e.g., core module for logging).
+ */
+fun LogRecordBuilder.setAllAttributes(attributes: io.opentelemetry.api.common.Attributes): LogRecordBuilder {
+    attributes.forEach { key, value ->
+        val keyString = key.key
+        when (value) {
+            is String -> this.setAttribute(keyString, value)
+            is Long -> this.setAttribute(keyString, value)
+            is Double -> this.setAttribute(keyString, value)
+            is Boolean -> this.setAttribute(keyString, value)
+            else -> this.setAttribute(keyString, value.toString())
+        }
+    }
+    return this
+}
+
 internal abstract class OneSignalOpenTelemetryBase(
-    private val _osTopLevelFields: OneSignalOtelFieldsTopLevel,
-    private val _osPerEventFields: OneSignalOtelFieldsPerEvent,
-) : IOneSignalOpenTelemetry {
+    private val osTopLevelFields: OtelFieldsTopLevel,
+    private val osPerEventFields: OtelFieldsPerEvent,
+) : IOtelOpenTelemetry {
     private val lock = Any()
     private var sdkCachedValue: OpenTelemetrySdk? = null
 
     protected suspend fun getSdk(): OpenTelemetrySdk {
-        val attributes = _osTopLevelFields.getAttributes()
+        val attributes = osTopLevelFields.getAttributes()
         synchronized(lock) {
             var localSdk = sdkCachedValue
             if (localSdk != null) {
@@ -51,9 +62,13 @@ internal abstract class OneSignalOpenTelemetryBase(
         val sdkLoggerProvider = getSdk().sdkLoggerProvider
         return suspendCoroutine {
             it.resume(
-                sdkLoggerProvider.forceFlush().join(10, TimeUnit.SECONDS)
+                sdkLoggerProvider.forceFlush().join(FORCE_FLUSH_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             )
         }
+    }
+
+    companion object {
+        private const val FORCE_FLUSH_TIMEOUT_SECONDS = 10L
     }
 
     override suspend fun getLogger(): LogRecordBuilder =
@@ -62,29 +77,22 @@ internal abstract class OneSignalOpenTelemetryBase(
             .loggerBuilder("loggerBuilder")
             .build()
             .logRecordBuilder()
-            .setAllAttributes(_osPerEventFields.getAttributes())
+            .setAllAttributes(osPerEventFields.getAttributes())
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 internal class OneSignalOpenTelemetryRemote(
-    private val _configModelStore: ConfigModelStore,
-    _osTopLevelFields: OneSignalOtelFieldsTopLevel,
-    _osPerEventFields: OneSignalOtelFieldsPerEvent,
-) : OneSignalOpenTelemetryBase(_osTopLevelFields, _osPerEventFields),
-    IOneSignalOpenTelemetryRemote {
-    private val appId: String get() =
-        try {
-            _configModelStore.model.appId
-        } catch (_: NullPointerException) {
-            Logging.error("Auth missing for crash log reporting!")
-            ""
-        }
+    private val platformProvider: IOtelPlatformProvider,
+    osTopLevelFields: OtelFieldsTopLevel,
+    osPerEventFields: OtelFieldsPerEvent,
+) : OneSignalOpenTelemetryBase(osTopLevelFields, osPerEventFields),
+    IOtelOpenTelemetryRemote {
+
+    private val appId: String get() = platformProvider.appIdForHeaders
 
     val extraHttpHeaders: Map<String, String> by lazy {
         mapOf(
             "X-OneSignal-App-Id" to appId,
-            HTTP_SDK_VERSION_HEADER_KEY to HTTP_SDK_VERSION_HEADER_VALUE,
-            "x-honeycomb-team" to "", // TODO: REMOVE
+            "X-OneSignal-SDK-Version" to platformProvider.sdkBaseVersion,
         )
     }
 
@@ -104,11 +112,11 @@ internal class OneSignalOpenTelemetryRemote(
 }
 
 internal class OneSignalOpenTelemetryCrashLocal(
-    private val _crashPathProvider: IOneSignalCrashConfigProvider,
-    _osTopLevelFields: OneSignalOtelFieldsTopLevel,
-    _osPerEventFields: OneSignalOtelFieldsPerEvent,
-) : OneSignalOpenTelemetryBase(_osTopLevelFields, _osPerEventFields),
-    IOneSignalOpenTelemetryCrash {
+    private val platformProvider: IOtelPlatformProvider,
+    osTopLevelFields: OtelFieldsTopLevel,
+    osPerEventFields: OtelFieldsPerEvent,
+) : OneSignalOpenTelemetryBase(osTopLevelFields, osPerEventFields),
+    IOtelOpenTelemetryCrash {
     override fun getSdkInstance(attributes: Map<String, String>): OpenTelemetrySdk =
         OpenTelemetrySdk
             .builder()
@@ -117,8 +125,8 @@ internal class OneSignalOpenTelemetryCrashLocal(
                     OtelConfigShared.ResourceConfig.create(
                         attributes
                     ),
-                    _crashPathProvider.path,
-                    _crashPathProvider.minFileAgeForReadMillis,
+                    platformProvider.crashStoragePath,
+                    platformProvider.minFileAgeForReadMillis,
                 )
             ).build()
 }

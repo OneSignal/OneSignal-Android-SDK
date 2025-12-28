@@ -1,7 +1,5 @@
-package com.onesignal.debug.internal.logging.otel.config
+package com.onesignal.otel.config
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import io.opentelemetry.sdk.logs.LogLimits
 import io.opentelemetry.sdk.logs.LogRecordProcessor
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor
@@ -28,25 +26,33 @@ internal class OtelConfigShared {
     }
 
     object LogRecordProcessorConfig {
-        @RequiresApi(Build.VERSION_CODES.O)
+        private const val MAX_QUEUE_SIZE = 100
+        private const val MAX_EXPORT_BATCH_SIZE = 100
+        private const val EXPORTER_TIMEOUT_SECONDS = 30L
+        private const val SCHEDULE_DELAY_SECONDS = 1L
+
         fun batchLogRecordProcessor(logRecordExporter: LogRecordExporter): LogRecordProcessor =
             BatchLogRecordProcessor
                 .builder(logRecordExporter)
-                .setMaxQueueSize(100)
-                .setMaxExportBatchSize(100)
-                .setExporterTimeout(Duration.ofSeconds(30))
-                .setScheduleDelay(Duration.ofSeconds(1))
+                .setMaxQueueSize(MAX_QUEUE_SIZE)
+                .setMaxExportBatchSize(MAX_EXPORT_BATCH_SIZE)
+                .setExporterTimeout(Duration.ofSeconds(EXPORTER_TIMEOUT_SECONDS))
+                .setScheduleDelay(Duration.ofSeconds(SCHEDULE_DELAY_SECONDS))
                 .build()
     }
 
     object LogLimitsConfig {
+        private const val MAX_NUMBER_OF_ATTRIBUTES = 128
+
+        // We want a high value max length as the exception.stacktrace
+        // value can be lengthly.
+        private const val MAX_ATTRIBUTE_VALUE_LENGTH = 32000
+
         fun logLimits(): LogLimits =
             LogLimits
                 .builder()
-                .setMaxNumberOfAttributes(128)
-                // We want a high value max length as the exception.stacktrace
-                // value can be lengthly.
-                .setMaxAttributeValueLength(32000)
+                .setMaxNumberOfAttributes(MAX_NUMBER_OF_ATTRIBUTES)
+                .setMaxAttributeValueLength(MAX_ATTRIBUTE_VALUE_LENGTH)
                 .build()
     }
 }

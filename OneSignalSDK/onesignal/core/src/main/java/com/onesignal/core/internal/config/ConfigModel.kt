@@ -435,6 +435,9 @@ class FCMConfigModel(parentModel: Model, parentProperty: String) : Model(parentM
         }
 }
 
+/**
+ * Configuration related to OneSignal's remote logging.
+ */
 class RemoteLoggingConfigModel(
     parentModel: Model,
     parentProperty: String,

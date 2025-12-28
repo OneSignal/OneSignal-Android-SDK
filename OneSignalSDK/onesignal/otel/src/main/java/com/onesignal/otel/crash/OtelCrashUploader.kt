@@ -1,24 +1,38 @@
-package com.onesignal.debug.internal.logging.otel.crash
+package com.onesignal.otel.crash
 
-import com.onesignal.core.internal.config.ConfigModelStore
-import com.onesignal.core.internal.startup.IStartableService
-import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.debug.internal.logging.otel.IOneSignalOpenTelemetryRemote
-import com.onesignal.debug.internal.logging.otel.config.OtelConfigCrashFile
+import com.onesignal.otel.IOtelLogger
+import com.onesignal.otel.IOtelOpenTelemetryRemote
+import com.onesignal.otel.IOtelPlatformProvider
+import com.onesignal.otel.config.OtelConfigCrashFile
 import io.opentelemetry.sdk.logs.data.LogRecordData
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import java.util.concurrent.TimeUnit
 
 /**
  * Purpose: This reads a local crash report files created by OneSignal's
  *   crash handler and sends them to OneSignal on the app's next start.
+ *
+ * This is fully platform-agnostic and can be used in KMP projects.
+ * All platform-specific values are injected through IOtelPlatformProvider.
+ *
+ * Dependencies (all platform-agnostic):
+ * - IOtelOpenTelemetryRemote: For network export (created via OtelFactory)
+ * - IOtelPlatformProvider: Injects all platform values (Android/iOS)
+ * - IOtelLogger: Platform logging interface (Android/iOS)
+ *
+ * Usage:
+ * ```kotlin
+ * val uploader = OtelFactory.createCrashUploader(platformProvider, logger)
+ * coroutineScope.launch {
+ *     uploader.start()
+ * }
+ * ```
  */
-internal class OneSignalCrashUploader(
-    private val _openTelemetryRemote: IOneSignalOpenTelemetryRemote,
-    private val _crashPathProvider: IOneSignalCrashConfigProvider,
-    _configModelStore: ConfigModelStore,
-) : IStartableService {
+class OtelCrashUploader(
+    private val openTelemetryRemote: IOtelOpenTelemetryRemote,
+    private val platformProvider: IOtelPlatformProvider,
+    private val logger: IOtelLogger,
+) {
     companion object {
         const val SEND_TIMEOUT_SECONDS = 30L
     }
@@ -26,19 +40,18 @@ internal class OneSignalCrashUploader(
     private fun getReports() =
         OtelConfigCrashFile.SdkLoggerProviderConfig
             .getFileLogRecordStorage(
-                _crashPathProvider.path,
-                _crashPathProvider.minFileAgeForReadMillis
+                platformProvider.crashStoragePath,
+                platformProvider.minFileAgeForReadMillis
             ).iterator()
 
-    private val enable =
-        _configModelStore.model.remoteLoggingParams.enable ?: false
-
-    override fun start() {
-        Logging.info("OneSignalCrashUploader.enable: $enable")
-        if (!enable) {
+    suspend fun start() {
+        if (!platformProvider.remoteLoggingEnabled) {
+            logger.info("OtelCrashUploader: remote logging disabled")
             return
         }
-        runBlocking { internalStart() }
+
+        logger.info("OtelCrashUploader: starting")
+        internalStart()
     }
 
     /**
@@ -52,21 +65,21 @@ internal class OneSignalCrashUploader(
      */
     suspend fun internalStart() {
         sendCrashReports(getReports())
-        delay(_crashPathProvider.minFileAgeForReadMillis)
+        delay(platformProvider.minFileAgeForReadMillis)
         sendCrashReports(getReports())
     }
 
     private fun sendCrashReports(reports: Iterator<Collection<LogRecordData>>) {
-        val networkExporter = _openTelemetryRemote.logExporter
+        val networkExporter = openTelemetryRemote.logExporter
         var failed = false
         // NOTE: next() will delete the previous report, so we only want to send
         // another one if there isn't an issue making network calls.
         while (reports.hasNext() && !failed) {
             val future = networkExporter.export(reports.next())
-            Logging.debug("Sending OneSignal crash report")
+            logger.debug("Sending OneSignal crash report")
             val result = future.join(SEND_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             failed = !result.isSuccess
-            Logging.debug("Done OneSignal crash report, failed: $failed")
+            logger.debug("Done OneSignal crash report, failed: $failed")
         }
     }
 }

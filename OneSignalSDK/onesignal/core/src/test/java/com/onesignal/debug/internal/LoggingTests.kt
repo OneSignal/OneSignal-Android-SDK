@@ -99,9 +99,9 @@ class LoggingTests : FunSpec({
         listener =
             ILogListener {
                 calls += it.entry
-                Logging.removeListener(listener!!)
+                listener?.let { listener -> Logging.removeListener(listener) }
             }
-        Logging.addListener(listener!!)
+        Logging.addListener(listener)
 
         // When
         Logging.debug("test")

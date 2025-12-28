@@ -20,6 +20,7 @@ interface IParamsBackendService {
     ): ParamsObject
 }
 
+@Suppress("LongParameterList")
 class ParamsObject(
     var googleProjectNumber: String? = null,
     var enterprise: Boolean? = null,

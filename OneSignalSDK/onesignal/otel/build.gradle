@@ -1,0 +1,67 @@
+plugins {
+    id 'com.android.library'
+    id 'kotlin-android'
+    id 'com.diffplug.spotless'
+    id 'io.gitlab.arturbosch.detekt'
+}
+
+android {
+    namespace 'com.onesignal.otel'
+    compileSdkVersion rootProject.buildVersions.compileSdkVersion
+
+    defaultConfig {
+        minSdkVersion 26
+        consumerProguardFiles "consumer-rules.pro"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        original {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        release {
+            minifyEnabled false
+        }
+        unity {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+        freeCompilerArgs += ['-module-name', namespace]
+    }
+}
+
+ext {
+    projectName = "OneSignal SDK Otel"
+    projectDescription = "OneSignal Android SDK - OpenTelemetry Module"
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
+
+    implementation platform("io.opentelemetry:opentelemetry-bom:$rootProject.opentelemetryBomVersion")
+    implementation('io.opentelemetry:opentelemetry-api')
+    implementation('io.opentelemetry:opentelemetry-sdk')
+    implementation('io.opentelemetry:opentelemetry-exporter-otlp')
+    implementation("io.opentelemetry.semconv:opentelemetry-semconv:$rootProject.opentelemetrySemconvVersion")
+    implementation("io.opentelemetry.contrib:opentelemetry-disk-buffering:$rootProject.opentelemetryDiskBufferingVersion")
+
+    testImplementation(project(':OneSignal:testhelpers'))
+    testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
+    testImplementation("io.kotest:kotest-runner-junit5-jvm:$kotestVersion")
+    testImplementation("io.kotest:kotest-assertions-core:$kotestVersion")
+    testImplementation("io.mockk:mockk:$ioMockVersion")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
+}
+
+apply from: '../detekt.gradle'
+apply from: '../spotless.gradle'

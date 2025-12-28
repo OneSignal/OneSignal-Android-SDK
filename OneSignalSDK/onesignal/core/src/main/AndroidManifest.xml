@@ -1,4 +1,9 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Override otel module's minSdk requirement (26) since we have runtime checks -->
+    <!-- The otel module is only used on SDK 26+, so this is safe -->
+    <uses-sdk tools:overrideLibrary="com.onesignal.otel" />
 
     <!-- Required so the device can access the internet. -->
     <uses-permission android:name="android.permission.INTERNET" />

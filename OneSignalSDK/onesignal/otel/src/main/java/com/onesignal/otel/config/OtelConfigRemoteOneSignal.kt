@@ -1,18 +1,14 @@
-package com.onesignal.debug.internal.logging.otel.config
+package com.onesignal.otel.config
 
-import android.os.Build
-import androidx.annotation.RequiresApi
-import com.onesignal.debug.internal.logging.otel.config.OtelConfigRemoteOneSignal.SdkLoggerProviderConfig.BASE_URL
-import com.onesignal.debug.internal.logging.otel.config.OtelConfigShared.LogLimitsConfig
 import io.opentelemetry.exporter.otlp.http.logs.OtlpHttpLogRecordExporter
 import io.opentelemetry.sdk.logs.SdkLoggerProvider
 import io.opentelemetry.sdk.logs.export.LogRecordExporter
-import io.opentelemetry.sdk.resources.Resource
 import java.time.Duration
 
 internal class OtelConfigRemoteOneSignal {
     object LogRecordExporterConfig {
-        @RequiresApi(Build.VERSION_CODES.O)
+        private const val EXPORTER_TIMEOUT_SECONDS = 10L
+
         fun otlpHttpLogRecordExporter(
             headers: Map<String, String>,
             endpoint: String,
@@ -21,18 +17,17 @@ internal class OtelConfigRemoteOneSignal {
             headers.forEach { builder.addHeader(it.key, it.value) }
             builder
                 .setEndpoint(endpoint)
-                .setTimeout(Duration.ofSeconds(10))
+                .setTimeout(Duration.ofSeconds(EXPORTER_TIMEOUT_SECONDS))
             return builder.build()
         }
     }
 
     object SdkLoggerProviderConfig {
-        // TODO: Switch to https://sdklogs.onesignal.com:443/sdk/otel
+        // NOTE: Switch to https://sdklogs.onesignal.com:443/sdk/otel when ready
         const val BASE_URL = "https://api.honeycomb.io:443"
 
-        @RequiresApi(Build.VERSION_CODES.O)
         fun create(
-            resource: Resource,
+            resource: io.opentelemetry.sdk.resources.Resource,
             extraHttpHeaders: Map<String, String>,
         ): SdkLoggerProvider =
             SdkLoggerProvider
@@ -42,16 +37,15 @@ internal class OtelConfigRemoteOneSignal {
                     OtelConfigShared.LogRecordProcessorConfig.batchLogRecordProcessor(
                         HttpRecordBatchExporter.create(extraHttpHeaders)
                     )
-                ).setLogLimits(LogLimitsConfig::logLimits)
+                ).setLogLimits(OtelConfigShared.LogLimitsConfig::logLimits)
                 .build()
     }
 
     object HttpRecordBatchExporter {
-        @RequiresApi(Build.VERSION_CODES.O)
         fun create(extraHttpHeaders: Map<String, String>) =
             LogRecordExporterConfig.otlpHttpLogRecordExporter(
                 extraHttpHeaders,
-                "${BASE_URL}/v1/logs"
+                "${SdkLoggerProviderConfig.BASE_URL}/v1/logs"
             )
     }
 }

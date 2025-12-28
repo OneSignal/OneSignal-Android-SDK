@@ -1,17 +1,20 @@
-package com.onesignal.debug.internal.logging.otel.config
+package com.onesignal.otel.config
 
-import com.onesignal.debug.internal.logging.otel.config.OtelConfigShared.LogLimitsConfig
 import io.opentelemetry.contrib.disk.buffering.exporters.LogRecordToDiskExporter
 import io.opentelemetry.contrib.disk.buffering.storage.impl.FileLogRecordStorage
 import io.opentelemetry.contrib.disk.buffering.storage.impl.FileStorageConfiguration
 import io.opentelemetry.sdk.logs.SdkLoggerProvider
 import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor
-import io.opentelemetry.sdk.resources.Resource
 import java.io.File
 import kotlin.time.Duration.Companion.hours
 
 internal class OtelConfigCrashFile {
     internal object SdkLoggerProviderConfig {
+        // NOTE: Only use such as small maxFileAgeForWrite for
+        // crashes, as we want to send them as soon as possible
+        // without having to wait too long for buffers.
+        private const val MAX_FILE_AGE_FOR_WRITE_MILLIS = 2_000L
+
         fun getFileLogRecordStorage(
             rootDir: String,
             minFileAgeForReadMillis: Long
@@ -20,17 +23,14 @@ internal class OtelConfigCrashFile {
                 File(rootDir),
                 FileStorageConfiguration
                     .builder()
-                    // NOTE: Only use such as small maxFileAgeForWrite for
-                    // crashes, as we want to send them as soon as possible
-                    // without having to wait too long for buffers.
-                    .setMaxFileAgeForWriteMillis(2_000)
+                    .setMaxFileAgeForWriteMillis(MAX_FILE_AGE_FOR_WRITE_MILLIS)
                     .setMinFileAgeForReadMillis(minFileAgeForReadMillis)
                     .setMaxFileAgeForReadMillis(72.hours.inWholeMilliseconds)
                     .build()
             )
 
         fun create(
-            resource: Resource,
+            resource: io.opentelemetry.sdk.resources.Resource,
             rootDir: String,
             minFileAgeForReadMillis: Long,
         ): SdkLoggerProvider {
@@ -43,7 +43,7 @@ internal class OtelConfigCrashFile {
                 .setResource(resource)
                 .addLogRecordProcessor(
                     BatchLogRecordProcessor.builder(logToDiskExporter).build()
-                ).setLogLimits(LogLimitsConfig::logLimits)
+                ).setLogLimits(OtelConfigShared.LogLimitsConfig::logLimits)
                 .build()
         }
     }
