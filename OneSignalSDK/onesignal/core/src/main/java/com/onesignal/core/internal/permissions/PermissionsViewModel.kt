@@ -9,6 +9,7 @@ import com.onesignal.core.internal.permissions.impl.RequestPermissionService
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -149,14 +150,21 @@ class PermissionsViewModel : ViewModel() {
         granted: Boolean,
         showSettings: Boolean,
     ) {
-        val callback =
-            requestPermissionService.getCallback(permissionRequestType!!)
-                ?: throw RuntimeException("Missing handler for permissionRequestType: $permissionRequestType")
+        permissionRequestType?.let { type ->
+            val callback =
+                requestPermissionService.getCallback(type)
+                    ?: throw RuntimeException("Missing handler for permissionRequestType: $type")
 
-        if (granted) {
-            callback.onAccept()
-        } else {
-            callback.onReject(showSettings)
+            if (granted) {
+                callback.onAccept()
+            } else {
+                callback.onReject(showSettings)
+            }
+        } ?: run {
+            // There is a small chance ViewModel was never fully initialized (e.g. process death or OneSignal init hanging while prompting).
+            // We can't safely resolve a callback in this state, so just finish the flow.
+            Logging.error("PermissionsViewModel: Cannot resolve callback because permissionRequestType is null. Ending permission flow.")
+            _shouldFinish.value = true
         }
     }
 
