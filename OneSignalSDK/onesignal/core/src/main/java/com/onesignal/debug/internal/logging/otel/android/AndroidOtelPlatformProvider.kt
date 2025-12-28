@@ -18,25 +18,25 @@ import java.io.File
  * This injects all Android-specific values into the platform-agnostic otel module.
  */
 internal class AndroidOtelPlatformProvider(
-    private val _applicationService: IApplicationService,
-    private val _installIdService: IInstallIdService,
-    private val _configModelStore: ConfigModelStore,
-    private val _identityModelStore: IdentityModelStore,
-    private val _time: ITime,
+    private val applicationService: IApplicationService,
+    private val installIdService: IInstallIdService,
+    private val configModelStore: ConfigModelStore,
+    private val identityModelStore: IdentityModelStore,
+    private val time: ITime,
 ) : IOtelPlatformProvider {
     // Top-level attributes (static, calculated once)
     override suspend fun getInstallId(): String =
-        _installIdService.getId().toString()
+        installIdService.getId().toString()
 
     override val sdkBase: String = "android"
 
     override val sdkBaseVersion: String = OneSignalUtils.sdkVersion
 
     override val appPackageId: String
-        get() = _applicationService.appContext.packageName
+        get() = applicationService.appContext.packageName
 
     override val appVersion: String
-        get() = AndroidUtils.getAppVersion(_applicationService.appContext) ?: "unknown"
+        get() = AndroidUtils.getAppVersion(applicationService.appContext) ?: "unknown"
 
     override val deviceManufacturer: String = Build.MANUFACTURER
 
@@ -55,7 +55,7 @@ internal class AndroidOtelPlatformProvider(
     // Per-event attributes (dynamic, calculated per event)
     override val appId: String?
         get() = try {
-            _configModelStore.model.appId
+            configModelStore.model.appId
         } catch (_: NullPointerException) {
             Logging.warn("app_id not available to add to crash log")
             null
@@ -63,7 +63,7 @@ internal class AndroidOtelPlatformProvider(
 
     override val onesignalId: String?
         get() = try {
-            val onesignalId = _identityModelStore.model.onesignalId
+            val onesignalId = identityModelStore.model.onesignalId
             if (com.onesignal.common.IDManager.isLocalId(onesignalId)) {
                 null
             } else {
@@ -76,7 +76,7 @@ internal class AndroidOtelPlatformProvider(
 
     override val pushSubscriptionId: String?
         get() = try {
-            val pushSubscriptionId = _configModelStore.model.pushSubscriptionId
+            val pushSubscriptionId = configModelStore.model.pushSubscriptionId
             if (pushSubscriptionId == null ||
                 com.onesignal.common.IDManager.isLocalId(pushSubscriptionId)
             ) {
@@ -91,11 +91,11 @@ internal class AndroidOtelPlatformProvider(
 
     // https://opentelemetry.io/docs/specs/semconv/registry/attributes/android/
     override val appState: String
-        get() = if (_applicationService.isInForeground) "foreground" else "background"
+        get() = if (applicationService.isInForeground) "foreground" else "background"
 
     // https://opentelemetry.io/docs/specs/semconv/system/process-metrics/#metric-processuptime
     override val processUptime: Double
-        get() = _time.processUptimeMillis / 1_000.0
+        get() = time.processUptimeMillis / 1_000.0
 
     // https://opentelemetry.io/docs/specs/semconv/general/attributes/#general-thread-attributes
     override val currentThreadName: String
@@ -104,7 +104,7 @@ internal class AndroidOtelPlatformProvider(
     // Crash-specific configuration
     override val crashStoragePath: String
         get() {
-            val path = _applicationService.appContext.cacheDir.path + File.separator +
+            val path = applicationService.appContext.cacheDir.path + File.separator +
                 "onesignal" + File.separator +
                 "otel" + File.separator +
                 "crashes"
@@ -118,14 +118,14 @@ internal class AndroidOtelPlatformProvider(
     // Remote logging configuration
     override val remoteLoggingEnabled: Boolean
         get() = try {
-            _configModelStore.model.remoteLoggingParams.enable ?: true
+            configModelStore.model.remoteLoggingParams.enable ?: true
         } catch (_: NullPointerException) {
             false
         }
 
     override val appIdForHeaders: String
         get() = try {
-            _configModelStore.model.appId
+            configModelStore.model.appId
         } catch (_: NullPointerException) {
             Logging.error("Auth missing for crash log reporting!")
             ""

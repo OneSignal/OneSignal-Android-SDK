@@ -203,6 +203,7 @@ object Logging {
      * Logs to Otel remote telemetry if enabled.
      * This is non-blocking and runs asynchronously.
      */
+    @Suppress("TooGenericExceptionCaught", "ReturnCount")
     private fun logToOtel(
         level: LogLevel,
         message: String,

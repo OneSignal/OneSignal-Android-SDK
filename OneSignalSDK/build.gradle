@@ -29,9 +29,6 @@ buildscript {
         opentelemetryBomVersion = '1.55.0'
         opentelemetrySemconvVersion = '1.37.0'
         opentelemetryDiskBufferingVersion = '1.51.0-alpha'
-        ktlintVersion = '0.50.0' // Used by Spotless for Kotlin formatting (compatible with Kotlin 1.7.10)
-        spotlessVersion = '6.25.0'
-        tdunningJsonForTest = '1.0' // DO NOT upgrade for tests, using an old version so it matches AOSP
 
         sharedRepos = {
             google()

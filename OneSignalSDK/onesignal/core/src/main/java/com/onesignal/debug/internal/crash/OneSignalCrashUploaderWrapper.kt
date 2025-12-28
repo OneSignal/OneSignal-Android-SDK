@@ -34,20 +34,20 @@ import kotlinx.coroutines.runBlocking
  * ```
  */
 internal class OneSignalCrashUploaderWrapper(
-    private val _applicationService: IApplicationService,
-    private val _installIdService: IInstallIdService,
-    private val _configModelStore: ConfigModelStore,
-    private val _identityModelStore: IdentityModelStore,
-    private val _time: ITime,
+    private val applicationService: IApplicationService,
+    private val installIdService: IInstallIdService,
+    private val configModelStore: ConfigModelStore,
+    private val identityModelStore: IdentityModelStore,
+    private val time: ITime,
 ) : IStartableService {
     private val uploader: OtelCrashUploader by lazy {
         // Create Android-specific platform provider (injects Android values)
         val platformProvider = AndroidOtelPlatformProvider(
-            _applicationService,
-            _installIdService,
-            _configModelStore,
-            _identityModelStore,
-            _time
+            applicationService,
+            installIdService,
+            configModelStore,
+            identityModelStore,
+            time
         )
         // Create Android-specific logger (delegates to Android Logging)
         val logger = AndroidOtelLogger()

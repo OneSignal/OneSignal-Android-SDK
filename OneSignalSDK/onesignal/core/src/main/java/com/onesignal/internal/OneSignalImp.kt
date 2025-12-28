@@ -235,6 +235,7 @@ internal class OneSignalImp(
         initializeOtelLogging(applicationService)
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun initializeCrashHandlerEarly(applicationService: IApplicationService) {
         try {
             Logging.info("OneSignal: Initializing crash handler early...")
@@ -269,6 +270,7 @@ internal class OneSignalImp(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun initializeOtelLogging(applicationService: IApplicationService) {
         try {
             // Get dependencies needed for Otel logging
