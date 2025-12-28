@@ -6,6 +6,12 @@ package com.onesignal.otel
  */
 interface IOtelPlatformProvider {
     // Top-level attributes (static, calculated once)
+    /**
+     * Gets the installation ID for this device.
+     * This is an async operation as it may need to generate a new ID if one doesn't exist.
+     *
+     * @return The installation ID as a string
+     */
     suspend fun getInstallId(): String
     val sdkBase: String
     val sdkBaseVersion: String

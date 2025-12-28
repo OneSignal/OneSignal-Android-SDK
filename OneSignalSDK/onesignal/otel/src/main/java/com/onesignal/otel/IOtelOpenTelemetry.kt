@@ -8,7 +8,20 @@ import io.opentelemetry.sdk.logs.export.LogRecordExporter
  * Platform-agnostic OpenTelemetry interface.
  */
 interface IOtelOpenTelemetry {
+    /**
+     * Gets a LogRecordBuilder for creating log records.
+     * This is a suspend function as it may need to initialize the SDK on first call.
+     *
+     * @return A LogRecordBuilder instance for building log records
+     */
     suspend fun getLogger(): LogRecordBuilder
+
+    /**
+     * Forces a flush of all pending log records.
+     * This ensures all buffered logs are exported immediately.
+     *
+     * @return A CompletableResultCode indicating the flush operation result
+     */
     suspend fun forceFlush(): CompletableResultCode
 }
 
