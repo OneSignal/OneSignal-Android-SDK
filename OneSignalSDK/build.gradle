@@ -15,6 +15,7 @@ buildscript {
         huaweiHMSPushVersion = '6.3.0.304'
         huaweiHMSLocationVersion = '4.0.0.300'
         kotlinVersion = '1.9.25'
+        dokkaVersion = '1.9.10' // Dokka version compatible with Kotlin 1.9.25
         coroutinesVersion = '1.7.3'
         kotestVersion = '5.8.0'
         ioMockVersion = '1.13.2'
@@ -37,6 +38,7 @@ buildscript {
             "com.google.gms:google-services:$googleServicesGradlePluginVersion",
             "com.huawei.agconnect:agcp:$huaweiAgconnectVersion",
             "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion",
+            "org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion",
             "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:$detektVersion",
             "com.diffplug.spotless:spotless-plugin-gradle:$spotlessVersion",
             "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin:0.32.0"
