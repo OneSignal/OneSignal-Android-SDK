@@ -1,23 +1,23 @@
-<?xml version="1.0" ?>
+<?xml version='1.0' encoding='UTF-8'?>
 <SmellBaseline>
-  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>ComplexCondition:PropertiesModelStoreListener.kt$PropertiesModelStoreListener$path.startsWith(PropertiesModel::locationTimestamp.name) || path.startsWith(PropertiesModel::locationBackground.name) || path.startsWith(PropertiesModel::locationType.name) || path.startsWith(PropertiesModel::locationAccuracy.name)</ID>
     <ID>ComplexCondition:TrackGooglePurchase.kt$TrackGooglePurchase.Companion$args.size == 4 &amp;&amp; args[0] == Int::class.javaPrimitiveType &amp;&amp; args[1] == String::class.java &amp;&amp; args[2] == String::class.java &amp;&amp; args[3] == Bundle::class.java &amp;&amp; returnType == Bundle::class.java</ID>
     <ID>ComplexCondition:TrackGooglePurchase.kt$TrackGooglePurchase.Companion$args.size == 4 &amp;&amp; args[0] == Int::class.javaPrimitiveType &amp;&amp; args[1] == String::class.java &amp;&amp; args[2] == String::class.java &amp;&amp; args[3] == String::class.java</ID>
     <ID>ComplexMethod:ConfigModelStoreListener.kt$ConfigModelStoreListener$private fun fetchParams()</ID>
     <ID>ComplexMethod:HttpClient.kt$HttpClient$private suspend fun makeRequestIODispatcher( url: String, method: String?, jsonBody: JSONObject?, timeout: Int, headers: OptionalHeaders?, ): HttpResponse</ID>
-    <ID>ComplexMethod:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation&gt;): ExecutionResponse</ID>
-    <ID>ComplexMethod:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun createUser( createUserOperation: LoginUserOperation, operations: List&lt;Operation&gt;, ): ExecutionResponse</ID>
+    <ID>ComplexMethod:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
+    <ID>ComplexMethod:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun createUser( createUserOperation: LoginUserOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
     <ID>ComplexMethod:OSDatabase.kt$OSDatabase$@Synchronized private fun internalOnUpgrade( db: SQLiteDatabase, oldVersion: Int, newVersion: Int, )</ID>
     <ID>ComplexMethod:OperationModelStore.kt$OperationModelStore$override fun create(jsonObject: JSONObject?): Operation?</ID>
-    <ID>ComplexMethod:OperationRepo.kt$OperationRepo$internal suspend fun executeOperations(ops: List&lt;OperationQueueItem&gt;)</ID>
-    <ID>ComplexMethod:PreferencesService.kt$PreferencesService$private fun get( store: String, key: String, type: Class&lt;*&gt;, defValue: Any?, ): Any?</ID>
+    <ID>ComplexMethod:OperationRepo.kt$OperationRepo$internal suspend fun executeOperations(ops: List&lt;OperationQueueItem>)</ID>
+    <ID>ComplexMethod:PreferencesService.kt$PreferencesService$private fun get( store: String, key: String, type: Class&lt;*>, defValue: Any?, ): Any?</ID>
     <ID>ComplexMethod:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse</ID>
-    <ID>ComplexMethod:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private suspend fun createSubscription( createOperation: CreateSubscriptionOperation, operations: List&lt;Operation&gt;, ): ExecutionResponse</ID>
-    <ID>ComplexMethod:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$override suspend fun execute(operations: List&lt;Operation&gt;): ExecutionResponse</ID>
+    <ID>ComplexMethod:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private suspend fun createSubscription( createOperation: CreateSubscriptionOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
+    <ID>ComplexMethod:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
     <ID>ConstructorParameterNaming:BackgroundManager.kt$BackgroundManager$private val _applicationService: IApplicationService</ID>
-    <ID>ConstructorParameterNaming:BackgroundManager.kt$BackgroundManager$private val _backgroundServices: List&lt;(IBackgroundService)&gt;</ID>
+    <ID>ConstructorParameterNaming:BackgroundManager.kt$BackgroundManager$private val _backgroundServices: List&lt;(IBackgroundService)></ID>
     <ID>ConstructorParameterNaming:BackgroundManager.kt$BackgroundManager$private val _time: ITime</ID>
     <ID>ConstructorParameterNaming:ConfigModelStoreListener.kt$ConfigModelStoreListener$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:ConfigModelStoreListener.kt$ConfigModelStoreListener$private val _paramsBackendService: IParamsBackendService</ID>
@@ -102,13 +102,14 @@
     <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _identityModelStore: IdentityModelStore</ID>
     <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _operationRepo: IOperationRepo</ID>
     <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _outcomeEventsController: IOutcomeEventsController</ID>
+    <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _propertiesModelStore: PropertiesModelStore</ID>
     <ID>ConstructorParameterNaming:SessionListener.kt$SessionListener$private val _sessionService: ISessionService</ID>
     <ID>ConstructorParameterNaming:SessionManager.kt$SessionManager$private val _outcomeController: IOutcomeEventsController</ID>
     <ID>ConstructorParameterNaming:SessionService.kt$SessionService$private val _applicationService: IApplicationService</ID>
     <ID>ConstructorParameterNaming:SessionService.kt$SessionService$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:SessionService.kt$SessionService$private val _sessionModelStore: SessionModelStore</ID>
     <ID>ConstructorParameterNaming:SessionService.kt$SessionService$private val _time: ITime</ID>
-    <ID>ConstructorParameterNaming:SimpleModelStore.kt$SimpleModelStore$/** * Will be called whenever a new [TModel] needs to be instantiated. */ private val _create: () -&gt; TModel</ID>
+    <ID>ConstructorParameterNaming:SimpleModelStore.kt$SimpleModelStore$/** * Will be called whenever a new [TModel] needs to be instantiated. */ private val _create: () -> TModel</ID>
     <ID>ConstructorParameterNaming:SimpleModelStore.kt$SimpleModelStore$_prefs: IPreferencesService? = null</ID>
     <ID>ConstructorParameterNaming:SubscriptionBackendService.kt$SubscriptionBackendService$private val _httpClient: IHttpClient</ID>
     <ID>ConstructorParameterNaming:SubscriptionList.kt$SubscriptionList$private val _fallbackPushSub: IPushSubscription</ID>
@@ -137,7 +138,6 @@
     <ID>ConstructorParameterNaming:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$private val _propertiesModelStore: PropertiesModelStore</ID>
     <ID>ConstructorParameterNaming:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$private val _userBackend: IUserBackendService</ID>
     <ID>ConstructorParameterNaming:UserBackendService.kt$UserBackendService$private val _httpClient: IHttpClient</ID>
-    <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _applicationService: IApplicationService</ID>
     <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _identityModelStore: IdentityModelStore</ID>
     <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _languageContext: ILanguageContext</ID>
     <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _propertiesModelStore: PropertiesModelStore</ID>
@@ -166,32 +166,32 @@
     <ID>ForbiddenComment:PermissionsViewModel.kt$PermissionsViewModel.Companion$// TODO this will be removed once the handler is deleted</ID>
     <ID>ForbiddenComment:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$// TODO: whenever the end-user changes users, we need to add the read-your-write token here, currently no code to handle the re-fetch IAMs</ID>
     <ID>ForbiddenComment:TrackGooglePurchase.kt$TrackGooglePurchase$// TODO: Handle very large list. Test for continuationToken != null then call getPurchases again</ID>
-    <ID>FunctionOnlyReturningConstant:AndroidUtils.kt$AndroidUtils$@Keep fun opaqueHasClass(_class: Class&lt;*&gt;): Boolean</ID>
-    <ID>FunctionParameterNaming:AndroidUtils.kt$AndroidUtils$_class: Class&lt;*&gt;</ID>
+    <ID>FunctionOnlyReturningConstant:AndroidUtils.kt$AndroidUtils$@Keep fun opaqueHasClass(_class: Class&lt;*>): Boolean</ID>
+    <ID>FunctionParameterNaming:AndroidUtils.kt$AndroidUtils$_class: Class&lt;*></ID>
     <ID>FunctionParameterNaming:JSONUtils.kt$JSONUtils$`object`: Any</ID>
     <ID>InstanceOfCheckForException:HttpClient.kt$HttpClient$t is ConnectException</ID>
     <ID>InstanceOfCheckForException:HttpClient.kt$HttpClient$t is UnknownHostException</ID>
     <ID>LongMethod:ApplicationService.kt$ApplicationService$override suspend fun waitUntilSystemConditionsAvailable(): Boolean</ID>
     <ID>LongMethod:ConfigModelStoreListener.kt$ConfigModelStoreListener$private fun fetchParams()</ID>
     <ID>LongMethod:HttpClient.kt$HttpClient$private suspend fun makeRequestIODispatcher( url: String, method: String?, jsonBody: JSONObject?, timeout: Int, headers: OptionalHeaders?, ): HttpResponse</ID>
-    <ID>LongMethod:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation&gt;): ExecutionResponse</ID>
-    <ID>LongMethod:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun createUser( createUserOperation: LoginUserOperation, operations: List&lt;Operation&gt;, ): ExecutionResponse</ID>
-    <ID>LongMethod:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun loginUser( loginUserOp: LoginUserOperation, operations: List&lt;Operation&gt;, ): ExecutionResponse</ID>
-    <ID>LongMethod:OperationRepo.kt$OperationRepo$internal suspend fun executeOperations(ops: List&lt;OperationQueueItem&gt;)</ID>
-    <ID>LongMethod:OutcomeEventsController.kt$OutcomeEventsController$private suspend fun sendAndCreateOutcomeEvent( name: String, weight: Float, // Note: this is optional sessionTime: Long, influences: List&lt;Influence&gt;, ): OutcomeEvent?</ID>
-    <ID>LongMethod:OutcomeEventsController.kt$OutcomeEventsController$private suspend fun sendUniqueOutcomeEvent( name: String, sessionInfluences: List&lt;Influence&gt;, ): OutcomeEvent?</ID>
-    <ID>LongMethod:OutcomeEventsRepository.kt$OutcomeEventsRepository$override suspend fun getAllEventsToSend(): List&lt;OutcomeEventParams&gt;</ID>
-    <ID>LongMethod:OutcomeEventsRepository.kt$OutcomeEventsRepository$override suspend fun getNotCachedUniqueInfluencesForOutcome( name: String, influences: List&lt;Influence&gt;, ): List&lt;Influence&gt;</ID>
+    <ID>LongMethod:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
+    <ID>LongMethod:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun createUser( createUserOperation: LoginUserOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
+    <ID>LongMethod:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun loginUser( loginUserOp: LoginUserOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
+    <ID>LongMethod:OperationRepo.kt$OperationRepo$internal suspend fun executeOperations(ops: List&lt;OperationQueueItem>)</ID>
+    <ID>LongMethod:OutcomeEventsController.kt$OutcomeEventsController$private suspend fun sendAndCreateOutcomeEvent( name: String, weight: Float, // Note: this is optional sessionTime: Long, influences: List&lt;Influence>, ): OutcomeEvent?</ID>
+    <ID>LongMethod:OutcomeEventsController.kt$OutcomeEventsController$private suspend fun sendUniqueOutcomeEvent( name: String, sessionInfluences: List&lt;Influence>, ): OutcomeEvent?</ID>
+    <ID>LongMethod:OutcomeEventsRepository.kt$OutcomeEventsRepository$override suspend fun getAllEventsToSend(): List&lt;OutcomeEventParams></ID>
+    <ID>LongMethod:OutcomeEventsRepository.kt$OutcomeEventsRepository$override suspend fun getNotCachedUniqueInfluencesForOutcome( name: String, influences: List&lt;Influence>, ): List&lt;Influence></ID>
     <ID>LongMethod:OutcomeEventsRepository.kt$OutcomeEventsRepository$override suspend fun saveOutcomeEvent(eventParams: OutcomeEventParams)</ID>
     <ID>LongMethod:ParamsBackendService.kt$ParamsBackendService$override suspend fun fetchParams( appId: String, subscriptionId: String?, ): ParamsObject</ID>
     <ID>LongMethod:PropertyOperationHelper.kt$PropertyOperationHelper$fun createPropertiesFromOperation( operation: SetPropertyOperation, propertiesObject: PropertiesObject, ): PropertiesObject</ID>
     <ID>LongMethod:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse</ID>
-    <ID>LongMethod:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private suspend fun createSubscription( createOperation: CreateSubscriptionOperation, operations: List&lt;Operation&gt;, ): ExecutionResponse</ID>
-    <ID>LongMethod:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private suspend fun updateSubscription( startingOperation: UpdateSubscriptionOperation, operations: List&lt;Operation&gt;, ): ExecutionResponse</ID>
+    <ID>LongMethod:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private suspend fun createSubscription( createOperation: CreateSubscriptionOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
+    <ID>LongMethod:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private suspend fun updateSubscription( startingOperation: UpdateSubscriptionOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
     <ID>LongMethod:TrackGooglePurchase.kt$TrackGooglePurchase$private fun queryBoughtItems()</ID>
-    <ID>LongMethod:TrackGooglePurchase.kt$TrackGooglePurchase$private fun sendPurchases( skusToAdd: ArrayList&lt;String&gt;, newPurchaseTokens: ArrayList&lt;String&gt;, )</ID>
-    <ID>LongMethod:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$override suspend fun execute(operations: List&lt;Operation&gt;): ExecutionResponse</ID>
-    <ID>LongParameterList:IDatabase.kt$IDatabase$( table: String, columns: Array&lt;String&gt;? = null, whereClause: String? = null, whereArgs: Array&lt;String&gt;? = null, groupBy: String? = null, having: String? = null, orderBy: String? = null, limit: String? = null, action: (ICursor) -&gt; Unit, )</ID>
+    <ID>LongMethod:TrackGooglePurchase.kt$TrackGooglePurchase$private fun sendPurchases( skusToAdd: ArrayList&lt;String>, newPurchaseTokens: ArrayList&lt;String>, )</ID>
+    <ID>LongMethod:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
+    <ID>LongParameterList:IDatabase.kt$IDatabase$( table: String, columns: Array&lt;String>? = null, whereClause: String? = null, whereArgs: Array&lt;String>? = null, groupBy: String? = null, having: String? = null, orderBy: String? = null, limit: String? = null, action: (ICursor) -> Unit, )</ID>
     <ID>LongParameterList:IOutcomeEventsBackendService.kt$IOutcomeEventsBackendService$( appId: String, userId: String, subscriptionId: String, deviceType: String, direct: Boolean?, event: OutcomeEvent, )</ID>
     <ID>LongParameterList:IParamsBackendService.kt$ParamsObject$( var googleProjectNumber: String? = null, var enterprise: Boolean? = null, var useIdentityVerification: Boolean? = null, var notificationChannels: JSONArray? = null, var firebaseAnalytics: Boolean? = null, var restoreTTLFilter: Boolean? = null, var clearGroupOnSummaryClick: Boolean? = null, var receiveReceiptEnabled: Boolean? = null, var disableGMSMissingPrompt: Boolean? = null, var unsubscribeWhenNotificationsDisabled: Boolean? = null, var locationShared: Boolean? = null, var requiresUserPrivacyConsent: Boolean? = null, var opRepoExecutionInterval: Long? = null, var influenceParams: InfluenceParamsObject, var fcmParams: FCMParamsObject, )</ID>
     <ID>LongParameterList:IUserBackendService.kt$IUserBackendService$( appId: String, aliasLabel: String, aliasValue: String, properties: PropertiesObject, refreshDeviceMetadata: Boolean, propertyiesDelta: PropertiesDeltasObject, )</ID>
@@ -199,13 +199,12 @@
     <ID>LongParameterList:OutcomeEventsController.kt$OutcomeEventsController$( private val _session: ISessionService, private val _influenceManager: IInfluenceManager, private val _outcomeEventsCache: IOutcomeEventsRepository, private val _outcomeEventsPreferences: IOutcomeEventsPreferences, private val _outcomeEventsBackend: IOutcomeEventsBackendService, private val _configModelStore: ConfigModelStore, private val _identityModelStore: IdentityModelStore, private val _subscriptionManager: ISubscriptionManager, private val _deviceService: IDeviceService, private val _time: ITime, )</ID>
     <ID>LongParameterList:SubscriptionObject.kt$SubscriptionObject$( val id: String? = null, val type: SubscriptionObjectType? = null, val token: String? = null, val enabled: Boolean? = null, val notificationTypes: Int? = null, val sdk: String? = null, val deviceModel: String? = null, val deviceOS: String? = null, val rooted: Boolean? = null, val netType: Int? = null, val carrier: String? = null, val appVersion: String? = null, )</ID>
     <ID>LongParameterList:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$( private val _subscriptionBackend: ISubscriptionBackendService, private val _deviceService: IDeviceService, private val _applicationService: IApplicationService, private val _subscriptionModelStore: SubscriptionModelStore, private val _configModelStore: ConfigModelStore, private val _buildUserService: IRebuildUserService, private val _newRecordState: NewRecordsState, private val _consistencyManager: IConsistencyManager, )</ID>
-    <ID>LongParameterList:UserSwitcher.kt$UserSwitcher$( private val preferencesService: IPreferencesService, private val operationRepo: IOperationRepo, private val services: ServiceProvider, private val idManager: IDManager = IDManager, private val identityModelStore: IdentityModelStore, private val propertiesModelStore: PropertiesModelStore, private val subscriptionModelStore: SubscriptionModelStore, private val configModel: ConfigModel, private val oneSignalUtils: OneSignalUtils = OneSignalUtils, private val carrierName: String? = null, private val deviceOS: String? = null, private val androidUtils: AndroidUtils = AndroidUtils, private val appContextProvider: () -&gt; Context, )</ID>
-    <ID>LoopWithTooManyJumpStatements:ModelStore.kt$ModelStore$for (index in jsonArray.length() - 1 downTo 0) { val newModel = create(jsonArray.getJSONObject(index)) ?: continue /* * NOTE: Migration fix for bug introduced in 5.1.12 * The following check is intended for the operation model store. * When the call to this method moved out of the operation model store's initializer, * duplicate operations could be cached. * See https://github.com/OneSignal/OneSignal-Android-SDK/pull/2099 */ val hasExisting = models.any { it.id == newModel.id } if (hasExisting) { Logging.debug("ModelStore&lt;$name&gt;: load - operation.id: ${newModel.id} already exists in the store.") continue } models.add(0, newModel) // listen for changes to this model newModel.subscribe(this) }</ID>
+    <ID>LongParameterList:UserSwitcher.kt$UserSwitcher$( private val preferencesService: IPreferencesService, private val operationRepo: IOperationRepo, private val services: ServiceProvider, private val idManager: IDManager = IDManager, private val identityModelStore: IdentityModelStore, private val propertiesModelStore: PropertiesModelStore, private val subscriptionModelStore: SubscriptionModelStore, private val configModel: ConfigModel, private val oneSignalUtils: OneSignalUtils = OneSignalUtils, private val carrierName: String? = null, private val deviceOS: String? = null, private val androidUtils: AndroidUtils = AndroidUtils, private val appContextProvider: () -> Context, )</ID>
+    <ID>LoopWithTooManyJumpStatements:ModelStore.kt$ModelStore$for (index in jsonArray.length() - 1 downTo 0) { val newModel = create(jsonArray.getJSONObject(index)) ?: continue /* * NOTE: Migration fix for bug introduced in 5.1.12 * The following check is intended for the operation model store. * When the call to this method moved out of the operation model store's initializer, * duplicate operations could be cached. * See https://github.com/OneSignal/OneSignal-Android-SDK/pull/2099 */ val hasExisting = models.any { it.id == newModel.id } if (hasExisting) { Logging.debug("ModelStore&lt;$name>: load - operation.id: ${newModel.id} already exists in the store.") continue } models.add(0, newModel) // listen for changes to this model newModel.subscribe(this) }</ID>
     <ID>MagicNumber:ApplicationService.kt$ApplicationService$50</ID>
     <ID>MagicNumber:BackgroundManager.kt$BackgroundManager$5000</ID>
     <ID>MagicNumber:ChannelTracker.kt$ChannelTracker$1000L</ID>
     <ID>MagicNumber:ChannelTracker.kt$ChannelTracker$60</ID>
-    <ID>MagicNumber:CompletionAwaiter.kt$CompletionAwaiter$10</ID>
     <ID>MagicNumber:ConfigModelStoreListener.kt$ConfigModelStoreListener$1000</ID>
     <ID>MagicNumber:HttpClient.kt$HttpClient$1_000</ID>
     <ID>MagicNumber:HttpClient.kt$HttpClient$429</ID>
@@ -254,21 +253,21 @@
     <ID>MagicNumber:TimeUtils.kt$TimeUtils$1000</ID>
     <ID>MagicNumber:TrackGooglePurchase.kt$TrackGooglePurchase$1000000</ID>
     <ID>MagicNumber:TrackGooglePurchase.kt$TrackGooglePurchase$3</ID>
-    <ID>MagicNumber:TrackGooglePurchase.kt$TrackGooglePurchase.&lt;no name provided&gt;$99</ID>
+    <ID>MagicNumber:TrackGooglePurchase.kt$TrackGooglePurchase.&lt;no name provided>$99</ID>
     <ID>MagicNumber:TrackGooglePurchase.kt$TrackGooglePurchase.Companion$3</ID>
     <ID>MagicNumber:TrackGooglePurchase.kt$TrackGooglePurchase.Companion$4</ID>
     <ID>MagicNumber:TrackGooglePurchase.kt$TrackGooglePurchase.Companion$99</ID>
     <ID>MagicNumber:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$404</ID>
     <ID>MemberNameEqualsClassName:OneSignal.kt$OneSignal$private val oneSignal: IOneSignal by lazy { OneSignalImp() }</ID>
-    <ID>NestedBlockDepth:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation&gt;): ExecutionResponse</ID>
+    <ID>NestedBlockDepth:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
     <ID>NestedBlockDepth:InfluenceManager.kt$InfluenceManager$private fun attemptSessionUpgrade( entryAction: AppEntryAction, directId: String? = null, )</ID>
     <ID>NestedBlockDepth:JSONUtils.kt$JSONUtils$fun compareJSONArrays( jsonArray1: JSONArray?, jsonArray2: JSONArray?, ): Boolean</ID>
-    <ID>NestedBlockDepth:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun createUser( createUserOperation: LoginUserOperation, operations: List&lt;Operation&gt;, ): ExecutionResponse</ID>
+    <ID>NestedBlockDepth:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun createUser( createUserOperation: LoginUserOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
     <ID>NestedBlockDepth:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse</ID>
     <ID>NestedBlockDepth:ServiceRegistration.kt$ServiceRegistrationReflection$override fun resolve(provider: IServiceProvider): Any?</ID>
-    <ID>NestedBlockDepth:ServiceRegistration.kt$ServiceRegistrationReflection$private fun doesHaveAllParameters( constructor: Constructor&lt;*&gt;, provider: IServiceProvider, ): Boolean</ID>
-    <ID>NestedBlockDepth:TrackGooglePurchase.kt$TrackGooglePurchase$private fun sendPurchases( skusToAdd: ArrayList&lt;String&gt;, newPurchaseTokens: ArrayList&lt;String&gt;, )</ID>
-    <ID>NestedBlockDepth:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$override suspend fun execute(operations: List&lt;Operation&gt;): ExecutionResponse</ID>
+    <ID>NestedBlockDepth:ServiceRegistration.kt$ServiceRegistrationReflection$private fun doesHaveAllParameters( constructor: Constructor&lt;*>, provider: IServiceProvider, ): Boolean</ID>
+    <ID>NestedBlockDepth:TrackGooglePurchase.kt$TrackGooglePurchase$private fun sendPurchases( skusToAdd: ArrayList&lt;String>, newPurchaseTokens: ArrayList&lt;String>, )</ID>
+    <ID>NestedBlockDepth:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
     <ID>PrintStackTrace:AndroidUtils.kt$AndroidUtils$e</ID>
     <ID>PrintStackTrace:ApplicationService.kt$ApplicationService$e</ID>
     <ID>PrintStackTrace:DeviceUtils.kt$DeviceUtils$t</ID>
@@ -276,36 +275,36 @@
     <ID>PrintStackTrace:OSDatabase.kt$OSDatabase$e</ID>
     <ID>PrintStackTrace:OutcomeTableProvider.kt$OutcomeTableProvider$e</ID>
     <ID>PrintStackTrace:TrackGooglePurchase.kt$TrackGooglePurchase$e</ID>
-    <ID>PrintStackTrace:TrackGooglePurchase.kt$TrackGooglePurchase.&lt;no name provided&gt;$t</ID>
+    <ID>PrintStackTrace:TrackGooglePurchase.kt$TrackGooglePurchase.&lt;no name provided>$t</ID>
     <ID>RethrowCaughtException:OSDatabase.kt$OSDatabase$throw e</ID>
     <ID>ReturnCount:AppIdResolution.kt$fun resolveAppId( inputAppId: String?, configModel: ConfigModel, preferencesService: IPreferencesService, ): AppIdResolution</ID>
     <ID>ReturnCount:BackgroundManager.kt$BackgroundManager$override fun cancelRunBackgroundServices(): Boolean</ID>
     <ID>ReturnCount:ConfigModel.kt$ConfigModel$override fun createModelForProperty( property: String, jsonObject: JSONObject, ): Model?</ID>
     <ID>ReturnCount:HttpClient.kt$HttpClient$private suspend fun makeRequest( url: String, method: String?, jsonBody: JSONObject?, timeout: Int, headers: OptionalHeaders?, ): HttpResponse</ID>
-    <ID>ReturnCount:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation&gt;): ExecutionResponse</ID>
+    <ID>ReturnCount:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
     <ID>ReturnCount:JSONUtils.kt$JSONUtils$fun compareJSONArrays( jsonArray1: JSONArray?, jsonArray2: JSONArray?, ): Boolean</ID>
     <ID>ReturnCount:LoginUserFromSubscriptionOperationExecutor.kt$LoginUserFromSubscriptionOperationExecutor$private suspend fun loginUser(loginUserOp: LoginUserFromSubscriptionOperation): ExecutionResponse</ID>
-    <ID>ReturnCount:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun loginUser( loginUserOp: LoginUserOperation, operations: List&lt;Operation&gt;, ): ExecutionResponse</ID>
-    <ID>ReturnCount:Model.kt$Model$protected fun getOptBigDecimalProperty( name: String, create: (() -&gt; BigDecimal?)? = null, ): BigDecimal?</ID>
-    <ID>ReturnCount:Model.kt$Model$protected fun getOptDoubleProperty( name: String, create: (() -&gt; Double?)? = null, ): Double?</ID>
-    <ID>ReturnCount:Model.kt$Model$protected fun getOptFloatProperty( name: String, create: (() -&gt; Float?)? = null, ): Float?</ID>
-    <ID>ReturnCount:Model.kt$Model$protected fun getOptIntProperty( name: String, create: (() -&gt; Int?)? = null, ): Int?</ID>
-    <ID>ReturnCount:Model.kt$Model$protected fun getOptLongProperty( name: String, create: (() -&gt; Long?)? = null, ): Long?</ID>
-    <ID>ReturnCount:Model.kt$Model$protected inline fun &lt;reified T : Enum&lt;T&gt;&gt; getOptEnumProperty(name: String): T?</ID>
+    <ID>ReturnCount:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun loginUser( loginUserOp: LoginUserOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
+    <ID>ReturnCount:Model.kt$Model$protected fun getOptBigDecimalProperty( name: String, create: (() -> BigDecimal?)? = null, ): BigDecimal?</ID>
+    <ID>ReturnCount:Model.kt$Model$protected fun getOptDoubleProperty( name: String, create: (() -> Double?)? = null, ): Double?</ID>
+    <ID>ReturnCount:Model.kt$Model$protected fun getOptFloatProperty( name: String, create: (() -> Float?)? = null, ): Float?</ID>
+    <ID>ReturnCount:Model.kt$Model$protected fun getOptIntProperty( name: String, create: (() -> Int?)? = null, ): Int?</ID>
+    <ID>ReturnCount:Model.kt$Model$protected fun getOptLongProperty( name: String, create: (() -> Long?)? = null, ): Long?</ID>
+    <ID>ReturnCount:Model.kt$Model$protected inline fun &lt;reified T : Enum&lt;T>> getOptEnumProperty(name: String): T?</ID>
     <ID>ReturnCount:OperationModelStore.kt$OperationModelStore$override fun create(jsonObject: JSONObject?): Operation?</ID>
     <ID>ReturnCount:OperationModelStore.kt$OperationModelStore$private fun isValidOperation(jsonObject: JSONObject): Boolean</ID>
-    <ID>ReturnCount:OutcomeEventsController.kt$OutcomeEventsController$private suspend fun sendAndCreateOutcomeEvent( name: String, weight: Float, // Note: this is optional sessionTime: Long, influences: List&lt;Influence&gt;, ): OutcomeEvent?</ID>
-    <ID>ReturnCount:OutcomeEventsController.kt$OutcomeEventsController$private suspend fun sendUniqueOutcomeEvent( name: String, sessionInfluences: List&lt;Influence&gt;, ): OutcomeEvent?</ID>
+    <ID>ReturnCount:OutcomeEventsController.kt$OutcomeEventsController$private suspend fun sendAndCreateOutcomeEvent( name: String, weight: Float, // Note: this is optional sessionTime: Long, influences: List&lt;Influence>, ): OutcomeEvent?</ID>
+    <ID>ReturnCount:OutcomeEventsController.kt$OutcomeEventsController$private suspend fun sendUniqueOutcomeEvent( name: String, sessionInfluences: List&lt;Influence>, ): OutcomeEvent?</ID>
     <ID>ReturnCount:PermissionsViewModel.kt$PermissionsViewModel$private fun shouldShowSettings( permission: String, shouldShowRationaleAfter: Boolean, ): Boolean</ID>
     <ID>ReturnCount:PermissionsViewModel.kt$PermissionsViewModel$suspend fun initialize( activity: Activity, permissionType: String?, androidPermission: String?, ): Boolean</ID>
     <ID>ReturnCount:PreferenceStoreFix.kt$PreferenceStoreFix$fun ensureNoObfuscatedPrefStore(context: Context)</ID>
-    <ID>ReturnCount:PreferencesService.kt$PreferencesService$private fun get( store: String, key: String, type: Class&lt;*&gt;, defValue: Any?, ): Any?</ID>
+    <ID>ReturnCount:PreferencesService.kt$PreferencesService$private fun get( store: String, key: String, type: Class&lt;*>, defValue: Any?, ): Any?</ID>
     <ID>ReturnCount:PropertiesModelStoreListener.kt$PropertiesModelStoreListener$override fun getUpdateOperation( model: PropertiesModel, path: String, property: String, oldValue: Any?, newValue: Any?, ): Operation?</ID>
     <ID>ReturnCount:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse</ID>
-    <ID>ReturnCount:ServiceRegistration.kt$ServiceRegistrationReflection$private fun doesHaveAllParameters( constructor: Constructor&lt;*&gt;, provider: IServiceProvider, ): Boolean</ID>
-    <ID>ReturnCount:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private suspend fun createSubscription( createOperation: CreateSubscriptionOperation, operations: List&lt;Operation&gt;, ): ExecutionResponse</ID>
-    <ID>ReturnCount:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private suspend fun updateSubscription( startingOperation: UpdateSubscriptionOperation, operations: List&lt;Operation&gt;, ): ExecutionResponse</ID>
-    <ID>ReturnCount:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$override suspend fun execute(operations: List&lt;Operation&gt;): ExecutionResponse</ID>
+    <ID>ReturnCount:ServiceRegistration.kt$ServiceRegistrationReflection$private fun doesHaveAllParameters( constructor: Constructor&lt;*>, provider: IServiceProvider, ): Boolean</ID>
+    <ID>ReturnCount:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private suspend fun createSubscription( createOperation: CreateSubscriptionOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
+    <ID>ReturnCount:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private suspend fun updateSubscription( startingOperation: UpdateSubscriptionOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
+    <ID>ReturnCount:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
     <ID>SpreadOperator:AndroidUtils.kt$AndroidUtils$(*packageInfo.requestedPermissions)</ID>
     <ID>SpreadOperator:ServiceRegistration.kt$ServiceRegistrationReflection$(*paramList.toTypedArray())</ID>
     <ID>StringLiteralDuplication:OSDatabase.kt$OSDatabase$"Error closing transaction! "</ID>
@@ -316,11 +315,11 @@
     <ID>SwallowedException:DeviceService.kt$DeviceService$e: ClassNotFoundException</ID>
     <ID>SwallowedException:DeviceService.kt$DeviceService$e: PackageManager.NameNotFoundException</ID>
     <ID>SwallowedException:JSONUtils.kt$JSONUtils$t: Throwable</ID>
-    <ID>SwallowedException:OneSignalImp.kt$OneSignalImp$e: TimeoutCancellationException</ID>
     <ID>SwallowedException:PermissionsActivity.kt$PermissionsActivity$e: ClassNotFoundException</ID>
     <ID>SwallowedException:PreferencesService.kt$PreferencesService$ex: Exception</ID>
+    <ID>SwallowedException:SyncJobService.kt$SyncJobService$e: Exception</ID>
     <ID>SwallowedException:TrackGooglePurchase.kt$TrackGooglePurchase.Companion$t: Throwable</ID>
-    <ID>ThrowsCount:OneSignalImp.kt$OneSignalImp$private suspend fun suspendUntilInit()</ID>
+    <ID>ThrowsCount:OneSignalImp.kt$OneSignalImp$private suspend fun waitUntilInitInternal(operationName: String? = null)</ID>
     <ID>TooGenericExceptionCaught:AndroidUtils.kt$AndroidUtils$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:DeviceUtils.kt$DeviceUtils$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:HttpClient.kt$HttpClient$e: Throwable</ID>
@@ -332,10 +331,11 @@
     <ID>TooGenericExceptionCaught:PreferenceStoreFix.kt$PreferenceStoreFix$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:PreferencesService.kt$PreferencesService$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:PreferencesService.kt$PreferencesService$ex: Exception</ID>
+    <ID>TooGenericExceptionCaught:SyncJobService.kt$SyncJobService$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ThreadUtils.kt$e: Exception</ID>
     <ID>TooGenericExceptionCaught:TrackGooglePurchase.kt$TrackGooglePurchase$e: Throwable</ID>
     <ID>TooGenericExceptionCaught:TrackGooglePurchase.kt$TrackGooglePurchase$t: Throwable</ID>
-    <ID>TooGenericExceptionCaught:TrackGooglePurchase.kt$TrackGooglePurchase.&lt;no name provided&gt;$t: Throwable</ID>
+    <ID>TooGenericExceptionCaught:TrackGooglePurchase.kt$TrackGooglePurchase.&lt;no name provided>$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:TrackGooglePurchase.kt$TrackGooglePurchase.Companion$t: Throwable</ID>
     <ID>TooGenericExceptionThrown:IdentityOperationExecutor.kt$IdentityOperationExecutor$throw Exception("Can't process SetAliasOperation and DeleteAliasOperation at the same time.")</ID>
     <ID>TooGenericExceptionThrown:IdentityOperationExecutor.kt$IdentityOperationExecutor$throw Exception("Unrecognized operation(s)! Attempted operations:\n$operations")</ID>
@@ -349,7 +349,7 @@
     <ID>TooGenericExceptionThrown:OperationRepo.kt$OperationRepo$throw Exception("Both comparison keys can not be blank!")</ID>
     <ID>TooGenericExceptionThrown:OperationRepo.kt$OperationRepo$throw Exception("Could not find executor for operation ${startingOp.operation.name}")</ID>
     <ID>TooGenericExceptionThrown:PermissionsActivity.kt$PermissionsActivity$throw RuntimeException( "Could not find callback class for PermissionActivity: $className", )</ID>
-    <ID>TooGenericExceptionThrown:PermissionsViewModel.kt$PermissionsViewModel$throw RuntimeException("Missing handler for permissionRequestType: $permissionRequestType")</ID>
+    <ID>TooGenericExceptionThrown:PermissionsViewModel.kt$PermissionsViewModel$throw RuntimeException("Missing handler for permissionRequestType: $type")</ID>
     <ID>TooGenericExceptionThrown:PreferencesService.kt$PreferencesService$throw Exception("Store not found: $store")</ID>
     <ID>TooGenericExceptionThrown:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$throw Exception("Unrecognized operation(s)! Attempted operations:\n$operations")</ID>
     <ID>TooGenericExceptionThrown:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$throw Exception("Unrecognized operation: $startingOp")</ID>
@@ -372,14 +372,15 @@
     <ID>TooManyFunctions:JSONObjectExtensions.kt$com.onesignal.common.JSONObjectExtensions.kt</ID>
     <ID>TooManyFunctions:Logging.kt$Logging$Logging</ID>
     <ID>TooManyFunctions:Model.kt$Model : IEventNotifier</ID>
-    <ID>TooManyFunctions:ModelStore.kt$ModelStore&lt;TModel&gt; : IEventNotifierIModelStoreIModelChangedHandler</ID>
+    <ID>TooManyFunctions:ModelStore.kt$ModelStore&lt;TModel> : IEventNotifierIModelStoreIModelChangedHandler</ID>
     <ID>TooManyFunctions:OSDatabase.kt$OSDatabase : SQLiteOpenHelperIDatabase</ID>
+    <ID>TooManyFunctions:OneSignal.kt$OneSignal$OneSignal</ID>
     <ID>TooManyFunctions:OneSignalImp.kt$OneSignalImp : IOneSignalIServiceProvider</ID>
     <ID>TooManyFunctions:OperationRepo.kt$OperationRepo : IOperationRepoIStartableService</ID>
     <ID>TooManyFunctions:OutcomeEventsController.kt$OutcomeEventsController : IOutcomeEventsControllerIStartableServiceISessionLifecycleHandler</ID>
     <ID>TooManyFunctions:PreferencesService.kt$PreferencesService : IPreferencesServiceIStartableService</ID>
     <ID>TooManyFunctions:SubscriptionManager.kt$SubscriptionManager : ISubscriptionManagerIModelStoreChangeHandlerISessionLifecycleHandler</ID>
-    <ID>TooManyFunctions:UserManager.kt$UserManager : IUserManagerIApplicationLifecycleHandlerISingletonModelStoreChangeHandler</ID>
+    <ID>TooManyFunctions:UserManager.kt$UserManager : IUserManagerISingletonModelStoreChangeHandler</ID>
     <ID>UndocumentedPublicClass:AlertDialogPrepromptForAndroidSettings.kt$AlertDialogPrepromptForAndroidSettings$Callback</ID>
     <ID>UndocumentedPublicClass:AndroidUtils.kt$AndroidUtils</ID>
     <ID>UndocumentedPublicClass:AndroidUtils.kt$AndroidUtils$SchemaType</ID>
@@ -398,11 +399,9 @@
     <ID>UndocumentedPublicClass:IIdentityBackendService.kt$IIdentityBackendService</ID>
     <ID>UndocumentedPublicClass:IIdentityBackendService.kt$IdentityConstants</ID>
     <ID>UndocumentedPublicClass:IInAppMessage.kt$IInAppMessage</ID>
-    <ID>UndocumentedPublicClass:IInAppMessageClickListener.kt$IInAppMessageClickListener</ID>
     <ID>UndocumentedPublicClass:IInfluenceManager.kt$IInfluenceManager</ID>
     <ID>UndocumentedPublicClass:IInstallIdService.kt$IInstallIdService</ID>
     <ID>UndocumentedPublicClass:ILanguageContext.kt$ILanguageContext</ID>
-    <ID>UndocumentedPublicClass:ILogListener.kt$ILogListener</ID>
     <ID>UndocumentedPublicClass:IModelStore.kt$ModelChangeTags</ID>
     <ID>UndocumentedPublicClass:INotification.kt$INotification</ID>
     <ID>UndocumentedPublicClass:IOneSignal.kt$IOneSignal</ID>
@@ -429,7 +428,6 @@
     <ID>UndocumentedPublicClass:InfluenceType.kt$InfluenceType</ID>
     <ID>UndocumentedPublicClass:JSONConverter.kt$JSONConverter</ID>
     <ID>UndocumentedPublicClass:JSONUtils.kt$JSONUtils</ID>
-    <ID>UndocumentedPublicClass:LogLevel.kt$LogLevel</ID>
     <ID>UndocumentedPublicClass:Logging.kt$Logging</ID>
     <ID>UndocumentedPublicClass:LoginHelper.kt$LoginHelper</ID>
     <ID>UndocumentedPublicClass:LogoutHelper.kt$LogoutHelper</ID>
@@ -439,7 +437,6 @@
     <ID>UndocumentedPublicClass:OneSignalDbContract.kt$OneSignalDbContract</ID>
     <ID>UndocumentedPublicClass:OneSignalDbContract.kt$OneSignalDbContract$InAppMessageTable : BaseColumns</ID>
     <ID>UndocumentedPublicClass:OneSignalDbContract.kt$OneSignalDbContract$NotificationTable : BaseColumns</ID>
-    <ID>UndocumentedPublicClass:OneSignalLogEvent.kt$OneSignalLogEvent</ID>
     <ID>UndocumentedPublicClass:OneSignalUtils.kt$OneSignalUtils</ID>
     <ID>UndocumentedPublicClass:OneSignalWrapper.kt$OneSignalWrapper</ID>
     <ID>UndocumentedPublicClass:Operation.kt$GroupComparisonType</ID>
@@ -450,7 +447,6 @@
     <ID>UndocumentedPublicClass:PropertiesModel.kt$PropertiesModel : Model</ID>
     <ID>UndocumentedPublicClass:PropertiesModelStore.kt$PropertiesModelStore : SingletonModelStore</ID>
     <ID>UndocumentedPublicClass:PropertiesObject.kt$PropertiesObject</ID>
-    <ID>UndocumentedPublicClass:PushSubscriptionChangedState.kt$PushSubscriptionChangedState</ID>
     <ID>UndocumentedPublicClass:RebuildUserService.kt$RebuildUserService : IRebuildUserService</ID>
     <ID>UndocumentedPublicClass:RootToolsInternalMethods.kt$RootToolsInternalMethods</ID>
     <ID>UndocumentedPublicClass:RywData.kt$RywData</ID>
@@ -464,11 +460,143 @@
     <ID>UndocumentedPublicClass:SubscriptionObjectType.kt$SubscriptionObjectType</ID>
     <ID>UndocumentedPublicClass:SyncJobService.kt$SyncJobService : JobService</ID>
     <ID>UndocumentedPublicClass:TimeUtils.kt$TimeUtils</ID>
-    <ID>UndocumentedPublicClass:UserChangedState.kt$UserChangedState</ID>
     <ID>UndocumentedPublicClass:UserRefreshService.kt$UserRefreshService : IStartableServiceISessionLifecycleHandler</ID>
     <ID>UndocumentedPublicClass:UserSwitcher.kt$UserSwitcher</ID>
     <ID>UndocumentedPublicClass:ViewUtils.kt$ViewUtils</ID>
-    <ID>UnusedPrivateMember:AndroidUtils.kt$AndroidUtils$_class: Class&lt;*&gt;</ID>
+    <ID>UndocumentedPublicFunction:AlertDialogPrepromptForAndroidSettings.kt$AlertDialogPrepromptForAndroidSettings$fun show( activity: Activity, titlePrefix: String, previouslyDeniedPostfix: String, callback: Callback, )</ID>
+    <ID>UndocumentedPublicFunction:AlertDialogPrepromptForAndroidSettings.kt$AlertDialogPrepromptForAndroidSettings$fun show( activity: Activity, titlePrefix: String, previouslyDeniedPostfix: String, callback: Callback, dismissCallback: (() -> Unit)?, )</ID>
+    <ID>UndocumentedPublicFunction:AlertDialogPrepromptForAndroidSettings.kt$AlertDialogPrepromptForAndroidSettings.Callback$fun onAccept()</ID>
+    <ID>UndocumentedPublicFunction:AlertDialogPrepromptForAndroidSettings.kt$AlertDialogPrepromptForAndroidSettings.Callback$fun onDecline()</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$@Keep fun opaqueHasClass(_class: Class&lt;*>): Boolean</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$fun getAppVersion(context: Context): String?</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$fun getManifestMeta( context: Context, metaName: String?, ): String?</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$fun getManifestMetaBoolean( context: Context, metaName: String?, ): Boolean</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$fun getManifestMetaBundle(context: Context): Bundle?</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$fun getRandomDelay( minDelay: Int, maxDelay: Int, ): Int</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$fun getResourceString( context: Context, key: String?, defaultStr: String?, ): String?</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$fun getRootCauseMessage(throwable: Throwable): String?</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$fun getRootCauseThrowable(subjectThrowable: Throwable): Throwable</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$fun getTargetSdkVersion(context: Context): Int</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$fun hasConfigChangeFlag( activity: Activity, configChangeFlag: Int, ): Boolean</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$fun hasNotificationManagerCompat(): Boolean</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$fun isActivityFullyReady(activity: Activity): Boolean</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$fun isRunningOnMainThread(): Boolean</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$fun isStringNotEmpty(body: String?): Boolean</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$fun isValidResourceName(name: String?): Boolean</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$fun openURLInBrowser( appContext: Context, uri: Uri, )</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$fun openURLInBrowser( appContext: Context, url: String, )</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils$fun openURLInBrowserIntent(uri: Uri): Intent</ID>
+    <ID>UndocumentedPublicFunction:AndroidUtils.kt$AndroidUtils.SchemaType.Companion$fun fromString(text: String?): SchemaType?</ID>
+    <ID>UndocumentedPublicFunction:AppIdResolution.kt$fun resolveAppId( inputAppId: String?, configModel: ConfigModel, preferencesService: IPreferencesService, ): AppIdResolution</ID>
+    <ID>UndocumentedPublicFunction:ApplicationService.kt$ApplicationService$fun decorViewReady( activity: Activity, runnable: Runnable, )</ID>
+    <ID>UndocumentedPublicFunction:DateUtils.kt$DateUtils$fun iso8601Format(): SimpleDateFormat</ID>
+    <ID>UndocumentedPublicFunction:DeviceUtils.kt$DeviceUtils$fun getCarrierName(appContext: Context): String?</ID>
+    <ID>UndocumentedPublicFunction:DeviceUtils.kt$DeviceUtils$fun getNetType(appContext: Context): Int?</ID>
+    <ID>UndocumentedPublicFunction:IDeviceService.kt$IDeviceService$fun supportsGooglePush(): Boolean</ID>
+    <ID>UndocumentedPublicFunction:IMigrationRecovery.kt$IMigrationRecovery$fun isInBadState(): Boolean</ID>
+    <ID>UndocumentedPublicFunction:IMigrationRecovery.kt$IMigrationRecovery$fun recover()</ID>
+    <ID>UndocumentedPublicFunction:IMigrationRecovery.kt$IMigrationRecovery$fun recoveryMessage(): String</ID>
+    <ID>UndocumentedPublicFunction:IOneSignal.kt$IOneSignal$fun login(externalId: String)</ID>
+    <ID>UndocumentedPublicFunction:IOperationRepo.kt$IOperationRepo$fun forceExecuteOperations()</ID>
+    <ID>UndocumentedPublicFunction:IOperationRepo.kt$IOperationRepo$suspend fun awaitInitialized()</ID>
+    <ID>UndocumentedPublicFunction:IOperationRepo.kt$inline fun &lt;reified T : Operation> IOperationRepo.containsInstanceOf(): Boolean</ID>
+    <ID>UndocumentedPublicFunction:IRequestPermissionService.kt$IRequestPermissionService.PermissionCallback$fun onAccept()</ID>
+    <ID>UndocumentedPublicFunction:IRequestPermissionService.kt$IRequestPermissionService.PermissionCallback$fun onReject(fallbackToSettings: Boolean)</ID>
+    <ID>UndocumentedPublicFunction:ISubscriptionManager.kt$ISubscriptionChangedHandler$fun onSubscriptionAdded(subscription: ISubscription)</ID>
+    <ID>UndocumentedPublicFunction:ISubscriptionManager.kt$ISubscriptionChangedHandler$fun onSubscriptionChanged( subscription: ISubscription, args: ModelChangedArgs, )</ID>
+    <ID>UndocumentedPublicFunction:ISubscriptionManager.kt$ISubscriptionChangedHandler$fun onSubscriptionRemoved(subscription: ISubscription)</ID>
+    <ID>UndocumentedPublicFunction:ISubscriptionManager.kt$ISubscriptionManager$fun addEmailSubscription(email: String)</ID>
+    <ID>UndocumentedPublicFunction:ISubscriptionManager.kt$ISubscriptionManager$fun addOrUpdatePushSubscriptionToken( pushToken: String?, pushTokenStatus: SubscriptionStatus, )</ID>
+    <ID>UndocumentedPublicFunction:ISubscriptionManager.kt$ISubscriptionManager$fun addSmsSubscription(sms: String)</ID>
+    <ID>UndocumentedPublicFunction:ISubscriptionManager.kt$ISubscriptionManager$fun removeEmailSubscription(email: String)</ID>
+    <ID>UndocumentedPublicFunction:ISubscriptionManager.kt$ISubscriptionManager$fun removeSmsSubscription(sms: String)</ID>
+    <ID>UndocumentedPublicFunction:InAppMessageActionUrlType.kt$InAppMessageActionUrlType.Companion$fun fromString(text: String?): InAppMessageActionUrlType?</ID>
+    <ID>UndocumentedPublicFunction:Influence.kt$Influence$@Throws(JSONException::class) fun toJSONString()</ID>
+    <ID>UndocumentedPublicFunction:Influence.kt$Influence$fun copy()</ID>
+    <ID>UndocumentedPublicFunction:InfluenceChannel.kt$InfluenceChannel$fun equalsName(otherName: String)</ID>
+    <ID>UndocumentedPublicFunction:InfluenceChannel.kt$InfluenceChannel.Companion$@JvmStatic fun fromString(value: String?)</ID>
+    <ID>UndocumentedPublicFunction:InfluenceType.kt$InfluenceType$fun isAttributed()</ID>
+    <ID>UndocumentedPublicFunction:InfluenceType.kt$InfluenceType$fun isDirect()</ID>
+    <ID>UndocumentedPublicFunction:InfluenceType.kt$InfluenceType$fun isDisabled()</ID>
+    <ID>UndocumentedPublicFunction:InfluenceType.kt$InfluenceType$fun isIndirect()</ID>
+    <ID>UndocumentedPublicFunction:InfluenceType.kt$InfluenceType$fun isUnattributed()</ID>
+    <ID>UndocumentedPublicFunction:InfluenceType.kt$InfluenceType.Companion$@JvmStatic fun fromString(value: String?)</ID>
+    <ID>UndocumentedPublicFunction:JSONConverter.kt$JSONConverter$fun convertToCreateUserResponse(jsonObject: JSONObject): CreateUserResponse</ID>
+    <ID>UndocumentedPublicFunction:JSONConverter.kt$JSONConverter$fun convertToJSON(properties: PropertiesObject): JSONObject</ID>
+    <ID>UndocumentedPublicFunction:JSONConverter.kt$JSONConverter$fun convertToJSON(propertiesDeltas: PropertiesDeltasObject): JSONObject</ID>
+    <ID>UndocumentedPublicFunction:JSONConverter.kt$JSONConverter$fun convertToJSON(subscription: SubscriptionObject): JSONObject</ID>
+    <ID>UndocumentedPublicFunction:JSONConverter.kt$JSONConverter$fun convertToJSON(subscriptions: List&lt;SubscriptionObject>): JSONArray</ID>
+    <ID>UndocumentedPublicFunction:JSONObjectExtensions.kt$fun &lt;T> JSONObject.expandJSONArray( name: String, into: (childObject: JSONObject) -> T?, ): List&lt;T></ID>
+    <ID>UndocumentedPublicFunction:JSONUtils.kt$JSONUtils$fun bundleAsJSONObject(bundle: Bundle): JSONObject</ID>
+    <ID>UndocumentedPublicFunction:JSONUtils.kt$JSONUtils$fun jsonStringToBundle(data: String): Bundle?</ID>
+    <ID>UndocumentedPublicFunction:JSONUtils.kt$JSONUtils$fun newStringMapFromJSONObject(jsonObject: JSONObject): Map&lt;String, String></ID>
+    <ID>UndocumentedPublicFunction:JSONUtils.kt$JSONUtils$fun newStringSetFromJSONArray(jsonArray: JSONArray): Set&lt;String></ID>
+    <ID>UndocumentedPublicFunction:JSONUtils.kt$JSONUtils$fun normalizeType(`object`: Any): Any?</ID>
+    <ID>UndocumentedPublicFunction:LogLevel.kt$LogLevel.Companion$@JvmStatic fun fromInt(value: Int): LogLevel</ID>
+    <ID>UndocumentedPublicFunction:Logging.kt$Logging$@JvmStatic fun atLogLevel(level: LogLevel): Boolean</ID>
+    <ID>UndocumentedPublicFunction:Logging.kt$Logging$@JvmStatic fun debug( message: String, throwable: Throwable? = null, )</ID>
+    <ID>UndocumentedPublicFunction:Logging.kt$Logging$@JvmStatic fun error( message: String, throwable: Throwable? = null, )</ID>
+    <ID>UndocumentedPublicFunction:Logging.kt$Logging$@JvmStatic fun fatal( message: String, throwable: Throwable? = null, )</ID>
+    <ID>UndocumentedPublicFunction:Logging.kt$Logging$@JvmStatic fun info( message: String, throwable: Throwable? = null, )</ID>
+    <ID>UndocumentedPublicFunction:Logging.kt$Logging$@JvmStatic fun log( level: LogLevel, message: String, )</ID>
+    <ID>UndocumentedPublicFunction:Logging.kt$Logging$@JvmStatic fun log( level: LogLevel, message: String, throwable: Throwable?, )</ID>
+    <ID>UndocumentedPublicFunction:Logging.kt$Logging$@JvmStatic fun verbose( message: String, throwable: Throwable? = null, )</ID>
+    <ID>UndocumentedPublicFunction:Logging.kt$Logging$@JvmStatic fun warn( message: String, throwable: Throwable? = null, )</ID>
+    <ID>UndocumentedPublicFunction:Logging.kt$Logging$fun addListener(listener: ILogListener)</ID>
+    <ID>UndocumentedPublicFunction:Logging.kt$Logging$fun removeListener(listener: ILogListener)</ID>
+    <ID>UndocumentedPublicFunction:LoginHelper.kt$LoginHelper$suspend fun login( externalId: String, jwtBearerToken: String? = null, )</ID>
+    <ID>UndocumentedPublicFunction:LogoutHelper.kt$LogoutHelper$fun logout()</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun &lt;T> setListProperty( name: String, value: List&lt;T>, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun &lt;T> setMapModelProperty( name: String, value: MapModel&lt;T>, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun &lt;T> setOptListProperty( name: String, value: List&lt;T>?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun &lt;T> setOptMapModelProperty( name: String, value: MapModel&lt;T>?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun setAnyProperty( name: String, value: Any, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun setBigDecimalProperty( name: String, value: BigDecimal, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun setBooleanProperty( name: String, value: Boolean, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun setDoubleProperty( name: String, value: Double, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun setFloatProperty( name: String, value: Float, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun setIntProperty( name: String, value: Int, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun setLongProperty( name: String, value: Long, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun setOptAnyProperty( name: String, value: Any?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun setOptBigDecimalProperty( name: String, value: BigDecimal?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun setOptBooleanProperty( name: String, value: Boolean?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun setOptDoubleProperty( name: String, value: Double?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun setOptFloatProperty( name: String, value: Float?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun setOptIntProperty( name: String, value: Int?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun setOptLongProperty( name: String, value: Long?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun setOptStringProperty( name: String, value: String?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$fun setStringProperty( name: String, value: String, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$inline fun &lt;reified T : Enum&lt;T>> setEnumProperty( name: String, value: T, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:Model.kt$Model$inline fun &lt;reified T : Enum&lt;T>> setOptEnumProperty( name: String, value: T?, tag: String = ModelChangeTags.NORMAL, forceChange: Boolean = false, )</ID>
+    <ID>UndocumentedPublicFunction:NetworkUtils.kt$NetworkUtils$fun getResponseStatusType(statusCode: Int): ResponseStatusType</ID>
+    <ID>UndocumentedPublicFunction:NewRecordsState.kt$NewRecordsState$fun add(key: String)</ID>
+    <ID>UndocumentedPublicFunction:NewRecordsState.kt$NewRecordsState$fun canAccess(key: String): Boolean</ID>
+    <ID>UndocumentedPublicFunction:NewRecordsState.kt$NewRecordsState$fun isInMissingRetryWindow(key: String): Boolean</ID>
+    <ID>UndocumentedPublicFunction:OneSignalDispatchers.kt$OneSignalDispatchers$fun launchOnDefault(block: suspend () -> Unit): Job</ID>
+    <ID>UndocumentedPublicFunction:OneSignalDispatchers.kt$OneSignalDispatchers$fun launchOnIO(block: suspend () -> Unit): Job</ID>
+    <ID>UndocumentedPublicFunction:OneSignalUtils.kt$OneSignalUtils$fun isValidEmail(email: String): Boolean</ID>
+    <ID>UndocumentedPublicFunction:OneSignalUtils.kt$OneSignalUtils$fun isValidPhoneNumber(number: String): Boolean</ID>
+    <ID>UndocumentedPublicFunction:PushSubscriptionChangedState.kt$PushSubscriptionChangedState$fun toJSONObject(): JSONObject</ID>
+    <ID>UndocumentedPublicFunction:PushSubscriptionState.kt$PushSubscriptionState$fun toJSONObject(): JSONObject</ID>
+    <ID>UndocumentedPublicFunction:RemoveInvalidSessionTimeRecords.kt$RemoveInvalidSessionTimeRecords$fun run(databaseProvider: IDatabaseProvider)</ID>
+    <ID>UndocumentedPublicFunction:ServiceRegistration.kt$ServiceRegistration$abstract fun resolve(provider: IServiceProvider): Any?</ID>
+    <ID>UndocumentedPublicFunction:ServiceRegistration.kt$ServiceRegistration$inline fun &lt;reified TService : Any> provides(): ServiceRegistration&lt;T></ID>
+    <ID>UndocumentedPublicFunction:SubscriptionModel.kt$SubscriptionStatus.Companion$fun fromInt(value: Int): SubscriptionStatus?</ID>
+    <ID>UndocumentedPublicFunction:SubscriptionObjectType.kt$SubscriptionObjectType.Companion$fun fromDeviceType(type: IDeviceService.DeviceType): SubscriptionObjectType</ID>
+    <ID>UndocumentedPublicFunction:SubscriptionObjectType.kt$SubscriptionObjectType.Companion$fun fromString(type: String): SubscriptionObjectType?</ID>
+    <ID>UndocumentedPublicFunction:TimeUtils.kt$TimeUtils$fun getTimeZoneId(): String</ID>
+    <ID>UndocumentedPublicFunction:TimeUtils.kt$TimeUtils$fun getTimeZoneOffset(): Int</ID>
+    <ID>UndocumentedPublicFunction:UserChangedState.kt$UserChangedState$fun toJSONObject(): JSONObject</ID>
+    <ID>UndocumentedPublicFunction:UserState.kt$UserState$fun toJSONObject(): JSONObject</ID>
+    <ID>UndocumentedPublicFunction:UserSwitcher.kt$UserSwitcher$fun createAndSwitchToNewUser( suppressBackendOperation: Boolean = false, modify: ((identityModel: IdentityModel, propertiesModel: PropertiesModel) -> Unit)? = null, )</ID>
+    <ID>UndocumentedPublicFunction:UserSwitcher.kt$UserSwitcher$fun createPushSubscriptionFromLegacySync( legacyPlayerId: String, legacyUserSyncJSON: JSONObject, configModel: ConfigModel, subscriptionModelStore: SubscriptionModelStore, appContext: Context, ): Boolean</ID>
+    <ID>UndocumentedPublicFunction:UserSwitcher.kt$UserSwitcher$fun initUser(forceCreateUser: Boolean)</ID>
+    <ID>UndocumentedPublicFunction:ViewUtils.kt$ViewUtils$fun dpToPx(dp: Int): Int</ID>
+    <ID>UndocumentedPublicFunction:ViewUtils.kt$ViewUtils$fun getCutoutAndStatusBarInsets(activity: Activity): IntArray</ID>
+    <ID>UndocumentedPublicFunction:ViewUtils.kt$ViewUtils$fun getFullbleedWindowWidth(activity: Activity): Int</ID>
+    <ID>UndocumentedPublicFunction:ViewUtils.kt$ViewUtils$fun getWindowHeight(activity: Activity): Int</ID>
+    <ID>UndocumentedPublicFunction:ViewUtils.kt$ViewUtils$fun getWindowWidth(activity: Activity): Int</ID>
+    <ID>UnusedPrivateMember:AndroidUtils.kt$AndroidUtils$_class: Class&lt;*></ID>
     <ID>UnusedPrivateMember:AndroidUtils.kt$AndroidUtils$var requestPermission: String? = null</ID>
     <ID>UnusedPrivateMember:ApplicationService.kt$ApplicationService$val listenerKey = "decorViewReady:$runnable"</ID>
     <ID>UnusedPrivateMember:JSONUtils.kt$JSONUtils$`object`: Any</ID>
@@ -477,11 +605,6 @@
     <ID>UnusedPrivateMember:OperationRepo.kt$OperationRepo$private val _time: ITime</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'login'")</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'logout'")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Initialization failed. Cannot proceed.")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before 'login'")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before 'logout'")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before use")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("initWithContext was not called or timed out")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("initWithContext was timed out after $MAX_TIMEOUT_TO_INIT ms")</ID>
+    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")</ID>
   </CurrentIssues>
 </SmellBaseline>
