@@ -15,7 +15,7 @@ import com.onesignal.otel.IOtelPlatformProvider
  * Configuration for AndroidOtelPlatformProvider.
  * Groups parameters to avoid LongParameterList detekt issue.
  */
-internal data class AndroidOtelPlatformProviderConfig(
+internal data class OtelPlatformProviderConfig(
     val crashStoragePath: String,
     val appPackageId: String,
     val appVersion: String,
@@ -43,8 +43,8 @@ internal data class AndroidOtelPlatformProviderConfig(
  * - getIsInForeground: () -> Boolean? - Get foreground state from ApplicationService if available
  * - getRemoteLogLevel: () -> LogLevel? - Get remote logging level from ConfigModelStore if available
  */
-internal class AndroidOtelPlatformProvider(
-    config: AndroidOtelPlatformProviderConfig,
+internal class OtelPlatformProvider(
+    config: OtelPlatformProviderConfig,
 ) : IOtelPlatformProvider {
     override val appPackageId: String = config.appPackageId
     override val appVersion: String = config.appVersion
@@ -78,16 +78,12 @@ internal class AndroidOtelPlatformProvider(
     override val sdkWrapperVersion: String? = OneSignalWrapper.sdkVersion
 
     // Per-event attributes (dynamic, calculated per event)
-    // Try to retrieve from services or SharedPreferences if available, fall back to null
+    // The getAppId lambda already contains all fallback logic (service -> app SharedPreferences -> legacy -> "unknown")
+    // So we just invoke it here without duplicating the logic
     override val appId: String?
         @Suppress("TooGenericExceptionCaught", "SwallowedException")
         get() = try {
-            // First try to get from service if available
-            getAppId?.invoke() ?: run {
-                // Fall back to SharedPreferences and pick up at least Legacy Id if it exists
-                context?.getSharedPreferences(PreferenceStores.ONESIGNAL, Context.MODE_PRIVATE)
-                    ?.getString(PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID, null)
-            }
+            getAppId?.invoke()
         } catch (e: Exception) {
             null
         }
@@ -207,15 +203,15 @@ internal fun createAndroidOtelPlatformProvider(
     installIdService: com.onesignal.core.internal.device.IInstallIdService,
     configModelStore: com.onesignal.core.internal.config.ConfigModelStore,
     identityModelStore: com.onesignal.user.internal.identity.IdentityModelStore,
-): AndroidOtelPlatformProvider {
+): OtelPlatformProvider {
     val context = applicationService.appContext
     val crashStoragePath = context.cacheDir.path + java.io.File.separator +
         "onesignal" + java.io.File.separator +
         "otel" + java.io.File.separator +
         "crashes"
 
-    return AndroidOtelPlatformProvider(
-        AndroidOtelPlatformProviderConfig(
+    return OtelPlatformProvider(
+        OtelPlatformProviderConfig(
             crashStoragePath = crashStoragePath,
             appPackageId = context.packageName,
             appVersion = com.onesignal.common.AndroidUtils.getAppVersion(context) ?: "unknown",

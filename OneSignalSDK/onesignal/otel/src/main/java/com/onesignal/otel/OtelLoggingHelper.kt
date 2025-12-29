@@ -2,6 +2,7 @@ package com.onesignal.otel
 
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
+import java.time.Instant
 
 /**
  * Helper class for logging to Otel from the Logging class.
@@ -58,6 +59,7 @@ object OtelLoggingHelper {
         logRecordBuilder.setAllAttributes(attributes)
         logRecordBuilder.setSeverity(severity)
         logRecordBuilder.setBody(message)
+        logRecordBuilder.setTimestamp(Instant.now())
         logRecordBuilder.emit()
     }
 }

@@ -4,6 +4,7 @@ import com.onesignal.otel.IOtelLogger
 import com.onesignal.otel.IOtelOpenTelemetryCrash
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.Severity
+import java.time.Instant
 
 internal class OtelCrashReporter(
     private val openTelemetry: IOtelOpenTelemetryCrash,
@@ -35,6 +36,7 @@ internal class OtelCrashReporter(
                 .getLogger()
                 .setAllAttributes(attributes)
                 .setSeverity(Severity.FATAL)
+                .setTimestamp(Instant.now())
                 .emit()
 
             logger.debug("OtelCrashReporter: Flushing crash report to disk...")

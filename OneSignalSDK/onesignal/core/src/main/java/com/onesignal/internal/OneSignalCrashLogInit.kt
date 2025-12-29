@@ -13,8 +13,8 @@ import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.debug.internal.logging.otel.android.AndroidOtelLogger
-import com.onesignal.debug.internal.logging.otel.android.AndroidOtelPlatformProvider
-import com.onesignal.debug.internal.logging.otel.android.AndroidOtelPlatformProviderConfig
+import com.onesignal.debug.internal.logging.otel.android.OtelPlatformProvider
+import com.onesignal.debug.internal.logging.otel.android.OtelPlatformProviderConfig
 import com.onesignal.debug.internal.logging.otel.android.createAndroidOtelPlatformProvider
 import com.onesignal.otel.IOtelCrashHandler
 import com.onesignal.otel.IOtelOpenTelemetryRemote
@@ -69,8 +69,8 @@ internal object OneSignalCrashLogInit {
 
             // Create platform provider with lambda getters that check services dynamically
             // If services are available at crash time, use them; otherwise fall back to SharedPreferences
-            val platformProvider = AndroidOtelPlatformProvider(
-                AndroidOtelPlatformProviderConfig(
+            val platformProvider = OtelPlatformProvider(
+                OtelPlatformProviderConfig(
                     crashStoragePath = crashStoragePath,
                     appPackageId = appPackageId,
                     appVersion = appVersion,
@@ -90,33 +90,24 @@ internal object OneSignalCrashLogInit {
                     getAppId = {
                         @Suppress("TooGenericExceptionCaught", "SwallowedException")
                         try {
+                            // First: try to get from service (ConfigModelStore) if available
                             getConfigModelStore()?.model?.appId ?: run {
-                                // Fall back to SharedPreferences - try MODEL_STORE_config first, then legacy
-                                val prefs = context.getSharedPreferences(PreferenceStores.ONESIGNAL, Context.MODE_PRIVATE)
-                                val configStoreJson = prefs?.getString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + "config", null)
-                                if (configStoreJson != null) {
-                                    @Suppress("SwallowedException")
-                                    try {
-                                        val jsonArray = JSONArray(configStoreJson)
-                                        if (jsonArray.length() > 0) {
-                                            val configModelJson = jsonArray.getJSONObject(0)
-                                            configModelJson.optString("appId", null)?.takeIf { it.isNotEmpty() }
-                                        } else {
-                                            null
-                                        }
-                                    } catch (e: Exception) {
-                                        null
-                                    }
-                                } else {
+                                // Second: try to get from app's SharedPreferences (like SharedPreferenceUtil.getOneSignalAppId)
+                                // This reads from the app's own SharedPreferences where the app ID might be cached
+                                try {
+                                    val appPrefs = context.getSharedPreferences(context.packageName, Context.MODE_PRIVATE)
+                                    appPrefs.getString("OS_APP_ID_SHARED_PREF", null)?.takeIf { it.isNotEmpty() }
+                                } catch (e: Exception) {
                                     null
                                 }
                             } ?: run {
-                                // Final fallback to legacy app ID
+                                // Third: fall back to legacy OneSignal SharedPreferences
                                 context.getSharedPreferences(PreferenceStores.ONESIGNAL, Context.MODE_PRIVATE)
                                     ?.getString(PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID, null)
-                            }
+                                    ?.takeIf { it.isNotEmpty() }
+                            } ?: "unknown" // Fourth: if all checks are empty, return "unknown"
                         } catch (e: Exception) {
-                            null
+                            "unknown" // If there's an error, return "unknown"
                         }
                     },
                     getOnesignalId = {
