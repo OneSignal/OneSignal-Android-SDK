@@ -32,7 +32,7 @@ class OtelFactoryTest : FunSpec({
         every { mockPlatformProvider.currentThreadName } returns "main"
         every { mockPlatformProvider.crashStoragePath } returns "/test/path"
         every { mockPlatformProvider.minFileAgeForReadMillis } returns 5000L
-        every { mockPlatformProvider.remoteLoggingEnabled } returns true
+        every { mockPlatformProvider.remoteLogLevel } returns "ERROR"
         every { mockPlatformProvider.appIdForHeaders } returns "test-app-id"
         coEvery { mockPlatformProvider.getInstallId() } returns "test-install-id"
     }

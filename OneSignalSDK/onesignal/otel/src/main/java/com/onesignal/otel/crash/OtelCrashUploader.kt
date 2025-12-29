@@ -47,11 +47,12 @@ class OtelCrashUploader(
     /**
      * Starts the crash uploader process.
      * This will periodically check for crash reports on disk and upload them to OneSignal.
-     * If remote logging is disabled, this function returns immediately without doing anything.
+     * If remote logging is disabled (NONE level), this function returns immediately without doing anything.
      */
     suspend fun start() {
-        if (!platformProvider.remoteLoggingEnabled) {
-            logger.info("OtelCrashUploader: remote logging disabled")
+        val remoteLogLevel = platformProvider.remoteLogLevel
+        if (remoteLogLevel == null || remoteLogLevel == "NONE") {
+            logger.info("OtelCrashUploader: remote logging disabled (level: $remoteLogLevel)")
             return
         }
 

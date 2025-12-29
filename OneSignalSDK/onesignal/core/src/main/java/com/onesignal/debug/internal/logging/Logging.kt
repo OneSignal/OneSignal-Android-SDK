@@ -31,25 +31,25 @@ object Logging {
     private var otelRemoteTelemetry: IOtelOpenTelemetryRemote? = null
 
     /**
-     * Function to check if remote logging is enabled.
-     * Set this to dynamically check remote logging configuration.
+     * Function to check if a specific log level should be sent remotely.
+     * Set this to dynamically check remote logging configuration based on log level.
      */
     @Volatile
-    private var isRemoteLoggingEnabled: () -> Boolean = { false }
+    private var shouldSendLogLevel: (LogLevel) -> Boolean = { false }
 
     /**
-     * Sets the Otel remote telemetry instance and remote logging check function.
+     * Sets the Otel remote telemetry instance and log level check function.
      * This should be called when remote logging is enabled.
      *
      * @param telemetry The Otel remote telemetry instance
-     * @param isEnabled Function that returns true if remote logging is currently enabled
+     * @param shouldSend Function that returns true if a log level should be sent remotely
      */
     fun setOtelTelemetry(
         telemetry: IOtelOpenTelemetryRemote?,
-        isEnabled: () -> Boolean = { false },
+        shouldSend: (LogLevel) -> Boolean = { false },
     ) {
         otelRemoteTelemetry = telemetry
-        isRemoteLoggingEnabled = isEnabled
+        shouldSendLogLevel = shouldSend
     }
 
     // Coroutine scope for async Otel logging (non-blocking)
@@ -210,10 +210,12 @@ object Logging {
         throwable: Throwable?,
     ) {
         val telemetry = otelRemoteTelemetry ?: return
-        if (!isRemoteLoggingEnabled()) return
 
         // Skip NONE level
         if (level == LogLevel.NONE) return
+
+        // Check if this log level should be sent remotely
+        if (!shouldSendLogLevel(level)) return
 
         // Log asynchronously (non-blocking)
         otelLoggingScope.launch {

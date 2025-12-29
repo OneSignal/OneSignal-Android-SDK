@@ -16,23 +16,17 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
-import com.onesignal.core.internal.device.IInstallIdService
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceStoreFix
 import com.onesignal.core.internal.startup.StartupService
-import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.IDebugManager
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.DebugManager
-import com.onesignal.debug.internal.crash.OneSignalCrashHandlerFactory
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.debug.internal.logging.otel.android.AndroidOtelPlatformProvider
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.location.ILocationManager
 import com.onesignal.notifications.INotificationsManager
-import com.onesignal.otel.IOtelOpenTelemetryRemote
-import com.onesignal.otel.OtelFactory
 import com.onesignal.session.ISessionManager
 import com.onesignal.session.SessionModule
 import com.onesignal.user.IUserManager
@@ -213,6 +207,14 @@ internal class OneSignalImp(
     }
 
     private fun initEssentials(context: Context) {
+        // Crash handler needs to be one of the first things we setup,
+        // otherwise we'll not report some crashes, resulting in a false sense
+        // of stability.
+        // Initialize crash handler early, before any other services that might crash.
+        // This is decoupled from getService to ensure fast initialization.
+        // Pass Context directly instead of going through ApplicationService
+        OneSignalCrashLogInit.initializeCrashHandler(context, services)
+
         PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
 
         // start the application service. This is called explicitly first because we want
@@ -224,86 +226,8 @@ internal class OneSignalImp(
         // Give the logging singleton access to the application service to support visual logging.
         Logging.applicationService = applicationService
 
-        // Crash handler needs to be one of the first things we setup,
-        // otherwise we'll not report some crashes, resulting in a false sense
-        // of stability.
-        // Initialize crash handler early, before any other services that might crash.
-        // This is decoupled from getService to ensure fast initialization.
-        initializeCrashHandlerEarly(applicationService)
-
         // Initialize Otel logging integration after services are available
-        initializeOtelLogging(applicationService)
-    }
-
-    @Suppress("TooGenericExceptionCaught")
-    private fun initializeCrashHandlerEarly(applicationService: IApplicationService) {
-        try {
-            Logging.info("OneSignal: Initializing crash handler early...")
-            // Get minimal dependencies needed for crash handler
-            val installIdService = services.getService<IInstallIdService>()
-            val configModelStore = services.getService<ConfigModelStore>()
-            val identityModelStore = services.getService<IdentityModelStore>()
-            val time = services.getService<ITime>()
-
-            Logging.info("OneSignal: Creating crash handler...")
-            val crashHandler = OneSignalCrashHandlerFactory.createCrashHandler(
-                applicationService,
-                installIdService,
-                configModelStore,
-                identityModelStore,
-                time
-            )
-            Logging.info("OneSignal: Crash handler created, initializing...")
-            crashHandler.initialize()
-
-            // Log crash storage location for debugging
-            val crashPath = (applicationService.appContext.cacheDir.path +
-                java.io.File.separator + "onesignal" +
-                java.io.File.separator + "otel" +
-                java.io.File.separator + "crashes")
-            Logging.info("OneSignal: ✅ Crash handler initialized successfully and ready to capture crashes")
-            Logging.info("OneSignal: 📁 Crash logs will be stored at: $crashPath")
-            Logging.info("OneSignal: 💡 To view crash logs, use: adb shell run-as com.onesignal.sdktest ls -la $crashPath")
-        } catch (e: Exception) {
-            // If crash handler initialization fails, log it but don't crash
-            Logging.error("OneSignal: Failed to initialize crash handler: ${e.message}", e)
-        }
-    }
-
-    @Suppress("TooGenericExceptionCaught")
-    private fun initializeOtelLogging(applicationService: IApplicationService) {
-        try {
-            // Get dependencies needed for Otel logging
-            val installIdService = services.getService<IInstallIdService>()
-            val configModelStore = services.getService<ConfigModelStore>()
-            val identityModelStore = services.getService<IdentityModelStore>()
-            val time = services.getService<ITime>()
-
-            val platformProvider = AndroidOtelPlatformProvider(
-                applicationService,
-                installIdService,
-                configModelStore,
-                identityModelStore,
-                time
-            )
-
-            // Check if remote logging is enabled
-            val isRemoteLoggingEnabled = { platformProvider.remoteLoggingEnabled }
-
-            if (isRemoteLoggingEnabled()) {
-                Logging.info("OneSignal: Remote logging enabled, initializing Otel logging integration...")
-                val remoteTelemetry: IOtelOpenTelemetryRemote = OtelFactory.createRemoteTelemetry(platformProvider)
-
-                // Inject Otel telemetry into Logging class
-                Logging.setOtelTelemetry(remoteTelemetry, isRemoteLoggingEnabled)
-                Logging.info("OneSignal: ✅ Otel logging integration initialized - logs will be sent to remote server")
-            } else {
-                Logging.debug("OneSignal: Remote logging disabled, skipping Otel logging integration")
-            }
-        } catch (e: Exception) {
-            // If Otel logging initialization fails, log it but don't crash
-            Logging.warn("OneSignal: Failed to initialize Otel logging: ${e.message}", e)
-        }
+        OneSignalCrashLogInit.initializeOtelLogging(applicationService, services)
     }
 
     private fun updateConfig() {

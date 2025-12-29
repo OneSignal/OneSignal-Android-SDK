@@ -26,10 +26,10 @@ class LoggingOtelTest : FunSpec({
 
     test("setOtelTelemetry should store telemetry and enabled check function") {
         // Given
-        val isEnabled = { true }
+        val shouldSend = { _: LogLevel -> true }
 
         // When
-        Logging.setOtelTelemetry(mockTelemetry, isEnabled)
+        Logging.setOtelTelemetry(mockTelemetry, shouldSend)
 
         // Then - verify it's set (we'll test it works by logging)
         Logging.info("test")
@@ -45,7 +45,7 @@ class LoggingOtelTest : FunSpec({
 
     test("logToOtel should work when remote logging is enabled") {
         // Given
-        Logging.setOtelTelemetry(mockTelemetry, { true })
+        Logging.setOtelTelemetry(mockTelemetry, { _: LogLevel -> true })
 
         // When
         Logging.info("test message")
@@ -61,7 +61,7 @@ class LoggingOtelTest : FunSpec({
 
     test("logToOtel should NOT crash when remote logging is disabled") {
         // Given
-        Logging.setOtelTelemetry(mockTelemetry, { false })
+        Logging.setOtelTelemetry(mockTelemetry, { _: LogLevel -> false })
 
         // When
         Logging.info("test message")
@@ -76,7 +76,7 @@ class LoggingOtelTest : FunSpec({
 
     test("logToOtel should NOT crash when telemetry is null") {
         // Given
-        Logging.setOtelTelemetry(null, { true })
+        Logging.setOtelTelemetry(null, { _: LogLevel -> true })
 
         // When
         Logging.info("test message")
@@ -91,7 +91,7 @@ class LoggingOtelTest : FunSpec({
 
     test("logToOtel should handle all log levels without crashing") {
         // Given
-        Logging.setOtelTelemetry(mockTelemetry, { true })
+        Logging.setOtelTelemetry(mockTelemetry, { _: LogLevel -> true })
 
         // When
         Logging.verbose("verbose message")
@@ -111,7 +111,7 @@ class LoggingOtelTest : FunSpec({
 
     test("logToOtel should NOT log NONE level") {
         // Given
-        Logging.setOtelTelemetry(mockTelemetry, { true })
+        Logging.setOtelTelemetry(mockTelemetry, { _: LogLevel -> true })
 
         // When
         Logging.log(LogLevel.NONE, "none message")
@@ -126,7 +126,7 @@ class LoggingOtelTest : FunSpec({
 
     test("logToOtel should handle exceptions in logs") {
         // Given
-        Logging.setOtelTelemetry(mockTelemetry, { true })
+        Logging.setOtelTelemetry(mockTelemetry, { _: LogLevel -> true })
         val exception = RuntimeException("test exception")
 
         // When
@@ -142,7 +142,7 @@ class LoggingOtelTest : FunSpec({
 
     test("logToOtel should handle null exception message") {
         // Given
-        Logging.setOtelTelemetry(mockTelemetry, { true })
+        Logging.setOtelTelemetry(mockTelemetry, { _: LogLevel -> true })
         val exception = RuntimeException()
 
         // When
@@ -158,7 +158,7 @@ class LoggingOtelTest : FunSpec({
 
     test("logToOtel should handle Otel errors gracefully") {
         // Given
-        Logging.setOtelTelemetry(mockTelemetry, { true })
+        Logging.setOtelTelemetry(mockTelemetry, { _: LogLevel -> true })
         // Note: We can't mock getLogger() to throw due to OpenTelemetry type visibility,
         // but the real implementation in Logging.logToOtel() handles errors gracefully
 
@@ -176,7 +176,7 @@ class LoggingOtelTest : FunSpec({
     test("logToOtel should use dynamic remote logging check") {
         // Given
         var isEnabled = false
-        Logging.setOtelTelemetry(mockTelemetry, { isEnabled })
+        Logging.setOtelTelemetry(mockTelemetry, { _: LogLevel -> isEnabled })
 
         // When - initially disabled
         Logging.info("message 1")
@@ -197,7 +197,7 @@ class LoggingOtelTest : FunSpec({
 
     test("logToOtel should handle multiple rapid log calls") {
         // Given
-        Logging.setOtelTelemetry(mockTelemetry, { true })
+        Logging.setOtelTelemetry(mockTelemetry, { _: LogLevel -> true })
 
         // When - rapid fire logging
         repeat(10) {
@@ -214,7 +214,7 @@ class LoggingOtelTest : FunSpec({
 
     test("logToOtel should work with different message formats") {
         // Given
-        Logging.setOtelTelemetry(mockTelemetry, { true })
+        Logging.setOtelTelemetry(mockTelemetry, { _: LogLevel -> true })
 
         // When
         Logging.info("simple message")

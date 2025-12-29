@@ -4,9 +4,7 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IInstallIdService
 import com.onesignal.core.internal.startup.IStartableService
-import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.otel.android.AndroidOtelLogger
-import com.onesignal.debug.internal.logging.otel.android.AndroidOtelPlatformProvider
 import com.onesignal.otel.OtelFactory
 import com.onesignal.otel.crash.OtelCrashUploader
 import com.onesignal.user.internal.identity.IdentityModelStore
@@ -38,16 +36,14 @@ internal class OneSignalCrashUploaderWrapper(
     private val installIdService: IInstallIdService,
     private val configModelStore: ConfigModelStore,
     private val identityModelStore: IdentityModelStore,
-    private val time: ITime,
 ) : IStartableService {
     private val uploader: OtelCrashUploader by lazy {
         // Create Android-specific platform provider (injects Android values)
-        val platformProvider = AndroidOtelPlatformProvider(
+        val platformProvider = com.onesignal.debug.internal.logging.otel.android.createAndroidOtelPlatformProvider(
             applicationService,
             installIdService,
             configModelStore,
-            identityModelStore,
-            time
+            identityModelStore
         )
         // Create Android-specific logger (delegates to Android Logging)
         val logger = AndroidOtelLogger()

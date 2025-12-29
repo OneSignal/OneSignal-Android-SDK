@@ -6,9 +6,8 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IInstallIdService
-import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.otel.android.AndroidOtelLogger
-import com.onesignal.debug.internal.logging.otel.android.AndroidOtelPlatformProvider
+import com.onesignal.debug.internal.logging.otel.android.createAndroidOtelPlatformProvider
 import com.onesignal.otel.IOtelCrashHandler
 import com.onesignal.otel.IOtelPlatformProvider
 import com.onesignal.otel.OtelFactory
@@ -34,7 +33,6 @@ class OtelIntegrationTest : FunSpec({
     val mockInstallIdService = mockk<IInstallIdService>(relaxed = true)
     val mockConfigModelStore = mockk<ConfigModelStore>(relaxed = true)
     val mockIdentityModelStore = mockk<IdentityModelStore>(relaxed = true)
-    val mockTime = mockk<ITime>(relaxed = true)
     val mockConfigModel = mockk<ConfigModel>(relaxed = true)
     val mockIdentityModel = mockk<IdentityModel>(relaxed = true)
 
@@ -48,22 +46,20 @@ class OtelIntegrationTest : FunSpec({
         coEvery { mockInstallIdService.getId() } returns UUID.randomUUID()
         every { mockConfigModelStore.model } returns mockConfigModel
         every { mockIdentityModelStore.model } returns mockIdentityModel
-        every { mockTime.processUptimeMillis } returns 100000L
         every { mockConfigModel.appId } returns "test-app-id"
         every { mockConfigModel.remoteLoggingParams } returns mockk(relaxed = true) {
-            every { enable } returns true
+            every { logLevel } returns com.onesignal.debug.LogLevel.ERROR
         }
         every { mockIdentityModel.onesignalId } returns "test-onesignal-id"
         every { mockConfigModel.pushSubscriptionId } returns "test-subscription-id"
     }
 
     test("AndroidOtelPlatformProvider should provide correct Android values") {
-        val provider = AndroidOtelPlatformProvider(
+        val provider = createAndroidOtelPlatformProvider(
             mockApplicationService,
             mockInstallIdService,
             mockConfigModelStore,
-            mockIdentityModelStore,
-            mockTime
+            mockIdentityModelStore
         )
 
         provider.shouldBeInstanceOf<IOtelPlatformProvider>()
@@ -81,12 +77,11 @@ class OtelIntegrationTest : FunSpec({
     }
 
     test("AndroidOtelPlatformProvider should provide per-event values") {
-        val provider = AndroidOtelPlatformProvider(
+        val provider = createAndroidOtelPlatformProvider(
             mockApplicationService,
             mockInstallIdService,
             mockConfigModelStore,
-            mockIdentityModelStore,
-            mockTime
+            mockIdentityModelStore
         )
 
         provider.appId shouldBe "test-app-id"
@@ -109,12 +104,11 @@ class OtelIntegrationTest : FunSpec({
     }
 
     test("OtelFactory should create crash handler with Android provider") {
-        val provider = AndroidOtelPlatformProvider(
+        val provider = createAndroidOtelPlatformProvider(
             mockApplicationService,
             mockInstallIdService,
             mockConfigModelStore,
-            mockIdentityModelStore,
-            mockTime
+            mockIdentityModelStore
         )
         val logger = AndroidOtelLogger()
 
@@ -130,8 +124,7 @@ class OtelIntegrationTest : FunSpec({
             mockApplicationService,
             mockInstallIdService,
             mockConfigModelStore,
-            mockIdentityModelStore,
-            mockTime
+            mockIdentityModelStore
         )
 
         handler shouldNotBe null
@@ -140,12 +133,11 @@ class OtelIntegrationTest : FunSpec({
     }
 
     test("AndroidOtelPlatformProvider should provide crash storage path") {
-        val provider = AndroidOtelPlatformProvider(
+        val provider = createAndroidOtelPlatformProvider(
             mockApplicationService,
             mockInstallIdService,
             mockConfigModelStore,
-            mockIdentityModelStore,
-            mockTime
+            mockIdentityModelStore
         )
 
         provider.crashStoragePath.contains("onesignal") shouldBe true
@@ -156,18 +148,17 @@ class OtelIntegrationTest : FunSpec({
 
     test("AndroidOtelPlatformProvider should handle remote logging config") {
         every { mockConfigModel.remoteLoggingParams } returns mockk(relaxed = true) {
-            every { enable } returns true
+            every { logLevel } returns com.onesignal.debug.LogLevel.ERROR
         }
 
-        val provider = AndroidOtelPlatformProvider(
+        val provider = createAndroidOtelPlatformProvider(
             mockApplicationService,
             mockInstallIdService,
             mockConfigModelStore,
-            mockIdentityModelStore,
-            mockTime
+            mockIdentityModelStore
         )
 
-        provider.remoteLoggingEnabled shouldBe true
+        provider.remoteLogLevel shouldBe "ERROR"
         provider.appIdForHeaders shouldBe "test-app-id"
     }
 })

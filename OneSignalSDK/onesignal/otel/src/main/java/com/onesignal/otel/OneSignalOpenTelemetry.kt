@@ -97,7 +97,7 @@ internal class OneSignalOpenTelemetryRemote(
     }
 
     override val logExporter by lazy {
-        OtelConfigRemoteOneSignal.HttpRecordBatchExporter.create(extraHttpHeaders)
+        OtelConfigRemoteOneSignal.HttpRecordBatchExporter.create(extraHttpHeaders, appId)
     }
 
     override fun getSdkInstance(attributes: Map<String, String>): OpenTelemetrySdk =
@@ -106,7 +106,8 @@ internal class OneSignalOpenTelemetryRemote(
             .setLoggerProvider(
                 OtelConfigRemoteOneSignal.SdkLoggerProviderConfig.create(
                     OtelConfigShared.ResourceConfig.create(attributes),
-                    extraHttpHeaders
+                    extraHttpHeaders,
+                    appId
                 )
             ).build()
 }

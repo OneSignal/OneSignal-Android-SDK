@@ -38,6 +38,12 @@ interface IOtelPlatformProvider {
     val minFileAgeForReadMillis: Long
 
     // Remote logging configuration
-    val remoteLoggingEnabled: Boolean
+    /**
+     * The minimum log level to send remotely as a string (e.g., "ERROR", "WARN", "NONE").
+     * If null, defaults to ERROR level for client-side logging.
+     * If "NONE", no logs (including errors) will be sent remotely.
+     * Valid values: "NONE", "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "VERBOSE"
+     */
+    val remoteLogLevel: String?
     val appIdForHeaders: String
 }

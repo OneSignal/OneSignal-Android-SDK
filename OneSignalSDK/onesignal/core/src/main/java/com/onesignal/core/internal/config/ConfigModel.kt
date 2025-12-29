@@ -443,11 +443,15 @@ class RemoteLoggingConfigModel(
     parentProperty: String,
 ) : Model(parentModel, parentProperty) {
     /**
-     * Do we send OneSignal related logs to OneSignal's server.
+     * The minimum log level to send to OneSignal's server.
+     * If null, defaults to ERROR level for client-side logging.
+     * If NONE, no logs (including errors) will be sent remotely.
+     *
+     * Log levels: NONE < FATAL < ERROR < WARN < INFO < DEBUG < VERBOSE
      */
-    var enable: Boolean?
-        get() = getOptBooleanProperty(::enable.name) { null }
+    var logLevel: com.onesignal.debug.LogLevel?
+        get() = getOptEnumProperty<com.onesignal.debug.LogLevel>(::logLevel.name)
         set(value) {
-            setOptBooleanProperty(::enable.name, value)
+            setOptEnumProperty(::logLevel.name, value)
         }
 }

@@ -4,9 +4,8 @@ import android.os.Build
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IInstallIdService
-import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.internal.logging.otel.android.AndroidOtelLogger
-import com.onesignal.debug.internal.logging.otel.android.AndroidOtelPlatformProvider
+import com.onesignal.debug.internal.logging.otel.android.createAndroidOtelPlatformProvider
 import com.onesignal.otel.IOtelCrashHandler
 import com.onesignal.otel.OtelFactory
 import com.onesignal.user.internal.identity.IdentityModelStore
@@ -27,7 +26,6 @@ internal object OneSignalCrashHandlerFactory {
         installIdService: IInstallIdService,
         configModelStore: ConfigModelStore,
         identityModelStore: IdentityModelStore,
-        time: ITime,
     ): IOtelCrashHandler {
         // Otel requires SDK 26+, use no-op for older versions
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
@@ -36,12 +34,11 @@ internal object OneSignalCrashHandlerFactory {
         }
 
         com.onesignal.debug.internal.logging.Logging.info("OneSignal: Creating Otel crash handler (SDK ${Build.VERSION.SDK_INT} >= 26)")
-        val platformProvider = AndroidOtelPlatformProvider(
+        val platformProvider = createAndroidOtelPlatformProvider(
             applicationService,
             installIdService,
             configModelStore,
-            identityModelStore,
-            time
+            identityModelStore
         )
         val logger = AndroidOtelLogger()
 

@@ -24,28 +24,29 @@ internal class OtelConfigRemoteOneSignal {
 
     object SdkLoggerProviderConfig {
         // NOTE: Switch to https://sdklogs.onesignal.com:443/sdk/otel when ready
-        const val BASE_URL = "https://api.honeycomb.io:443"
+        const val BASE_URL = "https://api.staging.onesignal.com/sdk/otel"
 
         fun create(
             resource: io.opentelemetry.sdk.resources.Resource,
             extraHttpHeaders: Map<String, String>,
+            appId: String,
         ): SdkLoggerProvider =
             SdkLoggerProvider
                 .builder()
                 .setResource(resource)
                 .addLogRecordProcessor(
                     OtelConfigShared.LogRecordProcessorConfig.batchLogRecordProcessor(
-                        HttpRecordBatchExporter.create(extraHttpHeaders)
+                        HttpRecordBatchExporter.create(extraHttpHeaders, appId)
                     )
                 ).setLogLimits(OtelConfigShared.LogLimitsConfig::logLimits)
                 .build()
     }
 
     object HttpRecordBatchExporter {
-        fun create(extraHttpHeaders: Map<String, String>) =
+        fun create(extraHttpHeaders: Map<String, String>, appId: String) =
             LogRecordExporterConfig.otlpHttpLogRecordExporter(
                 extraHttpHeaders,
-                "${SdkLoggerProviderConfig.BASE_URL}/v1/logs"
+                "${SdkLoggerProviderConfig.BASE_URL}/v1/logs?app_id=$appId"
             )
     }
 }
