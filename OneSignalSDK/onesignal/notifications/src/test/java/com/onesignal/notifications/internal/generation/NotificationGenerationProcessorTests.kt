@@ -43,7 +43,7 @@ private class Mocks {
         run {
             val mockNotificationLifecycleService = mockk<INotificationLifecycleService>()
             coEvery { mockNotificationLifecycleService.canReceiveNotification(any()) } returns true
-            coEvery { mockNotificationLifecycleService.notificationReceived(any()) } just runs
+            coEvery { mockNotificationLifecycleService.notificationReceived(any(), any()) } just runs
             mockNotificationLifecycleService
         }
 
@@ -168,6 +168,10 @@ class NotificationGenerationProcessorTests : FunSpec({
         mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, false, 1111)
 
         // Then
+        // notificationReceived should be called with wasDisplayed=false
+        coVerify(exactly = 1) {
+            mocks.notificationLifecycleService.notificationReceived(any(), false)
+        }
     }
 
     test("processNotificationData should display notification when external callback takes longer than 30 seconds") {
@@ -209,6 +213,10 @@ class NotificationGenerationProcessorTests : FunSpec({
         mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, false, 1111)
 
         // Then
+        // notificationReceived should be called with wasDisplayed=false
+        coVerify(exactly = 1) {
+            mocks.notificationLifecycleService.notificationReceived(any(), false)
+        }
     }
 
     test("processNotificationData should display notification when foreground callback takes longer than 30 seconds") {
