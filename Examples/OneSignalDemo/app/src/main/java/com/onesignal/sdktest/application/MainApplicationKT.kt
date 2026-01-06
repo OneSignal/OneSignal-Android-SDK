@@ -43,6 +43,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainApplicationKT : MultiDexApplication() {
 
@@ -83,8 +86,39 @@ class MainApplicationKT : MultiDexApplication() {
             Log.d(Tag.LOG_TAG, Text.ONESIGNAL_SDK_INIT)
 
             delay(3000)
-            //throw RuntimeException("test crash 2025-11-04 18")
         }
+//        crashApp()
+//        forceANR()
+    }
+
+    private fun forceANR() {
+        try {
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                Log.d(Tag.LOG_TAG, "Starting infinite loop on main thread to trigger ANR.")
+                // This will block the main thread indefinitely, triggering an ANR
+                // The ANR detector will detect it after 5 seconds if OneSignal code is in the stack trace
+                while (true) {
+                    Log.d(Tag.LOG_TAG, "Blocking main thread - ANR test")
+                    // Small sleep to prevent excessive CPU usage, but still blocks the thread
+                    Thread.sleep(100)
+                }
+            }
+        } catch (e: InterruptedException) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun crashApp() {
+        val sdf = SimpleDateFormat(
+            "MMM dd, yyyy HH:mm:ss",
+            Locale.getDefault()
+        )
+
+        crashApp()
+        val currentTimeMillis = System.currentTimeMillis()
+        val date = Date(currentTimeMillis)
+        val formattedDate = sdf.format(date)
+        throw RuntimeException("test crash from AR $formattedDate")
     }
 
     private fun setupOneSignalListeners() {

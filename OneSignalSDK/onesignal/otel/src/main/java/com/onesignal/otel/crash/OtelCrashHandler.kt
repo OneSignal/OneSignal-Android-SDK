@@ -46,15 +46,27 @@ internal class OtelCrashHandler(
 
         logger.info("OtelCrashHandler: Uncaught exception detected - ${throwable.javaClass.simpleName}: ${throwable.message}")
 
+        // Check if this is an ANR exception (though standalone ANR detector already handles ANRs)
+        // This would only catch ANRs if they're thrown as exceptions, which is rare
+        val isAnr = throwable.javaClass.simpleName.contains("ApplicationNotResponding", ignoreCase = true) ||
+            throwable.message?.contains("Application Not Responding", ignoreCase = true) == true
+
         // NOTE: Future improvements:
         // - Catch anything we may throw and print only to logcat
         // - Send a stop command to OneSignalCrashUploader, give a bit of time to finish
         //   and then call existingHandler. This way the app doesn't have to open a 2nd
         //   time to get the crash report and should help prevent duplicated reports.
-        if (!isOneSignalAtFault(throwable)) {
+        // NOTE: ANRs are typically detected by the standalone OtelAnrDetector, which only
+        // reports OneSignal-related ANRs. This handler would only catch ANRs if they're
+        // thrown as exceptions (unlikely), and we still check if OneSignal is at fault.
+        if (!isAnr && !isOneSignalAtFault(throwable)) {
             logger.debug("OtelCrashHandler: Crash is not OneSignal-related, delegating to existing handler")
             existingHandler?.uncaughtException(thread, throwable)
             return
+        }
+
+        if (isAnr) {
+            logger.info("OtelCrashHandler: ANR exception caught (unusual - ANRs are usually detected by standalone detector)")
         }
 
         logger.info("OtelCrashHandler: OneSignal-related crash detected, saving crash report...")
@@ -93,5 +105,17 @@ internal class OtelCrashHandler(
     }
 }
 
+/**
+ * Checks if a throwable's stack trace indicates OneSignal is at fault.
+ * Centralized logic used by both crash handler and ANR detector.
+ */
 internal fun isOneSignalAtFault(throwable: Throwable): Boolean =
-    throwable.stackTrace.any { it.className.startsWith("com.onesignal") }
+    isOneSignalAtFault(throwable.stackTrace)
+
+/**
+ * Helper function to check if a stack trace indicates OneSignal is at fault.
+ * Centralized logic used by both crash handler and ANR detector.
+ * Made public so it can be accessed from core module.
+ */
+fun isOneSignalAtFault(stackTrace: Array<StackTraceElement>): Boolean =
+    stackTrace.any { it.className.startsWith("com.onesignal") }

@@ -3,61 +3,41 @@ package com.onesignal.debug.internal.logging.otel.android
 import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
-import com.onesignal.common.IDManager
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.OneSignalWrapper
-import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
-import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.otel.IOtelPlatformProvider
 
 /**
  * Configuration for AndroidOtelPlatformProvider.
- * Groups parameters to avoid LongParameterList detekt issue.
  */
 internal data class OtelPlatformProviderConfig(
     val crashStoragePath: String,
     val appPackageId: String,
     val appVersion: String,
-    val getInstallIdProvider: suspend () -> String,
     val context: Context? = null,
-    val getAppId: (() -> String?)? = null,
-    val getOnesignalId: (() -> String?)? = null,
-    val getPushSubscriptionId: (() -> String?)? = null,
     val getIsInForeground: (() -> Boolean?)? = null,
-    val getRemoteLogLevel: (() -> com.onesignal.debug.LogLevel?)? = null,
 )
 
 /**
  * Android-specific implementation of IOtelPlatformProvider.
- * This provider can work with or without full service dependencies, making it flexible for both
- * early crash handler initialization and full remote logging scenarios.
+ * Reads all values directly from SharedPreferences and system services.
+ * No SDK service dependencies required.
  *
- * If Context is provided, it will attempt to retrieve additional metadata from SharedPreferences
- * and system services, falling back to null/defaults if unavailable.
- *
- * Optional service getters can be provided to retrieve values from services if available:
- * - getAppId: () -> String? - Get appId from ConfigModelStore if available
- * - getOnesignalId: () -> String? - Get onesignalId from IdentityModelStore if available
- * - getPushSubscriptionId: () -> String? - Get pushSubscriptionId from ConfigModelStore if available
- * - getIsInForeground: () -> Boolean? - Get foreground state from ApplicationService if available
- * - getRemoteLogLevel: () -> LogLevel? - Get remote logging level from ConfigModelStore if available
+ * All IDs (appId, onesignalId, pushSubscriptionId) are resolved from SharedPreferences via OtelIdResolver.
+ * Remote log level defaults to ERROR if not found in config.
  */
 internal class OtelPlatformProvider(
     config: OtelPlatformProviderConfig,
 ) : IOtelPlatformProvider {
     override val appPackageId: String = config.appPackageId
     override val appVersion: String = config.appVersion
-    private val getInstallIdProvider: suspend () -> String = config.getInstallIdProvider
     private val context: Context? = config.context
-    private val getAppId: (() -> String?)? = config.getAppId
-    private val getOnesignalId: (() -> String?)? = config.getOnesignalId
-    private val getPushSubscriptionId: (() -> String?)? = config.getPushSubscriptionId
     private val getIsInForeground: (() -> Boolean?)? = config.getIsInForeground
-    private val getRemoteLogLevel: (() -> com.onesignal.debug.LogLevel?)? = config.getRemoteLogLevel
+    private val idResolver = OtelIdResolver(context)
 
     // Top-level attributes (static, calculated once)
-    override suspend fun getInstallId(): String = getInstallIdProvider()
+    override suspend fun getInstallId(): String = idResolver.resolveInstallId()
 
     override val sdkBase: String = "android"
 
@@ -77,38 +57,18 @@ internal class OtelPlatformProvider(
 
     override val sdkWrapperVersion: String? = OneSignalWrapper.sdkVersion
 
-    // Per-event attributes (dynamic, calculated per event)
-    // The getAppId lambda already contains all fallback logic (service -> app SharedPreferences -> legacy -> "unknown")
-    // So we just invoke it here without duplicating the logic
-    override val appId: String?
-        @Suppress("TooGenericExceptionCaught", "SwallowedException")
-        get() = try {
-            getAppId?.invoke()
-        } catch (e: Exception) {
-            null
-        }
+    // Per-event attributes - IDs are cached (calculated once), appState is dynamic (calculated per access)
+    override val appId: String? by lazy {
+        idResolver.resolveAppId()
+    }
 
-    override val onesignalId: String?
-        @Suppress("TooGenericExceptionCaught", "SwallowedException")
-        get() = try {
-            // First try to get from service if available
-            getOnesignalId?.invoke()?.takeIf { !IDManager.isLocalId(it) } ?: run {
-                // Fall back to SharedPreferences and pick up at least Legacy Id if it exists
-                context?.getSharedPreferences(PreferenceStores.ONESIGNAL, Context.MODE_PRIVATE)
-                    ?.getString(PreferenceOneSignalKeys.PREFS_LEGACY_PLAYER_ID, null)
-                    ?.takeIf { !IDManager.isLocalId(it) }
-            }
-        } catch (e: Exception) {
-            null
-        }
+    override val onesignalId: String? by lazy {
+        idResolver.resolveOnesignalId()
+    }
 
-    override val pushSubscriptionId: String?
-        @Suppress("TooGenericExceptionCaught", "SwallowedException")
-        get() = try {
-            getPushSubscriptionId?.invoke()?.takeIf { !IDManager.isLocalId(it) }
-        } catch (e: Exception) {
-            null
-        }
+    override val pushSubscriptionId: String? by lazy {
+        idResolver.resolvePushSubscriptionId()
+    }
 
     // https://opentelemetry.io/docs/specs/semconv/registry/attributes/android/
     override val appState: String
@@ -164,47 +124,39 @@ internal class OtelPlatformProvider(
     /**
      * The minimum log level to send remotely as a string.
      * - If remote config log level is populated and valid: use that level
-     * - If remote config is null or unavailable: default to "ERROR" (bare minimum for client-side)
+     * - If remote config is null or unavailable: default to "ERROR" (always log errors)
      * - If remote config is explicitly NONE: return "NONE" (no logs including errors)
      */
-    override val remoteLogLevel: String?
-        @Suppress("TooGenericExceptionCaught", "SwallowedException")
-        get() = try {
-            val configLevel = getRemoteLogLevel?.invoke()
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    override val remoteLogLevel: String? by lazy {
+        try {
+            val configLevel = idResolver.resolveRemoteLogLevel()
             when {
                 // Remote config is populated and working well - use whatever is sent from there
                 configLevel != null && configLevel != com.onesignal.debug.LogLevel.NONE -> configLevel.name
                 // Explicitly NONE means no logging (including errors)
                 configLevel == com.onesignal.debug.LogLevel.NONE -> "NONE"
-                // Remote config not available - default to ERROR as bare minimum
+                // Remote config not available - default to ERROR (always log errors)
                 else -> "ERROR"
             }
         } catch (e: Exception) {
-            // If there's an error accessing config, default to ERROR as bare minimum
+            // If there's an error accessing config, default to ERROR (always log errors)
+            // Exception is intentionally swallowed to avoid recursion in logging
             "ERROR"
         }
+    }
 
     override val appIdForHeaders: String
-        @Suppress("TooGenericExceptionCaught", "SwallowedException")
-        get() = try {
-            // Try to get appId for headers (same logic as appId property)
-            appId ?: ""
-        } catch (e: Exception) {
-            ""
-        }
+        get() = appId ?: ""
 }
 
 /**
- * Factory function to create AndroidOtelPlatformProvider with full service dependencies.
- * This is a convenience function that creates the provider with service getters.
+ * Factory function to create AndroidOtelPlatformProvider without service dependencies.
+ * Reads all values directly from SharedPreferences and system services.
  */
 internal fun createAndroidOtelPlatformProvider(
-    applicationService: com.onesignal.core.internal.application.IApplicationService,
-    installIdService: com.onesignal.core.internal.device.IInstallIdService,
-    configModelStore: com.onesignal.core.internal.config.ConfigModelStore,
-    identityModelStore: com.onesignal.user.internal.identity.IdentityModelStore,
+    context: Context,
 ): OtelPlatformProvider {
-    val context = applicationService.appContext
     val crashStoragePath = context.cacheDir.path + java.io.File.separator +
         "onesignal" + java.io.File.separator +
         "otel" + java.io.File.separator +
@@ -215,43 +167,7 @@ internal fun createAndroidOtelPlatformProvider(
             crashStoragePath = crashStoragePath,
             appPackageId = context.packageName,
             appVersion = com.onesignal.common.AndroidUtils.getAppVersion(context) ?: "unknown",
-            getInstallIdProvider = { installIdService.getId().toString() },
             context = context,
-            getAppId = {
-                @Suppress("TooGenericExceptionCaught", "SwallowedException")
-                try {
-                    configModelStore.model.appId
-                } catch (e: Exception) {
-                    null
-                }
-            },
-            getOnesignalId = {
-                @Suppress("TooGenericExceptionCaught", "SwallowedException")
-                try {
-                    val onesignalId = identityModelStore.model.onesignalId
-                    onesignalId.takeIf { !IDManager.isLocalId(it) }
-                } catch (e: Exception) {
-                    null
-                }
-            },
-            getPushSubscriptionId = {
-                @Suppress("TooGenericExceptionCaught", "SwallowedException")
-                try {
-                    val pushSubscriptionId = configModelStore.model.pushSubscriptionId
-                    pushSubscriptionId?.takeIf { !IDManager.isLocalId(pushSubscriptionId) }
-                } catch (e: Exception) {
-                    null
-                }
-            },
-            getIsInForeground = { applicationService.isInForeground },
-            getRemoteLogLevel = {
-                @Suppress("TooGenericExceptionCaught", "SwallowedException")
-                try {
-                    configModelStore.model.remoteLoggingParams.logLevel
-                } catch (e: Exception) {
-                    null
-                }
-            },
         )
     )
 }

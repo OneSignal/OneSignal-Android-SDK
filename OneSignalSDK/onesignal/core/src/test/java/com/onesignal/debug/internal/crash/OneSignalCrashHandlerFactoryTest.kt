@@ -1,27 +1,30 @@
 package com.onesignal.debug.internal.crash
 
-import com.onesignal.core.internal.application.IApplicationService
-import com.onesignal.core.internal.config.ConfigModelStore
-import com.onesignal.core.internal.device.IInstallIdService
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.debug.internal.logging.otel.android.AndroidOtelLogger
 import com.onesignal.otel.IOtelCrashHandler
-import com.onesignal.user.internal.identity.IdentityModelStore
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import io.mockk.mockk
 
+@RobolectricTest
 class OneSignalCrashHandlerFactoryTest : FunSpec({
-    val mockApplicationService = mockk<IApplicationService>(relaxed = true)
-    val mockInstallIdService = mockk<IInstallIdService>(relaxed = true)
-    val mockConfigModelStore = mockk<ConfigModelStore>(relaxed = true)
-    val mockIdentityModelStore = mockk<IdentityModelStore>(relaxed = true)
+    var appContext: Context? = null
+    var logger: AndroidOtelLogger? = null
+
+    beforeAny {
+        if (appContext == null) {
+            appContext = ApplicationProvider.getApplicationContext()
+            logger = AndroidOtelLogger()
+        }
+    }
 
     test("createCrashHandler should return IOtelCrashHandler") {
         val handler = OneSignalCrashHandlerFactory.createCrashHandler(
-            mockApplicationService,
-            mockInstallIdService,
-            mockConfigModelStore,
-            mockIdentityModelStore
+            appContext!!,
+            logger!!
         )
 
         handler.shouldBeInstanceOf<IOtelCrashHandler>()
@@ -31,10 +34,8 @@ class OneSignalCrashHandlerFactoryTest : FunSpec({
         // Note: SDK version check is handled at runtime by the factory
         // This test verifies the handler can be created and initialized
         val handler = OneSignalCrashHandlerFactory.createCrashHandler(
-            mockApplicationService,
-            mockInstallIdService,
-            mockConfigModelStore,
-            mockIdentityModelStore
+            appContext!!,
+            logger!!
         )
 
         handler shouldNotBe null
@@ -46,10 +47,8 @@ class OneSignalCrashHandlerFactoryTest : FunSpec({
         // Note: SDK version check is handled at runtime by the factory
         // This test verifies the handler can be created and initialized
         val handler = OneSignalCrashHandlerFactory.createCrashHandler(
-            mockApplicationService,
-            mockInstallIdService,
-            mockConfigModelStore,
-            mockIdentityModelStore
+            appContext!!,
+            logger!!
         )
 
         handler shouldNotBe null

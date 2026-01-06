@@ -14,6 +14,7 @@ internal class OtelCrashReporter(
         private const val OTEL_EXCEPTION_TYPE = "exception.type"
         private const val OTEL_EXCEPTION_MESSAGE = "exception.message"
         private const val OTEL_EXCEPTION_STACKTRACE = "exception.stacktrace"
+        private const val OTEL_EXCEPTION_THREAD_NAME = "ossdk.exception.thread.name"
     }
 
     override suspend fun saveCrash(thread: Thread, throwable: Throwable) {
@@ -28,7 +29,7 @@ internal class OtelCrashReporter(
                     .put(OTEL_EXCEPTION_TYPE, throwable.javaClass.name)
                     // This matches the top level thread.name today, but it may not
                     // always if things are refactored to use a different thread.
-                    .put("ossdk.exception.thread.name", thread.name)
+                    .put(OTEL_EXCEPTION_THREAD_NAME, thread.name)
                     .build()
 
             logger.debug("OtelCrashReporter: Creating log record with attributes...")

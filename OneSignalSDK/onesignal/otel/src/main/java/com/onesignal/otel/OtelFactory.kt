@@ -15,19 +15,16 @@ object OtelFactory {
     /**
      * Creates a fully configured crash handler that can be initialized immediately.
      * All fields are pre-populated for fast initialization.
+     *
+     * This method composes other factory methods to create the crash handler,
+     * ensuring consistency and reducing duplication.
      */
     fun createCrashHandler(
         platformProvider: IOtelPlatformProvider,
         logger: IOtelLogger,
     ): IOtelCrashHandler {
-        val topLevelFields = OtelFieldsTopLevel(platformProvider)
-        val perEventFields = OtelFieldsPerEvent(platformProvider)
-        val crashLocal = OneSignalOpenTelemetryCrashLocal(
-            platformProvider,
-            topLevelFields,
-            perEventFields
-        )
-        val crashReporter = OtelCrashReporter(crashLocal, logger)
+        val crashLocal = createCrashLocalTelemetry(platformProvider)
+        val crashReporter = createCrashReporter(crashLocal, logger)
         return OtelCrashHandler(crashReporter, logger)
     }
 
@@ -74,5 +71,42 @@ object OtelFactory {
             topLevelFields,
             perEventFields
         )
+    }
+
+    /**
+     * Creates a local OpenTelemetry crash instance for saving crash reports locally.
+     *
+     * This is platform-agnostic and can be used in KMP projects.
+     * All platform-specific values must be provided through IOtelPlatformProvider.
+     *
+     * @param platformProvider Platform-specific provider that injects all required values
+     * @return Platform-agnostic crash local telemetry instance
+     */
+    fun createCrashLocalTelemetry(
+        platformProvider: IOtelPlatformProvider,
+    ): IOtelOpenTelemetryCrash {
+        val topLevelFields = OtelFieldsTopLevel(platformProvider)
+        val perEventFields = OtelFieldsPerEvent(platformProvider)
+        return OneSignalOpenTelemetryCrashLocal(
+            platformProvider,
+            topLevelFields,
+            perEventFields
+        )
+    }
+
+    /**
+     * Creates a crash reporter for saving crash reports.
+     *
+     * This is platform-agnostic and can be used in KMP projects.
+     *
+     * @param openTelemetryCrash The crash telemetry instance to use
+     * @param logger Platform-specific logger implementation
+     * @return Platform-agnostic crash reporter
+     */
+    fun createCrashReporter(
+        openTelemetryCrash: IOtelOpenTelemetryCrash,
+        logger: IOtelLogger,
+    ): IOtelCrashReporter {
+        return OtelCrashReporter(openTelemetryCrash, logger)
     }
 }

@@ -1,47 +1,42 @@
 package com.onesignal.debug.internal.crash
 
+import android.content.Context
 import android.os.Build
-import com.onesignal.core.internal.application.IApplicationService
-import com.onesignal.core.internal.config.ConfigModelStore
-import com.onesignal.core.internal.device.IInstallIdService
-import com.onesignal.debug.internal.logging.otel.android.AndroidOtelLogger
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.debug.internal.logging.otel.android.createAndroidOtelPlatformProvider
 import com.onesignal.otel.IOtelCrashHandler
+import com.onesignal.otel.IOtelLogger
 import com.onesignal.otel.OtelFactory
-import com.onesignal.user.internal.identity.IdentityModelStore
 
 /**
  * Factory for creating crash handlers with SDK version checks.
  * For SDK < 26, returns a no-op implementation.
  * For SDK >= 26, returns the Otel-based crash handler.
+ *
+ * Uses minimal dependencies - only Context and logger.
+ * Platform provider uses OtelIdResolver internally which reads from SharedPreferences.
  */
 internal object OneSignalCrashHandlerFactory {
     /**
      * Creates a crash handler appropriate for the current SDK version.
      * This should be called as early as possible, before any other initialization.
-     * All dependencies must be pre-populated.
+     *
+     * @param context Android context for creating platform provider
+     * @param logger Logger instance (can be shared with other components)
      */
     fun createCrashHandler(
-        applicationService: IApplicationService,
-        installIdService: IInstallIdService,
-        configModelStore: ConfigModelStore,
-        identityModelStore: IdentityModelStore,
+        context: Context,
+        logger: IOtelLogger,
     ): IOtelCrashHandler {
         // Otel requires SDK 26+, use no-op for older versions
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            com.onesignal.debug.internal.logging.Logging.info("OneSignal: Creating no-op crash handler (SDK ${Build.VERSION.SDK_INT} < 26)")
+            Logging.info("OneSignal: Creating no-op crash handler (SDK ${Build.VERSION.SDK_INT} < 26)")
             return NoOpCrashHandler()
         }
 
-        com.onesignal.debug.internal.logging.Logging.info("OneSignal: Creating Otel crash handler (SDK ${Build.VERSION.SDK_INT} >= 26)")
-        val platformProvider = createAndroidOtelPlatformProvider(
-            applicationService,
-            installIdService,
-            configModelStore,
-            identityModelStore
-        )
-        val logger = AndroidOtelLogger()
-
+        Logging.info("OneSignal: Creating Otel crash handler (SDK ${Build.VERSION.SDK_INT} >= 26)")
+        // Create platform provider - uses OtelIdResolver internally
+        val platformProvider = createAndroidOtelPlatformProvider(context)
         return OtelFactory.createCrashHandler(platformProvider, logger)
     }
 }
@@ -51,6 +46,6 @@ internal object OneSignalCrashHandlerFactory {
  */
 private class NoOpCrashHandler : IOtelCrashHandler {
     override fun initialize() {
-        com.onesignal.debug.internal.logging.Logging.info("OneSignal: No-op crash handler initialized (SDK < 26, Otel not supported)")
+        Logging.info("OneSignal: No-op crash handler initialized (SDK < 26, Otel not supported)")
     }
 }
