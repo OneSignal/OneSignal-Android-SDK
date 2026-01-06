@@ -235,8 +235,8 @@ internal class NotificationGenerationProcessor(
             markNotificationAsDismissed(notificationJob)
         }
 
-        // Always call notificationReceived, but pass wasDisplayed to control influence/analytics tracking
-        _lifecycleService.notificationReceived(notificationJob, wasDisplayed)
+        // Always call notificationReceived, regardless of wasDisplayed
+        _lifecycleService.notificationReceived(notificationJob)
     }
 
     // Saving the notification provides the following:

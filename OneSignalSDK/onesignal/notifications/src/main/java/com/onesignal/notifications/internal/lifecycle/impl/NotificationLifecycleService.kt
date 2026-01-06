@@ -96,14 +96,8 @@ internal class NotificationLifecycleService(
         return canReceive
     }
 
-    override suspend fun notificationReceived(notificationJob: NotificationGenerationJob, wasDisplayed: Boolean) {
-        // Always send receive receipt regardless of whether notification was displayed
+    override suspend fun notificationReceived(notificationJob: NotificationGenerationJob) {
         _receiveReceiptWorkManager.enqueueReceiveReceipt(notificationJob.apiNotificationId)
-
-        // Only track influence and analytics if the notification was actually displayed
-        if (!wasDisplayed) {
-            return
-        }
 
         _influenceManager.onNotificationReceived(notificationJob.apiNotificationId)
 

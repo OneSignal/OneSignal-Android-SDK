@@ -52,7 +52,7 @@ interface INotificationLifecycleService {
 
     fun externalNotificationWillShowInForeground(willDisplayEvent: INotificationWillDisplayEvent)
 
-    suspend fun notificationReceived(notificationJob: NotificationGenerationJob, wasDisplayed: Boolean)
+    suspend fun notificationReceived(notificationJob: NotificationGenerationJob)
 
     suspend fun canOpenNotification(
         activity: Activity,
