@@ -212,11 +212,11 @@ internal class HmsLocationController(
 
     class LocationHandlerThread internal constructor() :
         HandlerThread("OSH_LocationHandlerThread") {
-            var mHandler: Handler
+        var mHandler: Handler
 
-            init {
-                start()
-                mHandler = Handler(looper)
-            }
+        init {
+            start()
+            mHandler = Handler(looper)
         }
+    }
 }

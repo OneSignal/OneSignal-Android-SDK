@@ -579,7 +579,7 @@ internal class InAppMessageView(
             messageView,
             (
                 -height - marginPxSizeTop
-            ).toFloat(),
+                ).toFloat(),
             0f,
             IN_APP_BANNER_ANIMATION_DURATION_MS,
             OneSignalBounceInterpolator(0.1, 8.0),
@@ -598,7 +598,7 @@ internal class InAppMessageView(
             messageView,
             (
                 height + marginPxSizeBottom
-            ).toFloat(),
+                ).toFloat(),
             0f,
             IN_APP_BANNER_ANIMATION_DURATION_MS,
             OneSignalBounceInterpolator(0.1, 8.0),
