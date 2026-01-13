@@ -5,6 +5,7 @@ import android.content.ContextWrapper
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.common.AndroidUtils
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys.PREFS_LEGACY_APP_ID
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
@@ -14,6 +15,9 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.maps.shouldContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.mockk.every
+import io.mockk.mockkObject
+import io.mockk.unmockkObject
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.CountDownLatch
 
@@ -96,6 +100,42 @@ class SDKInitTests : FunSpec({
         shouldThrow<IllegalStateException> {
             os.location
         }
+    }
+
+    test("initWithContext returns gracefully when Android user is locked") {
+        // Given
+        val context = getApplicationContext<Context>()
+        val os = OneSignalImp()
+
+        mockkObject(AndroidUtils)
+        every { AndroidUtils.isAndroidUserUnlocked(any()) } returns false
+
+        // When
+        os.initWithContext(context, "appId")
+
+        // Then
+        // returns gracefully but isInitialized should be false
+        os.isInitialized shouldBe false
+
+        unmockkObject(AndroidUtils)
+    }
+
+    test("initWithContext is successful when Android user is unlocked") {
+        // Given
+        val context = getApplicationContext<Context>()
+        val os = OneSignalImp()
+
+        mockkObject(AndroidUtils)
+        every { AndroidUtils.isAndroidUserUnlocked(any()) } returns true
+
+        // When
+        os.initWithContext(context, "appId")
+
+        // Then
+        waitForInitialization(os)
+        os.isInitialized shouldBe true
+
+        unmockkObject(AndroidUtils)
     }
 
     test("initWithContext with no appId succeeds when configModel has appId") {
