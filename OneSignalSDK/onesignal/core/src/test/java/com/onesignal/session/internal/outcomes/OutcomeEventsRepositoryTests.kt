@@ -4,6 +4,7 @@ import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.DatabaseMockHelper
+import com.onesignal.mocks.TestDispatcherProvider
 import com.onesignal.session.internal.influence.Influence
 import com.onesignal.session.internal.influence.InfluenceChannel
 import com.onesignal.session.internal.influence.InfluenceType
@@ -19,6 +20,7 @@ import io.kotest.matchers.shouldNotBe
 import io.mockk.verify
 import io.mockk.verifyAll
 import io.mockk.verifySequence
+import kotlinx.coroutines.test.StandardTestDispatcher
 import org.json.JSONArray
 
 @RobolectricTest
@@ -29,8 +31,10 @@ class OutcomeEventsRepositoryTests : FunSpec({
 
     test("delete outcome event should use the timestamp to delete row from database") {
         // Given
+        val testDispatcher = StandardTestDispatcher()
+        val dispatcherProvider = TestDispatcherProvider(testDispatcher)
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(OutcomeEventsTable.TABLE_NAME)
-        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
+        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first, dispatcherProvider)
 
         // When
         outcomeEventsRepository.deleteOldOutcomeEvent(OutcomeEventParams("outcomeId", null, 0f, 0, 1111))
@@ -50,7 +54,9 @@ class OutcomeEventsRepositoryTests : FunSpec({
     test("save outcome event should insert row into database") {
         // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(OutcomeEventsTable.TABLE_NAME)
-        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
+        val testDispatcher = StandardTestDispatcher()
+        val dispatcherProvider = TestDispatcherProvider(testDispatcher)
+        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first, dispatcherProvider)
 
         // When
         outcomeEventsRepository.saveOutcomeEvent(OutcomeEventParams("outcomeId1", null, 0f, 0, 1111))
@@ -151,7 +157,9 @@ class OutcomeEventsRepositoryTests : FunSpec({
     test("get events should retrieve return empty list when database is empty") {
         // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(OutcomeEventsTable.TABLE_NAME)
-        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
+        val testDispatcher = StandardTestDispatcher()
+        val dispatcherProvider = TestDispatcherProvider(testDispatcher)
+        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first, dispatcherProvider)
 
         // When
         val events = outcomeEventsRepository.getAllEventsToSend()
@@ -195,7 +203,9 @@ class OutcomeEventsRepositoryTests : FunSpec({
             )
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(OutcomeEventsTable.TABLE_NAME, records)
 
-        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
+        val testDispatcher = StandardTestDispatcher()
+        val dispatcherProvider = TestDispatcherProvider(testDispatcher)
+        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first, dispatcherProvider)
 
         // When
         val events = outcomeEventsRepository.getAllEventsToSend()
@@ -238,7 +248,9 @@ class OutcomeEventsRepositoryTests : FunSpec({
     test("save unique outcome should insert no rows when no influences") {
         // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(CachedUniqueOutcomeTable.COLUMN_NAME_NAME)
-        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
+        val testDispatcher = StandardTestDispatcher()
+        val dispatcherProvider = TestDispatcherProvider(testDispatcher)
+        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first, dispatcherProvider)
 
         // When
         outcomeEventsRepository.saveUniqueOutcomeEventParams(OutcomeEventParams("outcomeId1", null, 0f, 0, 1111))
@@ -250,7 +262,9 @@ class OutcomeEventsRepositoryTests : FunSpec({
     test("save unique outcome should insert 1 row for each unique influence when direct notification and indiract iam") {
         // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(CachedUniqueOutcomeTable.TABLE_NAME)
-        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
+        val testDispatcher = StandardTestDispatcher()
+        val dispatcherProvider = TestDispatcherProvider(testDispatcher)
+        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first, dispatcherProvider)
 
         // When
         outcomeEventsRepository.saveUniqueOutcomeEventParams(
@@ -301,7 +315,9 @@ class OutcomeEventsRepositoryTests : FunSpec({
     test("save unique outcome should insert 1 row for each unique influence when direct iam and indiract notifications") {
         // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(CachedUniqueOutcomeTable.TABLE_NAME)
-        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
+        val testDispatcher = StandardTestDispatcher()
+        val dispatcherProvider = TestDispatcherProvider(testDispatcher)
+        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first, dispatcherProvider)
 
         // When
         outcomeEventsRepository.saveUniqueOutcomeEventParams(
@@ -352,7 +368,9 @@ class OutcomeEventsRepositoryTests : FunSpec({
     test("save unique outcome should insert 1 row for each unique influence when direct notification and iam") {
         // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(CachedUniqueOutcomeTable.TABLE_NAME)
-        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
+        val testDispatcher = StandardTestDispatcher()
+        val dispatcherProvider = TestDispatcherProvider(testDispatcher)
+        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first, dispatcherProvider)
 
         // When
         outcomeEventsRepository.saveUniqueOutcomeEventParams(
@@ -394,7 +412,9 @@ class OutcomeEventsRepositoryTests : FunSpec({
     test("save unique outcome should insert 1 row for each unique influence when indirect notification and iam") {
         // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(CachedUniqueOutcomeTable.TABLE_NAME)
-        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
+        val testDispatcher = StandardTestDispatcher()
+        val dispatcherProvider = TestDispatcherProvider(testDispatcher)
+        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first, dispatcherProvider)
 
         // When
         outcomeEventsRepository.saveUniqueOutcomeEventParams(
@@ -455,7 +475,9 @@ class OutcomeEventsRepositoryTests : FunSpec({
         // Given
         val records = listOf<Map<String, Any>>()
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(CachedUniqueOutcomeTable.TABLE_NAME, records)
-        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
+        val testDispatcher = StandardTestDispatcher()
+        val dispatcherProvider = TestDispatcherProvider(testDispatcher)
+        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first, dispatcherProvider)
 
         // When
         val influences =
@@ -475,7 +497,9 @@ class OutcomeEventsRepositoryTests : FunSpec({
         // Given
         val records = listOf(mapOf(CachedUniqueOutcomeTable.COLUMN_NAME_NAME to "outcomeId1"))
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(CachedUniqueOutcomeTable.TABLE_NAME, records)
-        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
+        val testDispatcher = StandardTestDispatcher()
+        val dispatcherProvider = TestDispatcherProvider(testDispatcher)
+        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first, dispatcherProvider)
 
         // When
         val influences =
@@ -494,7 +518,9 @@ class OutcomeEventsRepositoryTests : FunSpec({
     test("clear unique influence should delete out an influence when there are is a matching influence") {
         // Given
         val mockDatabasePair = DatabaseMockHelper.databaseProvider(CachedUniqueOutcomeTable.TABLE_NAME)
-        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first)
+        val testDispatcher = StandardTestDispatcher()
+        val dispatcherProvider = TestDispatcherProvider(testDispatcher)
+        val outcomeEventsRepository = OutcomeEventsRepository(mockDatabasePair.first, dispatcherProvider)
 
         // When
         outcomeEventsRepository.cleanCachedUniqueOutcomeEventNotifications()

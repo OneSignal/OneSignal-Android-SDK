@@ -9,7 +9,8 @@ import com.onesignal.common.modules.IModule
 import com.onesignal.common.services.IServiceProvider
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.common.services.ServiceProvider
-import com.onesignal.common.threading.OneSignalDispatchers
+import com.onesignal.common.threading.CoroutineDispatcherProvider
+import com.onesignal.common.threading.DefaultDispatcherProvider
 import com.onesignal.common.threading.suspendifyOnIO
 import com.onesignal.core.CoreModule
 import com.onesignal.core.internal.application.IApplicationService
@@ -39,12 +40,11 @@ import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.resolveAppId
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 internal class OneSignalImp(
-    private val ioDispatcher: CoroutineDispatcher = OneSignalDispatchers.IO,
+    private val dispatchers: CoroutineDispatcherProvider = DefaultDispatcherProvider(),
 ) : IOneSignal, IServiceProvider {
 
     private val suspendCompletion = CompletableDeferred<Unit>()
@@ -337,7 +337,7 @@ internal class OneSignalImp(
      * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
      */
     private fun waitForInit(operationName: String? = null) {
-        runBlocking(ioDispatcher) {
+        runBlocking(dispatchers.io) {
             waitUntilInitInternal(operationName)
         }
     }
@@ -436,7 +436,7 @@ internal class OneSignalImp(
             Logging.debug("Could not check main thread status (likely in test environment): ${e.message}")
         }
         // Call suspendAndReturn directly to avoid nested runBlocking (waitAndReturn -> waitForInit -> runBlocking)
-        return runBlocking(ioDispatcher) {
+        return runBlocking(dispatchers.io) {
             suspendAndReturn(getter)
         }
     }
@@ -446,48 +446,48 @@ internal class OneSignalImp(
     // ===============================
 
     override suspend fun getSession(): ISessionManager =
-        withContext(ioDispatcher) {
+        withContext(dispatchers.io) {
             suspendAndReturn { services.getService() }
         }
 
     override suspend fun getNotifications(): INotificationsManager =
-        withContext(ioDispatcher) {
+        withContext(dispatchers.io) {
             suspendAndReturn { services.getService() }
         }
 
     override suspend fun getLocation(): ILocationManager =
-        withContext(ioDispatcher) {
+        withContext(dispatchers.io) {
             suspendAndReturn { services.getService() }
         }
 
     override suspend fun getInAppMessages(): IInAppMessagesManager =
-        withContext(ioDispatcher) {
+        withContext(dispatchers.io) {
             suspendAndReturn { services.getService() }
         }
 
     override suspend fun getUser(): IUserManager =
-        withContext(ioDispatcher) {
+        withContext(dispatchers.io) {
             suspendAndReturn { services.getService() }
         }
 
     override suspend fun getConsentRequired(): Boolean =
-        withContext(ioDispatcher) {
+        withContext(dispatchers.io) {
             configModel.consentRequired ?: (_consentRequired == true)
         }
 
     override suspend fun setConsentRequired(required: Boolean) =
-        withContext(ioDispatcher) {
+        withContext(dispatchers.io) {
             _consentRequired = required
             configModel.consentRequired = required
         }
 
     override suspend fun getConsentGiven(): Boolean =
-        withContext(ioDispatcher) {
+        withContext(dispatchers.io) {
             configModel.consentGiven ?: (_consentGiven == true)
         }
 
     override suspend fun setConsentGiven(value: Boolean) =
-        withContext(ioDispatcher) {
+        withContext(dispatchers.io) {
             val oldValue = _consentGiven
             _consentGiven = value
             configModel.consentGiven = value
@@ -497,12 +497,12 @@ internal class OneSignalImp(
         }
 
     override suspend fun getDisableGMSMissingPrompt(): Boolean =
-        withContext(ioDispatcher) {
+        withContext(dispatchers.io) {
             configModel.disableGMSMissingPrompt
         }
 
     override suspend fun setDisableGMSMissingPrompt(value: Boolean) =
-        withContext(ioDispatcher) {
+        withContext(dispatchers.io) {
             _disableGMSMissingPrompt = value
             configModel.disableGMSMissingPrompt = value
         }
@@ -517,7 +517,7 @@ internal class OneSignalImp(
         initFailureException = IllegalStateException("OneSignal initWithContext failed.")
 
         // Use IO dispatcher for initialization to prevent ANRs and optimize for I/O operations
-        return withContext(ioDispatcher) {
+        return withContext(dispatchers.io) {
             // do not do this again if already initialized or init is in progress
             synchronized(initLock) {
                 if (initState.isSDKAccessible()) {
@@ -537,7 +537,7 @@ internal class OneSignalImp(
     override suspend fun loginSuspend(
         externalId: String,
         jwtBearerToken: String?,
-    ) = withContext(ioDispatcher) {
+    ) = withContext(dispatchers.io) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
         suspendUntilInit(operationName = "login")
@@ -550,7 +550,7 @@ internal class OneSignalImp(
     }
 
     override suspend fun logoutSuspend() =
-        withContext(ioDispatcher) {
+        withContext(dispatchers.io) {
             Logging.log(LogLevel.DEBUG, "logoutSuspend()")
 
             suspendUntilInit(operationName = "logout")
