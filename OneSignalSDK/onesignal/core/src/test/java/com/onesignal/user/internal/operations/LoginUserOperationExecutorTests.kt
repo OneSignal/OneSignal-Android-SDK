@@ -136,10 +136,37 @@ class LoginUserOperationExecutorTests : FunSpec({
         coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any()) }
     }
 
-    test("login anonymous user fails with no retry when backend error condition exists") {
+    test("login anonymous user fails with no retry when hit with backend error 404") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(404, "NOT FOUND")
+
+        val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
+
+        val mockIdentityModelStore = MockHelper.identityModelStore()
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+
+        val loginUserOperationExecutor =
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, AndroidMockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
+        val operations =
+            listOf<Operation>(
+                LoginUserOperation(appId, localOneSignalId, null, null),
+                createSubscriptionOperation,
+            )
+
+        // When
+        val response = loginUserOperationExecutor.execute(operations)
+
+        // Then
+        response.result shouldBe ExecutionResult.FAIL_PAUSE_OPREPO
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any()) }
+    }
+
+    test("login anonymous user fails with no retry when hit with backend error 400") {
+        // Given
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(400, "INVALID")
 
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
 
