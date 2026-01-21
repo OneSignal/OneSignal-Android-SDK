@@ -53,7 +53,7 @@ class CustomEventOperationExecutorTests : FunSpec({
                 "event-name",
                 properties,
                 withArg {
-                    it.sdk shouldBe OneSignalUtils.SDK_VERSION
+                    it.sdk shouldBe OneSignalUtils.sdkVersion
                     it.appVersion?.shouldBeEqual("0")
                     it.type?.shouldBeEqual(("AndroidPush"))
                     it.deviceType?.shouldBeEqual(("Android"))

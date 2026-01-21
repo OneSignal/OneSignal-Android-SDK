@@ -26,7 +26,7 @@ internal class CustomEventOperationExecutor(
     private val eventMetadataJson: CustomEventMetadata by lazy {
         CustomEventMetadata(
             deviceType = _deviceService.deviceType.name,
-            sdk = OneSignalUtils.SDK_VERSION,
+            sdk = OneSignalUtils.sdkVersion,
             appVersion = AndroidUtils.getAppVersion(_applicationService.appContext),
             type = "AndroidPush",
             deviceModel = Build.MODEL,
