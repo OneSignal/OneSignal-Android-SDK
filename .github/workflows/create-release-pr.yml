@@ -110,9 +110,6 @@ jobs:
       - name: Generate Release Notes from PR Titles
         id: generate_notes
         run: |
-          echo "## 🔖 Auto-Generated Release Notes" > pr_body.md
-          echo "" >> pr_body.md
-
           if [[ "$VERSION" == *"alpha"* ]]; then
             CHANNEL="alpha"
           elif [[ "$VERSION" == *"beta"* ]]; then
