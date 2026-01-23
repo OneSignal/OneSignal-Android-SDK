@@ -207,6 +207,9 @@ internal class OneSignalImp(
     }
 
     private fun initEssentials(context: Context) {
+        for (i in 0..10) {
+            println("initEssentials: $i")
+        }
         PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
 
         // start the application service. This is called explicitly first because we want
