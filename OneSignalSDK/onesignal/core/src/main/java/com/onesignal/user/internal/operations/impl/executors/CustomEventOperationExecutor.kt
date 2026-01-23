@@ -16,18 +16,18 @@ import com.onesignal.user.internal.customEvents.impl.CustomEventMetadata
 import com.onesignal.user.internal.operations.TrackCustomEventOperation
 
 internal class CustomEventOperationExecutor(
-    private val _customEventBackendService: ICustomEventBackendService,
-    private val _applicationService: IApplicationService,
-    private val _deviceService: IDeviceService,
+    private val customEventBackendService: ICustomEventBackendService,
+    private val applicationService: IApplicationService,
+    private val deviceService: IDeviceService,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(CUSTOM_EVENT)
 
     private val eventMetadataJson: CustomEventMetadata by lazy {
         CustomEventMetadata(
-            deviceType = _deviceService.deviceType.name,
+            deviceType = deviceService.deviceType.name,
             sdk = OneSignalUtils.sdkVersion,
-            appVersion = AndroidUtils.getAppVersion(_applicationService.appContext),
+            appVersion = AndroidUtils.getAppVersion(applicationService.appContext),
             type = "AndroidPush",
             deviceModel = Build.MODEL,
             deviceOS = Build.VERSION.RELEASE,
@@ -35,13 +35,12 @@ internal class CustomEventOperationExecutor(
     }
 
     override suspend fun execute(operations: List<Operation>): ExecutionResponse {
-        // TODO: each trackEvent is sent individually right now; may need to batch in the future
         val operation = operations.first()
 
         try {
             when (operation) {
                 is TrackCustomEventOperation -> {
-                    _customEventBackendService.sendCustomEvent(
+                    customEventBackendService.sendCustomEvent(
                         operation.appId,
                         operation.onesignalId,
                         operation.externalId,
@@ -59,7 +58,6 @@ internal class CustomEventOperationExecutor(
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
                     ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                 else ->
-                    // TODO: will not retry all other error until we finalize how to handle
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)
             }
         }

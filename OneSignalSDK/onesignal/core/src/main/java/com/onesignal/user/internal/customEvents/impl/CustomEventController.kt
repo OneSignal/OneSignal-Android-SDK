@@ -9,10 +9,10 @@ import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.TrackCustomEventOperation
 
 class CustomEventController(
-    private val _identityModelStore: IdentityModelStore,
-    private val _configModelStore: ConfigModelStore,
-    private val _time: ITime,
-    private val _opRepo: IOperationRepo,
+    private val identityModelStore: IdentityModelStore,
+    private val configModelStore: ConfigModelStore,
+    private val time: ITime,
+    private val opRepo: IOperationRepo,
 ) : ICustomEventController {
     override fun sendCustomEvent(
         name: String,
@@ -20,13 +20,13 @@ class CustomEventController(
     ) {
         val op =
             TrackCustomEventOperation(
-                _configModelStore.model.appId,
-                _identityModelStore.model.onesignalId,
-                _identityModelStore.model.externalId,
-                _time.currentTimeMillis,
+                configModelStore.model.appId,
+                identityModelStore.model.onesignalId,
+                identityModelStore.model.externalId,
+                time.currentTimeMillis,
                 name,
                 properties?.let { JSONUtils.mapToJson(it).toString() },
             )
-        _opRepo.enqueue(op)
+        opRepo.enqueue(op)
     }
 }

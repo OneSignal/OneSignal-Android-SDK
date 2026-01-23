@@ -11,7 +11,7 @@ import org.json.JSONObject
 import java.util.TimeZone
 
 internal class CustomEventBackendService(
-    private val _httpClient: IHttpClient,
+    private val httpClient: IHttpClient,
 ) : ICustomEventBackendService {
     override suspend fun sendCustomEvent(
         appId: String,
@@ -42,9 +42,7 @@ internal class CustomEventBackendService(
         body.put("payload", payload)
         val jsonObject = JSONObject().put("events", JSONArray().put(body))
 
-        // TODO: include auth header when identity verification is on
-
-        val response = _httpClient.post("apps/$appId/custom_events", jsonObject)
+        val response = httpClient.post("apps/$appId/custom_events", jsonObject)
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)

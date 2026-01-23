@@ -64,7 +64,6 @@ class TrackCustomEventOperation() : Operation(CustomEventOperationExecutor.CUSTO
     override val createComparisonKey: String get() = "$appId.User.$onesignalId.CustomEvent.$eventName"
     override val modifyComparisonKey: String get() = "$appId.User.$onesignalId.CustomEvent.$eventName"
 
-    // TODO: no batching of custom events until finalized
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.NONE
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
     override val applyToRecordId: String get() = onesignalId
