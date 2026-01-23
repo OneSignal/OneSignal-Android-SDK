@@ -163,8 +163,6 @@ jobs:
             CHANNEL="current"
           fi
 
-          echo -e "Channels: $CHANNEL\n\n$(cat release_notes.md)" > release_notes.md
-
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
