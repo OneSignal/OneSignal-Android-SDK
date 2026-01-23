@@ -2,41 +2,51 @@ package com.onesignal.internal
 
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.mocks.TestDispatcherProvider
 import io.kotest.assertions.throwables.shouldThrowUnit
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.runTest
 
 class OneSignalImpTests : FunSpec({
     beforeAny {
         Logging.logLevel = LogLevel.NONE
     }
 
+    val testDispatcher = StandardTestDispatcher()
+    val dispatcherProvider = TestDispatcherProvider(testDispatcher)
+
     test("attempting login before initWithContext throws exception") {
-        // Given
-        val os = OneSignalImp()
+        runTest(testDispatcher.scheduler) {
+            // Given
+            val os = OneSignalImp()
 
-        // When
-        val exception =
-            shouldThrowUnit<Exception> {
-                os.login("login-id")
-            }
+            // When
+            val exception =
+                shouldThrowUnit<Exception> {
+                    os.login("login-id")
+                }
 
-        // Then
-        exception.message shouldBe "Must call 'initWithContext' before 'login'"
+            // Then
+            exception.message shouldBe "Must call 'initWithContext' before 'login'"
+        }
     }
 
     test("attempting logout before initWithContext throws exception") {
-        // Given
-        val os = OneSignalImp()
+        runTest(testDispatcher.scheduler) {
+            // Given
+            val os = OneSignalImp()
 
-        // When
-        val exception =
-            shouldThrowUnit<Exception> {
-                os.logout()
-            }
+            // When
+            val exception =
+                shouldThrowUnit<Exception> {
+                    os.logout()
+                }
 
-        // Then
-        exception.message shouldBe "Must call 'initWithContext' before 'logout'"
+            // Then
+            exception.message shouldBe "Must call 'initWithContext' before 'logout'"
+        }
     }
 
     // Comprehensive tests for deprecated properties that should work before and after initialization
@@ -44,7 +54,7 @@ class OneSignalImpTests : FunSpec({
         context("before initWithContext") {
             test("get returns false by default") {
                 // Given
-                val os = OneSignalImp()
+                val os = OneSignalImp(dispatcherProvider.io)
 
                 // When & Then
                 os.consentRequired shouldBe false
@@ -52,7 +62,7 @@ class OneSignalImpTests : FunSpec({
 
             test("set and get works correctly") {
                 // Given
-                val os = OneSignalImp()
+                val os = OneSignalImp(dispatcherProvider.io)
 
                 // When
                 os.consentRequired = true
@@ -69,7 +79,7 @@ class OneSignalImpTests : FunSpec({
 
             test("set should not throw") {
                 // Given
-                val os = OneSignalImp()
+                val os = OneSignalImp(dispatcherProvider.io)
 
                 // When & Then - should not throw
                 os.consentRequired = false
@@ -82,7 +92,7 @@ class OneSignalImpTests : FunSpec({
         context("before initWithContext") {
             test("get returns false by default") {
                 // Given
-                val os = OneSignalImp()
+                val os = OneSignalImp(dispatcherProvider.io)
 
                 // When & Then
                 os.consentGiven shouldBe false
@@ -90,7 +100,7 @@ class OneSignalImpTests : FunSpec({
 
             test("set and get works correctly") {
                 // Given
-                val os = OneSignalImp()
+                val os = OneSignalImp(dispatcherProvider.io)
 
                 // When
                 os.consentGiven = true
@@ -107,7 +117,7 @@ class OneSignalImpTests : FunSpec({
 
             test("set should not throw") {
                 // Given
-                val os = OneSignalImp()
+                val os = OneSignalImp(dispatcherProvider.io)
 
                 // When & Then - should not throw
                 os.consentGiven = true
@@ -120,7 +130,7 @@ class OneSignalImpTests : FunSpec({
         context("before initWithContext") {
             test("get returns false by default") {
                 // Given
-                val os = OneSignalImp()
+                val os = OneSignalImp(dispatcherProvider.io)
 
                 // When & Then
                 os.disableGMSMissingPrompt shouldBe false
@@ -128,7 +138,7 @@ class OneSignalImpTests : FunSpec({
 
             test("set and get works correctly") {
                 // Given
-                val os = OneSignalImp()
+                val os = OneSignalImp(dispatcherProvider.io)
 
                 // When
                 os.disableGMSMissingPrompt = true
@@ -145,7 +155,7 @@ class OneSignalImpTests : FunSpec({
 
             test("set should not throw") {
                 // Given
-                val os = OneSignalImp()
+                val os = OneSignalImp(dispatcherProvider.io)
 
                 // When & Then - should not throw
                 os.disableGMSMissingPrompt = true
@@ -157,7 +167,7 @@ class OneSignalImpTests : FunSpec({
     context("property consistency tests") {
         test("all properties maintain state correctly") {
             // Given
-            val os = OneSignalImp()
+            val os = OneSignalImp(dispatcherProvider.io)
 
             // When - set all properties to true
             os.consentRequired = true
@@ -182,7 +192,7 @@ class OneSignalImpTests : FunSpec({
 
         test("properties are independent of each other") {
             // Given
-            val os = OneSignalImp()
+            val os = OneSignalImp(dispatcherProvider.io)
 
             // When - set only consentRequired to true
             os.consentRequired = true
@@ -218,7 +228,7 @@ class OneSignalImpTests : FunSpec({
         // waitForInit() would timeout after 30 seconds and log a warning (not throw)
 
         // Given - a fresh OneSignalImp instance
-        val oneSignalImp = OneSignalImp()
+        val oneSignalImp = OneSignalImp(dispatcherProvider.io)
 
         // The timeout behavior is built into waitUntilInitInternal()
         // which uses withTimeout() to wait for up to 30 seconds (or 4.8 seconds on main thread)
@@ -236,7 +246,7 @@ class OneSignalImpTests : FunSpec({
         // until initialization completes (per PR #2412)
 
         // Given
-        val oneSignalImp = OneSignalImp()
+        val oneSignalImp = OneSignalImp(dispatcherProvider.io)
 
         // We can verify the wait behavior by checking:
         // 1. The suspendCompletion (CompletableDeferred) is properly initialized

@@ -41,7 +41,7 @@ class StartupServiceTests : FunSpec({
     test("bootstrap with no IBootstrapService dependencies is a no-op") {
         runTest(testDispatcher.scheduler) {
             // Given
-            val startupService = StartupService(setupServiceProvider(listOf(), listOf()))
+            val startupService = StartupService(setupServiceProvider(listOf(), listOf()), dispatcherProvider)
 
             // When
             startupService.bootstrap()
@@ -56,7 +56,7 @@ class StartupServiceTests : FunSpec({
             val mockBootstrapService1 = mockk<IBootstrapService>(relaxed = true)
             val mockBootstrapService2 = mockk<IBootstrapService>(relaxed = true)
 
-            val startupService = StartupService(setupServiceProvider(listOf(mockBootstrapService1, mockBootstrapService2), listOf()))
+            val startupService = StartupService(setupServiceProvider(listOf(mockBootstrapService1, mockBootstrapService2), listOf()), dispatcherProvider)
 
             // When
             startupService.bootstrap()
@@ -76,7 +76,7 @@ class StartupServiceTests : FunSpec({
             every { mockBootstrapService1.bootstrap() } throws exception
             val mockBootstrapService2 = spyk<IBootstrapService>()
 
-            val startupService = StartupService(setupServiceProvider(listOf(mockBootstrapService1, mockBootstrapService2), listOf()))
+            val startupService = StartupService(setupServiceProvider(listOf(mockBootstrapService1, mockBootstrapService2), listOf()), dispatcherProvider)
 
             // When
             val actualException =

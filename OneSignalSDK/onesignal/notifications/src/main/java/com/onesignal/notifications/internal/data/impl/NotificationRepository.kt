@@ -4,6 +4,8 @@ import android.app.NotificationManager
 import android.content.ContentValues
 import android.provider.BaseColumns
 import android.text.TextUtils
+import com.onesignal.common.threading.CoroutineDispatcherProvider
+import com.onesignal.common.threading.DefaultDispatcherProvider
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.core.internal.database.impl.OneSignalDbContract
@@ -14,7 +16,6 @@ import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.data.INotificationQueryHelper
 import com.onesignal.notifications.internal.data.INotificationRepository
 import com.onesignal.notifications.internal.limiting.INotificationLimitManager
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONException
 
@@ -24,6 +25,7 @@ internal class NotificationRepository(
     private val _databaseProvider: IDatabaseProvider,
     private val _time: ITime,
     private val _badgeCountUpdater: IBadgeCountUpdater,
+    private val dispatchers: CoroutineDispatcherProvider = DefaultDispatcherProvider(),
 ) : INotificationRepository {
     /**
      * Deletes notifications with created timestamps older than 7 days
@@ -31,7 +33,7 @@ internal class NotificationRepository(
      * 1. NotificationTable.TABLE_NAME
      */
     override suspend fun deleteExpiredNotifications() {
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             val whereStr: String = OneSignalDbContract.NotificationTable.COLUMN_NAME_CREATED_TIME.toString() + " < ?"
             val sevenDaysAgoInSeconds: String =
                 java.lang.String.valueOf(
@@ -48,7 +50,7 @@ internal class NotificationRepository(
     }
 
     override suspend fun markAsDismissedForOutstanding() {
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             val appContext = _applicationService.appContext
             val notificationManager: NotificationManager = NotificationHelper.getNotificationManager(appContext)
             val retColumn = arrayOf(OneSignalDbContract.NotificationTable.COLUMN_NAME_ANDROID_NOTIFICATION_ID)
@@ -79,7 +81,7 @@ internal class NotificationRepository(
     }
 
     override suspend fun markAsDismissedForGroup(group: String) {
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             val appContext = _applicationService.appContext
             val notificationManager: NotificationManager =
                 NotificationHelper.getNotificationManager(appContext)
@@ -124,7 +126,7 @@ internal class NotificationRepository(
     override suspend fun markAsDismissed(androidId: Int): Boolean {
         var didDismiss: Boolean = false
 
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             didDismiss = internalMarkAsDismissed(androidId)
         }
 
@@ -159,7 +161,7 @@ internal class NotificationRepository(
 
         var result = false
 
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             val retColumn =
                 arrayOf<String>(OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID)
             val whereArgs = arrayOf(id!!)
@@ -188,7 +190,7 @@ internal class NotificationRepository(
         androidId: Int,
         groupId: String,
     ) {
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             // There currently isn't a visible notification from for this group_id.
             // Save the group summary notification id so it can be updated later.
             val values = ContentValues()
@@ -218,7 +220,7 @@ internal class NotificationRepository(
         expireTime: Long,
         jsonPayload: String,
     ) {
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             Logging.debug("Saving Notification id=$id")
 
             try {
@@ -302,7 +304,7 @@ internal class NotificationRepository(
         summaryGroup: String?,
         clearGroupOnSummaryClick: Boolean,
     ) {
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             var whereStr: String
             var whereArgs: Array<String>? = null
             if (summaryGroup != null) {
@@ -358,7 +360,7 @@ internal class NotificationRepository(
     override suspend fun getGroupId(androidId: Int): String? {
         var groupId: String? = null
 
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             _databaseProvider.os.query(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
                 // retColumn
@@ -378,7 +380,7 @@ internal class NotificationRepository(
     override suspend fun getAndroidIdFromCollapseKey(collapseKey: String): Int? {
         var androidId: Int? = null
 
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             _databaseProvider.os.query(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
                 // retColumn
@@ -402,7 +404,7 @@ internal class NotificationRepository(
         notificationsToMakeRoomFor: Int,
         maxNumberOfNotificationsInt: Int,
     ) {
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             val maxNumberOfNotificationsString = maxNumberOfNotificationsInt.toString()
 
             try {
@@ -437,7 +439,7 @@ internal class NotificationRepository(
     override suspend fun listNotificationsForGroup(summaryGroup: String): List<INotificationRepository.NotificationData> {
         val listOfNotifications = mutableListOf<INotificationRepository.NotificationData>()
 
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             val whereArgs = arrayOf(summaryGroup)
 
             _databaseProvider.os.query(
@@ -512,7 +514,7 @@ internal class NotificationRepository(
 
         val whereArgs = if (isGroupless) null else arrayOf(group)
 
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             // Order by timestamp in descending and limit to 1
             _databaseProvider.os.query(
                 OneSignalDbContract.NotificationTable.TABLE_NAME,
@@ -538,7 +540,7 @@ internal class NotificationRepository(
 
     override suspend fun listNotificationsForOutstanding(excludeAndroidIds: List<Int>?): List<INotificationRepository.NotificationData> {
         val listOfNotifications = mutableListOf<INotificationRepository.NotificationData>()
-        withContext(Dispatchers.IO) {
+        withContext(dispatchers.io) {
             val dbQuerySelection = _queryHelper.recentUninteractedWithNotificationsWhere()
 
             if (excludeAndroidIds != null) {
