@@ -1,7 +1,6 @@
 package com.onesignal.session.internal.outcomes.impl
 
 import android.content.ContentValues
-import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.core.internal.database.impl.OneSignalDbContract
 import com.onesignal.debug.internal.logging.Logging
@@ -10,7 +9,7 @@ import com.onesignal.session.internal.influence.InfluenceChannel
 import com.onesignal.session.internal.influence.InfluenceType
 import com.onesignal.session.internal.influence.InfluenceType.Companion.fromString
 import com.onesignal.session.internal.outcomes.migrations.RemoveInvalidSessionTimeRecords
-import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONException
@@ -18,13 +17,12 @@ import java.util.Locale
 
 internal class OutcomeEventsRepository(
     private val _databaseProvider: IDatabaseProvider,
-    private val ioDispatcher: CoroutineDispatcher = OneSignalDispatchers.IO,
 ) : IOutcomeEventsRepository {
     /**
      * Delete event from the DB
      */
     override suspend fun deleteOldOutcomeEvent(event: OutcomeEventParams) {
-        withContext(ioDispatcher) {
+        withContext(Dispatchers.IO) {
             _databaseProvider.os.delete(
                 OutcomeEventsTable.TABLE_NAME,
                 OutcomeEventsTable.COLUMN_NAME_TIMESTAMP + " = ?",
@@ -38,7 +36,7 @@ internal class OutcomeEventsRepository(
      * For offline mode and contingency of errors
      */
     override suspend fun saveOutcomeEvent(eventParams: OutcomeEventParams) {
-        withContext(ioDispatcher) {
+        withContext(Dispatchers.IO) {
             var notificationIds = JSONArray()
             var iamIds = JSONArray()
             var notificationInfluenceType = InfluenceType.UNATTRIBUTED
@@ -103,7 +101,7 @@ internal class OutcomeEventsRepository(
      */
     override suspend fun getAllEventsToSend(): List<OutcomeEventParams> {
         val events: MutableList<OutcomeEventParams> = ArrayList()
-        withContext(ioDispatcher) {
+        withContext(Dispatchers.IO) {
             RemoveInvalidSessionTimeRecords.run(_databaseProvider)
             _databaseProvider.os.query(OutcomeEventsTable.TABLE_NAME) { cursor ->
                 if (cursor.moveToFirst()) {
@@ -250,7 +248,7 @@ internal class OutcomeEventsRepository(
     override suspend fun saveUniqueOutcomeEventParams(eventParams: OutcomeEventParams) {
         Logging.debug("OutcomeEventsCache.saveUniqueOutcomeEventParams(eventParams: $eventParams)")
 
-        withContext(ioDispatcher) {
+        withContext(Dispatchers.IO) {
             val outcomeName = eventParams.outcomeId
             val cachedUniqueOutcomes: MutableList<CachedUniqueOutcome> = ArrayList()
             val directBody = eventParams.outcomeSource?.directBody
@@ -285,7 +283,7 @@ internal class OutcomeEventsRepository(
     ): List<Influence> {
         val uniqueInfluences: MutableList<Influence> = ArrayList()
 
-        withContext(ioDispatcher) {
+        withContext(Dispatchers.IO) {
             try {
                 for (influence in influences) {
                     val availableInfluenceIds = JSONArray()
@@ -335,7 +333,7 @@ internal class OutcomeEventsRepository(
         val notificationTableName = OneSignalDbContract.NotificationTable.TABLE_NAME
         val notificationIdColumnName = OneSignalDbContract.NotificationTable.COLUMN_NAME_NOTIFICATION_ID
 
-        withContext(ioDispatcher) {
+        withContext(Dispatchers.IO) {
             val whereStr =
                 "NOT EXISTS(" +
                     "SELECT NULL FROM " + notificationTableName + " n " +
