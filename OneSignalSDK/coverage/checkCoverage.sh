@@ -2,6 +2,7 @@
 
 # Diff Coverage Check Script
 # This script generates coverage reports and checks diff coverage against the base branch
+# Only checks coverage for newly added/modified lines (not entire files)
 # Uses a manual coverage check that reliably matches JaCoCo paths to git diff paths
 # 
 # Usage:
@@ -25,7 +26,10 @@ SKIP_COVERAGE_CHECK=${SKIP_COVERAGE_CHECK:-false}  # Set to 'true' to bypass cov
 
 # Get script directory and project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# PROJECT_ROOT is the OneSignalSDK directory (where build reports are)
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# REPO_ROOT is the git repository root (parent of OneSignalSDK)
+REPO_ROOT="$(cd "$PROJECT_ROOT/.." && pwd)"
 
 # Paths relative to project root
 COVERAGE_REPORT="$PROJECT_ROOT/build/reports/jacoco/merged/jacocoMergedReport.xml"
@@ -42,7 +46,7 @@ if [ "$SKIP_COVERAGE_CHECK" = "true" ]; then
     BYPASS_REASON="SKIP_COVERAGE_CHECK environment variable set"
 elif [ -n "$GITHUB_EVENT_NAME" ] && [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
     # Check commit messages for bypass keyword
-    cd "$PROJECT_ROOT"
+    cd "$REPO_ROOT"
     COMMIT_MESSAGES=$(git log --format=%B origin/main..HEAD 2>/dev/null || git log --format=%B "$BASE_BRANCH"..HEAD 2>/dev/null || echo "")
     if echo "$COMMIT_MESSAGES" | grep -qiE "\[skip coverage\]|\[bypass coverage\]|\[no coverage\]"; then
         BYPASS_REASON="Commit message contains [skip coverage] keyword"
@@ -71,8 +75,13 @@ echo -e "${YELLOW}[2/3] Checking diff coverage against $BASE_BRANCH...${NC}"
 echo -e "${YELLOW}Threshold: ${COVERAGE_THRESHOLD}%${NC}\n"
 
 # Get changed files (run from project root)
-cd "$PROJECT_ROOT"
-CHANGED_FILES=$(git diff --name-only "$BASE_BRANCH"...HEAD 2>/dev/null | grep -E '\.(kt|java)$' || true)
+# Include committed changes, staged changes, and unstaged changes
+cd "$REPO_ROOT"
+COMMITTED_FILES=$(git diff --name-only "$BASE_BRANCH"...HEAD 2>/dev/null | grep -E '\.(kt|java)$' || true)
+STAGED_FILES=$(git diff --cached --name-only 2>/dev/null | grep -E '\.(kt|java)$' || true)
+UNSTAGED_FILES=$(git diff --name-only 2>/dev/null | grep -E '\.(kt|java)$' || true)
+# Combine all, remove duplicates, and filter to OneSignalSDK files
+CHANGED_FILES=$(echo -e "$COMMITTED_FILES\n$STAGED_FILES\n$UNSTAGED_FILES" | grep -E '^OneSignalSDK/' | sort -u || true)
 
 if [ -z "$CHANGED_FILES" ]; then
     echo -e "${BLUE}No Kotlin/Java files changed${NC}\n"
@@ -91,17 +100,93 @@ else
     export COVERAGE_REPORT
     export GENERATE_MARKDOWN
     export MARKDOWN_REPORT
+    export BASE_BRANCH
+    export REPO_ROOT
     python3 << PYEOF
 import xml.etree.ElementTree as ET
 import re
 import sys
 import os
+import subprocess
 
 coverage_report = os.environ.get('COVERAGE_REPORT')
 threshold = int(os.environ.get('COVERAGE_THRESHOLD', '80'))
 changed_files_str = """$CHANGED_FILES"""
 generate_markdown = os.environ.get('GENERATE_MARKDOWN', 'false').lower() == 'true'
 markdown_report = os.environ.get('MARKDOWN_REPORT', 'diff_coverage.md')
+base_branch = os.environ.get('BASE_BRANCH', 'origin/main')
+repo_root_env = os.environ.get('REPO_ROOT')
+
+def get_changed_lines(file_path, project_root):
+    """Get line numbers of added/modified lines from git diff"""
+    try:
+        # First try to get diff from committed changes
+        result = subprocess.run(
+            ['git', 'diff', '--unified=0', base_branch + '...HEAD', '--', file_path],
+            capture_output=True,
+            text=True,
+            cwd=project_root
+        )
+        
+        # If no committed changes, check staged changes
+        if result.returncode != 0 or not result.stdout.strip():
+            result = subprocess.run(
+                ['git', 'diff', '--cached', '--unified=0', '--', file_path],
+                capture_output=True,
+                text=True,
+                cwd=project_root
+            )
+        
+        # If no staged changes, check unstaged changes
+        if result.returncode != 0 or not result.stdout.strip():
+            result = subprocess.run(
+                ['git', 'diff', '--unified=0', '--', file_path],
+                capture_output=True,
+                text=True,
+                cwd=project_root
+            )
+        
+        # If still nothing, try alternative base branch format
+        if result.returncode != 0 or not result.stdout.strip():
+            result = subprocess.run(
+                ['git', 'diff', '--unified=0', base_branch, 'HEAD', '--', file_path],
+                capture_output=True,
+                text=True,
+                cwd=project_root
+            )
+        
+        if result.returncode != 0 or not result.stdout.strip():
+            return None
+        
+        changed_lines = set()
+        current_new_line = None
+        
+        for line in result.stdout.split('\n'):
+            # Parse unified diff format
+            # @@ -old_start,old_count +new_start,new_count @@
+            match = re.match(r'@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@', line)
+            if match:
+                current_new_line = int(match.group(1))
+                count = int(match.group(2)) if match.group(2) else 1
+                # The count tells us how many lines are in this hunk
+                # We'll track them as we see + lines
+            elif line.startswith('+') and not line.startswith('+++'):
+                # Added/modified line (starts with +)
+                if current_new_line is not None:
+                    changed_lines.add(current_new_line)
+                    current_new_line += 1
+            elif line.startswith('-') and not line.startswith('---'):
+                # Deleted line - don't add to changed_lines, don't increment current_new_line
+                pass
+            elif line.startswith(' '):
+                # Context line (unchanged, starts with space) - increment current_new_line
+                if current_new_line is not None:
+                    current_new_line += 1
+        
+        return changed_lines if changed_lines else None
+    except Exception as e:
+        # Silently fail and return None - we'll fall back to checking all lines
+        return None
 
 try:
     tree = ET.parse(coverage_report)
@@ -109,6 +194,22 @@ try:
 except Exception as e:
     print(f"Error parsing coverage report: {e}")
     sys.exit(1)
+
+# Get repository root - prefer environment variable, then try to detect from coverage report path
+if repo_root_env:
+    project_root = repo_root_env
+else:
+    # Fallback: try to detect from coverage report path
+    # Coverage report is in OneSignalSDK/build/..., so go up two levels to get repo root
+    detected_root = os.path.dirname(os.path.dirname(coverage_report)) if '/build/' in coverage_report else os.path.dirname(coverage_report)
+    # Look for OneSignalSDK in the path and go one level up
+    parts = coverage_report.split('/')
+    if 'OneSignalSDK' in parts:
+        idx = parts.index('OneSignalSDK')
+        project_root = '/'.join(parts[:idx])
+    else:
+        # Fallback: assume we're in repo root
+        project_root = os.getcwd()
 
 changed_files = [f.strip() for f in changed_files_str.split('\n') if f.strip()]
 
@@ -119,7 +220,7 @@ files_checked = []
 markdown_output = []
 
 if generate_markdown:
-    markdown_output.append("## Diff Coverage Report\n")
+    markdown_output.append("## Diff Coverage Report (Changed Lines Only)\n")
     markdown_output.append(f"**Threshold:** {threshold}%\n\n")
     markdown_output.append("### Changed Files Coverage\n\n")
 
@@ -141,6 +242,9 @@ for changed_file in changed_files:
     filename = match.group(3)
     package_name = package_path.replace('/', '/')
     
+    # Get changed line numbers for this file
+    changed_lines = get_changed_lines(changed_file, project_root)
+    
     # Find in coverage report
     found = False
     for package in root.findall(f'.//package[@name="{package_name}"]'):
@@ -149,26 +253,38 @@ for changed_file in changed_files:
             files_checked.append(filename)
             
             lines = sourcefile.findall('line')
-            file_total = len([l for l in lines if int(l.get('mi', 0)) > 0 or int(l.get('ci', 0)) > 0])
-            file_covered = len([l for l in lines if int(l.get('ci', 0)) > 0])
-            file_uncovered = len([l for l in lines if l.get('ci') == '0' and int(l.get('mi', 0)) > 0])
+            
+            # Filter to only changed lines if we have that info
+            if changed_lines is not None and len(changed_lines) > 0:
+                # Only check lines that were added/modified
+                relevant_lines = [l for l in lines if int(l.get('nr', 0)) in changed_lines]
+            else:
+                # Fallback: check all lines if we can't get changed lines
+                relevant_lines = lines
+            
+            # Count only executable lines (mi > 0 means instructions exist)
+            file_total = len([l for l in relevant_lines if int(l.get('mi', 0)) > 0 or int(l.get('ci', 0)) > 0])
+            file_covered = len([l for l in relevant_lines if int(l.get('ci', 0)) > 0])
+            file_uncovered = len([l for l in relevant_lines if l.get('ci') == '0' and int(l.get('mi', 0)) > 0])
             
             if file_total > 0:
                 total_lines += file_total
                 total_uncovered += file_uncovered
-                coverage_pct = (file_covered / file_total * 100)
+                coverage_pct = (file_covered / file_total * 100) if file_total > 0 else 100
                 
                 if generate_markdown:
                     status = "✅" if coverage_pct >= threshold else "❌"
-                    markdown_output.append(f"- {status} **{filename}**: {file_covered}/{file_total} lines ({coverage_pct:.1f}%)")
+                    changed_info = f" ({len(changed_lines)} changed lines)" if changed_lines else " (all lines - could not determine changed lines)"
+                    markdown_output.append(f"- {status} **{filename}**: {file_covered}/{file_total} changed lines ({coverage_pct:.1f}%){changed_info}")
                     if coverage_pct < threshold:
                         files_below_threshold.append((filename, coverage_pct, file_uncovered))
-                        markdown_output.append(f"  - ⚠️ Below threshold: {file_uncovered} uncovered lines")
+                        markdown_output.append(f"  - ⚠️ Below threshold: {file_uncovered} uncovered changed lines")
                 else:
                     status = "✓" if coverage_pct >= threshold else "✗"
                     color = "" if coverage_pct >= threshold else "\033[0;31m"
                     reset = "\033[0m" if color else ""
-                    print(f"  {color}{status}{reset} {filename}: {file_covered}/{file_total} lines ({coverage_pct:.1f}%)")
+                    changed_info = f" ({len(changed_lines)} changed lines)" if changed_lines else " (all lines - could not determine changed lines)"
+                    print(f"  {color}{status}{reset} {filename}: {file_covered}/{file_total} changed lines ({coverage_pct:.1f}%){changed_info}")
                     if coverage_pct < threshold:
                         files_below_threshold.append((filename, coverage_pct, file_uncovered))
             break
@@ -185,14 +301,14 @@ if total_lines > 0:
     overall_coverage = ((total_lines - total_uncovered) / total_lines * 100)
     
     if generate_markdown:
-        markdown_output.append(f"\n### Overall Coverage\n")
-        markdown_output.append(f"**{total_lines - total_uncovered}/{total_lines}** lines covered ({overall_coverage:.1f}%)\n")
+        markdown_output.append(f"\n### Overall Coverage (Changed Lines Only)\n")
+        markdown_output.append(f"**{total_lines - total_uncovered}/{total_lines}** changed lines covered ({overall_coverage:.1f}%)\n")
         
         if files_below_threshold:
             markdown_output.append(f"\n### ❌ Coverage Check Failed\n")
             markdown_output.append(f"Files below {threshold}% threshold:\n")
             for filename, pct, uncovered in files_below_threshold:
-                markdown_output.append(f"- **{filename}**: {pct:.1f}% ({uncovered} uncovered lines)\n")
+                markdown_output.append(f"- **{filename}**: {pct:.1f}% ({uncovered} uncovered changed lines)\n")
         
         # Write markdown file
         with open(markdown_report, 'w') as f:
@@ -206,15 +322,15 @@ if total_lines > 0:
         else:
             sys.exit(0)
     else:
-        print(f"\n  Overall: {(total_lines - total_uncovered)}/{total_lines} lines covered ({overall_coverage:.1f}%)")
+        print(f"\n  Overall: {(total_lines - total_uncovered)}/{total_lines} changed lines covered ({overall_coverage:.1f}%)")
         
         if files_below_threshold:
             print(f"\n  Files below {threshold}% threshold:")
             for filename, pct, uncovered in files_below_threshold:
-                print(f"    • {filename}: {pct:.1f}% ({uncovered} uncovered lines)")
+                print(f"    • {filename}: {pct:.1f}% ({uncovered} uncovered changed lines)")
             sys.exit(1)
         else:
-            print(f"\n  ✓ All files meet {threshold}% threshold")
+            print(f"\n  ✓ All files meet {threshold}% threshold for changed lines")
             sys.exit(0)
 elif files_checked:
     # Files were found but had no executable lines
@@ -279,13 +395,27 @@ echo -e "${YELLOW}[3/3] Generating HTML coverage report...${NC}"
 # Try to generate HTML report using diff-cover if available, otherwise skip
 if python3 -m diff_cover.diff_cover_tool --version &>/dev/null 2>&1; then
     # Try diff-cover for HTML report (may not work due to path issues, but worth trying)
-    cd "$PROJECT_ROOT"
-    python3 -m diff_cover.diff_cover_tool "build/reports/jacoco/merged/jacocoMergedReport.xml" \
+    cd "$REPO_ROOT"
+    # Check if there are uncommitted changes - if so, we need to handle them differently
+    STAGED_COUNT=$(git diff --cached --name-only 2>/dev/null | grep -E '\.(kt|java)$' | wc -l | tr -d ' ')
+    UNSTAGED_COUNT=$(git diff --name-only 2>/dev/null | grep -E '\.(kt|java)$' | wc -l | tr -d ' ')
+    
+    if [ "$STAGED_COUNT" -gt 0 ] || [ "$UNSTAGED_COUNT" -gt 0 ]; then
+        # There are uncommitted changes - diff-cover won't see them with --compare-branch
+        # So we'll note this in the output
+        echo -e "${YELLOW}  Note: HTML report shows committed changes only${NC}"
+        echo -e "${YELLOW}  Uncommitted changes are checked in the console output above${NC}"
+    fi
+    
+    python3 -m diff_cover.diff_cover_tool "$PROJECT_ROOT/build/reports/jacoco/merged/jacocoMergedReport.xml" \
         --compare-branch="$BASE_BRANCH" \
         --format html:"$HTML_REPORT" 2>&1 | grep -v "No lines with coverage" || true
     
     if [ -f "$HTML_REPORT" ]; then
         echo -e "${GREEN}✓ HTML report generated: $HTML_REPORT${NC}"
+        if [ "$STAGED_COUNT" -gt 0 ] || [ "$UNSTAGED_COUNT" -gt 0 ]; then
+            echo -e "${YELLOW}  Note: Report shows committed changes only (uncommitted changes shown in console)${NC}"
+        fi
         echo -e "${BLUE}  Open it in your browser to see detailed coverage${NC}\n"
     else
         echo -e "${YELLOW}  HTML report generation had issues (non-fatal)${NC}\n"
