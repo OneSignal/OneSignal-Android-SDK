@@ -622,11 +622,24 @@ internal class InAppMessagesManager(
     override fun removeTrigger(key: String) {
         Logging.debug("InAppMessagesManager.removeTrigger(key: $key)")
 
+        synchronized(earlySessionTriggers) {
+            if (!hasCompletedFirstFetch) {
+                earlySessionTriggers.remove(key)
+            }
+        }
+
         _triggerModelStore.remove(key)
     }
 
     override fun clearTriggers() {
         Logging.debug("InAppMessagesManager.clearTriggers()")
+
+        synchronized(earlySessionTriggers) {
+            if (!hasCompletedFirstFetch) {
+                earlySessionTriggers.clear()
+            }
+        }
+
         _triggerModelStore.clear()
     }
 
