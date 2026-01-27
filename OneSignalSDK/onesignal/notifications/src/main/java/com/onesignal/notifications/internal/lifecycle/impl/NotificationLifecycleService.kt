@@ -155,9 +155,9 @@ internal class NotificationLifecycleService(
                 },
                 onError = { ex ->
                     if (ex is BackendException) {
-                        Logging.error("Notification opened confirmation failed with statusCode: ${ex.statusCode} response: ${ex.response}")
+                        Logging.info("Notification opened confirmation failed with statusCode: ${ex.statusCode} response: ${ex.response}")
                     } else {
-                        Logging.error("Unexpected error in notification opened confirmation", ex)
+                        Logging.info("Unexpected error in notification opened confirmation", ex)
                     }
                 },
             )
@@ -275,22 +275,19 @@ internal class NotificationLifecycleService(
 
             val intent = intentGenerator.getIntentVisible()
             if (intent != null) {
-                Logging.info("SDK running startActivity with Intent: $intent")
+                Logging.debug("SDK running startActivity with Intent: $intent")
                 withContext(Dispatchers.Main) {
                     activity.startActivity(intent)
                 }
             } else {
-                Logging.info("SDK not showing an Activity automatically due to it's settings.")
+                Logging.debug("SDK not showing an Activity automatically due to it's settings.")
             }
         } catch (e: JSONException) {
-            Logging.error("Could not parse JSON to open notification activity.")
-            e.printStackTrace()
+            Logging.error("Could not parse JSON to open notification activity.", e)
         } catch (e: ActivityNotFoundException) {
-            Logging.error("No activity found to handle notification open intent.")
-            e.printStackTrace()
+            Logging.warn("No activity found to handle notification open intent.", e)
         } catch (e: Exception) {
-            Logging.error("Could not open notification activity.")
-            e.printStackTrace()
+            Logging.error("Could not open notification activity.", e)
         }
     }
 }

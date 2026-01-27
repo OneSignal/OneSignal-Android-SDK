@@ -272,7 +272,7 @@ internal class OperationRepo(
                 ExecutionResult.FAIL_NORETRY,
                 ExecutionResult.FAIL_CONFLICT,
                 -> {
-                    Logging.error("Operation execution failed without retry: $operations")
+                    Logging.warn("Operation execution failed without retry: $operations")
                     // on failure we remove the operation from the store and wake any waiters
                     ops.forEach { _operationModelStore.remove(it.operation.id) }
                     ops.forEach { it.waiter?.wake(false) }
@@ -287,7 +287,7 @@ internal class OperationRepo(
                     }
                 }
                 ExecutionResult.FAIL_RETRY -> {
-                    Logging.error("Operation execution failed, retrying: $operations")
+                    Logging.info("Operation execution failed, retrying: $operations")
                     // add back all operations to the front of the queue to be re-executed.
                     synchronized(queue) {
                         ops.reversed().forEach {
@@ -349,7 +349,7 @@ internal class OperationRepo(
         val delayForOnRetries = retries * _configModelStore.model.opRepoDefaultFailRetryBackoff
         val delayFor = max(delayForOnRetries, retryAfterSecondsNonNull * 1_000)
         if (delayFor < 1) return
-        Logging.error("Operations being delay for: $delayFor ms")
+        Logging.debug("Operations being delay for: $delayFor ms")
         withTimeoutOrNull(delayFor) {
             retryWaiter.waitForWake()
         }

@@ -56,7 +56,7 @@ internal class SessionListener(
 
         // Time is erroneous if below 1 second or over a day
         if (durationInSeconds < 1L || durationInSeconds > SECONDS_IN_A_DAY) {
-            Logging.error("SessionListener.onSessionEnded sending duration of $durationInSeconds seconds")
+            Logging.info("SessionListener.onSessionEnded sending duration of $durationInSeconds seconds")
         }
 
         _operationRepo.enqueue(

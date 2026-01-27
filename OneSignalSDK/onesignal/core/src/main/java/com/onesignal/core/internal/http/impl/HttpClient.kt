@@ -93,7 +93,7 @@ internal class HttpClient(
                 return@withTimeout makeRequestIODispatcher(url, method, jsonBody, timeout, headers)
             }
         } catch (e: TimeoutCancellationException) {
-            Logging.error("HttpClient: Request timed out: $url", e)
+            Logging.info("HttpClient: Request timed out: $url", e)
             return HttpResponse(0, null, e)
         } catch (e: Throwable) {
             return HttpResponse(0, null, e)
