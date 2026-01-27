@@ -117,6 +117,12 @@ internal class InAppMessagesManager(
     private val fetchIAMMutex = Mutex()
     private var lastTimeFetchedIAMs: Long? = null
 
+    // Tracks whether the first IAM fetch has completed since this cold start
+    private var hasCompletedFirstFetch: Boolean = false
+
+    // Tracks trigger keys added early on cold start (before first fetch completes), for redisplay logic
+    private val earlySessionTriggers: MutableSet<String> = java.util.Collections.synchronizedSet(mutableSetOf())
+
     private val identityModelChangeHandler =
         object : ISingletonModelStoreChangeHandler<IdentityModel> {
             override fun onModelReplaced(
@@ -309,6 +315,26 @@ internal class InAppMessagesManager(
 
         if (newMessages != null) {
             this.messages = newMessages as MutableList<InAppMessage>
+
+            // Apply isTriggerChanged for messages that match triggers added too early on cold start
+            synchronized(earlySessionTriggers) {
+                if (earlySessionTriggers.isNotEmpty()) {
+                    Logging.verbose("InAppMessagesManager: Processing triggers added early on cold start: $earlySessionTriggers")
+                    for (message in this.messages) {
+                        val isMessageDisplayed = redisplayedInAppMessages.contains(message)
+                        val isTriggerOnMessage =
+                            _triggerController.isTriggerOnMessage(message, earlySessionTriggers)
+                        if (isMessageDisplayed && isTriggerOnMessage) {
+                            Logging.verbose("InAppMessagesManager: Setting isTriggerChanged=true for message ${message.messageId}")
+                            message.isTriggerChanged = true
+                        }
+                    }
+                    earlySessionTriggers.clear()
+                }
+                // Mark that first fetch has completed
+                hasCompletedFirstFetch = true
+            }
+
             evaluateInAppMessages()
         }
     }
@@ -566,6 +592,14 @@ internal class InAppMessagesManager(
     ) {
         Logging.debug("InAppMessagesManager.addTrigger(key: $key, value: $value)")
 
+        // Track triggers added early on cold start (before first fetch completes) for redisplay logic
+        synchronized(earlySessionTriggers) {
+            if (!hasCompletedFirstFetch) {
+                Logging.verbose("InAppMessagesManager: Tracking trigger added early on cold start: $key")
+                earlySessionTriggers.add(key)
+            }
+        }
+
         var triggerModel = _triggerModelStore.get(key)
         if (triggerModel != null) {
             triggerModel.value = value
@@ -589,11 +623,24 @@ internal class InAppMessagesManager(
     override fun removeTrigger(key: String) {
         Logging.debug("InAppMessagesManager.removeTrigger(key: $key)")
 
+        synchronized(earlySessionTriggers) {
+            if (!hasCompletedFirstFetch) {
+                earlySessionTriggers.remove(key)
+            }
+        }
+
         _triggerModelStore.remove(key)
     }
 
     override fun clearTriggers() {
         Logging.debug("InAppMessagesManager.clearTriggers()")
+
+        synchronized(earlySessionTriggers) {
+            if (!hasCompletedFirstFetch) {
+                earlySessionTriggers.clear()
+            }
+        }
+
         _triggerModelStore.clear()
     }
 
