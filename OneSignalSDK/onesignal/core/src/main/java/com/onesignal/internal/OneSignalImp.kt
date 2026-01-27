@@ -192,6 +192,14 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
                 return true
             }
 
+            // Check whether current Android user is accessible.
+            // Return early if it is inaccessible, as we are unable to complete initialization without access
+            // to device storage like SharedPreferences.
+            if (!AndroidUtils.isAndroidUserUnlocked(context)) {
+                Logging.warn("initWithContext called when device storage is locked, no user data is accessible!")
+                return false
+            }
+
             Logging.log(LogLevel.DEBUG, "initWithContext: SDK initializing")
 
             PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
