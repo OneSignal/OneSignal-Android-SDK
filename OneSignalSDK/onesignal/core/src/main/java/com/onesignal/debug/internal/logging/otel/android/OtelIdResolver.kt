@@ -5,6 +5,7 @@ import com.onesignal.common.IDManager
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.IdentityConstants
 import org.json.JSONArray
 import org.json.JSONObject
@@ -23,9 +24,14 @@ internal class OtelIdResolver(
 ) {
     companion object {
         /**
-         * Default error appId prefix when appId cannot be resolved.
+         * Hardcoded error appId prefix when appId cannot be resolved.
          */
-        private const val ERROR_APP_ID_PREFIX = "8123-1231-4343-2323-error-"
+        private const val ERROR_APP_ID_RESOLVE = "00000000-0000-4000-a000-000000000000"
+        private const val ERROR_APP_ID_PREFIX_UNKNOWN = "e1100000-0000-4000-a000-000000000000"
+        private const val ERROR_APP_ID_PREFIX_NO_APPID_IN_CONFIG = "e1100000-0000-4000-a000-000000000001"
+        private const val ERROR_APP_ID_PREFIX_NO_CONFIG_STORE = "e1100000-0000-4000-a000-000000000002"
+        private const val ERROR_APP_ID_PREFIX_NO_APPID_IN_CONFIG_STORE = "e1100000-0000-4000-a000-000000000003"
+        private const val ERROR_APP_ID_PREFIX_NO_CONTEXT = "e1100000-0000-4000-a000-000000000004"
     }
 
     // Get SharedPreferences instance (fresh each time to avoid caching issues in tests)
@@ -91,7 +97,8 @@ internal class OtelIdResolver(
             val appIdFromConfig = extractAppIdFromConfig(configModel)
             appIdFromConfig ?: resolveAppIdFromLegacy(configModel)
         } catch (e: Exception) {
-            "$ERROR_APP_ID_PREFIX${e.javaClass.simpleName}"
+            Logging.error("Trying resolve the app Id${e.message}")
+            ERROR_APP_ID_RESOLVE
         }
     }
 
@@ -118,14 +125,13 @@ internal class OtelIdResolver(
 
         return legacyAppId ?: run {
             // Third: return error appId with affix
-            val errorAffix = when {
-                context == null -> "no-context"
-                hasEmptyConfigStore() -> "no-appid-in-config" // Store exists but is empty array
-                configModel == null -> "config-store-not-found" // Store doesn't exist
-                !configModel.has("appId") -> "no-appid-in-config" // Store exists but no appId field
-                else -> "unknown"
+            return when {
+                context == null -> ERROR_APP_ID_PREFIX_NO_CONTEXT
+                hasEmptyConfigStore() -> ERROR_APP_ID_PREFIX_NO_APPID_IN_CONFIG_STORE // Store exists but is empty array
+                configModel == null -> ERROR_APP_ID_PREFIX_NO_CONFIG_STORE // Store doesn't exist
+                !configModel.has("appId") -> ERROR_APP_ID_PREFIX_NO_APPID_IN_CONFIG // Store exists but no appId field
+                else -> ERROR_APP_ID_PREFIX_UNKNOWN
             }
-            "$ERROR_APP_ID_PREFIX$errorAffix"
         }
     }
 

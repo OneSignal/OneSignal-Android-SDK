@@ -60,7 +60,7 @@ internal class ParamsBackendService(
 
         // Process Remote Logging params
         var remoteLoggingParams: RemoteLoggingParamsObject? = null
-        responseJson.expandJSONObject("remote_logging") {
+        responseJson.expandJSONObject("logging_config") {
             val logLevel = parseLogLevel(it)
             remoteLoggingParams =
                 RemoteLoggingParamsObject(
