@@ -270,6 +270,7 @@ internal class OperationRepo(
                 }
                 ExecutionResult.FAIL_UNAUTHORIZED, // TODO: Need to provide callback for app to reset JWT. For now, fail with no retry.
                 ExecutionResult.FAIL_NORETRY,
+                ExecutionResult.FAIL_INVALID_LOGIN,
                 ExecutionResult.FAIL_CONFLICT,
                 -> {
                     Logging.error("Operation execution failed without retry: $operations")

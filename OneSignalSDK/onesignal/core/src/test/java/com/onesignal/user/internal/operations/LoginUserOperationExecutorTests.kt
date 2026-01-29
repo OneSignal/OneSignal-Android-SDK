@@ -163,7 +163,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any()) }
     }
 
-    test("login anonymous user fails with no retry when hit with backend error 400") {
+    test("login anonymous user fails with LOGIN_INVALID when hit with backend error 400") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(400, "INVALID")
@@ -186,7 +186,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val response = loginUserOperationExecutor.execute(operations)
 
         // Then
-        response.result shouldBe ExecutionResult.FAIL_NORETRY
+        response.result shouldBe ExecutionResult.FAIL_INVALID_LOGIN
         coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any()) }
     }
 
