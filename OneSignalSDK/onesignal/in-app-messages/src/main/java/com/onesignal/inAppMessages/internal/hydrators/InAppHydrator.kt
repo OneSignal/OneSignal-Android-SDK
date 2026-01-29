@@ -30,7 +30,7 @@ internal class InAppHydrator(
         try {
             val content = InAppMessageContent(jsonObject)
             if (content.contentHtml == null) {
-                Logging.debug("displayMessage:OnSuccess: No HTML retrieved from loadMessageContent")
+                Logging.info("displayMessage:OnSuccess: No HTML retrieved from loadMessageContent")
                 return null
             }
 

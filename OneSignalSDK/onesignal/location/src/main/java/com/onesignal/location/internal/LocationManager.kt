@@ -103,7 +103,7 @@ internal class LocationManager(
             if (androidSDKInt < Build.VERSION_CODES.M) {
                 if (!hasFinePermissionGranted && !hasCoarsePermissionGranted) {
                     // Permission missing on manifest
-                    Logging.error("Location permissions not added on AndroidManifest file < M")
+                    Logging.info("Location permissions not added on AndroidManifest file < M")
                     return@withContext false
                 }
 
