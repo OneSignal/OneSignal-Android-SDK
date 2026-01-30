@@ -772,6 +772,7 @@ class JSONUtilsTests : FunSpec({
             JSONUtils.convertToJson(true) shouldBe true
             JSONUtils.convertToJson(false) shouldBe false
             JSONUtils.convertToJson(3.14) shouldBe 3.14
+            JSONUtils.convertToJson(null) shouldBe JSONObject.NULL
         }
 
         test("should convert Map to JSONObject") {
@@ -887,18 +888,19 @@ class JSONUtilsTests : FunSpec({
 
         test("should handle List with mixed types") {
             // Given
-            val list = listOf("string", 42, true, 3.14)
+            val list = listOf("string", 42, true, 3.14, null)
 
             // When
             val result = JSONUtils.convertToJson(list)
 
             // Then
             val jsonArray = result as JSONArray
-            jsonArray.length() shouldBe 4
+            jsonArray.length() shouldBe 5
             jsonArray.getString(0) shouldBe "string"
             jsonArray.getInt(1) shouldBe 42
             jsonArray.getBoolean(2) shouldBe true
             jsonArray.getDouble(3) shouldBe 3.14
+            jsonArray.get(4) shouldBe JSONObject.NULL
         }
 
         test("should filter out non-String keys from Map") {
@@ -940,6 +942,125 @@ class JSONUtilsTests : FunSpec({
             val level2Array = level1Item.getJSONArray("level2")
             val level2Item = level2Array.getJSONObject(0)
             level2Item.getString("level3") shouldBe "deepValue"
+        }
+
+        test("should handle null values in maps") {
+            // Given
+            val map = mapOf(
+                "key1" to "value1",
+                "key2" to null,
+                "key3" to 42,
+            )
+
+            // When
+            val result = JSONUtils.convertToJson(map)
+
+            // Then
+            val jsonObject = result as JSONObject
+            jsonObject.getString("key1") shouldBe "value1"
+            jsonObject.isNull("key2") shouldBe true
+            jsonObject.getInt("key3") shouldBe 42
+        }
+
+        test("should handle null values in nested objects") {
+            // Given
+            val map = mapOf(
+                "someObject" to mapOf(
+                    "abc" to "123",
+                    "nested" to mapOf(
+                        "def" to "456",
+                    ),
+                    "ghi" to null,
+                ),
+            )
+
+            // When
+            val result = JSONUtils.convertToJson(map)
+
+            // Then
+            val jsonObject = result as JSONObject
+            val someObject = jsonObject.getJSONObject("someObject")
+            someObject.getString("abc") shouldBe "123"
+            val nested = someObject.getJSONObject("nested")
+            nested.getString("def") shouldBe "456"
+            someObject.isNull("ghi") shouldBe true
+        }
+
+        test("should handle null values in arrays") {
+            // Given
+            val map = mapOf(
+                "someArray" to listOf(1, 2),
+                "someMixedArray" to listOf(1, "2", mapOf("abc" to "123"), null),
+            )
+
+            // When
+            val result = JSONUtils.convertToJson(map)
+
+            // Then
+            val jsonObject = result as JSONObject
+            val someArray = jsonObject.getJSONArray("someArray")
+            someArray.length() shouldBe 2
+            someArray.getInt(0) shouldBe 1
+            someArray.getInt(1) shouldBe 2
+
+            val someMixedArray = jsonObject.getJSONArray("someMixedArray")
+            someMixedArray.length() shouldBe 4
+            someMixedArray.getInt(0) shouldBe 1
+            someMixedArray.getString(1) shouldBe "2"
+            val nestedObj = someMixedArray.getJSONObject(2)
+            nestedObj.getString("abc") shouldBe "123"
+            someMixedArray.get(3) shouldBe JSONObject.NULL
+        }
+
+        test("should handle complete example structure with nulls") {
+            // Given - matches the user's example structure
+            val map = mapOf(
+                "someNum" to 123,
+                "someFloat" to 3.14159,
+                "someString" to "abc",
+                "someBool" to true,
+                "someObject" to mapOf(
+                    "abc" to "123",
+                    "nested" to mapOf(
+                        "def" to "456",
+                    ),
+                    "ghi" to null,
+                ),
+                "someArray" to listOf(1, 2),
+                "someMixedArray" to listOf(1, "2", mapOf("abc" to "123"), null),
+                "someNull" to null,
+            )
+
+            // When
+            val result = JSONUtils.convertToJson(map)
+
+            // Then
+            val jsonObject = result as JSONObject
+            jsonObject.getInt("someNum") shouldBe 123
+            jsonObject.getDouble("someFloat") shouldBe 3.14159
+            jsonObject.getString("someString") shouldBe "abc"
+            jsonObject.getBoolean("someBool") shouldBe true
+
+            val someObject = jsonObject.getJSONObject("someObject")
+            someObject.getString("abc") shouldBe "123"
+            val nested = someObject.getJSONObject("nested")
+            nested.getString("def") shouldBe "456"
+            someObject.isNull("ghi") shouldBe true
+
+            val someArray = jsonObject.getJSONArray("someArray")
+            someArray.length() shouldBe 2
+            someArray.getInt(0) shouldBe 1
+            someArray.getInt(1) shouldBe 2
+
+            val someMixedArray = jsonObject.getJSONArray("someMixedArray")
+            someMixedArray.length() shouldBe 4
+            someMixedArray.getInt(0) shouldBe 1
+            someMixedArray.getString(1) shouldBe "2"
+            val nestedObj = someMixedArray.getJSONObject(2)
+            nestedObj.getString("abc") shouldBe "123"
+            someMixedArray.get(3) shouldBe JSONObject.NULL
+
+            jsonObject.isNull("someNull") shouldBe true
         }
     }
 })

@@ -175,6 +175,6 @@ interface IUserManager {
      */
     fun trackEvent(
         name: String,
-        properties: Map<String, Any>? = null,
+        properties: Map<String, Any?>? = null,
     )
 }

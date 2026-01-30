@@ -5,6 +5,11 @@ import com.onesignal.core.internal.operations.GroupComparisonType
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.user.internal.operations.impl.executors.CustomEventOperationExecutor
 
+/**
+ * An [Operation] to track a single custom event with properties for the current user.
+ * This operation is enqueued when a user tracks a custom event and will be processed
+ * by the [CustomEventOperationExecutor] to send the event to the OneSignal backend.
+ */
 class TrackCustomEventOperation() : Operation(CustomEventOperationExecutor.CUSTOM_EVENT) {
     /**
      * The OneSignal appId the custom event was created.

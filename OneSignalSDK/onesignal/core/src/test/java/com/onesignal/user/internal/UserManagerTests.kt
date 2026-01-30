@@ -210,6 +210,7 @@ class UserManagerTests : FunSpec({
                 "key3" to 5.123,
                 "key4" to mapOf("key4-1" to "value4-1"),
                 "key5" to mapOf("key5-1" to mapOf("key5-1-1" to 0)),
+                "key6" to null,
             )
 
         // When
