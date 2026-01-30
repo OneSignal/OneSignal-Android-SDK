@@ -8,6 +8,10 @@ import com.onesignal.user.internal.customEvents.ICustomEventController
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.TrackCustomEventOperation
 
+/**
+ * Controller for custom events. Handles the creation and enqueueing of custom event operations
+ * for tracking user events with optional properties.
+ */
 class CustomEventController(
     private val identityModelStore: IdentityModelStore,
     private val configModelStore: ConfigModelStore,
@@ -16,7 +20,7 @@ class CustomEventController(
 ) : ICustomEventController {
     override fun sendCustomEvent(
         name: String,
-        properties: Map<String, Any>?,
+        properties: Map<String, Any?>?,
     ) {
         val op =
             TrackCustomEventOperation(

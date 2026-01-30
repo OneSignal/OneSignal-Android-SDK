@@ -249,7 +249,7 @@ internal open class UserManager(
 
     override fun trackEvent(
         name: String,
-        properties: Map<String, Any>?,
+        properties: Map<String, Any?>?,
     ) {
         if (!JSONUtils.isValidJsonObject(properties)) {
             Logging.log(LogLevel.ERROR, "Custom event properties are not JSON-serializable")

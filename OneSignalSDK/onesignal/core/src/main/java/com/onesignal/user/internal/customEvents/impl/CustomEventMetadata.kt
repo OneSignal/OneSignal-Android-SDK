@@ -4,6 +4,10 @@ import com.onesignal.common.putSafe
 import org.json.JSONException
 import org.json.JSONObject
 
+/**
+ * Metadata for custom events containing device and SDK information.
+ * This metadata is included with custom events sent to the OneSignal backend.
+ */
 class CustomEventMetadata(
     val deviceType: String?,
     val sdk: String?,
@@ -12,6 +16,12 @@ class CustomEventMetadata(
     val deviceModel: String?,
     val deviceOS: String?,
 ) {
+    /**
+     * Converts the metadata to a JSONObject for serialization.
+     *
+     * @return JSONObject containing all metadata fields
+     * @throws JSONException if JSON serialization fails
+     */
     @Throws(JSONException::class)
     fun toJSONObject(): JSONObject {
         val json = JSONObject()
