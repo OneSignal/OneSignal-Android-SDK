@@ -16,7 +16,7 @@ class CustomEventController(
 ) : ICustomEventController {
     override fun sendCustomEvent(
         name: String,
-        properties: Map<String, Any>?,
+        properties: Map<String, Any?>?,
     ) {
         val op =
             TrackCustomEventOperation(
