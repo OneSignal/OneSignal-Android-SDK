@@ -134,6 +134,8 @@ internal class LoginUserOperationExecutor(
                     )
                     createUser(loginUserOp, operations)
                 }
+                // For all other errors, the request will be dropped and will not create the user
+                // e.g. ExecutionResult.FAIL_INVALID_LOGIN
                 else -> ExecutionResponse(result.result)
             }
         }
