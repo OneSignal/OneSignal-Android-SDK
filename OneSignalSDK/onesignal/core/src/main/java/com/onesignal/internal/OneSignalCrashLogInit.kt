@@ -70,49 +70,40 @@ internal class OneSignalCrashLogInit(
     fun initializeOtelLogging() {
         // Initialize Otel logging asynchronously to avoid blocking initialization
         // Remote logging is not critical for crashes, so it's safe to do this in the background
-        // Uses OtelIdResolver internally which reads directly from SharedPreferences
-        // No service dependencies required - fully decoupled from service architecture
+        // To remove the variable of refactors of internal dependencies breaking this
+        // initialization, OtelIdResolver reads directly from SharedPreferences, to fully decouple
+        // from our service architecture.
         suspendifyOnIO {
             try {
-                // Reuses the same platform provider instance created for crash handler
                 // Get the remote log level as string (defaults to "ERROR" if null, "NONE" if explicitly set)
                 val remoteLogLevelStr = platformProvider.remoteLogLevel
 
-                // Check if remote logging is enabled (not NONE)
                 if (remoteLogLevelStr != null && remoteLogLevelStr != "NONE") {
-                    // Store in local variable for smart cast
-                    val logLevelStr = remoteLogLevelStr
-                    Logging.info("OneSignal: Remote logging enabled at level $logLevelStr, initializing Otel logging integration...")
-                    val remoteTelemetry: IOtelOpenTelemetryRemote = OtelFactory.createRemoteTelemetry(platformProvider)
+                    Logging.debug("OneSignal: Remote logging enabled at level $remoteLogLevelStr, initializing Otel logging integration...")
+                    val remoteTelemetry = OtelFactory.createRemoteTelemetry(platformProvider)
 
-                    // Parse the log level string to LogLevel enum for comparison
-                    @Suppress("TooGenericExceptionCaught", "SwallowedException")
-                    val remoteLogLevel: LogLevel = try {
-                        LogLevel.valueOf(logLevelStr)
-                    } catch (e: Exception) {
-                        LogLevel.ERROR // Default to ERROR on parse error
-                    }
+                    val remoteLogLevel =
+                        try {
+                            LogLevel.valueOf(remoteLogLevelStr)
+                        } catch (_: Exception) {
+                            LogLevel.ERROR
+                        }
 
-                    // Create a function that checks if a log level should be sent remotely
-                    // - If remoteLogLevel is null: default to ERROR (send ERROR and above)
-                    // - If remoteLogLevel is NONE: don't send anything (shouldn't reach here, but handle it)
-                    // - Otherwise: send logs at that level and above
                     val shouldSendLogLevel: (LogLevel) -> Boolean = { level ->
                         when {
-                            remoteLogLevel == LogLevel.NONE -> false // Don't send anything
+                            remoteLogLevel == LogLevel.NONE -> false
                             else -> level <= remoteLogLevel
                         }
                     }
 
-                    // Inject Otel telemetry into Logging class
                     Logging.setOtelTelemetry(remoteTelemetry, shouldSendLogLevel)
-                    Logging.info("OneSignal: ✅ Otel logging integration initialized - logs at level $logLevelStr and above will be sent to remote server")
+                    Logging.debug("OneSignal: ✅ Otel logging integration initialized - logs at level $remoteLogLevelStr and above will be sent to remote server")
                 } else {
-                    Logging.debug("OneSignal: Remote logging disabled (level: $remoteLogLevelStr), skipping Otel logging integration")
+                    Logging.debug("OneSignal: ❌ Remote logging disabled (level: $remoteLogLevelStr), skipping Otel logging integration")
                 }
-            } catch (e: Exception) {
-                // If Otel logging initialization fails, log it but don't crash
-                Logging.warn("OneSignal: Failed to initialize Otel logging: ${e.message}", e)
+            } catch (t: Throwable) {
+                // Never crash the app if Otel fails to initialize.
+                Logging.warn("OneSignal: Failed to initialize Otel logging: ${t.message}", t)
             }
         }
     }
