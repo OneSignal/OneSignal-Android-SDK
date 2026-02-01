@@ -100,7 +100,7 @@ internal class OneSignalCrashLogInit(
                     val shouldSendLogLevel: (LogLevel) -> Boolean = { level ->
                         when {
                             remoteLogLevel == LogLevel.NONE -> false // Don't send anything
-                            else -> level >= remoteLogLevel // Send at configured level and above
+                            else -> level <= remoteLogLevel
                         }
                     }
 
