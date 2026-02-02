@@ -205,8 +205,8 @@ class OtelIdResolverTest : FunSpec({
         // When
         val result = resolver.resolveAppId()
 
-        // Then
-        result shouldBe "8123-1231-4343-2323-error-config-store-not-found"
+        // Then - ERROR_APP_ID_PREFIX_NO_CONFIG_STORE
+        result shouldBe "e1100000-0000-4000-a000-000000000002"
     }
 
     test("resolveAppId returns error appId when ConfigModelStore is empty array") {
@@ -229,8 +229,8 @@ class OtelIdResolverTest : FunSpec({
         // When
         val result = resolver.resolveAppId()
 
-        // Then
-        result shouldBe "8123-1231-4343-2323-error-no-appid-in-config"
+        // Then - ERROR_APP_ID_PREFIX_NO_APPID_IN_CONFIG_STORE
+        result shouldBe "e1100000-0000-4000-a000-000000000003"
     }
 
     test("resolveAppId returns error appId when context is null") {
@@ -240,8 +240,8 @@ class OtelIdResolverTest : FunSpec({
         // When
         val result = resolver.resolveAppId()
 
-        // Then
-        result shouldBe "8123-1231-4343-2323-error-no-context"
+        // Then - ERROR_APP_ID_PREFIX_NO_CONTEXT
+        result shouldBe "e1100000-0000-4000-a000-000000000004"
     }
 
     test("resolveAppId handles JSON parsing exceptions gracefully") {
@@ -255,8 +255,8 @@ class OtelIdResolverTest : FunSpec({
         // When
         val result = resolver.resolveAppId()
 
-        // Then - should return error appId with exception name
-        result shouldBe "8123-1231-4343-2323-error-config-store-not-found"
+        // Then - JSON parse error results in null configModel, so ERROR_APP_ID_PREFIX_NO_CONFIG_STORE
+        result shouldBe "e1100000-0000-4000-a000-000000000002"
     }
 
     // ===== resolveOnesignalId Tests =====
