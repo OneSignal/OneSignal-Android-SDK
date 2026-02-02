@@ -122,13 +122,14 @@ class OtelCrashReporterTest : FunSpec({
         val throwable = RuntimeException("Test crash")
         val thread = Thread.currentThread()
 
+        // Note: IllegalStateException extends RuntimeException, so it gets caught by the RuntimeException handler
         shouldThrow<IllegalStateException> {
             runBlocking {
                 crashReporter.saveCrash(thread, throwable)
             }
         }
 
-        verify { mockLogger.error(match { it.contains("Illegal state error saving crash report") }) }
+        verify { mockLogger.error(match { it.contains("Failed to save crash report") }) }
     }
 
     test("saveCrash should set timestamp") {

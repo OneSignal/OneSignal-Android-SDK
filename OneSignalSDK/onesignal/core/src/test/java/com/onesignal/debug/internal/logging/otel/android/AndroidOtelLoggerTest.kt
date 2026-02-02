@@ -7,6 +7,8 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.types.shouldBeInstanceOf
 
 class AndroidOtelLoggerTest : FunSpec({
+    // Save original log level to restore after tests
+    val originalLogLevel = Logging.logLevel
 
     beforeEach {
         // Disable logging during tests to avoid polluting test output
@@ -14,7 +16,8 @@ class AndroidOtelLoggerTest : FunSpec({
     }
 
     afterEach {
-        Logging.logLevel = LogLevel.NONE
+        // Restore original log level
+        Logging.logLevel = originalLogLevel
     }
 
     test("should implement IOtelLogger interface") {

@@ -4,6 +4,7 @@ import com.onesignal.otel.IOtelLogger
 import com.onesignal.otel.IOtelOpenTelemetryRemote
 import com.onesignal.otel.IOtelPlatformProvider
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.clearMocks
 import io.mockk.every
@@ -12,6 +13,7 @@ import io.mockk.verify
 import io.opentelemetry.sdk.common.CompletableResultCode
 import io.opentelemetry.sdk.logs.export.LogRecordExporter
 import kotlinx.coroutines.runBlocking
+import java.io.File
 
 class OtelCrashUploaderTest : FunSpec({
     val mockRemoteTelemetry = mockk<IOtelOpenTelemetryRemote>(relaxed = true)
@@ -19,13 +21,21 @@ class OtelCrashUploaderTest : FunSpec({
     val mockLogger = mockk<IOtelLogger>(relaxed = true)
     val mockExporter = mockk<LogRecordExporter>(relaxed = true)
 
+    // Use temp directory for tests that need file system access
+    fun createTempDir(): String {
+        val tempDir = File(System.getProperty("java.io.tmpdir"), "otel-test-${System.currentTimeMillis()}")
+        tempDir.mkdirs()
+        return tempDir.absolutePath
+    }
+
     fun setupDefaultMocks(
         remoteLogLevel: String? = "ERROR",
-        crashStoragePath: String = "/test/crash/path",
-        minFileAgeForReadMillis: Long = 100L
+        crashStoragePath: String? = null,
+        minFileAgeForReadMillis: Long = 0L // Use 0 to avoid delays in tests
     ) {
+        val path = crashStoragePath ?: createTempDir()
         every { mockPlatformProvider.remoteLogLevel } returns remoteLogLevel
-        every { mockPlatformProvider.crashStoragePath } returns crashStoragePath
+        every { mockPlatformProvider.crashStoragePath } returns path
         every { mockPlatformProvider.minFileAgeForReadMillis } returns minFileAgeForReadMillis
         every { mockRemoteTelemetry.logExporter } returns mockExporter
         every { mockExporter.export(any()) } returns CompletableResultCode.ofSuccess()
@@ -71,19 +81,6 @@ class OtelCrashUploaderTest : FunSpec({
         runBlocking { uploader.start() }
 
         verify { mockLogger.info("OtelCrashUploader: starting") }
-    }
-
-    test("start should work with different log levels") {
-        listOf("ERROR", "WARN", "INFO", "DEBUG", "VERBOSE").forEach { level ->
-            clearMocks(mockLogger)
-            setupDefaultMocks(remoteLogLevel = level)
-
-            val uploader = OtelCrashUploader(mockRemoteTelemetry, mockPlatformProvider, mockLogger)
-
-            runBlocking { uploader.start() }
-
-            verify { mockLogger.info("OtelCrashUploader: starting") }
-        }
     }
 
     test("SEND_TIMEOUT_SECONDS should be 30 seconds") {

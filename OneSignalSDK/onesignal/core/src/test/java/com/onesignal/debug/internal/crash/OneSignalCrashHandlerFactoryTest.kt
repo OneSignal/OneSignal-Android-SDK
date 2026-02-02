@@ -18,6 +18,8 @@ import org.robolectric.annotation.Config
 class OneSignalCrashHandlerFactoryTest : FunSpec({
     lateinit var appContext: Context
     lateinit var logger: AndroidOtelLogger
+    // Save original handler to restore after tests
+    val originalHandler: Thread.UncaughtExceptionHandler? = Thread.getDefaultUncaughtExceptionHandler()
 
     beforeAny {
         appContext = ApplicationProvider.getApplicationContext()
@@ -25,8 +27,8 @@ class OneSignalCrashHandlerFactoryTest : FunSpec({
     }
 
     afterEach {
-        // Reset uncaught exception handler after each test
-        Thread.setDefaultUncaughtExceptionHandler(null)
+        // Restore original uncaught exception handler after each test
+        Thread.setDefaultUncaughtExceptionHandler(originalHandler)
     }
 
     test("createCrashHandler should return IOtelCrashHandler") {
