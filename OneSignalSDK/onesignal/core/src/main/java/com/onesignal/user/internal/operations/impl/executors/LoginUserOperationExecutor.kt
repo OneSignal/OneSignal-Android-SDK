@@ -239,10 +239,8 @@ internal class LoginUserOperationExecutor(
                     ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
-                NetworkUtils.ResponseStatusType.INVALID ->
-                    ExecutionResponse(ExecutionResult.FAIL_INVALID_LOGIN)
                 else ->
-                    ExecutionResponse(ExecutionResult.FAIL_PAUSE_OPREPO)
+                    ExecutionResponse(ExecutionResult.FAIL_INVALID_LOGIN)
             }
         }
     }

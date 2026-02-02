@@ -83,11 +83,4 @@ enum class ExecutionResult {
      * We should not retry the operation as the external ID should not be used again.
      */
     FAIL_INVALID_LOGIN,
-
-    /**
-     * Used in special create user case.
-     * The operation failed due to a non-retryable error. Pause the operation repo
-     * and retry on a new session, giving the SDK a chance to recover from the failed user create.
-     */
-    FAIL_PAUSE_OPREPO,
 }

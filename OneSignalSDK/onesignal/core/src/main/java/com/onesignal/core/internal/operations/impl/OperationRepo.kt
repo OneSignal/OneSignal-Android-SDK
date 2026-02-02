@@ -57,7 +57,6 @@ internal class OperationRepo(
     internal val queue = mutableListOf<OperationQueueItem>()
     private val waiter = WaiterWithValue<LoopWaiterMessage>()
     private val retryWaiter = WaiterWithValue<LoopWaiterMessage>()
-    private var paused = false
     private val initialized = CompletableDeferred<Unit>()
 
     override suspend fun awaitInitialized() {
@@ -101,7 +100,6 @@ internal class OperationRepo(
     }
 
     override fun start() {
-        paused = false
         scope.launch {
             // load saved operations first then start processing the queue to ensure correct operation order
             loadSavedOperations()
@@ -182,11 +180,6 @@ internal class OperationRepo(
         waitForNewOperationAndExecutionInterval()
         enqueueIntoBucket++
         while (true) {
-            if (paused) {
-                Logging.debug("OperationRepo is paused")
-                return
-            }
-
             val ops = getNextOps(executeBucket)
             Logging.debug("processQueueForever:ops:\n$ops")
 
@@ -297,15 +290,6 @@ internal class OperationRepo(
                             }
                             queue.add(0, it)
                         }
-                    }
-                }
-                ExecutionResult.FAIL_PAUSE_OPREPO -> {
-                    Logging.error("Operation execution failed with eventual retry, pausing the operation repo: $operations")
-                    // keep the failed operation and pause the operation repo from executing
-                    paused = true
-                    // add back all operations to the front of the queue to be re-executed.
-                    synchronized(queue) {
-                        ops.reversed().forEach { queue.add(0, it) }
                     }
                 }
             }
