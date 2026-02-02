@@ -15,6 +15,7 @@ import com.onesignal.otel.IOtelPlatformProvider
 import com.onesignal.otel.OtelFactory
 import com.onesignal.user.internal.backend.IdentityConstants
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.comparables.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -111,7 +112,7 @@ class OtelIntegrationTest : FunSpec({
         provider.onesignalId shouldBe "test-onesignal-id"
         provider.pushSubscriptionId shouldBe "test-subscription-id"
         provider.appState shouldBeOneOf listOf("foreground", "background", "unknown")
-        (provider.processUptime > 0.0) shouldBe true
+        provider.processUptime shouldBeGreaterThan 0
         provider.currentThreadName shouldBe Thread.currentThread().name
     }
 

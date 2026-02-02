@@ -14,6 +14,8 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.IdentityConstants
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.comparables.shouldBeGreaterThan
+import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
@@ -416,8 +418,8 @@ class OtelPlatformProviderTest : FunSpec({
         val result = provider.processUptime
 
         // Then
-        (result > 0.0) shouldBe true
-        (result < 1000000.0) shouldBe true // Reasonable upper bound
+        result shouldBeGreaterThan 0
+        result shouldBeLessThan 1000000 // Reasonable upper bound
     }
 
     // ===== currentThreadName Tests =====

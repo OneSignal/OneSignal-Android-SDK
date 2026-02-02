@@ -3,6 +3,7 @@ package com.onesignal.debug.internal.logging.otel.android
 import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
+import android.os.SystemClock
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.OneSignalWrapper
 import com.onesignal.debug.internal.logging.Logging
@@ -100,8 +101,8 @@ internal class OtelPlatformProvider(
         }
 
     // https://opentelemetry.io/docs/specs/semconv/system/process-metrics/#metric-processuptime
-    override val processUptime: Double
-        get() = android.os.SystemClock.uptimeMillis() / 1_000.0 // Use SystemClock directly
+    override val processUptime: Long
+        get() = SystemClock.uptimeMillis() - android.os.Process.getStartUptimeMillis()
 
     // https://opentelemetry.io/docs/specs/semconv/general/attributes/#general-thread-attributes
     override val currentThreadName: String

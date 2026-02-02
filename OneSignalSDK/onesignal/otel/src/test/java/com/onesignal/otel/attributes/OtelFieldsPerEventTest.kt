@@ -18,7 +18,7 @@ class OtelFieldsPerEventTest : FunSpec({
         every { mockPlatformProvider.onesignalId } returns "test-onesignal-id"
         every { mockPlatformProvider.pushSubscriptionId } returns "test-subscription-id"
         every { mockPlatformProvider.appState } returns "foreground"
-        every { mockPlatformProvider.processUptime } returns 100.5
+        every { mockPlatformProvider.processUptime } returns 100
         every { mockPlatformProvider.currentThreadName } returns "main-thread"
 
         val attributes = fields.getAttributes()
@@ -38,7 +38,7 @@ class OtelFieldsPerEventTest : FunSpec({
         every { mockPlatformProvider.onesignalId } returns null
         every { mockPlatformProvider.pushSubscriptionId } returns null
         every { mockPlatformProvider.appState } returns "background"
-        every { mockPlatformProvider.processUptime } returns 50.0
+        every { mockPlatformProvider.processUptime } returns 50
         every { mockPlatformProvider.currentThreadName } returns "worker-thread"
 
         val attributes = fields.getAttributes()
@@ -56,7 +56,7 @@ class OtelFieldsPerEventTest : FunSpec({
         every { mockPlatformProvider.onesignalId } returns null
         every { mockPlatformProvider.pushSubscriptionId } returns null
         every { mockPlatformProvider.appState } returns "foreground"
-        every { mockPlatformProvider.processUptime } returns 100.0
+        every { mockPlatformProvider.processUptime } returns 100
         every { mockPlatformProvider.currentThreadName } returns "main"
 
         val attributes1 = fields.getAttributes()
