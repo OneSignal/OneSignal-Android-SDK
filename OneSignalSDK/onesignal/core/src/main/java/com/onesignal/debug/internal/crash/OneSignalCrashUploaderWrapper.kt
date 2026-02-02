@@ -1,5 +1,6 @@
 package com.onesignal.debug.internal.crash
 
+import android.os.Build
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.otel.android.AndroidOtelLogger
@@ -44,6 +45,9 @@ internal class OneSignalCrashUploaderWrapper(
     }
 
     override fun start() {
+        // Otel library requires Android Oreo (8) or newer
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+
         runBlocking {
             uploader.start()
         }

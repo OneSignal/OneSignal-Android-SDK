@@ -1,6 +1,7 @@
 package com.onesignal.debug.internal.logging
 
 import android.app.AlertDialog
+import android.os.Build
 import com.onesignal.common.threading.suspendifyOnMain
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.ILogListener
@@ -216,6 +217,9 @@ object Logging {
 
         // Check if this log level should be sent remotely
         if (!shouldSendLogLevel(level)) return
+
+        // Otel library requires Android Oreo (8) or newer
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
 
         // Log asynchronously (non-blocking)
         otelLoggingScope.launch {
