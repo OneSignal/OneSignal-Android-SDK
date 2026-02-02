@@ -121,7 +121,8 @@ class OneSignalOpenTelemetryTest : FunSpec({
 
         mockBuilder.setAllAttributes(attributes)
 
-        // Verify the extension function was called (relaxed mock accepts all calls)
+        io.mockk.verify { mockBuilder.setAttribute("key1", "value1") }
+        io.mockk.verify { mockBuilder.setAttribute("key2", "value2") }
     }
 
     test("setAllAttributes with Attributes should handle different types") {
@@ -135,7 +136,10 @@ class OneSignalOpenTelemetryTest : FunSpec({
 
         mockBuilder.setAllAttributes(attributes)
 
-        // Verify extension function handles all types without throwing
+        io.mockk.verify { mockBuilder.setAttribute("string.key", "string-value") }
+        io.mockk.verify { mockBuilder.setAttribute("long.key", 123L) }
+        io.mockk.verify { mockBuilder.setAttribute("double.key", 45.67) }
+        io.mockk.verify { mockBuilder.setAttribute("boolean.key", true) }
     }
 
     // ===== SDK Caching Tests =====

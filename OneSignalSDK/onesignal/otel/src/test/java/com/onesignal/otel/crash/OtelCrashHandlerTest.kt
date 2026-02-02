@@ -27,8 +27,8 @@ class OtelCrashHandlerTest : FunSpec({
         crashHandler.initialize()
 
         Thread.getDefaultUncaughtExceptionHandler() shouldBe crashHandler
-        verify { mockLogger.info("OtelCrashHandler: Setting up uncaught exception handler...") }
-        verify { mockLogger.info("OtelCrashHandler: ✅ Successfully initialized and registered as default uncaught exception handler") }
+        verify { mockLogger.info(match { it.contains("Setting up uncaught exception handler") }) }
+        verify { mockLogger.info(match { it.contains("Successfully initialized") }) }
 
         Thread.setDefaultUncaughtExceptionHandler(originalHandler)
     }

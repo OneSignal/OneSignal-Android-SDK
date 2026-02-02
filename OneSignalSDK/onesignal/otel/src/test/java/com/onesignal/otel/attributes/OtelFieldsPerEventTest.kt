@@ -42,7 +42,7 @@ class OtelFieldsPerEventTest : FunSpec({
         attributes["ossdk.app_id"] shouldBe "test-app-id"
         attributes["ossdk.onesignal_id"] shouldBe "test-onesignal-id"
         attributes["ossdk.push_subscription_id"] shouldBe "test-subscription-id"
-        attributes["android.app.state"] shouldBe "foreground"
+        attributes["app.state"] shouldBe "foreground"
         attributes["process.uptime"] shouldBe "100.5"
         attributes["thread.name"] shouldBe "main-thread"
     }
@@ -55,7 +55,7 @@ class OtelFieldsPerEventTest : FunSpec({
         attributes.keys shouldNotContain "ossdk.app_id"
         attributes.keys shouldNotContain "ossdk.onesignal_id"
         attributes.keys shouldNotContain "ossdk.push_subscription_id"
-        attributes["android.app.state"] shouldBe "background"
+        attributes["app.state"] shouldBe "background"
     }
 
     test("getAttributes should generate unique record IDs on each call") {

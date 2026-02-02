@@ -3,7 +3,6 @@ package com.onesignal.otel.config
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import io.kotest.matchers.string.shouldContain
 import io.opentelemetry.semconv.ServiceAttributes
 
 class OtelConfigTest : FunSpec({
@@ -58,9 +57,8 @@ class OtelConfigTest : FunSpec({
 
     // ===== OtelConfigRemoteOneSignal Tests =====
 
-    test("BASE_URL should point to staging endpoint") {
-        OtelConfigRemoteOneSignal.SdkLoggerProviderConfig.BASE_URL shouldContain "onesignal.com"
-        OtelConfigRemoteOneSignal.SdkLoggerProviderConfig.BASE_URL shouldContain "/sdk/otel"
+    test("BASE_URL should point to production endpoint") {
+        OtelConfigRemoteOneSignal.SdkLoggerProviderConfig.BASE_URL shouldBe "https://api.onesignal.com/sdk/otel"
     }
 
     test("HttpRecordBatchExporter should create exporter with correct endpoint") {

@@ -87,6 +87,6 @@ class OtelCrashUploaderTest : FunSpec({
     }
 
     test("SEND_TIMEOUT_SECONDS should be 30 seconds") {
-        OtelCrashUploader.SEND_TIMEOUT_SECONDS shouldNotBe 0L
+        OtelCrashUploader.SEND_TIMEOUT_SECONDS shouldBe 30L
     }
 })
