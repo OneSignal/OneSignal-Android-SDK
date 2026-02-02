@@ -30,7 +30,7 @@ interface IOtelPlatformProvider {
     val onesignalId: String?
     val pushSubscriptionId: String?
     val appState: String // "foreground" or "background"
-    val processUptime: Double // in seconds
+    val processUptime: Long // in ms
     val currentThreadName: String
 
     // Crash-specific configuration

@@ -277,7 +277,7 @@ class CrashReportUploadTest : FunSpec({
         println("   OneSignal ID: ${platformProvider.onesignalId}")
         println("   Push Subscription ID: ${platformProvider.pushSubscriptionId}")
         println("   App State: ${platformProvider.appState}")
-        println("   Process Uptime: ${platformProvider.processUptime}s")
+        println("   Process Uptime: ${platformProvider.processUptime}ms")
         println("   Thread Name: ${platformProvider.currentThreadName}")
         println("   Remote Log Level: ${platformProvider.remoteLogLevel}")
 
