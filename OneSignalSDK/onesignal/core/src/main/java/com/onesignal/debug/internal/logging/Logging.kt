@@ -232,9 +232,9 @@ object Logging {
                     exceptionMessage = throwable?.message,
                     exceptionStacktrace = throwable?.stackTraceToString(),
                 )
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 // Don't log Otel errors to Otel (would cause infinite loop)
-                // Just log to logcat silently
+                // Just print to logcat
                 android.util.Log.e(TAG, "Failed to log to Otel: ${e.message}", e)
             }
         }
