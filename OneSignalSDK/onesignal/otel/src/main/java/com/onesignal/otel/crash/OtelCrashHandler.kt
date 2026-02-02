@@ -15,7 +15,8 @@ import kotlinx.coroutines.runBlocking
 internal class OtelCrashHandler(
     private val crashReporter: IOtelCrashReporter,
     private val logger: IOtelLogger,
-) : Thread.UncaughtExceptionHandler, com.onesignal.otel.IOtelCrashHandler {
+) : Thread.UncaughtExceptionHandler,
+    com.onesignal.otel.IOtelCrashHandler {
     private var existingHandler: Thread.UncaughtExceptionHandler? = null
     private val seenThrowables: MutableList<Throwable> = mutableListOf()
     private var initialized = false
@@ -33,9 +34,7 @@ internal class OtelCrashHandler(
     }
 
     override fun uncaughtException(thread: Thread, throwable: Throwable) {
-        // Ensure we never attempt to process the same throwable instance
-        // more than once. This would only happen if there was another crash
-        // handler and was faulty in a specific way.
+        // Prevents infinite loops if another handler calls us again
         synchronized(seenThrowables) {
             if (seenThrowables.contains(throwable)) {
                 logger.warn("OtelCrashHandler: Ignoring duplicate throwable instance")
@@ -44,12 +43,26 @@ internal class OtelCrashHandler(
             seenThrowables.add(throwable)
         }
 
+        try {
+            internalUncaughtException(thread, throwable)
+        } catch (t: Throwable) {
+            // If there is a bug with our crash handling we at least want to
+            // ensure the existingHandler is not skipped.
+            logger.error("Error thrown when saving crash report: ${t.message}")
+        }
+
+        logger.debug("OtelCrashHandler: Delegating to existing crash handler")
+        existingHandler?.uncaughtException(thread, throwable)
+    }
+
+    private fun internalUncaughtException(thread: Thread, throwable: Throwable) {
         logger.info("OtelCrashHandler: Uncaught exception detected - ${throwable.javaClass.simpleName}: ${throwable.message}")
 
         // Check if this is an ANR exception (though standalone ANR detector already handles ANRs)
         // This would only catch ANRs if they're thrown as exceptions, which is rare
-        val isAnr = throwable.javaClass.simpleName.contains("ApplicationNotResponding", ignoreCase = true) ||
-            throwable.message?.contains("Application Not Responding", ignoreCase = true) == true
+        val isAnr =
+            throwable.javaClass.simpleName.contains("ApplicationNotResponding", ignoreCase = true) ||
+                throwable.message?.contains("Application Not Responding", ignoreCase = true) == true
 
         // NOTE: Future improvements:
         // - Catch anything we may throw and print only to logcat
@@ -61,7 +74,6 @@ internal class OtelCrashHandler(
         // thrown as exceptions (unlikely), and we still check if OneSignal is at fault.
         if (!isAnr && !isOneSignalAtFault(throwable)) {
             logger.debug("OtelCrashHandler: Crash is not OneSignal-related, delegating to existing handler")
-            existingHandler?.uncaughtException(thread, throwable)
             return
         }
 
@@ -70,7 +82,10 @@ internal class OtelCrashHandler(
         }
 
         logger.info("OtelCrashHandler: OneSignal-related crash detected, saving crash report...")
+        saveCrash(thread, throwable)
+    }
 
+    private fun saveCrash(thread: Thread, throwable: Throwable) {
         /**
          * NOTE: The order and running sequentially is important as:
          * The existingHandler.uncaughtException can immediately terminate the
@@ -92,16 +107,19 @@ internal class OtelCrashHandler(
             logger.info("OtelCrashHandler: Crash report saved successfully")
         } catch (e: RuntimeException) {
             // If crash reporting fails, at least try to log it
-            logger.error("OtelCrashHandler: Failed to save crash report: ${e.message} - ${e.javaClass.simpleName}")
+            logger.error("OtelCrashHandler: Runtime error, could not save crash report: ${e.message} - ${e.javaClass.simpleName}")
         } catch (e: java.io.IOException) {
             // Handle IO errors specifically
-            logger.error("OtelCrashHandler: IO error saving crash report: ${e.message}")
+            logger.error("OtelCrashHandler: IO error, could not save crash report: ${e.message}")
         } catch (e: IllegalStateException) {
             // Handle illegal state errors
-            logger.error("OtelCrashHandler: Illegal state error saving crash report: ${e.message}")
+            logger.error("OtelCrashHandler: Illegal state error, could not save crash report: ${e.message}")
+        } catch (e: NoClassDefFoundError) {
+            logger.error(
+                "OtelCrashHandler: No Class found error, this happens on Android 7 or older, " +
+                    "or if parts of otel code was omitted from the app, could not save crash report: ${e.message}"
+            )
         }
-        logger.info("OtelCrashHandler: Delegating to existing crash handler")
-        existingHandler?.uncaughtException(thread, throwable)
     }
 }
 
