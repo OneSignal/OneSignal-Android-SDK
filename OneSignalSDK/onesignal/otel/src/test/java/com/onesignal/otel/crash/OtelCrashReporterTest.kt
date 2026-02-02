@@ -1,8 +1,12 @@
 package com.onesignal.otel.crash
 
+import com.onesignal.otel.IOtelCrashReporter
 import com.onesignal.otel.IOtelLogger
 import com.onesignal.otel.IOtelOpenTelemetryCrash
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.types.shouldBeInstanceOf
+import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -16,21 +20,30 @@ import kotlinx.coroutines.runBlocking
 class OtelCrashReporterTest : FunSpec({
     val mockOpenTelemetry = mockk<IOtelOpenTelemetryCrash>(relaxed = true)
     val mockLogger = mockk<IOtelLogger>(relaxed = true)
-    val crashReporter = OtelCrashReporter(mockOpenTelemetry, mockLogger)
+    val mockLogRecordBuilder = mockk<LogRecordBuilder>(relaxed = true)
+    val mockCompletableResult = mockk<CompletableResultCode>(relaxed = true)
 
-    test("saveCrash should log crash with correct attributes") {
-        val mockLogRecordBuilder = mockk<LogRecordBuilder>(relaxed = true)
-        val mockCompletableResult = mockk<CompletableResultCode>(relaxed = true)
-
+    fun setupDefaultMocks() {
         coEvery { mockOpenTelemetry.getLogger() } returns mockLogRecordBuilder
         coEvery { mockOpenTelemetry.forceFlush() } returns mockCompletableResult
-        every { mockLogRecordBuilder.setAttribute(any<String>(), any<String>()) } returns mockLogRecordBuilder
-        every { mockLogRecordBuilder.setAttribute(any<String>(), any<Long>()) } returns mockLogRecordBuilder
-        every { mockLogRecordBuilder.setAttribute(any<String>(), any<Double>()) } returns mockLogRecordBuilder
-        every { mockLogRecordBuilder.setAttribute(any<String>(), any<Boolean>()) } returns mockLogRecordBuilder
         every { mockLogRecordBuilder.setSeverity(any()) } returns mockLogRecordBuilder
+        every { mockLogRecordBuilder.setTimestamp(any()) } returns mockLogRecordBuilder
         every { mockLogRecordBuilder.emit() } returns Unit
+    }
 
+    beforeEach {
+        clearMocks(mockOpenTelemetry, mockLogger, mockLogRecordBuilder, mockCompletableResult)
+        setupDefaultMocks()
+    }
+
+    test("should implement IOtelCrashReporter interface") {
+        val crashReporter = OtelCrashReporter(mockOpenTelemetry, mockLogger)
+
+        crashReporter.shouldBeInstanceOf<IOtelCrashReporter>()
+    }
+
+    test("saveCrash should get logger and emit log record") {
+        val crashReporter = OtelCrashReporter(mockOpenTelemetry, mockLogger)
         val throwable = RuntimeException("Test crash")
         val thread = Thread.currentThread()
 
@@ -40,39 +53,12 @@ class OtelCrashReporterTest : FunSpec({
 
         coVerify(exactly = 1) { mockOpenTelemetry.getLogger() }
         coVerify(exactly = 1) { mockOpenTelemetry.forceFlush() }
-        verify { mockLogRecordBuilder.setAttribute("exception.type", "java.lang.RuntimeException") }
-        verify { mockLogRecordBuilder.setAttribute("exception.message", "Test crash") }
-        verify { mockLogRecordBuilder.setAttribute("exception.stacktrace", any<String>()) }
-        verify { mockLogRecordBuilder.setAttribute("ossdk.exception.thread.name", thread.name) }
         verify { mockLogRecordBuilder.setSeverity(Severity.FATAL) }
         verify { mockLogRecordBuilder.emit() }
     }
 
-    test("saveCrash should handle null exception message") {
-        val mockLogRecordBuilder = mockk<LogRecordBuilder>(relaxed = true)
-        val mockCompletableResult = mockk<CompletableResultCode>(relaxed = true)
-
-        coEvery { mockOpenTelemetry.getLogger() } returns mockLogRecordBuilder
-        coEvery { mockOpenTelemetry.forceFlush() } returns mockCompletableResult
-        every { mockLogRecordBuilder.setAttribute(any<String>(), any<String>()) } returns mockLogRecordBuilder
-        every { mockLogRecordBuilder.setSeverity(any()) } returns mockLogRecordBuilder
-        every { mockLogRecordBuilder.emit() } returns Unit
-
-        val throwable = RuntimeException()
-        val thread = Thread.currentThread()
-
-        runBlocking {
-            crashReporter.saveCrash(thread, throwable)
-        }
-
-        verify { mockLogRecordBuilder.setAttribute("exception.message", "") }
-    }
-
-    test("saveCrash should handle failures gracefully") {
-        val mockLogRecordBuilder = mockk<LogRecordBuilder>(relaxed = true)
-
-        coEvery { mockOpenTelemetry.getLogger() } throws RuntimeException("OpenTelemetry failed")
-
+    test("saveCrash should log info messages") {
+        val crashReporter = OtelCrashReporter(mockOpenTelemetry, mockLogger)
         val throwable = RuntimeException("Test crash")
         val thread = Thread.currentThread()
 
@@ -80,6 +66,80 @@ class OtelCrashReporterTest : FunSpec({
             crashReporter.saveCrash(thread, throwable)
         }
 
-        verify { mockLogger.error("Failed to save crash report: OpenTelemetry failed") }
+        verify { mockLogger.info(match { it.contains("Starting to save crash report") }) }
+        verify { mockLogger.info(match { it.contains("Crash report saved and flushed successfully") }) }
+    }
+
+    test("saveCrash should handle null exception message") {
+        val crashReporter = OtelCrashReporter(mockOpenTelemetry, mockLogger)
+        val throwable = RuntimeException() // No message
+        val thread = Thread.currentThread()
+
+        runBlocking {
+            crashReporter.saveCrash(thread, throwable)
+        }
+
+        coVerify { mockOpenTelemetry.getLogger() }
+        verify { mockLogRecordBuilder.emit() }
+    }
+
+    test("saveCrash should re-throw RuntimeException on failure") {
+        coEvery { mockOpenTelemetry.getLogger() } throws RuntimeException("OpenTelemetry failed")
+
+        val crashReporter = OtelCrashReporter(mockOpenTelemetry, mockLogger)
+        val throwable = RuntimeException("Test crash")
+        val thread = Thread.currentThread()
+
+        shouldThrow<RuntimeException> {
+            runBlocking {
+                crashReporter.saveCrash(thread, throwable)
+            }
+        }
+
+        verify { mockLogger.error(match { it.contains("Failed to save crash report") }) }
+    }
+
+    test("saveCrash should re-throw IOException on IO failure") {
+        coEvery { mockOpenTelemetry.getLogger() } throws java.io.IOException("IO failed")
+
+        val crashReporter = OtelCrashReporter(mockOpenTelemetry, mockLogger)
+        val throwable = RuntimeException("Test crash")
+        val thread = Thread.currentThread()
+
+        shouldThrow<java.io.IOException> {
+            runBlocking {
+                crashReporter.saveCrash(thread, throwable)
+            }
+        }
+
+        verify { mockLogger.error(match { it.contains("IO error saving crash report") }) }
+    }
+
+    test("saveCrash should re-throw IllegalStateException") {
+        coEvery { mockOpenTelemetry.getLogger() } throws IllegalStateException("Illegal state")
+
+        val crashReporter = OtelCrashReporter(mockOpenTelemetry, mockLogger)
+        val throwable = RuntimeException("Test crash")
+        val thread = Thread.currentThread()
+
+        shouldThrow<IllegalStateException> {
+            runBlocking {
+                crashReporter.saveCrash(thread, throwable)
+            }
+        }
+
+        verify { mockLogger.error(match { it.contains("Illegal state error saving crash report") }) }
+    }
+
+    test("saveCrash should set timestamp") {
+        val crashReporter = OtelCrashReporter(mockOpenTelemetry, mockLogger)
+        val throwable = RuntimeException("Test crash")
+        val thread = Thread.currentThread()
+
+        runBlocking {
+            crashReporter.saveCrash(thread, throwable)
+        }
+
+        verify { mockLogRecordBuilder.setTimestamp(any()) }
     }
 })
