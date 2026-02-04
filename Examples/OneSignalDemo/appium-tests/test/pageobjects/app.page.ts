@@ -7,32 +7,32 @@ class AppPage {
      * Wait for the app to be ready
      */
     async waitForAppReady(): Promise<void> {
-        // Wait for the main activity to be visible
+        // Wait for the app to be visible
         await driver.pause(2000);
     }
 
     /**
-     * Get element by resource ID
-     * @param resourceId - The Android resource ID (without package prefix)
+     * Get element by resource ID (cross-platform)
+     * @param resourceId - The resource ID (without package prefix)
      */
     async getElementByResourceId(resourceId: string) {
-        return $(`android=new UiSelector().resourceId("com.onesignal.sdktest:id/${resourceId}")`);
+        return $(`~${resourceId}`);
     }
 
     /**
-     * Get element by text content
+     * Get element by text content (cross-platform using XPath)
      * @param text - The text to search for
      */
     async getElementByText(text: string) {
-        return $(`android=new UiSelector().text("${text}")`);
+        return $(`//*[@text="${text}" or @label="${text}" or @value="${text}"]`);
     }
 
     /**
-     * Get element by content description (accessibility ID)
-     * @param description - The content description
+     * Get element by accessibility ID (cross-platform)
+     * @param accessibilityId - The accessibility ID / content description
      */
-    async getElementByContentDesc(description: string) {
-        return $(`~${description}`);
+    async getElementByAccessibilityId(accessibilityId: string) {
+        return $(`~${accessibilityId}`);
     }
 
     /**
@@ -55,32 +55,31 @@ class AppPage {
     }
 
     /**
-     * Scroll down on the screen
+     * Scroll down on the screen (cross-platform using gesture)
      */
     async scrollDown(): Promise<void> {
-        await $('android=new UiScrollable(new UiSelector().scrollable(true)).scrollForward()');
+        const { width, height } = await driver.getWindowSize();
+        await driver.action('pointer', { parameters: { pointerType: 'touch' } })
+            .move({ x: Math.floor(width / 2), y: Math.floor(height * 0.7) })
+            .down()
+            .move({ x: Math.floor(width / 2), y: Math.floor(height * 0.3), duration: 300 })
+            .up()
+            .perform();
     }
 
     /**
      * Scroll to an element with specific text
      * @param text - The text to scroll to
+     * @param maxScrolls - Maximum number of scroll attempts
      */
-    async scrollToText(text: string): Promise<void> {
-        await $(`android=new UiScrollable(new UiSelector().scrollable(true)).scrollTextIntoView("${text}")`);
-    }
-
-    /**
-     * Get the current activity name
-     */
-    async getCurrentActivity(): Promise<string> {
-        return driver.getCurrentActivity();
-    }
-
-    /**
-     * Get the current package name
-     */
-    async getCurrentPackage(): Promise<string> {
-        return driver.getCurrentPackage();
+    async scrollToText(text: string, maxScrolls: number = 5): Promise<void> {
+        for (let i = 0; i < maxScrolls; i++) {
+            const element = await this.getElementByText(text);
+            if (await element.isDisplayed().catch(() => false)) {
+                return;
+            }
+            await this.scrollDown();
+        }
     }
 
     /**
@@ -92,17 +91,22 @@ class AppPage {
     }
 
     /**
-     * Press the Android back button
+     * Press the back button (cross-platform)
      */
     async pressBack(): Promise<void> {
         await driver.back();
     }
 
     /**
-     * Press the Android home button
+     * Navigate to home screen (cross-platform)
      */
     async pressHome(): Promise<void> {
-        await driver.pressKeyCode(3); // KEYCODE_HOME
+        if (driver.isAndroid) {
+            await driver.pressKeyCode(3); // KEYCODE_HOME
+        } else {
+            // iOS doesn't support programmatic home press in the same way
+            await driver.execute('mobile: pressButton', { name: 'home' });
+        }
     }
 }
 
