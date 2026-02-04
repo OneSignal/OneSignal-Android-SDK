@@ -19,13 +19,30 @@ describe('OneSignalDemo App', () => {
         });
     });
 
+    describe('Privacy Consent', () => {
+        it('should tap the Allow button to accept privacy consent', async () => {
+            // Wait for the privacy consent dialog to appear
+            await appPage.waitForAppReady();
+            
+            // Tap the ALLOW button
+            await appPage.tapElementByText('ALLOW');
+            
+            // Wait for the consent to be processed and activity to transition
+            await driver.pause(1000);
+            
+            // Verify we've transitioned to the MainActivity
+            const currentActivity = await appPage.getCurrentActivity();
+            expect(currentActivity).toBe('.activity.MainActivity');
+        });
+    });
+
     describe('App Navigation', () => {
         it('should have visible UI elements', async () => {
             // Wait for app to be ready
             await appPage.waitForAppReady();
             
             // Take a screenshot for verification
-            await appPage.takeScreenshot('main-screen');
+            await appPage.takeScreenshot('navigation-screen');
         });
 
         it('should be able to scroll the main view', async () => {
