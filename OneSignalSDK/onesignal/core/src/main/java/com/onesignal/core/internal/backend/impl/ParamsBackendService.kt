@@ -138,7 +138,7 @@ internal class ParamsBackendService(
     /**
      * Parse LogLevel from JSON. Supports string (enum name)
      */
-    private fun parseLogLevel(json: JSONObject): LogLevel? {
+    private fun parseLogLevel(json: JSONObject): LogLevel {
         val logLevel = json.safeString("log_level")
         if (logLevel != null) {
             try {
@@ -148,6 +148,6 @@ internal class ParamsBackendService(
             }
         }
 
-        return null
+        return LogLevel.NONE
     }
 }
