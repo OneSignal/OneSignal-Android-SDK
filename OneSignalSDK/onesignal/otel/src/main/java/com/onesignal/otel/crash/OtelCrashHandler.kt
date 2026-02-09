@@ -116,7 +116,7 @@ internal class OtelCrashHandler(
             logger.error("OtelCrashHandler: Illegal state error, could not save crash report: ${e.message}")
         } catch (e: NoClassDefFoundError) {
             logger.error(
-                "OtelCrashHandler: No Class found error, this happens on Android 7 or older, " +
+                "OtelCrashHandler: NoClassDefFoundError, this happens on Android 7 or older, " +
                     "or if parts of otel code was omitted from the app, could not save crash report: ${e.message}"
             )
         }
