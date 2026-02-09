@@ -21,6 +21,7 @@ object Logging {
     private const val TAG = "OneSignal"
 
     var applicationService: IApplicationService? = null
+    var androidVersion: Int = Build.VERSION.SDK_INT
 
     private val logListeners = CopyOnWriteArraySet<ILogListener>()
 
@@ -219,7 +220,7 @@ object Logging {
         if (!shouldSendLogLevel(level)) return
 
         // Otel library requires Android Oreo (8) or newer
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        if (androidVersion < Build.VERSION_CODES.O) return
 
         // Log asynchronously (non-blocking)
         otelLoggingScope.launch {
