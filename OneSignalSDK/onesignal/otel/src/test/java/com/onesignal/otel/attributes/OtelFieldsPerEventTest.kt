@@ -6,6 +6,7 @@ import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk
 
@@ -13,13 +14,26 @@ class OtelFieldsPerEventTest : FunSpec({
     val mockPlatformProvider = mockk<IOtelPlatformProvider>(relaxed = true)
     val fields = OtelFieldsPerEvent(mockPlatformProvider)
 
-    test("getAttributes should include all per-event fields") {
-        every { mockPlatformProvider.appId } returns "test-app-id"
-        every { mockPlatformProvider.onesignalId } returns "test-onesignal-id"
-        every { mockPlatformProvider.pushSubscriptionId } returns "test-subscription-id"
-        every { mockPlatformProvider.appState } returns "foreground"
-        every { mockPlatformProvider.processUptime } returns 100.5
-        every { mockPlatformProvider.currentThreadName } returns "main-thread"
+    fun setupDefaultMocks(
+        appId: String? = "test-app-id",
+        onesignalId: String? = "test-onesignal-id",
+        pushSubscriptionId: String? = "test-subscription-id",
+        appState: String = "foreground",
+        processUptime: Double = 100.5,
+        threadName: String = "main-thread"
+    ) {
+        every { mockPlatformProvider.appId } returns appId
+        every { mockPlatformProvider.onesignalId } returns onesignalId
+        every { mockPlatformProvider.pushSubscriptionId } returns pushSubscriptionId
+        every { mockPlatformProvider.appState } returns appState
+        every { mockPlatformProvider.processUptime } returns processUptime
+        every { mockPlatformProvider.currentThreadName } returns threadName
+    }
+
+    beforeEach { clearMocks(mockPlatformProvider) }
+
+    test("getAttributes should include all per-event fields when all values present") {
+        setupDefaultMocks()
 
         val attributes = fields.getAttributes()
 
@@ -28,40 +42,28 @@ class OtelFieldsPerEventTest : FunSpec({
         attributes["ossdk.app_id"] shouldBe "test-app-id"
         attributes["ossdk.onesignal_id"] shouldBe "test-onesignal-id"
         attributes["ossdk.push_subscription_id"] shouldBe "test-subscription-id"
-        attributes["android.app.state"] shouldBe "foreground"
+        attributes["app.state"] shouldBe "foreground"
         attributes["process.uptime"] shouldBe "100.5"
         attributes["thread.name"] shouldBe "main-thread"
     }
 
     test("getAttributes should exclude null optional fields") {
-        every { mockPlatformProvider.appId } returns null
-        every { mockPlatformProvider.onesignalId } returns null
-        every { mockPlatformProvider.pushSubscriptionId } returns null
-        every { mockPlatformProvider.appState } returns "background"
-        every { mockPlatformProvider.processUptime } returns 50.0
-        every { mockPlatformProvider.currentThreadName } returns "worker-thread"
+        setupDefaultMocks(appId = null, onesignalId = null, pushSubscriptionId = null, appState = "background")
 
         val attributes = fields.getAttributes()
 
         attributes.keys shouldNotContain "ossdk.app_id"
         attributes.keys shouldNotContain "ossdk.onesignal_id"
         attributes.keys shouldNotContain "ossdk.push_subscription_id"
-        attributes["android.app.state"] shouldBe "background"
-        attributes["process.uptime"] shouldBe "50.0"
-        attributes["thread.name"] shouldBe "worker-thread"
+        attributes["app.state"] shouldBe "background"
     }
 
-    test("getAttributes should generate unique record IDs") {
-        every { mockPlatformProvider.appId } returns "test-app-id"
-        every { mockPlatformProvider.onesignalId } returns null
-        every { mockPlatformProvider.pushSubscriptionId } returns null
-        every { mockPlatformProvider.appState } returns "foreground"
-        every { mockPlatformProvider.processUptime } returns 100.0
-        every { mockPlatformProvider.currentThreadName } returns "main"
+    test("getAttributes should generate unique record IDs on each call") {
+        setupDefaultMocks()
 
-        val attributes1 = fields.getAttributes()
-        val attributes2 = fields.getAttributes()
+        val uid1 = fields.getAttributes()["log.record.uid"]
+        val uid2 = fields.getAttributes()["log.record.uid"]
 
-        attributes1["log.record.uid"] shouldNotBe attributes2["log.record.uid"]
+        uid1 shouldNotBe uid2
     }
 })

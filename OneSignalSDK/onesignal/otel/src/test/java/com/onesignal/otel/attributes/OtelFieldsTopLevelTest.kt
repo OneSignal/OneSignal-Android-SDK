@@ -4,6 +4,7 @@ import com.onesignal.otel.IOtelPlatformProvider
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
+import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -13,8 +14,12 @@ class OtelFieldsTopLevelTest : FunSpec({
     val mockPlatformProvider = mockk<IOtelPlatformProvider>(relaxed = true)
     val fields = OtelFieldsTopLevel(mockPlatformProvider)
 
-    test("getAttributes should include all top-level fields") {
-        coEvery { mockPlatformProvider.getInstallId() } returns "test-install-id"
+    fun setupDefaultMocks(
+        installId: String = "test-install-id",
+        sdkWrapper: String? = null,
+        sdkWrapperVersion: String? = null
+    ) {
+        coEvery { mockPlatformProvider.getInstallId() } returns installId
         every { mockPlatformProvider.sdkBase } returns "android"
         every { mockPlatformProvider.sdkBaseVersion } returns "1.0.0"
         every { mockPlatformProvider.appPackageId } returns "com.test.app"
@@ -24,8 +29,14 @@ class OtelFieldsTopLevelTest : FunSpec({
         every { mockPlatformProvider.osName } returns "Android"
         every { mockPlatformProvider.osVersion } returns "10"
         every { mockPlatformProvider.osBuildId } returns "TEST123"
-        every { mockPlatformProvider.sdkWrapper } returns "unity"
-        every { mockPlatformProvider.sdkWrapperVersion } returns "2.0.0"
+        every { mockPlatformProvider.sdkWrapper } returns sdkWrapper
+        every { mockPlatformProvider.sdkWrapperVersion } returns sdkWrapperVersion
+    }
+
+    beforeEach { clearMocks(mockPlatformProvider) }
+
+    test("getAttributes should include all required top-level fields") {
+        setupDefaultMocks()
 
         runBlocking {
             val attributes = fields.getAttributes()
@@ -40,24 +51,22 @@ class OtelFieldsTopLevelTest : FunSpec({
             attributes["os.name"] shouldBe "Android"
             attributes["os.version"] shouldBe "10"
             attributes["os.build_id"] shouldBe "TEST123"
+        }
+    }
+
+    test("getAttributes should include wrapper fields when present") {
+        setupDefaultMocks(sdkWrapper = "unity", sdkWrapperVersion = "2.0.0")
+
+        runBlocking {
+            val attributes = fields.getAttributes()
+
             attributes["ossdk.sdk_wrapper"] shouldBe "unity"
             attributes["ossdk.sdk_wrapper_version"] shouldBe "2.0.0"
         }
     }
 
     test("getAttributes should exclude null wrapper fields") {
-        coEvery { mockPlatformProvider.getInstallId() } returns "test-install-id"
-        every { mockPlatformProvider.sdkBase } returns "android"
-        every { mockPlatformProvider.sdkBaseVersion } returns "1.0.0"
-        every { mockPlatformProvider.appPackageId } returns "com.test.app"
-        every { mockPlatformProvider.appVersion } returns "1.0"
-        every { mockPlatformProvider.deviceManufacturer } returns "Test"
-        every { mockPlatformProvider.deviceModel } returns "TestDevice"
-        every { mockPlatformProvider.osName } returns "Android"
-        every { mockPlatformProvider.osVersion } returns "10"
-        every { mockPlatformProvider.osBuildId } returns "TEST123"
-        every { mockPlatformProvider.sdkWrapper } returns null
-        every { mockPlatformProvider.sdkWrapperVersion } returns null
+        setupDefaultMocks(sdkWrapper = null, sdkWrapperVersion = null)
 
         runBlocking {
             val attributes = fields.getAttributes()

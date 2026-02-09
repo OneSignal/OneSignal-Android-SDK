@@ -234,16 +234,16 @@ class OtelPlatformProviderTest : FunSpec({
         result shouldBe "test-app-id-123"
     }
 
-    test("appId returns null when not available") {
+    test("appId returns error UUID when not available") {
         // Given
         val provider = createAndroidOtelPlatformProvider(appContext!!)
 
         // When
         val result = provider.appId
 
-        // Then - should return error appId (not null, but error prefix)
+        // Then - should return error appId (not null, but error UUID prefix)
         result shouldNotBe null
-        result shouldContain "8123-1231-4343-2323-error-"
+        result shouldContain "e1100000-0000-4000-a000-"
     }
 
     test("onesignalId returns resolved onesignalId from OtelIdResolver") {
