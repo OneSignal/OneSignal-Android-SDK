@@ -86,7 +86,7 @@ internal class OneSignalCrashLogInit(
                         try {
                             LogLevel.valueOf(remoteLogLevelStr)
                         } catch (_: Exception) {
-                            LogLevel.ERROR
+                            LogLevel.NONE
                         }
 
                     val shouldSendLogLevel: (LogLevel) -> Boolean = { level ->
