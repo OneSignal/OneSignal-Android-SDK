@@ -139,6 +139,8 @@ internal class OtelAnrDetector(
         watchdogThread?.interrupt()
         watchdogThread = null
         watchdogRunnable = null
+        // Remove pending callbacks before nulling to prevent execution after stop
+        mainThreadRunnable?.let { mainHandler.removeCallbacks(it) }
         mainThreadRunnable = null
 
         logger.info("$TAG: ✅ ANR detection stopped")
