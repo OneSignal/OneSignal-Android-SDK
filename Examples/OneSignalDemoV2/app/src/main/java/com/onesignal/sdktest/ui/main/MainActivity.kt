@@ -58,6 +58,9 @@ class MainActivity : AppCompatActivity() {
         setupRecyclerViews()
         setupClickListeners()
         setupObservers()
+        
+        // Automatically prompt for notification permission when activity loads
+        viewModel.promptPush()
     }
 
     private fun setupToolbar() {

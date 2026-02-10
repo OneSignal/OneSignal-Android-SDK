@@ -176,10 +176,11 @@ Push Section:
 - Section title: "Push" with info icon for tooltip
 - Push Subscription ID display (readonly, ellipsize middle)
 - Enabled toggle switch (controls optIn/optOut)
+- Notification permission is automatically requested when MainActivity loads
 - PROMPT PUSH button:
-  - Only visible when notification permission is NOT granted
+  - Only visible when notification permission is NOT granted (fallback if user denied)
   - Requests notification permission when clicked
-  - Hide after permission is granted
+  - Hidden once permission is granted
 ```
 
 ### Prompt 2.3 - Send Push Notification Section

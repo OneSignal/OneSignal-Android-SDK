@@ -2,7 +2,6 @@ package com.onesignal.sdktest.util
 
 import android.content.Context
 import android.content.SharedPreferences
-import org.json.JSONObject
 
 object SharedPreferenceUtil {
 
@@ -12,7 +11,6 @@ object SharedPreferenceUtil {
     private const val USER_EXTERNAL_USER_ID_SHARED_PREF = "USER_EXTERNAL_USER_ID_SHARED_PREF"
     private const val LOCATION_SHARED_PREF = "LOCATION_SHARED_PREF"
     private const val IN_APP_MESSAGING_PAUSED_PREF = "IN_APP_MESSAGING_PAUSED_PREF"
-    private const val TRIGGERS_PREF = "TRIGGERS_PREF"
 
     private fun getSharedPreference(context: Context): SharedPreferences {
         return context.getSharedPreferences(APP_SHARED_PREFS, Context.MODE_PRIVATE)
@@ -43,20 +41,6 @@ object SharedPreferenceUtil {
         return getSharedPreference(context).getBoolean(IN_APP_MESSAGING_PAUSED_PREF, true)
     }
 
-    fun getCachedTriggers(context: Context): Map<String, String> {
-        val json = getSharedPreference(context).getString(TRIGGERS_PREF, null) ?: return emptyMap()
-        return try {
-            val jsonObject = JSONObject(json)
-            val result = mutableMapOf<String, String>()
-            jsonObject.keys().forEach { key ->
-                result[key] = jsonObject.getString(key)
-            }
-            result
-        } catch (e: Exception) {
-            emptyMap()
-        }
-    }
-
     fun cacheOneSignalAppId(context: Context, appId: String) {
         getSharedPreference(context).edit().putString(OS_APP_ID_SHARED_PREF, appId).apply()
     }
@@ -75,13 +59,5 @@ object SharedPreferenceUtil {
 
     fun cacheInAppMessagingPausedStatus(context: Context, paused: Boolean) {
         getSharedPreference(context).edit().putBoolean(IN_APP_MESSAGING_PAUSED_PREF, paused).apply()
-    }
-
-    fun cacheTriggers(context: Context, triggers: Map<String, String>) {
-        val jsonObject = JSONObject()
-        triggers.forEach { (key, value) ->
-            jsonObject.put(key, value)
-        }
-        getSharedPreference(context).edit().putString(TRIGGERS_PREF, jsonObject.toString()).apply()
     }
 }

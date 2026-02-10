@@ -67,9 +67,8 @@ class MainApplication : MultiDexApplication() {
         // Set up all OneSignal listeners
         setupOneSignalListeners()
         
-        // Note: Permission is requested via the "PROMPT PUSH" button in MainActivity
-        // when the user has not yet granted notification permission.
-        // This avoids showing the prompt before the user sees the app UI.
+        // Note: Notification permission is automatically requested when MainActivity loads.
+        // This ensures the prompt appears after the user sees the app UI.
     }
 
     private fun setupOneSignalListeners() {
