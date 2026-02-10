@@ -1,6 +1,7 @@
 package com.onesignal.sdktest.ui.main
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.AdapterView
@@ -19,10 +20,10 @@ import com.onesignal.sdktest.data.model.InAppMessageType
 import com.onesignal.sdktest.data.model.NotificationType
 import com.onesignal.sdktest.databinding.ActivityMainBinding
 import com.onesignal.sdktest.ui.adapter.InAppMessageAdapter
-import com.onesignal.sdktest.ui.adapter.NotificationGridAdapter
 import com.onesignal.sdktest.ui.adapter.PairListAdapter
 import com.onesignal.sdktest.ui.adapter.SingleListAdapter
 import com.onesignal.sdktest.ui.secondary.SecondaryActivity
+import com.onesignal.sdktest.util.TooltipHelper
 
 class MainActivity : AppCompatActivity() {
 
@@ -35,8 +36,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var smsAdapter: SingleListAdapter
     private lateinit var tagsAdapter: PairListAdapter
     private lateinit var triggersAdapter: PairListAdapter
-    private lateinit var notificationsAdapter: NotificationGridAdapter
     private lateinit var inAppMessagesAdapter: InAppMessageAdapter
+
+    // Collapse state for lists
+    private var emailsExpanded = false
+    private var smsExpanded = false
+    private var allEmails: List<String> = emptyList()
+    private var allSmsNumbers: List<String> = emptyList()
+
+    companion object {
+        private const val MAX_COLLAPSED_ITEMS = 5
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,10 +71,6 @@ class MainActivity : AppCompatActivity() {
         smsAdapter = SingleListAdapter { sms -> viewModel.removeSms(sms) }
         tagsAdapter = PairListAdapter { key -> viewModel.removeTag(key) }
         triggersAdapter = PairListAdapter { key -> viewModel.removeTrigger(key) }
-
-        notificationsAdapter = NotificationGridAdapter(NotificationType.values().toList()) { type ->
-            viewModel.sendNotification(type)
-        }
 
         inAppMessagesAdapter = InAppMessageAdapter(InAppMessageType.values().toList()) { type ->
             viewModel.sendInAppMessage(type.triggerKey, type.triggerValue)
@@ -102,27 +108,61 @@ class MainActivity : AppCompatActivity() {
             adapter = triggersAdapter
         }
 
-        // Notifications Grid (2 columns)
-        binding.rvNotifications.apply {
-            layoutManager = GridLayoutManager(this@MainActivity, 2)
-            adapter = notificationsAdapter
-        }
-
-        // In-App Messages Grid (2 columns)
+        // In-App Messages (full-width buttons)
         binding.rvInAppMessages.apply {
-            layoutManager = GridLayoutManager(this@MainActivity, 2)
+            layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = inAppMessagesAdapter
         }
     }
 
     private fun setupClickListeners() {
-        // Consent buttons
-        binding.btnAllowConsent.setOnClickListener {
-            viewModel.setPrivacyConsent(true)
+        // Guidance banner link
+        binding.tvGetKeysLink.setOnClickListener {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://onesignal.com"))
+            startActivity(intent)
         }
 
-        binding.btnRevokeConsent.setOnClickListener {
-            viewModel.revokeConsent()
+        // Info tooltip buttons
+        binding.btnInfoAliases.setOnClickListener {
+            TooltipHelper.showTooltip(this, "aliases")
+        }
+        binding.btnInfoPush.setOnClickListener {
+            TooltipHelper.showTooltip(this, "push")
+        }
+        binding.btnInfoSendPush.setOnClickListener {
+            TooltipHelper.showTooltip(this, "sendPushNotification")
+        }
+        binding.btnInfoSendIam.setOnClickListener {
+            TooltipHelper.showTooltip(this, "sendInAppMessage")
+        }
+        binding.btnInfoEmails.setOnClickListener {
+            TooltipHelper.showTooltip(this, "emails")
+        }
+        binding.btnInfoSms.setOnClickListener {
+            TooltipHelper.showTooltip(this, "sms")
+        }
+        binding.btnInfoTags.setOnClickListener {
+            TooltipHelper.showTooltip(this, "tags")
+        }
+        binding.btnInfoOutcomes.setOnClickListener {
+            TooltipHelper.showTooltip(this, "outcomes")
+        }
+        binding.btnInfoIam.setOnClickListener {
+            TooltipHelper.showTooltip(this, "inAppMessaging")
+        }
+        binding.btnInfoTriggers.setOnClickListener {
+            TooltipHelper.showTooltip(this, "triggers")
+        }
+        binding.btnInfoTrackEvent.setOnClickListener {
+            TooltipHelper.showTooltip(this, "trackEvent")
+        }
+        binding.btnInfoLocation.setOnClickListener {
+            TooltipHelper.showTooltip(this, "location")
+        }
+
+        // Privacy Consent toggle
+        binding.switchPrivacyConsent.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.setPrivacyConsent(isChecked)
         }
 
         // Login/Logout
@@ -141,6 +181,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        binding.btnRemoveAllAliases.setOnClickListener {
+            viewModel.removeAllAliases()
+        }
+
         binding.btnAddEmail.setOnClickListener {
             showSingleInputDialog(getString(R.string.new_email)) { email ->
                 viewModel.addEmail(email)
@@ -157,6 +201,10 @@ class MainActivity : AppCompatActivity() {
             showAddPairDialog(getString(R.string.add_tag_title)) { key, value ->
                 viewModel.addTag(key, value)
             }
+        }
+
+        binding.btnRemoveAllTags.setOnClickListener {
+            viewModel.removeAllTags()
         }
 
         binding.btnAddTrigger.setOnClickListener {
@@ -180,6 +228,24 @@ class MainActivity : AppCompatActivity() {
 
         binding.switchLocationShared.setOnCheckedChangeListener { _, isChecked ->
             viewModel.setLocationShared(isChecked)
+        }
+
+        // Track Event
+        binding.btnTrackEvent.setOnClickListener {
+            showTrackEventDialog()
+        }
+
+        // Send Notifications
+        binding.btnSendSimpleNotification.setOnClickListener {
+            viewModel.sendNotification(NotificationType.SIMPLE)
+        }
+
+        binding.btnSendImageNotification.setOnClickListener {
+            viewModel.sendNotification(NotificationType.WITH_IMAGE)
+        }
+
+        binding.btnSendCustomNotification.setOnClickListener {
+            showCustomNotificationDialog()
         }
 
         // Location prompt
@@ -221,36 +287,39 @@ class MainActivity : AppCompatActivity() {
 
         // Privacy Consent
         viewModel.privacyConsentGiven.observe(this) { granted ->
-            binding.privacyConsentLayout.visibility = if (granted) View.GONE else View.VISIBLE
-            binding.nestedScrollView.visibility = if (granted) View.VISIBLE else View.GONE
+            binding.switchPrivacyConsent.isChecked = granted
         }
 
         // Aliases
         viewModel.aliases.observe(this) { aliases ->
+            android.util.Log.d("MainActivity", "Aliases observer triggered: ${aliases.size} items")
             aliasesAdapter.submitList(aliases)
-            binding.rvAliases.visibility = if (aliases.isNotEmpty()) View.VISIBLE else View.GONE
-            binding.tvNoAliases.visibility = if (aliases.isEmpty()) View.VISIBLE else View.GONE
+            val hasItems = aliases.isNotEmpty()
+            binding.rvAliases.visibility = if (hasItems) View.VISIBLE else View.GONE
+            binding.tvNoAliases.visibility = if (hasItems) View.GONE else View.VISIBLE
+            binding.layoutRemoveAllAliases.visibility = if (hasItems) View.VISIBLE else View.GONE
         }
 
         // Emails
         viewModel.emails.observe(this) { emails ->
-            emailsAdapter.submitList(emails)
-            binding.rvEmails.visibility = if (emails.isNotEmpty()) View.VISIBLE else View.GONE
-            binding.tvNoEmails.visibility = if (emails.isEmpty()) View.VISIBLE else View.GONE
+            android.util.Log.d("MainActivity", "Emails observer triggered: ${emails.size} items")
+            allEmails = emails
+            updateEmailsDisplay()
         }
 
         // SMS
         viewModel.smsNumbers.observe(this) { smsNumbers ->
-            smsAdapter.submitList(smsNumbers)
-            binding.rvSms.visibility = if (smsNumbers.isNotEmpty()) View.VISIBLE else View.GONE
-            binding.tvNoSms.visibility = if (smsNumbers.isEmpty()) View.VISIBLE else View.GONE
+            allSmsNumbers = smsNumbers
+            updateSmsDisplay()
         }
 
         // Tags
         viewModel.tags.observe(this) { tags ->
             tagsAdapter.submitList(tags)
-            binding.rvTags.visibility = if (tags.isNotEmpty()) View.VISIBLE else View.GONE
-            binding.tvNoTags.visibility = if (tags.isEmpty()) View.VISIBLE else View.GONE
+            val hasItems = tags.isNotEmpty()
+            binding.rvTags.visibility = if (hasItems) View.VISIBLE else View.GONE
+            binding.tvNoTags.visibility = if (hasItems) View.GONE else View.VISIBLE
+            binding.layoutRemoveAllTags.visibility = if (hasItems) View.VISIBLE else View.GONE
         }
 
         // Triggers
@@ -276,6 +345,23 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
                 viewModel.clearToast()
             }
+        }
+
+        // Loading state
+        viewModel.isLoading.observe(this) { isLoading ->
+            binding.loadingOverlay.visibility = if (isLoading) View.VISIBLE else View.GONE
+        }
+
+        // External User ID (login state)
+        viewModel.externalUserId.observe(this) { externalId ->
+            val isLoggedIn = !externalId.isNullOrEmpty()
+            binding.btnLoginUser.text = if (isLoggedIn) {
+                getString(R.string.switch_user)
+            } else {
+                getString(R.string.login_user)
+            }
+            binding.layoutExternalId.visibility = if (isLoggedIn) View.VISIBLE else View.GONE
+            binding.tvExternalId.text = externalId ?: ""
         }
     }
 
@@ -326,6 +412,52 @@ class MainActivity : AppCompatActivity() {
                 val input = etInput.text.toString().trim()
                 if (input.isNotEmpty()) {
                     onAdd(input)
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showTrackEventDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_pair, null)
+        val etName = dialogView.findViewById<EditText>(R.id.et_key)
+        val etValue = dialogView.findViewById<EditText>(R.id.et_value)
+
+        // Update hints for track event context
+        etName.hint = getString(R.string.event_name)
+        etValue.hint = getString(R.string.event_value)
+
+        AlertDialog.Builder(this, R.style.AlertDialogTheme)
+            .setTitle(R.string.track_event)
+            .setView(dialogView)
+            .setPositiveButton(R.string.send) { _, _ ->
+                val name = etName.text.toString().trim()
+                val value = etValue.text.toString().trim()
+                if (name.isNotEmpty()) {
+                    viewModel.trackEvent(name, value.ifEmpty { null })
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showCustomNotificationDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_pair, null)
+        val etTitle = dialogView.findViewById<EditText>(R.id.et_key)
+        val etBody = dialogView.findViewById<EditText>(R.id.et_value)
+
+        // Update hints for notification context
+        etTitle.hint = getString(R.string.notification_title)
+        etBody.hint = getString(R.string.notification_body)
+
+        AlertDialog.Builder(this, R.style.AlertDialogTheme)
+            .setTitle(R.string.send_custom_notification)
+            .setView(dialogView)
+            .setPositiveButton(R.string.send) { _, _ ->
+                val title = etTitle.text.toString().trim()
+                val body = etBody.text.toString().trim()
+                if (title.isNotEmpty() && body.isNotEmpty()) {
+                    viewModel.sendCustomNotification(title, body)
                 }
             }
             .setNegativeButton(R.string.cancel, null)
@@ -389,5 +521,49 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.refreshPushSubscription()
+    }
+
+    private fun updateEmailsDisplay() {
+        val hasItems = allEmails.isNotEmpty()
+        binding.rvEmails.visibility = if (hasItems) View.VISIBLE else View.GONE
+        binding.tvNoEmails.visibility = if (hasItems) View.GONE else View.VISIBLE
+
+        if (allEmails.size > MAX_COLLAPSED_ITEMS && !emailsExpanded) {
+            // Show collapsed view
+            emailsAdapter.submitList(allEmails.take(MAX_COLLAPSED_ITEMS))
+            val remaining = allEmails.size - MAX_COLLAPSED_ITEMS
+            binding.tvEmailsMore.text = getString(R.string.x_more_available, remaining)
+            binding.tvEmailsMore.visibility = View.VISIBLE
+            binding.tvEmailsMore.setOnClickListener {
+                emailsExpanded = true
+                updateEmailsDisplay()
+            }
+        } else {
+            // Show all items
+            emailsAdapter.submitList(allEmails)
+            binding.tvEmailsMore.visibility = View.GONE
+        }
+    }
+
+    private fun updateSmsDisplay() {
+        val hasItems = allSmsNumbers.isNotEmpty()
+        binding.rvSms.visibility = if (hasItems) View.VISIBLE else View.GONE
+        binding.tvNoSms.visibility = if (hasItems) View.GONE else View.VISIBLE
+
+        if (allSmsNumbers.size > MAX_COLLAPSED_ITEMS && !smsExpanded) {
+            // Show collapsed view
+            smsAdapter.submitList(allSmsNumbers.take(MAX_COLLAPSED_ITEMS))
+            val remaining = allSmsNumbers.size - MAX_COLLAPSED_ITEMS
+            binding.tvSmsMore.text = getString(R.string.x_more_available, remaining)
+            binding.tvSmsMore.visibility = View.VISIBLE
+            binding.tvSmsMore.setOnClickListener {
+                smsExpanded = true
+                updateSmsDisplay()
+            }
+        } else {
+            // Show all items
+            smsAdapter.submitList(allSmsNumbers)
+            binding.tvSmsMore.visibility = View.GONE
+        }
     }
 }

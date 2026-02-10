@@ -18,8 +18,9 @@ import com.onesignal.notifications.INotificationClickListener
 import com.onesignal.notifications.INotificationLifecycleListener
 import com.onesignal.notifications.INotificationWillDisplayEvent
 import com.onesignal.sdktest.R
-import com.onesignal.sdktest.data.network.OneSignalNotificationSender
+import com.onesignal.sdktest.data.network.OneSignalService
 import com.onesignal.sdktest.util.SharedPreferenceUtil
+import com.onesignal.sdktest.util.TooltipHelper
 import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.state.UserChangedState
 import kotlinx.coroutines.CoroutineScope
@@ -54,7 +55,10 @@ class MainApplication : MultiDexApplication() {
         }
 
         // Initialize notification sender with app ID
-        OneSignalNotificationSender.setAppId(appId)
+        OneSignalService.setAppId(appId)
+        
+        // Initialize tooltip helper
+        TooltipHelper.init(this)
 
         // Initialize OneSignal on main thread (required)
         OneSignal.initWithContext(this, appId)
@@ -120,7 +124,7 @@ class MainApplication : MultiDexApplication() {
 
         OneSignal.User.addObserver(object : IUserStateObserver {
             override fun onUserStateChange(state: UserChangedState) {
-                Log.v(TAG, "onUserStateChange fired: ${state.current.toJSONObject()}")
+                Log.d(TAG, ">>> onUserStateChange fired: onesignalId=${state.current.onesignalId}, externalId=${state.current.externalId}")
             }
         })
 

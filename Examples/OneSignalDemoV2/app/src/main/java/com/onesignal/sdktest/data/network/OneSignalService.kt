@@ -10,21 +10,25 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Sends push notifications to the current device via the OneSignal REST API.
+ * OneSignal API service for testing purposes.
+ * Provides methods to send notifications and fetch user data via the REST API.
  * 
  * Note: This approach is for testing purposes only. In production, notifications
- * should be sent from your backend server which can securely provide the API key.
+ * should be sent from your backend server.
  */
-object OneSignalNotificationSender {
+object OneSignalService {
     
-    private const val TAG = "OneSignalNotificationSender"
+    private const val TAG = "OneSignalService"
     private const val ONESIGNAL_API_URL = "https://onesignal.com/api/v1/notifications"
+    private const val ONESIGNAL_API_BASE_URL = "https://api.onesignal.com"
     
     private var appId: String = ""
     
     fun setAppId(appId: String) {
         this.appId = appId
     }
+    
+    fun getAppId(): String = appId
     
     /**
      * Send a notification to this device.
@@ -52,6 +56,8 @@ object OneSignalNotificationSender {
                 put("android_group", type.title)
                 put("android_led_color", "FFE9444E")
                 put("android_accent_color", "FFE9444E")
+                // Add big picture if available
+                type.bigPicture?.let { put("big_picture", it) }
             }
             
             val connection = (URL(ONESIGNAL_API_URL).openConnection() as HttpURLConnection).apply {
@@ -144,4 +150,127 @@ object OneSignalNotificationSender {
             return@withContext false
         }
     }
+    
+    /**
+     * Fetch user data from OneSignal API.
+     * Note: This endpoint does not require authentication.
+     * 
+     * @param onesignalId The OneSignal user ID
+     * @return UserData object containing aliases, tags, emails, and SMS numbers, or null on error
+     */
+    suspend fun fetchUser(onesignalId: String): UserData? = withContext(Dispatchers.IO) {
+        if (onesignalId.isEmpty()) {
+            Log.w(TAG, "Cannot fetch user - onesignalId is empty")
+            return@withContext null
+        }
+        
+        if (appId.isEmpty()) {
+            Log.w(TAG, "Cannot fetch user - appId not set")
+            return@withContext null
+        }
+        
+        try {
+            val url = "$ONESIGNAL_API_BASE_URL/apps/$appId/users/by/onesignal_id/$onesignalId"
+            Log.d(TAG, "Fetching user data from: $url")
+            
+            val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                useCaches = false
+                connectTimeout = 30000
+                readTimeout = 30000
+                setRequestProperty("Accept", "application/json")
+                requestMethod = "GET"
+            }
+            
+            val responseCode = connection.responseCode
+            
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                val response = connection.inputStream.bufferedReader().use { it.readText() }
+                Log.d(TAG, "User data fetched successfully, parsing response...")
+                try {
+                    val userData = parseUserResponse(response)
+                    Log.d(TAG, "Parsed user data: aliases=${userData.aliases.size}, tags=${userData.tags.size}, emails=${userData.emails.size}, sms=${userData.smsNumbers.size}")
+                    return@withContext userData
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error parsing user response", e)
+                    return@withContext null
+                }
+            } else {
+                val errorResponse = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
+                Log.e(TAG, "Failed to fetch user (HTTP $responseCode): $errorResponse")
+                return@withContext null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching user", e)
+            return@withContext null
+        }
+    }
+    
+    private fun parseUserResponse(json: String): UserData {
+        val jsonObject = JSONObject(json)
+        
+        // Parse aliases from identity object (filter out external_id and onesignal_id)
+        val aliases = mutableMapOf<String, String>()
+        if (jsonObject.has("identity")) {
+            val identity = jsonObject.getJSONObject("identity")
+            identity.keys().forEach { key ->
+                if (key != "external_id" && key != "onesignal_id") {
+                    aliases[key] = identity.getString(key)
+                }
+            }
+        }
+        
+        // Parse external_id separately
+        val externalId = if (jsonObject.has("identity")) {
+            val identity = jsonObject.getJSONObject("identity")
+            if (identity.has("external_id")) identity.getString("external_id") else null
+        } else null
+        
+        // Parse tags from properties object
+        val tags = mutableMapOf<String, String>()
+        if (jsonObject.has("properties")) {
+            val properties = jsonObject.getJSONObject("properties")
+            if (properties.has("tags")) {
+                val tagsObj = properties.getJSONObject("tags")
+                tagsObj.keys().forEach { key ->
+                    tags[key] = tagsObj.getString(key)
+                }
+            }
+        }
+        
+        // Parse subscriptions for emails and SMS
+        val emails = mutableListOf<String>()
+        val smsNumbers = mutableListOf<String>()
+        if (jsonObject.has("subscriptions")) {
+            val subscriptions = jsonObject.getJSONArray("subscriptions")
+            for (i in 0 until subscriptions.length()) {
+                val subscription = subscriptions.getJSONObject(i)
+                val type = subscription.optString("type", "")
+                val token = subscription.optString("token", "")
+                
+                when (type) {
+                    "Email" -> if (token.isNotEmpty()) emails.add(token)
+                    "SMS" -> if (token.isNotEmpty()) smsNumbers.add(token)
+                }
+            }
+        }
+        
+        return UserData(
+            aliases = aliases,
+            tags = tags,
+            emails = emails,
+            smsNumbers = smsNumbers,
+            externalId = externalId
+        )
+    }
 }
+
+/**
+ * Data class representing user data fetched from the OneSignal API.
+ */
+data class UserData(
+    val aliases: Map<String, String>,
+    val tags: Map<String, String>,
+    val emails: List<String>,
+    val smsNumbers: List<String>,
+    val externalId: String?
+)

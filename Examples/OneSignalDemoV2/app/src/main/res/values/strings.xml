@@ -8,17 +8,27 @@
     <string name="app_id_label">App-Id:</string>
     <string name="revoke_consent">REVOKE CONSENT</string>
     <string name="login_user">LOGIN USER</string>
+    <string name="switch_user">SWITCH USER</string>
     <string name="logout_user">LOGOUT USER</string>
+    <string name="logged_in_as">Logged in as:</string>
+    
+    <!-- App ID Guidance Banner -->
+    <string name="app_id_guidance">Add your own App ID, then rebuild to fully test all functionality.</string>
+    <string name="get_keys_link">Get your keys at onesignal.com</string>
+    
+    <!-- Collapse/Expand -->
+    <string name="x_more_available">%d more available</string>
 
     <!-- Privacy Consent -->
     <string name="privacy_consent">Privacy Consent</string>
-    <string name="consent_required">Consent must be given to proceed into the application</string>
-    <string name="allow">Allow</string>
+    <string name="privacy_consent_label">Privacy Consent:</string>
+    <string name="privacy_consent_description">Consent given for data collection</string>
 
     <!-- Aliases -->
     <string name="aliases">Aliases</string>
     <string name="no_aliases_added">No Aliases Added</string>
     <string name="add_alias">ADD ALIAS</string>
+    <string name="remove_all_aliases">REMOVE ALL ALIASES</string>
 
     <!-- Push -->
     <string name="push">Push</string>
@@ -42,6 +52,7 @@
     <string name="tags">Tags</string>
     <string name="no_tags_added">No Tags Added</string>
     <string name="add_tag">ADD TAG</string>
+    <string name="remove_all_tags">REMOVE ALL TAGS</string>
 
     <!-- Outcome Events -->
     <string name="outcome_events">Outcome Events</string>
@@ -65,6 +76,12 @@
     <string name="no_triggers_added">No Triggers Added</string>
     <string name="add_trigger">ADD TRIGGER</string>
 
+    <!-- Track Event -->
+    <string name="track_event">Track Event</string>
+    <string name="track_event_button">TRACK EVENT</string>
+    <string name="event_name">Event Name</string>
+    <string name="event_value">Event Value (optional)</string>
+
     <!-- Location -->
     <string name="location">Location</string>
     <string name="location_shared">Location Shared:</string>
@@ -73,6 +90,11 @@
 
     <!-- Send Push Notification -->
     <string name="send_push_notification">Send Push Notification</string>
+    <string name="send_simple_notification">SIMPLE NOTIFICATION</string>
+    <string name="send_image_notification">NOTIFICATION WITH IMAGE</string>
+    <string name="send_custom_notification">CUSTOM NOTIFICATION</string>
+    <string name="notification_title">Notification Title</string>
+    <string name="notification_body">Notification Body</string>
 
     <!-- Send In-App Message -->
     <string name="send_in_app_message">Send In-App Message</string>

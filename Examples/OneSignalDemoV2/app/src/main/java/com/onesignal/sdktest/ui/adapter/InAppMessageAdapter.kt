@@ -4,7 +4,7 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.onesignal.sdktest.data.model.InAppMessageType
-import com.onesignal.sdktest.databinding.ItemNotificationGridBinding
+import com.onesignal.sdktest.databinding.ItemIamGridBinding
 
 class InAppMessageAdapter(
     private val items: List<InAppMessageType>,
@@ -12,7 +12,7 @@ class InAppMessageAdapter(
 ) : RecyclerView.Adapter<InAppMessageAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val binding = ItemNotificationGridBinding.inflate(
+        val binding = ItemIamGridBinding.inflate(
             LayoutInflater.from(parent.context),
             parent,
             false
@@ -27,7 +27,7 @@ class InAppMessageAdapter(
     override fun getItemCount(): Int = items.size
 
     inner class ViewHolder(
-        private val binding: ItemNotificationGridBinding
+        private val binding: ItemIamGridBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(item: InAppMessageType) {

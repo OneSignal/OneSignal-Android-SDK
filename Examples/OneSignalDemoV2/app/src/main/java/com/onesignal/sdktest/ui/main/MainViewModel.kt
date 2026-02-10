@@ -10,13 +10,15 @@ import com.onesignal.notifications.IPermissionObserver
 import com.onesignal.sdktest.data.model.NotificationType
 import com.onesignal.sdktest.data.repository.OneSignalRepository
 import com.onesignal.sdktest.util.SharedPreferenceUtil
+import com.onesignal.user.state.IUserStateObserver
+import com.onesignal.user.state.UserChangedState
 import com.onesignal.user.subscriptions.IPushSubscriptionObserver
 import com.onesignal.user.subscriptions.PushSubscriptionChangedState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class MainViewModel(application: Application) : AndroidViewModel(application), IPushSubscriptionObserver, IPermissionObserver {
+class MainViewModel(application: Application) : AndroidViewModel(application), IPushSubscriptionObserver, IPermissionObserver, IUserStateObserver {
 
     private val repository = OneSignalRepository()
 
@@ -71,6 +73,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private val _toastMessage = MutableLiveData<String?>()
     val toastMessage: LiveData<String?> = _toastMessage
 
+    // Loading state
+    private val _isLoading = MutableLiveData<Boolean>()
+    val isLoading: LiveData<Boolean> = _isLoading
+
+    // External User ID (for login state display)
+    private val _externalUserId = MutableLiveData<String?>()
+    val externalUserId: LiveData<String?> = _externalUserId
+
     // Local lists to track added items
     private val aliasesList = mutableListOf<Pair<String, String>>()
     private val emailsList = mutableListOf<String>()
@@ -82,11 +92,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         loadInitialState()
         OneSignal.User.pushSubscription.addObserver(this)
         OneSignal.Notifications.addPermissionObserver(this)
+        OneSignal.User.addObserver(this)
+        android.util.Log.d("MainViewModel", "init: observers registered, current onesignalId=${OneSignal.User.onesignalId}")
     }
 
     // IPermissionObserver
     override fun onNotificationPermissionChange(permission: Boolean) {
         _hasNotificationPermission.postValue(permission)
+    }
+
+    // IUserStateObserver - called when user changes (login/logout)
+    // Note: This is called on a background thread, so we need to post to main thread
+    override fun onUserStateChange(state: UserChangedState) {
+        android.util.Log.d("MainViewModel", "onUserStateChange fired: ${state.current.onesignalId}")
+        viewModelScope.launch(Dispatchers.Main) {
+            // Reload local data when user changes
+            loadExistingAliases()
+            loadExistingTags()
+            refreshPushSubscription()
+            // Fetch full user data from API now that we have a real onesignalId
+            fetchUserDataFromApi()
+        }
     }
 
     private fun loadInitialState() {
@@ -97,12 +123,103 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         _inAppMessagesPaused.value = SharedPreferenceUtil.getCachedInAppMessagingPausedStatus(context)
         _locationShared.value = SharedPreferenceUtil.getCachedLocationSharedStatus(context)
         
+        // Load cached external user ID
+        val cachedExternalId = SharedPreferenceUtil.getCachedUserExternalUserId(context)
+        _externalUserId.value = if (cachedExternalId.isNullOrEmpty()) null else cachedExternalId
+        
         refreshPushSubscription()
-        refreshAliases()
+        
+        // Load existing data from OneSignal
+        loadExistingAliases()
+        loadExistingTags()
+        
         refreshEmails()
         refreshSmsNumbers()
-        refreshTags()
         refreshTriggers()
+        
+        // Fetch user data from API if onesignalId exists
+        val onesignalId = OneSignal.User.onesignalId
+        if (!onesignalId.isNullOrEmpty()) {
+            fetchUserDataFromApi()
+        }
+    }
+    
+    /**
+     * Fetch user data from OneSignal REST API.
+     * This populates aliases, tags, emails, and SMS from the server.
+     */
+    fun fetchUserDataFromApi() {
+        val onesignalId = OneSignal.User.onesignalId
+        if (onesignalId.isNullOrEmpty()) {
+            android.util.Log.d("MainViewModel", "fetchUserDataFromApi: no onesignalId, hiding loading")
+            _isLoading.value = false
+            return
+        }
+        
+        _isLoading.value = true
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                android.util.Log.d("MainViewModel", "fetchUserDataFromApi: calling repository.fetchUser")
+                val userData = repository.fetchUser(onesignalId)
+                android.util.Log.d("MainViewModel", "fetchUserDataFromApi: repository returned, userData=${userData != null}")
+                withContext(Dispatchers.Main) {
+                    android.util.Log.d("MainViewModel", "fetchUserDataFromApi: on Main thread")
+                    if (userData != null) {
+                        // Update aliases from API (filtered, excludes external_id and onesignal_id)
+                        aliasesList.clear()
+                        aliasesList.addAll(userData.aliases.map { Pair(it.key, it.value) })
+                        refreshAliases()
+                        
+                        // Update tags from API
+                        tagsList.clear()
+                        tagsList.addAll(userData.tags.map { Pair(it.key, it.value) })
+                        refreshTags()
+                        
+                        // Update emails from API
+                        emailsList.clear()
+                        emailsList.addAll(userData.emails)
+                        refreshEmails()
+                        
+                        // Update SMS from API
+                        smsNumbersList.clear()
+                        smsNumbersList.addAll(userData.smsNumbers)
+                        refreshSmsNumbers()
+                        
+                        // Update external user ID if available
+                        if (!userData.externalId.isNullOrEmpty()) {
+                            _externalUserId.value = userData.externalId
+                            SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), userData.externalId)
+                        }
+                        
+                        android.util.Log.d("MainViewModel", "User data loaded from API: aliases=${aliasesList.size}, tags=${tagsList.size}, emails=${emailsList.size}, sms=${smsNumbersList.size}")
+                        android.util.Log.d("MainViewModel", "LiveData values - aliases=${_aliases.value?.size}, tags=${_tags.value?.size}, emails=${_emails.value?.size}, sms=${_smsNumbers.value?.size}")
+                    } else {
+                        android.util.Log.w("MainViewModel", "Failed to fetch user data from API")
+                    }
+                    _isLoading.value = false
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MainViewModel", "Error fetching user data", e)
+                withContext(Dispatchers.Main) {
+                    _isLoading.value = false
+                }
+            }
+        }
+    }
+
+    private fun loadExistingAliases() {
+        // Note: OneSignal SDK doesn't have a getAliases() method,
+        // so aliases are managed locally. On login/logout, we clear the local list
+        // since the new user won't have the same aliases.
+        aliasesList.clear()
+        refreshAliases()
+    }
+
+    private fun loadExistingTags() {
+        val existingTags = repository.getTags()
+        tagsList.clear()
+        tagsList.addAll(existingTags.map { Pair(it.key, it.value) })
+        refreshTags()
     }
 
     fun refreshPushSubscription() {
@@ -133,33 +250,58 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
 
     // User operations
     fun loginUser(externalUserId: String) {
+        android.util.Log.d("MainViewModel", "loginUser called with: $externalUserId")
+        _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
+            android.util.Log.d("MainViewModel", "loginUser: calling repository.loginUser")
             repository.loginUser(externalUserId)
+            android.util.Log.d("MainViewModel", "loginUser: repository.loginUser returned")
             withContext(Dispatchers.Main) {
                 SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalUserId)
+                _externalUserId.value = externalUserId
                 showToast("Logged in as: $externalUserId")
+                // Clear old user data immediately
+                aliasesList.clear()
+                emailsList.clear()
+                smsNumbersList.clear()
+                triggersList.clear()
+                refreshAliases()
+                refreshEmails()
+                refreshSmsNumbers()
+                refreshTriggers()
+                // Reload tags and push for new user
+                loadExistingTags()
                 refreshPushSubscription()
+                
+                // Fetch new user data from API (loading indicator handled by fetchUserDataFromApi)
+                kotlinx.coroutines.delay(1000)
+                fetchUserDataFromApi()
             }
         }
     }
 
     fun logoutUser() {
+        android.util.Log.d("MainViewModel", "logoutUser called")
+        _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
+            android.util.Log.d("MainViewModel", "logoutUser: calling repository.logoutUser")
             repository.logoutUser()
+            android.util.Log.d("MainViewModel", "logoutUser: repository.logoutUser returned")
             withContext(Dispatchers.Main) {
                 SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), "")
+                _externalUserId.value = null
                 showToast("Logged out")
+                // Reload data from SDK (will be empty for new device-scoped user)
+                loadExistingAliases()
+                loadExistingTags()
                 refreshPushSubscription()
-                // Clear local lists
-                aliasesList.clear()
+                _isLoading.value = false
+                // Clear emails/sms/triggers which aren't persisted in SDK
                 emailsList.clear()
                 smsNumbersList.clear()
-                tagsList.clear()
                 triggersList.clear()
-                refreshAliases()
                 refreshEmails()
                 refreshSmsNumbers()
-                refreshTags()
                 refreshTriggers()
             }
         }
@@ -182,8 +324,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         viewModelScope.launch(Dispatchers.IO) {
             repository.addAlias(label, id)
             withContext(Dispatchers.Main) {
-                aliasesList.add(Pair(label, id))
-                refreshAliases()
+                loadExistingAliases()
                 showToast("Alias added: $label")
             }
         }
@@ -193,9 +334,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         viewModelScope.launch(Dispatchers.IO) {
             repository.removeAlias(label)
             withContext(Dispatchers.Main) {
-                aliasesList.removeAll { it.first == label }
-                refreshAliases()
+                loadExistingAliases()
                 showToast("Alias removed: $label")
+            }
+        }
+    }
+
+    fun removeAllAliases() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val labels = aliasesList.map { it.first }
+            repository.removeAllAliases(labels)
+            withContext(Dispatchers.Main) {
+                loadExistingAliases()
+                showToast("All aliases removed")
             }
         }
     }
@@ -255,9 +406,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         viewModelScope.launch(Dispatchers.IO) {
             repository.addTag(key, value)
             withContext(Dispatchers.Main) {
-                tagsList.removeAll { it.first == key }
-                tagsList.add(Pair(key, value))
-                refreshTags()
+                loadExistingTags()
                 showToast("Tag added: $key")
             }
         }
@@ -267,9 +416,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         viewModelScope.launch(Dispatchers.IO) {
             repository.removeTag(key)
             withContext(Dispatchers.Main) {
-                tagsList.removeAll { it.first == key }
-                refreshTags()
+                loadExistingTags()
                 showToast("Tag removed: $key")
+            }
+        }
+    }
+
+    fun removeAllTags() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val keys = tagsList.map { it.first }
+            repository.removeAllTags(keys)
+            withContext(Dispatchers.Main) {
+                loadExistingTags()
+                showToast("All tags removed")
             }
         }
     }
@@ -322,6 +481,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             repository.sendOutcomeWithValue(name, value)
             withContext(Dispatchers.Main) {
                 showToast("Outcome with value sent: $name = $value")
+            }
+        }
+    }
+
+    // Track Event
+    fun trackEvent(name: String, value: String?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.trackEvent(name, value)
+            withContext(Dispatchers.Main) {
+                val message = if (!value.isNullOrEmpty()) {
+                    "Event tracked: $name = $value"
+                } else {
+                    "Event tracked: $name"
+                }
+                showToast(message)
             }
         }
     }

@@ -42,61 +42,6 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- Privacy Consent Overlay -->
-    <LinearLayout
-        android:id="@+id/privacy_consent_layout"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:visibility="gone">
-
-        <TextView
-            android:id="@+id/tv_privacy_consent_title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:gravity="center"
-            android:layout_marginBottom="2dp"
-            android:text="@string/privacy_consent"
-            android:textSize="18sp"
-            android:textColor="@color/colorDarkText"/>
-
-        <TextView
-            android:id="@+id/tv_privacy_consent_description"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:gravity="center"
-            android:layout_marginBottom="14dp"
-            android:layout_marginStart="64dp"
-            android:layout_marginEnd="64dp"
-            android:text="@string/consent_required"
-            android:textSize="12sp"
-            android:textColor="@color/colorDarkText"/>
-
-        <androidx.cardview.widget.CardView
-            android:layout_width="172dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="6dp"
-            app:cardElevation="4dp">
-
-            <Button
-                android:id="@+id/btn_allow_consent"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:text="@string/allow"
-                android:textSize="19sp"
-                android:textColor="@android:color/white"
-                android:background="@color/colorPrimary"/>
-
-        </androidx.cardview.widget.CardView>
-
-    </LinearLayout>
-
     <!-- Main Content ScrollView -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/nested_scroll_view"
@@ -171,18 +116,94 @@
 
                 </androidx.cardview.widget.CardView>
 
-                <!-- Revoke Consent Button -->
-                <Button
-                    android:id="@+id/btn_revoke_consent"
+                <!-- Guidance Banner -->
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/card_guidance_banner"
                     android:layout_width="match_parent"
-                    android:layout_height="56dp"
+                    android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
                     android:layout_marginEnd="12dp"
                     android:layout_marginBottom="12dp"
-                    android:text="@string/revoke_consent"
-                    android:textSize="19sp"
-                    android:textColor="@android:color/white"
-                    android:background="@color/colorPrimary"/>
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="2dp"
+                    app:cardBackgroundColor="#FFF9E6">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/app_id_guidance"
+                            android:textColor="@color/colorDarkText"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/tv_get_keys_link"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/get_keys_link"
+                            android:textColor="@color/colorPrimary"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                    </LinearLayout>
+
+                </androidx.cardview.widget.CardView>
+
+                <!-- Privacy Consent Toggle -->
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="12dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <RelativeLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="12dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentStart="true"
+                            android:layout_centerVertical="true"
+                            android:layout_toStartOf="@id/switch_privacy_consent"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/privacy_consent_label"
+                                android:textSize="16sp"
+                                android:textColor="@color/colorDarkText"/>
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/privacy_consent_description"
+                                android:textSize="13sp"
+                                android:textColor="@color/colorDarkText"/>
+
+                        </LinearLayout>
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/switch_privacy_consent"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_alignParentEnd="true"
+                            android:layout_centerVertical="true" />
+
+                    </RelativeLayout>
+
+                </androidx.cardview.widget.CardView>
 
                 <!-- Login User Button -->
                 <Button
@@ -191,11 +212,44 @@
                     android:layout_height="56dp"
                     android:layout_marginStart="12dp"
                     android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="12dp"
+                    android:layout_marginBottom="8dp"
                     android:text="@string/login_user"
                     android:textSize="19sp"
                     android:textColor="@android:color/white"
                     android:background="@color/colorPrimary"/>
+
+                <!-- External User ID Display (shown when logged in) -->
+                <LinearLayout
+                    android:id="@+id/layout_external_id"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="12dp"
+                    android:gravity="center_vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/logged_in_as"
+                        android:textColor="@color/colorDarkText"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/tv_external_id"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:textColor="@color/colorPrimary"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:ellipsize="end"
+                        android:maxLines="1" />
+
+                </LinearLayout>
 
                 <!-- Logout User Button -->
                 <Button
@@ -212,68 +266,6 @@
 
             </LinearLayout>
 
-            <!-- Aliases Section -->
-            <LinearLayout
-                android:id="@+id/section_aliases"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginBottom="4dp"
-                    android:text="@string/aliases"
-                    android:textColor="@color/colorDarkText" />
-
-                <androidx.cardview.widget.CardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
-                        <androidx.recyclerview.widget.RecyclerView
-                            android:id="@+id/rv_aliases"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:nestedScrollingEnabled="false"
-                            android:visibility="gone"/>
-
-                        <TextView
-                            android:id="@+id/tv_no_aliases"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_gravity="center"
-                            android:layout_marginTop="12dp"
-                            android:layout_marginBottom="12dp"
-                            android:text="@string/no_aliases_added"
-                            android:textSize="18sp"
-                            android:textColor="@color/colorDarkText"/>
-
-                        <Button
-                            android:id="@+id/btn_add_alias"
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:text="@string/add_alias"
-                            android:textSize="19sp"
-                            android:textColor="@android:color/white"
-                            android:background="@color/colorPrimary"/>
-
-                    </LinearLayout>
-
-                </androidx.cardview.widget.CardView>
-
-            </LinearLayout>
-
             <!-- Push Section -->
             <LinearLayout
                 android:id="@+id/section_push"
@@ -281,13 +273,31 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
                     android:layout_marginBottom="4dp"
-                    android:text="@string/push"
-                    android:textColor="@color/colorDarkText" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/push"
+                        android:textColor="@color/colorDarkText" />
+
+                    <ImageButton
+                        android:id="@+id/btn_info_push"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_info"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/icon" />
+
+                </LinearLayout>
 
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
@@ -390,20 +400,38 @@
 
             </LinearLayout>
 
-            <!-- Emails Section -->
+            <!-- Send Push Notification Section -->
             <LinearLayout
-                android:id="@+id/section_emails"
+                android:id="@+id/section_send_push"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
                     android:layout_marginBottom="4dp"
-                    android:text="@string/emails"
-                    android:textColor="@color/colorDarkText" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/send_push_notification"
+                        android:textColor="@color/colorDarkText" />
+
+                    <ImageButton
+                        android:id="@+id/btn_info_send_push"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_info"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/icon" />
+
+                </LinearLayout>
 
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
@@ -419,195 +447,44 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical">
 
-                        <androidx.recyclerview.widget.RecyclerView
-                            android:id="@+id/rv_emails"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:nestedScrollingEnabled="false"
-                            android:visibility="gone"/>
-
-                        <TextView
-                            android:id="@+id/tv_no_emails"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_gravity="center"
-                            android:layout_marginTop="12dp"
-                            android:layout_marginBottom="12dp"
-                            android:text="@string/no_emails_added"
-                            android:textSize="18sp"
-                            android:textColor="@color/colorDarkText"/>
-
                         <Button
-                            android:id="@+id/btn_add_email"
+                            android:id="@+id/btn_send_simple_notification"
                             android:layout_width="match_parent"
                             android:layout_height="56dp"
-                            android:text="@string/add_email"
+                            android:text="@string/send_simple_notification"
+                            android:textSize="19sp"
+                            android:textColor="@android:color/white"
+                            android:background="@color/colorPrimary"/>
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:background="@color/colorDivider"/>
+
+                        <Button
+                            android:id="@+id/btn_send_image_notification"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:text="@string/send_image_notification"
+                            android:textSize="19sp"
+                            android:textColor="@android:color/white"
+                            android:background="@color/colorPrimary"/>
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:background="@color/colorDivider"/>
+
+                        <Button
+                            android:id="@+id/btn_send_custom_notification"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:text="@string/send_custom_notification"
                             android:textSize="19sp"
                             android:textColor="@android:color/white"
                             android:background="@color/colorPrimary"/>
 
                     </LinearLayout>
-
-                </androidx.cardview.widget.CardView>
-
-            </LinearLayout>
-
-            <!-- SMSs Section -->
-            <LinearLayout
-                android:id="@+id/section_sms"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginBottom="4dp"
-                    android:text="@string/smss"
-                    android:textColor="@color/colorDarkText" />
-
-                <androidx.cardview.widget.CardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
-                        <androidx.recyclerview.widget.RecyclerView
-                            android:id="@+id/rv_sms"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:nestedScrollingEnabled="false"
-                            android:visibility="gone"/>
-
-                        <TextView
-                            android:id="@+id/tv_no_sms"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_gravity="center"
-                            android:layout_marginTop="12dp"
-                            android:layout_marginBottom="12dp"
-                            android:text="@string/no_smss_added"
-                            android:textSize="18sp"
-                            android:textColor="@color/colorDarkText"/>
-
-                        <Button
-                            android:id="@+id/btn_add_sms"
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:text="@string/add_sms"
-                            android:textSize="19sp"
-                            android:textColor="@android:color/white"
-                            android:background="@color/colorPrimary"/>
-
-                    </LinearLayout>
-
-                </androidx.cardview.widget.CardView>
-
-            </LinearLayout>
-
-            <!-- Tags Section -->
-            <LinearLayout
-                android:id="@+id/section_tags"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginBottom="4dp"
-                    android:text="@string/tags"
-                    android:textColor="@color/colorDarkText" />
-
-                <androidx.cardview.widget.CardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
-
-                        <androidx.recyclerview.widget.RecyclerView
-                            android:id="@+id/rv_tags"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:nestedScrollingEnabled="false"
-                            android:visibility="gone"/>
-
-                        <TextView
-                            android:id="@+id/tv_no_tags"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_gravity="center"
-                            android:layout_marginTop="12dp"
-                            android:layout_marginBottom="12dp"
-                            android:text="@string/no_tags_added"
-                            android:textSize="18sp"
-                            android:textColor="@color/colorDarkText"/>
-
-                        <Button
-                            android:id="@+id/btn_add_tag"
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:text="@string/add_tag"
-                            android:textSize="19sp"
-                            android:textColor="@android:color/white"
-                            android:background="@color/colorPrimary"/>
-
-                    </LinearLayout>
-
-                </androidx.cardview.widget.CardView>
-
-            </LinearLayout>
-
-            <!-- Outcome Events Section -->
-            <LinearLayout
-                android:id="@+id/section_outcomes"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginBottom="4dp"
-                    android:text="@string/outcome_events"
-                    android:textColor="@color/colorDarkText" />
-
-                <androidx.cardview.widget.CardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
-
-                    <Button
-                        android:id="@+id/btn_send_outcome"
-                        android:layout_width="match_parent"
-                        android:layout_height="56dp"
-                        android:text="@string/send_outcome"
-                        android:textSize="19sp"
-                        android:textColor="@android:color/white"
-                        android:background="@color/colorPrimary"/>
 
                 </androidx.cardview.widget.CardView>
 
@@ -620,13 +497,31 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
                     android:layout_marginBottom="4dp"
-                    android:text="@string/in_app_messaging"
-                    android:textColor="@color/colorDarkText" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/in_app_messaging"
+                        android:textColor="@color/colorDarkText" />
+
+                    <ImageButton
+                        android:id="@+id/btn_info_iam"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_info"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/icon" />
+
+                </LinearLayout>
 
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
@@ -679,6 +574,493 @@
 
             </LinearLayout>
 
+            <!-- Send In-App Message Section -->
+            <LinearLayout
+                android:id="@+id/section_send_iam"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/send_in_app_message"
+                        android:textColor="@color/colorDarkText" />
+
+                    <ImageButton
+                        android:id="@+id/btn_info_send_iam"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_info"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/icon" />
+
+                </LinearLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_in_app_messages"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:nestedScrollingEnabled="false"/>
+
+            </LinearLayout>
+
+            <!-- Aliases Section -->
+            <LinearLayout
+                android:id="@+id/section_aliases"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/aliases"
+                        android:textColor="@color/colorDarkText" />
+
+                    <ImageButton
+                        android:id="@+id/btn_info_aliases"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_info"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/icon" />
+
+                </LinearLayout>
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="12dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/rv_aliases"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:nestedScrollingEnabled="false"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/tv_no_aliases"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:layout_marginTop="12dp"
+                            android:layout_marginBottom="12dp"
+                            android:text="@string/no_aliases_added"
+                            android:textSize="18sp"
+                            android:textColor="@color/colorDarkText"/>
+
+                        <Button
+                            android:id="@+id/btn_add_alias"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:text="@string/add_alias"
+                            android:textSize="19sp"
+                            android:textColor="@android:color/white"
+                            android:background="@color/colorPrimary"/>
+
+                        <LinearLayout
+                            android:id="@+id/layout_remove_all_aliases"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:visibility="gone">
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:background="@color/colorDivider"/>
+
+                            <Button
+                                android:id="@+id/btn_remove_all_aliases"
+                                android:layout_width="match_parent"
+                                android:layout_height="56dp"
+                                android:text="@string/remove_all_aliases"
+                                android:textSize="19sp"
+                                android:textColor="@android:color/white"
+                                android:background="@color/colorRed"/>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
+            <!-- Emails Section -->
+            <LinearLayout
+                android:id="@+id/section_emails"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/emails"
+                        android:textColor="@color/colorDarkText" />
+
+                    <ImageButton
+                        android:id="@+id/btn_info_emails"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_info"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/icon" />
+
+                </LinearLayout>
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="12dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/rv_emails"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:nestedScrollingEnabled="false"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/tv_emails_more"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:layout_marginTop="8dp"
+                            android:layout_marginBottom="8dp"
+                            android:textSize="14sp"
+                            android:textColor="@color/colorPrimary"
+                            android:textStyle="bold"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/tv_no_emails"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:layout_marginTop="12dp"
+                            android:layout_marginBottom="12dp"
+                            android:text="@string/no_emails_added"
+                            android:textSize="18sp"
+                            android:textColor="@color/colorDarkText"/>
+
+                        <Button
+                            android:id="@+id/btn_add_email"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:text="@string/add_email"
+                            android:textSize="19sp"
+                            android:textColor="@android:color/white"
+                            android:background="@color/colorPrimary"/>
+
+                    </LinearLayout>
+
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
+            <!-- SMSs Section -->
+            <LinearLayout
+                android:id="@+id/section_sms"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/smss"
+                        android:textColor="@color/colorDarkText" />
+
+                    <ImageButton
+                        android:id="@+id/btn_info_sms"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_info"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/icon" />
+
+                </LinearLayout>
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="12dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/rv_sms"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:nestedScrollingEnabled="false"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/tv_sms_more"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:layout_marginTop="8dp"
+                            android:layout_marginBottom="8dp"
+                            android:textSize="14sp"
+                            android:textColor="@color/colorPrimary"
+                            android:textStyle="bold"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/tv_no_sms"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:layout_marginTop="12dp"
+                            android:layout_marginBottom="12dp"
+                            android:text="@string/no_smss_added"
+                            android:textSize="18sp"
+                            android:textColor="@color/colorDarkText"/>
+
+                        <Button
+                            android:id="@+id/btn_add_sms"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:text="@string/add_sms"
+                            android:textSize="19sp"
+                            android:textColor="@android:color/white"
+                            android:background="@color/colorPrimary"/>
+
+                    </LinearLayout>
+
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
+            <!-- Tags Section -->
+            <LinearLayout
+                android:id="@+id/section_tags"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tags"
+                        android:textColor="@color/colorDarkText" />
+
+                    <ImageButton
+                        android:id="@+id/btn_info_tags"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_info"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/icon" />
+
+                </LinearLayout>
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="12dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/rv_tags"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:nestedScrollingEnabled="false"
+                            android:visibility="gone"/>
+
+                        <TextView
+                            android:id="@+id/tv_no_tags"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:layout_marginTop="12dp"
+                            android:layout_marginBottom="12dp"
+                            android:text="@string/no_tags_added"
+                            android:textSize="18sp"
+                            android:textColor="@color/colorDarkText"/>
+
+                        <Button
+                            android:id="@+id/btn_add_tag"
+                            android:layout_width="match_parent"
+                            android:layout_height="56dp"
+                            android:text="@string/add_tag"
+                            android:textSize="19sp"
+                            android:textColor="@android:color/white"
+                            android:background="@color/colorPrimary"/>
+
+                        <LinearLayout
+                            android:id="@+id/layout_remove_all_tags"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:visibility="gone">
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:background="@color/colorDivider"/>
+
+                            <Button
+                                android:id="@+id/btn_remove_all_tags"
+                                android:layout_width="match_parent"
+                                android:layout_height="56dp"
+                                android:text="@string/remove_all_tags"
+                                android:textSize="19sp"
+                                android:textColor="@android:color/white"
+                                android:background="@color/colorRed"/>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
+            <!-- Outcome Events Section -->
+            <LinearLayout
+                android:id="@+id/section_outcomes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/outcome_events"
+                        android:textColor="@color/colorDarkText" />
+
+                    <ImageButton
+                        android:id="@+id/btn_info_outcomes"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_info"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/icon" />
+
+                </LinearLayout>
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="12dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <Button
+                        android:id="@+id/btn_send_outcome"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:text="@string/send_outcome"
+                        android:textSize="19sp"
+                        android:textColor="@android:color/white"
+                        android:background="@color/colorPrimary"/>
+
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
             <!-- Triggers Section -->
             <LinearLayout
                 android:id="@+id/section_triggers"
@@ -686,13 +1068,31 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
                     android:layout_marginBottom="4dp"
-                    android:text="@string/triggers"
-                    android:textColor="@color/colorDarkText" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/triggers"
+                        android:textColor="@color/colorDarkText" />
+
+                    <ImageButton
+                        android:id="@+id/btn_info_triggers"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_info"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/icon" />
+
+                </LinearLayout>
 
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
@@ -741,6 +1141,61 @@
 
             </LinearLayout>
 
+            <!-- Track Event Section -->
+            <LinearLayout
+                android:id="@+id/section_track_event"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/track_event"
+                        android:textColor="@color/colorDarkText" />
+
+                    <ImageButton
+                        android:id="@+id/btn_info_track_event"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_info"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/icon" />
+
+                </LinearLayout>
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="12dp"
+                    app:cardCornerRadius="6dp"
+                    app:cardElevation="4dp">
+
+                    <Button
+                        android:id="@+id/btn_track_event"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:text="@string/track_event_button"
+                        android:textSize="19sp"
+                        android:textColor="@android:color/white"
+                        android:background="@color/colorPrimary"/>
+
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
             <!-- Location Section -->
             <LinearLayout
                 android:id="@+id/section_location"
@@ -748,13 +1203,31 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
                     android:layout_marginBottom="4dp"
-                    android:text="@string/location"
-                    android:textColor="@color/colorDarkText" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="@string/location"
+                        android:textColor="@color/colorDarkText" />
+
+                    <ImageButton
+                        android:id="@+id/btn_info_location"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@drawable/ic_info"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/icon" />
+
+                </LinearLayout>
 
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
@@ -824,56 +1297,6 @@
 
             </LinearLayout>
 
-            <!-- Send Push Notification Section -->
-            <LinearLayout
-                android:id="@+id/section_send_push"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginBottom="4dp"
-                    android:text="@string/send_push_notification"
-                    android:textColor="@color/colorDarkText" />
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rv_notifications"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_marginEnd="4dp"
-                    android:nestedScrollingEnabled="false"/>
-
-            </LinearLayout>
-
-            <!-- Send In-App Message Section -->
-            <LinearLayout
-                android:id="@+id/section_send_iam"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginBottom="4dp"
-                    android:text="@string/send_in_app_message"
-                    android:textColor="@color/colorDarkText" />
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rv_in_app_messages"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_marginEnd="4dp"
-                    android:nestedScrollingEnabled="false"/>
-
-            </LinearLayout>
-
             <!-- Next Activity Button -->
             <Button
                 android:id="@+id/btn_next_activity"
@@ -891,5 +1314,23 @@
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>
+
+    <!-- Loading Overlay -->
+    <FrameLayout
+        android:id="@+id/loading_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#80000000"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:indeterminateTint="@android:color/white" />
+
+    </FrameLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

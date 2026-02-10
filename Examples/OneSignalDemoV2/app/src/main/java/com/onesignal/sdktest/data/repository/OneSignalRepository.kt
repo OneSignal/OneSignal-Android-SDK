@@ -3,7 +3,8 @@ package com.onesignal.sdktest.data.repository
 import android.util.Log
 import com.onesignal.OneSignal
 import com.onesignal.sdktest.data.model.NotificationType
-import com.onesignal.sdktest.data.network.OneSignalNotificationSender
+import com.onesignal.sdktest.data.network.OneSignalService
+import com.onesignal.sdktest.data.network.UserData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -21,6 +22,7 @@ class OneSignalRepository {
     suspend fun loginUser(externalUserId: String) = withContext(Dispatchers.IO) {
         Log.d(TAG, "Logging in user with externalUserId: $externalUserId")
         OneSignal.login(externalUserId)
+        Log.d(TAG, "Logged in user with onesignalId: ${OneSignal.User.onesignalId}")
     }
 
     suspend fun logoutUser() = withContext(Dispatchers.IO) {
@@ -39,11 +41,11 @@ class OneSignalRepository {
         OneSignal.User.removeAlias(label)
     }
 
-    fun getAliases(): Map<String, String> {
-        return OneSignal.User.onesignalId?.let {
-            // Return current aliases
-            mapOf()
-        } ?: mapOf()
+    fun removeAllAliases(labels: Collection<String>) {
+        Log.d(TAG, "Removing all aliases: $labels")
+        if (labels.isNotEmpty()) {
+            OneSignal.User.removeAliases(labels)
+        }
     }
 
     // Email operations
@@ -79,6 +81,13 @@ class OneSignalRepository {
         OneSignal.User.removeTag(key)
     }
 
+    fun removeAllTags(keys: Collection<String>) {
+        Log.d(TAG, "Removing all tags: $keys")
+        if (keys.isNotEmpty()) {
+            OneSignal.User.removeTags(keys)
+        }
+    }
+
     fun getTags(): Map<String, String> {
         return OneSignal.User.getTags()
     }
@@ -108,6 +117,17 @@ class OneSignalRepository {
     fun sendOutcomeWithValue(name: String, value: Float) {
         Log.d(TAG, "Sending outcome with value: $name -> $value")
         OneSignal.Session.addOutcomeWithValue(name, value)
+    }
+
+    // Track Event
+    fun trackEvent(name: String, value: String?) {
+        Log.d(TAG, "Tracking event: $name with value: $value")
+        val properties: Map<String, Any?>? = if (!value.isNullOrEmpty()) {
+            mapOf("value" to value)
+        } else {
+            null
+        }
+        OneSignal.User.trackEvent(name, properties)
     }
 
     // Push subscription
@@ -166,12 +186,12 @@ class OneSignalRepository {
     // Send notifications
     suspend fun sendNotification(type: NotificationType): Boolean {
         Log.d(TAG, "Sending notification: ${type.title}")
-        return OneSignalNotificationSender.sendNotification(type)
+        return OneSignalService.sendNotification(type)
     }
 
     suspend fun sendCustomNotification(title: String, body: String): Boolean {
         Log.d(TAG, "Sending custom notification: $title")
-        return OneSignalNotificationSender.sendCustomNotification(title, body)
+        return OneSignalService.sendCustomNotification(title, body)
     }
 
     // Privacy consent
@@ -187,5 +207,11 @@ class OneSignalRepository {
     // OneSignal ID
     fun getOneSignalId(): String? {
         return OneSignal.User.onesignalId
+    }
+
+    // Fetch user data from API
+    suspend fun fetchUser(onesignalId: String): UserData? = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Fetching user data for: $onesignalId")
+        OneSignalService.fetchUser(onesignalId)
     }
 }
