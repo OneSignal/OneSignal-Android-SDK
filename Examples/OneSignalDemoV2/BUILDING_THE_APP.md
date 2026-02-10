@@ -76,12 +76,34 @@ Privacy consent:
 - setConsentGiven(given: Boolean)
 - isConsentGiven(): Boolean
 
-Notification sending (via REST API):
+Notification sending (via REST API, delegated to OneSignalService):
 - sendNotification(type: NotificationType): Boolean
 - sendCustomNotification(title: String, body: String): Boolean
+- fetchUser(onesignalId: String): UserData?
 ```
 
-### Prompt 1.3 - SDK Observers
+### Prompt 1.3 - OneSignalService (REST API Client)
+
+```
+Create OneSignalService.kt object for REST API calls:
+
+Properties:
+- appId: String (set from MainApplication)
+
+Methods:
+- setAppId(appId: String)
+- getAppId(): String
+- sendNotification(type: NotificationType): Boolean
+- sendCustomNotification(title: String, body: String): Boolean
+- fetchUser(onesignalId: String): UserData?
+
+fetchUser endpoint:
+- GET https://api.onesignal.com/apps/{app_id}/users/by/onesignal_id/{onesignal_id}
+- NO Authorization header needed (public endpoint)
+- Returns UserData with aliases, tags, emails, smsNumbers, externalId
+```
+
+### Prompt 1.4 - SDK Observers
 
 ```
 In MainApplication.kt, set up OneSignal listeners:
@@ -89,33 +111,33 @@ In MainApplication.kt, set up OneSignal listeners:
 - IInAppMessageClickListener
 - INotificationClickListener
 - INotificationLifecycleListener (with preventDefault() for async display testing)
-- IUserStateObserver
+- IUserStateObserver (log when user state changes)
 
 In MainViewModel.kt, implement observers:
 - IPushSubscriptionObserver - react to push subscription changes
 - IPermissionObserver - react to notification permission changes
-- IUserStateObserver - reload data when user changes (login/logout)
+- IUserStateObserver - call fetchUserDataFromApi() when user changes (login/logout)
 ```
 
 ---
 
 ## Phase 2: UI Sections
 
-### Section Order (top to bottom)
+### Section Order (top to bottom) - FINAL
 
-1. **App Section**
-2. **Aliases Section**
-3. **Push Section**
-4. **Send Push Notification Section** ← moved up
-5. **Emails Section**
-6. **SMS Section**
-7. **Tags Section**
-8. **Outcome Events Section**
-9. **In-App Messaging Section**
-10. **Send In-App Message Section** ← moved here
-11. **Triggers Section**
-12. **Track Event Section**
-13. **Location Section**
+1. **App Section** (App ID, Guidance Banner, Consent Toggle, Login/Logout)
+2. **Push Section** (Push ID, Enabled Toggle, Prompt Push button)
+3. **Send Push Notification Section** (Simple, With Image, Custom buttons)
+4. **In-App Messaging Section** (Pause toggle)
+5. **Send In-App Message Section** (Top Banner, Bottom Banner, Center Modal, Full Screen)
+6. **Aliases Section** (RecyclerView with Add/Remove All)
+7. **Emails Section** (RecyclerView with Add, collapsible >5 items)
+8. **SMS Section** (RecyclerView with Add, collapsible >5 items)
+9. **Tags Section** (RecyclerView with Add/Remove All)
+10. **Outcome Events Section** (Send Outcome dropdown)
+11. **Triggers Section** (RecyclerView with Add - IN MEMORY ONLY)
+12. **Track Event Section** (Track Event button)
+13. **Location Section** (Location Shared toggle, Prompt Location button)
 14. **Next Activity Button**
 
 ### Prompt 2.1 - App Section
@@ -126,7 +148,7 @@ App Section layout:
 1. App ID display (readonly TextView showing the OneSignal App ID)
 
 2. Sticky guidance banner below App ID:
-   - Text: "Add your own App ID and REST API Key, then rebuild to fully test all functionality."
+   - Text: "Add your own App ID, then rebuild to fully test all functionality."
    - Link text: "Get your keys at onesignal.com" (clickable, opens browser)
    - Light background color to stand out
 
@@ -147,23 +169,7 @@ App Section layout:
 6. LOGOUT USER button
 ```
 
-### Prompt 2.2 - Aliases Section
-
-```
-Aliases Section:
-- Section title: "Aliases" with info icon (ℹ️) for tooltip
-- RecyclerView showing key-value pairs
-- Each item shows: Label | ID with long-press to delete
-- Filter out "external_id" and "onesignal_id" from display (these are special)
-- "No Aliases Added" text when empty
-- ADD ALIAS button → dialog with empty Key and Value fields
-- REMOVE ALL ALIASES button:
-  - Only visible when at least one alias exists
-  - Red background color
-  - Removes all displayed aliases at once
-```
-
-### Prompt 2.3 - Push Section
+### Prompt 2.2 - Push Section
 
 ```
 Push Section:
@@ -176,7 +182,7 @@ Push Section:
   - Hide after permission is granted
 ```
 
-### Prompt 2.4 - Send Push Notification Section
+### Prompt 2.3 - Send Push Notification Section
 
 ```
 Send Push Notification Section (placed right after Push Section):
@@ -189,69 +195,17 @@ Send Push Notification Section (placed right after Push Section):
 Tooltip should explain each button type.
 ```
 
-### Prompt 2.5 - Emails Section
+### Prompt 2.4 - In-App Messaging Section
 
 ```
-Emails Section:
-- Section title: "Emails" with info icon for tooltip
-- RecyclerView showing email addresses
-- Each item shows email with long-press to delete
-- "No Emails Added" text when empty
-- ADD EMAIL button → dialog with empty email field
-- Collapse behavior when >5 items:
-  - Show first 5 items
-  - Show "X more available" text (clickable)
-  - Expand to show all when clicked
-```
-
-### Prompt 2.6 - SMS Section
-
-```
-SMS Section:
-- Section title: "SMSs" with info icon for tooltip
-- RecyclerView showing phone numbers
-- Each item shows phone number with long-press to delete
-- "No SMSs Added" text when empty
-- ADD SMS button → dialog with empty SMS field
-- Collapse behavior when >5 items (same as Emails)
-```
-
-### Prompt 2.7 - Tags Section
-
-```
-Tags Section:
-- Section title: "Tags" with info icon for tooltip
-- RecyclerView showing key-value pairs
-- Each item shows: Key | Value with long-press to delete
-- "No Tags Added" text when empty
-- ADD TAG button → dialog with empty Key and Value fields
-- REMOVE ALL TAGS button:
-  - Only visible when at least one tag exists
-  - Red background color
-```
-
-### Prompt 2.8 - Outcome Events Section
-
-```
-Outcome Events Section:
-- Section title: "Outcome Events" with info icon for tooltip
-- SEND OUTCOME button → opens dropdown dialog with 3 options:
-  1. Normal Outcome → shows name input field
-  2. Unique Outcome → shows name input field
-  3. Outcome with Value → shows name and value (float) input fields
-```
-
-### Prompt 2.9 - In-App Messaging Section
-
-```
-In-App Messaging Section:
+In-App Messaging Section (placed right after Send Push):
 - Section title: "In-App Messaging" with info icon for tooltip
 - Pause In-App Messages toggle switch:
   - Label: "Pause In-App Messages"
   - Description: "Toggle in-app message display"
 ```
 
-### Prompt 2.10 - Send In-App Message Section
+### Prompt 2.5 - Send In-App Message Section
 
 ```
 Send In-App Message Section (placed right after In-App Messaging):
@@ -270,7 +224,75 @@ Send In-App Message Section (placed right after In-App Messaging):
 Tooltip should explain each IAM type.
 ```
 
-### Prompt 2.11 - Triggers Section
+### Prompt 2.6 - Aliases Section
+
+```
+Aliases Section (placed after Send In-App Message):
+- Section title: "Aliases" with info icon (ℹ️) for tooltip
+- RecyclerView showing key-value pairs
+- Each item shows: Label | ID with long-press to delete
+- Filter out "external_id" and "onesignal_id" from display (these are special)
+- "No Aliases Added" text when empty
+- ADD ALIAS button → dialog with empty Key and Value fields
+- REMOVE ALL ALIASES button:
+  - Only visible when at least one alias exists
+  - Red background color
+  - Removes all displayed aliases at once
+```
+
+### Prompt 2.7 - Emails Section
+
+```
+Emails Section:
+- Section title: "Emails" with info icon for tooltip
+- RecyclerView showing email addresses
+- Each item shows email with long-press to delete
+- "No Emails Added" text when empty
+- ADD EMAIL button → dialog with empty email field
+- Collapse behavior when >5 items:
+  - Show first 5 items
+  - Show "X more available" text (clickable)
+  - Expand to show all when clicked
+```
+
+### Prompt 2.8 - SMS Section
+
+```
+SMS Section:
+- Section title: "SMSs" with info icon for tooltip
+- RecyclerView showing phone numbers
+- Each item shows phone number with long-press to delete
+- "No SMSs Added" text when empty
+- ADD SMS button → dialog with empty SMS field
+- Collapse behavior when >5 items (same as Emails)
+```
+
+### Prompt 2.9 - Tags Section
+
+```
+Tags Section:
+- Section title: "Tags" with info icon for tooltip
+- RecyclerView showing key-value pairs
+- Each item shows: Key | Value with long-press to delete
+- "No Tags Added" text when empty
+- ADD TAG button → dialog with empty Key and Value fields
+- REMOVE ALL TAGS button:
+  - Only visible when at least one tag exists
+  - Red background color
+```
+
+### Prompt 2.10 - Outcome Events Section
+
+```
+Outcome Events Section:
+- Section title: "Outcome Events" with info icon for tooltip
+- SEND OUTCOME button → opens dropdown dialog with 3 options:
+  1. Normal Outcome → shows name input field
+  2. Unique Outcome → shows name input field
+  3. Outcome with Value → shows name and value (float) input fields
+```
+
+### Prompt 2.11 - Triggers Section (IN MEMORY ONLY)
 
 ```
 Triggers Section:
@@ -279,6 +301,12 @@ Triggers Section:
 - Each item shows: Key | Value with long-press to delete
 - "No Triggers Added" text when empty
 - ADD TRIGGER button → dialog with empty Key and Value fields
+
+IMPORTANT: Triggers are stored IN MEMORY ONLY during the app session.
+- triggersList is a mutableListOf<Pair<String, String>>() in MainViewModel
+- Triggers are NOT persisted to SharedPreferences
+- Triggers are cleared when the app is killed/restarted
+- This is intentional - triggers are transient test data for IAM testing
 ```
 
 ### Prompt 2.12 - Track Event Section
@@ -307,52 +335,50 @@ Location Section:
 
 ## Phase 3: View User API Integration
 
-### Prompt 3.1 - REST API Client
-
-```
-Create OneSignalApiClient.kt (or add to existing OneSignalNotificationSender.kt):
-
-Add fetchUser() method:
-- Endpoint: GET https://api.onesignal.com/apps/{app_id}/users/by/onesignal_id/{onesignal_id}
-- Header: Authorization: Key {REST_API_KEY}
-- REST API key should be stored in BuildConfig (sourced from strings.xml placeholder)
-
-Response parsing:
-- identity map → aliases (but filter out "external_id" and "onesignal_id")
-- properties.tags map → tags
-- subscriptions array → filter by "type" field:
-  - type="Email" → extract "token" as email address
-  - type="SMS" → extract "token" as phone number
-```
-
-### Prompt 3.2 - Data Loading Flow
+### Prompt 3.1 - Data Loading Flow
 
 ```
 Loading indicator overlay:
-- Add ProgressBar overlay to activity_main.xml
+- Add ProgressBar overlay to activity_main.xml (covers entire screen with semi-transparent background)
 - Add isLoading LiveData to MainViewModel
+- Show/hide based on isLoading state
 
 On cold start:
 - Check if OneSignal.User.onesignalId is not null
-- If exists: show loading → call fetchUser() → populate UI → hide loading
-- If null: just show empty state
+- If exists: show loading → call fetchUserDataFromApi() → populate UI → hide loading
+- If null: just show empty state (no loading indicator)
 
 On login (LOGIN USER / SWITCH USER):
-- Show loading indicator
+- Show loading indicator immediately
 - Call OneSignal.login(externalUserId)
-- Call fetchUser() to get updated data
-- Hide loading indicator
+- Clear old user data (aliases, emails, sms, triggers)
+- Wait for onUserStateChange callback
+- onUserStateChange calls fetchUserDataFromApi()
+- fetchUserDataFromApi() populates UI and hides loading
 
 On logout:
+- Show loading indicator
 - Call OneSignal.logout()
-- Clear local lists (aliases, emails, sms)
-- Call fetchUser() for the new device-scoped user
+- Clear local lists (aliases, emails, sms, triggers)
+- Hide loading indicator
 
 On onUserStateChange callback:
-- Call fetchUser() to sync with server state
-- Update UI with new data
+- Call fetchUserDataFromApi() to sync with server state
+- Update UI with new data (aliases, tags, emails, sms)
 
-Note: getTags() from SDK still works, but aliases/emails/sms must come from API.
+Note: REST API key is NOT required for fetchUser endpoint.
+```
+
+### Prompt 3.2 - UserData Model
+
+```
+data class UserData(
+    val aliases: Map<String, String>,    // From identity object (filter out external_id, onesignal_id)
+    val tags: Map<String, String>,        // From properties.tags object
+    val emails: List<String>,             // From subscriptions where type="Email" → token
+    val smsNumbers: List<String>,         // From subscriptions where type="SMS" → token
+    val externalId: String?               // From identity.external_id
+)
 ```
 
 ---
@@ -387,7 +413,7 @@ Create app/src/main/assets/tooltip_content.json:
   },
   "triggers": {
     "title": "Triggers",
-    "description": "Local triggers that control when in-app messages are displayed."
+    "description": "Local triggers that control when in-app messages are displayed. Stored in memory only - cleared on app restart."
   },
   "outcomes": {
     "title": "Outcomes",
@@ -478,7 +504,41 @@ Example layout for section header:
 
 ---
 
-## Phase 5: Testing Values (Appium Compatibility)
+## Phase 5: Data Persistence
+
+### What IS Persisted (SharedPreferences)
+
+```
+SharedPreferenceUtil.kt stores:
+- OneSignal App ID
+- Privacy consent status
+- External user ID (for login state restoration)
+- Location shared status
+- In-app messaging paused status
+```
+
+### What is NOT Persisted (In-Memory Only)
+
+```
+MainViewModel holds in memory:
+- triggersList: MutableList<Pair<String, String>>
+  - Triggers are session-only
+  - Cleared on app restart
+  - Used for testing IAM trigger conditions
+
+- aliasesList, emailsList, smsNumbersList:
+  - Populated from REST API on each session
+  - Not cached locally
+  - Fetched fresh via fetchUserDataFromApi()
+
+- tagsList:
+  - Can be read from SDK via getTags()
+  - Also fetched from API for consistency
+```
+
+---
+
+## Phase 6: Testing Values (Appium Compatibility)
 
 ```
 All dialog input fields should be EMPTY by default.
@@ -518,10 +578,14 @@ Examples/OneSignalDemoV2/
 │   │   │   │   │   ├── NotificationType.kt
 │   │   │   │   │   └── InAppMessageType.kt
 │   │   │   │   ├── network/
-│   │   │   │   │   └── OneSignalApiClient.kt
+│   │   │   │   │   └── OneSignalService.kt    # REST API client
 │   │   │   │   └── repository/
 │   │   │   │       └── OneSignalRepository.kt
 │   │   │   ├── ui/
+│   │   │   │   ├── adapter/
+│   │   │   │   │   ├── PairListAdapter.kt     # For aliases, tags, triggers
+│   │   │   │   │   ├── SingleListAdapter.kt   # For emails, sms
+│   │   │   │   │   └── InAppMessageAdapter.kt # For IAM buttons
 │   │   │   │   ├── main/
 │   │   │   │   │   ├── MainActivity.kt
 │   │   │   │   │   └── MainViewModel.kt
@@ -539,8 +603,12 @@ Examples/OneSignalDemoV2/
 │   │       │   ├── dialog_add_pair.xml
 │   │       │   ├── dialog_single_input.xml
 │   │       │   ├── dialog_outcome.xml
+│   │       │   ├── dialog_track_event.xml
 │   │       │   ├── item_pair.xml
-│   │       │   └── item_single.xml
+│   │       │   ├── item_single.xml
+│   │       │   └── item_iam_button.xml
+│   │       ├── drawable/
+│   │       │   └── ic_info.xml
 │   │       └── values/
 │   │           ├── strings.xml
 │   │           └── colors.xml
@@ -561,10 +629,9 @@ Examples/OneSignalDemoV2/
 ```xml
 <!-- Replace with your own OneSignal App ID -->
 <string name="onesignal_app_id">YOUR_APP_ID_HERE</string>
-
-<!-- Replace with your own REST API Key for View User API -->
-<string name="onesignal_rest_api_key">YOUR_REST_API_KEY_HERE</string>
 ```
+
+Note: REST API key is NOT required for the fetchUser endpoint.
 
 ### Package Name
 
@@ -583,7 +650,7 @@ This app demonstrates all OneSignal Android SDK features:
 - Push notifications (subscription, sending)
 - Email and SMS subscriptions
 - Tags for segmentation
-- Triggers for in-app message targeting
+- Triggers for in-app message targeting (in-memory only)
 - Outcomes for conversion tracking
 - Event tracking
 - In-app messages (display and testing)
@@ -595,3 +662,4 @@ The app is designed to be:
 2. **Comprehensive** - All SDK features demonstrated
 3. **Clean** - MVVM architecture with centralized OneSignal code
 4. **Cross-platform ready** - Tooltip content in JSON for sharing across wrappers
+5. **Session-based triggers** - Triggers stored in memory only, cleared on restart
