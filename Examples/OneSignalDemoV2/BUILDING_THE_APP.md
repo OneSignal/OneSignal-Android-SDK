@@ -1,4 +1,4 @@
-# OneSignal Sample App V2 - Build Guide
+# OneSignal Sample App - Build Guide (DELETE ME LATER AND USE SDK-SHARED ANDROID PROMPT)
 
 This document contains all the prompts and requirements needed to build the OneSignal Sample App V2 from scratch. Give these prompts to an AI assistant or follow them manually to recreate the app.
 
@@ -397,69 +397,12 @@ data class UserData(
 ### Prompt 4.1 - Tooltip JSON Content
 
 ```
-Create app/src/main/assets/tooltip_content.json:
+Tooltip content is fetched at runtime from the sdk-shared repo. Do NOT bundle a local copy.
 
-{
-  "aliases": {
-    "title": "Aliases",
-    "description": "Aliases are alternative identifiers for the user. Use them to reference users by your own IDs (e.g., database ID, username)."
-  },
-  "push": {
-    "title": "Push Subscription", 
-    "description": "The push subscription ID for this device. Used to send targeted push notifications."
-  },
-  "emails": {
-    "title": "Email Subscriptions",
-    "description": "Email addresses associated with this user for email messaging campaigns."
-  },
-  "sms": {
-    "title": "SMS Subscriptions",
-    "description": "Phone numbers associated with this user for SMS messaging."
-  },
-  "tags": {
-    "title": "Tags",
-    "description": "Key-value data attached to the user for segmentation and personalization."
-  },
-  "triggers": {
-    "title": "Triggers",
-    "description": "Local triggers that control when in-app messages are displayed. Stored in memory only - cleared on app restart."
-  },
-  "outcomes": {
-    "title": "Outcomes",
-    "description": "Track user actions and conversions attributed to OneSignal messaging."
-  },
-  "inAppMessaging": {
-    "title": "In-App Messaging",
-    "description": "Display rich messages inside your app based on user behavior and segments."
-  },
-  "location": {
-    "title": "Location",
-    "description": "Share device location for location-based targeting and analytics."
-  },
-  "trackEvent": {
-    "title": "Track Event",
-    "description": "Track custom events with optional properties for analytics and segmentation."
-  },
-  "sendPushNotification": {
-    "title": "Send Push Notification",
-    "description": "Test push notifications by sending them to this device.",
-    "options": [
-      {"name": "Simple", "description": "Basic push notification with title and body text only."},
-      {"name": "With Image", "description": "Push notification with a large image attachment (big picture style)."},
-      {"name": "Custom", "description": "Create a custom notification with your own title and message content."}
-    ]
-  },
-  "sendInAppMessage": {
-    "title": "Send In-App Message",
-    "description": "Test in-app message display formats. These trigger local IAMs for testing UI layouts.",
-    "options": [
-      {"name": "Top Banner", "description": "Slides in from the top of the screen. Best for non-intrusive alerts and quick info."},
-      {"name": "Bottom Banner", "description": "Slides in from the bottom of the screen. Great for prompts and soft CTAs."},
-      {"name": "Center Modal", "description": "Centered popup dialog. Ideal for important announcements requiring user attention."},
-      {"name": "Full Screen", "description": "Takes over the entire screen. Best for onboarding, promotions, or rich media content."}
-    ]
-  }
-}
+URL:
+https://raw.githubusercontent.com/OneSignal/sdk-shared/main/demo/tooltip_content.json
+
+This file is maintained in the sdk-shared repo and shared across all platform demo apps.
 ```
 
 ### Prompt 4.2 - Tooltip Helper
@@ -470,24 +413,28 @@ Create TooltipHelper.kt:
 object TooltipHelper {
     private var tooltips: Map<String, TooltipData> = emptyMap()
     private var initialized = false
-    
+
+    private const val TOOLTIP_URL =
+        "https://raw.githubusercontent.com/OneSignal/sdk-shared/main/demo/tooltip_content.json"
+
     fun init(context: Context) {
         if (initialized) return
-        
-        // IMPORTANT: Load on background thread to avoid blocking app startup
+
+        // IMPORTANT: Fetch on background thread to avoid blocking app startup
         CoroutineScope(Dispatchers.IO).launch {
-            // Load tooltip_content.json from assets
+            // Fetch tooltip_content.json from TOOLTIP_URL using HttpURLConnection
             // Parse JSON into tooltips map
-            
+            // On failure (no network, etc.), leave tooltips empty — tooltips are non-critical
+
             withContext(Dispatchers.Main) {
                 // Update tooltips map on main thread
                 initialized = true
             }
         }
     }
-    
+
     fun getTooltip(key: String): TooltipData?
-    
+
     fun showTooltip(context: Context, key: String) {
         // Show AlertDialog with tooltip title, description, and options if present
     }
@@ -515,7 +462,7 @@ For each section header in activity_main.xml:
 Example layout for section header:
 <LinearLayout orientation="horizontal">
     <TextView text="@string/aliases" />
-    <ImageButton 
+    <ImageButton
         android:id="@+id/btn_info_aliases"
         android:src="@drawable/ic_info"
         android:background="?selectableItemBackgroundBorderless" />
@@ -593,8 +540,6 @@ Examples/OneSignalDemoV2/
 │       └── Plugins.kt           # Plugin IDs
 ├── app/
 │   ├── src/main/
-│   │   ├── assets/
-│   │   │   └── tooltip_content.json
 │   │   ├── java/com/onesignal/sdktest/
 │   │   │   ├── application/
 │   │   │   │   └── MainApplication.kt
@@ -661,6 +606,7 @@ Note: REST API key is NOT required for the fetchUser endpoint.
 ### Package Name
 
 The package name MUST be `com.onesignal.sdktest` to work with the existing:
+
 - `google-services.json` (Firebase configuration)
 - `agconnect-services.json` (Huawei configuration)
 
@@ -698,6 +644,7 @@ Notification permission is automatically requested when MainActivity loads:
 ## Summary
 
 This app demonstrates all OneSignal Android SDK features:
+
 - User management (login/logout, aliases)
 - Push notifications (subscription, sending, auto-permission prompt)
 - Email and SMS subscriptions
@@ -710,6 +657,7 @@ This app demonstrates all OneSignal Android SDK features:
 - Privacy consent management
 
 The app is designed to be:
+
 1. **Testable** - Empty dialogs for Appium automation
 2. **Comprehensive** - All SDK features demonstrated
 3. **Clean** - MVVM architecture with centralized OneSignal code
