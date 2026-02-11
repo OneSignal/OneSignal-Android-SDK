@@ -11,20 +11,26 @@
         android:id="@+id/app_bar_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:theme="@style/AppTheme.AppBarOverlay">
+        android:theme="@style/AppTheme.AppBarOverlay"
+        android:clipChildren="false"
+        android:clipToPadding="false">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="@color/colorPrimary"
+            android:clipChildren="false"
+            android:clipToPadding="false"
             app:popupTheme="@style/AppTheme.PopupOverlay"
             app:layout_scrollFlags="snap|scroll|enterAlways">
 
             <RelativeLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="start|center_vertical">
+                android:gravity="start|center_vertical"
+                android:clipChildren="false"
+                android:clipToPadding="false">
 
                 <ImageView
                     android:layout_width="148dp"
