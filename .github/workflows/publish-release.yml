@@ -178,7 +178,7 @@ jobs:
 
   wrapper_prs:
     needs: publish
-    uses: OneSignal/sdk-actions/.github/workflows/create-wrapper-prs.yml@main
+    uses: OneSignal/sdk-shared/.github/workflows/create-wrapper-prs.yml@main
     secrets:
       GH_PUSH_TOKEN: ${{ secrets.GH_PUSH_TOKEN }}
     with:

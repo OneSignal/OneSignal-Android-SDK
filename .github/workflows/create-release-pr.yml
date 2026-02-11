@@ -70,7 +70,7 @@ jobs:
           fetch-tags: true
 
       - name: Setup Git User
-        uses: OneSignal/sdk-actions/.github/actions/setup-git-user@main
+        uses: OneSignal/sdk-shared/.github/actions/setup-git-user@main
 
       - name: Create release branch from base
         run: |
