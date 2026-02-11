@@ -23,12 +23,21 @@ object OneSignalService {
     private const val ONESIGNAL_API_BASE_URL = "https://api.onesignal.com"
     
     private var appId: String = ""
+    private var restApiKey: String = ""
     
     fun setAppId(appId: String) {
         this.appId = appId
     }
     
     fun getAppId(): String = appId
+    
+    /**
+     * Set the REST API key for sending notifications.
+     * This is required for sending notifications via the REST API.
+     */
+    fun setRestApiKey(key: String) {
+        this.restApiKey = key
+    }
     
     /**
      * Send a notification to this device.
@@ -47,25 +56,36 @@ object OneSignalService {
             return@withContext false
         }
         
+        if (restApiKey.isEmpty()) {
+            Log.w(TAG, "Cannot send notification - REST API key not set")
+            return@withContext false
+        }
+        
         try {
             val notificationJson = JSONObject().apply {
                 put("app_id", appId)
-                put("include_player_ids", org.json.JSONArray().put(subscriptionId))
+                put("include_subscription_ids", org.json.JSONArray().put(subscriptionId))
                 put("headings", JSONObject().put("en", type.notificationTitle))
                 put("contents", JSONObject().put("en", type.notificationBody))
                 put("android_group", type.title)
                 put("android_led_color", "FFE9444E")
                 put("android_accent_color", "FFE9444E")
                 // Add big picture if available
-                type.bigPicture?.let { put("big_picture", it) }
+                type.bigPicture?.let { 
+                    put("big_picture", it)
+                    Log.d(TAG, "Adding big_picture: $it")
+                }
             }
+            
+            Log.d(TAG, "Sending notification: ${notificationJson.toString(2)}")
             
             val connection = (URL(ONESIGNAL_API_URL).openConnection() as HttpURLConnection).apply {
                 useCaches = false
                 connectTimeout = 30000
                 readTimeout = 30000
-                setRequestProperty("Accept", "application/vnd.onesignal.v1+json")
+                setRequestProperty("Accept", "application/json")
                 setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                setRequestProperty("Authorization", "Basic $restApiKey")
                 requestMethod = "POST"
                 doOutput = true
                 doInput = true
@@ -77,7 +97,7 @@ object OneSignalService {
             
             val responseCode = connection.responseCode
             
-            if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_ACCEPTED) {
+            if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_ACCEPTED || responseCode == HttpURLConnection.HTTP_CREATED) {
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
                 Log.d(TAG, "Notification sent successfully: $response")
                 return@withContext true
@@ -109,10 +129,15 @@ object OneSignalService {
             return@withContext false
         }
         
+        if (restApiKey.isEmpty()) {
+            Log.w(TAG, "Cannot send notification - REST API key not set")
+            return@withContext false
+        }
+        
         try {
             val notificationJson = JSONObject().apply {
                 put("app_id", appId)
-                put("include_player_ids", org.json.JSONArray().put(subscriptionId))
+                put("include_subscription_ids", org.json.JSONArray().put(subscriptionId))
                 put("headings", JSONObject().put("en", title))
                 put("contents", JSONObject().put("en", body))
                 put("android_led_color", "FFE9444E")
@@ -123,8 +148,9 @@ object OneSignalService {
                 useCaches = false
                 connectTimeout = 30000
                 readTimeout = 30000
-                setRequestProperty("Accept", "application/vnd.onesignal.v1+json")
+                setRequestProperty("Accept", "application/json")
                 setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                setRequestProperty("Authorization", "Basic $restApiKey")
                 requestMethod = "POST"
                 doOutput = true
                 doInput = true
@@ -136,7 +162,7 @@ object OneSignalService {
             
             val responseCode = connection.responseCode
             
-            if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_ACCEPTED) {
+            if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_ACCEPTED || responseCode == HttpURLConnection.HTTP_CREATED) {
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
                 Log.d(TAG, "Custom notification sent successfully: $response")
                 return@withContext true

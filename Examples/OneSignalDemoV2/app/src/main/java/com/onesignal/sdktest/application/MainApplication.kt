@@ -23,14 +23,8 @@ import com.onesignal.sdktest.util.SharedPreferenceUtil
 import com.onesignal.sdktest.util.TooltipHelper
 import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.state.UserChangedState
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 
 class MainApplication : MultiDexApplication() {
-
-    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     companion object {
         private const val TAG = "OneSignalExample"
@@ -54,8 +48,17 @@ class MainApplication : MultiDexApplication() {
             SharedPreferenceUtil.cacheOneSignalAppId(this, appId)
         }
 
-        // Initialize notification sender with app ID
+        // Initialize OneSignal Service with app ID and REST API key
         OneSignalService.setAppId(appId)
+        
+        // Set REST API key for sending notifications
+        val restApiKey = getString(R.string.onesignal_rest_api_key)
+        if (restApiKey != "YOUR_REST_API_KEY_HERE") {
+            OneSignalService.setRestApiKey(restApiKey)
+        } else {
+            Log.w(TAG, "REST API key not configured - notification sending will not work. " +
+                    "Add your REST API key to strings.xml")
+        }
         
         // Initialize tooltip helper
         TooltipHelper.init(this)

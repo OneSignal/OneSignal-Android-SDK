@@ -1,7 +1,6 @@
 package com.onesignal.sdktest.util
 
 import android.content.Context
-import androidx.appcompat.app.AlertDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -9,7 +8,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /**
- * Helper object for loading and displaying tooltip content from JSON.
+ * Helper object for loading tooltip content from JSON.
  * The tooltip content is stored in assets/tooltip_content.json for easy
  * sharing across SDK wrapper projects.
  */
@@ -68,30 +67,6 @@ object TooltipHelper {
      */
     fun getTooltip(key: String): TooltipData? {
         return tooltips[key]
-    }
-
-    /**
-     * Show a tooltip dialog for the given key.
-     */
-    fun showTooltip(context: Context, key: String) {
-        val tooltip = tooltips[key] ?: return
-        
-        val message = buildString {
-            append(tooltip.description)
-            
-            tooltip.options?.let { options ->
-                append("\n")
-                options.forEach { option ->
-                    append("\n• ${option.name}: ${option.description}")
-                }
-            }
-        }
-        
-        AlertDialog.Builder(context)
-            .setTitle(tooltip.title)
-            .setMessage(message)
-            .setPositiveButton("OK", null)
-            .show()
     }
 }
 

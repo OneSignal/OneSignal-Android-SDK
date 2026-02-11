@@ -6,19 +6,31 @@ object Dependencies {
     // AndroidX
     const val appcompat = "androidx.appcompat:appcompat:${Versions.appcompat}"
     const val coreKtx = "androidx.core:core-ktx:${Versions.coreKtx}"
-    const val constraintLayout = "androidx.constraintlayout:constraintlayout:${Versions.constraintLayout}"
-    const val cardview = "androidx.cardview:cardview:${Versions.cardview}"
-    const val vectorDrawable = "androidx.vectordrawable:vectordrawable:${Versions.vectorDrawable}"
     const val multidex = "androidx.multidex:multidex:${Versions.multidex}"
-    const val activityKtx = "androidx.activity:activity-ktx:${Versions.activityKtx}"
+
+    // Compose BOM
+    const val composeBom = "androidx.compose:compose-bom:${Versions.composeBom}"
+    
+    // Compose (versions managed by BOM)
+    const val composeUi = "androidx.compose.ui:ui"
+    const val composeUiGraphics = "androidx.compose.ui:ui-graphics"
+    const val composeUiToolingPreview = "androidx.compose.ui:ui-tooling-preview"
+    const val composeMaterial3 = "androidx.compose.material3:material3"
+    const val composeMaterialIcons = "androidx.compose.material:material-icons-extended"
+    const val composeUiTooling = "androidx.compose.ui:ui-tooling"
+    const val composeRuntime = "androidx.compose.runtime:runtime"
+    const val composeRuntimeLivedata = "androidx.compose.runtime:runtime-livedata"
+    
+    // Activity Compose
+    const val activityCompose = "androidx.activity:activity-compose:${Versions.activityCompose}"
+    
+    // Lifecycle Compose
+    const val lifecycleViewModelCompose = "androidx.lifecycle:lifecycle-viewmodel-compose:${Versions.lifecycleCompose}"
+    const val lifecycleRuntimeCompose = "androidx.lifecycle:lifecycle-runtime-compose:${Versions.lifecycleCompose}"
 
     // Lifecycle
     const val lifecycleViewModelKtx = "androidx.lifecycle:lifecycle-viewmodel-ktx:${Versions.lifecycle}"
-    const val lifecycleLiveDataKtx = "androidx.lifecycle:lifecycle-livedata-ktx:${Versions.lifecycle}"
     const val lifecycleRuntimeKtx = "androidx.lifecycle:lifecycle-runtime-ktx:${Versions.lifecycle}"
-
-    // Material
-    const val material = "com.google.android.material:material:${Versions.material}"
 
     // Google Play Services
     const val playServicesLocation = "com.google.android.gms:play-services-location:${Versions.playServicesLocation}"

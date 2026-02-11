@@ -6,6 +6,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.onesignal.OneSignal
+import com.onesignal.common.JSONUtils
+import com.onesignal.debug.LogLevel
+import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.IPermissionObserver
 import com.onesignal.sdktest.data.model.NotificationType
 import com.onesignal.sdktest.data.repository.OneSignalRepository
@@ -495,12 +498,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     }
 
     // Track Event
-    fun trackEvent(name: String, value: String?) {
+    fun trackEvent(name: String, properties: Map<String, Any>?) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.trackEvent(name, value)
+            repository.trackEvent(name, properties)
             withContext(Dispatchers.Main) {
-                val message = if (!value.isNullOrEmpty()) {
-                    "Event tracked: $name = $value"
+                val message = if (!properties.isNullOrEmpty()) {
+                    "Event tracked: $name with properties"
                 } else {
                     "Event tracked: $name"
                 }
@@ -609,4 +612,5 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         super.onCleared()
         OneSignal.User.pushSubscription.removeObserver(this)
     }
+
 }

@@ -30,7 +30,11 @@ android {
     }
 
     buildFeatures {
-        viewBinding = true
+        compose = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = Versions.composeCompiler
     }
 
     flavorDimensions += "default"
@@ -91,20 +95,28 @@ dependencies {
 
     // AndroidX
     implementation(Dependencies.multidex)
-    implementation(Dependencies.cardview)
     implementation(Dependencies.appcompat)
-    implementation(Dependencies.vectorDrawable)
     implementation(Dependencies.coreKtx)
-    implementation(Dependencies.constraintLayout)
-    implementation(Dependencies.activityKtx)
 
-    // Lifecycle (MVVM)
+    // Compose BOM
+    implementation(platform(Dependencies.composeBom))
+    implementation(Dependencies.composeUi)
+    implementation(Dependencies.composeUiGraphics)
+    implementation(Dependencies.composeUiToolingPreview)
+    implementation(Dependencies.composeMaterial3)
+    implementation(Dependencies.composeMaterialIcons)
+    implementation(Dependencies.composeRuntime)
+    implementation(Dependencies.composeRuntimeLivedata)
+    debugImplementation(Dependencies.composeUiTooling)
+
+    // Activity & Lifecycle Compose
+    implementation(Dependencies.activityCompose)
+    implementation(Dependencies.lifecycleViewModelCompose)
+    implementation(Dependencies.lifecycleRuntimeCompose)
+
+    // Lifecycle
     implementation(Dependencies.lifecycleViewModelKtx)
-    implementation(Dependencies.lifecycleLiveDataKtx)
     implementation(Dependencies.lifecycleRuntimeKtx)
-
-    // Material Design
-    implementation(Dependencies.material)
 
     // Google Play Services
     implementation(Dependencies.playServicesLocation)

@@ -15,20 +15,22 @@ object Versions {
     const val kotlin = "1.9.24"
     const val coroutines = "1.7.3"
 
+    // Compose
+    const val composeBom = "2024.02.00"
+    const val composeCompiler = "1.5.14"
+    const val activityCompose = "1.8.2"
+    const val lifecycleCompose = "2.7.0"
+
     // AndroidX
     const val appcompat = "1.5.1"
     const val coreKtx = "1.9.0"
-    const val constraintLayout = "2.1.4"
-    const val cardview = "1.0.0"
-    const val vectorDrawable = "1.1.0"
     const val multidex = "2.0.1"
-    const val activityKtx = "1.6.1"
 
     // Lifecycle
-    const val lifecycle = "2.5.1"
+    const val lifecycle = "2.7.0"
 
     // Material
-    const val material = "1.7.0"
+    const val material3 = "1.2.0"
 
     // Google Play Services
     const val playServicesLocation = "21.0.0"
