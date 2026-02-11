@@ -43,12 +43,12 @@ SMS operations:
 Tag operations:
 - addTag(key: String, value: String)
 - removeTag(key: String)
-- removeTags(keys: Collection<String>)
 - getTags(): Map<String, String>
 
 Trigger operations:
 - addTrigger(key: String, value: String)
 - removeTrigger(key: String)
+- clearTriggers(keys: Collection<String>)
 
 Outcome operations:
 - sendOutcome(name: String)
@@ -125,17 +125,17 @@ In MainViewModel.kt, implement observers:
 
 ### Section Order (top to bottom) - FINAL
 
-1. **App Section** (App ID, Guidance Banner, Consent Toggle, Login/Logout)
-2. **Push Section** (Push ID, Enabled Toggle, Prompt Push button)
+1. **App Section** (App ID, Guidance Banner, Consent Toggle, Logged-in-as display, Login/Logout)
+2. **Push Section** (Push ID, Enabled Toggle, Auto-prompts permission on load)
 3. **Send Push Notification Section** (Simple, With Image, Custom buttons)
 4. **In-App Messaging Section** (Pause toggle)
 5. **Send In-App Message Section** (Top Banner, Bottom Banner, Center Modal, Full Screen)
 6. **Aliases Section** (RecyclerView with Add/Remove All)
 7. **Emails Section** (RecyclerView with Add, collapsible >5 items)
 8. **SMS Section** (RecyclerView with Add, collapsible >5 items)
-9. **Tags Section** (RecyclerView with Add/Remove All)
+9. **Tags Section** (RecyclerView with Add, individual remove only)
 10. **Outcome Events Section** (Send Outcome dropdown)
-11. **Triggers Section** (RecyclerView with Add - IN MEMORY ONLY)
+11. **Triggers Section** (RecyclerView with Add/Clear Triggers - IN MEMORY ONLY)
 12. **Track Event Section** (Track Event button)
 13. **Location Section** (Location Shared toggle, Prompt Location button)
 14. **Next Activity Button**
@@ -158,13 +158,16 @@ App Section layout:
    - SwitchCompat control
    - NOT a blocking overlay - user can interact with app regardless of state
 
-4. LOGIN USER button:
+4. "Logged in as" display (ABOVE the buttons, only visible when logged in):
+   - Prominent green CardView background (#E8F5E9)
+   - "Logged in as:" label (16sp)
+   - External User ID displayed large and centered (22sp bold, green #2E7D32)
+   - Positioned ABOVE the Login/Switch User button
+
+5. LOGIN USER button:
    - Shows "LOGIN USER" when no user is logged in
    - Shows "SWITCH USER" when a user is logged in
    - Opens dialog with empty "External User Id" field
-
-5. External ID display (only visible when logged in):
-   - Shows current external user ID below login button
 
 6. LOGOUT USER button
 ```
@@ -274,12 +277,10 @@ SMS Section:
 Tags Section:
 - Section title: "Tags" with info icon for tooltip
 - RecyclerView showing key-value pairs
-- Each item shows: Key | Value with long-press to delete
+- Each item shows: Key | Value with X button to delete individually
 - "No Tags Added" text when empty
 - ADD TAG button → dialog with empty Key and Value fields
-- REMOVE ALL TAGS button:
-  - Only visible when at least one tag exists
-  - Red background color
+- NO "Remove All" button - tags are removed individually only
 ```
 
 ### Prompt 2.10 - Outcome Events Section
@@ -299,9 +300,13 @@ Outcome Events Section:
 Triggers Section:
 - Section title: "Triggers" with info icon for tooltip
 - RecyclerView showing key-value pairs
-- Each item shows: Key | Value with long-press to delete
+- Each item shows: Key | Value with X button to delete individually
 - "No Triggers Added" text when empty
 - ADD TRIGGER button → dialog with empty Key and Value fields
+- CLEAR TRIGGERS button:
+  - Only visible when at least 1 trigger exists
+  - Red background color
+  - Clears all triggers at once
 
 IMPORTANT: Triggers are stored IN MEMORY ONLY during the app session.
 - triggersList is a mutableListOf<Pair<String, String>>() in MainViewModel
@@ -343,10 +348,13 @@ Loading indicator overlay:
 - Add ProgressBar overlay to activity_main.xml (covers entire screen with semi-transparent background)
 - Add isLoading LiveData to MainViewModel
 - Show/hide based on isLoading state
+- IMPORTANT: Add 100ms delay after populating data before dismissing loading indicator
+  - This ensures UI (RecyclerViews, adapters) has time to render
+  - Use kotlinx.coroutines.delay(100) after setting all LiveData values
 
 On cold start:
 - Check if OneSignal.User.onesignalId is not null
-- If exists: show loading → call fetchUserDataFromApi() → populate UI → hide loading
+- If exists: show loading → call fetchUserDataFromApi() → populate UI → delay 100ms → hide loading
 - If null: just show empty state (no loading indicator)
 
 On login (LOGIN USER / SWITCH USER):
@@ -355,7 +363,7 @@ On login (LOGIN USER / SWITCH USER):
 - Clear old user data (aliases, emails, sms, triggers)
 - Wait for onUserStateChange callback
 - onUserStateChange calls fetchUserDataFromApi()
-- fetchUserDataFromApi() populates UI and hides loading
+- fetchUserDataFromApi() populates UI, delays 100ms, then hides loading
 
 On logout:
 - Show loading indicator
@@ -461,10 +469,21 @@ Create TooltipHelper.kt:
 
 object TooltipHelper {
     private var tooltips: Map<String, TooltipData> = emptyMap()
+    private var initialized = false
     
     fun init(context: Context) {
-        // Load tooltip_content.json from assets
-        // Parse JSON into tooltips map
+        if (initialized) return
+        
+        // IMPORTANT: Load on background thread to avoid blocking app startup
+        CoroutineScope(Dispatchers.IO).launch {
+            // Load tooltip_content.json from assets
+            // Parse JSON into tooltips map
+            
+            withContext(Dispatchers.Main) {
+                // Update tooltips map on main thread
+                initialized = true
+            }
+        }
     }
     
     fun getTooltip(key: String): TooltipData?
@@ -527,7 +546,12 @@ MainViewModel holds in memory:
   - Cleared on app restart
   - Used for testing IAM trigger conditions
 
-- aliasesList, emailsList, smsNumbersList:
+- aliasesList:
+  - Populated from REST API on each session start
+  - When user adds alias locally, added to list immediately (SDK syncs async)
+  - Fetched fresh via fetchUserDataFromApi() on login/app start
+
+- emailsList, smsNumbersList:
   - Populated from REST API on each session
   - Not cached locally
   - Fetched fresh via fetchUserDataFromApi()
@@ -644,14 +668,41 @@ If you change the package name, you must also update these files with your own F
 
 ---
 
+## Phase 7: Important Implementation Details
+
+### Alias Management
+
+```
+Aliases are managed with a hybrid approach:
+
+1. On app start/login: Fetched from REST API via fetchUserDataFromApi()
+2. When user adds alias locally:
+   - Call OneSignal.User.addAlias(label, id) - syncs to server async
+   - Immediately add to local aliasesList (don't wait for API)
+   - This ensures instant UI feedback while SDK syncs in background
+3. On next app launch: Fresh data from API includes the synced alias
+```
+
+### Notification Permission
+
+```
+Notification permission is automatically requested when MainActivity loads:
+- Call viewModel.promptPush() at end of onCreate()
+- This ensures prompt appears after user sees the app UI
+- PROMPT PUSH button remains as fallback if user initially denied
+- Button hidden once permission is granted
+```
+
+---
+
 ## Summary
 
 This app demonstrates all OneSignal Android SDK features:
 - User management (login/logout, aliases)
-- Push notifications (subscription, sending)
+- Push notifications (subscription, sending, auto-permission prompt)
 - Email and SMS subscriptions
-- Tags for segmentation
-- Triggers for in-app message targeting (in-memory only)
+- Tags for segmentation (individual remove only, no bulk remove)
+- Triggers for in-app message targeting (in-memory only, with Clear Triggers)
 - Outcomes for conversion tracking
 - Event tracking
 - In-app messages (display and testing)
@@ -664,3 +715,5 @@ The app is designed to be:
 3. **Clean** - MVVM architecture with centralized OneSignal code
 4. **Cross-platform ready** - Tooltip content in JSON for sharing across wrappers
 5. **Session-based triggers** - Triggers stored in memory only, cleared on restart
+6. **Responsive UI** - Loading indicator with delay to ensure UI populates before dismissing
+7. **Performant** - Tooltip JSON loaded on background thread
