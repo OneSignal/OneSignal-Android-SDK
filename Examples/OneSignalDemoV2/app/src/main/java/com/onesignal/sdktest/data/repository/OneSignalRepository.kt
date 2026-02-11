@@ -81,13 +81,6 @@ class OneSignalRepository {
         OneSignal.User.removeTag(key)
     }
 
-    fun removeAllTags(keys: Collection<String>) {
-        Log.d(TAG, "Removing all tags: $keys")
-        if (keys.isNotEmpty()) {
-            OneSignal.User.removeTags(keys)
-        }
-    }
-
     fun getTags(): Map<String, String> {
         return OneSignal.User.getTags()
     }
@@ -101,6 +94,13 @@ class OneSignalRepository {
     fun removeTrigger(key: String) {
         Log.d(TAG, "Removing trigger: $key")
         OneSignal.InAppMessages.removeTrigger(key)
+    }
+
+    fun clearTriggers(keys: Collection<String>) {
+        Log.d(TAG, "Clearing all triggers: $keys")
+        if (keys.isNotEmpty()) {
+            OneSignal.InAppMessages.removeTriggers(keys)
+        }
     }
 
     // Outcome operations

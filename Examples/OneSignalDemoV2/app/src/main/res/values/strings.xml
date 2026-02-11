@@ -52,7 +52,6 @@
     <string name="tags">Tags</string>
     <string name="no_tags_added">No Tags Added</string>
     <string name="add_tag">ADD TAG</string>
-    <string name="remove_all_tags">REMOVE ALL TAGS</string>
 
     <!-- Outcome Events -->
     <string name="outcome_events">Outcome Events</string>
@@ -75,6 +74,7 @@
     <string name="triggers">Triggers</string>
     <string name="no_triggers_added">No Triggers Added</string>
     <string name="add_trigger">ADD TRIGGER</string>
+    <string name="clear_triggers">CLEAR TRIGGERS</string>
 
     <!-- Track Event -->
     <string name="track_event">Track Event</string>

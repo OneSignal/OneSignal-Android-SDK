@@ -193,6 +193,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                         
                         android.util.Log.d("MainViewModel", "User data loaded from API: aliases=${aliasesList.size}, tags=${tagsList.size}, emails=${emailsList.size}, sms=${smsNumbersList.size}")
                         android.util.Log.d("MainViewModel", "LiveData values - aliases=${_aliases.value?.size}, tags=${_tags.value?.size}, emails=${_emails.value?.size}, sms=${_smsNumbers.value?.size}")
+                        
+                        // Small delay to let UI render before dismissing loading indicator
+                        kotlinx.coroutines.delay(100)
                     } else {
                         android.util.Log.w("MainViewModel", "Failed to fetch user data from API")
                     }
@@ -324,7 +327,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         viewModelScope.launch(Dispatchers.IO) {
             repository.addAlias(label, id)
             withContext(Dispatchers.Main) {
-                loadExistingAliases()
+                // Add to local list directly (SDK syncs to server asynchronously)
+                aliasesList.removeAll { it.first == label }
+                aliasesList.add(Pair(label, id))
+                refreshAliases()
                 showToast("Alias added: $label")
             }
         }
@@ -334,7 +340,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         viewModelScope.launch(Dispatchers.IO) {
             repository.removeAlias(label)
             withContext(Dispatchers.Main) {
-                loadExistingAliases()
+                aliasesList.removeAll { it.first == label }
+                refreshAliases()
                 showToast("Alias removed: $label")
             }
         }
@@ -345,7 +352,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             val labels = aliasesList.map { it.first }
             repository.removeAllAliases(labels)
             withContext(Dispatchers.Main) {
-                loadExistingAliases()
+                aliasesList.clear()
+                refreshAliases()
                 showToast("All aliases removed")
             }
         }
@@ -422,17 +430,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         }
     }
 
-    fun removeAllTags() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val keys = tagsList.map { it.first }
-            repository.removeAllTags(keys)
-            withContext(Dispatchers.Main) {
-                loadExistingTags()
-                showToast("All tags removed")
-            }
-        }
-    }
-
     // Trigger operations
     fun addTrigger(key: String, value: String) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -453,6 +450,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 triggersList.removeAll { it.first == key }
                 refreshTriggers()
                 showToast("Trigger removed: $key")
+            }
+        }
+    }
+
+    fun clearTriggers() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val keys = triggersList.map { it.first }
+            repository.clearTriggers(keys)
+            withContext(Dispatchers.Main) {
+                triggersList.clear()
+                refreshTriggers()
+                showToast("All triggers cleared")
             }
         }
     }

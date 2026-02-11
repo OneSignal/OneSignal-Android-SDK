@@ -206,14 +206,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        binding.btnRemoveAllTags.setOnClickListener {
-            viewModel.removeAllTags()
-        }
-
         binding.btnAddTrigger.setOnClickListener {
             showAddPairDialog(getString(R.string.add_trigger_title)) { key, value ->
                 viewModel.addTrigger(key, value)
             }
+        }
+
+        binding.btnClearTriggers.setOnClickListener {
+            viewModel.clearTriggers()
         }
 
         binding.btnSendOutcome.setOnClickListener {
@@ -322,7 +322,6 @@ class MainActivity : AppCompatActivity() {
             val hasItems = tags.isNotEmpty()
             binding.rvTags.visibility = if (hasItems) View.VISIBLE else View.GONE
             binding.tvNoTags.visibility = if (hasItems) View.GONE else View.VISIBLE
-            binding.layoutRemoveAllTags.visibility = if (hasItems) View.VISIBLE else View.GONE
         }
 
         // Triggers
@@ -330,6 +329,8 @@ class MainActivity : AppCompatActivity() {
             triggersAdapter.submitList(triggers)
             binding.rvTriggers.visibility = if (triggers.isNotEmpty()) View.VISIBLE else View.GONE
             binding.tvNoTriggers.visibility = if (triggers.isEmpty()) View.VISIBLE else View.GONE
+            // Show Clear Triggers when at least 1 trigger exists
+            binding.layoutClearTriggers.visibility = if (triggers.isNotEmpty()) View.VISIBLE else View.GONE
         }
 
         // In-App Messages Paused
