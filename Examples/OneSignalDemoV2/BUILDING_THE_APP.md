@@ -220,7 +220,7 @@ Send In-App Message Section (placed right after In-App Messaging):
   3. CENTER MODAL
   4. FULL SCREEN
 - Button styling:
-  - RED background color (#E9444E or similar)
+  - Primary theme color background (colorPrimary)
   - WHITE text
   - WHITE icon on the RIGHT side of the text
   - Full width of the card
