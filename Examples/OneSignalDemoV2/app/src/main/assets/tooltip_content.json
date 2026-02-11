@@ -1,43 +1,43 @@
 {
   "aliases": {
     "title": "Aliases",
-    "description": "Aliases are alternative identifiers for the user. Use them to reference users by your own IDs (e.g., database ID, username)."
+    "description": "Custom label:id pairs that let you reference users by your own identifiers (e.g., crm_user_id, database_id). An External ID must be set before aliases can be used."
   },
   "push": {
     "title": "Push Subscription",
-    "description": "The push subscription ID for this device. Used to send targeted push notifications."
+    "description": "The push subscription for this device. Enables push notifications, in-app messages, and Live Activities (iOS only)."
   },
   "emails": {
     "title": "Email Subscriptions",
-    "description": "Email addresses associated with this user for email messaging campaigns."
+    "description": "Email addresses associated with this user for transactional and marketing email messaging."
   },
   "sms": {
     "title": "SMS Subscriptions",
-    "description": "Phone numbers associated with this user for SMS messaging."
+    "description": "Phone numbers (in E.164 format) associated with this user for SMS and RCS messaging."
   },
   "tags": {
     "title": "Tags",
-    "description": "Key-value data attached to the user for segmentation and personalization."
+    "description": "Key-value string pairs attached to the user for segmentation and message personalization. Use tags for user properties like name, status, or preferences."
   },
   "triggers": {
     "title": "Triggers",
-    "description": "Local triggers that control when in-app messages are displayed."
+    "description": "Device-local key-value pairs that control when in-app messages are displayed. Triggers are not tags and are not sent to the server."
   },
   "outcomes": {
     "title": "Outcomes",
-    "description": "Track user actions and conversions attributed to OneSignal messaging."
+    "description": "Track user actions (count, value, or unique) attributed to push notifications to measure campaign impact."
   },
   "inAppMessaging": {
     "title": "In-App Messaging",
-    "description": "Display rich messages inside your app based on user behavior and segments."
+    "description": "Display targeted messages inside your app based on segments and triggers. Shown to all mobile subscriptions regardless of push opt-in status."
   },
   "location": {
     "title": "Location",
-    "description": "Share device location for location-based targeting and analytics."
+    "description": "Share device location (requires user permission) for location-based segmentation and messaging."
   },
   "trackEvent": {
     "title": "Track Event",
-    "description": "Track custom events with optional properties for analytics and segmentation."
+    "description": "Send custom events with optional properties to trigger Journeys, activate Wait Until steps, and power real-time personalized messaging."
   },
   "sendPushNotification": {
     "title": "Send Push Notification",
