@@ -41,8 +41,8 @@ class OneSignalRepository {
         OneSignal.User.removeAlias(label)
     }
 
-    fun removeAllAliases(labels: Collection<String>) {
-        Log.d(TAG, "Removing all aliases: $labels")
+    fun removeAliases(labels: Collection<String>) {
+        Log.d(TAG, "Removing aliases: $labels")
         if (labels.isNotEmpty()) {
             OneSignal.User.removeAliases(labels)
         }

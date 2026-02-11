@@ -7,36 +7,49 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 /**
  * Helper object for loading and displaying tooltip content from JSON.
- * The tooltip content is stored in assets/tooltip_content.json for easy
- * sharing across SDK wrapper projects.
+ * The tooltip content is fetched at runtime from the sdk-shared repo
+ * and shared across all platform demo apps.
  */
 object TooltipHelper {
 
     private var tooltips: Map<String, TooltipData> = emptyMap()
     private var initialized = false
 
+    private const val TOOLTIP_URL =
+        "https://raw.githubusercontent.com/OneSignal/sdk-shared/main/demo/tooltip_content.json"
+
     /**
-     * Initialize the tooltip helper by loading content from assets on a background thread.
+     * Initialize the tooltip helper by fetching content from the sdk-shared repo on a background thread.
      * Call this once during app startup (e.g., in Application.onCreate()).
+     * On failure (no network, etc.), tooltips are left empty — they are non-critical.
      */
     fun init(context: Context) {
         if (initialized) return
-        
+
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val json = context.assets.open("tooltip_content.json").bufferedReader().use { it.readText() }
+                val connection = URL(TOOLTIP_URL).openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+
+                val json = connection.inputStream.bufferedReader().use { it.readText() }
+                connection.disconnect()
+
                 val jsonObject = JSONObject(json)
-                
+
                 val tooltipMap = mutableMapOf<String, TooltipData>()
-                
+
                 jsonObject.keys().forEach { key ->
                     val tooltipJson = jsonObject.getJSONObject(key)
                     val title = tooltipJson.getString("title")
                     val description = tooltipJson.getString("description")
-                    
+
                     val options = if (tooltipJson.has("options")) {
                         val optionsArray = tooltipJson.getJSONArray("options")
                         (0 until optionsArray.length()).map { i ->
@@ -49,16 +62,16 @@ object TooltipHelper {
                     } else {
                         null
                     }
-                    
+
                     tooltipMap[key] = TooltipData(title, description, options)
                 }
-                
+
                 withContext(Dispatchers.Main) {
                     tooltips = tooltipMap
                     initialized = true
                 }
             } catch (e: Exception) {
-                android.util.Log.e("TooltipHelper", "Failed to load tooltip content", e)
+                android.util.Log.e("TooltipHelper", "Failed to fetch tooltip content", e)
             }
         }
     }

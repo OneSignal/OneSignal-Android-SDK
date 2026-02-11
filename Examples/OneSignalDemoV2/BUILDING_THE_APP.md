@@ -234,7 +234,7 @@ Tooltip should explain each IAM type.
 Aliases Section (placed after Send In-App Message):
 - Section title: "Aliases" with info icon (ℹ️) for tooltip
 - RecyclerView showing key-value pairs
-- Each item shows: Label | ID with long-press to delete
+- Each item shows: Label | ID with X button to delete
 - Filter out "external_id" and "onesignal_id" from display (these are special)
 - "No Aliases Added" text when empty
 - ADD ALIAS button → dialog with empty Key and Value fields
@@ -250,7 +250,7 @@ Aliases Section (placed after Send In-App Message):
 Emails Section:
 - Section title: "Emails" with info icon for tooltip
 - RecyclerView showing email addresses
-- Each item shows email with long-press to delete
+- Each item shows email with X button to delete
 - "No Emails Added" text when empty
 - ADD EMAIL button → dialog with empty email field
 - Collapse behavior when >5 items:
@@ -265,7 +265,7 @@ Emails Section:
 SMS Section:
 - Section title: "SMSs" with info icon for tooltip
 - RecyclerView showing phone numbers
-- Each item shows phone number with long-press to delete
+- Each item shows phone number with X button to delete
 - "No SMSs Added" text when empty
 - ADD SMS button → dialog with empty SMS field
 - Collapse behavior when >5 items (same as Emails)

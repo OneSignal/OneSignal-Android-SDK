@@ -185,7 +185,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnRemoveAllAliases.setOnClickListener {
-            viewModel.removeAllAliases()
+            viewModel.removeAliases()
         }
 
         binding.btnAddEmail.setOnClickListener {
