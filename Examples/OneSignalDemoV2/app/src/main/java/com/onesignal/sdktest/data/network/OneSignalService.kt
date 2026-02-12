@@ -70,6 +70,11 @@ object OneSignalService {
                 put("android_group", type.title)
                 put("android_led_color", "FF595CF2")
                 put("android_accent_color", "FF595CF2")
+                // Add large icon if available
+                type.largeIcon?.let { 
+                    put("large_icon", it)
+                    Log.d(TAG, "Adding large_icon: $it")
+                }
                 // Add big picture if available
                 type.bigPicture?.let { 
                     put("big_picture", it)
@@ -78,12 +83,14 @@ object OneSignalService {
             }
             
             Log.d(TAG, "Sending notification: ${notificationJson.toString(2)}")
+            Log.d(TAG, "Request URL: $ONESIGNAL_API_URL")
+            Log.d(TAG, "Using REST API key: ${restApiKey.take(8)}...")
             
             val connection = (URL(ONESIGNAL_API_URL).openConnection() as HttpURLConnection).apply {
                 useCaches = false
                 connectTimeout = 30000
                 readTimeout = 30000
-                setRequestProperty("Accept", "application/json")
+                setRequestProperty("Accept", "application/vnd.onesignal.v1+json")
                 setRequestProperty("Content-Type", "application/json; charset=UTF-8")
                 setRequestProperty("Authorization", "Basic $restApiKey")
                 requestMethod = "POST"
@@ -104,6 +111,7 @@ object OneSignalService {
             } else {
                 val errorResponse = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
                 Log.e(TAG, "Failed to send notification (HTTP $responseCode): $errorResponse")
+                Log.e(TAG, "Request body was: ${notificationJson.toString()}")
                 return@withContext false
             }
         } catch (e: Exception) {
@@ -148,7 +156,7 @@ object OneSignalService {
                 useCaches = false
                 connectTimeout = 30000
                 readTimeout = 30000
-                setRequestProperty("Accept", "application/json")
+                setRequestProperty("Accept", "application/vnd.onesignal.v1+json")
                 setRequestProperty("Content-Type", "application/json; charset=UTF-8")
                 setRequestProperty("Authorization", "Basic $restApiKey")
                 requestMethod = "POST"
