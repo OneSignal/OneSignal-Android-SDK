@@ -160,8 +160,8 @@ fun LogView(
                         .background(LogBackground)
                         .testTag("log_view_list")
                 ) {
-                    items(logs, key = { "${it.timestamp}_${it.message.hashCode()}" }) { entry ->
-                        LogEntryRow(entry = entry, index = logs.indexOf(entry))
+                    items(logs.size) { index ->
+                        LogEntryRow(entry = logs[index], index = index)
                     }
                 }
             }
