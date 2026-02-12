@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -32,11 +30,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.onesignal.sdktest.R
 import com.onesignal.sdktest.data.model.NotificationType
 import com.onesignal.sdktest.ui.components.CustomNotificationDialog
@@ -52,8 +53,8 @@ import com.onesignal.sdktest.ui.components.SingleInputDialog
 import com.onesignal.sdktest.ui.components.TooltipDialog
 import com.onesignal.sdktest.ui.components.TrackEventDialog
 import com.onesignal.sdktest.ui.secondary.SecondaryActivity
-import com.onesignal.sdktest.ui.theme.LightBackground
 import com.onesignal.sdktest.ui.theme.OneSignalRed
+import com.onesignal.sdktest.ui.theme.OneSignalRedDark
 import com.onesignal.sdktest.util.TooltipHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,7 +100,6 @@ fun MainScreen(viewModel: MainViewModel) {
     // Toast
     LaunchedEffect(toastMessage) {
         toastMessage?.let {
-            // In a real app, you'd use a Snackbar or custom toast composable
             viewModel.clearToast()
         }
     }
@@ -112,28 +112,45 @@ fun MainScreen(viewModel: MainViewModel) {
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Image(
-                                painter = painterResource(id = R.drawable.onesignal_rectangle),
-                                contentDescription = "OneSignal Logo",
-                                modifier = Modifier.height(28.dp),
-                                colorFilter = ColorFilter.tint(Color.White)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(OneSignalRed, OneSignalRedDark)
                             )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = OneSignalRed
+                        )
+                ) {
+                    TopAppBar(
+                        title = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.onesignal_rectangle),
+                                    contentDescription = "OneSignal Logo",
+                                    modifier = Modifier.height(24.dp),
+                                    colorFilter = ColorFilter.tint(Color.White)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    "SDK Test",
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Normal
+                                )
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent
+                        )
                     )
-                )
+                }
             }
         ) { paddingValues ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .background(LightBackground)
+                    .background(MaterialTheme.colorScheme.background)
             ) {
                 // Log view at top (fixed, not scrolling)
                 LogView(defaultExpanded = true)
@@ -144,7 +161,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         .weight(1f)
                         .verticalScroll(rememberScrollState())
                 ) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 
                 // === APP SECTION ===
                 AppSection(
@@ -259,6 +276,8 @@ fun MainScreen(viewModel: MainViewModel) {
                     onInfoClick = { showTooltipDialog = "location" }
                 )
                 
+                Spacer(modifier = Modifier.height(8.dp))
+                
                 // === NEXT ACTIVITY BUTTON ===
                 PrimaryButton(
                     text = "NEXT ACTIVITY",
@@ -267,7 +286,7 @@ fun MainScreen(viewModel: MainViewModel) {
                     }
                 )
                 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(24.dp))
                 }
             }
         }

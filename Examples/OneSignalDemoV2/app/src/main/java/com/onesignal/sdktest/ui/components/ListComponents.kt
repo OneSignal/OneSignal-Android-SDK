@@ -9,9 +9,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.outlined.RemoveCircleOutline
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,7 +41,7 @@ fun PairItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -55,16 +55,17 @@ fun PairItem(
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
         IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
             Icon(
-                imageVector = Icons.Default.Close,
+                imageVector = Icons.Outlined.RemoveCircleOutline,
                 contentDescription = "Delete",
-                tint = MaterialTheme.colorScheme.error
+                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                modifier = Modifier.size(20.dp)
             )
         }
     }
@@ -82,7 +83,7 @@ fun SingleItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -95,9 +96,10 @@ fun SingleItem(
         )
         IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
             Icon(
-                imageVector = Icons.Default.Close,
+                imageVector = Icons.Outlined.RemoveCircleOutline,
                 contentDescription = "Delete",
-                tint = MaterialTheme.colorScheme.error
+                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                modifier = Modifier.size(20.dp)
             )
         }
     }
@@ -114,13 +116,13 @@ fun EmptyState(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
+            .padding(vertical = 20.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
         )
     }
 }
@@ -151,12 +153,18 @@ fun CollapsibleSingleList(
             displayItems.forEachIndexed { index, item ->
                 SingleItem(value = item, onDelete = { onDelete(item) })
                 if (index < displayItems.lastIndex) {
-                    HorizontalDivider(color = DividerColor)
+                    HorizontalDivider(
+                        color = DividerColor,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
                 }
             }
             
             if (shouldCollapse) {
-                HorizontalDivider(color = DividerColor)
+                HorizontalDivider(
+                    color = DividerColor,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -166,14 +174,15 @@ fun CollapsibleSingleList(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (expanded) "Show less" else "${items.size - maxCollapsedItems} more available",
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = if (expanded) "Show less" else "${items.size - maxCollapsedItems} more",
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Icon(
                         imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
@@ -198,7 +207,10 @@ fun PairList(
             items.forEachIndexed { index, (key, value) ->
                 PairItem(key = key, value = value, onDelete = { onDelete(key) })
                 if (index < items.lastIndex) {
-                    HorizontalDivider(color = DividerColor)
+                    HorizontalDivider(
+                        color = DividerColor,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
                 }
             }
         }

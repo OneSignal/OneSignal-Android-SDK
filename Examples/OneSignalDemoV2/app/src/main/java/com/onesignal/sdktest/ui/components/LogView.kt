@@ -20,10 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,13 +43,13 @@ import com.onesignal.sdktest.util.LogEntry
 import com.onesignal.sdktest.util.LogLevel
 import com.onesignal.sdktest.util.LogManager
 
-private val LogBackground = Color(0xFF1E1E1E)
-private val LogHeaderBackground = Color(0xFF2D2D2D)
-private val LogDebugColor = Color(0xFF9CDCFE)
-private val LogInfoColor = Color(0xFFDCDCAA)
-private val LogWarnColor = Color(0xFFFFD700)
-private val LogErrorColor = Color(0xFFF44747)
-private val LogTimestampColor = Color(0xFF808080)
+private val LogBackground = Color(0xFF1A1B1E)
+private val LogHeaderBackground = Color(0xFF25262A)
+private val LogDebugColor = Color(0xFF82AAFF)
+private val LogInfoColor = Color(0xFFC3E88D)
+private val LogWarnColor = Color(0xFFFFCB6B)
+private val LogErrorColor = Color(0xFFFF5370)
+private val LogTimestampColor = Color(0xFF676E7B)
 
 /**
  * Collapsible log view that displays app logs at the top of the screen.
@@ -84,20 +81,21 @@ fun LogView(
                 .fillMaxWidth()
                 .background(LogHeaderBackground)
                 .clickable { isExpanded = !isExpanded }
-                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .padding(horizontal = 14.dp, vertical = 10.dp)
                 .testTag("log_view_header"),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "LOGS",
-                color = Color.White,
-                fontSize = 12.sp,
+                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace,
+                letterSpacing = 1.sp,
                 modifier = Modifier.testTag("log_view_title")
             )
             
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(6.dp))
             
             Text(
                 text = "(${logs.size})",
@@ -120,17 +118,18 @@ fun LogView(
                     modifier = Modifier
                         .clickable { LogManager.clear() }
                         .padding(4.dp)
-                        .height(16.dp)
+                        .size(14.dp)
                         .testTag("log_view_clear_button")
                 )
                 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(10.dp))
             }
             
             Icon(
                 imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                 contentDescription = if (isExpanded) "Collapse" else "Expand",
-                tint = Color.White
+                tint = Color.White.copy(alpha = 0.6f),
+                modifier = Modifier.size(18.dp)
             )
         }
         
@@ -149,7 +148,7 @@ fun LogView(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(LogBackground)
-                        .padding(12.dp)
+                        .padding(14.dp)
                         .testTag("log_view_empty")
                 )
             } else {
@@ -157,7 +156,7 @@ fun LogView(
                     state = listState,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(100.dp) // ~5 lines
+                        .height(100.dp)
                         .background(LogBackground)
                         .testTag("log_view_list")
                 ) {
@@ -167,8 +166,6 @@ fun LogView(
                 }
             }
         }
-        
-        HorizontalDivider(color = LogHeaderBackground, thickness = 1.dp)
     }
 }
 
@@ -184,7 +181,7 @@ private fun LogEntryRow(entry: LogEntry, index: Int) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .padding(horizontal = 14.dp, vertical = 4.dp)
             .testTag("log_entry_$index")
             .semantics { 
                 contentDescription = "Log $index: $levelText ${entry.message}" 
@@ -222,7 +219,7 @@ private fun LogEntryRow(entry: LogEntry, index: Int) {
         // Message
         Text(
             text = entry.message,
-            color = Color.White,
+            color = Color.White.copy(alpha = 0.85f),
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
             maxLines = 2,

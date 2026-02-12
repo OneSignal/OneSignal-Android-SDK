@@ -1,5 +1,6 @@
 package com.onesignal.sdktest.ui.main
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -35,7 +37,6 @@ import com.onesignal.sdktest.ui.components.PairList
 import com.onesignal.sdktest.ui.components.PrimaryButton
 import com.onesignal.sdktest.ui.components.SectionCard
 import com.onesignal.sdktest.ui.components.ToggleRow
-import com.onesignal.sdktest.ui.theme.CardBackground
 import com.onesignal.sdktest.ui.theme.DividerColor
 import com.onesignal.sdktest.ui.theme.OneSignalGreen
 import com.onesignal.sdktest.ui.theme.OneSignalGreenLight
@@ -60,14 +61,18 @@ fun AppSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("App-Id:", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                "App ID",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Text(
                 text = appId,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.widthIn(max = 200.dp)
@@ -75,22 +80,26 @@ fun AppSection(
         }
     }
     
+    Spacer(modifier = Modifier.height(8.dp))
+    
     // Guidance Banner
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp)
-            .padding(bottom = 12.dp),
-        colors = CardDefaults.cardColors(containerColor = WarningBackground)
+            .padding(horizontal = 16.dp),
+        colors = CardDefaults.cardColors(containerColor = WarningBackground),
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(1.dp, Color(0xFFFFE082).copy(alpha = 0.5f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(14.dp)) {
             Text(
                 "Add your own App ID, then rebuild to fully test all functionality.",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodySmall
             )
             Text(
                 "Get your keys at onesignal.com",
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
                 color = OneSignalRed,
                 modifier = Modifier
                     .padding(top = 4.dp)
@@ -99,13 +108,17 @@ fun AppSection(
         }
     }
     
+    Spacer(modifier = Modifier.height(8.dp))
+    
     // Privacy Consent Card
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp)
-            .padding(bottom = 12.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
+            .padding(horizontal = 16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         ToggleRow(
             label = "Privacy Consent",
@@ -117,12 +130,15 @@ fun AppSection(
     
     // Logged In As (shown above buttons when logged in)
     if (isLoggedIn) {
+        Spacer(modifier = Modifier.height(8.dp))
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp)
-                .padding(bottom = 12.dp),
-            colors = CardDefaults.cardColors(containerColor = OneSignalGreenLight)
+                .padding(horizontal = 16.dp),
+            colors = CardDefaults.cardColors(containerColor = OneSignalGreenLight),
+            shape = MaterialTheme.shapes.medium,
+            border = BorderStroke(1.dp, OneSignalGreen.copy(alpha = 0.2f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -131,14 +147,16 @@ fun AppSection(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    "Logged in as:",
-                    style = MaterialTheme.typography.bodyMedium
+                    "Logged in as",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     externalUserId ?: "",
-                    style = MaterialTheme.typography.headlineSmall.copy(
+                    style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 22.sp
+                        fontSize = 18.sp
                     ),
                     color = OneSignalGreen,
                     textAlign = TextAlign.Center,
@@ -148,6 +166,8 @@ fun AppSection(
             }
         }
     }
+    
+    Spacer(modifier = Modifier.height(8.dp))
     
     PrimaryButton(
         text = if (isLoggedIn) "SWITCH USER" else "LOGIN USER",
@@ -177,21 +197,35 @@ fun PushSection(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Push-Id:", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                "Push ID",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Text(
                 text = pushSubscriptionId ?: "Not Available",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.Medium,
+                    color = if (pushSubscriptionId != null) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    }
+                ),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.widthIn(max = 200.dp)
             )
         }
         
-        HorizontalDivider(color = DividerColor)
+        HorizontalDivider(
+            color = DividerColor,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
         
         // Enabled Toggle
         ToggleRow(
@@ -203,6 +237,7 @@ fun PushSection(
     }
     
     if (!hasPermission) {
+        Spacer(modifier = Modifier.height(8.dp))
         PrimaryButton(
             text = "PROMPT PUSH",
             onClick = onPromptPush
@@ -249,15 +284,19 @@ fun SendInAppMessageSection(
     onInfoClick: () -> Unit
 ) {
     SectionCard(title = "Send In-App Message", showCard = false, onInfoClick = onInfoClick) {
-        InAppMessageType.values().forEachIndexed { index, type ->
+        InAppMessageType.values().forEach { type ->
             Button(
                 onClick = { onSendMessage(type) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                    .height(48.dp),
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .height(44.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = OneSignalRed),
-                shape = MaterialTheme.shapes.medium
+                shape = RoundedCornerShape(10.dp),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 0.dp,
+                    pressedElevation = 0.dp
+                )
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -267,10 +306,18 @@ fun SendInAppMessageSection(
                         imageVector = type.icon,
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text(type.title)
+                    Text(
+                        type.title,
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp,
+                            letterSpacing = 0.8.sp
+                        )
+                    )
                 }
             }
         }
@@ -290,10 +337,11 @@ fun AliasesSection(
     SectionCard(title = "Aliases", onInfoClick = onInfoClick) {
         PairList(
             items = aliases,
-            emptyText = "No Aliases Added",
+            emptyText = "No aliases added",
             onDelete = onRemove
         )
     }
+    Spacer(modifier = Modifier.height(8.dp))
     PrimaryButton(text = "ADD", onClick = onAddClick)
     PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
     
@@ -313,10 +361,11 @@ fun EmailsSection(
     SectionCard(title = "Emails", onInfoClick = onInfoClick) {
         CollapsibleSingleList(
             items = emails,
-            emptyText = "No Emails Added",
+            emptyText = "No emails added",
             onDelete = onRemove
         )
     }
+    Spacer(modifier = Modifier.height(8.dp))
     PrimaryButton(text = "ADD EMAIL", onClick = onAddClick)
 }
 
@@ -328,13 +377,14 @@ fun SmsSection(
     onRemove: (String) -> Unit,
     onInfoClick: () -> Unit
 ) {
-    SectionCard(title = "SMSs", onInfoClick = onInfoClick) {
+    SectionCard(title = "SMS", onInfoClick = onInfoClick) {
         CollapsibleSingleList(
             items = smsNumbers,
-            emptyText = "No SMSs Added",
+            emptyText = "No SMS added",
             onDelete = onRemove
         )
     }
+    Spacer(modifier = Modifier.height(8.dp))
     PrimaryButton(text = "ADD SMS", onClick = onAddClick)
 }
 
@@ -351,10 +401,11 @@ fun TagsSection(
     SectionCard(title = "Tags", onInfoClick = onInfoClick) {
         PairList(
             items = tags,
-            emptyText = "No Tags Added",
+            emptyText = "No tags added",
             onDelete = onRemove
         )
     }
+    Spacer(modifier = Modifier.height(8.dp))
     PrimaryButton(text = "ADD", onClick = onAddClick)
     PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
     
@@ -388,10 +439,11 @@ fun TriggersSection(
     SectionCard(title = "Triggers", onInfoClick = onInfoClick) {
         PairList(
             items = triggers,
-            emptyText = "No Triggers Added",
+            emptyText = "No triggers added",
             onDelete = onRemove
         )
     }
+    Spacer(modifier = Modifier.height(8.dp))
     PrimaryButton(text = "ADD", onClick = onAddClick)
     PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
     
@@ -428,5 +480,6 @@ fun LocationSection(
             onCheckedChange = onLocationSharedChange
         )
     }
+    Spacer(modifier = Modifier.height(8.dp))
     PrimaryButton(text = "PROMPT LOCATION", onClick = onPromptLocation)
 }

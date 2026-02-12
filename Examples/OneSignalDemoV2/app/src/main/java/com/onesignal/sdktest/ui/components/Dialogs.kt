@@ -34,7 +34,9 @@ fun SingleInputDialog(
     
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+        },
         text = {
             OutlinedTextField(
                 value = value,
@@ -42,7 +44,8 @@ fun SingleInputDialog(
                 label = { Text(label) },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-                singleLine = true
+                singleLine = true,
+                shape = RoundedCornerShape(10.dp)
             )
         },
         confirmButton = {
@@ -50,14 +53,15 @@ fun SingleInputDialog(
                 onClick = { onConfirm(value) },
                 enabled = value.isNotBlank()
             ) {
-                Text("ADD")
+                Text("Add")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL")
+                Text("Cancel")
             }
-        }
+        },
+        shape = RoundedCornerShape(16.dp)
     )
 }
 
@@ -80,30 +84,32 @@ fun PairInputDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(24.dp),
-            tonalElevation = 6.dp
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+            shape = RoundedCornerShape(16.dp),
+            tonalElevation = 2.dp
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text(title, style = MaterialTheme.typography.headlineSmall)
-                Spacer(modifier = Modifier.height(16.dp))
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(20.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     OutlinedTextField(
                         value = key,
                         onValueChange = { key = it },
                         label = { Text(keyLabel) },
                         modifier = Modifier.weight(1f),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
                     )
                     OutlinedTextField(
                         value = value,
                         onValueChange = { value = it },
                         label = { Text(valueLabel) },
                         modifier = Modifier.weight(1f),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
                     )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
@@ -112,13 +118,13 @@ fun PairInputDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("CANCEL")
+                        Text("Cancel")
                     }
                     TextButton(
                         onClick = { onConfirm(key, value) },
                         enabled = key.isNotBlank() && value.isNotBlank()
                     ) {
-                        Text("ADD")
+                        Text("Add")
                     }
                 }
             }
@@ -146,13 +152,13 @@ fun MultiPairInputDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(24.dp),
-            tonalElevation = 6.dp
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+            shape = RoundedCornerShape(16.dp),
+            tonalElevation = 2.dp
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text(title, style = MaterialTheme.typography.headlineSmall)
-                Spacer(modifier = Modifier.height(16.dp))
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(20.dp))
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -162,7 +168,7 @@ fun MultiPairInputDialog(
                     pairs.forEachIndexed { index, (key, value) ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             OutlinedTextField(
@@ -174,7 +180,8 @@ fun MultiPairInputDialog(
                                 },
                                 label = { Text(keyLabel) },
                                 modifier = Modifier.weight(1f),
-                                singleLine = true
+                                singleLine = true,
+                                shape = RoundedCornerShape(10.dp)
                             )
                             OutlinedTextField(
                                 value = value,
@@ -185,7 +192,8 @@ fun MultiPairInputDialog(
                                 },
                                 label = { Text(valueLabel) },
                                 modifier = Modifier.weight(1f),
-                                singleLine = true
+                                singleLine = true,
+                                shape = RoundedCornerShape(10.dp)
                             )
                             if (pairs.size > 1) {
                                 IconButton(
@@ -196,7 +204,7 @@ fun MultiPairInputDialog(
                                     Icon(
                                         imageVector = Icons.Default.Close,
                                         contentDescription = "Remove",
-                                        tint = MaterialTheme.colorScheme.error
+                                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
                                     )
                                 }
                             }
@@ -214,7 +222,7 @@ fun MultiPairInputDialog(
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("ADD ROW")
+                        Text("Add Row")
                     }
                 }
                 Spacer(modifier = Modifier.height(24.dp))
@@ -223,13 +231,13 @@ fun MultiPairInputDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("CANCEL")
+                        Text("Cancel")
                     }
                     TextButton(
                         onClick = { onConfirm(pairs) },
                         enabled = allValid
                     ) {
-                        Text("ADD ALL")
+                        Text("Add All")
                     }
                 }
             }
@@ -251,7 +259,9 @@ fun MultiSelectRemoveDialog(
     
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+        },
         text = {
             Column(
                 modifier = Modifier
@@ -270,7 +280,7 @@ fun MultiSelectRemoveDialog(
                                     selectedKeys + key
                                 }
                             }
-                            .padding(vertical = 8.dp),
+                            .padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(
@@ -297,14 +307,15 @@ fun MultiSelectRemoveDialog(
                 onClick = { onConfirm(selectedKeys) },
                 enabled = selectedKeys.isNotEmpty()
             ) {
-                Text("REMOVE (${selectedKeys.size})")
+                Text("Remove (${selectedKeys.size})")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL")
+                Text("Cancel")
             }
-        }
+        },
+        shape = RoundedCornerShape(16.dp)
     )
 }
 
@@ -342,7 +353,9 @@ fun OutcomeDialog(
     
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Send Outcome") },
+        title = {
+            Text("Send Outcome", style = MaterialTheme.typography.titleMedium)
+        },
         text = {
             Column {
                 outcomeTypes.forEachIndexed { index, type ->
@@ -356,7 +369,8 @@ fun OutcomeDialog(
                         )
                         Text(
                             text = type,
-                            modifier = Modifier.padding(start = 8.dp)
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(start = 4.dp)
                         )
                     }
                 }
@@ -368,18 +382,20 @@ fun OutcomeDialog(
                     onValueChange = { outcomeName = it },
                     label = { Text("Outcome Name") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp)
                 )
                 
                 if (selectedType == 2) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     OutlinedTextField(
                         value = outcomeValue,
                         onValueChange = { outcomeValue = it },
                         label = { Text("Value") },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
                     )
                 }
             }
@@ -395,14 +411,15 @@ fun OutcomeDialog(
                 },
                 enabled = outcomeName.isNotBlank()
             ) {
-                Text("SEND")
+                Text("Send")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL")
+                Text("Cancel")
             }
-        }
+        },
+        shape = RoundedCornerShape(16.dp)
     )
 }
 
@@ -446,7 +463,9 @@ fun TrackEventDialog(
     
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Track Event") },
+        title = {
+            Text("Track Event", style = MaterialTheme.typography.titleMedium)
+        },
         text = {
             Column {
                 OutlinedTextField(
@@ -455,10 +474,11 @@ fun TrackEventDialog(
                     label = { Text("Event Name") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    isError = eventName.isBlank() && showError
+                    isError = eventName.isBlank() && showError,
+                    shape = RoundedCornerShape(10.dp)
                 )
                 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 
                 OutlinedTextField(
                     value = eventValue,
@@ -473,6 +493,7 @@ fun TrackEventDialog(
                     minLines = 2,
                     maxLines = 4,
                     isError = !isValueValid && eventValue.isNotBlank(),
+                    shape = RoundedCornerShape(10.dp),
                     supportingText = if (!isValueValid && eventValue.isNotBlank()) {
                         { 
                             Text(
@@ -495,14 +516,15 @@ fun TrackEventDialog(
                 },
                 enabled = eventName.isNotBlank() && isValueValid
             ) {
-                Text("TRACK")
+                Text("Track")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL")
+                Text("Cancel")
             }
-        }
+        },
+        shape = RoundedCornerShape(16.dp)
     )
 }
 
@@ -535,17 +557,22 @@ fun TooltipDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+        },
         text = {
             Column {
-                Text(description)
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodyMedium
+                )
                 options?.let { opts ->
                     Spacer(modifier = Modifier.height(12.dp))
                     opts.forEach { (name, desc) ->
                         Text(
                             text = "• $name: $desc",
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(vertical = 4.dp)
+                            modifier = Modifier.padding(vertical = 3.dp)
                         )
                     }
                 }
@@ -555,6 +582,7 @@ fun TooltipDialog(
             TextButton(onClick = onDismiss) {
                 Text("OK")
             }
-        }
+        },
+        shape = RoundedCornerShape(16.dp)
     )
 }

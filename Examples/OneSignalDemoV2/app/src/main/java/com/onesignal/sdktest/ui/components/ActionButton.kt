@@ -1,14 +1,20 @@
 package com.onesignal.sdktest.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.onesignal.sdktest.ui.theme.OneSignalRed
+
+private val ButtonShape = RoundedCornerShape(10.dp)
 
 /**
  * Primary action button (full width, colored background).
@@ -25,23 +31,33 @@ fun PrimaryButton(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-            .height(48.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .height(44.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = backgroundColor
+            containerColor = backgroundColor,
+            disabledContainerColor = backgroundColor.copy(alpha = 0.4f)
         ),
         enabled = enabled,
-        shape = MaterialTheme.shapes.medium
+        shape = ButtonShape,
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp
+        )
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelLarge
+            style = MaterialTheme.typography.labelLarge.copy(
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                letterSpacing = 0.8.sp
+            )
         )
     }
 }
 
 /**
- * Destructive button (red background).
+ * Destructive button (outlined red style).
  */
 @Composable
 fun DestructiveButton(
@@ -50,13 +66,29 @@ fun DestructiveButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
-    PrimaryButton(
-        text = text,
+    OutlinedButton(
         onClick = onClick,
-        modifier = modifier,
-        backgroundColor = OneSignalRed,
-        enabled = enabled
-    )
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .height(44.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = OneSignalRed
+        ),
+        enabled = enabled,
+        shape = ButtonShape,
+        border = BorderStroke(1.dp, if (enabled) OneSignalRed.copy(alpha = 0.5f) else OneSignalRed.copy(alpha = 0.2f))
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge.copy(
+                color = OneSignalRed,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                letterSpacing = 0.8.sp
+            )
+        )
+    }
 }
 
 /**
@@ -74,12 +106,16 @@ fun IconButton(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-            .height(48.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .height(44.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = backgroundColor
         ),
-        shape = MaterialTheme.shapes.medium
+        shape = ButtonShape,
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp
+        )
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -88,13 +124,19 @@ fun IconButton(
         ) {
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                    letterSpacing = 0.8.sp
+                ),
                 modifier = Modifier.padding(end = 8.dp)
             )
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color.White
+                tint = Color.White,
+                modifier = Modifier.size(18.dp)
             )
         }
     }
