@@ -2,7 +2,6 @@ package com.onesignal.sdktest.ui.main
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -329,14 +328,9 @@ fun AliasesSection(
             onDelete = onRemove
         )
         HorizontalDivider(color = DividerColor)
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Box(modifier = Modifier.weight(1f)) {
-                PrimaryButton(text = "ADD", onClick = onAddClick)
-            }
-            Box(modifier = Modifier.weight(1f)) {
-                PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
-            }
-        }
+        PrimaryButton(text = "ADD", onClick = onAddClick)
+        HorizontalDivider(color = DividerColor)
+        PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
         
         if (aliases.isNotEmpty()) {
             HorizontalDivider(color = DividerColor)
@@ -400,14 +394,9 @@ fun TagsSection(
             onDelete = onRemove
         )
         HorizontalDivider(color = DividerColor)
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Box(modifier = Modifier.weight(1f)) {
-                PrimaryButton(text = "ADD", onClick = onAddClick)
-            }
-            Box(modifier = Modifier.weight(1f)) {
-                PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
-            }
-        }
+        PrimaryButton(text = "ADD", onClick = onAddClick)
+        HorizontalDivider(color = DividerColor)
+        PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
         
         if (tags.isNotEmpty()) {
             HorizontalDivider(color = DividerColor)
@@ -445,25 +434,15 @@ fun TriggersSection(
             onDelete = onRemove
         )
         HorizontalDivider(color = DividerColor)
-        Row(modifier = Modifier.fillMaxWidth()) {
-            Box(modifier = Modifier.weight(1f)) {
-                PrimaryButton(text = "ADD", onClick = onAddClick)
-            }
-            Box(modifier = Modifier.weight(1f)) {
-                PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
-            }
-        }
+        PrimaryButton(text = "ADD", onClick = onAddClick)
+        HorizontalDivider(color = DividerColor)
+        PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
         
         if (triggers.isNotEmpty()) {
             HorizontalDivider(color = DividerColor)
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Box(modifier = Modifier.weight(1f)) {
-                    DestructiveButton(text = "REMOVE SELECTED", onClick = onRemoveSelected)
-                }
-                Box(modifier = Modifier.weight(1f)) {
-                    DestructiveButton(text = "CLEAR ALL", onClick = onClearAll)
-                }
-            }
+            DestructiveButton(text = "REMOVE SELECTED", onClick = onRemoveSelected)
+            HorizontalDivider(color = DividerColor)
+            DestructiveButton(text = "CLEAR ALL", onClick = onClearAll)
         }
     }
 }
