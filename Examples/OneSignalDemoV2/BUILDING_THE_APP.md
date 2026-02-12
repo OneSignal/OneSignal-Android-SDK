@@ -94,19 +94,16 @@ Create OneSignalService.kt object for REST API calls:
 
 Properties:
 - appId: String (set from MainApplication)
-- restApiKey: String (set from MainApplication, required for sending notifications)
 
 Methods:
 - setAppId(appId: String)
 - getAppId(): String
-- setRestApiKey(key: String)
 - sendNotification(type: NotificationType): Boolean
 - sendCustomNotification(title: String, body: String): Boolean
 - fetchUser(onesignalId: String): UserData?
 
 sendNotification endpoint:
 - POST https://onesignal.com/api/v1/notifications
-- REQUIRES Authorization header: "Basic $restApiKey"
 - Accept header: "application/vnd.onesignal.v1+json"
 - Uses include_subscription_ids (not include_player_ids)
 - Includes big_picture and large_icon for image notifications

@@ -51,15 +51,6 @@ class MainApplication : MultiDexApplication() {
         // Initialize OneSignal Service with app ID and REST API key
         OneSignalService.setAppId(appId)
         
-        // Set REST API key for sending notifications
-        val restApiKey = getString(R.string.onesignal_rest_api_key)
-        if (restApiKey != "YOUR_REST_API_KEY_HERE") {
-            OneSignalService.setRestApiKey(restApiKey)
-        } else {
-            Log.w(TAG, "REST API key not configured - notification sending will not work. " +
-                    "Add your REST API key to strings.xml")
-        }
-        
         // Initialize tooltip helper
         TooltipHelper.init(this)
 
