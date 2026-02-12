@@ -86,7 +86,8 @@
     <string name="track_event">Track Event</string>
     <string name="track_event_button">TRACK EVENT</string>
     <string name="event_name">Event Name</string>
-    <string name="event_value">Event Value (optional)</string>
+    <string name="event_properties">Properties (optional)</string>
+    <string name="event_properties_placeholder">{\"ABC\":123}</string>
 
     <!-- Location -->
     <string name="location">Location</string>

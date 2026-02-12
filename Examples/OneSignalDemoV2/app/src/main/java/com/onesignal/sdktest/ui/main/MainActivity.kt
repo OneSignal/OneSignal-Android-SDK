@@ -17,6 +17,7 @@ import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import org.json.JSONObject
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -614,24 +615,50 @@ class MainActivity : AppCompatActivity() {
     private fun showTrackEventDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_add_pair, null)
         val etName = dialogView.findViewById<EditText>(R.id.et_key)
-        val etValue = dialogView.findViewById<EditText>(R.id.et_value)
+        val etProperties = dialogView.findViewById<EditText>(R.id.et_value)
 
-        // Update hints for track event context
-        etName.hint = getString(R.string.event_name)
-        etValue.hint = getString(R.string.event_value)
+        dialogView.findViewById<TextView>(R.id.tv_key_label).text = getString(R.string.event_name)
+        dialogView.findViewById<TextView>(R.id.tv_value_label).text = getString(R.string.event_properties)
+        etProperties.hint = getString(R.string.event_properties_placeholder)
 
-        AlertDialog.Builder(this, R.style.AlertDialogTheme)
+        val dialog = AlertDialog.Builder(this, R.style.AlertDialogTheme)
             .setTitle(R.string.track_event)
             .setView(dialogView)
-            .setPositiveButton(R.string.send) { _, _ ->
-                val name = etName.text.toString().trim()
-                val value = etValue.text.toString().trim()
-                if (name.isNotEmpty()) {
-                    viewModel.trackEvent(name, value.ifEmpty { null })
-                }
-            }
+            .setPositiveButton(R.string.send, null)
             .setNegativeButton(R.string.cancel, null)
-            .show()
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val name = etName.text.toString().trim()
+                val propsText = etProperties.text.toString().trim()
+
+                if (name.isEmpty()) {
+                    etName.error = "Required"
+                    return@setOnClickListener
+                }
+
+                var properties: Map<String, Any?>? = null
+                if (propsText.isNotEmpty()) {
+                    try {
+                        val json = JSONObject(propsText)
+                        val map = mutableMapOf<String, Any?>()
+                        for (key in json.keys()) {
+                            map[key] = json.get(key)
+                        }
+                        properties = map
+                    } catch (e: Exception) {
+                        etProperties.error = "Invalid JSON"
+                        return@setOnClickListener
+                    }
+                }
+
+                viewModel.trackEvent(name, properties)
+                dialog.dismiss()
+            }
+        }
+
+        dialog.show()
     }
 
     private fun showCustomNotificationDialog() {

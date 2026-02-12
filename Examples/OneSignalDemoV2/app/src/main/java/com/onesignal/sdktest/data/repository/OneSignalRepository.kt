@@ -142,13 +142,8 @@ class OneSignalRepository {
     }
 
     // Track Event
-    fun trackEvent(name: String, value: String?) {
-        Log.d(TAG, "Tracking event: $name with value: $value")
-        val properties: Map<String, Any?>? = if (!value.isNullOrEmpty()) {
-            mapOf("value" to value)
-        } else {
-            null
-        }
+    fun trackEvent(name: String, properties: Map<String, Any?>?) {
+        Log.d(TAG, "Tracking event: $name with properties: $properties")
         OneSignal.User.trackEvent(name, properties)
     }
 

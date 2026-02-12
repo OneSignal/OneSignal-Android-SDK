@@ -568,12 +568,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     }
 
     // Track Event
-    fun trackEvent(name: String, value: String?) {
+    fun trackEvent(name: String, properties: Map<String, Any?>?) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.trackEvent(name, value)
+            repository.trackEvent(name, properties)
             withContext(Dispatchers.Main) {
-                val message = if (!value.isNullOrEmpty()) {
-                    "Event tracked: $name = $value"
+                val message = if (!properties.isNullOrEmpty()) {
+                    "Event tracked: $name with properties"
                 } else {
                     "Event tracked: $name"
                 }
