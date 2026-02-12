@@ -10,6 +10,7 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.LinearLayout
@@ -197,6 +198,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        binding.btnRemoveAliases.setOnClickListener {
+            val items = viewModel.aliases.value ?: emptyList()
+            showRemoveMultiDialog(getString(R.string.remove_aliases_title), items) { keys ->
+                viewModel.removeSelectedAliases(keys)
+            }
+        }
+
         binding.btnRemoveAllAliases.setOnClickListener {
             viewModel.removeAliases()
         }
@@ -225,6 +233,13 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        binding.btnRemoveTags.setOnClickListener {
+            val items = viewModel.tags.value ?: emptyList()
+            showRemoveMultiDialog(getString(R.string.remove_tags_title), items) { keys ->
+                viewModel.removeSelectedTags(keys)
+            }
+        }
+
         binding.btnAddTrigger.setOnClickListener {
             showAddPairDialog(getString(R.string.add_trigger_title)) { key, value ->
                 viewModel.addTrigger(key, value)
@@ -234,6 +249,13 @@ class MainActivity : AppCompatActivity() {
         binding.btnAddTriggers.setOnClickListener {
             showAddMultiPairDialog(getString(R.string.add_triggers_title)) { pairs ->
                 viewModel.addTriggers(pairs)
+            }
+        }
+
+        binding.btnRemoveTriggers.setOnClickListener {
+            val items = viewModel.triggers.value ?: emptyList()
+            showRemoveMultiDialog(getString(R.string.remove_triggers_title), items) { keys ->
+                viewModel.removeSelectedTriggers(keys)
             }
         }
 
@@ -325,6 +347,7 @@ class MainActivity : AppCompatActivity() {
             val hasItems = aliases.isNotEmpty()
             binding.rvAliases.visibility = if (hasItems) View.VISIBLE else View.GONE
             binding.tvNoAliases.visibility = if (hasItems) View.GONE else View.VISIBLE
+            binding.layoutRemoveAliases.visibility = if (hasItems) View.VISIBLE else View.GONE
             binding.layoutRemoveAllAliases.visibility = if (hasItems) View.VISIBLE else View.GONE
         }
 
@@ -347,6 +370,7 @@ class MainActivity : AppCompatActivity() {
             val hasItems = tags.isNotEmpty()
             binding.rvTags.visibility = if (hasItems) View.VISIBLE else View.GONE
             binding.tvNoTags.visibility = if (hasItems) View.GONE else View.VISIBLE
+            binding.layoutRemoveTags.visibility = if (hasItems) View.VISIBLE else View.GONE
         }
 
         // Triggers
@@ -354,7 +378,8 @@ class MainActivity : AppCompatActivity() {
             triggersAdapter.submitList(triggers)
             binding.rvTriggers.visibility = if (triggers.isNotEmpty()) View.VISIBLE else View.GONE
             binding.tvNoTriggers.visibility = if (triggers.isEmpty()) View.VISIBLE else View.GONE
-            // Show Clear Triggers when at least 1 trigger exists
+            // Show Remove/Clear Triggers when at least 1 trigger exists
+            binding.layoutRemoveTriggers.visibility = if (triggers.isNotEmpty()) View.VISIBLE else View.GONE
             binding.layoutClearTriggers.visibility = if (triggers.isNotEmpty()) View.VISIBLE else View.GONE
         }
 
@@ -533,6 +558,40 @@ class MainActivity : AppCompatActivity() {
         }
 
         dialog.show()
+    }
+
+    private fun showRemoveMultiDialog(
+        title: String,
+        items: List<Pair<String, String>>,
+        onConfirm: (Collection<String>) -> Unit
+    ) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_remove_multi, null)
+        val container = dialogView.findViewById<LinearLayout>(R.id.checkboxes_container)
+
+        val checkboxes = mutableListOf<Pair<CheckBox, String>>()
+
+        for ((key, value) in items) {
+            val rowView = LayoutInflater.from(this)
+                .inflate(R.layout.item_dialog_checkbox_row, container, false)
+            val cb = rowView.findViewById<CheckBox>(R.id.cb_item)
+            cb.text = "$key: $value"
+            container.addView(rowView)
+            checkboxes.add(Pair(cb, key))
+        }
+
+        AlertDialog.Builder(this, R.style.AlertDialogTheme)
+            .setTitle(title)
+            .setView(dialogView)
+            .setPositiveButton(R.string.confirm) { _, _ ->
+                val selectedKeys = checkboxes
+                    .filter { it.first.isChecked }
+                    .map { it.second }
+                if (selectedKeys.isNotEmpty()) {
+                    onConfirm(selectedKeys)
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun showSingleInputDialog(label: String, onAdd: (String) -> Unit) {

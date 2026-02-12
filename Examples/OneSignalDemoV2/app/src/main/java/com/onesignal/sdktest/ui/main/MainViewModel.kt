@@ -374,6 +374,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         }
     }
 
+    fun removeSelectedAliases(labels: Collection<String>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.removeAliases(labels)
+            withContext(Dispatchers.Main) {
+                aliasesList.removeAll { it.first in labels }
+                refreshAliases()
+                showToast("${labels.size} alias(es) removed")
+            }
+        }
+    }
+
     // Email operations
     fun addEmail(email: String) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -446,6 +457,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         }
     }
 
+    fun removeSelectedTags(keys: Collection<String>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.removeTags(keys)
+            withContext(Dispatchers.Main) {
+                loadExistingTags()
+                showToast("${keys.size} tag(s) removed")
+            }
+        }
+    }
+
     fun removeTag(key: String) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.removeTag(key)
@@ -480,6 +501,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 }
                 refreshTriggers()
                 showToast("${pairs.size} trigger(s) added")
+            }
+        }
+    }
+
+    fun removeSelectedTriggers(keys: Collection<String>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.clearTriggers(keys)
+            withContext(Dispatchers.Main) {
+                triggersList.removeAll { it.first in keys }
+                refreshTriggers()
+                showToast("${keys.size} trigger(s) removed")
             }
         }
     }

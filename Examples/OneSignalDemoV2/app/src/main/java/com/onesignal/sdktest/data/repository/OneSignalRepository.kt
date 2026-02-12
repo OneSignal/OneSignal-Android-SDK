@@ -91,6 +91,13 @@ class OneSignalRepository {
         OneSignal.User.removeTag(key)
     }
 
+    fun removeTags(keys: Collection<String>) {
+        Log.d(TAG, "Removing tags: $keys")
+        if (keys.isNotEmpty()) {
+            OneSignal.User.removeTags(keys)
+        }
+    }
+
     fun getTags(): Map<String, String> {
         return OneSignal.User.getTags()
     }
