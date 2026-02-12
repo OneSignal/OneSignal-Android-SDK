@@ -273,7 +273,7 @@ fun SendPushSection(
     SectionCard(title = "Send Push Notification", showCard = false, onInfoClick = onInfoClick) {
         PrimaryButton(text = "SIMPLE", onClick = onSimpleClick)
         PrimaryButton(text = "WITH IMAGE", onClick = onImageClick)
-        OutlineButton(text = "CUSTOM", onClick = onCustomClick)
+        PrimaryButton(text = "CUSTOM", onClick = onCustomClick)
     }
 }
 
