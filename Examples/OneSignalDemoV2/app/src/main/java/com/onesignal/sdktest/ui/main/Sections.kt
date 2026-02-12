@@ -52,13 +52,8 @@ fun AppSection(
     onConsentRequiredChange: (Boolean) -> Unit,
     privacyConsentGiven: Boolean,
     onConsentChange: (Boolean) -> Unit,
-    externalUserId: String?,
-    onLoginClick: () -> Unit,
-    onLogoutClick: () -> Unit,
     onGetKeysClick: () -> Unit
 ) {
-    val isLoggedIn = !externalUserId.isNullOrEmpty()
-    
     SectionCard(title = "App") {
         // App ID
         Row(
@@ -136,53 +131,69 @@ fun AppSection(
             )
         }
     }
-    
-    // Logged In As (shown above buttons when logged in)
-    if (isLoggedIn) {
-        Spacer(modifier = Modifier.height(8.dp))
-        Card(
+}
+
+// === USER SECTION ===
+@Composable
+fun UserSection(
+    externalUserId: String?,
+    onLoginClick: () -> Unit,
+    onLogoutClick: () -> Unit
+) {
+    val isLoggedIn = !externalUserId.isNullOrEmpty()
+
+    SectionCard(title = "User") {
+        // Status
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            colors = CardDefaults.cardColors(containerColor = OneSignalGreenLight),
-            shape = MaterialTheme.shapes.medium,
-            border = BorderStroke(1.dp, OneSignalGreen.copy(alpha = 0.2f)),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    "Logged in as",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            Text(
+                "Status",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = if (isLoggedIn) "Logged In" else "Anonymous",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.Medium,
+                    color = if (isLoggedIn) OneSignalGreen else MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    externalUserId ?: "",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    ),
-                    color = OneSignalGreen,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            )
+        }
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+        // External ID
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "External ID",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = externalUserId ?: "—",
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
-    
+
     Spacer(modifier = Modifier.height(8.dp))
-    
+
     PrimaryButton(
         text = if (isLoggedIn) "SWITCH USER" else "LOGIN USER",
         onClick = onLoginClick
     )
-    
+
     if (isLoggedIn) {
         OutlineButton(
             text = "LOGOUT USER",

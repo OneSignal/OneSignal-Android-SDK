@@ -30,7 +30,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
@@ -54,7 +53,7 @@ import com.onesignal.sdktest.ui.components.TooltipDialog
 import com.onesignal.sdktest.ui.components.TrackEventDialog
 import com.onesignal.sdktest.ui.secondary.SecondaryActivity
 import com.onesignal.sdktest.ui.theme.OneSignalRed
-import com.onesignal.sdktest.ui.theme.OneSignalRedDark
+
 import com.onesignal.sdktest.util.TooltipHelper
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,38 +103,28 @@ fun MainScreen(viewModel: MainViewModel) {
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             topBar = {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(OneSignalRed, OneSignalRedDark)
+                TopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Image(
+                                painter = painterResource(id = R.drawable.onesignal_rectangle),
+                                contentDescription = "OneSignal Logo",
+                                modifier = Modifier.height(24.dp),
+                                colorFilter = ColorFilter.tint(Color.White)
                             )
-                        )
-                ) {
-                    TopAppBar(
-                        title = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Image(
-                                    painter = painterResource(id = R.drawable.onesignal_rectangle),
-                                    contentDescription = "OneSignal Logo",
-                                    modifier = Modifier.height(24.dp),
-                                    colorFilter = ColorFilter.tint(Color.White)
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    "SDK Test",
-                                    color = Color.White.copy(alpha = 0.7f),
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Normal
-                                )
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color.Transparent
-                        )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                "Sample App",
+                                color = Color.White.copy(alpha = 0.7f),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Normal
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = OneSignalRed
                     )
-                }
+                )
             }
         ) { paddingValues ->
             Column(
@@ -162,12 +151,16 @@ fun MainScreen(viewModel: MainViewModel) {
                     onConsentRequiredChange = { viewModel.setConsentRequired(it) },
                     privacyConsentGiven = privacyConsentGiven,
                     onConsentChange = { viewModel.setPrivacyConsent(it) },
-                    externalUserId = externalUserId,
-                    onLoginClick = { showLoginDialog = true },
-                    onLogoutClick = { viewModel.logoutUser() },
                     onGetKeysClick = {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://onesignal.com")))
                     }
+                )
+                
+                // === USER SECTION ===
+                UserSection(
+                    externalUserId = externalUserId,
+                    onLoginClick = { showLoginDialog = true },
+                    onLogoutClick = { viewModel.logoutUser() }
                 )
                 
                 // === PUSH SECTION ===
