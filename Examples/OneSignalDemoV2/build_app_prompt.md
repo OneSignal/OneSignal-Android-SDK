@@ -123,6 +123,9 @@ In MainApplication.kt, set up OneSignal listeners:
 - INotificationClickListener
 - INotificationLifecycleListener (with preventDefault() for async display testing)
 - IUserStateObserver (log when user state changes)
+- After registering listeners, restore cached SDK states from SharedPreferences:
+  - OneSignal.InAppMessages.paused = cached paused status
+  - OneSignal.Location.isShared = cached location shared status
 
 In MainViewModel.kt, implement observers:
 - IPushSubscriptionObserver - react to push subscription changes
@@ -205,6 +208,7 @@ Send Push Notification Section (placed right after Push Section):
 - Three buttons in a card:
   1. SIMPLE - sends basic notification with title/body
   2. WITH IMAGE - sends notification with big picture
+     (use https://media.onesignal.com/automated_push_templates/ratings_template.png)
   3. CUSTOM - opens dialog for custom title and body
 
 Tooltip should explain each button type.
@@ -343,11 +347,11 @@ IMPORTANT: Triggers are stored IN MEMORY ONLY during the app session.
 Track Event Section:
 - Section title: "Track Event" with info icon for tooltip
 - TRACK EVENT button → opens TrackEventDialog with:
-  - Event Name field (required)
-  - Properties field (optional, JSON format)
-    - Inline validation: shows error if JSON is invalid
-    - Placeholder text: {"key": "value"}
-    - Parsed to Map<String, Any>? before sending
+  - "Event Name" label + empty input field (required, shows "Required" error if empty on submit)
+  - "Properties (optional, JSON)" label + input field with placeholder hint {"ABC":123}
+    - If non-empty and not valid JSON, shows "Invalid JSON" error on the field and dialog stays open
+    - If valid JSON, parsed via JSONObject and converted to Map<String, Any?> for the SDK call
+    - If empty, passes null
   - TRACK button disabled until name is filled AND JSON is valid (or empty)
 - Calls OneSignal.User.trackEvent(name, properties)
 ```
@@ -420,72 +424,15 @@ data class UserData(
 
 ## Phase 4: Info Tooltips
 
-### Prompt 4.1 - Tooltip JSON Content
+### Prompt 4.1 - Tooltip Content (Remote)
 
 ```
-Create app/src/main/assets/tooltip_content.json:
+Tooltip content is fetched at runtime from the sdk-shared repo. Do NOT bundle a local copy.
 
-{
-  "aliases": {
-    "title": "Aliases",
-    "description": "Aliases are alternative identifiers for the user. Use them to reference users by your own IDs (e.g., database ID, username)."
-  },
-  "push": {
-    "title": "Push Subscription", 
-    "description": "The push subscription ID for this device. Used to send targeted push notifications."
-  },
-  "emails": {
-    "title": "Email Subscriptions",
-    "description": "Email addresses associated with this user for email messaging campaigns."
-  },
-  "sms": {
-    "title": "SMS Subscriptions",
-    "description": "Phone numbers associated with this user for SMS messaging."
-  },
-  "tags": {
-    "title": "Tags",
-    "description": "Key-value data attached to the user for segmentation and personalization."
-  },
-  "triggers": {
-    "title": "Triggers",
-    "description": "Local triggers that control when in-app messages are displayed. Stored in memory only - cleared on app restart."
-  },
-  "outcomes": {
-    "title": "Outcomes",
-    "description": "Track user actions and conversions attributed to OneSignal messaging."
-  },
-  "inAppMessaging": {
-    "title": "In-App Messaging",
-    "description": "Display rich messages inside your app based on user behavior and segments."
-  },
-  "location": {
-    "title": "Location",
-    "description": "Share device location for location-based targeting and analytics."
-  },
-  "trackEvent": {
-    "title": "Track Event",
-    "description": "Track custom events with optional properties for analytics and segmentation."
-  },
-  "sendPushNotification": {
-    "title": "Send Push Notification",
-    "description": "Test push notifications by sending them to this device.",
-    "options": [
-      {"name": "Simple", "description": "Basic push notification with title and body text only."},
-      {"name": "With Image", "description": "Push notification with a large image attachment (big picture style)."},
-      {"name": "Custom", "description": "Create a custom notification with your own title and message content."}
-    ]
-  },
-  "sendInAppMessage": {
-    "title": "Send In-App Message",
-    "description": "Test in-app message display formats. These trigger local IAMs for testing UI layouts.",
-    "options": [
-      {"name": "Top Banner", "description": "Slides in from the top of the screen. Best for non-intrusive alerts and quick info."},
-      {"name": "Bottom Banner", "description": "Slides in from the bottom of the screen. Great for prompts and soft CTAs."},
-      {"name": "Center Modal", "description": "Centered popup dialog. Ideal for important announcements requiring user attention."},
-      {"name": "Full Screen", "description": "Takes over the entire screen. Best for onboarding, promotions, or rich media content."}
-    ]
-  }
-}
+URL:
+https://raw.githubusercontent.com/OneSignal/sdk-shared/main/demo/tooltip_content.json
+
+This file is maintained in the sdk-shared repo and shared across all platform demo apps.
 ```
 
 ### Prompt 4.2 - Tooltip Helper
@@ -496,27 +443,27 @@ Create TooltipHelper.kt:
 object TooltipHelper {
     private var tooltips: Map<String, TooltipData> = emptyMap()
     private var initialized = false
-    
+
+    private const val TOOLTIP_URL =
+        "https://raw.githubusercontent.com/OneSignal/sdk-shared/main/demo/tooltip_content.json"
+
     fun init(context: Context) {
         if (initialized) return
-        
-        // IMPORTANT: Load on background thread to avoid blocking app startup
+
+        // IMPORTANT: Fetch on background thread to avoid blocking app startup
         CoroutineScope(Dispatchers.IO).launch {
-            // Load tooltip_content.json from assets
+            // Fetch tooltip_content.json from TOOLTIP_URL using HttpURLConnection
             // Parse JSON into tooltips map
-            
+            // On failure (no network, etc.), leave tooltips empty — tooltips are non-critical
+
             withContext(Dispatchers.Main) {
                 // Update tooltips map on main thread
                 initialized = true
             }
         }
     }
-    
+
     fun getTooltip(key: String): TooltipData?
-    
-    fun showTooltip(context: Context, key: String) {
-        // Show AlertDialog with tooltip title, description, and options if present
-    }
 }
 
 data class TooltipData(
@@ -531,26 +478,31 @@ data class TooltipOption(
 )
 ```
 
-### Prompt 4.3 - Tooltip UI Integration
+### Prompt 4.3 - Tooltip UI Integration (Compose)
 
 ```
-For each section header in activity_main.xml:
-- Add an ImageButton with info icon (ic_info or similar) next to the section title
-- On click, call TooltipHelper.showTooltip(context, "sectionKey")
+For each section, pass an onInfoClick callback to SectionCard:
+- SectionCard has an optional info icon that calls onInfoClick when tapped
+- In MainScreen, wire onInfoClick to show a TooltipDialog composable
+- TooltipDialog displays title, description, and options (if present)
 
-Example layout for section header:
-<LinearLayout orientation="horizontal">
-    <TextView text="@string/aliases" />
-    <ImageButton 
-        android:id="@+id/btn_info_aliases"
-        android:src="@drawable/ic_info"
-        android:background="?selectableItemBackgroundBorderless" />
-</LinearLayout>
+Example in MainScreen.kt:
+AliasesSection(
+    ...,
+    onInfoClick = { showTooltipDialog = "aliases" }
+)
+
+if (showTooltipDialog != null) {
+    TooltipDialog(
+        tooltipKey = showTooltipDialog!!,
+        onDismiss = { showTooltipDialog = null }
+    )
+}
 ```
 
 ---
 
-## Phase 5: Data Persistence
+## Phase 5: Data Persistence & Initialization
 
 ### What IS Persisted (SharedPreferences)
 
@@ -561,6 +513,29 @@ SharedPreferenceUtil.kt stores:
 - External user ID (for login state restoration)
 - Location shared status
 - In-app messaging paused status
+```
+
+### Initialization Flow
+
+```
+On app startup, state is restored in two layers:
+
+1. MainApplication.kt restores SDK state from SharedPreferences cache:
+   - OneSignal.InAppMessages.paused = SharedPreferenceUtil.getCachedInAppMessagingPausedStatus(context)
+   - OneSignal.Location.isShared = SharedPreferenceUtil.getCachedLocationSharedStatus(context)
+   This ensures the SDK has the correct state before any UI is created.
+
+2. MainViewModel.loadInitialState() reads UI state from the SDK (not SharedPreferences):
+   - _privacyConsentGiven from repository.getPrivacyConsent() (reads OneSignal.consentGiven)
+   - _inAppMessagesPaused from repository.isInAppMessagesPaused() (reads OneSignal.InAppMessages.paused)
+   - _locationShared from repository.isLocationShared() (reads OneSignal.Location.isShared)
+   - _externalUserId from OneSignal.User.externalId (empty string means no user logged in)
+   - _appId from SharedPreferenceUtil (app-level config, no SDK getter)
+
+This two-layer approach ensures:
+- The SDK is configured with the user's last preferences before anything else runs
+- The ViewModel reads the SDK's actual state as the source of truth for the UI
+- The UI always reflects what the SDK reports, not stale cache values
 ```
 
 ### What is NOT Persisted (In-Memory Only)
@@ -618,17 +593,15 @@ Examples/OneSignalDemoV2/
 │       └── Dependencies.kt      # Dependency strings (includes Compose deps)
 ├── app/
 │   ├── src/main/
-│   │   ├── assets/
-│   │   │   └── tooltip_content.json
 │   │   ├── java/com/onesignal/sdktest/
 │   │   │   ├── application/
-│   │   │   │   └── MainApplication.kt
+│   │   │   │   └── MainApplication.kt   # SDK init, log listener, observers
 │   │   │   ├── data/
 │   │   │   │   ├── model/
 │   │   │   │   │   ├── NotificationType.kt    # With bigPicture and largeIcon
 │   │   │   │   │   └── InAppMessageType.kt    # With Material icons
 │   │   │   │   ├── network/
-│   │   │   │   │   └── OneSignalService.kt    # REST API client (with auth)
+│   │   │   │   │   └── OneSignalService.kt    # REST API client
 │   │   │   │   └── repository/
 │   │   │   │       └── OneSignalRepository.kt
 │   │   │   ├── ui/
@@ -638,10 +611,11 @@ Examples/OneSignalDemoV2/
 │   │   │   │   │   ├── ActionButton.kt        # Primary/Destructive buttons
 │   │   │   │   │   ├── ListComponents.kt      # PairList, SingleList, EmptyState
 │   │   │   │   │   ├── LoadingOverlay.kt      # Full-screen loading spinner
+│   │   │   │   │   ├── LogView.kt             # Collapsible log viewer (Appium-ready)
 │   │   │   │   │   └── Dialogs.kt             # All dialog composables
 │   │   │   │   ├── main/
 │   │   │   │   │   ├── MainActivity.kt        # ComponentActivity with setContent
-│   │   │   │   │   ├── MainScreen.kt          # Main Compose screen
+│   │   │   │   │   ├── MainScreen.kt          # Main Compose screen (includes LogView)
 │   │   │   │   │   ├── Sections.kt            # Individual section composables
 │   │   │   │   │   └── MainViewModel.kt       # With batch operations
 │   │   │   │   ├── splash/
@@ -652,10 +626,11 @@ Examples/OneSignalDemoV2/
 │   │   │   │       └── Theme.kt               # OneSignal Material3 theme
 │   │   │   └── util/
 │   │   │       ├── SharedPreferenceUtil.kt
-│   │   │       └── TooltipHelper.kt
+│   │   │       ├── LogManager.kt              # Thread-safe pass-through logger
+│   │   │       └── TooltipHelper.kt           # Fetches tooltips from remote URL
 │   │   └── res/
 │   │       └── values/
-│   │           ├── strings.xml                # Includes onesignal_rest_api_key
+│   │           ├── strings.xml
 │   │           ├── colors.xml
 │   │           └── styles.xml
 │   └── src/huawei/
@@ -666,7 +641,10 @@ Examples/OneSignalDemoV2/
 └── BUILDING_THE_APP.md (this file)
 ```
 
-Note: XML layouts have been removed - all UI is now Jetpack Compose.
+Note: 
+- XML layouts have been removed - all UI is now Jetpack Compose
+- Tooltip content is fetched from remote URL (not bundled locally)
+- LogView at top of screen displays SDK and app logs for debugging/Appium testing
 
 ---
 
@@ -677,15 +655,9 @@ Note: XML layouts have been removed - all UI is now Jetpack Compose.
 ```xml
 <!-- Replace with your own OneSignal App ID -->
 <string name="onesignal_app_id">YOUR_APP_ID_HERE</string>
-
-<!-- Replace with your OneSignal REST API Key (required for sending notifications) -->
-<string name="onesignal_rest_api_key">YOUR_REST_API_KEY_HERE</string>
 ```
 
-**Important:**
-- REST API key is required for sending push notifications via the REST API
-- REST API key is NOT required for the fetchUser endpoint (public)
-- Get your REST API key from OneSignal Dashboard → Settings → Keys & IDs
+Note: REST API key is NOT required for the fetchUser endpoint.
 
 ### Package Name
 
