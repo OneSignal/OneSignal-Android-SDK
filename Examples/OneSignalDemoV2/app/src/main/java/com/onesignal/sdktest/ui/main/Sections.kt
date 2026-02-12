@@ -283,8 +283,9 @@ fun SendInAppMessageSection(
 fun AliasesSection(
     aliases: List<Pair<String, String>>,
     onAddClick: () -> Unit,
+    onAddMultipleClick: () -> Unit,
     onRemove: (String) -> Unit,
-    onRemoveAll: () -> Unit,
+    onRemoveSelected: () -> Unit,
     onInfoClick: () -> Unit
 ) {
     SectionCard(title = "Aliases", onInfoClick = onInfoClick) {
@@ -294,11 +295,18 @@ fun AliasesSection(
             onDelete = onRemove
         )
         HorizontalDivider(color = DividerColor)
-        PrimaryButton(text = "ADD ALIAS", onClick = onAddClick)
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Box(modifier = Modifier.weight(1f)) {
+                PrimaryButton(text = "ADD", onClick = onAddClick)
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
+            }
+        }
         
         if (aliases.isNotEmpty()) {
             HorizontalDivider(color = DividerColor)
-            DestructiveButton(text = "REMOVE ALL ALIASES", onClick = onRemoveAll)
+            DestructiveButton(text = "REMOVE SELECTED", onClick = onRemoveSelected)
         }
     }
 }
@@ -346,7 +354,9 @@ fun SmsSection(
 fun TagsSection(
     tags: List<Pair<String, String>>,
     onAddClick: () -> Unit,
+    onAddMultipleClick: () -> Unit,
     onRemove: (String) -> Unit,
+    onRemoveSelected: () -> Unit,
     onInfoClick: () -> Unit
 ) {
     SectionCard(title = "Tags", onInfoClick = onInfoClick) {
@@ -356,7 +366,19 @@ fun TagsSection(
             onDelete = onRemove
         )
         HorizontalDivider(color = DividerColor)
-        PrimaryButton(text = "ADD TAG", onClick = onAddClick)
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Box(modifier = Modifier.weight(1f)) {
+                PrimaryButton(text = "ADD", onClick = onAddClick)
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
+            }
+        }
+        
+        if (tags.isNotEmpty()) {
+            HorizontalDivider(color = DividerColor)
+            DestructiveButton(text = "REMOVE SELECTED", onClick = onRemoveSelected)
+        }
     }
 }
 
@@ -376,7 +398,9 @@ fun OutcomeSection(
 fun TriggersSection(
     triggers: List<Pair<String, String>>,
     onAddClick: () -> Unit,
+    onAddMultipleClick: () -> Unit,
     onRemove: (String) -> Unit,
+    onRemoveSelected: () -> Unit,
     onClearAll: () -> Unit,
     onInfoClick: () -> Unit
 ) {
@@ -387,11 +411,25 @@ fun TriggersSection(
             onDelete = onRemove
         )
         HorizontalDivider(color = DividerColor)
-        PrimaryButton(text = "ADD TRIGGER", onClick = onAddClick)
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Box(modifier = Modifier.weight(1f)) {
+                PrimaryButton(text = "ADD", onClick = onAddClick)
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
+            }
+        }
         
         if (triggers.isNotEmpty()) {
             HorizontalDivider(color = DividerColor)
-            DestructiveButton(text = "CLEAR TRIGGERS", onClick = onClearAll)
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Box(modifier = Modifier.weight(1f)) {
+                    DestructiveButton(text = "REMOVE SELECTED", onClick = onRemoveSelected)
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    DestructiveButton(text = "CLEAR ALL", onClick = onClearAll)
+                }
+            }
         }
     }
 }

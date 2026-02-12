@@ -1,9 +1,16 @@
 package com.onesignal.sdktest.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -36,7 +43,10 @@ fun SingleInputDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(value) }) {
+            TextButton(
+                onClick = { onConfirm(value) },
+                enabled = value.isNotBlank()
+            ) {
                 Text("ADD")
             }
         },
@@ -85,8 +95,184 @@ fun PairInputDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(key, value) }) {
+            TextButton(
+                onClick = { onConfirm(key, value) },
+                enabled = key.isNotBlank() && value.isNotBlank()
+            ) {
                 Text("ADD")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CANCEL")
+            }
+        }
+    )
+}
+
+/**
+ * Dialog for entering multiple key-value pairs.
+ */
+@Composable
+fun MultiPairInputDialog(
+    title: String,
+    keyLabel: String = "Key",
+    valueLabel: String = "Value",
+    onDismiss: () -> Unit,
+    onConfirm: (List<Pair<String, String>>) -> Unit
+) {
+    var pairs by remember { mutableStateOf(listOf(Pair("", ""))) }
+    
+    val allValid = pairs.all { it.first.isNotBlank() && it.second.isNotBlank() }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 400.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                pairs.forEachIndexed { index, (key, value) ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            OutlinedTextField(
+                                value = key,
+                                onValueChange = { newKey ->
+                                    pairs = pairs.toMutableList().apply {
+                                        this[index] = Pair(newKey, this[index].second)
+                                    }
+                                },
+                                label = { Text(keyLabel) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            OutlinedTextField(
+                                value = value,
+                                onValueChange = { newValue ->
+                                    pairs = pairs.toMutableList().apply {
+                                        this[index] = Pair(this[index].first, newValue)
+                                    }
+                                },
+                                label = { Text(valueLabel) },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true
+                            )
+                        }
+                        if (pairs.size > 1) {
+                            IconButton(
+                                onClick = {
+                                    pairs = pairs.toMutableList().apply { removeAt(index) }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Remove",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    }
+                    if (index < pairs.lastIndex) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                TextButton(
+                    onClick = { pairs = pairs + Pair("", "") },
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("ADD ROW")
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(pairs) },
+                enabled = allValid
+            ) {
+                Text("ADD ALL")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CANCEL")
+            }
+        }
+    )
+}
+
+/**
+ * Dialog for selecting multiple items to remove.
+ */
+@Composable
+fun MultiSelectRemoveDialog(
+    title: String,
+    items: List<Pair<String, String>>,
+    onDismiss: () -> Unit,
+    onConfirm: (Collection<String>) -> Unit
+) {
+    var selectedKeys by remember { mutableStateOf(setOf<String>()) }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 400.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                items.forEach { (key, value) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                selectedKeys = if (key in selectedKeys) {
+                                    selectedKeys - key
+                                } else {
+                                    selectedKeys + key
+                                }
+                            }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = key in selectedKeys,
+                            onCheckedChange = { checked ->
+                                selectedKeys = if (checked) {
+                                    selectedKeys + key
+                                } else {
+                                    selectedKeys - key
+                                }
+                            }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "$key: $value",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(selectedKeys) },
+                enabled = selectedKeys.isNotEmpty()
+            ) {
+                Text("REMOVE (${selectedKeys.size})")
             }
         },
         dismissButton = {
@@ -134,11 +320,10 @@ fun OutcomeDialog(
         title = { Text("Send Outcome") },
         text = {
             Column {
-                // Outcome type selection
                 outcomeTypes.forEachIndexed { index, type ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = selectedType == index,
@@ -182,7 +367,8 @@ fun OutcomeDialog(
                         1 -> onSendUnique(outcomeName)
                         2 -> onSendWithValue(outcomeName, outcomeValue.toFloatOrNull() ?: 0f)
                     }
-                }
+                },
+                enabled = outcomeName.isNotBlank()
             ) {
                 Text("SEND")
             }
@@ -195,11 +381,8 @@ fun OutcomeDialog(
     )
 }
 
-/**
- * Validates if a string is valid JSON object.
- */
 private fun isValidJsonObject(value: String?): Boolean {
-    if (value.isNullOrBlank()) return true // Empty is valid (optional field)
+    if (value.isNullOrBlank()) return true
     return try {
         JSONObject(value)
         true
@@ -208,9 +391,6 @@ private fun isValidJsonObject(value: String?): Boolean {
     }
 }
 
-/**
- * Parses a JSON string into a Map.
- */
 private fun parseJsonToMap(json: String): Map<String, Any>? {
     if (json.isBlank()) return null
     return try {
@@ -237,7 +417,6 @@ fun TrackEventDialog(
     var eventValue by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
     
-    // Validate on each change
     val isValueValid = isValidJsonObject(eventValue)
     
     AlertDialog(
@@ -260,7 +439,7 @@ fun TrackEventDialog(
                     value = eventValue,
                     onValueChange = { 
                         eventValue = it
-                        showError = false // Clear error on change
+                        showError = false
                     },
                     label = { Text("Properties (JSON, optional)") },
                     placeholder = { Text("{\"key\": \"value\"}") },
@@ -272,20 +451,11 @@ fun TrackEventDialog(
                     supportingText = if (!isValueValid && eventValue.isNotBlank()) {
                         { 
                             Text(
-                                text = "Invalid JSON format. Example: {\"key\": \"value\"}",
+                                text = "Invalid JSON format",
                                 color = MaterialTheme.colorScheme.error
                             )
                         }
-                    } else if (eventValue.isBlank()) {
-                        {
-                            Text(
-                                text = "Optional: Enter a valid JSON object",
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            )
-                        }
-                    } else {
-                        null
-                    }
+                    } else null
                 )
             }
         },

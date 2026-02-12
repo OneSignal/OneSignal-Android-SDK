@@ -52,10 +52,16 @@ fun MainScreen(viewModel: MainViewModel) {
     // Dialog states
     var showLoginDialog by remember { mutableStateOf(false) }
     var showAddAliasDialog by remember { mutableStateOf(false) }
+    var showAddMultipleAliasDialog by remember { mutableStateOf(false) }
+    var showRemoveAliasesDialog by remember { mutableStateOf(false) }
     var showAddEmailDialog by remember { mutableStateOf(false) }
     var showAddSmsDialog by remember { mutableStateOf(false) }
     var showAddTagDialog by remember { mutableStateOf(false) }
+    var showAddMultipleTagDialog by remember { mutableStateOf(false) }
+    var showRemoveTagsDialog by remember { mutableStateOf(false) }
     var showAddTriggerDialog by remember { mutableStateOf(false) }
+    var showAddMultipleTriggerDialog by remember { mutableStateOf(false) }
+    var showRemoveTriggersDialog by remember { mutableStateOf(false) }
     var showOutcomeDialog by remember { mutableStateOf(false) }
     var showTrackEventDialog by remember { mutableStateOf(false) }
     var showCustomNotificationDialog by remember { mutableStateOf(false) }
@@ -149,8 +155,9 @@ fun MainScreen(viewModel: MainViewModel) {
                 AliasesSection(
                     aliases = aliases,
                     onAddClick = { showAddAliasDialog = true },
+                    onAddMultipleClick = { showAddMultipleAliasDialog = true },
                     onRemove = { viewModel.removeAlias(it) },
-                    onRemoveAll = { viewModel.removeAllAliases() },
+                    onRemoveSelected = { showRemoveAliasesDialog = true },
                     onInfoClick = { showTooltipDialog = "aliases" }
                 )
                 
@@ -174,7 +181,9 @@ fun MainScreen(viewModel: MainViewModel) {
                 TagsSection(
                     tags = tags,
                     onAddClick = { showAddTagDialog = true },
+                    onAddMultipleClick = { showAddMultipleTagDialog = true },
                     onRemove = { viewModel.removeTag(it) },
+                    onRemoveSelected = { showRemoveTagsDialog = true },
                     onInfoClick = { showTooltipDialog = "tags" }
                 )
                 
@@ -188,7 +197,9 @@ fun MainScreen(viewModel: MainViewModel) {
                 TriggersSection(
                     triggers = triggers,
                     onAddClick = { showAddTriggerDialog = true },
+                    onAddMultipleClick = { showAddMultipleTriggerDialog = true },
                     onRemove = { viewModel.removeTrigger(it) },
+                    onRemoveSelected = { showRemoveTriggersDialog = true },
                     onClearAll = { viewModel.clearTriggers() },
                     onInfoClick = { showTooltipDialog = "triggers" }
                 )
@@ -254,6 +265,31 @@ fun MainScreen(viewModel: MainViewModel) {
         )
     }
     
+    if (showAddMultipleAliasDialog) {
+        MultiPairInputDialog(
+            title = "Add Multiple Aliases",
+            keyLabel = "Label",
+            valueLabel = "ID",
+            onDismiss = { showAddMultipleAliasDialog = false },
+            onConfirm = { pairs ->
+                viewModel.addAliases(pairs)
+                showAddMultipleAliasDialog = false
+            }
+        )
+    }
+    
+    if (showRemoveAliasesDialog && aliases.isNotEmpty()) {
+        MultiSelectRemoveDialog(
+            title = "Remove Aliases",
+            items = aliases,
+            onDismiss = { showRemoveAliasesDialog = false },
+            onConfirm = { keys ->
+                viewModel.removeSelectedAliases(keys)
+                showRemoveAliasesDialog = false
+            }
+        )
+    }
+    
     if (showAddEmailDialog) {
         SingleInputDialog(
             title = "Add Email",
@@ -289,6 +325,29 @@ fun MainScreen(viewModel: MainViewModel) {
         )
     }
     
+    if (showAddMultipleTagDialog) {
+        MultiPairInputDialog(
+            title = "Add Multiple Tags",
+            onDismiss = { showAddMultipleTagDialog = false },
+            onConfirm = { pairs ->
+                viewModel.addTags(pairs)
+                showAddMultipleTagDialog = false
+            }
+        )
+    }
+    
+    if (showRemoveTagsDialog && tags.isNotEmpty()) {
+        MultiSelectRemoveDialog(
+            title = "Remove Tags",
+            items = tags,
+            onDismiss = { showRemoveTagsDialog = false },
+            onConfirm = { keys ->
+                viewModel.removeSelectedTags(keys)
+                showRemoveTagsDialog = false
+            }
+        )
+    }
+    
     if (showAddTriggerDialog) {
         PairInputDialog(
             title = "Add Trigger",
@@ -296,6 +355,29 @@ fun MainScreen(viewModel: MainViewModel) {
             onConfirm = { key, value ->
                 viewModel.addTrigger(key, value)
                 showAddTriggerDialog = false
+            }
+        )
+    }
+    
+    if (showAddMultipleTriggerDialog) {
+        MultiPairInputDialog(
+            title = "Add Multiple Triggers",
+            onDismiss = { showAddMultipleTriggerDialog = false },
+            onConfirm = { pairs ->
+                viewModel.addTriggers(pairs)
+                showAddMultipleTriggerDialog = false
+            }
+        )
+    }
+    
+    if (showRemoveTriggersDialog && triggers.isNotEmpty()) {
+        MultiSelectRemoveDialog(
+            title = "Remove Triggers",
+            items = triggers,
+            onDismiss = { showRemoveTriggersDialog = false },
+            onConfirm = { keys ->
+                viewModel.removeSelectedTriggers(keys)
+                showRemoveTriggersDialog = false
             }
         )
     }
