@@ -35,6 +35,7 @@ import com.onesignal.sdktest.data.model.NotificationType
 import com.onesignal.sdktest.ui.components.CustomNotificationDialog
 import com.onesignal.sdktest.ui.components.LoadingOverlay
 import com.onesignal.sdktest.ui.components.LoginDialog
+import com.onesignal.sdktest.ui.components.LogView
 import com.onesignal.sdktest.ui.components.MultiPairInputDialog
 import com.onesignal.sdktest.ui.components.MultiSelectRemoveDialog
 import com.onesignal.sdktest.ui.components.OutcomeDialog
@@ -121,9 +122,17 @@ fun MainScreen(viewModel: MainViewModel) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
                     .background(LightBackground)
             ) {
+                // Log view at top (fixed, not scrolling)
+                LogView(defaultExpanded = true)
+                
+                // Scrollable content
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                ) {
                 Spacer(modifier = Modifier.height(10.dp))
                 
                 // === APP SECTION ===
@@ -255,6 +264,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 }
                 
                 Spacer(modifier = Modifier.height(20.dp))
+                }
             }
         }
         

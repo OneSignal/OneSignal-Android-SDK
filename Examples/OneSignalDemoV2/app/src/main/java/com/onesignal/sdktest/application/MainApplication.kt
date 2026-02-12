@@ -1,10 +1,11 @@
 package com.onesignal.sdktest.application
 
 import android.os.StrictMode
-import android.util.Log
 import androidx.multidex.MultiDexApplication
 import com.onesignal.OneSignal
 import com.onesignal.debug.LogLevel
+import com.onesignal.sdktest.util.LogManager
+import com.onesignal.sdktest.util.LogLevel as AppLogLevel
 import com.onesignal.inAppMessages.IInAppMessageClickEvent
 import com.onesignal.inAppMessages.IInAppMessageClickListener
 import com.onesignal.inAppMessages.IInAppMessageDidDismissEvent
@@ -40,6 +41,18 @@ class MainApplication : MultiDexApplication() {
         super.onCreate()
         
         OneSignal.Debug.logLevel = LogLevel.VERBOSE
+        
+        // Add SDK log listener BEFORE init to capture all SDK logs in UI
+        OneSignal.Debug.addLogListener { event ->
+            val level = when (event.level) {
+                LogLevel.VERBOSE, LogLevel.DEBUG -> AppLogLevel.DEBUG
+                LogLevel.INFO -> AppLogLevel.INFO
+                LogLevel.WARN -> AppLogLevel.WARN
+                LogLevel.ERROR, LogLevel.FATAL -> AppLogLevel.ERROR
+                LogLevel.NONE -> return@addLogListener
+            }
+            LogManager.log("SDK", event.entry, level)
+        }
 
         // Get or set the OneSignal App ID
         var appId = SharedPreferenceUtil.getOneSignalAppId(this)
@@ -56,7 +69,7 @@ class MainApplication : MultiDexApplication() {
 
         // Initialize OneSignal on main thread (required)
         OneSignal.initWithContext(this, appId)
-        Log.d(TAG, "OneSignal init completed")
+        LogManager.i(TAG, "OneSignal init completed")
 
         // Set up all OneSignal listeners
         setupOneSignalListeners()
@@ -68,37 +81,37 @@ class MainApplication : MultiDexApplication() {
     private fun setupOneSignalListeners() {
         OneSignal.InAppMessages.addLifecycleListener(object : IInAppMessageLifecycleListener {
             override fun onWillDisplay(event: IInAppMessageWillDisplayEvent) {
-                Log.v(TAG, "onWillDisplayInAppMessage")
+                LogManager.d(TAG, "onWillDisplayInAppMessage")
             }
 
             override fun onDidDisplay(event: IInAppMessageDidDisplayEvent) {
-                Log.v(TAG, "onDidDisplayInAppMessage")
+                LogManager.d(TAG, "onDidDisplayInAppMessage")
             }
 
             override fun onWillDismiss(event: IInAppMessageWillDismissEvent) {
-                Log.v(TAG, "onWillDismissInAppMessage")
+                LogManager.d(TAG, "onWillDismissInAppMessage")
             }
 
             override fun onDidDismiss(event: IInAppMessageDidDismissEvent) {
-                Log.v(TAG, "onDidDismissInAppMessage")
+                LogManager.d(TAG, "onDidDismissInAppMessage")
             }
         })
 
         OneSignal.InAppMessages.addClickListener(object : IInAppMessageClickListener {
             override fun onClick(event: IInAppMessageClickEvent) {
-                Log.v(TAG, "IInAppMessageClickListener.onClick")
+                LogManager.d(TAG, "IInAppMessageClickListener.onClick")
             }
         })
 
         OneSignal.Notifications.addClickListener(object : INotificationClickListener {
             override fun onClick(event: INotificationClickEvent) {
-                Log.v(TAG, "INotificationClickListener.onClick fired with event: $event")
+                LogManager.d(TAG, "INotificationClickListener.onClick fired with event: $event")
             }
         })
 
         OneSignal.Notifications.addForegroundLifecycleListener(object : INotificationLifecycleListener {
             override fun onWillDisplay(event: INotificationWillDisplayEvent) {
-                Log.v(TAG, "INotificationLifecycleListener.onWillDisplay fired with event: $event")
+                LogManager.d(TAG, "INotificationLifecycleListener.onWillDisplay fired with event: $event")
 
                 val notification: IDisplayableNotification = event.notification
 
@@ -117,7 +130,7 @@ class MainApplication : MultiDexApplication() {
 
         OneSignal.User.addObserver(object : IUserStateObserver {
             override fun onUserStateChange(state: UserChangedState) {
-                Log.d(TAG, ">>> onUserStateChange fired: onesignalId=${state.current.onesignalId}, externalId=${state.current.externalId}")
+                LogManager.i(TAG, "User state changed: onesignalId=${state.current.onesignalId}, externalId=${state.current.externalId}")
             }
         })
 

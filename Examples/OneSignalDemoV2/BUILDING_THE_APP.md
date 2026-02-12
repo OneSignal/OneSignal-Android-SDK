@@ -832,7 +832,58 @@ OneSignalTheme composable:
 - Surface variants for cards
 ```
 
-### Prompt 8.4 - Toast Messages
+### Prompt 8.4 - Log View (Appium-Ready)
+
+```
+Add collapsible log view at top of screen for debugging and Appium testing.
+
+Files:
+- util/LogManager.kt - Thread-safe pass-through logger
+- ui/components/LogView.kt - Compose UI with test tags
+
+LogManager Features:
+- Pass-through to Android logcat AND UI display
+- Thread-safe (posts to main thread for Compose state)
+- Captures SDK logs via OneSignal.Debug.addLogListener
+- API: LogManager.d/i/w/e(tag, message) mimics android.util.Log
+
+LogView Features:
+- Collapsible header (default expanded)
+- 5-line height (~100dp)
+- Color-coded by level (Debug=blue, Info=yellow, Warn=orange, Error=red)
+- Clear button
+- Auto-scroll to newest
+
+Appium Test Tags:
+| Tag | Description |
+|-----|-------------|
+| log_view_container | Main container |
+| log_view_header | Clickable expand/collapse |
+| log_view_count | Shows "(N)" log count |
+| log_view_clear_button | Clear all logs |
+| log_view_list | Scrollable LazyColumn |
+| log_view_empty | "No logs yet" state |
+| log_entry_N | Each log row (N=index) |
+| log_entry_N_timestamp | Timestamp text |
+| log_entry_N_level | D/I/W/E indicator |
+| log_entry_N_message | Log message content |
+
+SDK Log Integration (MainApplication):
+OneSignal.Debug.addLogListener { event ->
+    LogManager.log("SDK", event.entry, level)
+}
+
+Appium Example:
+# Verify a log message exists
+log_msg = driver.find_element(By.XPATH, "//*[@resource-id='log_entry_0_message']")
+assert "Notification sent" in log_msg.text
+
+# Scroll logs
+log_list = driver.find_element(By.XPATH, "//*[@resource-id='log_view_list']")
+driver.execute_script("mobile: scroll", {"element": log_list, "direction": "down"})
+```
+
+### Prompt 8.5 - Toast Messages
 
 ```
 All user actions should display toast messages:
@@ -855,4 +906,5 @@ Implementation:
 - MainViewModel has toastMessage: LiveData<String?>
 - MainActivity observes and shows Android Toast
 - LaunchedEffect triggers on toastMessage change
+- All toast messages are also logged via LogManager.info()
 ```

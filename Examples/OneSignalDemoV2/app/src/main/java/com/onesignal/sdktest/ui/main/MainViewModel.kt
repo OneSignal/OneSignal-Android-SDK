@@ -9,6 +9,7 @@ import com.onesignal.OneSignal
 import com.onesignal.notifications.IPermissionObserver
 import com.onesignal.sdktest.data.model.NotificationType
 import com.onesignal.sdktest.data.repository.OneSignalRepository
+import com.onesignal.sdktest.util.LogManager
 import com.onesignal.sdktest.util.SharedPreferenceUtil
 import com.onesignal.user.state.IUserStateObserver
 import com.onesignal.user.state.UserChangedState
@@ -89,11 +90,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private val triggersList = mutableListOf<Pair<String, String>>()
 
     init {
+        LogManager.info("App initialized")
         loadInitialState()
         OneSignal.User.pushSubscription.addObserver(this)
         OneSignal.Notifications.addPermissionObserver(this)
         OneSignal.User.addObserver(this)
         android.util.Log.d("MainViewModel", "init: observers registered, current onesignalId=${OneSignal.User.onesignalId}")
+        LogManager.debug("OneSignal ID: ${OneSignal.User.onesignalId ?: "not set"}")
     }
 
     // IPermissionObserver
@@ -177,6 +180,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             } catch (e: Exception) {
                 android.util.Log.e("MainViewModel", "Error fetching user data", e)
                 withContext(Dispatchers.Main) {
+                    logError("Failed to fetch user data: ${e.message}")
                     _isLoading.value = false
                 }
             }
@@ -546,12 +550,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
 
     // Send notification
     fun sendNotification(type: NotificationType) {
+        logDebug("Sending notification: ${type.title}")
         viewModelScope.launch(Dispatchers.IO) {
             val success = repository.sendNotification(type)
             withContext(Dispatchers.Main) {
                 if (success) {
                     showToast("Notification sent: ${type.title}")
                 } else {
+                    logError("Failed to send notification: ${type.title}")
                     showToast("Failed to send notification")
                 }
             }
@@ -559,12 +565,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     }
 
     fun sendCustomNotification(title: String, body: String) {
+        logDebug("Sending custom notification: $title")
         viewModelScope.launch(Dispatchers.IO) {
             val success = repository.sendCustomNotification(title, body)
             withContext(Dispatchers.Main) {
                 if (success) {
                     showToast("Notification sent: $title")
                 } else {
+                    logError("Failed to send notification: $title")
                     showToast("Failed to send notification")
                 }
             }
@@ -583,8 +591,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         }
     }
 
-    private fun showToast(message: String) { _toastMessage.value = message }
+    private fun showToast(message: String) {
+        _toastMessage.value = message
+        LogManager.info(message)
+    }
+    
     fun clearToast() { _toastMessage.value = null }
+    
+    // Logging utilities
+    private fun logError(message: String) = LogManager.error(message)
+    private fun logDebug(message: String) = LogManager.debug(message)
 
     override fun onPushSubscriptionChange(state: PushSubscriptionChangedState) {
         _pushSubscriptionId.postValue(state.current.id)
