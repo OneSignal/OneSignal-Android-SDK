@@ -36,13 +36,18 @@ class OneSignalRepository {
         OneSignal.User.addAlias(label, id)
     }
 
+    fun addAliases(aliases: Map<String, String>) {
+        Log.d(TAG, "Adding aliases: $aliases")
+        OneSignal.User.addAliases(aliases)
+    }
+
     fun removeAlias(label: String) {
         Log.d(TAG, "Removing alias: $label")
         OneSignal.User.removeAlias(label)
     }
 
-    fun removeAllAliases(labels: Collection<String>) {
-        Log.d(TAG, "Removing all aliases: $labels")
+    fun removeAliases(labels: Collection<String>) {
+        Log.d(TAG, "Removing aliases: $labels")
         if (labels.isNotEmpty()) {
             OneSignal.User.removeAliases(labels)
         }
@@ -76,9 +81,21 @@ class OneSignalRepository {
         OneSignal.User.addTag(key, value)
     }
 
+    fun addTags(tags: Map<String, String>) {
+        Log.d(TAG, "Adding tags: $tags")
+        OneSignal.User.addTags(tags)
+    }
+
     fun removeTag(key: String) {
         Log.d(TAG, "Removing tag: $key")
         OneSignal.User.removeTag(key)
+    }
+
+    fun removeTags(keys: Collection<String>) {
+        Log.d(TAG, "Removing tags: $keys")
+        if (keys.isNotEmpty()) {
+            OneSignal.User.removeTags(keys)
+        }
     }
 
     fun getTags(): Map<String, String> {
@@ -91,13 +108,18 @@ class OneSignalRepository {
         OneSignal.InAppMessages.addTrigger(key, value)
     }
 
+    fun addTriggers(triggers: Map<String, String>) {
+        Log.d(TAG, "Adding triggers: $triggers")
+        OneSignal.InAppMessages.addTriggers(triggers)
+    }
+
     fun removeTrigger(key: String) {
         Log.d(TAG, "Removing trigger: $key")
         OneSignal.InAppMessages.removeTrigger(key)
     }
 
     fun clearTriggers(keys: Collection<String>) {
-        Log.d(TAG, "Clearing all triggers: $keys")
+        Log.d(TAG, "Clearing triggers: $keys")
         if (keys.isNotEmpty()) {
             OneSignal.InAppMessages.removeTriggers(keys)
         }
@@ -120,13 +142,8 @@ class OneSignalRepository {
     }
 
     // Track Event
-    fun trackEvent(name: String, value: Map<String, Any>?) {
-        Log.d(TAG, "Tracking event: $name with value: $value")
-        val properties: Map<String, Any?>? = if (!value.isNullOrEmpty()) {
-            mapOf("value" to value)
-        } else {
-            null
-        }
+    fun trackEvent(name: String, properties: Map<String, Any?>?) {
+        Log.d(TAG, "Tracking event: $name with properties: $properties")
         OneSignal.User.trackEvent(name, properties)
     }
 

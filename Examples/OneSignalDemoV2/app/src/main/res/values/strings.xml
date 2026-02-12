@@ -30,7 +30,8 @@
     <string name="aliases">Aliases</string>
     <string name="no_aliases_added">No Aliases Added</string>
     <string name="add_alias">ADD ALIAS</string>
-    <string name="remove_all_aliases">REMOVE ALL ALIASES</string>
+    <string name="add_aliases">ADD ALIASES</string>
+    <string name="remove_aliases">REMOVE ALIASES</string>
 
     <!-- Push -->
     <string name="push">Push</string>
@@ -54,6 +55,8 @@
     <string name="tags">Tags</string>
     <string name="no_tags_added">No Tags Added</string>
     <string name="add_tag">ADD TAG</string>
+    <string name="add_tags">ADD TAGS</string>
+    <string name="remove_tags">REMOVE TAGS</string>
 
     <!-- Outcome Events -->
     <string name="outcome_events">Outcome Events</string>
@@ -76,13 +79,16 @@
     <string name="triggers">Triggers</string>
     <string name="no_triggers_added">No Triggers Added</string>
     <string name="add_trigger">ADD TRIGGER</string>
+    <string name="add_triggers">ADD TRIGGERS</string>
+    <string name="remove_triggers">REMOVE TRIGGERS</string>
     <string name="clear_triggers">CLEAR TRIGGERS</string>
 
     <!-- Track Event -->
     <string name="track_event">Track Event</string>
     <string name="track_event_button">TRACK EVENT</string>
     <string name="event_name">Event Name</string>
-    <string name="event_value">Event Value (optional)</string>
+    <string name="event_properties">Properties (optional)</string>
+    <string name="event_properties_placeholder">{\"ABC\":123}</string>
 
     <!-- Location -->
     <string name="location">Location</string>
@@ -115,6 +121,14 @@
     <string name="remove">Remove</string>
     <string name="icon">Icon</string>
     <string name="add_alias_title">Add Alias</string>
+    <string name="add_aliases_title">Add Aliases</string>
     <string name="add_tag_title">Add Tag</string>
+    <string name="add_tags_title">Add Tags</string>
     <string name="add_trigger_title">Add Trigger</string>
+    <string name="add_triggers_title">Add Triggers</string>
+    <string name="add_row">+ ADD ROW</string>
+    <string name="remove_aliases_title">Remove Aliases</string>
+    <string name="remove_tags_title">Remove Tags</string>
+    <string name="remove_triggers_title">Remove Triggers</string>
+    <string name="confirm">REMOVE</string>
 </resources>

@@ -68,8 +68,8 @@ object OneSignalService {
                 put("headings", JSONObject().put("en", type.notificationTitle))
                 put("contents", JSONObject().put("en", type.notificationBody))
                 put("android_group", type.title)
-                put("android_led_color", "FFE9444E")
-                put("android_accent_color", "FFE9444E")
+                put("android_led_color", "FF595CF2")
+                put("android_accent_color", "FF595CF2")
                 // Add big picture if available
                 type.bigPicture?.let { 
                     put("big_picture", it)
@@ -140,8 +140,8 @@ object OneSignalService {
                 put("include_subscription_ids", org.json.JSONArray().put(subscriptionId))
                 put("headings", JSONObject().put("en", title))
                 put("contents", JSONObject().put("en", body))
-                put("android_led_color", "FFE9444E")
-                put("android_accent_color", "FFE9444E")
+                put("android_led_color", "FF595CF2")
+                put("android_accent_color", "FF595CF2")
             }
             
             val connection = (URL(ONESIGNAL_API_URL).openConnection() as HttpURLConnection).apply {

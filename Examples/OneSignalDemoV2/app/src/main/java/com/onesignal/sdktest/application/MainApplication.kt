@@ -130,8 +130,8 @@ class MainApplication : MultiDexApplication() {
             }
         })
 
-        // Set default states
-        OneSignal.InAppMessages.paused = true
-        OneSignal.Location.isShared = false
+        // Restore cached states
+        OneSignal.InAppMessages.paused = SharedPreferenceUtil.getCachedInAppMessagingPausedStatus(this)
+        OneSignal.Location.isShared = SharedPreferenceUtil.getCachedLocationSharedStatus(this)
     }
 }
