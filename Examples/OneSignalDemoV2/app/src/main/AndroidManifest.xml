@@ -52,20 +52,15 @@
             </intent-filter>
         </receiver>
 
-        <!-- Splash Activity (Launcher) -->
+        <!-- Main Activity (Launcher) -->
         <activity
-            android:name=".ui.splash.SplashActivity"
+            android:name=".ui.main.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <!-- Main Activity -->
-        <activity 
-            android:name=".ui.main.MainActivity"
-            android:exported="false" />
 
         <!-- Secondary Activity -->
         <activity
