@@ -230,8 +230,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 refreshTriggers()
                 loadExistingTags()
                 refreshPushSubscription()
-                kotlinx.coroutines.delay(1000)
-                fetchUserDataFromApi()
+                // Loading stays on; onUserStateChange will call fetchUserDataFromApi() to dismiss it
             }
         }
     }
