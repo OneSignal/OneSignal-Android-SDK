@@ -335,24 +335,17 @@ fun AliasesSection(
     aliases: List<Pair<String, String>>,
     onAddClick: () -> Unit,
     onAddMultipleClick: () -> Unit,
-    onRemove: (String) -> Unit,
-    onRemoveSelected: () -> Unit,
     onInfoClick: () -> Unit
 ) {
     SectionCard(title = "Aliases", onInfoClick = onInfoClick) {
         PairList(
             items = aliases,
-            emptyText = "No aliases added",
-            onDelete = onRemove
+            emptyText = "No aliases added"
         )
     }
     Spacer(modifier = Modifier.height(8.dp))
     PrimaryButton(text = "ADD", onClick = onAddClick)
     PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
-    
-    if (aliases.isNotEmpty()) {
-        DestructiveButton(text = "REMOVE SELECTED", onClick = onRemoveSelected)
-    }
 }
 
 // === EMAILS SECTION ===

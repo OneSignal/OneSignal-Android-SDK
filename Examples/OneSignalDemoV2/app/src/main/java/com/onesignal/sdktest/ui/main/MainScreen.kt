@@ -78,13 +78,11 @@ fun MainScreen(viewModel: MainViewModel) {
     val inAppMessagesPaused by viewModel.inAppMessagesPaused.observeAsState(true)
     val locationShared by viewModel.locationShared.observeAsState(false)
     val isLoading by viewModel.isLoading.observeAsState(false)
-    val toastMessage by viewModel.toastMessage.observeAsState()
     
     // Dialog states
     var showLoginDialog by remember { mutableStateOf(false) }
     var showAddAliasDialog by remember { mutableStateOf(false) }
     var showAddMultipleAliasDialog by remember { mutableStateOf(false) }
-    var showRemoveAliasesDialog by remember { mutableStateOf(false) }
     var showAddEmailDialog by remember { mutableStateOf(false) }
     var showAddSmsDialog by remember { mutableStateOf(false) }
     var showAddTagDialog by remember { mutableStateOf(false) }
@@ -97,13 +95,6 @@ fun MainScreen(viewModel: MainViewModel) {
     var showTrackEventDialog by remember { mutableStateOf(false) }
     var showCustomNotificationDialog by remember { mutableStateOf(false) }
     var showTooltipDialog by remember { mutableStateOf<String?>(null) }
-    
-    // Toast
-    LaunchedEffect(toastMessage) {
-        toastMessage?.let {
-            viewModel.clearToast()
-        }
-    }
     
     // Auto prompt for notification permission
     LaunchedEffect(Unit) {
@@ -217,8 +208,6 @@ fun MainScreen(viewModel: MainViewModel) {
                     aliases = aliases,
                     onAddClick = { showAddAliasDialog = true },
                     onAddMultipleClick = { showAddMultipleAliasDialog = true },
-                    onRemove = { viewModel.removeAlias(it) },
-                    onRemoveSelected = { showRemoveAliasesDialog = true },
                     onInfoClick = { showTooltipDialog = "aliases" }
                 )
                 
@@ -331,18 +320,6 @@ fun MainScreen(viewModel: MainViewModel) {
             onConfirm = { pairs ->
                 viewModel.addAliases(pairs)
                 showAddMultipleAliasDialog = false
-            }
-        )
-    }
-    
-    if (showRemoveAliasesDialog && aliases.isNotEmpty()) {
-        MultiSelectRemoveDialog(
-            title = "Remove Aliases",
-            items = aliases,
-            onDismiss = { showRemoveAliasesDialog = false },
-            onConfirm = { keys ->
-                viewModel.removeSelectedAliases(keys)
-                showRemoveAliasesDialog = false
             }
         )
     }

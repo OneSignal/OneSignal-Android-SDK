@@ -2,8 +2,6 @@
 <resources>
     <string name="app_name">OneSignal</string>
     <string name="onesignal_app_id">77e32082-ea27-42e3-a898-c72e141824ef</string>
-    <!-- REST API Key for sending notifications (get from OneSignal Dashboard > Settings > Keys & IDs) -->
-    <string name="onesignal_rest_api_key">YOUR_REST_API_KEY_HERE</string>
 
     <!-- App Section -->
     <string name="app">App</string>

@@ -31,8 +31,6 @@ User operations:
 Alias operations:
 - addAlias(label: String, id: String)
 - addAliases(aliases: Map<String, String>)  // Batch add
-- removeAlias(label: String)
-- removeAliases(labels: Collection<String>)  // Batch remove
 
 Email operations:
 - addEmail(email: String)
@@ -146,7 +144,7 @@ In MainViewModel.kt, implement observers:
 3. **Send Push Notification Section** (Simple, With Image, Custom buttons)
 4. **In-App Messaging Section** (Pause toggle)
 5. **Send In-App Message Section** (Top Banner, Bottom Banner, Center Modal, Full Screen - with icons)
-6. **Aliases Section** (Add/Add Multiple/Remove Selected)
+6. **Aliases Section** (Add/Add Multiple, read-only list)
 7. **Emails Section** (Collapsible list >5 items)
 8. **SMS Section** (Collapsible list >5 items)
 9. **Tags Section** (Add/Add Multiple/Remove Selected)
@@ -257,16 +255,13 @@ Tooltip should explain each IAM type.
 ```
 Aliases Section (placed after Send In-App Message):
 - Section title: "Aliases" with info icon for tooltip
-- Compose list showing key-value pairs
-- Each item shows: Label | ID with delete icon
+- Compose list showing key-value pairs (read-only, no delete icons)
+- Each item shows: Label | ID
 - Filter out "external_id" and "onesignal_id" from display (these are special)
 - "No Aliases Added" text when empty
 - ADD button -> PairInputDialog with empty Label and ID fields (single add)
 - ADD MULTIPLE button -> MultiPairInputDialog (dynamic rows, add/remove)
-- REMOVE SELECTED button:
-  - Only visible when at least one alias exists
-  - Opens MultiSelectRemoveDialog with checkboxes
-  - Shows count in button: "REMOVE (N)"
+- No remove/delete functionality (aliases are add-only from the UI)
 ```
 
 ### Prompt 2.7 - Emails Section
@@ -722,7 +717,6 @@ Behavior:
 - On confirm, checked items' keys are collected as Collection<String> and passed to the callback
 
 Used by:
-- REMOVE SELECTED button (Aliases section) -> calls viewModel.removeSelectedAliases(keys)
 - REMOVE SELECTED button (Tags section) -> calls viewModel.removeSelectedTags(keys)
 - REMOVE SELECTED button (Triggers section) -> calls viewModel.removeSelectedTriggers(keys)
 ```
@@ -809,8 +803,6 @@ All user actions should display toast messages:
 - Logout: "Logged out"
 - Add alias: "Alias added: {label}"
 - Add multiple aliases: "{count} alias(es) added"
-- Remove alias: "Alias removed: {label}"
-- Remove selected: "{count} alias(es) removed"
 - Similar patterns for tags, triggers, emails, SMS
 - Notifications: "Notification sent: {type}" or "Failed to send notification"
 - In-App Messages: "Sent In-App Message: {type}"
@@ -915,7 +907,7 @@ If you change the package name, you must also update these files with your own F
 ## Summary
 
 This app demonstrates all OneSignal Android SDK features:
-- User management (login/logout, aliases with batch add/remove)
+- User management (login/logout, aliases with batch add)
 - Push notifications (subscription, sending with images, auto-permission prompt)
 - Email and SMS subscriptions
 - Tags for segmentation (batch add/remove support)

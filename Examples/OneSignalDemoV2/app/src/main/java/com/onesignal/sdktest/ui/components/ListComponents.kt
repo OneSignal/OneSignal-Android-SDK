@@ -35,7 +35,7 @@ import com.onesignal.sdktest.ui.theme.DividerColor
 fun PairItem(
     key: String,
     value: String,
-    onDelete: () -> Unit,
+    onDelete: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -60,13 +60,15 @@ fun PairItem(
                 overflow = TextOverflow.Ellipsis
             )
         }
-        IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "Delete",
-                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
-                modifier = Modifier.size(18.dp)
-            )
+        if (onDelete != null) {
+            IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
 }
@@ -197,7 +199,7 @@ fun CollapsibleSingleList(
 fun PairList(
     items: List<Pair<String, String>>,
     emptyText: String,
-    onDelete: (String) -> Unit,
+    onDelete: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
@@ -205,7 +207,7 @@ fun PairList(
             EmptyState(text = emptyText)
         } else {
             items.forEachIndexed { index, (key, value) ->
-                PairItem(key = key, value = value, onDelete = { onDelete(key) })
+                PairItem(key = key, value = value, onDelete = onDelete?.let { { it(key) } })
                 if (index < items.lastIndex) {
                     HorizontalDivider(
                         color = DividerColor,
