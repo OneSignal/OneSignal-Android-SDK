@@ -119,13 +119,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         val context = getApplication<Application>()
         
         _appId.value = SharedPreferenceUtil.getOneSignalAppId(context) ?: ""
-        _privacyConsentGiven.value = SharedPreferenceUtil.getUserPrivacyConsent(context)
-        _inAppMessagesPaused.value = SharedPreferenceUtil.getCachedInAppMessagingPausedStatus(context)
-        _locationShared.value = SharedPreferenceUtil.getCachedLocationSharedStatus(context)
+        _privacyConsentGiven.value = repository.getPrivacyConsent()
+        _inAppMessagesPaused.value = repository.isInAppMessagesPaused()
+        _locationShared.value = repository.isLocationShared()
         
-        // Load cached external user ID
-        val cachedExternalId = SharedPreferenceUtil.getCachedUserExternalUserId(context)
-        _externalUserId.value = if (cachedExternalId.isNullOrEmpty()) null else cachedExternalId
+        // Load external user ID from SDK
+        val externalId = OneSignal.User.externalId
+        _externalUserId.value = if (externalId.isEmpty()) null else externalId
         
         refreshPushSubscription()
         
