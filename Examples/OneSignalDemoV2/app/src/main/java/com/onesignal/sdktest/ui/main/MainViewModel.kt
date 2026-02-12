@@ -571,11 +571,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         }
     }
 
-    fun sendInAppMessage(triggerKey: String, triggerValue: String) {
+    fun sendInAppMessage(title: String, triggerKey: String, triggerValue: String) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.addTrigger(triggerKey, triggerValue)
             withContext(Dispatchers.Main) {
-                showToast("Trigger added: $triggerKey=$triggerValue")
+                triggersList.removeAll { it.first == triggerKey }
+                triggersList.add(Pair(triggerKey, triggerValue))
+                refreshTriggers()
+                showToast("Sent In-App Message: $title")
             }
         }
     }

@@ -146,7 +146,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 // === SEND IN-APP MESSAGE SECTION ===
                 SendInAppMessageSection(
                     onSendMessage = { type ->
-                        viewModel.sendInAppMessage(type.triggerKey, type.triggerValue)
+                        viewModel.sendInAppMessage(type.title, type.triggerKey, type.triggerValue)
                     },
                     onInfoClick = { showTooltipDialog = "sendInAppMessage" }
                 )

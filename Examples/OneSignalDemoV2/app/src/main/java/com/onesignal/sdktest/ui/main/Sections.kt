@@ -259,14 +259,22 @@ fun SendInAppMessageSection(
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(type.title)
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = type.icon,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(type.title)
+                    }
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = null,
+                        contentDescription = "Send",
                         tint = Color.White
                     )
                 }
