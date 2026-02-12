@@ -11,6 +11,7 @@ object SharedPreferenceUtil {
     private const val USER_EXTERNAL_USER_ID_SHARED_PREF = "USER_EXTERNAL_USER_ID_SHARED_PREF"
     private const val LOCATION_SHARED_PREF = "LOCATION_SHARED_PREF"
     private const val IN_APP_MESSAGING_PAUSED_PREF = "IN_APP_MESSAGING_PAUSED_PREF"
+    private const val CONSENT_REQUIRED_PREF = "CONSENT_REQUIRED_PREF"
 
     private fun getSharedPreference(context: Context): SharedPreferences {
         return context.getSharedPreferences(APP_SHARED_PREFS, Context.MODE_PRIVATE)
@@ -59,5 +60,13 @@ object SharedPreferenceUtil {
 
     fun cacheInAppMessagingPausedStatus(context: Context, paused: Boolean) {
         getSharedPreference(context).edit().putBoolean(IN_APP_MESSAGING_PAUSED_PREF, paused).apply()
+    }
+
+    fun getCachedConsentRequired(context: Context): Boolean {
+        return getSharedPreference(context).getBoolean(CONSENT_REQUIRED_PREF, false)
+    }
+
+    fun cacheConsentRequired(context: Context, required: Boolean) {
+        getSharedPreference(context).edit().putBoolean(CONSENT_REQUIRED_PREF, required).apply()
     }
 }

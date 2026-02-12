@@ -47,6 +47,8 @@ import com.onesignal.sdktest.ui.theme.WarningBackground
 @Composable
 fun AppSection(
     appId: String,
+    consentRequired: Boolean,
+    onConsentRequiredChange: (Boolean) -> Unit,
     privacyConsentGiven: Boolean,
     onConsentChange: (Boolean) -> Unit,
     externalUserId: String?,
@@ -118,11 +120,20 @@ fun AppSection(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         ToggleRow(
-            label = "Privacy Consent",
-            description = "Consent given for data collection",
-            checked = privacyConsentGiven,
-            onCheckedChange = onConsentChange
+            label = "Consent Required",
+            description = "Require consent before SDK processes data",
+            checked = consentRequired,
+            onCheckedChange = onConsentRequiredChange
         )
+        if (consentRequired) {
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            ToggleRow(
+                label = "Privacy Consent",
+                description = "Consent given for data collection",
+                checked = privacyConsentGiven,
+                onCheckedChange = onConsentChange
+            )
+        }
     }
     
     // Logged In As (shown above buttons when logged in)

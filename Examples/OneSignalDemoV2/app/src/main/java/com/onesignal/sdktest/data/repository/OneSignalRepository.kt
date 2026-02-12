@@ -212,6 +212,15 @@ class OneSignalRepository {
     }
 
     // Privacy consent
+    fun setConsentRequired(required: Boolean) {
+        Log.d(TAG, "Setting consent required: $required")
+        OneSignal.consentRequired = required
+    }
+
+    fun getConsentRequired(): Boolean {
+        return OneSignal.consentRequired
+    }
+
     fun setPrivacyConsent(granted: Boolean) {
         Log.d(TAG, "Setting privacy consent: $granted")
         OneSignal.consentGiven = granted

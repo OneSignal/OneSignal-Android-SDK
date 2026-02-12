@@ -78,6 +78,8 @@ Location:
 - promptLocation()
 
 Privacy consent:
+- setConsentRequired(required: Boolean)
+- getConsentRequired(): Boolean
 - setPrivacyConsent(granted: Boolean)
 - getPrivacyConsent(): Boolean
 
@@ -166,10 +168,16 @@ App Section layout:
    - Link text: "Get your keys at onesignal.com" (clickable, opens browser)
    - Light background color to stand out
 
-3. Privacy Consent toggle switch:
-   - Label: "Privacy Consent"
-   - Description: "Consent given for data collection"
-   - Switch control
+3. Consent card with up to two toggles:
+   a. "Consent Required" toggle (always visible):
+      - Label: "Consent Required"
+      - Description: "Require consent before SDK processes data"
+      - Sets OneSignal.consentRequired
+   b. "Privacy Consent" toggle (only visible when Consent Required is ON):
+      - Label: "Privacy Consent"
+      - Description: "Consent given for data collection"
+      - Sets OneSignal.consentGiven
+      - Separated from the above toggle by a horizontal divider
    - NOT a blocking overlay - user can interact with app regardless of state
 
 4. "Logged in as" display (ABOVE the buttons, only visible when logged in):
@@ -508,6 +516,7 @@ showTooltipDialog?.let { key ->
 ```
 SharedPreferenceUtil.kt stores:
 - OneSignal App ID
+- Consent required status
 - Privacy consent status
 - External user ID (for login state restoration)
 - Location shared status
@@ -519,12 +528,17 @@ SharedPreferenceUtil.kt stores:
 ```
 On app startup, state is restored in two layers:
 
-1. MainApplication.kt restores SDK state from SharedPreferences cache:
+1. MainApplication.kt restores SDK state from SharedPreferences cache BEFORE init:
+   - OneSignal.consentRequired = SharedPreferenceUtil.getCachedConsentRequired(context)
+   - OneSignal.consentGiven = SharedPreferenceUtil.getUserPrivacyConsent(context)
+   - OneSignal.initWithContext(this, appId)
+   Then AFTER init, restores remaining SDK state:
    - OneSignal.InAppMessages.paused = SharedPreferenceUtil.getCachedInAppMessagingPausedStatus(context)
    - OneSignal.Location.isShared = SharedPreferenceUtil.getCachedLocationSharedStatus(context)
-   This ensures the SDK has the correct state before any UI is created.
+   This ensures consent settings are in place before the SDK initializes.
 
 2. MainViewModel.loadInitialState() reads UI state from the SDK (not SharedPreferences):
+   - _consentRequired from repository.getConsentRequired() (reads OneSignal.consentRequired)
    - _privacyConsentGiven from repository.getPrivacyConsent() (reads OneSignal.consentGiven)
    - _inAppMessagesPaused from repository.isInAppMessagesPaused() (reads OneSignal.InAppMessages.paused)
    - _locationShared from repository.isLocationShared() (reads OneSignal.Location.isShared)

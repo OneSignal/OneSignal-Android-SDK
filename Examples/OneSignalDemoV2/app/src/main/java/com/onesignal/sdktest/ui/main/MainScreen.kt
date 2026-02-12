@@ -67,6 +67,7 @@ fun MainScreen(viewModel: MainViewModel) {
     val pushSubscriptionId by viewModel.pushSubscriptionId.observeAsState()
     val pushEnabled by viewModel.pushEnabled.observeAsState(false)
     val hasNotificationPermission by viewModel.hasNotificationPermission.observeAsState(false)
+    val consentRequired by viewModel.consentRequired.observeAsState(false)
     val privacyConsentGiven by viewModel.privacyConsentGiven.observeAsState(false)
     val externalUserId by viewModel.externalUserId.observeAsState()
     val aliases by viewModel.aliases.observeAsState(emptyList())
@@ -166,6 +167,8 @@ fun MainScreen(viewModel: MainViewModel) {
                 // === APP SECTION ===
                 AppSection(
                     appId = appId,
+                    consentRequired = consentRequired,
+                    onConsentRequiredChange = { viewModel.setConsentRequired(it) },
                     privacyConsentGiven = privacyConsentGiven,
                     onConsentChange = { viewModel.setPrivacyConsent(it) },
                     externalUserId = externalUserId,

@@ -67,6 +67,10 @@ class MainApplication : MultiDexApplication() {
         // Initialize tooltip helper
         TooltipHelper.init(this)
 
+        // Set consent required before init (must be set before initWithContext)
+        OneSignal.consentRequired = SharedPreferenceUtil.getCachedConsentRequired(this)
+        OneSignal.consentGiven = SharedPreferenceUtil.getUserPrivacyConsent(this)
+
         // Initialize OneSignal on main thread (required)
         OneSignal.initWithContext(this, appId)
         LogManager.i(TAG, "OneSignal init completed")

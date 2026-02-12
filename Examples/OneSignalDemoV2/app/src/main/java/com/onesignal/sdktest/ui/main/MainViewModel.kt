@@ -38,6 +38,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private val _hasNotificationPermission = MutableLiveData<Boolean>()
     val hasNotificationPermission: LiveData<Boolean> = _hasNotificationPermission
 
+    // Consent Required
+    private val _consentRequired = MutableLiveData<Boolean>()
+    val consentRequired: LiveData<Boolean> = _consentRequired
+
     // Privacy Consent
     private val _privacyConsentGiven = MutableLiveData<Boolean>()
     val privacyConsentGiven: LiveData<Boolean> = _privacyConsentGiven
@@ -119,6 +123,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         val context = getApplication<Application>()
         
         _appId.value = SharedPreferenceUtil.getOneSignalAppId(context) ?: ""
+        _consentRequired.value = repository.getConsentRequired()
         _privacyConsentGiven.value = repository.getPrivacyConsent()
         _inAppMessagesPaused.value = repository.isInAppMessagesPaused()
         _locationShared.value = repository.isLocationShared()
@@ -255,6 +260,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 refreshTriggers()
             }
         }
+    }
+
+    // Consent required
+    fun setConsentRequired(required: Boolean) {
+        repository.setConsentRequired(required)
+        SharedPreferenceUtil.cacheConsentRequired(getApplication(), required)
+        _consentRequired.value = required
+        showToast(if (required) "Consent required enabled" else "Consent required disabled")
     }
 
     // Privacy consent
