@@ -10,12 +10,13 @@ This document contains all the prompts and requirements needed to build the OneS
 
 ```
 Build a sample Android app with:
-- MVVM architecture with Android View Binding
+- MVVM architecture with Jetpack Compose UI
 - Kotlin Coroutines for background threading (Dispatchers.IO, Dispatchers.Main)
 - Gradle Kotlin DSL with buildSrc for type-safe dependency management
 - Support for Google FCM and Huawei HMS product flavors (matching existing OneSignalDemo setup)
 - Package name: com.onesignal.sdktest (must match google-services.json and agconnect-services.json)
 - All dialogs should have EMPTY input fields (for Appium testing - test framework enters values)
+- Material3 theming with OneSignal brand colors
 ```
 
 ### Prompt 1.2 - OneSignal Code Organization
@@ -29,8 +30,9 @@ User operations:
 
 Alias operations:
 - addAlias(label: String, id: String)
+- addAliases(aliases: Map<String, String>)  // Batch add
 - removeAlias(label: String)
-- removeAliases(labels: Collection<String>)
+- removeAliases(labels: Collection<String>)  // Batch remove
 
 Email operations:
 - addEmail(email: String)
@@ -42,11 +44,14 @@ SMS operations:
 
 Tag operations:
 - addTag(key: String, value: String)
+- addTags(tags: Map<String, String>)  // Batch add
 - removeTag(key: String)
+- removeTags(keys: Collection<String>)  // Batch remove
 - getTags(): Map<String, String>
 
 Trigger operations:
 - addTrigger(key: String, value: String)
+- addTriggers(triggers: Map<String, String>)  // Batch add
 - removeTrigger(key: String)
 - clearTriggers(keys: Collection<String>)
 
@@ -56,12 +61,12 @@ Outcome operations:
 - sendOutcomeWithValue(name: String, value: Float)
 
 Track Event:
-- trackEvent(name: String, value: String?)
+- trackEvent(name: String, properties: Map<String, Any?>?)  // Properties as parsed JSON map
 
 Push subscription:
 - getPushSubscriptionId(): String?
 - isPushEnabled(): Boolean
-- setOptedIn(optedIn: Boolean)
+- setPushEnabled(enabled: Boolean)
 
 In-App Messages:
 - setInAppMessagesPaused(paused: Boolean)
@@ -73,8 +78,8 @@ Location:
 - promptLocation()
 
 Privacy consent:
-- setConsentGiven(given: Boolean)
-- isConsentGiven(): Boolean
+- setPrivacyConsent(granted: Boolean)
+- getPrivacyConsent(): Boolean
 
 Notification sending (via REST API, delegated to OneSignalService):
 - sendNotification(type: NotificationType): Boolean
@@ -89,13 +94,22 @@ Create OneSignalService.kt object for REST API calls:
 
 Properties:
 - appId: String (set from MainApplication)
+- restApiKey: String (set from MainApplication, required for sending notifications)
 
 Methods:
 - setAppId(appId: String)
 - getAppId(): String
+- setRestApiKey(key: String)
 - sendNotification(type: NotificationType): Boolean
 - sendCustomNotification(title: String, body: String): Boolean
 - fetchUser(onesignalId: String): UserData?
+
+sendNotification endpoint:
+- POST https://onesignal.com/api/v1/notifications
+- REQUIRES Authorization header: "Basic $restApiKey"
+- Accept header: "application/vnd.onesignal.v1+json"
+- Uses include_subscription_ids (not include_player_ids)
+- Includes big_picture and large_icon for image notifications
 
 fetchUser endpoint:
 - GET https://api.onesignal.com/apps/{app_id}/users/by/onesignal_id/{onesignal_id}
@@ -129,14 +143,14 @@ In MainViewModel.kt, implement observers:
 2. **Push Section** (Push ID, Enabled Toggle, Auto-prompts permission on load)
 3. **Send Push Notification Section** (Simple, With Image, Custom buttons)
 4. **In-App Messaging Section** (Pause toggle)
-5. **Send In-App Message Section** (Top Banner, Bottom Banner, Center Modal, Full Screen)
-6. **Aliases Section** (RecyclerView with Add/Remove All)
-7. **Emails Section** (RecyclerView with Add, collapsible >5 items)
-8. **SMS Section** (RecyclerView with Add, collapsible >5 items)
-9. **Tags Section** (RecyclerView with Add, individual remove only)
-10. **Outcome Events Section** (Send Outcome dropdown)
-11. **Triggers Section** (RecyclerView with Add/Clear Triggers - IN MEMORY ONLY)
-12. **Track Event Section** (Track Event button)
+5. **Send In-App Message Section** (Top Banner, Bottom Banner, Center Modal, Full Screen - with icons)
+6. **Aliases Section** (Add/Add Multiple/Remove Selected)
+7. **Emails Section** (Collapsible list >5 items)
+8. **SMS Section** (Collapsible list >5 items)
+9. **Tags Section** (Add/Add Multiple/Remove Selected)
+10. **Outcome Events Section** (Send Outcome dialog with type selection)
+11. **Triggers Section** (Add/Add Multiple/Remove Selected/Clear All - IN MEMORY ONLY)
+12. **Track Event Section** (Track Event with JSON validation)
 13. **Location Section** (Location Shared toggle, Prompt Location button)
 14. **Next Activity Button**
 
@@ -215,15 +229,17 @@ In-App Messaging Section (placed right after Send Push):
 Send In-App Message Section (placed right after In-App Messaging):
 - Section title: "Send In-App Message" with info icon for tooltip
 - Four FULL-WIDTH buttons (not a grid):
-  1. TOP BANNER
-  2. BOTTOM BANNER
-  3. CENTER MODAL
-  4. FULL SCREEN
+  1. TOP BANNER - VerticalAlignTop icon
+  2. BOTTOM BANNER - VerticalAlignBottom icon
+  3. CENTER MODAL - CropSquare icon
+  4. FULL SCREEN - Fullscreen icon
 - Button styling:
-  - RED background color (#E9444E or similar)
+  - RED background color (#E9444E)
   - WHITE text
-  - WHITE icon on the RIGHT side of the text
+  - Type-specific icon on LEFT side
+  - Send arrow icon on RIGHT side
   - Full width of the card
+- On click: adds trigger and shows toast "Sent In-App Message: {type}"
 
 Tooltip should explain each IAM type.
 ```
@@ -233,15 +249,18 @@ Tooltip should explain each IAM type.
 ```
 Aliases Section (placed after Send In-App Message):
 - Section title: "Aliases" with info icon (ℹ️) for tooltip
-- RecyclerView showing key-value pairs
-- Each item shows: Label | ID with long-press to delete
+- Compose LazyColumn showing key-value pairs
+- Each item shows: Label | ID with delete icon
 - Filter out "external_id" and "onesignal_id" from display (these are special)
 - "No Aliases Added" text when empty
-- ADD ALIAS button → dialog with empty Key and Value fields
-- REMOVE ALL ALIASES button:
+- Two buttons side by side:
+  - ADD button → PairInputDialog with empty Label and ID fields
+  - ADD MULTIPLE button → MultiPairInputDialog (dynamic rows, add/remove)
+- REMOVE SELECTED button:
   - Only visible when at least one alias exists
   - Red background color
-  - Removes all displayed aliases at once
+  - Opens MultiSelectRemoveDialog with checkboxes
+  - Shows count in button: "REMOVE (3)"
 ```
 
 ### Prompt 2.7 - Emails Section
@@ -276,11 +295,16 @@ SMS Section:
 ```
 Tags Section:
 - Section title: "Tags" with info icon for tooltip
-- RecyclerView showing key-value pairs
-- Each item shows: Key | Value with X button to delete individually
+- Compose LazyColumn showing key-value pairs
+- Each item shows: Key | Value with delete icon
 - "No Tags Added" text when empty
-- ADD TAG button → dialog with empty Key and Value fields
-- NO "Remove All" button - tags are removed individually only
+- Two buttons side by side:
+  - ADD button → PairInputDialog with empty Key and Value fields
+  - ADD MULTIPLE button → MultiPairInputDialog (dynamic rows)
+- REMOVE SELECTED button:
+  - Only visible when at least one tag exists
+  - Red background color
+  - Opens MultiSelectRemoveDialog with checkboxes
 ```
 
 ### Prompt 2.10 - Outcome Events Section
@@ -299,14 +323,15 @@ Outcome Events Section:
 ```
 Triggers Section:
 - Section title: "Triggers" with info icon for tooltip
-- RecyclerView showing key-value pairs
-- Each item shows: Key | Value with X button to delete individually
+- Compose LazyColumn showing key-value pairs
+- Each item shows: Key | Value with delete icon
 - "No Triggers Added" text when empty
-- ADD TRIGGER button → dialog with empty Key and Value fields
-- CLEAR TRIGGERS button:
-  - Only visible when at least 1 trigger exists
-  - Red background color
-  - Clears all triggers at once
+- Two buttons side by side:
+  - ADD button → PairInputDialog with empty Key and Value fields
+  - ADD MULTIPLE button → MultiPairInputDialog (dynamic rows)
+- Two action buttons (when triggers exist):
+  - REMOVE SELECTED → MultiSelectRemoveDialog with checkboxes
+  - CLEAR ALL → Removes all triggers at once
 
 IMPORTANT: Triggers are stored IN MEMORY ONLY during the app session.
 - triggersList is a mutableListOf<Pair<String, String>>() in MainViewModel
@@ -320,9 +345,13 @@ IMPORTANT: Triggers are stored IN MEMORY ONLY during the app session.
 ```
 Track Event Section:
 - Section title: "Track Event" with info icon for tooltip
-- TRACK EVENT button → opens dialog with:
+- TRACK EVENT button → opens TrackEventDialog with:
   - Event Name field (required)
-  - Event Value field (optional)
+  - Properties field (optional, JSON format)
+    - Inline validation: shows error if JSON is invalid
+    - Placeholder text: {"key": "value"}
+    - Parsed to Map<String, Any>? before sending
+  - TRACK button disabled until name is filled AND JSON is valid (or empty)
 - Calls OneSignal.User.trackEvent(name, properties)
 ```
 
@@ -588,9 +617,8 @@ The test automation framework (Appium) will enter these values:
 Examples/OneSignalDemoV2/
 ├── buildSrc/
 │   └── src/main/kotlin/
-│       ├── Versions.kt          # Version constants
-│       ├── Dependencies.kt      # Dependency strings
-│       └── Plugins.kt           # Plugin IDs
+│       ├── Versions.kt          # Version constants (includes Compose versions)
+│       └── Dependencies.kt      # Dependency strings (includes Compose deps)
 ├── app/
 │   ├── src/main/
 │   │   ├── assets/
@@ -600,43 +628,39 @@ Examples/OneSignalDemoV2/
 │   │   │   │   └── MainApplication.kt
 │   │   │   ├── data/
 │   │   │   │   ├── model/
-│   │   │   │   │   ├── NotificationType.kt
-│   │   │   │   │   └── InAppMessageType.kt
+│   │   │   │   │   ├── NotificationType.kt    # With bigPicture and largeIcon
+│   │   │   │   │   └── InAppMessageType.kt    # With Material icons
 │   │   │   │   ├── network/
-│   │   │   │   │   └── OneSignalService.kt    # REST API client
+│   │   │   │   │   └── OneSignalService.kt    # REST API client (with auth)
 │   │   │   │   └── repository/
 │   │   │   │       └── OneSignalRepository.kt
 │   │   │   ├── ui/
-│   │   │   │   ├── adapter/
-│   │   │   │   │   ├── PairListAdapter.kt     # For aliases, tags, triggers
-│   │   │   │   │   ├── SingleListAdapter.kt   # For emails, sms
-│   │   │   │   │   └── InAppMessageAdapter.kt # For IAM buttons
+│   │   │   │   ├── components/                # Reusable Compose components
+│   │   │   │   │   ├── SectionCard.kt         # Card with title and info icon
+│   │   │   │   │   ├── ToggleRow.kt           # Label + Switch
+│   │   │   │   │   ├── ActionButton.kt        # Primary/Destructive buttons
+│   │   │   │   │   ├── ListComponents.kt      # PairList, SingleList, EmptyState
+│   │   │   │   │   ├── LoadingOverlay.kt      # Full-screen loading spinner
+│   │   │   │   │   └── Dialogs.kt             # All dialog composables
 │   │   │   │   ├── main/
-│   │   │   │   │   ├── MainActivity.kt
-│   │   │   │   │   └── MainViewModel.kt
+│   │   │   │   │   ├── MainActivity.kt        # ComponentActivity with setContent
+│   │   │   │   │   ├── MainScreen.kt          # Main Compose screen
+│   │   │   │   │   ├── Sections.kt            # Individual section composables
+│   │   │   │   │   └── MainViewModel.kt       # With batch operations
 │   │   │   │   ├── splash/
-│   │   │   │   │   └── SplashActivity.kt
-│   │   │   │   └── secondary/
-│   │   │   │       └── SecondaryActivity.kt
+│   │   │   │   │   └── SplashActivity.kt      # Compose splash screen
+│   │   │   │   ├── secondary/
+│   │   │   │   │   └── SecondaryActivity.kt   # Simple Compose screen
+│   │   │   │   └── theme/
+│   │   │   │       └── Theme.kt               # OneSignal Material3 theme
 │   │   │   └── util/
 │   │   │       ├── SharedPreferenceUtil.kt
 │   │   │       └── TooltipHelper.kt
 │   │   └── res/
-│   │       ├── layout/
-│   │       │   ├── activity_main.xml
-│   │       │   ├── dialog_login.xml
-│   │       │   ├── dialog_add_pair.xml
-│   │       │   ├── dialog_single_input.xml
-│   │       │   ├── dialog_outcome.xml
-│   │       │   ├── dialog_track_event.xml
-│   │       │   ├── item_pair.xml
-│   │       │   ├── item_single.xml
-│   │       │   └── item_iam_button.xml
-│   │       ├── drawable/
-│   │       │   └── ic_info.xml
 │   │       └── values/
-│   │           ├── strings.xml
-│   │           └── colors.xml
+│   │           ├── strings.xml                # Includes onesignal_rest_api_key
+│   │           ├── colors.xml
+│   │           └── styles.xml
 │   └── src/huawei/
 │       └── java/com/onesignal/sdktest/notification/
 │           └── HmsMessageServiceAppLevel.kt
@@ -644,6 +668,8 @@ Examples/OneSignalDemoV2/
 ├── agconnect-services.json
 └── BUILDING_THE_APP.md (this file)
 ```
+
+Note: XML layouts have been removed - all UI is now Jetpack Compose.
 
 ---
 
@@ -654,9 +680,15 @@ Examples/OneSignalDemoV2/
 ```xml
 <!-- Replace with your own OneSignal App ID -->
 <string name="onesignal_app_id">YOUR_APP_ID_HERE</string>
+
+<!-- Replace with your OneSignal REST API Key (required for sending notifications) -->
+<string name="onesignal_rest_api_key">YOUR_REST_API_KEY_HERE</string>
 ```
 
-Note: REST API key is NOT required for the fetchUser endpoint.
+**Important:**
+- REST API key is required for sending push notifications via the REST API
+- REST API key is NOT required for the fetchUser endpoint (public)
+- Get your REST API key from OneSignal Dashboard → Settings → Keys & IDs
 
 ### Package Name
 
@@ -698,22 +730,132 @@ Notification permission is automatically requested when MainActivity loads:
 ## Summary
 
 This app demonstrates all OneSignal Android SDK features:
-- User management (login/logout, aliases)
-- Push notifications (subscription, sending, auto-permission prompt)
+- User management (login/logout, aliases with batch add/remove)
+- Push notifications (subscription, sending with images, auto-permission prompt)
 - Email and SMS subscriptions
-- Tags for segmentation (individual remove only, no bulk remove)
-- Triggers for in-app message targeting (in-memory only, with Clear Triggers)
+- Tags for segmentation (batch add/remove support)
+- Triggers for in-app message targeting (in-memory only, batch operations)
 - Outcomes for conversion tracking
-- Event tracking
-- In-app messages (display and testing)
+- Event tracking with JSON properties validation
+- In-app messages (display testing with type-specific icons)
 - Location sharing
 - Privacy consent management
 
 The app is designed to be:
 1. **Testable** - Empty dialogs for Appium automation
 2. **Comprehensive** - All SDK features demonstrated
-3. **Clean** - MVVM architecture with centralized OneSignal code
+3. **Clean** - MVVM architecture with Jetpack Compose UI
 4. **Cross-platform ready** - Tooltip content in JSON for sharing across wrappers
 5. **Session-based triggers** - Triggers stored in memory only, cleared on restart
 6. **Responsive UI** - Loading indicator with delay to ensure UI populates before dismissing
 7. **Performant** - Tooltip JSON loaded on background thread
+8. **Modern UI** - Material3 theming with reusable Compose components
+9. **Batch Operations** - Add multiple items at once, select and remove multiple items
+
+---
+
+## Phase 8: Jetpack Compose Architecture
+
+### Prompt 8.1 - Compose Setup
+
+```
+Enable Jetpack Compose in the project:
+
+build.gradle.kts (app):
+- buildFeatures { compose = true }
+- composeOptions { kotlinCompilerExtensionVersion = "1.5.10" }
+
+Dependencies (via BOM):
+- composeBom = "2024.02.00"
+- composeUi, composeUiGraphics, composeUiToolingPreview
+- composeMaterial3
+- composeMaterialIconsExtended (for IAM type icons)
+- composeRuntime, composeRuntimeLivedata
+- activityCompose
+- lifecycleViewModelCompose, lifecycleRuntimeCompose
+```
+
+### Prompt 8.2 - Reusable Components
+
+```
+Create reusable Compose components in ui/components/:
+
+SectionCard.kt:
+- Card with title text and optional info icon
+- Column content slot
+- OnInfoClick callback for tooltips
+
+ToggleRow.kt:
+- Label, optional description, Switch
+- Horizontal layout with space between
+
+ActionButton.kt:
+- PrimaryButton (OneSignalRed background)
+- DestructiveButton (Red/warning style)
+- Full-width buttons for consistent styling
+
+ListComponents.kt:
+- PairItem (key-value with delete icon)
+- SingleItem (single value with delete icon)
+- EmptyState (centered "No items" text)
+- CollapsibleSingleList (shows 5, expandable)
+- PairList (simple list of pairs)
+
+LoadingOverlay.kt:
+- Semi-transparent full-screen overlay
+- Centered CircularProgressIndicator
+- Shown via isLoading state
+
+Dialogs.kt:
+- SingleInputDialog (one text field)
+- PairInputDialog (key-value fields)
+- MultiPairInputDialog (dynamic rows, add/remove)
+- MultiSelectRemoveDialog (checkboxes for batch remove)
+- LoginDialog, OutcomeDialog, TrackEventDialog
+- CustomNotificationDialog, TooltipDialog
+```
+
+### Prompt 8.3 - Theme
+
+```
+Create OneSignal theme in ui/theme/Theme.kt:
+
+Colors:
+- OneSignalRed = #E9444E (primary)
+- OneSignalGreen = #2E7D32 (success)
+- OneSignalGreenLight = #E8F5E9 (success background)
+- CardBackground = #FAFAFA
+- LightBackground = #F5F5F5
+- DividerColor = #E0E0E0
+- WarningBackground = #FFF8E1
+
+OneSignalTheme composable:
+- MaterialTheme with LightColorScheme
+- Primary = OneSignalRed
+- Surface variants for cards
+```
+
+### Prompt 8.4 - Toast Messages
+
+```
+All user actions should display toast messages:
+
+- Login: "Logged in as: {userId}"
+- Logout: "Logged out"
+- Add alias: "Alias added: {label}"
+- Add multiple aliases: "{count} alias(es) added"
+- Remove alias: "Alias removed: {label}"
+- Remove selected: "{count} alias(es) removed"
+- Similar patterns for tags, triggers, emails, SMS
+- Notifications: "Notification sent: {type}" or "Failed to send notification"
+- In-App Messages: "Sent In-App Message: {type}"
+- Outcomes: "Outcome sent: {name}"
+- Events: "Event tracked: {name}"
+- Location: "Location sharing enabled/disabled"
+- Push: "Push enabled/disabled"
+
+Implementation:
+- MainViewModel has toastMessage: LiveData<String?>
+- MainActivity observes and shows Android Toast
+- LaunchedEffect triggers on toastMessage change
+```
