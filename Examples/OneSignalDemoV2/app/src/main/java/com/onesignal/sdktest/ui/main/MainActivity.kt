@@ -206,10 +206,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        binding.btnRemoveAllAliases.setOnClickListener {
-            viewModel.removeAliases()
-        }
-
         binding.btnAddEmail.setOnClickListener {
             showSingleInputDialog(getString(R.string.new_email)) { email ->
                 viewModel.addEmail(email)
@@ -349,7 +345,6 @@ class MainActivity : AppCompatActivity() {
             binding.rvAliases.visibility = if (hasItems) View.VISIBLE else View.GONE
             binding.tvNoAliases.visibility = if (hasItems) View.GONE else View.VISIBLE
             binding.layoutRemoveAliases.visibility = if (hasItems) View.VISIBLE else View.GONE
-            binding.layoutRemoveAllAliases.visibility = if (hasItems) View.VISIBLE else View.GONE
         }
 
         // Emails

@@ -362,18 +362,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         }
     }
 
-    fun removeAliases() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val labels = aliasesList.map { it.first }
-            repository.removeAliases(labels)
-            withContext(Dispatchers.Main) {
-                aliasesList.clear()
-                refreshAliases()
-                showToast("All aliases removed")
-            }
-        }
-    }
-
     fun removeSelectedAliases(labels: Collection<String>) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.removeAliases(labels)

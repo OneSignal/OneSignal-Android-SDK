@@ -30,7 +30,6 @@
     <string name="add_alias">ADD ALIAS</string>
     <string name="add_aliases">ADD ALIASES</string>
     <string name="remove_aliases">REMOVE ALIASES</string>
-    <string name="remove_all_aliases">REMOVE ALL ALIASES</string>
 
     <!-- Push -->
     <string name="push">Push</string>

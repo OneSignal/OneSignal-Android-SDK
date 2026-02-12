@@ -743,29 +743,6 @@
 
                         </LinearLayout>
 
-                        <LinearLayout
-                            android:id="@+id/layout_remove_all_aliases"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical"
-                            android:visibility="gone">
-
-                            <View
-                                android:layout_width="match_parent"
-                                android:layout_height="1dp"
-                                android:background="@color/colorDivider"/>
-
-                            <Button
-                                android:id="@+id/btn_remove_all_aliases"
-                                android:layout_width="match_parent"
-                                android:layout_height="56dp"
-                                android:text="@string/remove_all_aliases"
-                                android:textSize="19sp"
-                                android:textColor="@android:color/white"
-                                android:background="@color/colorRed"/>
-
-                        </LinearLayout>
-
                     </LinearLayout>
 
                 </androidx.cardview.widget.CardView>
