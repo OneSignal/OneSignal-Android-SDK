@@ -3,6 +3,7 @@ package com.onesignal.sdktest.ui.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -14,6 +15,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import org.json.JSONObject
 
 /**
@@ -72,42 +75,55 @@ fun PairInputDialog(
     var key by remember { mutableStateOf("") }
     var value by remember { mutableStateOf("") }
     
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = key,
-                    onValueChange = { key = it },
-                    label = { Text(keyLabel) },
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            shape = RoundedCornerShape(24.dp),
+            tonalElevation = 6.dp
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(title, style = MaterialTheme.typography.headlineSmall)
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = value,
-                    onValueChange = { value = it },
-                    label = { Text(valueLabel) },
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = key,
+                        onValueChange = { key = it },
+                        label = { Text(keyLabel) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = value,
+                        onValueChange = { value = it },
+                        label = { Text(valueLabel) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onConfirm(key, value) },
-                enabled = key.isNotBlank() && value.isNotBlank()
-            ) {
-                Text("ADD")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("CANCEL")
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("CANCEL")
+                    }
+                    TextButton(
+                        onClick = { onConfirm(key, value) },
+                        enabled = key.isNotBlank() && value.isNotBlank()
+                    ) {
+                        Text("ADD")
+                    }
+                }
             }
         }
-    )
+    }
 }
 
 /**
@@ -125,22 +141,30 @@ fun MultiPairInputDialog(
     
     val allValid = pairs.all { it.first.isNotBlank() && it.second.isNotBlank() }
     
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 400.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                pairs.forEachIndexed { index, (key, value) ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            shape = RoundedCornerShape(24.dp),
+            tonalElevation = 6.dp
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(title, style = MaterialTheme.typography.headlineSmall)
+                Spacer(modifier = Modifier.height(16.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 400.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    pairs.forEachIndexed { index, (key, value) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             OutlinedTextField(
                                 value = key,
                                 onValueChange = { newKey ->
@@ -149,10 +173,9 @@ fun MultiPairInputDialog(
                                     }
                                 },
                                 label = { Text(keyLabel) },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.weight(1f),
                                 singleLine = true
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
                             OutlinedTextField(
                                 value = value,
                                 onValueChange = { newValue ->
@@ -161,55 +184,57 @@ fun MultiPairInputDialog(
                                     }
                                 },
                                 label = { Text(valueLabel) },
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.weight(1f),
                                 singleLine = true
                             )
-                        }
-                        if (pairs.size > 1) {
-                            IconButton(
-                                onClick = {
-                                    pairs = pairs.toMutableList().apply { removeAt(index) }
+                            if (pairs.size > 1) {
+                                IconButton(
+                                    onClick = {
+                                        pairs = pairs.toMutableList().apply { removeAt(index) }
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Remove",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
                                 }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Remove",
-                                    tint = MaterialTheme.colorScheme.error
-                                )
                             }
                         }
+                        if (index < pairs.lastIndex) {
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                        }
                     }
-                    if (index < pairs.lastIndex) {
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    TextButton(
+                        onClick = { pairs = pairs + Pair("", "") },
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("ADD ROW")
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                TextButton(
-                    onClick = { pairs = pairs + Pair("", "") },
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("ADD ROW")
+                    TextButton(onClick = onDismiss) {
+                        Text("CANCEL")
+                    }
+                    TextButton(
+                        onClick = { onConfirm(pairs) },
+                        enabled = allValid
+                    ) {
+                        Text("ADD ALL")
+                    }
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onConfirm(pairs) },
-                enabled = allValid
-            ) {
-                Text("ADD ALL")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("CANCEL")
             }
         }
-    )
+    }
 }
 
 /**
