@@ -3,24 +3,30 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp"
+    android:paddingTop="20dp"
+    android:paddingBottom="8dp">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/key"
-        android:textSize="12sp"
-        android:textColor="@color/colorDarkText"/>
+        android:textSize="13sp"
+        android:textColor="@color/colorSecondaryText"
+        android:textAllCaps="true"
+        android:letterSpacing="0.04"/>
 
     <EditText
         android:id="@+id/et_key"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="20dp"
         android:inputType="text"
         android:textColor="@color/colorDarkText"
         android:textColorHint="@color/colorDarkHintText"
+        android:textSize="16sp"
         android:singleLine="true"
         android:hint=""/>
 
@@ -28,8 +34,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/value"
-        android:textSize="12sp"
-        android:textColor="@color/colorDarkText"/>
+        android:textSize="13sp"
+        android:textColor="@color/colorSecondaryText"
+        android:textAllCaps="true"
+        android:letterSpacing="0.04"/>
 
     <EditText
         android:id="@+id/et_value"
@@ -39,6 +47,7 @@
         android:inputType="text"
         android:textColor="@color/colorDarkText"
         android:textColorHint="@color/colorDarkHintText"
+        android:textSize="16sp"
         android:singleLine="true"
         android:hint=""/>
 

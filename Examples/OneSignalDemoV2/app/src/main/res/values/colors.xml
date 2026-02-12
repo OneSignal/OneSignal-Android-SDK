@@ -2,21 +2,26 @@
 <resources>
     <color name="colorPrimary">#595CF2</color>
     <color name="colorPrimaryDark">#3F42B0</color>
+    <color name="colorPrimaryLight">#EEEEFF</color>
     <color name="colorAccent">#595CF2</color>
 
-    <color name="colorBackground">#ECECEC</color>
-    <color name="colorDarkBackground">#3A3A3A</color>
+    <color name="colorBackground">#F5F5F7</color>
+    <color name="colorSurface">#FFFFFF</color>
+    <color name="colorDarkBackground">#1C1C1E</color>
 
-    <color name="colorDarkText">#3A3A3A</color>
-    <color name="colorDarkHintText">#7A7A7A</color>
+    <color name="colorDarkText">#1C1C1E</color>
+    <color name="colorSecondaryText">#6E6E73</color>
+    <color name="colorDarkHintText">#8E8E93</color>
 
-    <color name="colorDivider">#ECECEC</color>
+    <color name="colorDivider">#E5E5EA</color>
     <color name="colorRed">#E9444E</color>
 
     <color name="colorTextLight">#FFFFFF</color>
 
-    <color name="colorToastInfo">#1E88E5</color>
-    <color name="colorToastSuccess">#47B84C</color>
-    <color name="colorToastWarning">#FFB300</color>
-    <color name="colorToastError">#E53935</color>
+    <color name="colorToastInfo">#007AFF</color>
+    <color name="colorToastSuccess">#34C759</color>
+    <color name="colorToastWarning">#FF9500</color>
+    <color name="colorToastError">#FF3B30</color>
+
+    <color name="colorSectionHeader">#48494B</color>
 </resources>

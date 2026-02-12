@@ -3,21 +3,26 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp"
+    android:paddingTop="20dp"
+    android:paddingBottom="8dp">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/outcome_type"
-        android:textSize="12sp"
-        android:textColor="@color/colorDarkText"/>
+        android:textSize="13sp"
+        android:textColor="@color/colorSecondaryText"
+        android:textAllCaps="true"
+        android:letterSpacing="0.04"/>
 
     <Spinner
         android:id="@+id/spinner_outcome_type"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="20dp"
         android:background="@android:drawable/btn_dropdown"
         android:spinnerMode="dropdown"/>
 
@@ -25,18 +30,21 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/outcome_name"
-        android:textSize="12sp"
-        android:textColor="@color/colorDarkText"/>
+        android:textSize="13sp"
+        android:textColor="@color/colorSecondaryText"
+        android:textAllCaps="true"
+        android:letterSpacing="0.04"/>
 
     <EditText
         android:id="@+id/et_outcome_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="20dp"
         android:inputType="text"
         android:textColor="@color/colorDarkText"
         android:textColorHint="@color/colorDarkHintText"
+        android:textSize="16sp"
         android:singleLine="true"
         android:focusable="true"
         android:focusableInTouchMode="true"
@@ -47,8 +55,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/outcome_value"
-        android:textSize="12sp"
-        android:textColor="@color/colorDarkText"
+        android:textSize="13sp"
+        android:textColor="@color/colorSecondaryText"
+        android:textAllCaps="true"
+        android:letterSpacing="0.04"
         android:visibility="gone"/>
 
     <EditText
@@ -59,6 +69,7 @@
         android:inputType="numberDecimal|numberSigned"
         android:textColor="@color/colorDarkText"
         android:textColorHint="@color/colorDarkHintText"
+        android:textSize="16sp"
         android:singleLine="true"
         android:hint="@string/outcome_value"
         android:focusable="true"

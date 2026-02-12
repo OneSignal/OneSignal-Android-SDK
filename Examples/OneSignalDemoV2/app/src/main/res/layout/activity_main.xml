@@ -13,7 +13,8 @@
         android:layout_height="wrap_content"
         android:theme="@style/AppTheme.AppBarOverlay"
         android:clipChildren="false"
-        android:clipToPadding="false">
+        android:clipToPadding="false"
+        app:elevation="0dp">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
@@ -59,8 +60,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
-            android:paddingTop="10dp"
-            android:paddingBottom="12dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="24dp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
             android:orientation="vertical">
 
             <!-- App Section -->
@@ -73,19 +76,16 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginBottom="8dp"
                     android:text="@string/app"
-                    android:textColor="@color/colorDarkText" />
+                    style="@style/SectionHeader" />
 
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
                     android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
+                    style="@style/CardStyle">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -96,7 +96,7 @@
                         <RelativeLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:padding="12dp">
+                            android:padding="16dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
@@ -104,8 +104,8 @@
                                 android:layout_alignParentStart="true"
                                 android:layout_centerVertical="true"
                                 android:text="@string/app_id_label"
-                                android:textColor="@color/colorDarkText"
-                                android:textSize="16sp" />
+                                android:textColor="@color/colorSecondaryText"
+                                android:textSize="14sp" />
 
                             <TextView
                                 android:id="@+id/tv_app_id"
@@ -114,7 +114,8 @@
                                 android:layout_alignParentEnd="true"
                                 android:layout_centerVertical="true"
                                 android:textColor="@color/colorDarkText"
-                                android:textSize="14sp" />
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
 
                         </RelativeLayout>
 
@@ -127,31 +128,30 @@
                     android:id="@+id/card_guidance_banner"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
                     android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="2dp"
-                    app:cardBackgroundColor="#FFF9E6">
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="@color/colorPrimaryLight">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
-                        android:padding="12dp">
+                        android:padding="16dp">
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="@string/app_id_guidance"
                             android:textColor="@color/colorDarkText"
-                            android:textSize="14sp" />
+                            android:textSize="14sp"
+                            android:lineSpacingExtra="2dp" />
 
                         <TextView
                             android:id="@+id/tv_get_keys_link"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
+                            android:layout_marginTop="6dp"
                             android:text="@string/get_keys_link"
                             android:textColor="@color/colorPrimary"
                             android:textSize="14sp"
@@ -165,16 +165,13 @@
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
                     android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
+                    style="@style/CardStyle">
 
                     <RelativeLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:padding="12dp">
+                        android:padding="16dp">
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -182,6 +179,7 @@
                             android:layout_alignParentStart="true"
                             android:layout_centerVertical="true"
                             android:layout_toStartOf="@id/switch_privacy_consent"
+                            android:layout_marginEnd="12dp"
                             android:orientation="vertical">
 
                             <TextView
@@ -194,9 +192,10 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
                                 android:text="@string/privacy_consent_description"
                                 android:textSize="13sp"
-                                android:textColor="@color/colorDarkText"/>
+                                android:textColor="@color/colorSecondaryText"/>
 
                         </LinearLayout>
 
@@ -211,18 +210,16 @@
 
                 </androidx.cardview.widget.CardView>
 
-                <!-- External User ID Display (shown when logged in) - ABOVE buttons -->
+                <!-- External User ID Display (shown when logged in) -->
                 <androidx.cardview.widget.CardView
                     android:id="@+id/layout_external_id"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
                     android:layout_marginBottom="12dp"
                     android:visibility="gone"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="2dp"
-                    app:cardBackgroundColor="#E8F5E9">
+                    app:cardCornerRadius="14dp"
+                    app:cardElevation="0dp"
+                    app:cardBackgroundColor="@color/colorPrimaryLight">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -235,16 +232,16 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/logged_in_as"
-                            android:textColor="@color/colorDarkText"
-                            android:textSize="16sp" />
+                            android:textColor="@color/colorSecondaryText"
+                            android:textSize="14sp" />
 
                         <TextView
                             android:id="@+id/tv_external_id"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:textColor="#2E7D32"
-                            android:textSize="22sp"
+                            android:textColor="@color/colorPrimary"
+                            android:textSize="20sp"
                             android:textStyle="bold"
                             android:gravity="center"
                             android:ellipsize="middle"
@@ -257,28 +254,16 @@
                 <!-- Login/Switch User Button -->
                 <Button
                     android:id="@+id/btn_login_user"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
+                    style="@style/PrimaryButton"
                     android:layout_marginBottom="8dp"
-                    android:text="@string/login_user"
-                    android:textSize="19sp"
-                    android:textColor="@android:color/white"
-                    android:background="@color/colorPrimary"/>
+                    android:text="@string/login_user" />
 
                 <!-- Logout User Button -->
                 <Button
                     android:id="@+id/btn_logout_user"
-                    android:layout_width="match_parent"
-                    android:layout_height="56dp"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="12dp"
-                    android:text="@string/logout_user"
-                    android:textSize="19sp"
-                    android:textColor="@android:color/white"
-                    android:background="@color/colorPrimary"/>
+                    style="@style/OutlinedButton"
+                    android:layout_marginBottom="16dp"
+                    android:text="@string/logout_user" />
 
             </LinearLayout>
 
@@ -292,9 +277,9 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginBottom="8dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
 
@@ -303,12 +288,12 @@
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
                         android:text="@string/push"
-                        android:textColor="@color/colorDarkText" />
+                        style="@style/SectionHeader" />
 
                     <ImageButton
                         android:id="@+id/btn_info_push"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/ic_info"
                         android:background="?android:attr/selectableItemBackgroundBorderless"
                         android:contentDescription="@string/icon" />
@@ -318,11 +303,8 @@
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
+                    android:layout_marginBottom="16dp"
+                    style="@style/CardStyle">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -333,7 +315,7 @@
                         <RelativeLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:padding="12dp">
+                            android:padding="16dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
@@ -341,8 +323,8 @@
                                 android:layout_alignParentStart="true"
                                 android:layout_centerVertical="true"
                                 android:text="@string/push_id_label"
-                                android:textColor="@color/colorDarkText"
-                                android:textSize="16sp" />
+                                android:textColor="@color/colorSecondaryText"
+                                android:textSize="14sp" />
 
                             <TextView
                                 android:id="@+id/tv_push_id"
@@ -360,13 +342,15 @@
                         <View
                             android:layout_width="match_parent"
                             android:layout_height="1dp"
+                            android:layout_marginStart="16dp"
+                            android:layout_marginEnd="16dp"
                             android:background="@color/colorDivider" />
 
                         <!-- Enabled Toggle -->
                         <RelativeLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:padding="12dp">
+                            android:padding="16dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
@@ -392,21 +376,21 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp"
+                            android:paddingBottom="12dp"
                             android:visibility="gone">
 
                             <View
                                 android:layout_width="match_parent"
                                 android:layout_height="1dp"
+                                android:layout_marginBottom="12dp"
                                 android:background="@color/colorDivider" />
 
                             <Button
                                 android:id="@+id/btn_prompt_push"
-                                android:layout_width="match_parent"
-                                android:layout_height="56dp"
-                                android:text="@string/prompt_push"
-                                android:textSize="19sp"
-                                android:textColor="@android:color/white"
-                                android:backgroundTint="@color/colorPrimary" />
+                                style="@style/PrimaryButton"
+                                android:text="@string/prompt_push" />
 
                         </LinearLayout>
 
@@ -426,9 +410,9 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginBottom="8dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
 
@@ -437,72 +421,42 @@
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
                         android:text="@string/send_push_notification"
-                        android:textColor="@color/colorDarkText" />
+                        style="@style/SectionHeader" />
 
                     <ImageButton
                         android:id="@+id/btn_info_send_push"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/ic_info"
                         android:background="?android:attr/selectableItemBackgroundBorderless"
                         android:contentDescription="@string/icon" />
 
                 </LinearLayout>
 
-                <androidx.cardview.widget.CardView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
+                    android:layout_marginBottom="16dp"
+                    android:orientation="vertical">
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
+                    <Button
+                        android:id="@+id/btn_send_simple_notification"
+                        style="@style/PrimaryButton"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/send_simple_notification" />
 
-                        <Button
-                            android:id="@+id/btn_send_simple_notification"
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:text="@string/send_simple_notification"
-                            android:textSize="19sp"
-                            android:textColor="@android:color/white"
-                            android:background="@color/colorPrimary"/>
+                    <Button
+                        android:id="@+id/btn_send_image_notification"
+                        style="@style/PrimaryButton"
+                        android:layout_marginBottom="8dp"
+                        android:text="@string/send_image_notification" />
 
-                        <View
-                            android:layout_width="match_parent"
-                            android:layout_height="1dp"
-                            android:background="@color/colorDivider"/>
+                    <Button
+                        android:id="@+id/btn_send_custom_notification"
+                        style="@style/OutlinedButton"
+                        android:text="@string/send_custom_notification" />
 
-                        <Button
-                            android:id="@+id/btn_send_image_notification"
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:text="@string/send_image_notification"
-                            android:textSize="19sp"
-                            android:textColor="@android:color/white"
-                            android:background="@color/colorPrimary"/>
-
-                        <View
-                            android:layout_width="match_parent"
-                            android:layout_height="1dp"
-                            android:background="@color/colorDivider"/>
-
-                        <Button
-                            android:id="@+id/btn_send_custom_notification"
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:text="@string/send_custom_notification"
-                            android:textSize="19sp"
-                            android:textColor="@android:color/white"
-                            android:background="@color/colorPrimary"/>
-
-                    </LinearLayout>
-
-                </androidx.cardview.widget.CardView>
+                </LinearLayout>
 
             </LinearLayout>
 
@@ -516,9 +470,9 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginBottom="8dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
 
@@ -527,12 +481,12 @@
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
                         android:text="@string/in_app_messaging"
-                        android:textColor="@color/colorDarkText" />
+                        style="@style/SectionHeader" />
 
                     <ImageButton
                         android:id="@+id/btn_info_iam"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/ic_info"
                         android:background="?android:attr/selectableItemBackgroundBorderless"
                         android:contentDescription="@string/icon" />
@@ -542,16 +496,13 @@
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
+                    android:layout_marginBottom="16dp"
+                    style="@style/CardStyle">
 
                     <RelativeLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:padding="12dp">
+                        android:padding="16dp">
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -559,6 +510,7 @@
                             android:layout_alignParentStart="true"
                             android:layout_centerVertical="true"
                             android:layout_toStartOf="@id/switch_pause_iam"
+                            android:layout_marginEnd="12dp"
                             android:orientation="vertical">
 
                             <TextView
@@ -571,9 +523,10 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
                                 android:text="@string/toggle_in_app_messages"
                                 android:textSize="13sp"
-                                android:textColor="@color/colorDarkText"/>
+                                android:textColor="@color/colorSecondaryText"/>
 
                         </LinearLayout>
 
@@ -600,9 +553,9 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginBottom="8dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
 
@@ -611,12 +564,12 @@
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
                         android:text="@string/send_in_app_message"
-                        android:textColor="@color/colorDarkText" />
+                        style="@style/SectionHeader" />
 
                     <ImageButton
                         android:id="@+id/btn_info_send_iam"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/ic_info"
                         android:background="?android:attr/selectableItemBackgroundBorderless"
                         android:contentDescription="@string/icon" />
@@ -627,7 +580,7 @@
                     android:id="@+id/rv_in_app_messages"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="4dp"
+                    android:layout_marginBottom="8dp"
                     android:nestedScrollingEnabled="false"/>
 
             </LinearLayout>
@@ -642,9 +595,9 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginBottom="8dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
 
@@ -653,12 +606,12 @@
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
                         android:text="@string/aliases"
-                        android:textColor="@color/colorDarkText" />
+                        style="@style/SectionHeader" />
 
                     <ImageButton
                         android:id="@+id/btn_info_aliases"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/ic_info"
                         android:background="?android:attr/selectableItemBackgroundBorderless"
                         android:contentDescription="@string/icon" />
@@ -668,16 +621,14 @@
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
+                    android:layout_marginBottom="16dp"
+                    style="@style/CardStyle">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:padding="12dp">
 
                         <androidx.recyclerview.widget.RecyclerView
                             android:id="@+id/rv_aliases"
@@ -691,20 +642,16 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
-                            android:layout_marginTop="12dp"
-                            android:layout_marginBottom="12dp"
+                            android:layout_marginTop="20dp"
+                            android:layout_marginBottom="16dp"
                             android:text="@string/no_aliases_added"
-                            android:textSize="18sp"
-                            android:textColor="@color/colorDarkText"/>
+                            android:textSize="15sp"
+                            android:textColor="@color/colorSecondaryText"/>
 
                         <Button
                             android:id="@+id/btn_add_alias"
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:text="@string/add_alias"
-                            android:textSize="19sp"
-                            android:textColor="@android:color/white"
-                            android:background="@color/colorPrimary"/>
+                            style="@style/PrimaryButton"
+                            android:text="@string/add_alias" />
 
                         <LinearLayout
                             android:id="@+id/layout_remove_all_aliases"
@@ -713,19 +660,11 @@
                             android:orientation="vertical"
                             android:visibility="gone">
 
-                            <View
-                                android:layout_width="match_parent"
-                                android:layout_height="1dp"
-                                android:background="@color/colorDivider"/>
-
                             <Button
                                 android:id="@+id/btn_remove_all_aliases"
-                                android:layout_width="match_parent"
-                                android:layout_height="56dp"
-                                android:text="@string/remove_all_aliases"
-                                android:textSize="19sp"
-                                android:textColor="@android:color/white"
-                                android:background="@color/colorRed"/>
+                                style="@style/DestructiveButton"
+                                android:layout_marginTop="8dp"
+                                android:text="@string/remove_all_aliases" />
 
                         </LinearLayout>
 
@@ -745,9 +684,9 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginBottom="8dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
 
@@ -756,12 +695,12 @@
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
                         android:text="@string/emails"
-                        android:textColor="@color/colorDarkText" />
+                        style="@style/SectionHeader" />
 
                     <ImageButton
                         android:id="@+id/btn_info_emails"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/ic_info"
                         android:background="?android:attr/selectableItemBackgroundBorderless"
                         android:contentDescription="@string/icon" />
@@ -771,16 +710,14 @@
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
+                    android:layout_marginBottom="16dp"
+                    style="@style/CardStyle">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:padding="12dp">
 
                         <androidx.recyclerview.widget.RecyclerView
                             android:id="@+id/rv_emails"
@@ -806,20 +743,16 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
-                            android:layout_marginTop="12dp"
-                            android:layout_marginBottom="12dp"
+                            android:layout_marginTop="20dp"
+                            android:layout_marginBottom="16dp"
                             android:text="@string/no_emails_added"
-                            android:textSize="18sp"
-                            android:textColor="@color/colorDarkText"/>
+                            android:textSize="15sp"
+                            android:textColor="@color/colorSecondaryText"/>
 
                         <Button
                             android:id="@+id/btn_add_email"
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:text="@string/add_email"
-                            android:textSize="19sp"
-                            android:textColor="@android:color/white"
-                            android:background="@color/colorPrimary"/>
+                            style="@style/PrimaryButton"
+                            android:text="@string/add_email" />
 
                     </LinearLayout>
 
@@ -837,9 +770,9 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginBottom="8dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
 
@@ -848,12 +781,12 @@
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
                         android:text="@string/smss"
-                        android:textColor="@color/colorDarkText" />
+                        style="@style/SectionHeader" />
 
                     <ImageButton
                         android:id="@+id/btn_info_sms"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/ic_info"
                         android:background="?android:attr/selectableItemBackgroundBorderless"
                         android:contentDescription="@string/icon" />
@@ -863,16 +796,14 @@
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
+                    android:layout_marginBottom="16dp"
+                    style="@style/CardStyle">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:padding="12dp">
 
                         <androidx.recyclerview.widget.RecyclerView
                             android:id="@+id/rv_sms"
@@ -898,20 +829,16 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
-                            android:layout_marginTop="12dp"
-                            android:layout_marginBottom="12dp"
+                            android:layout_marginTop="20dp"
+                            android:layout_marginBottom="16dp"
                             android:text="@string/no_smss_added"
-                            android:textSize="18sp"
-                            android:textColor="@color/colorDarkText"/>
+                            android:textSize="15sp"
+                            android:textColor="@color/colorSecondaryText"/>
 
                         <Button
                             android:id="@+id/btn_add_sms"
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:text="@string/add_sms"
-                            android:textSize="19sp"
-                            android:textColor="@android:color/white"
-                            android:background="@color/colorPrimary"/>
+                            style="@style/PrimaryButton"
+                            android:text="@string/add_sms" />
 
                     </LinearLayout>
 
@@ -929,9 +856,9 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginBottom="8dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
 
@@ -940,12 +867,12 @@
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
                         android:text="@string/tags"
-                        android:textColor="@color/colorDarkText" />
+                        style="@style/SectionHeader" />
 
                     <ImageButton
                         android:id="@+id/btn_info_tags"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/ic_info"
                         android:background="?android:attr/selectableItemBackgroundBorderless"
                         android:contentDescription="@string/icon" />
@@ -955,16 +882,14 @@
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
+                    android:layout_marginBottom="16dp"
+                    style="@style/CardStyle">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:padding="12dp">
 
                         <androidx.recyclerview.widget.RecyclerView
                             android:id="@+id/rv_tags"
@@ -978,20 +903,16 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
-                            android:layout_marginTop="12dp"
-                            android:layout_marginBottom="12dp"
+                            android:layout_marginTop="20dp"
+                            android:layout_marginBottom="16dp"
                             android:text="@string/no_tags_added"
-                            android:textSize="18sp"
-                            android:textColor="@color/colorDarkText"/>
+                            android:textSize="15sp"
+                            android:textColor="@color/colorSecondaryText"/>
 
                         <Button
                             android:id="@+id/btn_add_tag"
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:text="@string/add_tag"
-                            android:textSize="19sp"
-                            android:textColor="@android:color/white"
-                            android:background="@color/colorPrimary"/>
+                            style="@style/PrimaryButton"
+                            android:text="@string/add_tag" />
 
                     </LinearLayout>
 
@@ -1009,9 +930,9 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginBottom="8dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
 
@@ -1020,37 +941,23 @@
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
                         android:text="@string/outcome_events"
-                        android:textColor="@color/colorDarkText" />
+                        style="@style/SectionHeader" />
 
                     <ImageButton
                         android:id="@+id/btn_info_outcomes"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/ic_info"
                         android:background="?android:attr/selectableItemBackgroundBorderless"
                         android:contentDescription="@string/icon" />
 
                 </LinearLayout>
 
-                <androidx.cardview.widget.CardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
-
-                    <Button
-                        android:id="@+id/btn_send_outcome"
-                        android:layout_width="match_parent"
-                        android:layout_height="56dp"
-                        android:text="@string/send_outcome"
-                        android:textSize="19sp"
-                        android:textColor="@android:color/white"
-                        android:background="@color/colorPrimary"/>
-
-                </androidx.cardview.widget.CardView>
+                <Button
+                    android:id="@+id/btn_send_outcome"
+                    style="@style/PrimaryButton"
+                    android:layout_marginBottom="16dp"
+                    android:text="@string/send_outcome" />
 
             </LinearLayout>
 
@@ -1064,9 +971,9 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginBottom="8dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
 
@@ -1075,12 +982,12 @@
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
                         android:text="@string/triggers"
-                        android:textColor="@color/colorDarkText" />
+                        style="@style/SectionHeader" />
 
                     <ImageButton
                         android:id="@+id/btn_info_triggers"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/ic_info"
                         android:background="?android:attr/selectableItemBackgroundBorderless"
                         android:contentDescription="@string/icon" />
@@ -1090,16 +997,14 @@
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
+                    android:layout_marginBottom="16dp"
+                    style="@style/CardStyle">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:padding="12dp">
 
                         <androidx.recyclerview.widget.RecyclerView
                             android:id="@+id/rv_triggers"
@@ -1113,20 +1018,16 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
-                            android:layout_marginTop="12dp"
-                            android:layout_marginBottom="12dp"
+                            android:layout_marginTop="20dp"
+                            android:layout_marginBottom="16dp"
                             android:text="@string/no_triggers_added"
-                            android:textSize="18sp"
-                            android:textColor="@color/colorDarkText"/>
+                            android:textSize="15sp"
+                            android:textColor="@color/colorSecondaryText"/>
 
                         <Button
                             android:id="@+id/btn_add_trigger"
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:text="@string/add_trigger"
-                            android:textSize="19sp"
-                            android:textColor="@android:color/white"
-                            android:background="@color/colorPrimary"/>
+                            style="@style/PrimaryButton"
+                            android:text="@string/add_trigger" />
 
                         <LinearLayout
                             android:id="@+id/layout_clear_triggers"
@@ -1135,19 +1036,11 @@
                             android:orientation="vertical"
                             android:visibility="gone">
 
-                            <View
-                                android:layout_width="match_parent"
-                                android:layout_height="1dp"
-                                android:background="@color/colorDivider"/>
-
                             <Button
                                 android:id="@+id/btn_clear_triggers"
-                                android:layout_width="match_parent"
-                                android:layout_height="56dp"
-                                android:text="@string/clear_triggers"
-                                android:textSize="19sp"
-                                android:textColor="@android:color/white"
-                                android:background="@color/colorRed"/>
+                                style="@style/DestructiveButton"
+                                android:layout_marginTop="8dp"
+                                android:text="@string/clear_triggers" />
 
                         </LinearLayout>
 
@@ -1167,9 +1060,9 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginBottom="8dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
 
@@ -1178,37 +1071,23 @@
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
                         android:text="@string/track_event"
-                        android:textColor="@color/colorDarkText" />
+                        style="@style/SectionHeader" />
 
                     <ImageButton
                         android:id="@+id/btn_info_track_event"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/ic_info"
                         android:background="?android:attr/selectableItemBackgroundBorderless"
                         android:contentDescription="@string/icon" />
 
                 </LinearLayout>
 
-                <androidx.cardview.widget.CardView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
-
-                    <Button
-                        android:id="@+id/btn_track_event"
-                        android:layout_width="match_parent"
-                        android:layout_height="56dp"
-                        android:text="@string/track_event_button"
-                        android:textSize="19sp"
-                        android:textColor="@android:color/white"
-                        android:background="@color/colorPrimary"/>
-
-                </androidx.cardview.widget.CardView>
+                <Button
+                    android:id="@+id/btn_track_event"
+                    style="@style/PrimaryButton"
+                    android:layout_marginBottom="16dp"
+                    android:text="@string/track_event_button" />
 
             </LinearLayout>
 
@@ -1222,9 +1101,9 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="4dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_marginBottom="8dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
 
@@ -1233,12 +1112,12 @@
                         android:layout_weight="1"
                         android:layout_height="wrap_content"
                         android:text="@string/location"
-                        android:textColor="@color/colorDarkText" />
+                        style="@style/SectionHeader" />
 
                     <ImageButton
                         android:id="@+id/btn_info_location"
-                        android:layout_width="32dp"
-                        android:layout_height="32dp"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
                         android:src="@drawable/ic_info"
                         android:background="?android:attr/selectableItemBackgroundBorderless"
                         android:contentDescription="@string/icon" />
@@ -1248,22 +1127,22 @@
                 <androidx.cardview.widget.CardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="12dp"
-                    app:cardCornerRadius="6dp"
-                    app:cardElevation="4dp">
+                    android:layout_marginBottom="16dp"
+                    style="@style/CardStyle">
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:paddingBottom="12dp">
 
                         <!-- Location Shared Toggle -->
                         <RelativeLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:padding="12dp">
+                            android:padding="16dp">
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -1271,6 +1150,7 @@
                                 android:layout_alignParentStart="true"
                                 android:layout_centerVertical="true"
                                 android:layout_toStartOf="@id/switch_location_shared"
+                                android:layout_marginEnd="12dp"
                                 android:orientation="vertical">
 
                                 <TextView
@@ -1283,9 +1163,10 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
                                     android:text="@string/location_shared_description"
                                     android:textSize="13sp"
-                                    android:textColor="@color/colorDarkText"/>
+                                    android:textColor="@color/colorSecondaryText"/>
 
                             </LinearLayout>
 
@@ -1300,12 +1181,8 @@
 
                         <Button
                             android:id="@+id/btn_prompt_location"
-                            android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:text="@string/prompt_location"
-                            android:textSize="19sp"
-                            android:textColor="@android:color/white"
-                            android:background="@color/colorPrimary"/>
+                            style="@style/PrimaryButton"
+                            android:text="@string/prompt_location" />
 
                     </LinearLayout>
 
@@ -1316,16 +1193,9 @@
             <!-- Next Activity Button -->
             <Button
                 android:id="@+id/btn_next_activity"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginStart="12dp"
-                android:layout_marginEnd="12dp"
+                style="@style/OutlinedButton"
                 android:layout_marginTop="8dp"
-                android:layout_marginBottom="12dp"
-                android:text="@string/next_activity"
-                android:textSize="19sp"
-                android:textColor="@android:color/white"
-                android:background="@color/colorPrimary"/>
+                android:text="@string/next_activity" />
 
         </LinearLayout>
 
@@ -1336,14 +1206,14 @@
         android:id="@+id/loading_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#80000000"
+        android:background="#99000000"
         android:clickable="true"
         android:focusable="true"
         android:visibility="gone">
 
         <ProgressBar
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_gravity="center"
             android:indeterminateTint="@android:color/white" />
 

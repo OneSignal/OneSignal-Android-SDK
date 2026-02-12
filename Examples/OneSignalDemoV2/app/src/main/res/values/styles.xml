@@ -6,19 +6,59 @@
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
         <item name="android:windowBackground">@color/colorBackground</item>
+        <item name="android:statusBarColor">@color/colorPrimaryDark</item>
     </style>
 
     <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.MaterialComponents.Dark.ActionBar" />
 
     <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.MaterialComponents.Light" />
 
-    <style name="SwitchTheme">
-        <item name="colorControlActivated">@color/colorPrimary</item>
+    <style name="SectionHeader">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/colorSectionHeader</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="CardStyle">
+        <item name="cardCornerRadius">14dp</item>
+        <item name="cardElevation">1dp</item>
+        <item name="cardBackgroundColor">@color/colorSurface</item>
+    </style>
+
+    <style name="PrimaryButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">52dp</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.04</item>
+        <item name="android:background">@drawable/bg_button_primary</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <style name="DestructiveButton" parent="PrimaryButton">
+        <item name="android:background">@drawable/bg_button_destructive</item>
+    </style>
+
+    <style name="OutlinedButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">52dp</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/colorPrimary</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.04</item>
+        <item name="android:background">@drawable/bg_button_outlined</item>
+        <item name="android:stateListAnimator">@null</item>
     </style>
 
     <style name="AlertDialogTheme" parent="Theme.MaterialComponents.Light.Dialog.Alert">
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorAccent">@color/colorPrimary</item>
+        <item name="dialogCornerRadius">16dp</item>
     </style>
 
 </resources>

@@ -2,6 +2,7 @@ package com.onesignal.sdktest.util
 
 import android.content.Context
 import androidx.appcompat.app.AlertDialog
+import com.onesignal.sdktest.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -100,7 +101,7 @@ object TooltipHelper {
             }
         }
         
-        AlertDialog.Builder(context)
+        AlertDialog.Builder(context, R.style.AlertDialogTheme)
             .setTitle(tooltip.title)
             .setMessage(message)
             .setPositiveButton("OK", null)
