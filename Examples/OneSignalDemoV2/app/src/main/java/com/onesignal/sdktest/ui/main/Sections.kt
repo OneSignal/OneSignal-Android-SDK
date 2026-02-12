@@ -1,12 +1,28 @@
 package com.onesignal.sdktest.ui.main
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -16,8 +32,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.onesignal.sdktest.data.model.InAppMessageType
-import com.onesignal.sdktest.ui.components.*
-import com.onesignal.sdktest.ui.theme.*
+import com.onesignal.sdktest.ui.components.CollapsibleSingleList
+import com.onesignal.sdktest.ui.components.DestructiveButton
+import com.onesignal.sdktest.ui.components.PairList
+import com.onesignal.sdktest.ui.components.PrimaryButton
+import com.onesignal.sdktest.ui.components.SectionCard
+import com.onesignal.sdktest.ui.components.ToggleRow
+import com.onesignal.sdktest.ui.theme.CardBackground
+import com.onesignal.sdktest.ui.theme.DividerColor
+import com.onesignal.sdktest.ui.theme.OneSignalGreen
+import com.onesignal.sdktest.ui.theme.OneSignalGreenLight
+import com.onesignal.sdktest.ui.theme.OneSignalRed
+import com.onesignal.sdktest.ui.theme.WarningBackground
 
 // === APP SECTION ===
 @Composable
