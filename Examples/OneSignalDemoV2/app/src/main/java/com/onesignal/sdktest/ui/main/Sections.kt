@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.onesignal.sdktest.data.model.InAppMessageType
 import com.onesignal.sdktest.ui.components.CollapsibleSingleList
 import com.onesignal.sdktest.ui.components.DestructiveButton
+import com.onesignal.sdktest.ui.components.OutlineButton
 import com.onesignal.sdktest.ui.components.PairList
 import com.onesignal.sdktest.ui.components.PrimaryButton
 import com.onesignal.sdktest.ui.components.SectionCard
@@ -183,7 +184,7 @@ fun AppSection(
     )
     
     if (isLoggedIn) {
-        PrimaryButton(
+        OutlineButton(
             text = "LOGOUT USER",
             onClick = onLogoutClick
         )
@@ -261,7 +262,7 @@ fun SendPushSection(
     SectionCard(title = "Send Push Notification", showCard = false, onInfoClick = onInfoClick) {
         PrimaryButton(text = "SIMPLE", onClick = onSimpleClick)
         PrimaryButton(text = "WITH IMAGE", onClick = onImageClick)
-        PrimaryButton(text = "CUSTOM", onClick = onCustomClick)
+        OutlineButton(text = "CUSTOM", onClick = onCustomClick)
     }
 }
 

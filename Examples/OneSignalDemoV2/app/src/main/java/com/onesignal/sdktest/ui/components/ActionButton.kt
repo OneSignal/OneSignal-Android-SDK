@@ -57,6 +57,40 @@ fun PrimaryButton(
 }
 
 /**
+ * Outline button (outlined primary style).
+ */
+@Composable
+fun OutlineButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    val color = MaterialTheme.colorScheme.primary
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .height(44.dp),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = color),
+        enabled = enabled,
+        shape = ButtonShape,
+        border = BorderStroke(1.dp, if (enabled) color.copy(alpha = 0.5f) else color.copy(alpha = 0.2f))
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge.copy(
+                color = color,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                letterSpacing = 0.8.sp
+            )
+        )
+    }
+}
+
+/**
  * Destructive button (outlined red style).
  */
 @Composable
