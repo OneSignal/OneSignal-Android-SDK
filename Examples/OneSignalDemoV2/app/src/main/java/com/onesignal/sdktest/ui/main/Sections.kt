@@ -200,14 +200,13 @@ fun PushSection(
             onCheckedChange = onEnabledChange,
             enabled = hasPermission
         )
-        
-        // Prompt Push Button (only if no permission)
-        if (!hasPermission) {
-            PrimaryButton(
-                text = "PROMPT PUSH",
-                onClick = onPromptPush
-            )
-        }
+    }
+    
+    if (!hasPermission) {
+        PrimaryButton(
+            text = "PROMPT PUSH",
+            onClick = onPromptPush
+        )
     }
 }
 
@@ -294,12 +293,12 @@ fun AliasesSection(
             emptyText = "No Aliases Added",
             onDelete = onRemove
         )
-        PrimaryButton(text = "ADD", onClick = onAddClick)
-        PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
-        
-        if (aliases.isNotEmpty()) {
-            DestructiveButton(text = "REMOVE SELECTED", onClick = onRemoveSelected)
-        }
+    }
+    PrimaryButton(text = "ADD", onClick = onAddClick)
+    PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
+    
+    if (aliases.isNotEmpty()) {
+        DestructiveButton(text = "REMOVE SELECTED", onClick = onRemoveSelected)
     }
 }
 
@@ -317,8 +316,8 @@ fun EmailsSection(
             emptyText = "No Emails Added",
             onDelete = onRemove
         )
-        PrimaryButton(text = "ADD EMAIL", onClick = onAddClick)
     }
+    PrimaryButton(text = "ADD EMAIL", onClick = onAddClick)
 }
 
 // === SMS SECTION ===
@@ -335,8 +334,8 @@ fun SmsSection(
             emptyText = "No SMSs Added",
             onDelete = onRemove
         )
-        PrimaryButton(text = "ADD SMS", onClick = onAddClick)
     }
+    PrimaryButton(text = "ADD SMS", onClick = onAddClick)
 }
 
 // === TAGS SECTION ===
@@ -355,12 +354,12 @@ fun TagsSection(
             emptyText = "No Tags Added",
             onDelete = onRemove
         )
-        PrimaryButton(text = "ADD", onClick = onAddClick)
-        PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
-        
-        if (tags.isNotEmpty()) {
-            DestructiveButton(text = "REMOVE SELECTED", onClick = onRemoveSelected)
-        }
+    }
+    PrimaryButton(text = "ADD", onClick = onAddClick)
+    PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
+    
+    if (tags.isNotEmpty()) {
+        DestructiveButton(text = "REMOVE SELECTED", onClick = onRemoveSelected)
     }
 }
 
@@ -392,13 +391,13 @@ fun TriggersSection(
             emptyText = "No Triggers Added",
             onDelete = onRemove
         )
-        PrimaryButton(text = "ADD", onClick = onAddClick)
-        PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
-        
-        if (triggers.isNotEmpty()) {
-            DestructiveButton(text = "REMOVE SELECTED", onClick = onRemoveSelected)
-            DestructiveButton(text = "CLEAR ALL", onClick = onClearAll)
-        }
+    }
+    PrimaryButton(text = "ADD", onClick = onAddClick)
+    PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
+    
+    if (triggers.isNotEmpty()) {
+        DestructiveButton(text = "REMOVE SELECTED", onClick = onRemoveSelected)
+        DestructiveButton(text = "CLEAR ALL", onClick = onClearAll)
     }
 }
 
@@ -428,6 +427,6 @@ fun LocationSection(
             checked = locationShared,
             onCheckedChange = onLocationSharedChange
         )
-        PrimaryButton(text = "PROMPT LOCATION", onClick = onPromptLocation)
     }
+    PrimaryButton(text = "PROMPT LOCATION", onClick = onPromptLocation)
 }
