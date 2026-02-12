@@ -36,6 +36,11 @@ class OneSignalRepository {
         OneSignal.User.addAlias(label, id)
     }
 
+    fun addAliases(aliases: Map<String, String>) {
+        Log.d(TAG, "Adding aliases: $aliases")
+        OneSignal.User.addAliases(aliases)
+    }
+
     fun removeAlias(label: String) {
         Log.d(TAG, "Removing alias: $label")
         OneSignal.User.removeAlias(label)
@@ -76,6 +81,11 @@ class OneSignalRepository {
         OneSignal.User.addTag(key, value)
     }
 
+    fun addTags(tags: Map<String, String>) {
+        Log.d(TAG, "Adding tags: $tags")
+        OneSignal.User.addTags(tags)
+    }
+
     fun removeTag(key: String) {
         Log.d(TAG, "Removing tag: $key")
         OneSignal.User.removeTag(key)
@@ -89,6 +99,11 @@ class OneSignalRepository {
     fun addTrigger(key: String, value: String) {
         Log.d(TAG, "Adding trigger: $key -> $value")
         OneSignal.InAppMessages.addTrigger(key, value)
+    }
+
+    fun addTriggers(triggers: Map<String, String>) {
+        Log.d(TAG, "Adding triggers: $triggers")
+        OneSignal.InAppMessages.addTriggers(triggers)
     }
 
     fun removeTrigger(key: String) {

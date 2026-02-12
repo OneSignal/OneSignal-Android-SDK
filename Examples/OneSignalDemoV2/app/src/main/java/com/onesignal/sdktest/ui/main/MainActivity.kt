@@ -3,10 +3,16 @@ package com.onesignal.sdktest.ui.main
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.LayoutInflater
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
@@ -177,10 +183,17 @@ class MainActivity : AppCompatActivity() {
             viewModel.logoutUser()
         }
 
-        // Add buttons
+        // Add buttons (single)
         binding.btnAddAlias.setOnClickListener {
             showAddPairDialog(getString(R.string.add_alias_title)) { key, value ->
                 viewModel.addAlias(key, value)
+            }
+        }
+
+        // Add buttons (multi)
+        binding.btnAddAliases.setOnClickListener {
+            showAddMultiPairDialog(getString(R.string.add_aliases_title)) { pairs ->
+                viewModel.addAliases(pairs)
             }
         }
 
@@ -206,9 +219,21 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        binding.btnAddTags.setOnClickListener {
+            showAddMultiPairDialog(getString(R.string.add_tags_title)) { pairs ->
+                viewModel.addTags(pairs)
+            }
+        }
+
         binding.btnAddTrigger.setOnClickListener {
             showAddPairDialog(getString(R.string.add_trigger_title)) { key, value ->
                 viewModel.addTrigger(key, value)
+            }
+        }
+
+        binding.btnAddTriggers.setOnClickListener {
+            showAddMultiPairDialog(getString(R.string.add_triggers_title)) { pairs ->
+                viewModel.addTriggers(pairs)
             }
         }
 
@@ -391,18 +416,123 @@ class MainActivity : AppCompatActivity() {
         val etKey = dialogView.findViewById<EditText>(R.id.et_key)
         val etValue = dialogView.findViewById<EditText>(R.id.et_value)
 
-        AlertDialog.Builder(this, R.style.AlertDialogTheme)
+        val dialog = AlertDialog.Builder(this, R.style.AlertDialogTheme)
             .setTitle(title)
             .setView(dialogView)
-            .setPositiveButton(R.string.add) { _, _ ->
-                val key = etKey.text.toString().trim()
-                val value = etValue.text.toString().trim()
-                if (key.isNotEmpty()) {
-                    onAdd(key, value)
+            .setPositiveButton(R.string.add, null)
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+
+        val watcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val addButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE) ?: return
+                addButton.isEnabled = etKey.text.toString().trim().isNotEmpty()
+                        && etValue.text.toString().trim().isNotEmpty()
+            }
+        }
+
+        etKey.addTextChangedListener(watcher)
+        etValue.addTextChangedListener(watcher)
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).apply {
+                isEnabled = false
+                setOnClickListener {
+                    onAdd(etKey.text.toString().trim(), etValue.text.toString().trim())
+                    dialog.dismiss()
                 }
             }
+        }
+
+        dialog.show()
+    }
+
+    private fun showAddMultiPairDialog(title: String, onAdd: (List<Pair<String, String>>) -> Unit) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_multi_pair, null)
+        val rowsContainer = dialogView.findViewById<LinearLayout>(R.id.rows_container)
+        val btnAddRow = dialogView.findViewById<View>(R.id.btn_add_row)
+
+        val dialog = AlertDialog.Builder(this, R.style.AlertDialogTheme)
+            .setTitle(title)
+            .setView(dialogView)
+            .setPositiveButton(R.string.add, null)
             .setNegativeButton(R.string.cancel, null)
-            .show()
+            .create()
+
+        fun validateFields() {
+            val addButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE) ?: return
+            var allFilled = true
+            for (i in 0 until rowsContainer.childCount) {
+                val row = rowsContainer.getChildAt(i)
+                val key = row.findViewById<EditText>(R.id.et_row_key).text.toString().trim()
+                val value = row.findViewById<EditText>(R.id.et_row_value).text.toString().trim()
+                if (key.isEmpty() || value.isEmpty()) {
+                    allFilled = false
+                    break
+                }
+            }
+            addButton.isEnabled = allFilled
+        }
+
+        val fieldWatcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) { validateFields() }
+        }
+
+        fun addRow() {
+            val rowView = LayoutInflater.from(this).inflate(R.layout.item_dialog_pair_row, rowsContainer, false)
+            val btnRemove = rowView.findViewById<ImageButton>(R.id.btn_remove_row)
+            val etKey = rowView.findViewById<EditText>(R.id.et_row_key)
+            val etValue = rowView.findViewById<EditText>(R.id.et_row_value)
+
+            etKey.addTextChangedListener(fieldWatcher)
+            etValue.addTextChangedListener(fieldWatcher)
+
+            rowsContainer.addView(rowView)
+
+            if (rowsContainer.childCount > 1) {
+                for (i in 0 until rowsContainer.childCount) {
+                    rowsContainer.getChildAt(i)
+                        .findViewById<ImageButton>(R.id.btn_remove_row).visibility = View.VISIBLE
+                }
+            }
+
+            btnRemove.setOnClickListener {
+                rowsContainer.removeView(rowView)
+                if (rowsContainer.childCount == 1) {
+                    rowsContainer.getChildAt(0)
+                        .findViewById<ImageButton>(R.id.btn_remove_row).visibility = View.GONE
+                }
+                validateFields()
+            }
+
+            validateFields()
+        }
+
+        addRow()
+
+        btnAddRow.setOnClickListener { addRow() }
+
+        dialog.setOnShowListener {
+            val addButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            addButton.isEnabled = false
+            addButton.setOnClickListener {
+                val pairs = mutableListOf<Pair<String, String>>()
+                for (i in 0 until rowsContainer.childCount) {
+                    val row = rowsContainer.getChildAt(i)
+                    val key = row.findViewById<EditText>(R.id.et_row_key).text.toString().trim()
+                    val value = row.findViewById<EditText>(R.id.et_row_value).text.toString().trim()
+                    pairs.add(Pair(key, value))
+                }
+                onAdd(pairs)
+                dialog.dismiss()
+            }
+        }
+
+        dialog.show()
     }
 
     private fun showSingleInputDialog(label: String, onAdd: (String) -> Unit) {

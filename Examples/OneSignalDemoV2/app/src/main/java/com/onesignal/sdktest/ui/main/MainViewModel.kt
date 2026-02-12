@@ -336,6 +336,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         }
     }
 
+    fun addAliases(pairs: List<Pair<String, String>>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val map = pairs.associate { it.first to it.second }
+            repository.addAliases(map)
+            withContext(Dispatchers.Main) {
+                for ((label, id) in pairs) {
+                    aliasesList.removeAll { it.first == label }
+                    aliasesList.add(Pair(label, id))
+                }
+                refreshAliases()
+                showToast("${pairs.size} alias(es) added")
+            }
+        }
+    }
+
     fun removeAlias(label: String) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.removeAlias(label)
@@ -420,6 +435,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         }
     }
 
+    fun addTags(pairs: List<Pair<String, String>>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val map = pairs.associate { it.first to it.second }
+            repository.addTags(map)
+            withContext(Dispatchers.Main) {
+                loadExistingTags()
+                showToast("${pairs.size} tag(s) added")
+            }
+        }
+    }
+
     fun removeTag(key: String) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.removeTag(key)
@@ -439,6 +465,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 triggersList.add(Pair(key, value))
                 refreshTriggers()
                 showToast("Trigger added: $key")
+            }
+        }
+    }
+
+    fun addTriggers(pairs: List<Pair<String, String>>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val map = pairs.associate { it.first to it.second }
+            repository.addTriggers(map)
+            withContext(Dispatchers.Main) {
+                for ((key, value) in pairs) {
+                    triggersList.removeAll { it.first == key }
+                    triggersList.add(Pair(key, value))
+                }
+                refreshTriggers()
+                showToast("${pairs.size} trigger(s) added")
             }
         }
     }
