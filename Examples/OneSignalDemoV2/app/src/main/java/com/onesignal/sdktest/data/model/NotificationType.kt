@@ -19,8 +19,6 @@ enum class NotificationType(
         title = "With Image",
         notificationTitle = "Image Notification",
         notificationBody = "This notification includes an image",
-        // Use known working URLs from Firebase storage (same as V1 sample app)
-        bigPicture = "https://i.ytimg.com/vi/C8YBKBuX43Q/maxresdefault.jpg",
-        largeIcon = "https://pbs.twimg.com/profile_images/719602655337656321/kQUzR2Es_400x400.jpg"
+        bigPicture = "https://media.onesignal.com/automated_push_templates/ratings_template.png"
     )
 }

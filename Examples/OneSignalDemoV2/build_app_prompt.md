@@ -237,8 +237,7 @@ Send In-App Message Section (placed right after In-App Messaging):
 - Button styling:
   - RED background color (#E9444E)
   - WHITE text
-  - Type-specific icon on LEFT side
-  - Send arrow icon on RIGHT side
+  - Type-specific icon on LEFT side only (no right side icon)
   - Full width of the card
 - On click: adds trigger and shows toast "Sent In-App Message: {type}"
 
@@ -618,8 +617,6 @@ Examples/OneSignalDemoV2/
 │   │   │   │   │   ├── MainScreen.kt          # Main Compose screen (includes LogView)
 │   │   │   │   │   ├── Sections.kt            # Individual section composables
 │   │   │   │   │   └── MainViewModel.kt       # With batch operations
-│   │   │   │   ├── splash/
-│   │   │   │   │   └── SplashActivity.kt      # Compose splash screen
 │   │   │   │   ├── secondary/
 │   │   │   │   │   └── SecondaryActivity.kt   # Simple Compose screen
 │   │   │   │   └── theme/
