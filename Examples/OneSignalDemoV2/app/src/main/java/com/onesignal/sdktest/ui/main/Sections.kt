@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -151,34 +149,16 @@ fun AppSection(
         }
     }
     
-    // Login / Switch User Button
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp)
-            .padding(bottom = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground)
-    ) {
-        PrimaryButton(
-            text = if (isLoggedIn) "SWITCH USER" else "LOGIN USER",
-            onClick = onLoginClick
-        )
-    }
+    PrimaryButton(
+        text = if (isLoggedIn) "SWITCH USER" else "LOGIN USER",
+        onClick = onLoginClick
+    )
     
-    // Logout Button (only when logged in)
     if (isLoggedIn) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp)
-                .padding(bottom = 12.dp),
-            colors = CardDefaults.cardColors(containerColor = CardBackground)
-        ) {
-            PrimaryButton(
-                text = "LOGOUT USER",
-                onClick = onLogoutClick
-            )
-        }
+        PrimaryButton(
+            text = "LOGOUT USER",
+            onClick = onLogoutClick
+        )
     }
 }
 
@@ -223,7 +203,6 @@ fun PushSection(
         
         // Prompt Push Button (only if no permission)
         if (!hasPermission) {
-            HorizontalDivider(color = DividerColor)
             PrimaryButton(
                 text = "PROMPT PUSH",
                 onClick = onPromptPush
@@ -240,11 +219,9 @@ fun SendPushSection(
     onCustomClick: () -> Unit,
     onInfoClick: () -> Unit
 ) {
-    SectionCard(title = "Send Push Notification", onInfoClick = onInfoClick) {
+    SectionCard(title = "Send Push Notification", showCard = false, onInfoClick = onInfoClick) {
         PrimaryButton(text = "SIMPLE", onClick = onSimpleClick)
-        HorizontalDivider(color = DividerColor)
         PrimaryButton(text = "WITH IMAGE", onClick = onImageClick)
-        HorizontalDivider(color = DividerColor)
         PrimaryButton(text = "CUSTOM", onClick = onCustomClick)
     }
 }
@@ -272,40 +249,30 @@ fun SendInAppMessageSection(
     onSendMessage: (InAppMessageType) -> Unit,
     onInfoClick: () -> Unit
 ) {
-    SectionCard(title = "Send In-App Message", onInfoClick = onInfoClick) {
+    SectionCard(title = "Send In-App Message", showCard = false, onInfoClick = onInfoClick) {
         InAppMessageType.values().forEachIndexed { index, type ->
             Button(
                 onClick = { onSendMessage(type) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .height(48.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = OneSignalRed),
-                shape = MaterialTheme.shapes.small
+                shape = MaterialTheme.shapes.medium
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = type.icon,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(type.title)
-                    }
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Send",
-                        tint = Color.White
+                        imageVector = type.icon,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
                     )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(type.title)
                 }
-            }
-            if (index < InAppMessageType.values().lastIndex) {
-                HorizontalDivider(color = DividerColor)
             }
         }
     }
@@ -327,13 +294,10 @@ fun AliasesSection(
             emptyText = "No Aliases Added",
             onDelete = onRemove
         )
-        HorizontalDivider(color = DividerColor)
         PrimaryButton(text = "ADD", onClick = onAddClick)
-        HorizontalDivider(color = DividerColor)
         PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
         
         if (aliases.isNotEmpty()) {
-            HorizontalDivider(color = DividerColor)
             DestructiveButton(text = "REMOVE SELECTED", onClick = onRemoveSelected)
         }
     }
@@ -353,7 +317,6 @@ fun EmailsSection(
             emptyText = "No Emails Added",
             onDelete = onRemove
         )
-        HorizontalDivider(color = DividerColor)
         PrimaryButton(text = "ADD EMAIL", onClick = onAddClick)
     }
 }
@@ -372,7 +335,6 @@ fun SmsSection(
             emptyText = "No SMSs Added",
             onDelete = onRemove
         )
-        HorizontalDivider(color = DividerColor)
         PrimaryButton(text = "ADD SMS", onClick = onAddClick)
     }
 }
@@ -393,13 +355,10 @@ fun TagsSection(
             emptyText = "No Tags Added",
             onDelete = onRemove
         )
-        HorizontalDivider(color = DividerColor)
         PrimaryButton(text = "ADD", onClick = onAddClick)
-        HorizontalDivider(color = DividerColor)
         PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
         
         if (tags.isNotEmpty()) {
-            HorizontalDivider(color = DividerColor)
             DestructiveButton(text = "REMOVE SELECTED", onClick = onRemoveSelected)
         }
     }
@@ -411,7 +370,7 @@ fun OutcomeSection(
     onSendOutcome: () -> Unit,
     onInfoClick: () -> Unit
 ) {
-    SectionCard(title = "Outcome Events", onInfoClick = onInfoClick) {
+    SectionCard(title = "Outcome Events", showCard = false, onInfoClick = onInfoClick) {
         PrimaryButton(text = "SEND OUTCOME", onClick = onSendOutcome)
     }
 }
@@ -433,15 +392,11 @@ fun TriggersSection(
             emptyText = "No Triggers Added",
             onDelete = onRemove
         )
-        HorizontalDivider(color = DividerColor)
         PrimaryButton(text = "ADD", onClick = onAddClick)
-        HorizontalDivider(color = DividerColor)
         PrimaryButton(text = "ADD MULTIPLE", onClick = onAddMultipleClick)
         
         if (triggers.isNotEmpty()) {
-            HorizontalDivider(color = DividerColor)
             DestructiveButton(text = "REMOVE SELECTED", onClick = onRemoveSelected)
-            HorizontalDivider(color = DividerColor)
             DestructiveButton(text = "CLEAR ALL", onClick = onClearAll)
         }
     }
@@ -453,7 +408,7 @@ fun TrackEventSection(
     onTrackClick: () -> Unit,
     onInfoClick: () -> Unit
 ) {
-    SectionCard(title = "Track Event", onInfoClick = onInfoClick) {
+    SectionCard(title = "Track Event", showCard = false, onInfoClick = onInfoClick) {
         PrimaryButton(text = "TRACK EVENT", onClick = onTrackClick)
     }
 }
@@ -473,7 +428,6 @@ fun LocationSection(
             checked = locationShared,
             onCheckedChange = onLocationSharedChange
         )
-        HorizontalDivider(color = DividerColor)
         PrimaryButton(text = "PROMPT LOCATION", onClick = onPromptLocation)
     }
 }

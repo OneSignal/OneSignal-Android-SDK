@@ -25,12 +25,13 @@ fun PrimaryButton(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .height(48.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = backgroundColor
         ),
         enabled = enabled,
-        shape = MaterialTheme.shapes.small
+        shape = MaterialTheme.shapes.medium
     ) {
         Text(
             text = text,
@@ -73,11 +74,12 @@ fun IconButton(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp),
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .height(48.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = backgroundColor
         ),
-        shape = MaterialTheme.shapes.small
+        shape = MaterialTheme.shapes.medium
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

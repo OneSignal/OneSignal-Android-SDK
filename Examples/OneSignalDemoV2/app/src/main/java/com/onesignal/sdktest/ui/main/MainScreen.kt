@@ -260,19 +260,12 @@ fun MainScreen(viewModel: MainViewModel) {
                 )
                 
                 // === NEXT ACTIVITY BUTTON ===
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    PrimaryButton(
-                        text = "NEXT ACTIVITY",
-                        onClick = {
-                            context.startActivity(Intent(context, SecondaryActivity::class.java))
-                        }
-                    )
-                }
+                PrimaryButton(
+                    text = "NEXT ACTIVITY",
+                    onClick = {
+                        context.startActivity(Intent(context, SecondaryActivity::class.java))
+                    }
+                )
                 
                 Spacer(modifier = Modifier.height(20.dp))
                 }
