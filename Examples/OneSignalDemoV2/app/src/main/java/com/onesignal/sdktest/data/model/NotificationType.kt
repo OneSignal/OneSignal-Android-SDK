@@ -18,6 +18,6 @@ enum class NotificationType(
         title = "With Image",
         notificationTitle = "Image Notification",
         notificationBody = "This notification includes an image",
-        bigPicture = "https://onesignal.com/blog/content/images/2023/02/introducing-the-new-onesignal-logo-4.jpg"
+        bigPicture = "https://media.onesignal.com/automated_push_templates/ratings_template.png"
     )
 }
