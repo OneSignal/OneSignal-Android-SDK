@@ -17,7 +17,19 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.graphics.Color
+import com.onesignal.sdktest.ui.theme.OneSignalRed
 import org.json.JSONObject
+
+private val TextFieldShape = RoundedCornerShape(10.dp)
+
+@Composable
+private fun dialogTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    unfocusedBorderColor = Color(0xFFBDBDBD),
+    focusedBorderColor = OneSignalRed,
+    cursorColor = OneSignalRed,
+    focusedLabelColor = OneSignalRed
+)
 
 /**
  * Dialog for entering a single value.
@@ -45,7 +57,8 @@ fun SingleInputDialog(
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
                 singleLine = true,
-                shape = RoundedCornerShape(10.dp)
+                shape = TextFieldShape,
+                colors = dialogTextFieldColors()
             )
         },
         confirmButton = {
@@ -101,7 +114,8 @@ fun PairInputDialog(
                         label = { Text(keyLabel) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
-                        shape = RoundedCornerShape(10.dp)
+                        shape = TextFieldShape,
+                        colors = dialogTextFieldColors()
                     )
                     OutlinedTextField(
                         value = value,
@@ -109,7 +123,8 @@ fun PairInputDialog(
                         label = { Text(valueLabel) },
                         modifier = Modifier.weight(1f),
                         singleLine = true,
-                        shape = RoundedCornerShape(10.dp)
+                        shape = TextFieldShape,
+                        colors = dialogTextFieldColors()
                     )
                 }
                 Spacer(modifier = Modifier.height(24.dp))
@@ -181,7 +196,8 @@ fun MultiPairInputDialog(
                                 label = { Text(keyLabel) },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
-                                shape = RoundedCornerShape(10.dp)
+                                shape = TextFieldShape,
+                                colors = dialogTextFieldColors()
                             )
                             OutlinedTextField(
                                 value = value,
@@ -193,7 +209,8 @@ fun MultiPairInputDialog(
                                 label = { Text(valueLabel) },
                                 modifier = Modifier.weight(1f),
                                 singleLine = true,
-                                shape = RoundedCornerShape(10.dp)
+                                shape = TextFieldShape,
+                                colors = dialogTextFieldColors()
                             )
                             if (pairs.size > 1) {
                                 IconButton(
@@ -383,7 +400,8 @@ fun OutcomeDialog(
                     label = { Text("Outcome Name") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    shape = RoundedCornerShape(10.dp)
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
                 )
                 
                 if (selectedType == 2) {
@@ -395,7 +413,8 @@ fun OutcomeDialog(
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
-                        shape = RoundedCornerShape(10.dp)
+                        shape = TextFieldShape,
+                        colors = dialogTextFieldColors()
                     )
                 }
             }
@@ -475,7 +494,8 @@ fun TrackEventDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     isError = eventName.isBlank() && showError,
-                    shape = RoundedCornerShape(10.dp)
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
                 )
                 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -493,7 +513,8 @@ fun TrackEventDialog(
                     minLines = 2,
                     maxLines = 4,
                     isError = !isValueValid && eventValue.isNotBlank(),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors(),
                     supportingText = if (!isValueValid && eventValue.isNotBlank()) {
                         { 
                             Text(
