@@ -106,7 +106,7 @@ sendNotification endpoint:
 - POST https://onesignal.com/api/v1/notifications
 - Accept header: "application/vnd.onesignal.v1+json"
 - Uses include_subscription_ids (not include_player_ids)
-- Includes big_picture and large_icon for image notifications
+- Includes big_picture for image notifications
 
 fetchUser endpoint:
 - GET https://api.onesignal.com/apps/{app_id}/users/by/onesignal_id/{onesignal_id}
@@ -159,7 +159,7 @@ In MainViewModel.kt, implement observers:
 ```
 App Section layout:
 
-1. App ID display (readonly TextView showing the OneSignal App ID)
+1. App ID display (readonly Text showing the OneSignal App ID)
 
 2. Sticky guidance banner below App ID:
    - Text: "Add your own App ID, then rebuild to fully test all functionality."
@@ -168,14 +168,14 @@ App Section layout:
 
 3. Privacy Consent toggle switch:
    - Label: "Privacy Consent"
-   - Description: "Grant or revoke privacy consent"
-   - SwitchCompat control
+   - Description: "Consent given for data collection"
+   - Switch control
    - NOT a blocking overlay - user can interact with app regardless of state
 
 4. "Logged in as" display (ABOVE the buttons, only visible when logged in):
-   - Prominent green CardView background (#E8F5E9)
-   - "Logged in as:" label (16sp)
-   - External User ID displayed large and centered (22sp bold, green #2E7D32)
+   - Prominent green Card background (#E8F5E9)
+   - "Logged in as:" label
+   - External User ID displayed large and centered (bold, green #2E7D32)
    - Positioned ABOVE the Login/Switch User button
 
 5. LOGIN USER button:
@@ -191,7 +191,7 @@ App Section layout:
 ```
 Push Section:
 - Section title: "Push" with info icon for tooltip
-- Push Subscription ID display (readonly, ellipsize middle)
+- Push Subscription ID display (readonly)
 - Enabled toggle switch (controls optIn/optOut)
 - Notification permission is automatically requested when MainActivity loads
 - PROMPT PUSH button:
@@ -205,7 +205,7 @@ Push Section:
 ```
 Send Push Notification Section (placed right after Push Section):
 - Section title: "Send Push Notification" with info icon for tooltip
-- Three buttons in a card:
+- Three buttons:
   1. SIMPLE - sends basic notification with title/body
   2. WITH IMAGE - sends notification with big picture
      (use https://media.onesignal.com/automated_push_templates/ratings_template.png)
@@ -248,19 +248,17 @@ Tooltip should explain each IAM type.
 
 ```
 Aliases Section (placed after Send In-App Message):
-- Section title: "Aliases" with info icon (ℹ️) for tooltip
-- Compose LazyColumn showing key-value pairs
+- Section title: "Aliases" with info icon for tooltip
+- Compose list showing key-value pairs
 - Each item shows: Label | ID with delete icon
 - Filter out "external_id" and "onesignal_id" from display (these are special)
 - "No Aliases Added" text when empty
-- Two buttons side by side:
-  - ADD button → PairInputDialog with empty Label and ID fields
-  - ADD MULTIPLE button → MultiPairInputDialog (dynamic rows, add/remove)
+- ADD button -> PairInputDialog with empty Label and ID fields (single add)
+- ADD MULTIPLE button -> MultiPairInputDialog (dynamic rows, add/remove)
 - REMOVE SELECTED button:
   - Only visible when at least one alias exists
-  - Red background color
   - Opens MultiSelectRemoveDialog with checkboxes
-  - Shows count in button: "REMOVE (3)"
+  - Shows count in button: "REMOVE (N)"
 ```
 
 ### Prompt 2.7 - Emails Section
@@ -268,13 +266,13 @@ Aliases Section (placed after Send In-App Message):
 ```
 Emails Section:
 - Section title: "Emails" with info icon for tooltip
-- RecyclerView showing email addresses
-- Each item shows email with long-press to delete
+- Compose list showing email addresses
+- Each item shows email with delete icon
 - "No Emails Added" text when empty
-- ADD EMAIL button → dialog with empty email field
+- ADD EMAIL button -> dialog with empty email field
 - Collapse behavior when >5 items:
   - Show first 5 items
-  - Show "X more available" text (clickable)
+  - Show "X more" text (clickable)
   - Expand to show all when clicked
 ```
 
@@ -282,11 +280,11 @@ Emails Section:
 
 ```
 SMS Section:
-- Section title: "SMSs" with info icon for tooltip
-- RecyclerView showing phone numbers
-- Each item shows phone number with long-press to delete
-- "No SMSs Added" text when empty
-- ADD SMS button → dialog with empty SMS field
+- Section title: "SMS" with info icon for tooltip
+- Compose list showing phone numbers
+- Each item shows phone number with delete icon
+- "No SMS Added" text when empty
+- ADD SMS button -> dialog with empty SMS field
 - Collapse behavior when >5 items (same as Emails)
 ```
 
@@ -295,15 +293,13 @@ SMS Section:
 ```
 Tags Section:
 - Section title: "Tags" with info icon for tooltip
-- Compose LazyColumn showing key-value pairs
+- Compose list showing key-value pairs
 - Each item shows: Key | Value with delete icon
 - "No Tags Added" text when empty
-- Two buttons side by side:
-  - ADD button → PairInputDialog with empty Key and Value fields
-  - ADD MULTIPLE button → MultiPairInputDialog (dynamic rows)
+- ADD button -> PairInputDialog with empty Key and Value fields (single add)
+- ADD MULTIPLE button -> MultiPairInputDialog (dynamic rows)
 - REMOVE SELECTED button:
   - Only visible when at least one tag exists
-  - Red background color
   - Opens MultiSelectRemoveDialog with checkboxes
 ```
 
@@ -312,10 +308,10 @@ Tags Section:
 ```
 Outcome Events Section:
 - Section title: "Outcome Events" with info icon for tooltip
-- SEND OUTCOME button → opens dropdown dialog with 3 options:
-  1. Normal Outcome → shows name input field
-  2. Unique Outcome → shows name input field
-  3. Outcome with Value → shows name and value (float) input fields
+- SEND OUTCOME button -> opens dialog with 3 radio options:
+  1. Normal Outcome -> shows name input field
+  2. Unique Outcome -> shows name input field
+  3. Outcome with Value -> shows name and value (float) input fields
 ```
 
 ### Prompt 2.11 - Triggers Section (IN MEMORY ONLY)
@@ -323,15 +319,14 @@ Outcome Events Section:
 ```
 Triggers Section:
 - Section title: "Triggers" with info icon for tooltip
-- Compose LazyColumn showing key-value pairs
+- Compose list showing key-value pairs
 - Each item shows: Key | Value with delete icon
 - "No Triggers Added" text when empty
-- Two buttons side by side:
-  - ADD button → PairInputDialog with empty Key and Value fields
-  - ADD MULTIPLE button → MultiPairInputDialog (dynamic rows)
-- Two action buttons (when triggers exist):
-  - REMOVE SELECTED → MultiSelectRemoveDialog with checkboxes
-  - CLEAR ALL → Removes all triggers at once
+- ADD button -> PairInputDialog with empty Key and Value fields (single add)
+- ADD MULTIPLE button -> MultiPairInputDialog (dynamic rows)
+- Two action buttons (only visible when triggers exist):
+  - REMOVE SELECTED -> MultiSelectRemoveDialog with checkboxes
+  - CLEAR ALL -> Removes all triggers at once
 
 IMPORTANT: Triggers are stored IN MEMORY ONLY during the app session.
 - triggersList is a mutableListOf<Pair<String, String>>() in MainViewModel
@@ -345,10 +340,10 @@ IMPORTANT: Triggers are stored IN MEMORY ONLY during the app session.
 ```
 Track Event Section:
 - Section title: "Track Event" with info icon for tooltip
-- TRACK EVENT button → opens TrackEventDialog with:
-  - "Event Name" label + empty input field (required, shows "Required" error if empty on submit)
-  - "Properties (optional, JSON)" label + input field with placeholder hint {"ABC":123}
-    - If non-empty and not valid JSON, shows "Invalid JSON" error on the field and dialog stays open
+- TRACK EVENT button -> opens TrackEventDialog with:
+  - "Event Name" label + empty input field (required, shows error if empty on submit)
+  - "Properties (optional, JSON)" label + input field with placeholder hint {"key": "value"}
+    - If non-empty and not valid JSON, shows "Invalid JSON format" error on the field
     - If valid JSON, parsed via JSONObject and converted to Map<String, Any?> for the SDK call
     - If empty, passes null
   - TRACK button disabled until name is filled AND JSON is valid (or empty)
@@ -374,16 +369,16 @@ Location Section:
 
 ```
 Loading indicator overlay:
-- Add ProgressBar overlay to activity_main.xml (covers entire screen with semi-transparent background)
-- Add isLoading LiveData to MainViewModel
+- Full-screen semi-transparent overlay with centered spinner
+- isLoading LiveData in MainViewModel
 - Show/hide based on isLoading state
 - IMPORTANT: Add 100ms delay after populating data before dismissing loading indicator
-  - This ensures UI (RecyclerViews, adapters) has time to render
+  - This ensures UI has time to render
   - Use kotlinx.coroutines.delay(100) after setting all LiveData values
 
 On cold start:
 - Check if OneSignal.User.onesignalId is not null
-- If exists: show loading → call fetchUserDataFromApi() → populate UI → delay 100ms → hide loading
+- If exists: show loading -> call fetchUserDataFromApi() -> populate UI -> delay 100ms -> hide loading
 - If null: just show empty state (no loading indicator)
 
 On login (LOGIN USER / SWITCH USER):
@@ -413,8 +408,8 @@ Note: REST API key is NOT required for fetchUser endpoint.
 data class UserData(
     val aliases: Map<String, String>,    // From identity object (filter out external_id, onesignal_id)
     val tags: Map<String, String>,        // From properties.tags object
-    val emails: List<String>,             // From subscriptions where type="Email" → token
-    val smsNumbers: List<String>,         // From subscriptions where type="SMS" → token
+    val emails: List<String>,             // From subscriptions where type="Email" -> token
+    val smsNumbers: List<String>,         // From subscriptions where type="SMS" -> token
     val externalId: String?               // From identity.external_id
 )
 ```
@@ -491,11 +486,16 @@ AliasesSection(
     onInfoClick = { showTooltipDialog = "aliases" }
 )
 
-if (showTooltipDialog != null) {
-    TooltipDialog(
-        tooltipKey = showTooltipDialog!!,
-        onDismiss = { showTooltipDialog = null }
-    )
+showTooltipDialog?.let { key ->
+    val tooltip = TooltipHelper.getTooltip(key)
+    if (tooltip != null) {
+        TooltipDialog(
+            title = tooltip.title,
+            description = tooltip.description,
+            options = tooltip.options?.map { it.name to it.description },
+            onDismiss = { showTooltipDialog = null }
+        )
+    }
 }
 ```
 
@@ -571,98 +571,17 @@ The test automation framework (Appium) will enter these values:
 
 - Login Dialog: External User Id = "test"
 - Add Alias Dialog: Key = "Test", Value = "Value"
+- Add Multiple Aliases Dialog: Key = "Test", Value = "Value" (first row; supports multiple rows)
 - Add Email Dialog: Email = "test@onesignal.com"
 - Add SMS Dialog: SMS = "123-456-5678"
 - Add Tag Dialog: Key = "Test", Value = "Value"
+- Add Multiple Tags Dialog: Key = "Test", Value = "Value" (first row; supports multiple rows)
 - Add Trigger Dialog: Key = "trigger_key", Value = "trigger_value"
+- Add Multiple Triggers Dialog: Key = "trigger_key", Value = "trigger_value" (first row; supports multiple rows)
 - Outcome Dialog: Name = "test_outcome", Value = "1.5"
-- Track Event Dialog: Name = "test_event", Value = "test_value"
+- Track Event Dialog: Name = "test_event", Properties = "{\"key\": \"value\"}"
 - Custom Notification Dialog: Title = "Test Title", Body = "Test Body"
 ```
-
----
-
-## Key Files Structure
-
-```
-Examples/OneSignalDemoV2/
-├── buildSrc/
-│   └── src/main/kotlin/
-│       ├── Versions.kt          # Version constants (includes Compose versions)
-│       └── Dependencies.kt      # Dependency strings (includes Compose deps)
-├── app/
-│   ├── src/main/
-│   │   ├── java/com/onesignal/sdktest/
-│   │   │   ├── application/
-│   │   │   │   └── MainApplication.kt   # SDK init, log listener, observers
-│   │   │   ├── data/
-│   │   │   │   ├── model/
-│   │   │   │   │   ├── NotificationType.kt    # With bigPicture and largeIcon
-│   │   │   │   │   └── InAppMessageType.kt    # With Material icons
-│   │   │   │   ├── network/
-│   │   │   │   │   └── OneSignalService.kt    # REST API client
-│   │   │   │   └── repository/
-│   │   │   │       └── OneSignalRepository.kt
-│   │   │   ├── ui/
-│   │   │   │   ├── components/                # Reusable Compose components
-│   │   │   │   │   ├── SectionCard.kt         # Card with title and info icon
-│   │   │   │   │   ├── ToggleRow.kt           # Label + Switch
-│   │   │   │   │   ├── ActionButton.kt        # Primary/Destructive buttons
-│   │   │   │   │   ├── ListComponents.kt      # PairList, SingleList, EmptyState
-│   │   │   │   │   ├── LoadingOverlay.kt      # Full-screen loading spinner
-│   │   │   │   │   ├── LogView.kt             # Collapsible log viewer (Appium-ready)
-│   │   │   │   │   └── Dialogs.kt             # All dialog composables
-│   │   │   │   ├── main/
-│   │   │   │   │   ├── MainActivity.kt        # ComponentActivity with setContent
-│   │   │   │   │   ├── MainScreen.kt          # Main Compose screen (includes LogView)
-│   │   │   │   │   ├── Sections.kt            # Individual section composables
-│   │   │   │   │   └── MainViewModel.kt       # With batch operations
-│   │   │   │   ├── secondary/
-│   │   │   │   │   └── SecondaryActivity.kt   # Simple Compose screen
-│   │   │   │   └── theme/
-│   │   │   │       └── Theme.kt               # OneSignal Material3 theme
-│   │   │   └── util/
-│   │   │       ├── SharedPreferenceUtil.kt
-│   │   │       ├── LogManager.kt              # Thread-safe pass-through logger
-│   │   │       └── TooltipHelper.kt           # Fetches tooltips from remote URL
-│   │   └── res/
-│   │       └── values/
-│   │           ├── strings.xml
-│   │           ├── colors.xml
-│   │           └── styles.xml
-│   └── src/huawei/
-│       └── java/com/onesignal/sdktest/notification/
-│           └── HmsMessageServiceAppLevel.kt
-├── google-services.json
-├── agconnect-services.json
-└── BUILDING_THE_APP.md (this file)
-```
-
-Note: 
-- XML layouts have been removed - all UI is now Jetpack Compose
-- Tooltip content is fetched from remote URL (not bundled locally)
-- LogView at top of screen displays SDK and app logs for debugging/Appium testing
-
----
-
-## Configuration
-
-### strings.xml Placeholders
-
-```xml
-<!-- Replace with your own OneSignal App ID -->
-<string name="onesignal_app_id">YOUR_APP_ID_HERE</string>
-```
-
-Note: REST API key is NOT required for the fetchUser endpoint.
-
-### Package Name
-
-The package name MUST be `com.onesignal.sdktest` to work with the existing:
-- `google-services.json` (Firebase configuration)
-- `agconnect-services.json` (Huawei configuration)
-
-If you change the package name, you must also update these files with your own Firebase/Huawei project configuration.
 
 ---
 
@@ -690,33 +609,6 @@ Notification permission is automatically requested when MainActivity loads:
 - PROMPT PUSH button remains as fallback if user initially denied
 - Button hidden once permission is granted
 ```
-
----
-
-## Summary
-
-This app demonstrates all OneSignal Android SDK features:
-- User management (login/logout, aliases with batch add/remove)
-- Push notifications (subscription, sending with images, auto-permission prompt)
-- Email and SMS subscriptions
-- Tags for segmentation (batch add/remove support)
-- Triggers for in-app message targeting (in-memory only, batch operations)
-- Outcomes for conversion tracking
-- Event tracking with JSON properties validation
-- In-app messages (display testing with type-specific icons)
-- Location sharing
-- Privacy consent management
-
-The app is designed to be:
-1. **Testable** - Empty dialogs for Appium automation
-2. **Comprehensive** - All SDK features demonstrated
-3. **Clean** - MVVM architecture with Jetpack Compose UI
-4. **Cross-platform ready** - Tooltip content in JSON for sharing across wrappers
-5. **Session-based triggers** - Triggers stored in memory only, cleared on restart
-6. **Responsive UI** - Loading indicator with delay to ensure UI populates before dismissing
-7. **Performant** - Tooltip JSON loaded on background thread
-8. **Modern UI** - Material3 theming with reusable Compose components
-9. **Batch Operations** - Add multiple items at once, select and remove multiple items
 
 ---
 
@@ -756,8 +648,8 @@ ToggleRow.kt:
 - Horizontal layout with space between
 
 ActionButton.kt:
-- PrimaryButton (OneSignalRed background)
-- DestructiveButton (Red/warning style)
+- PrimaryButton (filled, primary color background)
+- DestructiveButton (outlined, red accent)
 - Full-width buttons for consistent styling
 
 ListComponents.kt:
@@ -774,34 +666,76 @@ LoadingOverlay.kt:
 
 Dialogs.kt:
 - SingleInputDialog (one text field)
-- PairInputDialog (key-value fields)
-- MultiPairInputDialog (dynamic rows, add/remove)
+- PairInputDialog (key-value fields, single pair)
+- MultiPairInputDialog (dynamic rows, add/remove, batch submit)
 - MultiSelectRemoveDialog (checkboxes for batch remove)
 - LoginDialog, OutcomeDialog, TrackEventDialog
 - CustomNotificationDialog, TooltipDialog
 ```
 
-### Prompt 8.3 - Theme
+### Prompt 8.3 - Reusable Multi-Pair Dialog (Compose)
+
+```
+Tags, Aliases, and Triggers all share a reusable MultiPairInputDialog composable
+for adding multiple key-value pairs at once.
+
+Behavior:
+- Dialog opens with one empty key-value row
+- "Add Row" button below the rows adds another empty row
+- Each row has a remove button (hidden when only one row exists)
+- "Add All" button is disabled until ALL key and value fields in every row are filled
+- Validation runs on every text change and after row add/remove
+- On "Add All" press, all rows are collected and submitted as a batch
+- Batch operations use SDK bulk APIs (addAliases, addTags, addTriggers)
+
+Used by:
+- ADD MULTIPLE button (Aliases section) -> calls viewModel.addAliases(pairs)
+- ADD MULTIPLE button (Tags section) -> calls viewModel.addTags(pairs)
+- ADD MULTIPLE button (Triggers section) -> calls viewModel.addTriggers(pairs)
+```
+
+### Prompt 8.4 - Reusable Remove Multi Dialog (Compose)
+
+```
+Aliases, Tags, and Triggers share a reusable MultiSelectRemoveDialog composable
+for selectively removing items from the current list.
+
+Behavior:
+- Accepts the current list of items as List<Pair<String, String>>
+- Renders one Checkbox per item with label "key: value"
+- User can check 0, 1, or more items
+- "Remove (N)" button shows count of selected items, disabled when none selected
+- On confirm, checked items' keys are collected as Collection<String> and passed to the callback
+
+Used by:
+- REMOVE SELECTED button (Aliases section) -> calls viewModel.removeSelectedAliases(keys)
+- REMOVE SELECTED button (Tags section) -> calls viewModel.removeSelectedTags(keys)
+- REMOVE SELECTED button (Triggers section) -> calls viewModel.removeSelectedTriggers(keys)
+```
+
+### Prompt 8.5 - Theme
 
 ```
 Create OneSignal theme in ui/theme/Theme.kt:
 
 Colors:
-- OneSignalRed = #E9444E (primary)
-- OneSignalGreen = #2E7D32 (success)
-- OneSignalGreenLight = #E8F5E9 (success background)
-- CardBackground = #FAFAFA
-- LightBackground = #F5F5F5
-- DividerColor = #E0E0E0
+- OneSignalRed = #E54B4D (primary)
+- OneSignalGreen = #34A853 (success)
+- OneSignalGreenLight = #E6F4EA (success background)
+- LightBackground = #F8F9FA
+- CardBackground = White
+- DividerColor = #E8EAED
 - WarningBackground = #FFF8E1
 
 OneSignalTheme composable:
 - MaterialTheme with LightColorScheme
+- Custom Typography with SemiBold weights
+- Custom Shapes with rounded corners (8/12/16/24dp)
 - Primary = OneSignalRed
 - Surface variants for cards
 ```
 
-### Prompt 8.4 - Log View (Appium-Ready)
+### Prompt 8.6 - Log View (Appium-Ready)
 
 ```
 Add collapsible log view at top of screen for debugging and Appium testing.
@@ -819,7 +753,7 @@ LogManager Features:
 LogView Features:
 - Collapsible header (default expanded)
 - 5-line height (~100dp)
-- Color-coded by level (Debug=blue, Info=yellow, Warn=orange, Error=red)
+- Color-coded by level (Debug=blue, Info=green, Warn=amber, Error=red)
 - Clear button
 - Auto-scroll to newest
 
@@ -852,7 +786,7 @@ log_list = driver.find_element(By.XPATH, "//*[@resource-id='log_view_list']")
 driver.execute_script("mobile: scroll", {"element": log_list, "direction": "down"})
 ```
 
-### Prompt 8.5 - Toast Messages
+### Prompt 8.7 - Toast Messages
 
 ```
 All user actions should display toast messages:
@@ -877,3 +811,114 @@ Implementation:
 - LaunchedEffect triggers on toastMessage change
 - All toast messages are also logged via LogManager.info()
 ```
+
+---
+
+## Key Files Structure
+
+```
+Examples/OneSignalDemoV2/
+├── buildSrc/
+│   └── src/main/kotlin/
+│       ├── Versions.kt          # Version constants (includes Compose versions)
+│       └── Dependencies.kt      # Dependency strings (includes Compose deps)
+├── app/
+│   ├── src/main/
+│   │   ├── java/com/onesignal/sdktest/
+│   │   │   ├── application/
+│   │   │   │   └── MainApplication.kt   # SDK init, log listener, observers
+│   │   │   ├── data/
+│   │   │   │   ├── model/
+│   │   │   │   │   ├── NotificationType.kt    # With bigPicture URL
+│   │   │   │   │   └── InAppMessageType.kt    # With Material icons
+│   │   │   │   ├── network/
+│   │   │   │   │   └── OneSignalService.kt    # REST API client
+│   │   │   │   └── repository/
+│   │   │   │       └── OneSignalRepository.kt
+│   │   │   ├── ui/
+│   │   │   │   ├── components/                # Reusable Compose components
+│   │   │   │   │   ├── SectionCard.kt         # Card with title and info icon
+│   │   │   │   │   ├── ToggleRow.kt           # Label + Switch
+│   │   │   │   │   ├── ActionButton.kt        # Primary/Destructive buttons
+│   │   │   │   │   ├── ListComponents.kt      # PairList, SingleList, EmptyState
+│   │   │   │   │   ├── LoadingOverlay.kt      # Full-screen loading spinner
+│   │   │   │   │   ├── LogView.kt             # Collapsible log viewer (Appium-ready)
+│   │   │   │   │   └── Dialogs.kt             # All dialog composables
+│   │   │   │   ├── main/
+│   │   │   │   │   ├── MainActivity.kt        # ComponentActivity with setContent
+│   │   │   │   │   ├── MainScreen.kt          # Main Compose screen (includes LogView)
+│   │   │   │   │   ├── Sections.kt            # Individual section composables
+│   │   │   │   │   └── MainViewModel.kt       # With batch operations
+│   │   │   │   ├── secondary/
+│   │   │   │   │   └── SecondaryActivity.kt   # Simple Compose screen
+│   │   │   │   └── theme/
+│   │   │   │       └── Theme.kt               # OneSignal Material3 theme
+│   │   │   └── util/
+│   │   │       ├── SharedPreferenceUtil.kt
+│   │   │       ├── LogManager.kt              # Thread-safe pass-through logger
+│   │   │       └── TooltipHelper.kt           # Fetches tooltips from remote URL
+│   │   └── res/
+│   │       └── values/
+│   │           ├── strings.xml
+│   │           ├── colors.xml
+│   │           └── styles.xml
+│   └── src/huawei/
+│       └── java/com/onesignal/sdktest/notification/
+│           └── HmsMessageServiceAppLevel.kt
+├── google-services.json
+├── agconnect-services.json
+└── build_app_prompt.md (this file)
+```
+
+Note:
+- All UI is Jetpack Compose (no XML layouts)
+- Tooltip content is fetched from remote URL (not bundled locally)
+- LogView at top of screen displays SDK and app logs for debugging/Appium testing
+
+---
+
+## Configuration
+
+### strings.xml Placeholders
+
+```xml
+<!-- Replace with your own OneSignal App ID -->
+<string name="onesignal_app_id">YOUR_APP_ID_HERE</string>
+```
+
+Note: REST API key is NOT required for the fetchUser endpoint.
+
+### Package Name
+
+The package name MUST be `com.onesignal.sdktest` to work with the existing:
+- `google-services.json` (Firebase configuration)
+- `agconnect-services.json` (Huawei configuration)
+
+If you change the package name, you must also update these files with your own Firebase/Huawei project configuration.
+
+---
+
+## Summary
+
+This app demonstrates all OneSignal Android SDK features:
+- User management (login/logout, aliases with batch add/remove)
+- Push notifications (subscription, sending with images, auto-permission prompt)
+- Email and SMS subscriptions
+- Tags for segmentation (batch add/remove support)
+- Triggers for in-app message targeting (in-memory only, batch operations)
+- Outcomes for conversion tracking
+- Event tracking with JSON properties validation
+- In-app messages (display testing with type-specific icons)
+- Location sharing
+- Privacy consent management
+
+The app is designed to be:
+1. **Testable** - Empty dialogs for Appium automation
+2. **Comprehensive** - All SDK features demonstrated
+3. **Clean** - MVVM architecture with Jetpack Compose UI
+4. **Cross-platform ready** - Tooltip content in JSON for sharing across wrappers
+5. **Session-based triggers** - Triggers stored in memory only, cleared on restart
+6. **Responsive UI** - Loading indicator with delay to ensure UI populates before dismissing
+7. **Performant** - Tooltip JSON loaded on background thread
+8. **Modern UI** - Material3 theming with reusable Compose components
+9. **Batch Operations** - Add multiple items at once, select and remove multiple items
