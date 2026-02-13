@@ -713,7 +713,7 @@ for selectively removing items from the current list.
 
 Behavior:
 - Accepts the current list of items as List<Pair<String, String>>
-- Renders one Checkbox per item with label "key: value"
+- Renders one Checkbox per item on the left with just the key as the label (not "key: value")
 - User can check 0, 1, or more items
 - "Remove (N)" button shows count of selected items, disabled when none selected
 - On confirm, checked items' keys are collected as Collection<String> and passed to the callback

@@ -46,6 +46,8 @@ fun SingleInputDialog(
     
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             Text(title, style = MaterialTheme.typography.titleMedium)
         },
@@ -276,6 +278,8 @@ fun MultiSelectRemoveDialog(
     
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             Text(title, style = MaterialTheme.typography.titleMedium)
         },
@@ -312,7 +316,7 @@ fun MultiSelectRemoveDialog(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "$key: $value",
+                            text = key,
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
@@ -370,6 +374,8 @@ fun OutcomeDialog(
     
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             Text("Send Outcome", style = MaterialTheme.typography.titleMedium)
         },
@@ -482,6 +488,8 @@ fun TrackEventDialog(
     
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             Text("Track Event", style = MaterialTheme.typography.titleMedium)
         },
@@ -557,12 +565,53 @@ fun CustomNotificationDialog(
     onDismiss: () -> Unit,
     onConfirm: (String, String) -> Unit
 ) {
-    PairInputDialog(
-        title = "Custom Notification",
-        keyLabel = "Title",
-        valueLabel = "Body",
-        onDismiss = onDismiss,
-        onConfirm = onConfirm
+    var title by remember { mutableStateOf("") }
+    var body by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        title = {
+            Text("Custom Notification", style = MaterialTheme.typography.titleMedium)
+        },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Title") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = body,
+                    onValueChange = { body = it },
+                    label = { Text("Body") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = TextFieldShape,
+                    colors = dialogTextFieldColors()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(title, body) },
+                enabled = title.isNotBlank() && body.isNotBlank()
+            ) {
+                Text("Send")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+        shape = RoundedCornerShape(16.dp)
     )
 }
 
@@ -578,6 +627,8 @@ fun TooltipDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        properties = DialogProperties(usePlatformDefaultWidth = false),
         title = {
             Text(title, style = MaterialTheme.typography.titleMedium)
         },
