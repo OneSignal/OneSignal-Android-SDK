@@ -17,25 +17,25 @@ enum class InAppMessageType(
     val icon: ImageVector
 ) {
     TOP_BANNER(
-        title = "Top Banner",
+        title = "TOP BANNER",
         triggerKey = "iam_type",
         triggerValue = "top_banner",
         icon = Icons.Filled.VerticalAlignTop
     ),
     BOTTOM_BANNER(
-        title = "Bottom Banner",
+        title = "BOTTOM BANNER",
         triggerKey = "iam_type",
         triggerValue = "bottom_banner",
         icon = Icons.Filled.VerticalAlignBottom
     ),
     CENTER_MODAL(
-        title = "Center Modal",
+        title = "CENTER MODAL",
         triggerKey = "iam_type",
         triggerValue = "center_modal",
         icon = Icons.Filled.CropSquare
     ),
     FULL_SCREEN(
-        title = "Full Screen",
+        title = "FULL SCREEN",
         triggerKey = "iam_type",
         triggerValue = "full_screen",
         icon = Icons.Filled.Fullscreen
