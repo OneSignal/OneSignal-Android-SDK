@@ -236,16 +236,18 @@ In-App Messaging Section (placed right after Send Push):
 Send In-App Message Section (placed right after In-App Messaging):
 - Section title: "Send In-App Message" with info icon for tooltip
 - Four FULL-WIDTH buttons (not a grid):
-  1. TOP BANNER - VerticalAlignTop icon
-  2. BOTTOM BANNER - VerticalAlignBottom icon
-  3. CENTER MODAL - CropSquare icon
-  4. FULL SCREEN - Fullscreen icon
+  1. TOP BANNER - VerticalAlignTop icon, trigger: "iam_key" = "top_banner"
+  2. BOTTOM BANNER - VerticalAlignBottom icon, trigger: "iam_key" = "bottom_banner"
+  3. CENTER MODAL - CropSquare icon, trigger: "iam_key" = "center_modal"
+  4. FULL SCREEN - Fullscreen icon, trigger: "iam_key" = "full_screen"
 - Button styling:
   - RED background color (#E9444E)
   - WHITE text
   - Type-specific icon on LEFT side only (no right side icon)
   - Full width of the card
-- On click: adds trigger and shows toast "Sent In-App Message: {type}"
+  - Left-aligned text and icon content (not centered)
+  - UPPERCASE button text
+- On click: adds trigger "iam_key" with the type's value and shows toast "Sent In-App Message: {type}"
 
 Tooltip should explain each IAM type.
 ```
