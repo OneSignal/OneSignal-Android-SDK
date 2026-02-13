@@ -116,7 +116,7 @@ internal class NotificationChannelManager(
                 ledColor = BigInteger(ledc, 16)
                 channel.lightColor = ledColor.toInt()
             } catch (t: Throwable) {
-                Logging.error("Couldn't convert ARGB Hex value to BigInteger:", t)
+                Logging.warn("Couldn't convert ARGB Hex value to BigInteger:", t)
             }
         }
         channel.enableLights(payload.optInt("led", 1) == 1)
@@ -211,7 +211,7 @@ internal class NotificationChannelManager(
         } catch (e: NullPointerException) {
             // Catch issue caused by "Attempt to invoke virtual method 'boolean android.app.NotificationChannel.isDeleted()' on a null object reference"
             // https://github.com/OneSignal/OneSignal-Android-SDK/issues/1291
-            Logging.error("Error when trying to delete notification channel: " + e.message)
+            Logging.warn("Error when trying to delete notification channel: " + e.message)
         }
 
         // Delete old channels - Payload will include all changes for the app. Any extra OS_ ones must

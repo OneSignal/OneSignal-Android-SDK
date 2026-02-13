@@ -202,7 +202,7 @@ internal class InAppBackendService(
         statusCode: Int,
         response: String?,
     ) {
-        Logging.error("Encountered a $statusCode error while attempting in-app message $requestType request: $response")
+        Logging.info("Encountered a $statusCode error while attempting in-app message $requestType request: $response")
     }
 
     private suspend fun attemptFetchWithRetries(
