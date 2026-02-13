@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OneSignal</string>
+    <string name="onesignal_app_id">77e32082-ea27-42e3-a898-c72e141824ef</string>
+
+    <!-- App Section -->
+    <string name="app">App</string>
+    <string name="app_id_label">App-Id:</string>
+    <string name="revoke_consent">REVOKE CONSENT</string>
+    <string name="login_user">LOGIN USER</string>
+    <string name="switch_user">SWITCH USER</string>
+    <string name="logout_user">LOGOUT USER</string>
+    <string name="logged_in_as">Logged in as:</string>
+    
+    <!-- App ID Guidance Banner -->
+    <string name="app_id_guidance">Add your own App ID, then rebuild to fully test all functionality.</string>
+    <string name="get_keys_link">Get your keys at onesignal.com</string>
+    
+    <!-- Collapse/Expand -->
+    <string name="x_more_available">%d more available</string>
+
+    <!-- Privacy Consent -->
+    <string name="privacy_consent">Privacy Consent</string>
+    <string name="privacy_consent_label">Privacy Consent:</string>
+    <string name="privacy_consent_description">Consent given for data collection</string>
+
+    <!-- Aliases -->
+    <string name="aliases">Aliases</string>
+    <string name="no_aliases_added">No Aliases Added</string>
+    <string name="add_alias">ADD ALIAS</string>
+    <string name="add_aliases">ADD ALIASES</string>
+    <string name="remove_aliases">REMOVE ALIASES</string>
+
+    <!-- Push -->
+    <string name="push">Push</string>
+    <string name="push_id_label">Push-Id:</string>
+    <string name="enabled">Enabled</string>
+    <string name="prompt_push">PROMPT PUSH</string>
+
+    <!-- Emails -->
+    <string name="emails">Emails</string>
+    <string name="no_emails_added">No Emails Added</string>
+    <string name="add_email">ADD EMAIL</string>
+    <string name="new_email">New Email</string>
+
+    <!-- SMSs -->
+    <string name="smss">SMSs</string>
+    <string name="no_smss_added">No SMSs Added</string>
+    <string name="add_sms">ADD SMS</string>
+    <string name="new_sms">New SMS</string>
+
+    <!-- Tags -->
+    <string name="tags">Tags</string>
+    <string name="no_tags_added">No Tags Added</string>
+    <string name="add_tag">ADD TAG</string>
+    <string name="add_tags">ADD TAGS</string>
+    <string name="remove_tags">REMOVE TAGS</string>
+
+    <!-- Outcome Events -->
+    <string name="outcome_events">Outcome Events</string>
+    <string name="send_outcome">SEND OUTCOME</string>
+    <string name="outcome_type">Outcome Type</string>
+    <string name="outcome_name">Outcome Name</string>
+    <string name="outcome_value">Outcome Value</string>
+    <string name="select_outcome_type">Select an Outcome Type…</string>
+    <string name="normal_outcome">Normal Outcome</string>
+    <string name="unique_outcome">Unique Outcome</string>
+    <string name="outcome_with_value">Outcome with Value</string>
+    <string name="send">SEND</string>
+
+    <!-- In-App Messaging -->
+    <string name="in_app_messaging">In-App Messaging</string>
+    <string name="pause_in_app_messages">Pause In-App Messages:</string>
+    <string name="toggle_in_app_messages">Toggle in-app messages</string>
+
+    <!-- Triggers -->
+    <string name="triggers">Triggers</string>
+    <string name="no_triggers_added">No Triggers Added</string>
+    <string name="add_trigger">ADD TRIGGER</string>
+    <string name="add_triggers">ADD TRIGGERS</string>
+    <string name="remove_triggers">REMOVE TRIGGERS</string>
+    <string name="clear_triggers">CLEAR TRIGGERS</string>
+
+    <!-- Track Event -->
+    <string name="track_event">Track Event</string>
+    <string name="track_event_button">TRACK EVENT</string>
+    <string name="event_name">Event Name</string>
+    <string name="event_properties">Properties (optional)</string>
+    <string name="event_properties_placeholder">{\"ABC\":123}</string>
+
+    <!-- Location -->
+    <string name="location">Location</string>
+    <string name="location_shared">Location Shared:</string>
+    <string name="location_shared_description">Location will be shared from device</string>
+    <string name="prompt_location">PROMPT LOCATION</string>
+
+    <!-- Send Push Notification -->
+    <string name="send_push_notification">Send Push Notification</string>
+    <string name="send_simple_notification">SIMPLE NOTIFICATION</string>
+    <string name="send_image_notification">NOTIFICATION WITH IMAGE</string>
+    <string name="send_custom_notification">CUSTOM NOTIFICATION</string>
+    <string name="notification_title">Notification Title</string>
+    <string name="notification_body">Notification Body</string>
+
+    <!-- Send In-App Message -->
+    <string name="send_in_app_message">Send In-App Message</string>
+
+    <!-- Next Activity -->
+    <string name="next_activity">NEXT ACTIVITY</string>
+    <string name="secondary_activity">Secondary Activity</string>
+
+    <!-- Dialog -->
+    <string name="external_user_id">External User Id</string>
+    <string name="key">Key</string>
+    <string name="value">Value</string>
+    <string name="cancel">CANCEL</string>
+    <string name="add">ADD</string>
+    <string name="login">LOGIN</string>
+    <string name="remove">Remove</string>
+    <string name="icon">Icon</string>
+    <string name="add_alias_title">Add Alias</string>
+    <string name="add_aliases_title">Add Aliases</string>
+    <string name="add_tag_title">Add Tag</string>
+    <string name="add_tags_title">Add Tags</string>
+    <string name="add_trigger_title">Add Trigger</string>
+    <string name="add_triggers_title">Add Triggers</string>
+    <string name="add_row">+ ADD ROW</string>
+    <string name="remove_aliases_title">Remove Aliases</string>
+    <string name="remove_tags_title">Remove Tags</string>
+    <string name="remove_triggers_title">Remove Triggers</string>
+    <string name="confirm">REMOVE</string>
+</resources>
