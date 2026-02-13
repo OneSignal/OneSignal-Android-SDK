@@ -44,7 +44,7 @@ import com.onesignal.sdktest.util.LogLevel
 import com.onesignal.sdktest.util.LogManager
 
 private val LogBackground = Color(0xFF1A1B1E)
-private val LogHeaderBackground = Color(0xFF25262A)
+private val LogHeaderBackground = Color(0xFF1A1B1E)
 private val LogDebugColor = Color(0xFF82AAFF)
 private val LogInfoColor = Color(0xFFC3E88D)
 private val LogWarnColor = Color(0xFFFFCB6B)

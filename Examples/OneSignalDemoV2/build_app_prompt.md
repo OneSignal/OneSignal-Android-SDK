@@ -366,6 +366,15 @@ Location Section:
 - PROMPT LOCATION button
 ```
 
+### Prompt 2.14 - Secondary Activity
+
+```
+Secondary Activity (launched by "Next Activity" button at bottom of main screen):
+- Activity title: "Secondary Activity"
+- Page content: centered text "Secondary Activity" using headlineMedium style
+- Simple screen, no additional functionality needed
+```
+
 ---
 
 ## Phase 3: View User API Integration
@@ -879,6 +888,7 @@ Examples/OneSignalDemoV2/
 ```
 
 Note:
+
 - All UI is Jetpack Compose (no XML layouts)
 - Tooltip content is fetched from remote URL (not bundled locally)
 - LogView at top of screen displays SDK and app logs for debugging/Appium testing
@@ -899,6 +909,7 @@ Note: REST API key is NOT required for the fetchUser endpoint.
 ### Package Name
 
 The package name MUST be `com.onesignal.sdktest` to work with the existing:
+
 - `google-services.json` (Firebase configuration)
 - `agconnect-services.json` (Huawei configuration)
 
@@ -909,6 +920,7 @@ If you change the package name, you must also update these files with your own F
 ## Summary
 
 This app demonstrates all OneSignal Android SDK features:
+
 - User management (login/logout, aliases with batch add)
 - Push notifications (subscription, sending with images, auto-permission prompt)
 - Email and SMS subscriptions
@@ -921,6 +933,7 @@ This app demonstrates all OneSignal Android SDK features:
 - Privacy consent management
 
 The app is designed to be:
+
 1. **Testable** - Empty dialogs for Appium automation
 2. **Comprehensive** - All SDK features demonstrated
 3. **Clean** - MVVM architecture with Jetpack Compose UI
