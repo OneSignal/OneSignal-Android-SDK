@@ -48,7 +48,7 @@ spotless {
 
     // Format Java files
     java {
-        target 'src/main/**/*.java', '../../../Examples/**/*.java'
+        target 'src/main/**/*.java', '../../../examples/demo/**/*.java'
         targetExclude '**/build/**'
         palantirJavaFormat('2.28.0')
         removeUnusedImports()
