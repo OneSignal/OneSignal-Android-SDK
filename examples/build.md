@@ -1,4 +1,4 @@
-# OneSignal Sample App V2 - Build Guide
+# OneSignal Sample App - Build Guide
 
 This document contains all the prompts and requirements needed to build the OneSignal Sample App V2 from scratch. Give these prompts to an AI assistant or follow them manually to recreate the app.
 
@@ -834,7 +834,7 @@ Implementation:
 ## Key Files Structure
 
 ```
-Examples/OneSignalDemoV2/
+examples/demo/
 ├── buildSrc/
 │   └── src/main/kotlin/
 │       ├── Versions.kt          # Version constants (includes Compose versions)
