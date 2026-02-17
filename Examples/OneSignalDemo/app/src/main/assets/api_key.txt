@@ -1,2 +1,0 @@
-Insert Amazon API Key here.
-https://documentation.onesignal.com/docs/generate-an-amazon-api-key

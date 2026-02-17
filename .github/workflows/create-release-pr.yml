@@ -86,7 +86,7 @@ jobs:
       - name: Update SDK_VERSION in gradle.properties
         run: |
           sed -i "s/^SDK_VERSION=.*/SDK_VERSION=$VERSION/" OneSignalSDK/gradle.properties
-          sed -i "s/^SDK_VERSION=.*/SDK_VERSION=$VERSION/" Examples/OneSignalDemo/gradle.properties
+          sed -i "s/^SDK_VERSION=.*/SDK_VERSION=$VERSION/" examples/demo/gradle.properties
 
       - name: Commit and Push changes
         run: |

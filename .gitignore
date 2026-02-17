@@ -6,7 +6,7 @@ build/
 # Local properties
 local.properties
 OneSignalSDK/local.properties
-Examples/OneSignalDemo/local.properties
+examples/demo/local.properties
 
 # macOS
 .DS_Store
@@ -18,7 +18,7 @@ Examples/OneSignalDemo/local.properties
 # Captures
 captures/
 OneSignalSDK/captures/
-Examples/OneSignalDemo/captures/
+examples/demo/captures/
 
 # GPG files
 *.gpg

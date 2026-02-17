@@ -21,7 +21,7 @@ gradle.rootProject {
 }
 
 include ':app'
-project(':app').projectDir = new File(settingsDir, '../examples/OneSignalDemo/app')
+project(':app').projectDir = new File(settingsDir, '../examples/demo/app')
 
 include ':onesignal'
 project(':onesignal').name = "OneSignal"
