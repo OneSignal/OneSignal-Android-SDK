@@ -1,29 +1,29 @@
 plugins {
-    id(Plugins.androidApplication)
-    id(Plugins.kotlinAndroid)
+    id("com.android.application")
+    id("kotlin-android")
 }
 
 // Apply GMS or Huawei plugin based on build variant
 // Check at configuration time, not when task graph is ready
 val taskRequests = gradle.startParameter.taskRequests.toString().lowercase()
 if (taskRequests.contains("gms")) {
-    apply(plugin = Plugins.googleServices)
+    apply(plugin = "com.google.gms.google-services")
 } else if (taskRequests.contains("huawei")) {
-    apply(plugin = Plugins.huaweiAgconnect)
+    apply(plugin = "com.huawei.agconnect")
 }
 
 // OneSignal SDK version - can be overridden via gradle property SDK_VERSION
-val sdkVersion: String = rootProject.findProperty("SDK_VERSION") as? String ?: Versions.oneSignalSdk
+val sdkVersion: String = rootProject.findProperty("SDK_VERSION") as? String ?: "5.6.1"
 
 android {
-    namespace = AppConfig.applicationId
-    compileSdk = Versions.compileSdk
+    namespace = "com.onesignal.sdktest"
+    compileSdk = 34
 
     defaultConfig {
-        minSdk = Versions.minSdk
-        targetSdk = Versions.targetSdk
-        versionCode = Versions.versionCode
-        versionName = Versions.versionName
+        minSdk = 21
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
         multiDexEnabled = true
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -34,7 +34,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = Versions.composeCompiler
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
 
     flavorDimensions += "default"
@@ -42,12 +42,12 @@ android {
     productFlavors {
         create("gms") {
             dimension = "default"
-            applicationId = AppConfig.applicationId
+            applicationId = "com.onesignal.sdktest"
         }
         create("huawei") {
             dimension = "default"
-            minSdk = Versions.minSdk
-            applicationId = AppConfig.applicationId
+            minSdk = 21
+            applicationId = "com.onesignal.sdktest"
         }
     }
 
@@ -90,36 +90,36 @@ android {
 
 dependencies {
     // Kotlin
-    implementation(Dependencies.kotlinStdlib)
-    implementation(Dependencies.coroutinesAndroid)
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.24")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
     // AndroidX
-    implementation(Dependencies.multidex)
-    implementation(Dependencies.appcompat)
-    implementation(Dependencies.coreKtx)
+    implementation("androidx.multidex:multidex:2.0.1")
+    implementation("androidx.appcompat:appcompat:1.5.1")
+    implementation("androidx.core:core-ktx:1.9.0")
 
     // Compose BOM
-    implementation(platform(Dependencies.composeBom))
-    implementation(Dependencies.composeUi)
-    implementation(Dependencies.composeUiGraphics)
-    implementation(Dependencies.composeUiToolingPreview)
-    implementation(Dependencies.composeMaterial3)
-    implementation(Dependencies.composeMaterialIcons)
-    implementation(Dependencies.composeRuntime)
-    implementation(Dependencies.composeRuntimeLivedata)
-    debugImplementation(Dependencies.composeUiTooling)
+    implementation(platform("androidx.compose:compose-bom:2024.02.00"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.runtime:runtime")
+    implementation("androidx.compose.runtime:runtime-livedata")
+    debugImplementation("androidx.compose.ui:ui-tooling")
 
     // Activity & Lifecycle Compose
-    implementation(Dependencies.activityCompose)
-    implementation(Dependencies.lifecycleViewModelCompose)
-    implementation(Dependencies.lifecycleRuntimeCompose)
+    implementation("androidx.activity:activity-compose:1.8.2")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
 
     // Lifecycle
-    implementation(Dependencies.lifecycleViewModelKtx)
-    implementation(Dependencies.lifecycleRuntimeKtx)
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
 
     // Google Play Services
-    implementation(Dependencies.playServicesLocation)
+    implementation("com.google.android.gms:play-services-location:21.0.0")
 
     // OneSignal - Google Play Builds
     "gmsImplementation"("com.onesignal:OneSignal:$sdkVersion")
@@ -131,6 +131,6 @@ dependencies {
         exclude(group = "com.google.android.gms", module = "play-services-location")
         exclude(group = "com.google.firebase", module = "firebase-messaging")
     }
-    "huaweiImplementation"(Dependencies.huaweiPush)
-    "huaweiImplementation"(Dependencies.huaweiLocation)
+    "huaweiImplementation"("com.huawei.hms:push:6.3.0.304")
+    "huaweiImplementation"("com.huawei.hms:location:4.0.0.300")
 }

@@ -12,7 +12,7 @@ This document contains all the prompts and requirements needed to build the OneS
 Build a sample Android app with:
 - MVVM architecture with Jetpack Compose UI
 - Kotlin Coroutines for background threading (Dispatchers.IO, Dispatchers.Main)
-- Gradle Kotlin DSL with buildSrc for type-safe dependency management
+- Gradle Kotlin DSL with inline dependency versions (no buildSrc, so it works when included from the SDK project)
 - Support for Google FCM and Huawei HMS product flavors (matching existing OneSignalDemo setup)
 - Package name: com.onesignal.sdktest (must match google-services.json and agconnect-services.json)
 - All dialogs should have EMPTY input fields (for Appium testing - test framework enters values)
@@ -835,10 +835,6 @@ Implementation:
 
 ```
 examples/demo/
-├── buildSrc/
-│   └── src/main/kotlin/
-│       ├── Versions.kt          # Version constants (includes Compose versions)
-│       └── Dependencies.kt      # Dependency strings (includes Compose deps)
 ├── app/
 │   ├── src/main/
 │   │   ├── java/com/onesignal/sdktest/
