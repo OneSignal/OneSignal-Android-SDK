@@ -17,6 +17,8 @@ Build a sample Android app with:
 - Package name: com.onesignal.sdktest (must match google-services.json and agconnect-services.json)
 - All dialogs should have EMPTY input fields (for Appium testing - test framework enters values)
 - Material3 theming with OneSignal brand colors
+- App name (in strings.xml): "OneSignal Demo"
+- Top app bar: use CenterAlignedTopAppBar (Material3) with the OneSignal logo + "Sample App" text, centered horizontally
 ```
 
 ### Prompt 1.2 - OneSignal Code Organization
