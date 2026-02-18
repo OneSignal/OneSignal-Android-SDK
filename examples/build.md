@@ -17,6 +17,8 @@ Build a sample Android app with:
 - Package name: com.onesignal.sdktest (must match google-services.json and agconnect-services.json)
 - All dialogs should have EMPTY input fields (for Appium testing - test framework enters values)
 - Material3 theming with OneSignal brand colors
+- App name (in strings.xml): "OneSignal Demo"
+- Top app bar: use CenterAlignedTopAppBar (Material3) with the OneSignal logo + "Sample App" text, centered horizontally
 ```
 
 ### Prompt 1.2 - OneSignal Code Organization
@@ -178,18 +180,23 @@ App Section layout:
       - Separated from the above toggle by a horizontal divider
    - NOT a blocking overlay - user can interact with app regardless of state
 
-4. "Logged in as" display (ABOVE the buttons, only visible when logged in):
-   - Prominent green Card background (#E8F5E9)
-   - "Logged in as:" label
-   - External User ID displayed large and centered (bold, green #2E7D32)
-   - Positioned ABOVE the Login/Switch User button
+4. User status card (always visible, ABOVE the login/logout buttons):
+   - Card with two rows separated by a divider
+   - Row 1: "Status" label on the left, value on the right
+   - Row 2: "External ID" label on the left, value on the right
+   - When logged out:
+     - Status shows "Anonymous"
+     - External ID shows "–" (dash)
+   - When logged in:
+     - Status shows "Logged In" with green styling (Color(0xFF2E7D32))
+     - External ID shows the actual external user ID
 
 5. LOGIN USER button:
    - Shows "LOGIN USER" when no user is logged in
    - Shows "SWITCH USER" when a user is logged in
    - Opens dialog with empty "External User Id" field
 
-6. LOGOUT USER button
+6. LOGOUT USER button (only visible when a user is logged in)
 ```
 
 ### Prompt 2.2 - Push Section
