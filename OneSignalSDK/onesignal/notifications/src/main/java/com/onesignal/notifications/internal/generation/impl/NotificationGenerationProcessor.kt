@@ -82,6 +82,14 @@ internal class NotificationGenerationProcessor(
                         // we will exit `waitForWake` and set `wantsToDisplay` to true or false respectively. If the callback
                         // never calls `display` or `preventDefault(true)`, we will timeout and never update `wantsToDisplay`.
                         wantsToDisplay = notification.displayWaiter.waitForWake()
+                        // Guard against a race condition with Channel.CONFLATED: if `preventDefault(true)` and
+                        // `display()` are both called before `waitForWake()` picks up a value, the conflated
+                        // channel keeps only the latest write (`true` from `display()`), causing `waitForWake()`
+                        // to return `true` even though discard was requested. The `discard` flag is the
+                        // authoritative signal — honor it regardless of what the waiter returned.
+                        if (notificationReceivedEvent.discard) {
+                            wantsToDisplay = false
+                        }
                     }
                 }.join()
             }
@@ -115,6 +123,10 @@ internal class NotificationGenerationProcessor(
                                 // we will exit `waitForWake` and set `wantsToDisplay` to true or false respectively. If the callback
                                 // never calls `display` or `preventDefault(true)`, we will timeout and never update `wantsToDisplay`.
                                 wantsToDisplay = notification.displayWaiter.waitForWake()
+                                // Guard against race condition with Channel.CONFLATED (see received-event path above).
+                                if (notificationWillDisplayEvent.discard) {
+                                    wantsToDisplay = false
+                                }
                             }
                         }.join()
                     }
