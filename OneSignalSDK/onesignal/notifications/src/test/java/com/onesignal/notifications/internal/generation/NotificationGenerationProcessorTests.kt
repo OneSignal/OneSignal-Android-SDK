@@ -168,6 +168,10 @@ class NotificationGenerationProcessorTests : FunSpec({
         mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, false, 1111)
 
         // Then
+        // notificationReceived should be called
+        coVerify(exactly = 1) {
+            mocks.notificationLifecycleService.notificationReceived(any())
+        }
     }
 
     test("processNotificationData should display notification when external callback takes longer than 30 seconds") {
@@ -209,6 +213,10 @@ class NotificationGenerationProcessorTests : FunSpec({
         mocks.notificationGenerationProcessor.processNotificationData(mocks.context, 1, mocks.notificationPayload, false, 1111)
 
         // Then
+        // notificationReceived should be called
+        coVerify(exactly = 1) {
+            mocks.notificationLifecycleService.notificationReceived(any())
+        }
     }
 
     test("processNotificationData should display notification when foreground callback takes longer than 30 seconds") {

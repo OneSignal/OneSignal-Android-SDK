@@ -70,7 +70,7 @@ jobs:
           fetch-tags: true
 
       - name: Setup Git User
-        uses: OneSignal/sdk-actions/.github/actions/setup-git-user@main
+        uses: OneSignal/sdk-shared/.github/actions/setup-git-user@main
 
       - name: Create release branch from base
         run: |
@@ -86,7 +86,7 @@ jobs:
       - name: Update SDK_VERSION in gradle.properties
         run: |
           sed -i "s/^SDK_VERSION=.*/SDK_VERSION=$VERSION/" OneSignalSDK/gradle.properties
-          sed -i "s/^SDK_VERSION=.*/SDK_VERSION=$VERSION/" Examples/OneSignalDemo/gradle.properties
+          sed -i "s/^SDK_VERSION=.*/SDK_VERSION=$VERSION/" examples/demo/gradle.properties
 
       - name: Commit and Push changes
         run: |
@@ -110,9 +110,6 @@ jobs:
       - name: Generate Release Notes from PR Titles
         id: generate_notes
         run: |
-          echo "## 🔖 Auto-Generated Release Notes" > pr_body.md
-          echo "" >> pr_body.md
-
           if [[ "$VERSION" == *"alpha"* ]]; then
             CHANNEL="alpha"
           elif [[ "$VERSION" == *"beta"* ]]; then

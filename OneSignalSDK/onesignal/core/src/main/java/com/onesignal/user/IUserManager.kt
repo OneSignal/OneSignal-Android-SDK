@@ -166,4 +166,15 @@ interface IUserManager {
      * Remove an observer from the user state.
      */
     fun removeObserver(observer: IUserStateObserver)
+
+    /**
+     * Tracks a custom event performed by the current user
+     *
+     * @param name for the custom event
+     * @param properties an optional property dictionary, must be serializable into a JSON Object
+     */
+    fun trackEvent(
+        name: String,
+        properties: Map<String, Any?>? = null,
+    )
 }
