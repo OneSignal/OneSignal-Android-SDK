@@ -134,6 +134,8 @@ internal class LoginUserOperationExecutor(
                     )
                     createUser(loginUserOp, operations)
                 }
+                // For all other errors, the request will be dropped and will not create the user
+                // e.g. ExecutionResult.FAIL_INVALID_LOGIN
                 else -> ExecutionResponse(result.result)
             }
         }
@@ -238,7 +240,7 @@ internal class LoginUserOperationExecutor(
                 NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
                     ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
                 else ->
-                    ExecutionResponse(ExecutionResult.FAIL_PAUSE_OPREPO)
+                    ExecutionResponse(ExecutionResult.FAIL_INVALID_LOGIN)
             }
         }
     }
