@@ -1,9 +1,14 @@
 package com.onesignal.debug.internal.crash
 
 import android.content.Context
+import android.content.SharedPreferences
+import android.os.Build
 import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.config.ConfigModel
+import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
+import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.core.internal.startup.IStartableService
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldNotBe
@@ -11,90 +16,89 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
+import org.json.JSONArray
+import org.json.JSONObject
+import org.robolectric.annotation.Config
+import com.onesignal.core.internal.config.CONFIG_NAME_SPACE as configNameSpace
 
 @RobolectricTest
+@Config(sdk = [Build.VERSION_CODES.O])
 class OneSignalCrashUploaderWrapperTest : FunSpec({
 
-    var appContext: Context? = null
+    lateinit var appContext: Context
+    lateinit var sharedPreferences: SharedPreferences
 
     beforeAny {
-        if (appContext == null) {
-            appContext = ApplicationProvider.getApplicationContext()
-        }
+        appContext = ApplicationProvider.getApplicationContext()
+        sharedPreferences = appContext.getSharedPreferences(PreferenceStores.ONESIGNAL, Context.MODE_PRIVATE)
     }
 
-    test("should implement IStartableService") {
-        // Given
-        val mockApplicationService = mockk<IApplicationService>(relaxed = true)
-        every { mockApplicationService.appContext } returns appContext!!
+    afterEach {
+        sharedPreferences.edit().clear().commit()
+    }
 
-        // When
+    test("should implement IStartableService interface") {
+        val mockApplicationService = mockk<IApplicationService>(relaxed = true)
+        every { mockApplicationService.appContext } returns appContext
+
         val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService)
 
-        // Then
         wrapper.shouldBeInstanceOf<IStartableService>()
     }
 
-    test("should create uploader lazily when start is called") {
-        // Given
+    test("start should complete without error when remote logging is disabled") {
+        // Configure remote logging as disabled (NONE)
+        val remoteLoggingParams = JSONObject().put("logLevel", "NONE")
+        val configModel = JSONObject().put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        sharedPreferences.edit()
+            .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, JSONArray().put(configModel).toString())
+            .commit()
+
         val mockApplicationService = mockk<IApplicationService>(relaxed = true)
-        every { mockApplicationService.appContext } returns appContext!!
+        every { mockApplicationService.appContext } returns appContext
 
         val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService)
 
-        // When
-        runBlocking {
-            wrapper.start()
-        }
-
-        // Then - should not throw, uploader should be created
-        // We can't directly verify the uploader was created, but if start() completes without error,
-        // it means the uploader was created and started successfully
+        // Should return early without error when remote logging is disabled
+        runBlocking { wrapper.start() }
     }
 
-    test("should call uploader.start() when start() is called") {
-        // Given
+    test("start should complete without error when no crash reports exist") {
+        // Configure remote logging as enabled
+        val remoteLoggingParams = JSONObject().put("logLevel", "ERROR")
+        val configModel = JSONObject().put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        sharedPreferences.edit()
+            .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, JSONArray().put(configModel).toString())
+            .commit()
+
         val mockApplicationService = mockk<IApplicationService>(relaxed = true)
-        every { mockApplicationService.appContext } returns appContext!!
+        every { mockApplicationService.appContext } returns appContext
 
         val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService)
 
-        // When
-        runBlocking {
-            wrapper.start()
-        }
-
-        // Then - start() should complete without throwing
-        // The actual uploader.start() is called internally via runBlocking
-        // If it throws, this test would fail
+        // Should complete without error even when no crash reports exist
+        runBlocking { wrapper.start() }
     }
 
-    test("should handle errors gracefully when uploader fails") {
-        // Given
+    test("start can be called multiple times safely") {
         val mockApplicationService = mockk<IApplicationService>(relaxed = true)
-        every { mockApplicationService.appContext } returns appContext!!
+        every { mockApplicationService.appContext } returns appContext
 
         val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService)
 
-        // When/Then - start() should handle errors gracefully
-        // If remote logging is disabled, it should return early without error
-        // If there are no crash reports, it should complete without error
+        // Multiple calls should not throw
         runBlocking {
-            // This should not throw even if there are no crash reports or if remote logging is disabled
+            wrapper.start()
             wrapper.start()
         }
     }
 
-    test("should create wrapper with applicationService dependency") {
-        // Given
+    test("wrapper should be non-null after creation") {
         val mockApplicationService = mockk<IApplicationService>(relaxed = true)
-        every { mockApplicationService.appContext } returns appContext!!
+        every { mockApplicationService.appContext } returns appContext
 
-        // When
         val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService)
 
-        // Then
         wrapper shouldNotBe null
-        wrapper.shouldBeInstanceOf<OneSignalCrashUploaderWrapper>()
     }
 })

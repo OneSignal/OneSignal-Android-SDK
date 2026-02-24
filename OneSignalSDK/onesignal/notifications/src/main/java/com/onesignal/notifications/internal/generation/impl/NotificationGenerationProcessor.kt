@@ -233,9 +233,9 @@ internal class NotificationGenerationProcessor(
             // Notification channel disable or not displayed
             // save notification as dismissed to avoid user re-enabling channel and notification being displayed due to restore
             markNotificationAsDismissed(notificationJob)
-            return
         }
 
+        // Always call notificationReceived, regardless of wasDisplayed
         _lifecycleService.notificationReceived(notificationJob)
     }
 

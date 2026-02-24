@@ -23,8 +23,8 @@ internal class OtelConfigRemoteOneSignal {
     }
 
     object SdkLoggerProviderConfig {
-        // NOTE: Switch to https://sdklogs.onesignal.com:443/sdk/otel when ready
-        const val BASE_URL = "https://api.staging.onesignal.com/sdk/otel"
+        const val BASE_URL = "https://api.onesignal.com/sdk/otel"
+        // const val BASE_URL = "https://api.staging.onesignal.com/sdk/otel"
 
         fun create(
             resource: io.opentelemetry.sdk.resources.Resource,

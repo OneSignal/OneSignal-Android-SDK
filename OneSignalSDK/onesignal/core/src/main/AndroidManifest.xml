@@ -15,6 +15,13 @@
           android:permission="android.permission.BIND_JOB_SERVICE"
           android:exported="false" />
 
+        <!-- Temporary shim for old OneSignal v4 jobs pointing to com.onesignal.SyncJobService -->
+        <service
+            android:name="com.onesignal.SyncJobService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="false">
+        </service>
+
         <activity android:name="com.onesignal.core.activities.PermissionsActivity"
                   android:theme="@android:style/Theme.Translucent.NoTitleBar"
                   android:exported="false" />

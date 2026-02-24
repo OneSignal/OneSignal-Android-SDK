@@ -54,6 +54,8 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.json.JSONArray
 import org.json.JSONObject
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.jvm.isAccessible
 
 private class Mocks {
     // mock default services needed for InAppMessagesManager
@@ -112,22 +114,57 @@ private class Mocks {
         }
 
     // factory-style so every access returns a new message:
-    val testInAppMessage: InAppMessage
-        get() {
-            val json = JSONObject()
-            json.put("id", "test-message-id")
-            val variantsJson = JSONObject()
-            val allVariantJson = JSONObject()
-            allVariantJson.put("en", "variant-id-123")
-            variantsJson.put("all", allVariantJson)
-            json.put("variants", variantsJson)
-            json.put("triggers", JSONArray())
-            return InAppMessage(json, time)
-        }
-
-    // factory-style so every access returns a new message:
     val testInAppMessagePreview: InAppMessage
         get() = InAppMessage(true, time)
+
+    // Helper function to create InAppMessage with custom triggers (factory-style, returns new message each call)
+    fun createInAppMessage(
+        id: String = "test-message-${System.nanoTime()}", // Unique ID by default
+        triggers: List<Triple<String, String, String>> = emptyList() // List of (property, operator, value)
+    ): InAppMessage {
+        val json = JSONObject().apply {
+            put("id", id)
+            put("variants", JSONObject().apply {
+                put("all", JSONObject().apply { put("en", "variant-id-123") })
+            })
+
+            if (triggers.isEmpty()) {
+                put("triggers", JSONArray())
+            } else {
+                put("triggers", JSONArray().apply {
+                    put(JSONArray().apply {
+                        triggers.forEach { (property, operator, value) ->
+                            put(JSONObject().apply {
+                                put("id", "trigger-$property")
+                                put("kind", "custom")
+                                put("property", property)
+                                put("operator", operator)
+                                put("value", value)
+                            })
+                        }
+                    })
+                })
+            }
+        }
+        return InAppMessage(json, time)
+    }
+
+    // Helper function to access private earlySessionTriggers field for testing using Kotlin reflection
+    fun getEarlySessionTriggers(manager: InAppMessagesManager): MutableSet<String> {
+        val property = InAppMessagesManager::class.memberProperties
+            .first { it.name == "earlySessionTriggers" }
+        property.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        return property.get(manager) as MutableSet<String>
+    }
+
+    // Helper function to access private hasCompletedFirstFetch field for testing using Kotlin reflection
+    fun getHasCompletedFirstFetch(manager: InAppMessagesManager): Boolean {
+        val property = InAppMessagesManager::class.memberProperties
+            .first { it.name == "hasCompletedFirstFetch" }
+        property.isAccessible = true
+        return property.get(manager) as Boolean
+    }
 
     // Helper function to create InAppMessagesManager with all dependencies
     val inAppMessagesManager = InAppMessagesManager(
@@ -280,8 +317,8 @@ class InAppMessagesManagerTests : FunSpec({
 
         test("start loads redisplayed messages from repository and resets display flag") {
             // Given
-            val message1 = mocks.testInAppMessage
-            val message2 = mocks.testInAppMessage
+            val message1 = mocks.createInAppMessage()
+            val message2 = mocks.createInAppMessage()
             message1.isDisplayedInSession = true
             message2.isDisplayedInSession = true
             val mockRepository = mocks.repository
@@ -353,7 +390,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // When
             iamManager.addLifecycleListener(mockListener)
-            iamManager.onMessageWillDisplay(mocks.testInAppMessage)
+            iamManager.onMessageWillDisplay(mocks.createInAppMessage())
 
             // Then
             // Verify listener callback was called
@@ -368,7 +405,7 @@ class InAppMessagesManagerTests : FunSpec({
             // When
             iamManager.addLifecycleListener(mockListener)
             iamManager.removeLifecycleListener(mockListener)
-            iamManager.onMessageWillDisplay(mocks.testInAppMessage)
+            iamManager.onMessageWillDisplay(mocks.createInAppMessage())
 
             // Then
             // Listener should not be called after removal
@@ -378,7 +415,7 @@ class InAppMessagesManagerTests : FunSpec({
         test("addClickListener subscribes listener") {
             // Given
             val mockListener = mocks.inAppMessageClickListener
-            val message = mocks.testInAppMessage
+            val message = mocks.createInAppMessage()
             val mockClickResult = mocks.inAppMessageClickResult
             val iamManager = mocks.inAppMessagesManager
 
@@ -395,7 +432,7 @@ class InAppMessagesManagerTests : FunSpec({
         test("removeClickListener unsubscribes listener") {
             // Given
             val mockListener = mockk<IInAppMessageClickListener>(relaxed = true)
-            val message = mocks.testInAppMessage
+            val message = mocks.createInAppMessage()
             val mockClickResult = mocks.inAppMessageClickResult
             val iamManager = mocks.inAppMessagesManager
 
@@ -569,8 +606,8 @@ class InAppMessagesManagerTests : FunSpec({
     context("Session Lifecycle") {
         test("onSessionStarted resets redisplayed messages and fetches messages") {
             // Given
-            val message1 = mocks.testInAppMessage
-            val message2 = mocks.testInAppMessage
+            val message1 = mocks.createInAppMessage()
+            val message2 = mocks.createInAppMessage()
             val mockRywData = mocks.rywData
             val mockDeferred = mocks.rywDeferred
             val mockRepository = mocks.repository
@@ -626,7 +663,7 @@ class InAppMessagesManagerTests : FunSpec({
             mocks.inAppMessagesManager.addLifecycleListener(mocks.inAppMessageLifecycleListener)
 
             // When
-            mocks.inAppMessagesManager.onMessageWillDisplay(mocks.testInAppMessage)
+            mocks.inAppMessagesManager.onMessageWillDisplay(mocks.createInAppMessage())
             awaitIO()
 
             // Then
@@ -638,7 +675,7 @@ class InAppMessagesManagerTests : FunSpec({
             // Given
 
             // When/Then - should not throw
-            mocks.inAppMessagesManager.onMessageWillDisplay(mocks.testInAppMessage)
+            mocks.inAppMessagesManager.onMessageWillDisplay(mocks.createInAppMessage())
 
             // Verified by no exception being thrown when no listeners are subscribed
         }
@@ -650,7 +687,7 @@ class InAppMessagesManagerTests : FunSpec({
             coEvery { mocks.backend.sendIAMImpression(any(), any(), any(), any()) } just runs
 
             // When
-            mocks.inAppMessagesManager.onMessageWasDisplayed(mocks.testInAppMessage)
+            mocks.inAppMessagesManager.onMessageWasDisplayed(mocks.createInAppMessage())
             awaitIO()
 
             // Then
@@ -670,7 +707,7 @@ class InAppMessagesManagerTests : FunSpec({
 
         test("onMessageWasDisplayed does not send duplicate impressions") {
             // Given
-            val message = mocks.testInAppMessage
+            val message = mocks.createInAppMessage()
             every { mocks.pushSubscription.id } returns "subscription-id"
             coEvery { mocks.backend.sendIAMImpression(any(), any(), any(), any()) } just runs
 
@@ -688,7 +725,7 @@ class InAppMessagesManagerTests : FunSpec({
             mocks.inAppMessagesManager.addLifecycleListener(mocks.inAppMessageLifecycleListener)
 
             // When
-            mocks.inAppMessagesManager.onMessageWillDismiss(mocks.testInAppMessage)
+            mocks.inAppMessagesManager.onMessageWillDismiss(mocks.createInAppMessage())
             awaitIO()
 
             // Then
@@ -700,7 +737,7 @@ class InAppMessagesManagerTests : FunSpec({
             // Given
 
             // When/Then - should not throw
-            mocks.inAppMessagesManager.onMessageWillDismiss(mocks.testInAppMessage)
+            mocks.inAppMessagesManager.onMessageWillDismiss(mocks.createInAppMessage())
 
             // Verified by no exception being thrown when no listeners are subscribed
         }
@@ -710,7 +747,7 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.inAppStateService.inAppMessageIdShowing } returns null
 
             // When
-            mocks.inAppMessagesManager.onMessageWasDismissed(mocks.testInAppMessage)
+            mocks.inAppMessagesManager.onMessageWasDismissed(mocks.createInAppMessage())
             awaitIO()
 
             // Then
@@ -731,7 +768,7 @@ class InAppMessagesManagerTests : FunSpec({
 
         test("onTriggerConditionChanged makes redisplay messages available and re-evaluates") {
             // Given
-            val message = mocks.testInAppMessage
+            val message = mocks.createInAppMessage()
             every { mocks.userManager.onesignalId } returns "onesignal-id"
             every { mocks.applicationService.isInForeground } returns true
             every { mocks.pushSubscription.id } returns "subscription-id"
@@ -751,7 +788,7 @@ class InAppMessagesManagerTests : FunSpec({
 
         test("onTriggerChanged makes redisplay messages available and re-evaluates") {
             // Given
-            val message = mocks.testInAppMessage
+            val message = mocks.createInAppMessage()
             every { mocks.userManager.onesignalId } returns "onesignal-id"
             every { mocks.applicationService.isInForeground } returns true
             every { mocks.pushSubscription.id } returns "subscription-id"
@@ -814,7 +851,7 @@ class InAppMessagesManagerTests : FunSpec({
             coEvery { mocks.backend.sendIAMPageImpression(any(), any(), any(), any(), any()) } just runs
 
             // When
-            mocks.inAppMessagesManager.onMessagePageChanged(mocks.testInAppMessage, mockPage)
+            mocks.inAppMessagesManager.onMessagePageChanged(mocks.createInAppMessage(), mockPage)
             awaitIO()
 
             // Then
@@ -837,7 +874,7 @@ class InAppMessagesManagerTests : FunSpec({
     context("Error Handling") {
         test("onMessageWasDisplayed removes impression from set on backend failure") {
             // Given
-            val message = mocks.testInAppMessage
+            val message = mocks.createInAppMessage()
             every { mocks.pushSubscription.id } returns "subscription-id"
             coEvery {
                 mocks.backend.sendIAMImpression(any(), any(), any(), any())
@@ -857,7 +894,7 @@ class InAppMessagesManagerTests : FunSpec({
 
         test("onMessagePageChanged removes page impression on backend failure") {
             // Given
-            val message = mocks.testInAppMessage
+            val message = mocks.createInAppMessage()
             val mockPage = mockk<InAppMessagePage>(relaxed = true)
             every { mocks.pushSubscription.id } returns "subscription-id"
             every { mockPage.pageId } returns "page-id"
@@ -879,7 +916,7 @@ class InAppMessagesManagerTests : FunSpec({
 
         test("onMessageActionOccurredOnMessage removes click on backend failure") {
             // Given
-            val message = mocks.testInAppMessage
+            val message = mocks.createInAppMessage()
             coEvery {
                 mocks.backend.sendIAMClick(any(), any(), any(), any(), any(), any())
             } throws BackendException(500, "Server error")
@@ -939,7 +976,7 @@ class InAppMessagesManagerTests : FunSpec({
 
         test("fetchMessagesWhenConditionIsMet evaluates messages when new messages are returned") {
             // Given
-            val message = mocks.testInAppMessage
+            val message = mocks.createInAppMessage()
             every { mocks.userManager.onesignalId } returns "onesignal-id"
             every { mocks.applicationService.isInForeground } returns true
             every { mocks.pushSubscription.id } returns "subscription-id"
@@ -959,7 +996,7 @@ class InAppMessagesManagerTests : FunSpec({
     context("Message Queue and Display") {
         test("messages are not queued when paused") {
             // Given
-            val message = mocks.testInAppMessage
+            val message = mocks.createInAppMessage()
             every { mocks.userManager.onesignalId } returns "onesignal-id"
             every { mocks.applicationService.isInForeground } returns true
             every { mocks.pushSubscription.id } returns "subscription-id"
@@ -981,7 +1018,7 @@ class InAppMessagesManagerTests : FunSpec({
     context("Message Evaluation") {
         test("messages are evaluated and queued when paused is set to false") {
             // Given
-            val message = mocks.testInAppMessage
+            val message = mocks.createInAppMessage()
             every { mocks.userManager.onesignalId } returns "onesignal-id"
             every { mocks.applicationService.isInForeground } returns true
             every { mocks.pushSubscription.id } returns "subscription-id"
@@ -1007,7 +1044,7 @@ class InAppMessagesManagerTests : FunSpec({
 
         test("dismissed messages are not queued for display") {
             // Given
-            val message = mocks.testInAppMessage
+            val message = mocks.createInAppMessage()
             every { mocks.userManager.onesignalId } returns "onesignal-id"
             every { mocks.applicationService.isInForeground } returns true
             every { mocks.pushSubscription.id } returns "subscription-id"
@@ -1036,7 +1073,7 @@ class InAppMessagesManagerTests : FunSpec({
             // Given
 
             // When
-            mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
+            mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.createInAppMessage(), mocks.inAppMessageClickResult)
             awaitIO()
 
             // Then - wait for async operations
@@ -1049,7 +1086,7 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.testOutcome.weight } returns weight
 
             // When
-            mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
+            mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.createInAppMessage(), mocks.inAppMessageClickResult)
             awaitIO()
 
             // Then - wait for async operations
@@ -1066,7 +1103,7 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.inAppMessageClickResult.tags } returns mockTags
 
             // When
-            mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
+            mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.createInAppMessage(), mocks.inAppMessageClickResult)
             awaitIO()
 
             // Then - wait for async operations
@@ -1083,7 +1120,7 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.inAppMessageClickResult.tags } returns mockTags
 
             // When
-            mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
+            mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.createInAppMessage(), mocks.inAppMessageClickResult)
             awaitIO()
 
             // Then - wait for async operations
@@ -1101,7 +1138,7 @@ class InAppMessagesManagerTests : FunSpec({
             every { AndroidUtils.openURLInBrowser(any<Context>(), any<String>()) } just runs
 
             // When
-            mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
+            mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.createInAppMessage(), mocks.inAppMessageClickResult)
             awaitIO()
 
             // Then
@@ -1120,7 +1157,7 @@ class InAppMessagesManagerTests : FunSpec({
             every { OneSignalChromeTab.open(any(), any(), any()) } returns true
 
             // When
-            mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
+            mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.createInAppMessage(), mocks.inAppMessageClickResult)
             awaitIO()
 
             // Then
@@ -1133,7 +1170,7 @@ class InAppMessagesManagerTests : FunSpec({
             // Given
 
             // When/Then - should not throw
-            mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
+            mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.createInAppMessage(), mocks.inAppMessageClickResult)
         }
     }
     context("Prompt Processing") {
@@ -1149,7 +1186,7 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.inAppStateService.currentPrompt = any() } answers { currentPrompt = firstArg() }
 
             // When
-            mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
+            mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.createInAppMessage(), mocks.inAppMessageClickResult)
             awaitIO()
 
             // Then
@@ -1161,7 +1198,7 @@ class InAppMessagesManagerTests : FunSpec({
             // Given
 
             // When
-            mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.testInAppMessage, mocks.inAppMessageClickResult)
+            mocks.inAppMessagesManager.onMessageActionOccurredOnMessage(mocks.createInAppMessage(), mocks.inAppMessageClickResult)
             awaitIO()
 
             // Then
@@ -1172,7 +1209,7 @@ class InAppMessagesManagerTests : FunSpec({
     context("Message Persistence") {
         test("onMessageWasDismissed persists message to repository") {
             // Given
-            val message = mocks.testInAppMessage
+            val message = mocks.createInAppMessage()
             coEvery { mocks.repository.saveInAppMessage(any()) } just runs
             every { mocks.inAppStateService.lastTimeInAppDismissed } returns 500L
             every { mocks.inAppStateService.currentPrompt } returns null
@@ -1185,6 +1222,196 @@ class InAppMessagesManagerTests : FunSpec({
             coVerify { mocks.repository.saveInAppMessage(message) }
             message.isDisplayedInSession shouldBe true
             message.isTriggerChanged shouldBe false
+        }
+    }
+
+    context("Early Trigger Tracking") {
+        test("triggers added before first fetch are tracked in earlySessionTriggers") {
+            // Given
+            val iamManager = mocks.inAppMessagesManager
+            every { mocks.triggerModelStore.get(any()) } returns null
+            every { mocks.triggerModelStore.add(any()) } answers {}
+
+            // When
+            iamManager.addTrigger("trigger1", "value1")
+            iamManager.addTrigger("trigger2", "value2")
+
+            // Then
+            // Verify triggers were added to the triggerModelStore
+            verify(exactly = 1) { mocks.triggerModelStore.add(match { it.key == "trigger1" && it.value == "value1" }) }
+            verify(exactly = 1) { mocks.triggerModelStore.add(match { it.key == "trigger2" && it.value == "value2" }) }
+
+            // Verify triggers were tracked in earlySessionTriggers
+            val earlySessionTriggers = mocks.getEarlySessionTriggers(iamManager)
+            earlySessionTriggers.contains("trigger1") shouldBe true
+            earlySessionTriggers.contains("trigger2") shouldBe true
+        }
+
+        test("messages matching early triggers get isTriggerChanged flag after first fetch") {
+            // Given
+            every { mocks.applicationService.isInForeground } returns true
+            every { mocks.pushSubscription.id } returns "subscription-id"
+            every { mocks.triggerModelStore.get(any()) } returns null
+            every { mocks.triggerModelStore.add(any()) } answers {}
+
+            // Create test messages
+            // message1 has a trigger matching the early trigger we'll add
+            val message1 = mocks.createInAppMessage(
+                id = "message-1",
+                triggers = listOf(Triple("earlyTrigger", "equal", "value"))
+            )
+
+            // message2 has a different trigger that doesn't match
+            val message2 = mocks.createInAppMessage(
+                id = "message-2",
+                triggers = listOf(Triple("otherTrigger", "equal", "value"))
+            )
+
+            // Add message1 to redisplayedInAppMessages (simulate it was previously shown)
+            val redisplayedMessages = mutableListOf(message1)
+            coEvery { mocks.repository.listInAppMessages() } returns redisplayedMessages
+
+            // Mock trigger controller to say message1 matches early trigger, message2 does not
+            every { mocks.triggerController.isTriggerOnMessage(message1, any<Collection<String>>()) } returns true
+            every { mocks.triggerController.isTriggerOnMessage(message2, any<Collection<String>>()) } returns false
+            every { mocks.triggerController.evaluateMessageTriggers(any()) } returns false
+
+            // Mock backend to return both messages
+            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any()) } returns listOf(message1, message2)
+
+            // Start the manager to load redisplayed messages
+            mocks.inAppMessagesManager.start()
+            awaitIO()
+
+            // Add triggers before first fetch
+            mocks.inAppMessagesManager.addTrigger("earlyTrigger", "value")
+
+            // Both messages start with isTriggerChanged = false
+            message1.isTriggerChanged shouldBe false
+            message2.isTriggerChanged shouldBe false
+
+            // When - Trigger first fetch
+            mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
+
+            // Message 1 should have isTriggerChanged = true (matches early trigger and was redisplayed)
+            message1.isTriggerChanged shouldBe true
+
+            // Message 2 should have isTriggerChanged = false (does not match early trigger)
+            message2.isTriggerChanged shouldBe false
+        }
+
+        test("triggers added after first fetch are not tracked as early triggers") {
+            // Given
+            val message = mocks.createInAppMessage(
+                id = "message-1",
+                triggers = listOf(Triple("lateTrigger", "equal", "value"))
+            )
+
+            every { mocks.userManager.onesignalId } returns "onesignal-id"
+            every { mocks.applicationService.isInForeground } returns true
+            every { mocks.pushSubscription.id } returns "subscription-id"
+            every { mocks.configModelStore.model.appId } returns "test-app-id"
+            every { mocks.configModelStore.model.fetchIAMMinInterval } returns 0L
+            every { mocks.triggerModelStore.get(any()) } returns null
+            every { mocks.triggerModelStore.add(any()) } answers {}
+
+            // Message is in redisplayedInAppMessages from the start
+            coEvery { mocks.repository.listInAppMessages() } returns mutableListOf(message)
+
+            // Mock trigger controller to say message matches the late trigger
+            every { mocks.triggerController.isTriggerOnMessage(message, any<Collection<String>>()) } returns true
+            every { mocks.triggerController.evaluateMessageTriggers(any()) } returns false
+
+            // Mock first fetch to return the message
+            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any()) } returns listOf(message)
+
+            mocks.inAppMessagesManager.start()
+            awaitIO()
+
+            // Trigger first fetch (this sets hasCompletedFirstFetch = true)
+            mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
+
+            // Verify first fetch completed
+            mocks.getHasCompletedFirstFetch(mocks.inAppMessagesManager) shouldBe true
+
+            // When - Add trigger AFTER first fetch (should NOT be tracked)
+            mocks.inAppMessagesManager.addTrigger("lateTrigger", "value")
+
+            // Verify trigger was NOT added to earlySessionTriggers
+            val earlySessionTriggers = mocks.getEarlySessionTriggers(mocks.inAppMessagesManager)
+            earlySessionTriggers.contains("lateTrigger") shouldBe false
+
+            // Mock second fetch to return the same message
+            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any()) } returns listOf(message)
+
+            // Trigger second fetch
+            mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
+
+            // Then
+            // Message should NOT have isTriggerChanged because trigger was added after first fetch
+            message.isTriggerChanged shouldBe false
+        }
+
+        test("earlySessionTriggers is cleared after first fetch") {
+            // Given
+            val mockTriggerModelStore = mocks.triggerModelStore
+            val mockBackend = mocks.backend
+            val mockRepository = mocks.repository
+            val mockTriggerController = mocks.triggerController
+            val iamManager = mocks.inAppMessagesManager
+
+            every { mockTriggerModelStore.get(any()) } returns null
+            every { mockTriggerModelStore.add(any()) } answers {}
+            coEvery { mockRepository.listInAppMessages() } returns mutableListOf()
+            every { mockTriggerController.evaluateMessageTriggers(any()) } returns false
+            coEvery { mockBackend.listInAppMessages(any(), any(), any(), any()) } returns listOf(mocks.createInAppMessage())
+
+            every { mocks.pushSubscription.id } returns "test-sub-id"
+            every { mocks.configModelStore.model.appId } returns "test-app-id"
+            every { mocks.configModelStore.model.fetchIAMMinInterval } returns 0L
+            every { mocks.applicationService.isInForeground } returns true
+
+            iamManager.start()
+            awaitIO()
+
+            // Add triggers before first fetch
+            iamManager.addTrigger("trigger1", "value1")
+            iamManager.addTrigger("trigger2", "value2")
+
+            // Verify triggers were tracked before first fetch
+            val earlySessionTriggersBeforeFetch = mocks.getEarlySessionTriggers(iamManager)
+            earlySessionTriggersBeforeFetch.size shouldBe 2
+            earlySessionTriggersBeforeFetch.contains("trigger1") shouldBe true
+            earlySessionTriggersBeforeFetch.contains("trigger2") shouldBe true
+
+            // When - Trigger first fetch
+            mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
+
+            // Verify earlySessionTriggers was cleared after first fetch
+            val earlySessionTriggersAfterFetch = mocks.getEarlySessionTriggers(iamManager)
+            earlySessionTriggersAfterFetch.size shouldBe 0
+
+            // Create a message for potential second fetch
+            val messageAfterClear = mocks.createInAppMessage()
+
+            // Mock backend for second fetch
+            coEvery { mockBackend.listInAppMessages(any(), any(), any(), any()) } returns listOf(messageAfterClear)
+
+            // Mock that message is in redisplayed and matches the cleared triggers
+            coEvery { mockRepository.listInAppMessages() } returns mutableListOf(messageAfterClear)
+            every { mockTriggerController.isTriggerOnMessage(messageAfterClear, any<Collection<String>>()) } returns true
+
+            // Trigger second fetch
+            mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
+
+            // Then
+            // Message should NOT have isTriggerChanged because earlySessionTriggers was cleared after first fetch
+            messageAfterClear.isTriggerChanged shouldBe false
         }
     }
 })

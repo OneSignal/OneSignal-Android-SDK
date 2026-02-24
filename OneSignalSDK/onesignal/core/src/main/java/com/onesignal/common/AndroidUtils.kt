@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Looper
+import android.os.UserManager
 import android.text.TextUtils
 import androidx.annotation.Keep
 import androidx.core.app.NotificationManagerCompat
@@ -39,6 +40,27 @@ object AndroidUtils {
         val decorView = activity.window.decorView
         val insetsAttached = decorView.rootWindowInsets != null
         return hasToken && insetsAttached
+    }
+
+    /**
+     * Retrieve whether the device user is accessible.
+     *
+     * On Android 7.0+ (API 24+), encrypted user data is inaccessible until the user unlocks
+     * the device for the first time after boot. This includes:
+     *  * getSharedPreferences()
+     *  * Any file-based storage in the default credential-encrypted context
+     *
+     * Apps that auto-run on boot or background services triggered early may hit this issue.
+     */
+    fun isAndroidUserUnlocked(appContext: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+            // Prior to API 24, the device booted into an unlocked state by default
+            return true
+        }
+
+        val userManager = appContext.getSystemService(Context.USER_SERVICE) as? UserManager
+        // assume user is unlocked if the Android UserManager is null
+        return userManager?.isUserUnlocked ?: true
     }
 
     fun hasConfigChangeFlag(
