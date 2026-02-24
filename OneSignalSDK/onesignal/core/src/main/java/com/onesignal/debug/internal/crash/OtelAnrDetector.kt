@@ -73,9 +73,8 @@ internal class OtelAnrDetector(
                     // Thread was interrupted, stop monitoring
                     logger.info("$TAG: Watchdog thread interrupted, stopping ANR detection")
                     break
-                } catch (e: RuntimeException) {
-                    logger.error("$TAG: Error in ANR watchdog: ${e.message} - ${e.javaClass.simpleName}: ${e.stackTraceToString()}")
-                    // Continue monitoring even if there's an error
+                } catch (t: Throwable) {
+                    logger.error("$TAG: Error in ANR watchdog: ${t.message} - ${t.javaClass.simpleName}")
                 }
             }
         }
@@ -176,8 +175,8 @@ internal class OtelAnrDetector(
             }
 
             logger.info("$TAG: ✅ ANR report saved successfully")
-        } catch (e: RuntimeException) {
-            logger.error("$TAG: Failed to report ANR: ${e.message} - ${e.javaClass.simpleName}: ${e.stackTraceToString()}")
+        } catch (t: Throwable) {
+            logger.error("$TAG: Failed to report ANR: ${t.message} - ${t.javaClass.simpleName}")
         }
     }
 

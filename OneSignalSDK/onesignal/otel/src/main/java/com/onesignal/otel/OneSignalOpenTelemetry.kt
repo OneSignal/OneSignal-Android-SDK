@@ -67,6 +67,18 @@ internal abstract class OneSignalOpenTelemetryBase(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
+    override fun shutdown() {
+        synchronized(lock) {
+            try {
+                sdkCachedValue?.shutdown()
+            } catch (_: Throwable) {
+                // Best-effort cleanup — never propagate Otel teardown failures
+            }
+            sdkCachedValue = null
+        }
+    }
+
     companion object {
         private const val FORCE_FLUSH_TIMEOUT_SECONDS = 10L
     }

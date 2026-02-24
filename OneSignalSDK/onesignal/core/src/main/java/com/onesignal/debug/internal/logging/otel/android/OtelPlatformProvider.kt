@@ -34,7 +34,7 @@ internal class OtelPlatformProvider(
     override val appVersion: String = config.appVersion
     private val context: Context? = config.context
     private val getIsInForeground: (() -> Boolean?)? = config.getIsInForeground
-    private val idResolver = OneSignalIdResolver(context)
+    private val idResolver = OtelIdResolver(context)
 
     // Top-level attributes (static, calculated once)
     override suspend fun getInstallId(): String = idResolver.resolveInstallId()

@@ -1,52 +1,106 @@
 sequenceDiagram
     participant App
     participant OneSignalImp
-    participant OtelInit as OneSignalOtelInit
+    participant OtelMgr as OtelLifecycleManager
+    participant Evaluator as OtelConfigEvaluator
+    participant ConfigStore as ConfigModelStore
     participant StartupService
     participant ConfigListener as ConfigModelStoreListener
     participant Backend as android_params.js
     participant SharedPrefs as SharedPreferences
 
-    Note over App: Cold Start - Session N
+    Note over App: Cold Start — Session N
 
     App->>OneSignalImp: initWithContext(appId)
 
     rect rgb(230, 245, 255)
-        Note over OneSignalImp,SharedPrefs: initEssentials - runs FIRST, synchronous
-        OneSignalImp->>OtelInit: new OneSignalOtelInit(context)
-        OneSignalImp->>OtelInit: initializeCrashHandler()
-        OtelInit->>OtelInit: OtelSdkSupport.isSupported?
-        alt SDK less than 26
-            OtelInit-->>OtelInit: skip everything
-        else SDK 26+
-            OtelInit->>SharedPrefs: read cached logging_config from Session N-1
-            alt logging_config has log_level
-                Note over OtelInit: isRemoteLoggingEnabled = true
-                OtelInit->>OtelInit: init crash handler + ANR detector
-            else logging_config empty or missing
-                Note over OtelInit: isRemoteLoggingEnabled = false
-                OtelInit-->>OtelInit: skip
+        Note over OneSignalImp,SharedPrefs: initEssentials() — synchronous, on IO thread
+
+        OneSignalImp->>OtelMgr: new OtelLifecycleManager(context)
+        OneSignalImp->>OtelMgr: initializeFromCachedConfig()
+
+        OtelMgr->>OtelMgr: OtelSdkSupport.isSupported?
+        alt SDK < 26
+            OtelMgr-->>OtelMgr: skip all Otel features, return
+        else SDK >= 26
+            Note over OtelMgr: try/catch(Throwable) wraps entire block
+            OtelMgr->>SharedPrefs: readCurrentConfig() — cached logging_config
+            SharedPrefs-->>OtelMgr: OtelConfig(isEnabled, logLevel)
+            OtelMgr->>Evaluator: evaluate(old=null, new=cachedConfig)
+            Evaluator-->>OtelMgr: OtelConfigAction
+
+            alt Enable (cached config has valid log_level)
+                Note over OtelMgr: try/catch(Throwable) per feature
+                OtelMgr->>OtelMgr: startCrashHandler()
+                OtelMgr->>OtelMgr: startAnrDetector()
+                OtelMgr->>OtelMgr: startOtelLogging(logLevel)
+            else Disable / NoChange
+                OtelMgr-->>OtelMgr: no-op
             end
         end
-        OneSignalImp->>OtelInit: initializeOtelLogging()
-        Note over OtelInit: Same SDK + isEnabled gates
     end
 
-    OneSignalImp->>OneSignalImp: bootstrapServices()
+    OneSignalImp->>OneSignalImp: bootstrapServices() — IoC container ready
+
+    rect rgb(240, 255, 240)
+        Note over OneSignalImp,ConfigStore: Subscribe to config store (observer pattern)
+        OneSignalImp->>OtelMgr: subscribeToConfigStore(configModelStore)
+        OtelMgr->>ConfigStore: subscribe(this)
+        Note over OtelMgr: Now listens for HYDRATE events
+    end
+
     OneSignalImp->>OneSignalImp: resolveAppId()
     OneSignalImp->>OneSignalImp: configModel.appId = appId
 
     rect rgb(255, 245, 230)
-        Note over OneSignalImp,Backend: scheduleStart - runs AFTER, async background thread
+        Note over OneSignalImp,Backend: scheduleStart() — async, background IO thread
+
         OneSignalImp->>StartupService: scheduleStart()
         StartupService->>ConfigListener: start()
-        ConfigListener->>Backend: GET android_params.js with ETag
-        Backend-->>ConfigListener: 200 logging_config or 304 Not Modified
-        ConfigListener->>SharedPrefs: persist logging_config for Session N+1
+        ConfigListener->>Backend: GET android_params.js (with If-None-Match ETag)
+        Backend-->>ConfigListener: 200 {logging_config} or 304 Not Modified
+
+        ConfigListener->>ConfigListener: build new ConfigModel from response
+        ConfigListener->>ConfigStore: replace(config, HYDRATE)
+
+        Note over ConfigStore: Notifies all subscribers
+
+        ConfigStore->>OtelMgr: onModelReplaced(model, HYDRATE)
+
+        rect rgb(255, 240, 240)
+            Note over OtelMgr,Evaluator: Dynamic config refresh — try/catch(Throwable)
+
+            OtelMgr->>OtelMgr: tag == HYDRATE? SDK supported?
+            OtelMgr->>OtelMgr: extract remoteLoggingParams from ConfigModel
+            OtelMgr->>Evaluator: evaluate(old=currentConfig, new=freshConfig)
+            Evaluator-->>OtelMgr: OtelConfigAction
+
+            alt Enable (was off, now on)
+                Note over OtelMgr: try/catch(Throwable) per feature
+                OtelMgr->>OtelMgr: startCrashHandler()
+                OtelMgr->>OtelMgr: startAnrDetector()
+                OtelMgr->>OtelMgr: startOtelLogging(logLevel)
+            else Disable (was on, now off)
+                Note over OtelMgr: try/catch(Throwable) per feature
+                OtelMgr->>OtelMgr: anrDetector.stop()
+                OtelMgr->>OtelMgr: crashHandler.unregister()
+                OtelMgr->>OtelMgr: Logging.setOtelTelemetry(null)
+                OtelMgr->>OtelMgr: remoteTelemetry.shutdown()
+            else UpdateLogLevel (level changed)
+                Note over OtelMgr: try/catch(Throwable)
+                OtelMgr->>OtelMgr: shutdown old telemetry
+                OtelMgr->>OtelMgr: startOtelLogging(newLevel)
+            else NoChange
+                OtelMgr-->>OtelMgr: no-op
+            end
+        end
+
+        ConfigListener->>SharedPrefs: logging_config persisted (available for Session N+1)
     end
 
     Note over App: App killed / cold start again
 
-    Note over App: Cold Start - Session N+1
+    Note over App: Cold Start — Session N+1
     App->>OneSignalImp: initWithContext(appId)
-    Note over OtelInit: Reads FRESH config cached from Session N fetch
+    Note over OtelMgr: Reads FRESH config cached from Session N fetch
+    Note over OtelMgr: Same flow repeats — initializeFromCachedConfig()

@@ -32,6 +32,17 @@ internal class OtelCrashHandler(
         logger.info("OtelCrashHandler: ✅ Successfully initialized and registered as default uncaught exception handler")
     }
 
+    override fun unregister() {
+        if (!initialized) {
+            logger.debug("OtelCrashHandler: Not initialized, nothing to unregister")
+            return
+        }
+        logger.info("OtelCrashHandler: Unregistering — restoring previous exception handler")
+        Thread.setDefaultUncaughtExceptionHandler(existingHandler)
+        existingHandler = null
+        initialized = false
+    }
+
     override fun uncaughtException(thread: Thread, throwable: Throwable) {
         // Ensure we never attempt to process the same throwable instance
         // more than once. This would only happen if there was another crash
@@ -90,15 +101,8 @@ internal class OtelCrashHandler(
         try {
             runBlocking { crashReporter.saveCrash(thread, throwable) }
             logger.info("OtelCrashHandler: Crash report saved successfully")
-        } catch (e: RuntimeException) {
-            // If crash reporting fails, at least try to log it
-            logger.error("OtelCrashHandler: Failed to save crash report: ${e.message} - ${e.javaClass.simpleName}")
-        } catch (e: java.io.IOException) {
-            // Handle IO errors specifically
-            logger.error("OtelCrashHandler: IO error saving crash report: ${e.message}")
-        } catch (e: IllegalStateException) {
-            // Handle illegal state errors
-            logger.error("OtelCrashHandler: Illegal state error saving crash report: ${e.message}")
+        } catch (t: Throwable) {
+            logger.error("OtelCrashHandler: Failed to save crash report: ${t.message} - ${t.javaClass.simpleName}")
         }
         logger.info("OtelCrashHandler: Delegating to existing crash handler")
         existingHandler?.uncaughtException(thread, throwable)

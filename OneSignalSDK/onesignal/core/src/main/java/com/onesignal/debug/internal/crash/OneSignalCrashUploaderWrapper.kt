@@ -43,9 +43,18 @@ internal class OneSignalCrashUploaderWrapper(
         OtelFactory.createCrashUploader(platformProvider, logger)
     }
 
+    @Suppress("TooGenericExceptionCaught")
     override fun start() {
-        runBlocking {
-            uploader.start()
+        if (!OtelSdkSupport.isSupported) return
+        try {
+            runBlocking {
+                uploader.start()
+            }
+        } catch (t: Throwable) {
+            com.onesignal.debug.internal.logging.Logging.warn(
+                "OneSignal: Crash uploader failed to start: ${t.message}",
+                t,
+            )
         }
     }
 }
