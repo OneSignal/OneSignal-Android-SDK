@@ -454,4 +454,14 @@ class RemoteLoggingConfigModel(
         set(value) {
             setOptEnumProperty(::logLevel.name, value)
         }
+
+    /**
+     * Whether remote logging is enabled.
+     * Set by backend config hydration — true when the server sends a valid log_level, false otherwise.
+     */
+    var isEnabled: Boolean
+        get() = getBooleanProperty(::isEnabled.name) { false }
+        set(value) {
+            setBooleanProperty(::isEnabled.name, value)
+        }
 }

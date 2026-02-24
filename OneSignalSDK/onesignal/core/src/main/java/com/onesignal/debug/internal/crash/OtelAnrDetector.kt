@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicLong
  * It creates its own crash reporter to save ANR reports.
  */
 internal class OtelAnrDetector(
-    private val openTelemetryCrash: IOtelOpenTelemetryCrash,
+    openTelemetryCrash: IOtelOpenTelemetryCrash,
     private val logger: IOtelLogger,
     private val anrThresholdMs: Long = AnrConstants.DEFAULT_ANR_THRESHOLD_MS,
     private val checkIntervalMs: Long = AnrConstants.DEFAULT_CHECK_INTERVAL_MS,

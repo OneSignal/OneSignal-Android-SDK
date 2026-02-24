@@ -1,0 +1,52 @@
+sequenceDiagram
+    participant App
+    participant OneSignalImp
+    participant OtelInit as OneSignalOtelInit
+    participant StartupService
+    participant ConfigListener as ConfigModelStoreListener
+    participant Backend as android_params.js
+    participant SharedPrefs as SharedPreferences
+
+    Note over App: Cold Start - Session N
+
+    App->>OneSignalImp: initWithContext(appId)
+
+    rect rgb(230, 245, 255)
+        Note over OneSignalImp,SharedPrefs: initEssentials - runs FIRST, synchronous
+        OneSignalImp->>OtelInit: new OneSignalOtelInit(context)
+        OneSignalImp->>OtelInit: initializeCrashHandler()
+        OtelInit->>OtelInit: OtelSdkSupport.isSupported?
+        alt SDK less than 26
+            OtelInit-->>OtelInit: skip everything
+        else SDK 26+
+            OtelInit->>SharedPrefs: read cached logging_config from Session N-1
+            alt logging_config has log_level
+                Note over OtelInit: isRemoteLoggingEnabled = true
+                OtelInit->>OtelInit: init crash handler + ANR detector
+            else logging_config empty or missing
+                Note over OtelInit: isRemoteLoggingEnabled = false
+                OtelInit-->>OtelInit: skip
+            end
+        end
+        OneSignalImp->>OtelInit: initializeOtelLogging()
+        Note over OtelInit: Same SDK + isEnabled gates
+    end
+
+    OneSignalImp->>OneSignalImp: bootstrapServices()
+    OneSignalImp->>OneSignalImp: resolveAppId()
+    OneSignalImp->>OneSignalImp: configModel.appId = appId
+
+    rect rgb(255, 245, 230)
+        Note over OneSignalImp,Backend: scheduleStart - runs AFTER, async background thread
+        OneSignalImp->>StartupService: scheduleStart()
+        StartupService->>ConfigListener: start()
+        ConfigListener->>Backend: GET android_params.js with ETag
+        Backend-->>ConfigListener: 200 logging_config or 304 Not Modified
+        ConfigListener->>SharedPrefs: persist logging_config for Session N+1
+    end
+
+    Note over App: App killed / cold start again
+
+    Note over App: Cold Start - Session N+1
+    App->>OneSignalImp: initWithContext(appId)
+    Note over OtelInit: Reads FRESH config cached from Session N fetch

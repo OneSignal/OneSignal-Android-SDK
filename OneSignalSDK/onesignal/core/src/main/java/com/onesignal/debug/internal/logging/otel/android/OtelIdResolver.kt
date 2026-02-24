@@ -191,6 +191,23 @@ internal class OtelIdResolver(
     }
 
     /**
+     * Resolves whether remote logging is enabled from cached ConfigModelStore.
+     * Enabled is derived from the presence of a valid logLevel:
+     * - "logging_config": {} → no logLevel → disabled (not on allowlist)
+     * - "logging_config": {"log_level": "ERROR"} → has logLevel → enabled (on allowlist)
+     * Returns false if not found, empty, or on error (disabled by default on first launch).
+     */
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    fun resolveRemoteLoggingEnabled(): Boolean {
+        return try {
+            val logLevel = resolveRemoteLogLevel()
+            logLevel != null && logLevel != com.onesignal.debug.LogLevel.NONE
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
      * Resolves remote log level from cached ConfigModelStore.
      * Returns null if not found or if there's an error.
      */

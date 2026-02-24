@@ -141,7 +141,7 @@ class OtelIdResolverTest : FunSpec({
             throw AssertionError("Failed to write SharedPreferences data - test isolation issue")
         }
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveAppId()
@@ -166,7 +166,7 @@ class OtelIdResolverTest : FunSpec({
         // Ensure commit is complete before creating resolver
         Thread.sleep(10)
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveAppId()
@@ -189,7 +189,7 @@ class OtelIdResolverTest : FunSpec({
         // Ensure commit is complete before creating resolver
         Thread.sleep(10)
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveAppId()
@@ -200,7 +200,7 @@ class OtelIdResolverTest : FunSpec({
 
     test("resolveAppId returns error appId when ConfigModelStore is null") {
         // Given
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveAppId()
@@ -224,7 +224,7 @@ class OtelIdResolverTest : FunSpec({
             throw AssertionError("Failed to write SharedPreferences data - test isolation issue")
         }
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveAppId()
@@ -235,7 +235,7 @@ class OtelIdResolverTest : FunSpec({
 
     test("resolveAppId returns error appId when context is null") {
         // Given
-        val resolver = OtelIdResolver(null)
+        val resolver = OneSignalIdResolver(null)
 
         // When
         val result = resolver.resolveAppId()
@@ -250,7 +250,7 @@ class OtelIdResolverTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, "invalid-json")
             .commit()
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveAppId()
@@ -281,7 +281,7 @@ class OtelIdResolverTest : FunSpec({
             throw AssertionError("Failed to write SharedPreferences data - test isolation issue")
         }
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveOnesignalId()
@@ -310,7 +310,7 @@ class OtelIdResolverTest : FunSpec({
             throw AssertionError("Failed to write SharedPreferences data - test isolation issue")
         }
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveOnesignalId()
@@ -340,7 +340,7 @@ class OtelIdResolverTest : FunSpec({
             throw AssertionError("Failed to write SharedPreferences data - test isolation issue")
         }
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveOnesignalId()
@@ -367,7 +367,7 @@ class OtelIdResolverTest : FunSpec({
             throw AssertionError("Failed to write SharedPreferences data - test isolation issue")
         }
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveOnesignalId()
@@ -378,7 +378,7 @@ class OtelIdResolverTest : FunSpec({
 
     test("resolveOnesignalId returns null when IdentityModelStore is null") {
         // Given
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveOnesignalId()
@@ -402,7 +402,7 @@ class OtelIdResolverTest : FunSpec({
             throw AssertionError("Failed to write SharedPreferences data - test isolation issue")
         }
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveOnesignalId()
@@ -417,7 +417,7 @@ class OtelIdResolverTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + identityNameSpace, "invalid-json")
             .commit()
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveOnesignalId()
@@ -448,7 +448,7 @@ class OtelIdResolverTest : FunSpec({
             throw AssertionError("Failed to write SharedPreferences data - test isolation issue")
         }
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolvePushSubscriptionId()
@@ -477,7 +477,7 @@ class OtelIdResolverTest : FunSpec({
             throw AssertionError("Failed to write SharedPreferences data - test isolation issue")
         }
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolvePushSubscriptionId()
@@ -507,7 +507,7 @@ class OtelIdResolverTest : FunSpec({
             throw AssertionError("Failed to write SharedPreferences data - test isolation issue")
         }
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolvePushSubscriptionId()
@@ -534,7 +534,7 @@ class OtelIdResolverTest : FunSpec({
             throw AssertionError("Failed to write SharedPreferences data - test isolation issue")
         }
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolvePushSubscriptionId()
@@ -545,7 +545,7 @@ class OtelIdResolverTest : FunSpec({
 
     test("resolvePushSubscriptionId returns null when ConfigModelStore is null") {
         // Given
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolvePushSubscriptionId()
@@ -560,13 +560,124 @@ class OtelIdResolverTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, "invalid-json")
             .commit()
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolvePushSubscriptionId()
 
         // Then
         result shouldBe null
+    }
+
+    // ===== resolveRemoteLoggingEnabled Tests =====
+    // Enabled is derived from presence of a valid logLevel:
+    //   "logging_config": {} → disabled (not on allowlist)
+    //   "logging_config": {"log_level": "ERROR"} → enabled (on allowlist)
+
+    test("resolveRemoteLoggingEnabled returns true when logLevel is ERROR") {
+        val remoteLoggingParams = JSONObject().apply {
+            put("logLevel", "ERROR")
+        }
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply {
+            put(configModel)
+        }
+        sharedPreferences!!.edit()
+            .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
+            .commit()
+
+        val resolver = OneSignalIdResolver(appContext!!)
+        resolver.resolveRemoteLoggingEnabled() shouldBe true
+    }
+
+    test("resolveRemoteLoggingEnabled returns true when logLevel is WARN") {
+        val remoteLoggingParams = JSONObject().apply {
+            put("logLevel", "WARN")
+        }
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply {
+            put(configModel)
+        }
+        sharedPreferences!!.edit()
+            .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
+            .commit()
+
+        val resolver = OneSignalIdResolver(appContext!!)
+        resolver.resolveRemoteLoggingEnabled() shouldBe true
+    }
+
+    test("resolveRemoteLoggingEnabled returns false when logLevel is NONE") {
+        val remoteLoggingParams = JSONObject().apply {
+            put("logLevel", "NONE")
+        }
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply {
+            put(configModel)
+        }
+        sharedPreferences!!.edit()
+            .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
+            .commit()
+
+        val resolver = OneSignalIdResolver(appContext!!)
+        resolver.resolveRemoteLoggingEnabled() shouldBe false
+    }
+
+    test("resolveRemoteLoggingEnabled returns false when logLevel field is missing (empty logging_config)") {
+        val remoteLoggingParams = JSONObject()
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply {
+            put(configModel)
+        }
+        sharedPreferences!!.edit()
+            .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
+            .commit()
+
+        val resolver = OneSignalIdResolver(appContext!!)
+        resolver.resolveRemoteLoggingEnabled() shouldBe false
+    }
+
+    test("resolveRemoteLoggingEnabled returns false when remoteLoggingParams is missing") {
+        val configModel = JSONObject()
+        val configArray = JSONArray().apply {
+            put(configModel)
+        }
+        sharedPreferences!!.edit()
+            .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
+            .commit()
+
+        val resolver = OneSignalIdResolver(appContext!!)
+        resolver.resolveRemoteLoggingEnabled() shouldBe false
+    }
+
+    test("resolveRemoteLoggingEnabled returns false when no config exists") {
+        val resolver = OneSignalIdResolver(appContext!!)
+        resolver.resolveRemoteLoggingEnabled() shouldBe false
+    }
+
+    test("resolveRemoteLoggingEnabled returns false when logLevel is invalid") {
+        val remoteLoggingParams = JSONObject().apply {
+            put("logLevel", "INVALID_LEVEL")
+        }
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply {
+            put(configModel)
+        }
+        sharedPreferences!!.edit()
+            .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
+            .commit()
+
+        val resolver = OneSignalIdResolver(appContext!!)
+        resolver.resolveRemoteLoggingEnabled() shouldBe false
     }
 
     // ===== resolveRemoteLogLevel Tests =====
@@ -594,7 +705,7 @@ class OtelIdResolverTest : FunSpec({
             throw AssertionError("Failed to write SharedPreferences data - test isolation issue")
         }
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveRemoteLogLevel()
@@ -626,7 +737,7 @@ class OtelIdResolverTest : FunSpec({
             throw AssertionError("Failed to write SharedPreferences data - test isolation issue")
         }
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveRemoteLogLevel()
@@ -656,7 +767,7 @@ class OtelIdResolverTest : FunSpec({
             throw AssertionError("Failed to write SharedPreferences data - test isolation issue")
         }
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveRemoteLogLevel()
@@ -683,7 +794,7 @@ class OtelIdResolverTest : FunSpec({
             throw AssertionError("Failed to write SharedPreferences data - test isolation issue")
         }
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveRemoteLogLevel()
@@ -715,7 +826,7 @@ class OtelIdResolverTest : FunSpec({
             throw AssertionError("Failed to write SharedPreferences data - test isolation issue")
         }
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveRemoteLogLevel()
@@ -726,7 +837,7 @@ class OtelIdResolverTest : FunSpec({
 
     test("resolveRemoteLogLevel returns null when ConfigModelStore is null") {
         // Given
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveRemoteLogLevel()
@@ -741,7 +852,7 @@ class OtelIdResolverTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, "invalid-json")
             .commit()
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveRemoteLogLevel()
@@ -758,7 +869,7 @@ class OtelIdResolverTest : FunSpec({
             .putString(PreferenceOneSignalKeys.PREFS_OS_INSTALL_ID, "test-install-id-123")
             .commit()
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveInstallId()
@@ -769,7 +880,7 @@ class OtelIdResolverTest : FunSpec({
 
     test("resolveInstallId returns default InstallId-Null when not found") {
         // Given
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When
         val result = resolver.resolveInstallId()
@@ -784,7 +895,7 @@ class OtelIdResolverTest : FunSpec({
         val mockSharedPreferences = mockk<SharedPreferences>(relaxed = true)
         every { mockContext.getSharedPreferences(any(), any()) } throws RuntimeException("Test exception")
 
-        val resolver = OtelIdResolver(mockContext)
+        val resolver = OneSignalIdResolver(mockContext)
 
         // When
         val result = resolver.resolveInstallId()
@@ -816,7 +927,7 @@ class OtelIdResolverTest : FunSpec({
             throw AssertionError("Failed to write SharedPreferences data - test isolation issue")
         }
 
-        val resolver = OtelIdResolver(appContext!!)
+        val resolver = OneSignalIdResolver(appContext!!)
 
         // When - resolve multiple IDs
         val appId1 = resolver.resolveAppId()

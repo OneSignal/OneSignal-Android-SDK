@@ -3,8 +3,11 @@ package com.onesignal.sdktest.ui.secondary
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -19,9 +22,14 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import com.onesignal.sdktest.ui.components.DestructiveButton
 import com.onesignal.sdktest.ui.theme.LightBackground
 import com.onesignal.sdktest.ui.theme.OneSignalRed
 import com.onesignal.sdktest.ui.theme.OneSignalTheme
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class SecondaryActivity : ComponentActivity() {
 
@@ -51,19 +59,33 @@ class SecondaryActivity : ComponentActivity() {
                     },
                     containerColor = LightBackground
                 ) { paddingValues ->
-                    Box(
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(paddingValues),
-                        contentAlignment = Alignment.Center
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Text(
                             text = "Secondary Activity",
                             style = MaterialTheme.typography.headlineMedium
                         )
+
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        DestructiveButton(
+                            text = "CRASH",
+                            onClick = { triggerCrash() }
+                        )
                     }
                 }
             }
         }
+    }
+
+    private fun triggerCrash() {
+        val timestamp = SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.getDefault())
+            .format(Date())
+        throw RuntimeException("Test crash from OneSignal Demo App - $timestamp")
     }
 }
