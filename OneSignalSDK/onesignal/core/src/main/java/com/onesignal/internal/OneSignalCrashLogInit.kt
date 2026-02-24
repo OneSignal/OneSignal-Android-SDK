@@ -9,7 +9,6 @@ import com.onesignal.debug.internal.logging.otel.android.AndroidOtelLogger
 import com.onesignal.debug.internal.logging.otel.android.OtelPlatformProvider
 import com.onesignal.debug.internal.logging.otel.android.createAndroidOtelPlatformProvider
 import com.onesignal.otel.IOtelCrashHandler
-import com.onesignal.otel.IOtelOpenTelemetryRemote
 import com.onesignal.otel.OtelFactory
 import com.onesignal.otel.crash.IOtelAnrDetector
 

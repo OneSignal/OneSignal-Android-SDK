@@ -3,6 +3,7 @@ package com.onesignal.debug.internal.logging
 import android.os.Build
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.debug.LogLevel
+import com.onesignal.debug.internal.crash.OtelSdkSupport
 import com.onesignal.otel.IOtelOpenTelemetryRemote
 import com.onesignal.otel.OtelLoggingHelper
 import io.kotest.core.spec.style.FunSpec
@@ -23,10 +24,10 @@ class LoggingOtelTest :
         beforeEach {
             // Reset Logging state
             Logging.setOtelTelemetry(null, { false })
+        }
 
-            // Setup default mock behavior - relaxed mock automatically returns mocks for suspend functions
-            // The return type (LogRecordBuilder) is handled by the relaxed mock, but we can't verify it
-            // directly due to type visibility. We'll test behavior instead.
+        afterEach {
+            OtelSdkSupport.reset()
         }
 
         test("setOtelTelemetry should store telemetry and enabled check function") {
@@ -239,7 +240,7 @@ class LoggingOtelTest :
             // Given
             mockkObject(OtelLoggingHelper)
             Logging.setOtelTelemetry(mockTelemetry, { _: LogLevel -> true })
-            Logging.androidVersion = Build.VERSION_CODES.O
+            OtelSdkSupport.isSupported = true
 
             // When
             Logging.fatal("simple message")
@@ -262,7 +263,7 @@ class LoggingOtelTest :
             // Given
             mockkObject(OtelLoggingHelper)
             Logging.setOtelTelemetry(mockTelemetry, { _: LogLevel -> true })
-            Logging.androidVersion = Build.VERSION_CODES.N
+            OtelSdkSupport.isSupported = false
 
             // When
             Logging.fatal("simple message")

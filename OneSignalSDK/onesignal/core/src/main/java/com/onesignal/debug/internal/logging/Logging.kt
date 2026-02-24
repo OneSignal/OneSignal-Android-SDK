@@ -1,12 +1,12 @@
 package com.onesignal.debug.internal.logging
 
 import android.app.AlertDialog
-import android.os.Build
 import com.onesignal.common.threading.suspendifyOnMain
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.debug.ILogListener
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.OneSignalLogEvent
+import com.onesignal.debug.internal.crash.OtelSdkSupport
 import com.onesignal.otel.IOtelOpenTelemetryRemote
 import com.onesignal.otel.OtelLoggingHelper
 import kotlinx.coroutines.CoroutineScope
@@ -21,7 +21,6 @@ object Logging {
     private const val TAG = "OneSignal"
 
     var applicationService: IApplicationService? = null
-    var androidVersion: Int = Build.VERSION.SDK_INT
 
     private val logListeners = CopyOnWriteArraySet<ILogListener>()
 
@@ -219,8 +218,7 @@ object Logging {
         // Check if this log level should be sent remotely
         if (!shouldSendLogLevel(level)) return
 
-        // Otel library requires Android Oreo (8) or newer
-        if (androidVersion < Build.VERSION_CODES.O) return
+        if (!OtelSdkSupport.isSupported) return
 
         // Log asynchronously (non-blocking)
         otelLoggingScope.launch {
