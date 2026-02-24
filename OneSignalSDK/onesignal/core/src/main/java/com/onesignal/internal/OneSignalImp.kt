@@ -207,20 +207,20 @@ internal class OneSignalImp(
     }
 
     private fun initEssentials(context: Context) {
-        // Create OneSignalCrashLogInit instance once - it manages platform provider lifecycle
-        // Platform provider is created lazily and reused for both crash handler and logging
-        val crashLogInit = OneSignalCrashLogInit(context)
+        // Create OneSignalOtelInit instance once - it manages platform provider lifecycle
+        // Platform provider is created lazily and reused for crash handler, ANR detector, and logging
+        val otelInit = OneSignalOtelInit(context)
 
         // Crash handler needs to be one of the first things we setup,
         // otherwise we'll not report some crashes, resulting in a false sense
         // of stability.
         // Initialize crash handler early, before any other services that might crash.
         // This is decoupled from getService to ensure fast initialization.
-        crashLogInit.initializeCrashHandler()
+        otelInit.initializeCrashHandler()
 
         // Initialize Otel logging integration - reuses the same platform provider created in initializeCrashHandler
         // No service dependencies required, reads directly from SharedPreferences
-        crashLogInit.initializeOtelLogging()
+        otelInit.initializeOtelLogging()
 
         PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
 

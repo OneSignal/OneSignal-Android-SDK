@@ -39,9 +39,17 @@ interface IOtelPlatformProvider {
 
     // Remote logging configuration
     /**
-     * The minimum log level to send remotely as a string (e.g., "ERROR", "WARN", "NONE").
-     * If null, defaults to ERROR level for client-side logging.
-     * If "NONE", no logs (including errors) will be sent remotely.
+     * Whether remote logging (crash reporting, ANR detection, remote log shipping) is enabled.
+     * Derived from the presence of a valid log_level in logging_config:
+     * - "logging_config": {} → false (not on allowlist)
+     * - "logging_config": {"log_level": "ERROR"} → true (on allowlist)
+     * Defaults to false on first launch (before remote config is cached).
+     */
+    val isRemoteLoggingEnabled: Boolean
+
+    /**
+     * The minimum log level to send remotely as a string (e.g., "ERROR", "WARN").
+     * Null when logging_config is empty or not yet cached (disabled).
      * Valid values: "NONE", "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "VERBOSE"
      */
     val remoteLogLevel: String?

@@ -34,7 +34,7 @@ internal class OtelPlatformProvider(
     override val appVersion: String = config.appVersion
     private val context: Context? = config.context
     private val getIsInForeground: (() -> Boolean?)? = config.getIsInForeground
-    private val idResolver = OtelIdResolver(context)
+    private val idResolver = OneSignalIdResolver(context)
 
     // Top-level attributes (static, calculated once)
     override suspend fun getInstallId(): String = idResolver.resolveInstallId()
@@ -121,28 +121,23 @@ internal class OtelPlatformProvider(
     override val minFileAgeForReadMillis: Long = 5_000
 
     // Remote logging configuration
+    override val isRemoteLoggingEnabled: Boolean by lazy {
+        idResolver.resolveRemoteLoggingEnabled()
+    }
+
     /**
      * The minimum log level to send remotely as a string.
-     * - If remote config log level is populated and valid: use that level
-     * - If remote config is null or unavailable: default to "ERROR" (always log errors)
-     * - If remote config is explicitly NONE: return "NONE" (no logs including errors)
+     * - "logging_config": {"log_level": "ERROR"} → returns "ERROR" (enabled, on allowlist)
+     * - "logging_config": {} → returns null (disabled, not on allowlist)
+     * - No config cached yet → returns null (first launch)
      */
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     override val remoteLogLevel: String? by lazy {
         try {
             val configLevel = idResolver.resolveRemoteLogLevel()
-            when {
-                // Remote config is populated and working well - use whatever is sent from there
-                configLevel != null && configLevel != com.onesignal.debug.LogLevel.NONE -> configLevel.name
-                // Explicitly NONE means no logging (including errors)
-                configLevel == com.onesignal.debug.LogLevel.NONE -> "NONE"
-                // Remote config not available - default to ERROR (always log errors)
-                else -> "ERROR"
-            }
+            configLevel?.name
         } catch (e: Exception) {
-            // If there's an error accessing config, default to ERROR (always log errors)
-            // Exception is intentionally swallowed to avoid recursion in logging
-            "ERROR"
+            null
         }
     }
 

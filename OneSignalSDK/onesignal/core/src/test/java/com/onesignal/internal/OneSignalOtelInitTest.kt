@@ -22,7 +22,7 @@ import com.onesignal.core.internal.config.CONFIG_NAME_SPACE as configNameSpace
 
 @RobolectricTest
 @Config(sdk = [Build.VERSION_CODES.O])
-class OneSignalCrashLogInitTest : FunSpec({
+class OneSignalOtelInitTest : FunSpec({
 
     val context: Context = ApplicationProvider.getApplicationContext()
     val sharedPreferences = context.getSharedPreferences(PreferenceStores.ONESIGNAL, Context.MODE_PRIVATE)
@@ -44,16 +44,16 @@ class OneSignalCrashLogInitTest : FunSpec({
 
     test("platform provider should be created once and reused") {
         // Given
-        val crashLogInit = OneSignalCrashLogInit(context)
+        val otelInit = OneSignalOtelInit(context)
 
         // When - initialize crash handler (creates platform provider)
-        crashLogInit.initializeCrashHandler()
+        otelInit.initializeCrashHandler()
 
         // Then - initialize logging should reuse the same platform provider
         // We can't directly access the private property, but we can verify behavior
         // by checking that both initializations succeed without errors
         runBlocking {
-            crashLogInit.initializeOtelLogging()
+            otelInit.initializeOtelLogging()
             delay(100) // Give async initialization time to complete
         }
 
@@ -62,21 +62,21 @@ class OneSignalCrashLogInitTest : FunSpec({
 
     test("should create instance with context") {
         // Given & When
-        val crashLogInit = OneSignalCrashLogInit(context)
+        val otelInit = OneSignalOtelInit(context)
 
         // Then
-        crashLogInit shouldNotBe null
+        otelInit shouldNotBe null
     }
 
     // ===== Crash Handler Initialization Tests =====
 
     test("initializeCrashHandler should create and initialize crash handler") {
         // Given
-        val crashLogInit = OneSignalCrashLogInit(context)
+        val otelInit = OneSignalOtelInit(context)
         val originalHandler = Thread.getDefaultUncaughtExceptionHandler()
 
         // When
-        crashLogInit.initializeCrashHandler()
+        otelInit.initializeCrashHandler()
 
         // Then
         val currentHandler = Thread.getDefaultUncaughtExceptionHandler()
@@ -94,19 +94,19 @@ class OneSignalCrashLogInitTest : FunSpec({
         io.mockk.every { mockContext.packageName } returns "com.test"
         io.mockk.every { mockContext.getSharedPreferences(any(), any()) } returns sharedPreferences
 
-        val crashLogInit = OneSignalCrashLogInit(mockContext)
+        val otelInit = OneSignalOtelInit(mockContext)
 
         // When & Then - should not throw
-        crashLogInit.initializeCrashHandler()
+        otelInit.initializeCrashHandler()
     }
 
     test("initializeCrashHandler should initialize ANR detector") {
         // Given
-        val crashLogInit = OneSignalCrashLogInit(context)
+        val otelInit = OneSignalOtelInit(context)
         val originalHandler = Thread.getDefaultUncaughtExceptionHandler()
 
         // When
-        crashLogInit.initializeCrashHandler()
+        otelInit.initializeCrashHandler()
 
         // Then - ANR detector should be started (we can't directly verify, but no exception means success)
         // The method logs success, so if it doesn't throw, it worked
@@ -117,12 +117,12 @@ class OneSignalCrashLogInitTest : FunSpec({
 
     test("initializeCrashHandler can be called multiple times safely") {
         // Given
-        val crashLogInit = OneSignalCrashLogInit(context)
+        val otelInit = OneSignalOtelInit(context)
         val originalHandler = Thread.getDefaultUncaughtExceptionHandler()
 
         // When
-        crashLogInit.initializeCrashHandler()
-        crashLogInit.initializeCrashHandler() // Call again
+        otelInit.initializeCrashHandler()
+        otelInit.initializeCrashHandler() // Call again
 
         // Then - should not throw or cause issues
         val currentHandler = Thread.getDefaultUncaughtExceptionHandler()
@@ -150,11 +150,11 @@ class OneSignalCrashLogInitTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
             .commit()
 
-        val crashLogInit = OneSignalCrashLogInit(context)
+        val otelInit = OneSignalOtelInit(context)
 
         // When
         runBlocking {
-            crashLogInit.initializeOtelLogging()
+            otelInit.initializeOtelLogging()
             delay(200) // Give async initialization time to complete
         }
 
@@ -178,11 +178,11 @@ class OneSignalCrashLogInitTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
             .commit()
 
-        val crashLogInit = OneSignalCrashLogInit(context)
+        val otelInit = OneSignalOtelInit(context)
 
         // When
         runBlocking {
-            crashLogInit.initializeOtelLogging()
+            otelInit.initializeOtelLogging()
             delay(100) // Give async initialization time to complete
         }
 
@@ -191,11 +191,11 @@ class OneSignalCrashLogInitTest : FunSpec({
 
     test("initializeOtelLogging should default to ERROR when remote log level is not configured") {
         // Given - no remote logging config in SharedPreferences
-        val crashLogInit = OneSignalCrashLogInit(context)
+        val otelInit = OneSignalOtelInit(context)
 
         // When
         runBlocking {
-            crashLogInit.initializeOtelLogging()
+            otelInit.initializeOtelLogging()
             delay(200) // Give async initialization time to complete
         }
 
@@ -210,24 +210,24 @@ class OneSignalCrashLogInitTest : FunSpec({
         io.mockk.every { mockContext.packageName } returns "com.test"
         io.mockk.every { mockContext.getSharedPreferences(any(), any()) } throws RuntimeException("Test exception")
 
-        val crashLogInit = OneSignalCrashLogInit(mockContext)
+        val otelInit = OneSignalOtelInit(mockContext)
 
         // When & Then - should not throw
         runBlocking {
-            crashLogInit.initializeOtelLogging()
+            otelInit.initializeOtelLogging()
             delay(100)
         }
     }
 
     test("initializeOtelLogging can be called multiple times safely") {
         // Given
-        val crashLogInit = OneSignalCrashLogInit(context)
+        val otelInit = OneSignalOtelInit(context)
 
         // When
         runBlocking {
-            crashLogInit.initializeOtelLogging()
+            otelInit.initializeOtelLogging()
             delay(100)
-            crashLogInit.initializeOtelLogging() // Call again
+            otelInit.initializeOtelLogging() // Call again
             delay(100)
         }
 
@@ -252,13 +252,13 @@ class OneSignalCrashLogInitTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
             .commit()
 
-        val crashLogInit = OneSignalCrashLogInit(context)
+        val otelInit = OneSignalOtelInit(context)
         val originalHandler = Thread.getDefaultUncaughtExceptionHandler()
 
         // When
-        crashLogInit.initializeCrashHandler()
+        otelInit.initializeCrashHandler()
         runBlocking {
-            crashLogInit.initializeOtelLogging()
+            otelInit.initializeOtelLogging()
             delay(200)
         }
 
@@ -290,11 +290,11 @@ class OneSignalCrashLogInitTest : FunSpec({
                 .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
                 .commit()
 
-            val crashLogInit = OneSignalCrashLogInit(context)
+            val otelInit = OneSignalOtelInit(context)
 
             // When
             runBlocking {
-                crashLogInit.initializeOtelLogging()
+                otelInit.initializeOtelLogging()
                 delay(100)
             }
 
@@ -318,11 +318,11 @@ class OneSignalCrashLogInitTest : FunSpec({
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
             .commit()
 
-        val crashLogInit = OneSignalCrashLogInit(context)
+        val otelInit = OneSignalOtelInit(context)
 
         // When & Then - should default to ERROR and not throw
         runBlocking {
-            crashLogInit.initializeOtelLogging()
+            otelInit.initializeOtelLogging()
             delay(100)
         }
     }
@@ -334,12 +334,12 @@ class OneSignalCrashLogInitTest : FunSpec({
         val context1: Context = ApplicationProvider.getApplicationContext()
         val context2: Context = ApplicationProvider.getApplicationContext()
 
-        val crashLogInit1 = OneSignalCrashLogInit(context1)
-        val crashLogInit2 = OneSignalCrashLogInit(context2)
+        val otelInit1 = OneSignalOtelInit(context1)
+        val otelInit2 = OneSignalOtelInit(context2)
 
         // When
-        crashLogInit1.initializeCrashHandler()
-        crashLogInit2.initializeCrashHandler()
+        otelInit1.initializeCrashHandler()
+        otelInit2.initializeCrashHandler()
 
         // Then - both should work independently
         val handler1 = Thread.getDefaultUncaughtExceptionHandler()
