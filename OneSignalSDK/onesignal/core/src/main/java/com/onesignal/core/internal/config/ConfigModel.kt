@@ -301,6 +301,9 @@ class ConfigModel : Model() {
     val fcmParams: FCMConfigModel
         get() = getAnyProperty(::fcmParams.name) { FCMConfigModel(this, ::fcmParams.name) } as FCMConfigModel
 
+    val remoteLoggingParams: RemoteLoggingConfigModel
+        get() = getAnyProperty(::remoteLoggingParams.name) { RemoteLoggingConfigModel(this, ::remoteLoggingParams.name) } as RemoteLoggingConfigModel
+
     override fun createModelForProperty(
         property: String,
         jsonObject: JSONObject,
@@ -313,6 +316,12 @@ class ConfigModel : Model() {
 
         if (property == ::fcmParams.name) {
             val model = FCMConfigModel(this, ::influenceParams.name)
+            model.initializeFromJson(jsonObject)
+            return model
+        }
+
+        if (property == ::remoteLoggingParams.name) {
+            val model = RemoteLoggingConfigModel(this, ::remoteLoggingParams.name)
             model.initializeFromJson(jsonObject)
             return model
         }
@@ -423,5 +432,26 @@ class FCMConfigModel(parentModel: Model, parentProperty: String) : Model(parentM
         get() = getOptStringProperty(::apiKey.name) { null }
         set(value) {
             setOptStringProperty(::apiKey.name, value)
+        }
+}
+
+/**
+ * Configuration related to OneSignal's remote logging.
+ */
+class RemoteLoggingConfigModel(
+    parentModel: Model,
+    parentProperty: String,
+) : Model(parentModel, parentProperty) {
+    /**
+     * The minimum log level to send to OneSignal's server.
+     * If null, defaults to ERROR level for client-side logging.
+     * If NONE, no logs (including errors) will be sent remotely.
+     *
+     * Log levels: NONE < FATAL < ERROR < WARN < INFO < DEBUG < VERBOSE
+     */
+    var logLevel: com.onesignal.debug.LogLevel?
+        get() = getOptEnumProperty<com.onesignal.debug.LogLevel>(::logLevel.name)
+        set(value) {
+            setOptEnumProperty(::logLevel.name, value)
         }
 }

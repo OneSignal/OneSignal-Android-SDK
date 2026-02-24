@@ -91,7 +91,7 @@ comments:
   UndocumentedPublicFunction:
     active: true
     excludes: ['**/test/**', '**/androidTest/**', '**/testhelpers/**']
-  
+
   EndOfSentenceFormat:
     active: false
     endOfSentenceFormat: ([.?!][ \t\n\r\f<])|([.?!:]$)

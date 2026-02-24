@@ -79,9 +79,9 @@ internal class OutcomeEventsController(
             val err = "OutcomeEventsController.sendSavedOutcomeEvent: Sending outcome with name: ${event.outcomeId} failed with status code: ${ex.statusCode} and response: ${ex.response}"
 
             if (responseType == NetworkUtils.ResponseStatusType.RETRYABLE) {
-                Logging.warn("$err Outcome event was cached and will be reattempted on app cold start")
+                Logging.info("$err Outcome event was cached and will be reattempted on app cold start")
             } else {
-                Logging.error("$err Outcome event will be omitted!")
+                Logging.warn("$err Outcome event will be omitted!")
                 _outcomeEventsCache.deleteOldOutcomeEvent(event)
             }
         }
@@ -229,13 +229,13 @@ internal class OutcomeEventsController(
             val err = "OutcomeEventsController.sendAndCreateOutcomeEvent: Sending outcome with name: $name failed with status code: ${ex.statusCode} and response: ${ex.response}"
 
             if (responseType == NetworkUtils.ResponseStatusType.RETRYABLE) {
-                Logging.warn("$err Outcome event was cached and will be reattempted on app cold start")
+                Logging.info("$err Outcome event was cached and will be reattempted on app cold start")
 
                 // Only if we need to save and retry the outcome, then we will save the timestamp for future sending
                 eventParams.timestamp = timestampSeconds
                 _outcomeEventsCache.saveOutcomeEvent(eventParams)
             } else {
-                Logging.error("$err Outcome event will be omitted!")
+                Logging.warn("$err Outcome event will be omitted!")
                 _outcomeEventsCache.deleteOldOutcomeEvent(eventParams)
             }
 

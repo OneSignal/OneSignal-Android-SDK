@@ -57,12 +57,12 @@ internal abstract class PushRegistratorAbstractGoogle(
         }
 
         if (!_deviceService.hasFCMLibrary) {
-            Logging.fatal("The Firebase FCM library is missing! Please make sure to include it in your project.")
+            Logging.warn("The Firebase FCM library is missing! Please make sure to include it in your project.")
             return IPushRegistrator.RegisterResult(null, SubscriptionStatus.MISSING_FIREBASE_FCM_LIBRARY)
         }
 
         return if (!isValidProjectNumber(_configModelStore.model.googleProjectNumber)) {
-            Logging.error(
+            Logging.warn(
                 "Missing Google Project number!\nPlease enter a Google Project number / Sender ID on under App Settings > Android > Configuration on the OneSignal dashboard.",
             )
             IPushRegistrator.RegisterResult(
@@ -84,14 +84,14 @@ internal abstract class PushRegistratorAbstractGoogle(
                 registerInBackground(senderId)
             } else {
                 _upgradePrompt.showUpdateGPSDialog()
-                Logging.error("'Google Play services' app not installed or disabled on the device.")
+                Logging.warn("'Google Play services' app not installed or disabled on the device.")
                 IPushRegistrator.RegisterResult(
                     null,
                     SubscriptionStatus.OUTDATED_GOOGLE_PLAY_SERVICES_APP,
                 )
             }
         } catch (t: Throwable) {
-            Logging.error(
+            Logging.warn(
                 "Could not register with $providerName due to an issue with your AndroidManifest.xml or with 'Google Play services'.",
                 t,
             )
@@ -140,7 +140,7 @@ internal abstract class PushRegistratorAbstractGoogle(
                 // Wrapping with new Exception so the current line is included in the stack trace.
                 val exception = Exception(e)
                 if (currentRetry >= REGISTRATION_RETRY_COUNT - 1) {
-                    Logging.error("Retry count of $REGISTRATION_RETRY_COUNT exceed! Could not get a $providerName Token.", exception)
+                    Logging.info("Retry count of $REGISTRATION_RETRY_COUNT exceed! Could not get a $providerName Token.", exception)
                 } else {
                     Logging.info("'Google Play services' returned $exceptionMessage error. Current retry count: $currentRetry", exception)
 
@@ -152,12 +152,12 @@ internal abstract class PushRegistratorAbstractGoogle(
             } else {
                 // Wrapping with new Exception so the current line is included in the stack trace.
                 val exception = Exception(e)
-                Logging.error("Error Getting $providerName Token", exception)
+                Logging.warn("Error Getting $providerName Token", exception)
 
                 return IPushRegistrator.RegisterResult(null, pushStatus)
             }
         } catch (t: Throwable) {
-            Logging.error("Unknown error getting $providerName Token", t)
+            Logging.warn("Unknown error getting $providerName Token", t)
             return IPushRegistrator.RegisterResult(
                 null,
                 SubscriptionStatus.FIREBASE_FCM_ERROR_MISC_EXCEPTION,

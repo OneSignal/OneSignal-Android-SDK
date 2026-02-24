@@ -95,13 +95,13 @@ class LoggingTests : FunSpec({
     test("removeListener nested") {
         // Given
         val calls = ArrayList<String>()
-        var listener: ILogListener? = null
-        listener =
-            ILogListener {
-                calls += it.entry
-                Logging.removeListener(listener!!)
-            }
-        Logging.addListener(listener!!)
+        lateinit var listener: ILogListener
+        listener = ILogListener { logEvent ->
+            calls += logEvent.entry
+            // Remove self from listeners
+            Logging.removeListener(listener)
+        }
+        Logging.addListener(listener)
 
         // When
         Logging.debug("test")

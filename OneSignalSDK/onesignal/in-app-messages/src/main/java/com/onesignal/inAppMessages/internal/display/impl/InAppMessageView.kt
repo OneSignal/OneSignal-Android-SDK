@@ -460,7 +460,7 @@ internal class InAppMessageView(
      */
     suspend fun dismissAndAwaitNextMessage() {
         if (draggableRelativeLayout == null) {
-            Logging.error("No host presenter to trigger dismiss animation, counting as dismissed already")
+            Logging.info("No host presenter to trigger dismiss animation, counting as dismissed already")
             dereferenceViews()
             return
         }

@@ -20,7 +20,7 @@ internal class ReceiveReceiptProcessor(
         try {
             _backend.updateNotificationAsReceived(appId, notificationId, subscriptionId, deviceType)
         } catch (ex: BackendException) {
-            Logging.error("Receive receipt failed with statusCode: ${ex.statusCode} response: ${ex.response}")
+            Logging.info("Receive receipt failed with statusCode: ${ex.statusCode} response: ${ex.response}")
         }
     }
 }

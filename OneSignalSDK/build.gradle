@@ -14,8 +14,8 @@ buildscript {
         huaweiAgconnectVersion = '1.9.1.304'
         huaweiHMSPushVersion = '6.3.0.304'
         huaweiHMSLocationVersion = '4.0.0.300'
-        kotlinVersion = '1.9.25'
-        dokkaVersion = '1.9.10' // Dokka version compatible with Kotlin 1.9.25
+        kotlinVersion = '2.2.0'
+        dokkaVersion = '1.9.10'
         coroutinesVersion = '1.7.3'
         kotestVersion = '5.8.0'
         ioMockVersion = '1.13.2'
@@ -25,6 +25,10 @@ buildscript {
         ktlintVersion = '0.50.0' // Used by Spotless for Kotlin formatting (compatible with Kotlin 1.7.10)
         spotlessVersion = '6.25.0'
         tdunningJsonForTest = '1.0' // DO NOT upgrade for tests, using an old version so it matches AOSP
+        // OpenTelemetry versions
+        opentelemetryBomVersion = '1.55.0'
+        opentelemetrySemconvVersion = '1.37.0'
+        opentelemetryDiskBufferingVersion = '1.51.0-alpha'
 
         sharedRepos = {
             google()
@@ -45,11 +49,9 @@ buildscript {
         ]
     }
 
-    buildscript {
-        repositories sharedRepos
-        dependencies {
-            classpath sharedDeps
-        }
+    repositories sharedRepos
+    dependencies {
+        classpath sharedDeps
     }
 }
 
