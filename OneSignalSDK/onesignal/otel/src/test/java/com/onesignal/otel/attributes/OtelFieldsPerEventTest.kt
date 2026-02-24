@@ -19,7 +19,7 @@ class OtelFieldsPerEventTest : FunSpec({
         onesignalId: String? = "test-onesignal-id",
         pushSubscriptionId: String? = "test-subscription-id",
         appState: String = "foreground",
-        processUptime: Double = 100.5,
+        processUptime: Long = 100,
         threadName: String = "main-thread"
     ) {
         every { mockPlatformProvider.appId } returns appId
@@ -43,7 +43,7 @@ class OtelFieldsPerEventTest : FunSpec({
         attributes["ossdk.onesignal_id"] shouldBe "test-onesignal-id"
         attributes["ossdk.push_subscription_id"] shouldBe "test-subscription-id"
         attributes["app.state"] shouldBe "foreground"
-        attributes["process.uptime"] shouldBe "100.5"
+        attributes["process.uptime"] shouldBe "100"
         attributes["thread.name"] shouldBe "main-thread"
     }
 

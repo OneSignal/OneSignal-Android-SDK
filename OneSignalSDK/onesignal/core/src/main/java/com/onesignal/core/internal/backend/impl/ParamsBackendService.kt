@@ -136,36 +136,19 @@ internal class ParamsBackendService(
     }
 
     /**
-     * Parse LogLevel from JSON. Supports both string (enum name) and int (ordinal) formats.
+     * Parse LogLevel from JSON. Supports string (enum name)
      */
     @Suppress("ReturnCount", "TooGenericExceptionCaught", "SwallowedException")
-    private fun parseLogLevel(json: JSONObject): LogLevel? {
-        // Try string format first (e.g., "ERROR", "WARN", "NONE")
-        val logLevelString = json.safeString("log_level") ?: json.safeString("logLevel")
-        if (logLevelString != null) {
+    private fun parseLogLevel(json: JSONObject): LogLevel {
+        val logLevel = json.safeString("log_level")
+        if (logLevel != null) {
             try {
-                return LogLevel.valueOf(logLevelString.uppercase())
-            } catch (e: IllegalArgumentException) {
-                Logging.warn("Invalid log level string: $logLevelString")
+                return LogLevel.valueOf(logLevel.uppercase())
+            } catch (_: IllegalArgumentException) {
+                Logging.warn("Invalid log_level string: $logLevel")
             }
         }
 
-        // Try int format (ordinal: 0=NONE, 1=FATAL, 2=ERROR, etc.)
-        val logLevelInt = json.safeInt("log_level") ?: json.safeInt("logLevel")
-        if (logLevelInt != null) {
-            try {
-                return LogLevel.fromInt(logLevelInt)
-            } catch (e: Exception) {
-                Logging.warn("Invalid log level int: $logLevelInt")
-            }
-        }
-
-        // Backward compatibility: support old "enable" boolean field
-        val enable = json.safeBool("enable")
-        if (enable != null) {
-            return if (enable) LogLevel.ERROR else LogLevel.NONE
-        }
-
-        return null
+        return LogLevel.NONE
     }
 }

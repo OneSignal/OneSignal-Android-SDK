@@ -111,7 +111,7 @@ class OtelIntegrationTest : FunSpec({
         provider.onesignalId shouldBe "test-onesignal-id"
         provider.pushSubscriptionId shouldBe "test-subscription-id"
         provider.appState shouldBeOneOf listOf("foreground", "background", "unknown")
-        (provider.processUptime > 0.0) shouldBe true
+        (provider.processUptime > 0) shouldBe true
         provider.currentThreadName shouldBe Thread.currentThread().name
     }
 

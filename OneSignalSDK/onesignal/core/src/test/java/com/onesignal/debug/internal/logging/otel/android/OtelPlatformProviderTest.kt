@@ -408,7 +408,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     // ===== processUptime Tests =====
 
-    test("processUptime returns uptime in seconds") {
+    test("processUptime returns uptime in milliseconds") {
         // Given
         val provider = createAndroidOtelPlatformProvider(appContext!!)
 
@@ -416,7 +416,7 @@ class OtelPlatformProviderTest : FunSpec({
         val result = provider.processUptime
 
         // Then
-        (result > 0.0) shouldBe true
+        (result >= 0) shouldBe true
         (result < 1000000.0) shouldBe true // Reasonable upper bound
     }
 

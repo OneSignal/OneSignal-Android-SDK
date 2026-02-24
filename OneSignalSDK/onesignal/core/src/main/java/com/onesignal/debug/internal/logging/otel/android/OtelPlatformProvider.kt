@@ -100,8 +100,8 @@ internal class OtelPlatformProvider(
         }
 
     // https://opentelemetry.io/docs/specs/semconv/system/process-metrics/#metric-processuptime
-    override val processUptime: Double
-        get() = android.os.SystemClock.uptimeMillis() / 1_000.0 // Use SystemClock directly
+    override val processUptime: Long
+        get() = android.os.SystemClock.uptimeMillis() - android.os.Process.getStartUptimeMillis()
 
     // https://opentelemetry.io/docs/specs/semconv/general/attributes/#general-thread-attributes
     override val currentThreadName: String

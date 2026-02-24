@@ -447,7 +447,7 @@ internal class OneSignalImp(
     private fun <T> blockingGet(getter: () -> T): T {
         try {
             if (AndroidUtils.isRunningOnMainThread()) {
-                Logging.warn("This is called on main thread. This is not recommended.")
+                Logging.debug("This is called on main thread. This is not recommended.")
             }
         } catch (e: RuntimeException) {
             // In test environments, AndroidUtils.isRunningOnMainThread() may fail
