@@ -163,4 +163,61 @@ object JSONUtils {
             `object`
         }
     }
+
+    /**
+     * Check if an object is JSON-serializable.
+     * Recursively check each item if object is a map or a list.
+     */
+    fun isValidJsonObject(value: Any?): Boolean {
+        return when (value) {
+            null,
+            is Boolean,
+            is Number,
+            is String,
+            is JSONObject,
+            is JSONArray,
+            -> true
+            is Map<*, *> -> value.keys.all { it is String } && value.values.all { isValidJsonObject(it) }
+            is List<*> -> value.all { isValidJsonObject(it) }
+            else -> false
+        }
+    }
+
+    /**
+     * Recursively convert a JSON-serializable map into a JSON-compatible format, handling
+     * nested Maps and Lists appropriately.
+     */
+    fun mapToJson(map: Map<String, Any?>): JSONObject {
+        val json = JSONObject()
+        for ((key, value) in map) {
+            json.put(key, convertToJson(value))
+        }
+        return json
+    }
+
+    /**
+     * Recursively converts maps and lists into JSON-compatible objects, transforming maps with
+     * String keys into JSON objects, lists into JSON arrays, and leaving primitive values unchanged to support safe JSON serialization.
+     * Null values are converted to JSONObject.NULL to preserve them in the JSON structure.
+     */
+    fun convertToJson(value: Any?): Any? {
+        return when (value) {
+            null -> JSONObject.NULL
+            is Map<*, *> -> {
+                val subMap =
+                    value.entries
+                        .filter { it.key is String }
+                        .associate {
+                            it.key as String to convertToJson(it.value)
+                        }
+                mapToJson(subMap)
+            }
+            is List<*> -> {
+                val array = JSONArray()
+                value.forEach { array.put(convertToJson(it)) }
+                array
+            }
+            else -> value
+        }
+    }
 }

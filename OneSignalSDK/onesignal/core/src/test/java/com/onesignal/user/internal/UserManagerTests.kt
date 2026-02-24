@@ -4,7 +4,9 @@ import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionList
+import io.kotest.assertions.throwables.shouldNotThrow
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.equals.shouldBeEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.every
@@ -26,7 +28,7 @@ class UserManagerTests : FunSpec({
         every { languageContext.language = capture(languageSlot) } answers { }
 
         val userManager =
-            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), languageContext)
+            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), MockHelper.customEventController(), languageContext)
 
         // When
         userManager.setLanguage("new-language")
@@ -44,7 +46,7 @@ class UserManagerTests : FunSpec({
             }
 
         val userManager =
-            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.languageContext())
+            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.customEventController(), MockHelper.languageContext())
 
         // When
         val externalId = userManager.externalId
@@ -63,7 +65,7 @@ class UserManagerTests : FunSpec({
             }
 
         val userManager =
-            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.languageContext())
+            UserManager(mockSubscriptionManager, identityModelStore, MockHelper.propertiesModelStore(), MockHelper.customEventController(), MockHelper.languageContext())
 
         // When
         val alias1 = userManager.aliases["my-alias-key1"]
@@ -102,7 +104,7 @@ class UserManagerTests : FunSpec({
             }
 
         val userManager =
-            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext())
+            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.customEventController(), MockHelper.languageContext())
 
         // When
         val tag1 = propertiesModelStore.model.tags["my-tag-key1"]
@@ -141,7 +143,7 @@ class UserManagerTests : FunSpec({
                 it.tags["my-tag-key1"] = "my-tag-value1"
             }
 
-        val userManager = UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.languageContext())
+        val userManager = UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), propertiesModelStore, MockHelper.customEventController(), MockHelper.languageContext())
 
         // When
         val tagSnapshot1 = userManager.getTags()
@@ -173,6 +175,7 @@ class UserManagerTests : FunSpec({
                 mockSubscriptionManager,
                 MockHelper.identityModelStore(),
                 MockHelper.propertiesModelStore(),
+                MockHelper.customEventController(),
                 MockHelper.languageContext(),
             )
 
@@ -190,5 +193,46 @@ class UserManagerTests : FunSpec({
         verify(exactly = 1) { mockSubscriptionManager.removeEmailSubscription("email@co.com") }
         verify(exactly = 1) { mockSubscriptionManager.addSmsSubscription("+15558675309") }
         verify(exactly = 1) { mockSubscriptionManager.removeSmsSubscription("+15558675309") }
+    }
+
+    test("custom event controller sends various types of properties") {
+        // Given
+        val customEventController = MockHelper.customEventController()
+
+        val userManager =
+            UserManager(mockk<ISubscriptionManager>(), MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), customEventController, MockHelper.languageContext())
+
+        val eventName = "eventName"
+        val properties =
+            mapOf(
+                "key1" to "value1",
+                "key2" to 2,
+                "key3" to 5.123,
+                "key4" to mapOf("key4-1" to "value4-1"),
+                "key5" to mapOf("key5-1" to mapOf("key5-1-1" to 0)),
+                "key6" to null,
+            )
+
+        // When
+        // should be able to handle any of the map structures above
+        shouldNotThrow<Exception> {
+            userManager.trackEvent(
+                eventName,
+                properties,
+            )
+        }
+
+        // Then
+        // ensure the controller call sendCustomEvent() with the correct name and properties
+        verify(exactly = 1) {
+            customEventController.sendCustomEvent(
+                withArg {
+                    it.shouldBeEqual(eventName)
+                },
+                withArg {
+                    it.shouldBeEqual(properties)
+                },
+            )
+        }
     }
 })
