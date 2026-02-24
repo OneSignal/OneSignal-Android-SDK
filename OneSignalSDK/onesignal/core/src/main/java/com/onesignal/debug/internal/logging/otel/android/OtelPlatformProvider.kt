@@ -120,22 +120,20 @@ internal class OtelPlatformProvider(
 
     override val minFileAgeForReadMillis: Long = 5_000
 
-    // Remote logging configuration
+    // Cached from SharedPreferences on first access and held for the session.
+    // Mid-session config updates are handled by OtelLifecycleManager reading
+    // from ConfigModel directly, not from these cached values.
     override val isRemoteLoggingEnabled: Boolean by lazy {
         idResolver.resolveRemoteLoggingEnabled()
     }
 
-    /**
-     * The minimum log level to send remotely as a string.
-     * - "logging_config": {"log_level": "ERROR"} → returns "ERROR" (enabled, on allowlist)
-     * - "logging_config": {} → returns null (disabled, not on allowlist)
-     * - No config cached yet → returns null (first launch)
-     */
+    // Cached from SharedPreferences on first access and held for the session.
+    // Mid-session config updates are handled by OtelLifecycleManager reading
+    // from ConfigModel directly, not from these cached values.
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     override val remoteLogLevel: String? by lazy {
         try {
-            val configLevel = idResolver.resolveRemoteLogLevel()
-            configLevel?.name
+            idResolver.resolveRemoteLogLevel()?.name
         } catch (e: Exception) {
             null
         }

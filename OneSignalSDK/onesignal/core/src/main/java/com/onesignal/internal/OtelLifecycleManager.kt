@@ -41,6 +41,8 @@ internal class OtelLifecycleManager(
         createAndroidOtelPlatformProvider(context)
     }
 
+    private val logger = AndroidOtelLogger()
+
     private var crashHandler: IOtelCrashHandler? = null
     private var anrDetector: IOtelAnrDetector? = null
     private var remoteTelemetry: IOtelOpenTelemetryRemote? = null
@@ -59,7 +61,7 @@ internal class OtelLifecycleManager(
         }
 
         try {
-            val cachedConfig = readCurrentConfig()
+            val cachedConfig = readCurrentCachedConfig()
             val action = OtelConfigEvaluator.evaluate(old = null, new = cachedConfig)
             applyAction(action, cachedConfig)
         } catch (t: Throwable) {
@@ -105,7 +107,7 @@ internal class OtelLifecycleManager(
     // Internal
     // ------------------------------------------------------------------
 
-    private fun readCurrentConfig(): OtelConfig {
+    private fun readCurrentCachedConfig(): OtelConfig {
         val enabled = platformProvider.isRemoteLoggingEnabled
         val levelStr = platformProvider.remoteLogLevel
         val level = levelStr?.let {
@@ -195,7 +197,6 @@ internal class OtelLifecycleManager(
 
     private fun startCrashHandler() {
         if (crashHandler != null) return
-        val logger = AndroidOtelLogger()
         val handler = OneSignalCrashHandlerFactory.createCrashHandler(context, logger)
         handler.initialize()
         crashHandler = handler
@@ -204,7 +205,6 @@ internal class OtelLifecycleManager(
 
     private fun startAnrDetector() {
         if (anrDetector != null) return
-        val logger = AndroidOtelLogger()
         val detector = createAnrDetector(
             platformProvider,
             logger,
