@@ -77,6 +77,13 @@ class SecondaryActivity : ComponentActivity() {
                             text = "CRASH",
                             onClick = { triggerCrash() }
                         )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        DestructiveButton(
+                            text = "SIMULATE ANR (10s block)",
+                            onClick = { triggerAnr() }
+                        )
                     }
                 }
             }
@@ -87,5 +94,10 @@ class SecondaryActivity : ComponentActivity() {
         val timestamp = SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.getDefault())
             .format(Date())
         throw RuntimeException("Test crash from OneSignal Demo App - $timestamp")
+    }
+
+    @Suppress("MagicNumber")
+    private fun triggerAnr() {
+        Thread.sleep(10_000)
     }
 }
