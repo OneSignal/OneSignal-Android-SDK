@@ -32,11 +32,12 @@ class OneSignalOpenTelemetryTest : FunSpec({
         every { mockPlatformProvider.onesignalId } returns "test-onesignal-id"
         every { mockPlatformProvider.pushSubscriptionId } returns "test-subscription-id"
         every { mockPlatformProvider.appState } returns "foreground"
-        every { mockPlatformProvider.processUptime } returns 100.0
+        every { mockPlatformProvider.processUptime } returns 100L
         every { mockPlatformProvider.currentThreadName } returns "main"
         every { mockPlatformProvider.crashStoragePath } returns "/test/path"
         every { mockPlatformProvider.minFileAgeForReadMillis } returns 5000L
         every { mockPlatformProvider.remoteLogLevel } returns "ERROR"
+        every { mockPlatformProvider.apiBaseUrl } returns "https://api.onesignal.com"
     }
 
     beforeEach {

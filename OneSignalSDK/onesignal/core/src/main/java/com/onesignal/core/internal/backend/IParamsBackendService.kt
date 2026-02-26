@@ -58,5 +58,5 @@ internal class FCMParamsObject(
 
 internal class RemoteLoggingParamsObject(
     val logLevel: com.onesignal.debug.LogLevel? = null,
-    val isEnabled: Boolean = logLevel != null && logLevel != com.onesignal.debug.LogLevel.NONE,
+    val isEnabled: Boolean = logLevel != null,
 )

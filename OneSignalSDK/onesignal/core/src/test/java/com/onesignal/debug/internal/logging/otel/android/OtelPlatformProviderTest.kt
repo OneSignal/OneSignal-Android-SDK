@@ -729,6 +729,14 @@ class OtelPlatformProviderTest : FunSpec({
         result shouldNotBe null
     }
 
+    // ===== apiBaseUrl Tests =====
+
+    test("apiBaseUrl returns the core module base URL") {
+        val provider = createAndroidOtelPlatformProvider(appContext!!)
+
+        provider.apiBaseUrl shouldBe com.onesignal.core.internal.http.OneSignalService.ONESIGNAL_API_BASE_URL
+    }
+
     // ===== getInstallId Tests =====
 
     test("getInstallId returns installId from SharedPreferences") {

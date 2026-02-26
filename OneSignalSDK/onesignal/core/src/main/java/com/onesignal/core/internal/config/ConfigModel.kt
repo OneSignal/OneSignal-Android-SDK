@@ -1,6 +1,7 @@
 package com.onesignal.core.internal.config
 
 import com.onesignal.common.modeling.Model
+import com.onesignal.core.internal.http.OneSignalService.ONESIGNAL_API_BASE_URL
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -36,7 +37,7 @@ class ConfigModel : Model() {
      * The API URL String.
      */
     var apiUrl: String
-        get() = getStringProperty(::apiUrl.name) { "https://api.onesignal.com/" }
+        get() = getStringProperty(::apiUrl.name) { ONESIGNAL_API_BASE_URL }
         set(value) {
             setStringProperty(::apiUrl.name, value)
         }

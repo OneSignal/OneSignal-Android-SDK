@@ -226,19 +226,10 @@ internal class OtelIdResolver(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught", "SwallowedException")
-    private fun extractLogLevelFromParams(remoteLoggingParams: JSONObject): com.onesignal.debug.LogLevel? {
-        return if (remoteLoggingParams.has("logLevel")) {
-            val logLevelString = remoteLoggingParams.getString("logLevel")
-            try {
-                com.onesignal.debug.LogLevel.valueOf(logLevelString.uppercase())
-            } catch (e: Exception) {
-                null
-            }
-        } else {
-            null
-        }
-    }
+    private fun extractLogLevelFromParams(remoteLoggingParams: JSONObject): com.onesignal.debug.LogLevel? =
+        com.onesignal.debug.LogLevel.fromString(
+            if (remoteLoggingParams.has("logLevel")) remoteLoggingParams.getString("logLevel") else null
+        )
 
     /**
      * Resolves install ID from SharedPreferences.

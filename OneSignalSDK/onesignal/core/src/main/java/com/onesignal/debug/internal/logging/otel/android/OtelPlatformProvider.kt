@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Build
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.OneSignalWrapper
+import com.onesignal.core.internal.http.OneSignalService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.otel.IOtelPlatformProvider
 
@@ -107,16 +108,11 @@ internal class OtelPlatformProvider(
     override val currentThreadName: String
         get() = Thread.currentThread().name
 
-    // Crash-specific configuration
-    // Store crashStoragePath privately since we need a custom getter that logs
-    private val _crashStoragePath: String = config.crashStoragePath
-
-    override val crashStoragePath: String
-        get() {
-            // Log the path on first access so developers know where to find crash logs
-            Logging.info("OneSignal: Crash logs stored at: $_crashStoragePath")
-            return _crashStoragePath
-        }
+    override val crashStoragePath: String by lazy {
+        val path = config.crashStoragePath
+        Logging.info("OneSignal: Crash logs stored at: $path")
+        path
+    }
 
     override val minFileAgeForReadMillis: Long = 5_000
 
@@ -141,6 +137,8 @@ internal class OtelPlatformProvider(
 
     override val appIdForHeaders: String
         get() = appId ?: ""
+
+    override val apiBaseUrl: String = OneSignalService.ONESIGNAL_API_BASE_URL
 }
 
 /**

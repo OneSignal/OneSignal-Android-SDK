@@ -58,6 +58,7 @@ internal class OtelAnrDetector(
         logger.info("$TAG: ✅ ANR detection started successfully")
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun setupRunnables() {
         // Runnable that runs on the main thread to indicate it's responsive
         mainThreadRunnable = Runnable {
@@ -81,8 +82,8 @@ internal class OtelAnrDetector(
     }
 
     private fun checkForAnr() {
-        // Post a message to the main thread
-        mainHandler.post(mainThreadRunnable!!)
+        val runnable = mainThreadRunnable ?: return
+        mainHandler.post(runnable)
 
         // Wait for the check interval
         Thread.sleep(checkIntervalMs)
@@ -145,6 +146,7 @@ internal class OtelAnrDetector(
         logger.info("$TAG: ✅ ANR detection stopped")
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun reportAnr(unresponsiveDurationMs: Long) {
         try {
             logger.info("$TAG: Checking if ANR is OneSignal-related (unresponsive for ${unresponsiveDurationMs}ms)")

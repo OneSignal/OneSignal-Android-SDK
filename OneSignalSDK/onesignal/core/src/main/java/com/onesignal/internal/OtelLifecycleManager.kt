@@ -32,6 +32,7 @@ import com.onesignal.otel.crash.IOtelAnrDetector
  * Thread safety: methods are synchronized on [lock] so that concurrent
  * calls from initEssentials (main) and the config store callback (IO) are safe.
  */
+@Suppress("TooManyFunctions")
 internal class OtelLifecycleManager(
     private val context: Context,
 ) : ISingletonModelStoreChangeHandler<ConfigModel> {
@@ -62,8 +63,10 @@ internal class OtelLifecycleManager(
 
         try {
             val cachedConfig = readCurrentCachedConfig()
-            val action = OtelConfigEvaluator.evaluate(old = null, new = cachedConfig)
-            applyAction(action, cachedConfig)
+            synchronized(lock) {
+                val action = OtelConfigEvaluator.evaluate(old = currentConfig, new = cachedConfig)
+                applyAction(action, cachedConfig)
+            }
         } catch (t: Throwable) {
             Logging.warn("OneSignal: Failed to initialize Otel from cached config: ${t.message}", t)
         }
@@ -90,10 +93,10 @@ internal class OtelLifecycleManager(
             val logLevel = model.remoteLoggingParams.logLevel
             val isEnabled = model.remoteLoggingParams.isEnabled
             val newConfig = OtelConfig(isEnabled = isEnabled, logLevel = logLevel)
-            val action = synchronized(lock) {
-                OtelConfigEvaluator.evaluate(old = currentConfig, new = newConfig)
+            synchronized(lock) {
+                val action = OtelConfigEvaluator.evaluate(old = currentConfig, new = newConfig)
+                applyAction(action, newConfig)
             }
-            applyAction(action, newConfig)
         } catch (t: Throwable) {
             Logging.warn("OneSignal: Failed to refresh Otel from remote config: ${t.message}", t)
         }
@@ -109,30 +112,22 @@ internal class OtelLifecycleManager(
 
     private fun readCurrentCachedConfig(): OtelConfig {
         val enabled = platformProvider.isRemoteLoggingEnabled
-        val levelStr = platformProvider.remoteLogLevel
-        val level = levelStr?.let {
-            try {
-                LogLevel.valueOf(it)
-            } catch (_: Throwable) {
-                null
-            }
-        }
+        val level = LogLevel.fromString(platformProvider.remoteLogLevel)
         return OtelConfig(isEnabled = enabled, logLevel = level)
     }
 
+    /** Must be called while holding [lock]. */
     @Suppress("TooGenericExceptionCaught")
     private fun applyAction(action: OtelConfigAction, newConfig: OtelConfig) {
-        synchronized(lock) {
-            when (action) {
-                is OtelConfigAction.Enable -> enableFeatures(newConfig.logLevel ?: LogLevel.ERROR)
-                is OtelConfigAction.Disable -> disableFeatures()
-                is OtelConfigAction.UpdateLogLevel -> updateLogLevel(action.newLevel)
-                is OtelConfigAction.NoChange -> {
-                    Logging.debug("OneSignal: Otel config unchanged, no action needed")
-                }
+        when (action) {
+            is OtelConfigAction.Enable -> enableFeatures(newConfig.logLevel ?: LogLevel.ERROR)
+            is OtelConfigAction.Disable -> disableFeatures()
+            is OtelConfigAction.UpdateLogLevel -> updateLogLevel(action.newLevel)
+            is OtelConfigAction.NoChange -> {
+                Logging.debug("OneSignal: Otel config unchanged, no action needed")
             }
-            currentConfig = newConfig
         }
+        currentConfig = newConfig
     }
 
     @Suppress("TooGenericExceptionCaught")

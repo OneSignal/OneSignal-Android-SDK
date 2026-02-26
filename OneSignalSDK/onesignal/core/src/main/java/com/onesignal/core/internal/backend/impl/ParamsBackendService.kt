@@ -61,7 +61,7 @@ internal class ParamsBackendService(
         // Process Remote Logging params
         var remoteLoggingParams: RemoteLoggingParamsObject? = null
         responseJson.expandJSONObject("logging_config") {
-            val logLevel = parseLogLevel(it)
+            val logLevel = LogLevel.fromString(it.safeString("log_level"))
             remoteLoggingParams =
                 RemoteLoggingParamsObject(
                     logLevel = logLevel,
@@ -133,22 +133,5 @@ internal class ParamsBackendService(
             isIndirectEnabled,
             isUnattributedEnabled,
         )
-    }
-
-    /**
-     * Parse LogLevel from JSON. Supports string (enum name)
-     */
-    @Suppress("ReturnCount", "TooGenericExceptionCaught", "SwallowedException")
-    private fun parseLogLevel(json: JSONObject): LogLevel {
-        val logLevel = json.safeString("log_level")
-        if (logLevel != null) {
-            try {
-                return LogLevel.valueOf(logLevel.uppercase())
-            } catch (_: IllegalArgumentException) {
-                Logging.warn("Invalid log_level string: $logLevel")
-            }
-        }
-
-        return LogLevel.NONE
     }
 }

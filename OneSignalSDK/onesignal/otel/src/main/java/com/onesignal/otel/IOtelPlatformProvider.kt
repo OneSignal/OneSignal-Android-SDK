@@ -54,4 +54,11 @@ interface IOtelPlatformProvider {
      */
     val remoteLogLevel: String?
     val appIdForHeaders: String
+
+    /**
+     * Base URL for the OneSignal API (e.g. "https://api.onesignal.com").
+     * The Otel exporter appends "sdk/otel/v1/logs" to this.
+     * Sourced from the core module so all SDK traffic hits the same host.
+     */
+    val apiBaseUrl: String
 }

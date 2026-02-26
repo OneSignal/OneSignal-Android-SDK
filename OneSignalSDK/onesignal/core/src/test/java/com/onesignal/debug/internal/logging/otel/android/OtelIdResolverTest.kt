@@ -861,6 +861,113 @@ class OtelIdResolverTest : FunSpec({
         result shouldBe null
     }
 
+    // ===== extractLogLevelFromParams Tests (via resolveRemoteLogLevel / resolveRemoteLoggingEnabled) =====
+    // These test the exact JSON shapes received from the backend.
+
+    test("extractLogLevelFromParams: {logLevel:NONE, isEnabled:false} returns NONE and disabled") {
+        val remoteLoggingParams = JSONObject("""{"logLevel":"NONE","isEnabled":false}""")
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply { put(configModel) }
+        writeAndVerifyConfigData(configArray)
+
+        val resolver = OtelIdResolver(appContext!!)
+        resolver.resolveRemoteLogLevel() shouldBe LogLevel.NONE
+        resolver.resolveRemoteLoggingEnabled() shouldBe false
+    }
+
+    test("extractLogLevelFromParams: {logLevel:ERROR, isEnabled:true} returns ERROR and enabled") {
+        val remoteLoggingParams = JSONObject("""{"logLevel":"ERROR","isEnabled":true}""")
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply { put(configModel) }
+        writeAndVerifyConfigData(configArray)
+
+        val resolver = OtelIdResolver(appContext!!)
+        resolver.resolveRemoteLogLevel() shouldBe LogLevel.ERROR
+        resolver.resolveRemoteLoggingEnabled() shouldBe true
+    }
+
+    test("extractLogLevelFromParams: {isEnabled:false} with no logLevel returns null and disabled") {
+        val remoteLoggingParams = JSONObject("""{"isEnabled":false}""")
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply { put(configModel) }
+        writeAndVerifyConfigData(configArray)
+
+        val resolver = OtelIdResolver(appContext!!)
+        resolver.resolveRemoteLogLevel() shouldBe null
+        resolver.resolveRemoteLoggingEnabled() shouldBe false
+    }
+
+    test("extractLogLevelFromParams: empty object {} returns null and disabled") {
+        val remoteLoggingParams = JSONObject("""{}""")
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply { put(configModel) }
+        writeAndVerifyConfigData(configArray)
+
+        val resolver = OtelIdResolver(appContext!!)
+        resolver.resolveRemoteLogLevel() shouldBe null
+        resolver.resolveRemoteLoggingEnabled() shouldBe false
+    }
+
+    test("extractLogLevelFromParams: {logLevel:WARN} without isEnabled returns WARN and enabled") {
+        val remoteLoggingParams = JSONObject("""{"logLevel":"WARN"}""")
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply { put(configModel) }
+        writeAndVerifyConfigData(configArray)
+
+        val resolver = OtelIdResolver(appContext!!)
+        resolver.resolveRemoteLogLevel() shouldBe LogLevel.WARN
+        resolver.resolveRemoteLoggingEnabled() shouldBe true
+    }
+
+    test("extractLogLevelFromParams: {logLevel:error} lowercase returns ERROR (case-insensitive)") {
+        val remoteLoggingParams = JSONObject("""{"logLevel":"error","isEnabled":true}""")
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply { put(configModel) }
+        writeAndVerifyConfigData(configArray)
+
+        val resolver = OtelIdResolver(appContext!!)
+        resolver.resolveRemoteLogLevel() shouldBe LogLevel.ERROR
+        resolver.resolveRemoteLoggingEnabled() shouldBe true
+    }
+
+    test("extractLogLevelFromParams: {logLevel:INVALID} returns null and disabled") {
+        val remoteLoggingParams = JSONObject("""{"logLevel":"INVALID","isEnabled":true}""")
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply { put(configModel) }
+        writeAndVerifyConfigData(configArray)
+
+        val resolver = OtelIdResolver(appContext!!)
+        resolver.resolveRemoteLogLevel() shouldBe null
+        resolver.resolveRemoteLoggingEnabled() shouldBe false
+    }
+
+    test("extractLogLevelFromParams: isEnabled field does not influence logLevel resolution") {
+        val remoteLoggingParams = JSONObject("""{"logLevel":"ERROR","isEnabled":false}""")
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply { put(configModel) }
+        writeAndVerifyConfigData(configArray)
+
+        val resolver = OtelIdResolver(appContext!!)
+        resolver.resolveRemoteLogLevel() shouldBe LogLevel.ERROR
+        resolver.resolveRemoteLoggingEnabled() shouldBe true
+    }
+
     // ===== resolveInstallId Tests =====
 
     test("resolveInstallId returns installId from SharedPreferences when available") {

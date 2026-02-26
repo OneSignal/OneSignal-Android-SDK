@@ -18,6 +18,8 @@ internal class OtelCrashHandler(
 ) : Thread.UncaughtExceptionHandler, com.onesignal.otel.IOtelCrashHandler {
     private var existingHandler: Thread.UncaughtExceptionHandler? = null
     private val seenThrowables: MutableList<Throwable> = mutableListOf()
+
+    @Volatile
     private var initialized = false
 
     override fun initialize() {
