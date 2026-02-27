@@ -61,7 +61,7 @@ internal class ParamsBackendService(
         // Process Remote Logging params
         var remoteLoggingParams: RemoteLoggingParamsObject? = null
         responseJson.expandJSONObject("logging_config") {
-            val logLevel = parseLogLevel(it)
+            val logLevel = LogLevel.fromString(it.safeString("log_level"))
             remoteLoggingParams =
                 RemoteLoggingParamsObject(
                     logLevel = logLevel,
@@ -133,39 +133,5 @@ internal class ParamsBackendService(
             isIndirectEnabled,
             isUnattributedEnabled,
         )
-    }
-
-    /**
-     * Parse LogLevel from JSON. Supports both string (enum name) and int (ordinal) formats.
-     */
-    @Suppress("ReturnCount", "TooGenericExceptionCaught", "SwallowedException")
-    private fun parseLogLevel(json: JSONObject): LogLevel? {
-        // Try string format first (e.g., "ERROR", "WARN", "NONE")
-        val logLevelString = json.safeString("log_level") ?: json.safeString("logLevel")
-        if (logLevelString != null) {
-            try {
-                return LogLevel.valueOf(logLevelString.uppercase())
-            } catch (e: IllegalArgumentException) {
-                Logging.warn("Invalid log level string: $logLevelString")
-            }
-        }
-
-        // Try int format (ordinal: 0=NONE, 1=FATAL, 2=ERROR, etc.)
-        val logLevelInt = json.safeInt("log_level") ?: json.safeInt("logLevel")
-        if (logLevelInt != null) {
-            try {
-                return LogLevel.fromInt(logLevelInt)
-            } catch (e: Exception) {
-                Logging.warn("Invalid log level int: $logLevelInt")
-            }
-        }
-
-        // Backward compatibility: support old "enable" boolean field
-        val enable = json.safeBool("enable")
-        if (enable != null) {
-            return if (enable) LogLevel.ERROR else LogLevel.NONE
-        }
-
-        return null
     }
 }

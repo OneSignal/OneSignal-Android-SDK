@@ -67,6 +67,18 @@ internal abstract class OneSignalOpenTelemetryBase(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught")
+    override fun shutdown() {
+        synchronized(lock) {
+            try {
+                sdkCachedValue?.shutdown()
+            } catch (_: Throwable) {
+                // Best-effort cleanup — never propagate Otel teardown failures
+            }
+            sdkCachedValue = null
+        }
+    }
+
     companion object {
         private const val FORCE_FLUSH_TIMEOUT_SECONDS = 10L
     }
@@ -96,8 +108,10 @@ internal class OneSignalOpenTelemetryRemote(
         )
     }
 
+    private val apiBaseUrl: String get() = platformProvider.apiBaseUrl
+
     override val logExporter by lazy {
-        OtelConfigRemoteOneSignal.HttpRecordBatchExporter.create(extraHttpHeaders, appId)
+        OtelConfigRemoteOneSignal.HttpRecordBatchExporter.create(extraHttpHeaders, appId, apiBaseUrl)
     }
 
     override fun getSdkInstance(attributes: Map<String, String>): OpenTelemetrySdk =
@@ -107,7 +121,8 @@ internal class OneSignalOpenTelemetryRemote(
                 OtelConfigRemoteOneSignal.SdkLoggerProviderConfig.create(
                     OtelConfigShared.ResourceConfig.create(attributes),
                     extraHttpHeaders,
-                    appId
+                    appId,
+                    apiBaseUrl,
                 )
             ).build()
 }

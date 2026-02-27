@@ -1,6 +1,7 @@
 package com.onesignal.core.internal.config
 
 import com.onesignal.common.modeling.Model
+import com.onesignal.core.internal.http.OneSignalService.ONESIGNAL_API_BASE_URL
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -36,7 +37,7 @@ class ConfigModel : Model() {
      * The API URL String.
      */
     var apiUrl: String
-        get() = getStringProperty(::apiUrl.name) { "https://api.onesignal.com/" }
+        get() = getStringProperty(::apiUrl.name) { ONESIGNAL_API_BASE_URL }
         set(value) {
             setStringProperty(::apiUrl.name, value)
         }
@@ -453,5 +454,15 @@ class RemoteLoggingConfigModel(
         get() = getOptEnumProperty<com.onesignal.debug.LogLevel>(::logLevel.name)
         set(value) {
             setOptEnumProperty(::logLevel.name, value)
+        }
+
+    /**
+     * Whether remote logging is enabled.
+     * Set by backend config hydration — true when the server sends a valid log_level, false otherwise.
+     */
+    var isEnabled: Boolean
+        get() = getBooleanProperty(::isEnabled.name) { false }
+        set(value) {
+            setBooleanProperty(::isEnabled.name, value)
         }
 }

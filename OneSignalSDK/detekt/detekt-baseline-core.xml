@@ -138,6 +138,7 @@
     <ID>ConstructorParameterNaming:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$private val _propertiesModelStore: PropertiesModelStore</ID>
     <ID>ConstructorParameterNaming:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$private val _userBackend: IUserBackendService</ID>
     <ID>ConstructorParameterNaming:UserBackendService.kt$UserBackendService$private val _httpClient: IHttpClient</ID>
+    <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _customEventController: ICustomEventController</ID>
     <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _identityModelStore: IdentityModelStore</ID>
     <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _languageContext: ILanguageContext</ID>
     <ID>ConstructorParameterNaming:UserManager.kt$UserManager$private val _propertiesModelStore: PropertiesModelStore</ID>
@@ -191,6 +192,7 @@
     <ID>LongMethod:TrackGooglePurchase.kt$TrackGooglePurchase$private fun queryBoughtItems()</ID>
     <ID>LongMethod:TrackGooglePurchase.kt$TrackGooglePurchase$private fun sendPurchases( skusToAdd: ArrayList&lt;String>, newPurchaseTokens: ArrayList&lt;String>, )</ID>
     <ID>LongMethod:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
+    <ID>LongParameterList:ICustomEventBackendService.kt$ICustomEventBackendService$( appId: String, onesignalId: String, externalId: String?, timestamp: Long, eventName: String, eventProperties: String?, metadata: CustomEventMetadata, )</ID>
     <ID>LongParameterList:IDatabase.kt$IDatabase$( table: String, columns: Array&lt;String>? = null, whereClause: String? = null, whereArgs: Array&lt;String>? = null, groupBy: String? = null, having: String? = null, orderBy: String? = null, limit: String? = null, action: (ICursor) -> Unit, )</ID>
     <ID>LongParameterList:IOutcomeEventsBackendService.kt$IOutcomeEventsBackendService$( appId: String, userId: String, subscriptionId: String, deviceType: String, direct: Boolean?, event: OutcomeEvent, )</ID>
     <ID>LongParameterList:IParamsBackendService.kt$ParamsObject$( var googleProjectNumber: String? = null, var enterprise: Boolean? = null, var useIdentityVerification: Boolean? = null, var notificationChannels: JSONArray? = null, var firebaseAnalytics: Boolean? = null, var restoreTTLFilter: Boolean? = null, var clearGroupOnSummaryClick: Boolean? = null, var receiveReceiptEnabled: Boolean? = null, var disableGMSMissingPrompt: Boolean? = null, var unsubscribeWhenNotificationsDisabled: Boolean? = null, var locationShared: Boolean? = null, var requiresUserPrivacyConsent: Boolean? = null, var opRepoExecutionInterval: Long? = null, var influenceParams: InfluenceParamsObject, var fcmParams: FCMParamsObject, )</ID>
@@ -279,6 +281,7 @@
     <ID>RethrowCaughtException:OSDatabase.kt$OSDatabase$throw e</ID>
     <ID>ReturnCount:AppIdResolution.kt$fun resolveAppId( inputAppId: String?, configModel: ConfigModel, preferencesService: IPreferencesService, ): AppIdResolution</ID>
     <ID>ReturnCount:BackgroundManager.kt$BackgroundManager$override fun cancelRunBackgroundServices(): Boolean</ID>
+    <ID>ReturnCount:OneSignalImp.kt$OneSignalImp$private fun internalInit( context: Context, appId: String?, ): Boolean</ID>
     <ID>ReturnCount:ConfigModel.kt$ConfigModel$override fun createModelForProperty( property: String, jsonObject: JSONObject, ): Model?</ID>
     <ID>ReturnCount:HttpClient.kt$HttpClient$private suspend fun makeRequest( url: String, method: String?, jsonBody: JSONObject?, timeout: Int, headers: OptionalHeaders?, ): HttpResponse</ID>
     <ID>ReturnCount:IdentityOperationExecutor.kt$IdentityOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
@@ -370,6 +373,7 @@
     <ID>TooManyFunctions:IUserManager.kt$IUserManager</ID>
     <ID>TooManyFunctions:InfluenceManager.kt$InfluenceManager : IInfluenceManagerISessionLifecycleHandler</ID>
     <ID>TooManyFunctions:JSONObjectExtensions.kt$com.onesignal.common.JSONObjectExtensions.kt</ID>
+    <ID>TooManyFunctions:JSONUtils.kt$JSONUtils$JSONUtils</ID>
     <ID>TooManyFunctions:Logging.kt$Logging$Logging</ID>
     <ID>TooManyFunctions:Model.kt$Model : IEventNotifier</ID>
     <ID>TooManyFunctions:ModelStore.kt$ModelStore&lt;TModel> : IEventNotifierIModelStoreIModelChangedHandler</ID>
