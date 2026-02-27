@@ -16,7 +16,9 @@ import com.onesignal.debug.internal.logging.otel.android.AndroidOtelLogger
 import com.onesignal.debug.internal.logging.otel.android.OtelPlatformProvider
 import com.onesignal.debug.internal.logging.otel.android.createAndroidOtelPlatformProvider
 import com.onesignal.otel.IOtelCrashHandler
+import com.onesignal.otel.IOtelLogger
 import com.onesignal.otel.IOtelOpenTelemetryRemote
+import com.onesignal.otel.IOtelPlatformProvider
 import com.onesignal.otel.OtelFactory
 import com.onesignal.otel.crash.IOtelAnrDetector
 
@@ -31,18 +33,31 @@ import com.onesignal.otel.crash.IOtelAnrDetector
  *
  * Thread safety: methods are synchronized on [lock] so that concurrent
  * calls from initEssentials (main) and the config store callback (IO) are safe.
+ *
+ * All factory parameters default to the real implementations, so production
+ * callers can use `OtelLifecycleManager(context)`. Tests can override any
+ * factory to inject mocks or throwing stubs.
  */
 @Suppress("TooManyFunctions")
 internal class OtelLifecycleManager(
     private val context: Context,
+    private val crashHandlerFactory: (Context, IOtelLogger) -> IOtelCrashHandler =
+        { ctx, log -> OneSignalCrashHandlerFactory.createCrashHandler(ctx, log) },
+    private val anrDetectorFactory: (IOtelPlatformProvider, IOtelLogger, Long, Long) -> IOtelAnrDetector =
+        { pp, log, threshold, interval -> createAnrDetector(pp, log, threshold, interval) },
+    private val remoteTelemetryFactory: (IOtelPlatformProvider) -> IOtelOpenTelemetryRemote =
+        { pp -> OtelFactory.createRemoteTelemetry(pp) },
+    private val platformProviderFactory: (Context) -> OtelPlatformProvider =
+        { ctx -> createAndroidOtelPlatformProvider(ctx) },
+    private val loggerFactory: () -> IOtelLogger = { AndroidOtelLogger() },
 ) : ISingletonModelStoreChangeHandler<ConfigModel> {
     private val lock = Any()
 
     private val platformProvider: OtelPlatformProvider by lazy {
-        createAndroidOtelPlatformProvider(context)
+        platformProviderFactory(context)
     }
 
-    private val logger = AndroidOtelLogger()
+    private val logger: IOtelLogger by lazy { loggerFactory() }
 
     private var crashHandler: IOtelCrashHandler? = null
     private var anrDetector: IOtelAnrDetector? = null
@@ -192,7 +207,7 @@ internal class OtelLifecycleManager(
 
     private fun startCrashHandler() {
         if (crashHandler != null) return
-        val handler = OneSignalCrashHandlerFactory.createCrashHandler(context, logger)
+        val handler = crashHandlerFactory(context, logger)
         handler.initialize()
         crashHandler = handler
         Logging.info("OneSignal: Crash handler initialized — logs at: ${platformProvider.crashStoragePath}")
@@ -200,11 +215,11 @@ internal class OtelLifecycleManager(
 
     private fun startAnrDetector() {
         if (anrDetector != null) return
-        val detector = createAnrDetector(
+        val detector = anrDetectorFactory(
             platformProvider,
             logger,
-            anrThresholdMs = AnrConstants.DEFAULT_ANR_THRESHOLD_MS,
-            checkIntervalMs = AnrConstants.DEFAULT_CHECK_INTERVAL_MS,
+            AnrConstants.DEFAULT_ANR_THRESHOLD_MS,
+            AnrConstants.DEFAULT_CHECK_INTERVAL_MS,
         )
         detector.start()
         anrDetector = detector
@@ -214,7 +229,7 @@ internal class OtelLifecycleManager(
     @Suppress("TooGenericExceptionCaught")
     private fun startOtelLogging(logLevel: LogLevel) {
         remoteTelemetry?.shutdown()
-        val telemetry = OtelFactory.createRemoteTelemetry(platformProvider)
+        val telemetry = remoteTelemetryFactory(platformProvider)
         remoteTelemetry = telemetry
         val shouldSend: (LogLevel) -> Boolean = { level ->
             logLevel != LogLevel.NONE && level <= logLevel
