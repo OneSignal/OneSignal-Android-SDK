@@ -57,15 +57,17 @@ class OtelConfigTest : FunSpec({
 
     // ===== OtelConfigRemoteOneSignal Tests =====
 
-    test("BASE_URL should point to production endpoint") {
-        OtelConfigRemoteOneSignal.SdkLoggerProviderConfig.BASE_URL shouldBe "https://api.onesignal.com/sdk/otel"
+    test("buildEndpoint should construct correct URL from base and appId") {
+        val endpoint = OtelConfigRemoteOneSignal.buildEndpoint("https://api.onesignal.com", "my-app")
+        endpoint shouldBe "https://api.onesignal.com/sdk/otel/v1/logs?app_id=my-app"
     }
 
     test("HttpRecordBatchExporter should create exporter with correct endpoint") {
         val headers = mapOf("X-Test-Header" to "test-value")
         val appId = "test-app-id"
+        val apiBaseUrl = "https://api.onesignal.com"
 
-        val exporter = OtelConfigRemoteOneSignal.HttpRecordBatchExporter.create(headers, appId)
+        val exporter = OtelConfigRemoteOneSignal.HttpRecordBatchExporter.create(headers, appId, apiBaseUrl)
 
         exporter shouldNotBe null
     }
@@ -89,7 +91,8 @@ class OtelConfigTest : FunSpec({
         val provider = OtelConfigRemoteOneSignal.SdkLoggerProviderConfig.create(
             resource,
             headers,
-            "test-app-id"
+            "test-app-id",
+            "https://api.onesignal.com",
         )
 
         provider shouldNotBe null

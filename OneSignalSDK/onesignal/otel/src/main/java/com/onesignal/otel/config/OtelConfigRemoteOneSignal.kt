@@ -6,6 +6,13 @@ import io.opentelemetry.sdk.logs.export.LogRecordExporter
 import java.time.Duration
 
 internal class OtelConfigRemoteOneSignal {
+    companion object {
+        const val OTEL_PATH = "sdk/otel"
+
+        fun buildEndpoint(apiBaseUrl: String, appId: String): String =
+            "$apiBaseUrl$OTEL_PATH/v1/logs?app_id=$appId"
+    }
+
     object LogRecordExporterConfig {
         private const val EXPORTER_TIMEOUT_SECONDS = 10L
 
@@ -23,30 +30,28 @@ internal class OtelConfigRemoteOneSignal {
     }
 
     object SdkLoggerProviderConfig {
-        const val BASE_URL = "https://api.onesignal.com/sdk/otel"
-        // const val BASE_URL = "https://api.staging.onesignal.com/sdk/otel"
-
         fun create(
             resource: io.opentelemetry.sdk.resources.Resource,
             extraHttpHeaders: Map<String, String>,
             appId: String,
+            apiBaseUrl: String,
         ): SdkLoggerProvider =
             SdkLoggerProvider
                 .builder()
                 .setResource(resource)
                 .addLogRecordProcessor(
                     OtelConfigShared.LogRecordProcessorConfig.batchLogRecordProcessor(
-                        HttpRecordBatchExporter.create(extraHttpHeaders, appId)
+                        HttpRecordBatchExporter.create(extraHttpHeaders, appId, apiBaseUrl)
                     )
                 ).setLogLimits(OtelConfigShared.LogLimitsConfig::logLimits)
                 .build()
     }
 
     object HttpRecordBatchExporter {
-        fun create(extraHttpHeaders: Map<String, String>, appId: String) =
+        fun create(extraHttpHeaders: Map<String, String>, appId: String, apiBaseUrl: String) =
             LogRecordExporterConfig.otlpHttpLogRecordExporter(
                 extraHttpHeaders,
-                "${SdkLoggerProviderConfig.BASE_URL}/v1/logs?app_id=$appId"
+                buildEndpoint(apiBaseUrl, appId)
             )
     }
 }

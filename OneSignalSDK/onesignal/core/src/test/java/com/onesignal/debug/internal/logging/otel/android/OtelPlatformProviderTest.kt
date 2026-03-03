@@ -408,7 +408,7 @@ class OtelPlatformProviderTest : FunSpec({
 
     // ===== processUptime Tests =====
 
-    test("processUptime returns uptime in seconds") {
+    test("processUptime returns uptime in milliseconds") {
         // Given
         val provider = createAndroidOtelPlatformProvider(appContext!!)
 
@@ -416,7 +416,7 @@ class OtelPlatformProviderTest : FunSpec({
         val result = provider.processUptime
 
         // Then
-        (result > 0.0) shouldBe true
+        (result >= 0) shouldBe true
         (result < 1000000.0) shouldBe true // Reasonable upper bound
     }
 
@@ -496,9 +496,82 @@ class OtelPlatformProviderTest : FunSpec({
         result shouldBe 5_000L
     }
 
+    // ===== isRemoteLoggingEnabled Tests =====
+    // Derived from logLevel presence: empty logging_config → disabled, has log_level → enabled
+
+    test("isRemoteLoggingEnabled returns false when no config exists") {
+        val provider = createAndroidOtelPlatformProvider(appContext!!)
+        provider.isRemoteLoggingEnabled shouldBe false
+    }
+
+    test("isRemoteLoggingEnabled returns true when config has logLevel ERROR") {
+        val remoteLoggingParams = JSONObject().apply {
+            put("logLevel", "ERROR")
+        }
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply {
+            put(configModel)
+        }
+        sharedPreferences!!.edit()
+            .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
+            .commit()
+
+        val provider = createAndroidOtelPlatformProvider(appContext!!)
+        provider.isRemoteLoggingEnabled shouldBe true
+    }
+
+    test("isRemoteLoggingEnabled returns false when logging_config is empty (no logLevel)") {
+        val remoteLoggingParams = JSONObject()
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply {
+            put(configModel)
+        }
+        sharedPreferences!!.edit()
+            .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
+            .commit()
+
+        val provider = createAndroidOtelPlatformProvider(appContext!!)
+        provider.isRemoteLoggingEnabled shouldBe false
+    }
+
+    test("isRemoteLoggingEnabled returns false when logLevel is NONE") {
+        val remoteLoggingParams = JSONObject().apply {
+            put("logLevel", "NONE")
+        }
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply {
+            put(configModel)
+        }
+        sharedPreferences!!.edit()
+            .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
+            .commit()
+
+        val provider = createAndroidOtelPlatformProvider(appContext!!)
+        provider.isRemoteLoggingEnabled shouldBe false
+    }
+
+    test("isRemoteLoggingEnabled returns false when exception occurs") {
+        val mockContext = mockk<Context>(relaxed = true)
+        every { mockContext.getSharedPreferences(any(), any()) } throws RuntimeException("Test exception")
+        val config = OtelPlatformProviderConfig(
+            crashStoragePath = "/test/path",
+            appPackageId = "com.test",
+            appVersion = "1.0",
+            context = mockContext
+        )
+        val provider = OtelPlatformProvider(config)
+        provider.isRemoteLoggingEnabled shouldBe false
+    }
+
     // ===== remoteLogLevel Tests =====
 
-    test("remoteLogLevel returns ERROR when configLevel is null") {
+    test("remoteLogLevel returns null when no config exists (disabled)") {
         // Given
         val provider = createAndroidOtelPlatformProvider(appContext!!)
 
@@ -506,7 +579,29 @@ class OtelPlatformProviderTest : FunSpec({
         val result = provider.remoteLogLevel
 
         // Then
-        result shouldBe "ERROR"
+        result shouldBe null
+    }
+
+    test("remoteLogLevel returns null when logging_config is empty (disabled)") {
+        // Given
+        val remoteLoggingParams = JSONObject()
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply {
+            put(configModel)
+        }
+        sharedPreferences!!.edit()
+            .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
+            .commit()
+
+        val provider = createAndroidOtelPlatformProvider(appContext!!)
+
+        // When
+        val result = provider.remoteLogLevel
+
+        // Then
+        result shouldBe null
     }
 
     test("remoteLogLevel returns configLevel name when available") {
@@ -533,6 +628,30 @@ class OtelPlatformProviderTest : FunSpec({
         result shouldBe "WARN"
     }
 
+    test("remoteLogLevel returns ERROR when configLevel is ERROR") {
+        // Given
+        val remoteLoggingParams = JSONObject().apply {
+            put("logLevel", "ERROR")
+        }
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply {
+            put(configModel)
+        }
+        sharedPreferences!!.edit()
+            .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
+            .commit()
+
+        val provider = createAndroidOtelPlatformProvider(appContext!!)
+
+        // When
+        val result = provider.remoteLogLevel
+
+        // Then
+        result shouldBe "ERROR"
+    }
+
     test("remoteLogLevel returns NONE when configLevel is NONE") {
         // Given
         val remoteLoggingParams = JSONObject().apply {
@@ -557,7 +676,7 @@ class OtelPlatformProviderTest : FunSpec({
         result shouldBe "NONE"
     }
 
-    test("remoteLogLevel returns ERROR when exception occurs") {
+    test("remoteLogLevel returns null when exception occurs") {
         // Given
         val mockContext = mockk<Context>(relaxed = true)
         every { mockContext.getSharedPreferences(any(), any()) } throws RuntimeException("Test exception")
@@ -573,7 +692,7 @@ class OtelPlatformProviderTest : FunSpec({
         val result = provider.remoteLogLevel
 
         // Then
-        result shouldBe "ERROR"
+        result shouldBe null
     }
 
     // ===== appIdForHeaders Tests =====
@@ -608,6 +727,14 @@ class OtelPlatformProviderTest : FunSpec({
 
         // Then - even with error appId, it should return something (not empty)
         result shouldNotBe null
+    }
+
+    // ===== apiBaseUrl Tests =====
+
+    test("apiBaseUrl returns the core module base URL") {
+        val provider = createAndroidOtelPlatformProvider(appContext!!)
+
+        provider.apiBaseUrl shouldBe com.onesignal.core.internal.http.OneSignalService.ONESIGNAL_API_BASE_URL
     }
 
     // ===== getInstallId Tests =====
@@ -649,6 +776,104 @@ class OtelPlatformProviderTest : FunSpec({
         provider.sdkBase shouldBe "android"
         provider.osName shouldBe "Android"
     }
+
+    // ===== Fresh install / all-missing scenario =====
+
+    test("fresh install: all lazy properties return safe defaults without crashing") {
+        val provider = createAndroidOtelPlatformProvider(appContext!!)
+
+        provider.appId shouldContain "e1100000-0000-4000-a000-"
+        provider.onesignalId shouldBe null
+        provider.pushSubscriptionId shouldBe null
+        provider.isRemoteLoggingEnabled shouldBe false
+        provider.remoteLogLevel shouldBe null
+        provider.appIdForHeaders shouldNotBe null
+        provider.sdkBase shouldBe "android"
+        provider.osName shouldBe "Android"
+        provider.crashStoragePath shouldContain "onesignal"
+    }
+
+    test("lazy properties cache the initial value and ignore later SharedPreferences changes") {
+        val provider = createAndroidOtelPlatformProvider(appContext!!)
+
+        provider.isRemoteLoggingEnabled shouldBe false
+        provider.remoteLogLevel shouldBe null
+
+        val remoteLoggingParams = JSONObject().apply { put("logLevel", "ERROR") }
+        val configModel = JSONObject().apply {
+            put(ConfigModel::remoteLoggingParams.name, remoteLoggingParams)
+        }
+        val configArray = JSONArray().apply { put(configModel) }
+        sharedPreferences!!.edit()
+            .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
+            .commit()
+
+        provider.isRemoteLoggingEnabled shouldBe false
+        provider.remoteLogLevel shouldBe null
+    }
+
+    test("getIsInForeground callback throws — appState returns unknown") {
+        val config = OtelPlatformProviderConfig(
+            crashStoragePath = "/test/path",
+            appPackageId = "com.test",
+            appVersion = "1.0",
+            context = appContext,
+            getIsInForeground = { throw RuntimeException("callback boom") }
+        )
+        val provider = OtelPlatformProvider(config)
+        provider.appState shouldBe "unknown"
+    }
+
+    test("getIsInForeground returns null — falls back to ActivityManager") {
+        val config = OtelPlatformProviderConfig(
+            crashStoragePath = "/test/path",
+            appPackageId = "com.test",
+            appVersion = "1.0",
+            context = appContext,
+            getIsInForeground = { null }
+        )
+        val provider = OtelPlatformProvider(config)
+        provider.appState shouldBeOneOf listOf("foreground", "background", "unknown")
+    }
+
+    test("null context and null callback — all provider properties return safe defaults") {
+        val config = OtelPlatformProviderConfig(
+            crashStoragePath = "/test/path",
+            appPackageId = "com.test",
+            appVersion = "1.0",
+            context = null,
+            getIsInForeground = null
+        )
+        val provider = OtelPlatformProvider(config)
+
+        provider.appState shouldBe "unknown"
+        provider.appPackageId shouldBe "com.test"
+        provider.appVersion shouldBe "1.0"
+        provider.crashStoragePath shouldBe "/test/path"
+        provider.isRemoteLoggingEnabled shouldBe false
+        provider.remoteLogLevel shouldBe null
+    }
+
+    test("corrupted SharedPreferences JSON — isRemoteLoggingEnabled returns false") {
+        sharedPreferences!!.edit()
+            .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, "not valid json {{{")
+            .commit()
+
+        val provider = createAndroidOtelPlatformProvider(appContext!!)
+        provider.isRemoteLoggingEnabled shouldBe false
+        provider.remoteLogLevel shouldBe null
+    }
+
+    test("corrupted SharedPreferences JSON — appId returns error UUID") {
+        sharedPreferences!!.edit()
+            .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, "not valid json {{{")
+            .commit()
+
+        val provider = createAndroidOtelPlatformProvider(appContext!!)
+        provider.appId shouldContain "e1100000-0000-4000-a000-"
+    }
+
+    // ===== Factory Function Tests =====
 
     test("createAndroidOtelPlatformProvider handles null appVersion gracefully") {
         // Given

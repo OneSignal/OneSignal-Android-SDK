@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicLong
  * It creates its own crash reporter to save ANR reports.
  */
 internal class OtelAnrDetector(
-    private val openTelemetryCrash: IOtelOpenTelemetryCrash,
+    openTelemetryCrash: IOtelOpenTelemetryCrash,
     private val logger: IOtelLogger,
     private val anrThresholdMs: Long = AnrConstants.DEFAULT_ANR_THRESHOLD_MS,
     private val checkIntervalMs: Long = AnrConstants.DEFAULT_CHECK_INTERVAL_MS,
@@ -58,6 +58,7 @@ internal class OtelAnrDetector(
         logger.info("$TAG: ✅ ANR detection started successfully")
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun setupRunnables() {
         // Runnable that runs on the main thread to indicate it's responsive
         mainThreadRunnable = Runnable {
@@ -73,17 +74,16 @@ internal class OtelAnrDetector(
                     // Thread was interrupted, stop monitoring
                     logger.info("$TAG: Watchdog thread interrupted, stopping ANR detection")
                     break
-                } catch (e: RuntimeException) {
-                    logger.error("$TAG: Error in ANR watchdog: ${e.message} - ${e.javaClass.simpleName}: ${e.stackTraceToString()}")
-                    // Continue monitoring even if there's an error
+                } catch (t: Throwable) {
+                    logger.error("$TAG: Error in ANR watchdog: ${t.message} - ${t.javaClass.simpleName}")
                 }
             }
         }
     }
 
     private fun checkForAnr() {
-        // Post a message to the main thread
-        mainHandler.post(mainThreadRunnable!!)
+        val runnable = mainThreadRunnable ?: return
+        mainHandler.post(runnable)
 
         // Wait for the check interval
         Thread.sleep(checkIntervalMs)
@@ -146,6 +146,7 @@ internal class OtelAnrDetector(
         logger.info("$TAG: ✅ ANR detection stopped")
     }
 
+    @Suppress("TooGenericExceptionCaught")
     private fun reportAnr(unresponsiveDurationMs: Long) {
         try {
             logger.info("$TAG: Checking if ANR is OneSignal-related (unresponsive for ${unresponsiveDurationMs}ms)")
@@ -176,8 +177,8 @@ internal class OtelAnrDetector(
             }
 
             logger.info("$TAG: ✅ ANR report saved successfully")
-        } catch (e: RuntimeException) {
-            logger.error("$TAG: Failed to report ANR: ${e.message} - ${e.javaClass.simpleName}: ${e.stackTraceToString()}")
+        } catch (t: Throwable) {
+            logger.error("$TAG: Failed to report ANR: ${t.message} - ${t.javaClass.simpleName}")
         }
     }
 

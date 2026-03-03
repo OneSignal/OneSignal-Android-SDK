@@ -10,4 +10,10 @@ interface IOtelCrashHandler {
      * before any other initialization that might crash.
      */
     fun initialize()
+
+    /**
+     * Unregisters this crash handler, restoring the previous default handler.
+     * Safe to call even if [initialize] was never called (no-op in that case).
+     */
+    fun unregister()
 }

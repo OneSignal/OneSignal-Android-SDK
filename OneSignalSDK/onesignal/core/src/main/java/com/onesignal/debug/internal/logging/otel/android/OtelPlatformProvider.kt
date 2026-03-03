@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Build
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.OneSignalWrapper
+import com.onesignal.core.internal.http.OneSignalService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.otel.IOtelPlatformProvider
 
@@ -100,54 +101,44 @@ internal class OtelPlatformProvider(
         }
 
     // https://opentelemetry.io/docs/specs/semconv/system/process-metrics/#metric-processuptime
-    override val processUptime: Double
-        get() = android.os.SystemClock.uptimeMillis() / 1_000.0 // Use SystemClock directly
+    override val processUptime: Long
+        get() = android.os.SystemClock.uptimeMillis() - android.os.Process.getStartUptimeMillis()
 
     // https://opentelemetry.io/docs/specs/semconv/general/attributes/#general-thread-attributes
     override val currentThreadName: String
         get() = Thread.currentThread().name
 
-    // Crash-specific configuration
-    // Store crashStoragePath privately since we need a custom getter that logs
-    private val _crashStoragePath: String = config.crashStoragePath
-
-    override val crashStoragePath: String
-        get() {
-            // Log the path on first access so developers know where to find crash logs
-            Logging.info("OneSignal: Crash logs stored at: $_crashStoragePath")
-            return _crashStoragePath
-        }
+    override val crashStoragePath: String by lazy {
+        val path = config.crashStoragePath
+        Logging.info("OneSignal: Crash logs stored at: $path")
+        path
+    }
 
     override val minFileAgeForReadMillis: Long = 5_000
 
-    // Remote logging configuration
-    /**
-     * The minimum log level to send remotely as a string.
-     * - If remote config log level is populated and valid: use that level
-     * - If remote config is null or unavailable: default to "ERROR" (always log errors)
-     * - If remote config is explicitly NONE: return "NONE" (no logs including errors)
-     */
+    // Cached from SharedPreferences on first access and held for the session.
+    // Mid-session config updates are handled by OtelLifecycleManager reading
+    // from ConfigModel directly, not from these cached values.
+    override val isRemoteLoggingEnabled: Boolean by lazy {
+        idResolver.resolveRemoteLoggingEnabled()
+    }
+
+    // Cached from SharedPreferences on first access and held for the session.
+    // Mid-session config updates are handled by OtelLifecycleManager reading
+    // from ConfigModel directly, not from these cached values.
     @Suppress("TooGenericExceptionCaught", "SwallowedException")
     override val remoteLogLevel: String? by lazy {
         try {
-            val configLevel = idResolver.resolveRemoteLogLevel()
-            when {
-                // Remote config is populated and working well - use whatever is sent from there
-                configLevel != null && configLevel != com.onesignal.debug.LogLevel.NONE -> configLevel.name
-                // Explicitly NONE means no logging (including errors)
-                configLevel == com.onesignal.debug.LogLevel.NONE -> "NONE"
-                // Remote config not available - default to ERROR (always log errors)
-                else -> "ERROR"
-            }
+            idResolver.resolveRemoteLogLevel()?.name
         } catch (e: Exception) {
-            // If there's an error accessing config, default to ERROR (always log errors)
-            // Exception is intentionally swallowed to avoid recursion in logging
-            "ERROR"
+            null
         }
     }
 
     override val appIdForHeaders: String
         get() = appId ?: ""
+
+    override val apiBaseUrl: String = OneSignalService.ONESIGNAL_API_BASE_URL
 }
 
 /**

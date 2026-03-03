@@ -23,6 +23,13 @@ interface IOtelOpenTelemetry {
      * @return A CompletableResultCode indicating the flush operation result
      */
     suspend fun forceFlush(): CompletableResultCode
+
+    /**
+     * Shuts down the underlying OpenTelemetry SDK, flushing pending data
+     * and releasing resources (exporters, logger providers, etc.).
+     * After this call the instance must not be reused.
+     */
+    fun shutdown()
 }
 
 /**

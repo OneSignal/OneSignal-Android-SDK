@@ -55,6 +55,8 @@ internal class OneSignalImp(
     // Save the exception pointing to the caller that triggered init, not the async worker thread.
     private var initFailureException: Exception? = null
 
+    private var otelManager: OtelLifecycleManager? = null
+
     override val sdkVersion: String = OneSignalUtils.sdkVersion
 
     override val isInitialized: Boolean
@@ -207,20 +209,7 @@ internal class OneSignalImp(
     }
 
     private fun initEssentials(context: Context) {
-        // Create OneSignalCrashLogInit instance once - it manages platform provider lifecycle
-        // Platform provider is created lazily and reused for both crash handler and logging
-        val crashLogInit = OneSignalCrashLogInit(context)
-
-        // Crash handler needs to be one of the first things we setup,
-        // otherwise we'll not report some crashes, resulting in a false sense
-        // of stability.
-        // Initialize crash handler early, before any other services that might crash.
-        // This is decoupled from getService to ensure fast initialization.
-        crashLogInit.initializeCrashHandler()
-
-        // Initialize Otel logging integration - reuses the same platform provider created in initializeCrashHandler
-        // No service dependencies required, reads directly from SharedPreferences
-        crashLogInit.initializeOtelLogging()
+        otelManager = OtelLifecycleManager(context).also { it.initializeFromCachedConfig() }
 
         PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
 
@@ -305,6 +294,11 @@ internal class OneSignalImp(
         initEssentials(context)
 
         val startupService = bootstrapServices()
+
+        // Now that the IoC container is ready, subscribe the Otel lifecycle
+        // manager to config store events so it reacts to fresh remote config.
+        otelManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
+
         val result = resolveAppId(appId, configModel, preferencesService)
         if (result.failed) {
             val message = "suspendInitInternal: no appId provided or found in local storage. Please pass a valid appId to initWithContext()."
@@ -453,7 +447,7 @@ internal class OneSignalImp(
     private fun <T> blockingGet(getter: () -> T): T {
         try {
             if (AndroidUtils.isRunningOnMainThread()) {
-                Logging.warn("This is called on main thread. This is not recommended.")
+                Logging.debug("This is called on main thread. This is not recommended.")
             }
         } catch (e: RuntimeException) {
             // In test environments, AndroidUtils.isRunningOnMainThread() may fail

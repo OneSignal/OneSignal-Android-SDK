@@ -40,12 +40,13 @@ class OtelAnrDetectorTest : FunSpec({
         every { mockPlatformProvider.onesignalId } returns null
         every { mockPlatformProvider.pushSubscriptionId } returns null
         every { mockPlatformProvider.appState } returns "foreground"
-        every { mockPlatformProvider.processUptime } returns 100.0
+        every { mockPlatformProvider.processUptime } returns 100L
         every { mockPlatformProvider.currentThreadName } returns "main"
         every { mockPlatformProvider.crashStoragePath } returns "/test/path"
         every { mockPlatformProvider.minFileAgeForReadMillis } returns 5000L
         every { mockPlatformProvider.remoteLogLevel } returns "ERROR"
         every { mockPlatformProvider.appIdForHeaders } returns "test-app-id"
+        every { mockPlatformProvider.apiBaseUrl } returns "https://api.onesignal.com"
         coEvery { mockPlatformProvider.getInstallId() } returns "test-install-id"
     }
 
