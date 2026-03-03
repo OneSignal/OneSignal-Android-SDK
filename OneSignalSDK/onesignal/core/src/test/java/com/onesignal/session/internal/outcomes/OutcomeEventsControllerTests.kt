@@ -504,6 +504,176 @@ class OutcomeEventsControllerTests : FunSpec({
         }
     }
 
+    test("send session end outcome with unattributed influence") {
+        // Given
+        val now = 111L
+        val mockSessionService = mockk<ISessionService>()
+        every { mockSessionService.subscribe(any()) } just Runs
+
+        val mockInfluenceManager = mockk<IInfluenceManager>()
+        every { mockInfluenceManager.influences } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.UNATTRIBUTED, null))
+
+        val subscriptionModel = createTestSubscriptionModel()
+
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
+
+        val mockOutcomeEventsRepository = spyk<IOutcomeEventsRepository>()
+        val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
+        val mockOutcomeEventsBackend = spyk<IOutcomeEventsBackendService>()
+
+        val outcomeEventsController =
+            OutcomeEventsController(
+                mockSessionService,
+                mockInfluenceManager,
+                mockOutcomeEventsRepository,
+                mockOutcomeEventsPreferences,
+                mockOutcomeEventsBackend,
+                MockHelper.configModelStore(),
+                MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
+                mockSubscriptionManager,
+                MockHelper.deviceService(),
+                MockHelper.time(now),
+            )
+
+        // When
+        val evnt = outcomeEventsController.sendSessionEndOutcomeEvent(120)
+
+        // Then
+        evnt shouldNotBe null
+        evnt!!.name shouldBe "os__session_duration"
+        evnt.sessionTime shouldBe 120
+        evnt.notificationIds shouldBe null
+        evnt.session shouldBe InfluenceType.UNATTRIBUTED
+
+        coVerify(exactly = 1) {
+            mockOutcomeEventsBackend.sendOutcomeEvent(
+                MockHelper.DEFAULT_APP_ID,
+                "onesignalId",
+                "subscriptionId",
+                "AndroidPush",
+                null,
+                evnt,
+            )
+        }
+    }
+
+    test("send session end outcome with attributed direct influence") {
+        // Given
+        val now = 111L
+        val notificationIds = "[\"notif-1\",\"notif-2\"]"
+        val mockSessionService = mockk<ISessionService>()
+        every { mockSessionService.subscribe(any()) } just Runs
+
+        val mockInfluenceManager = mockk<IInfluenceManager>()
+        every {
+            mockInfluenceManager.influences
+        } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.DIRECT, JSONArray(notificationIds)))
+
+        val subscriptionModel = createTestSubscriptionModel()
+
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
+
+        val mockOutcomeEventsRepository = spyk<IOutcomeEventsRepository>()
+        val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
+        val mockOutcomeEventsBackend = spyk<IOutcomeEventsBackendService>()
+
+        val outcomeEventsController =
+            OutcomeEventsController(
+                mockSessionService,
+                mockInfluenceManager,
+                mockOutcomeEventsRepository,
+                mockOutcomeEventsPreferences,
+                mockOutcomeEventsBackend,
+                MockHelper.configModelStore(),
+                MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
+                mockSubscriptionManager,
+                MockHelper.deviceService(),
+                MockHelper.time(now),
+            )
+
+        // When
+        val evnt = outcomeEventsController.sendSessionEndOutcomeEvent(60)
+
+        // Then
+        evnt shouldNotBe null
+        evnt!!.name shouldBe "os__session_duration"
+        evnt.sessionTime shouldBe 60
+        evnt.notificationIds shouldNotBe null
+        evnt.notificationIds!!.toString() shouldBe notificationIds
+        evnt.session shouldBe InfluenceType.DIRECT
+
+        coVerify(exactly = 1) {
+            mockOutcomeEventsBackend.sendOutcomeEvent(
+                MockHelper.DEFAULT_APP_ID,
+                "onesignalId",
+                "subscriptionId",
+                "AndroidPush",
+                true,
+                evnt,
+            )
+        }
+    }
+
+    test("send session end outcome with attributed indirect influence") {
+        // Given
+        val now = 111L
+        val notificationIds = "[\"notif-1\",\"notif-2\",\"notif-3\"]"
+        val mockSessionService = mockk<ISessionService>()
+        every { mockSessionService.subscribe(any()) } just Runs
+
+        val mockInfluenceManager = mockk<IInfluenceManager>()
+        every {
+            mockInfluenceManager.influences
+        } returns listOf(Influence(InfluenceChannel.NOTIFICATION, InfluenceType.INDIRECT, JSONArray(notificationIds)))
+
+        val subscriptionModel = createTestSubscriptionModel()
+
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        every { mockSubscriptionManager.subscriptions.push } returns PushSubscription(subscriptionModel)
+
+        val mockOutcomeEventsRepository = spyk<IOutcomeEventsRepository>()
+        val mockOutcomeEventsPreferences = spyk<IOutcomeEventsPreferences>()
+        val mockOutcomeEventsBackend = spyk<IOutcomeEventsBackendService>()
+
+        val outcomeEventsController =
+            OutcomeEventsController(
+                mockSessionService,
+                mockInfluenceManager,
+                mockOutcomeEventsRepository,
+                mockOutcomeEventsPreferences,
+                mockOutcomeEventsBackend,
+                MockHelper.configModelStore(),
+                MockHelper.identityModelStore { it.onesignalId = "onesignalId" },
+                mockSubscriptionManager,
+                MockHelper.deviceService(),
+                MockHelper.time(now),
+            )
+
+        // When
+        val evnt = outcomeEventsController.sendSessionEndOutcomeEvent(90)
+
+        // Then
+        evnt shouldNotBe null
+        evnt!!.name shouldBe "os__session_duration"
+        evnt.sessionTime shouldBe 90
+        evnt.notificationIds shouldNotBe null
+        evnt.notificationIds!!.toString() shouldBe notificationIds
+        evnt.session shouldBe InfluenceType.INDIRECT
+
+        coVerify(exactly = 1) {
+            mockOutcomeEventsBackend.sendOutcomeEvent(
+                MockHelper.DEFAULT_APP_ID,
+                "onesignalId",
+                "subscriptionId",
+                "AndroidPush",
+                false,
+                evnt,
+            )
+        }
+    }
+
     test("send outcome in offline mode") {
         // Given
         val now = 111111L
