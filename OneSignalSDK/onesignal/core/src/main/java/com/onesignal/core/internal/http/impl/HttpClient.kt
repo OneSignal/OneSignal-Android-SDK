@@ -29,9 +29,6 @@ import java.net.UnknownHostException
 import java.util.Scanner
 import javax.net.ssl.HttpsURLConnection
 
-internal const val HTTP_SDK_VERSION_HEADER_KEY = "SDK-Version"
-internal val HTTP_SDK_VERSION_HEADER_VALUE = "onesignal/android/${OneSignalUtils.sdkVersion}"
-
 internal class HttpClient(
     private val _connectionFactory: IHttpConnectionFactory,
     private val _prefs: IPreferencesService,
@@ -96,7 +93,7 @@ internal class HttpClient(
                 return@withTimeout makeRequestIODispatcher(url, method, jsonBody, timeout, headers)
             }
         } catch (e: TimeoutCancellationException) {
-            Logging.info("HttpClient: Request timed out: $url", e)
+            Logging.error("HttpClient: Request timed out: $url", e)
             return HttpResponse(0, null, e)
         } catch (e: Throwable) {
             return HttpResponse(0, null, e)
@@ -138,7 +135,7 @@ internal class HttpClient(
                     con.useCaches = false
                     con.connectTimeout = timeout
                     con.readTimeout = timeout
-                    con.setRequestProperty(HTTP_SDK_VERSION_HEADER_KEY, HTTP_SDK_VERSION_HEADER_VALUE)
+                    con.setRequestProperty("SDK-Version", "onesignal/android/" + OneSignalUtils.sdkVersion)
 
                     if (OneSignalWrapper.sdkType != null && OneSignalWrapper.sdkVersion != null) {
                         con.setRequestProperty("SDK-Wrapper", "onesignal/${OneSignalWrapper.sdkType}/${OneSignalWrapper.sdkVersion}")

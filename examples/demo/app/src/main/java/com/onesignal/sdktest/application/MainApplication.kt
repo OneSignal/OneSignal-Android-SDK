@@ -72,9 +72,8 @@ class MainApplication : MultiDexApplication() {
         OneSignal.consentGiven = SharedPreferenceUtil.getUserPrivacyConsent(this)
 
         // Initialize OneSignal on main thread (required)
-        // Crash handler + ANR detector are initialized early inside initWithContext
         OneSignal.initWithContext(this, appId)
-        LogManager.i(TAG, "OneSignal init completed (crash handler, ANR detector, and logging active)")
+        LogManager.i(TAG, "OneSignal init completed")
 
         // Set up all OneSignal listeners
         setupOneSignalListeners()

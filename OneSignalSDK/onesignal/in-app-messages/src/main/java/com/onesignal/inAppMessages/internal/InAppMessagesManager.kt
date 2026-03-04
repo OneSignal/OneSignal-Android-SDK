@@ -446,7 +446,7 @@ internal class InAppMessagesManager(
             Logging.debug("InAppMessagesManager.attemptToShowInAppMessage: $messageDisplayQueue")
             // If there are IAMs in the queue and nothing showing, show first in the queue
             if (paused) {
-                Logging.debug(
+                Logging.warn(
                     "InAppMessagesManager.attemptToShowInAppMessage: In app messaging is currently paused, in app messages will not be shown!",
                 )
             } else if (messageDisplayQueue.isEmpty()) {

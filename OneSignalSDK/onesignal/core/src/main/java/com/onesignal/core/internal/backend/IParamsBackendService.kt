@@ -2,7 +2,7 @@ package com.onesignal.core.internal.backend
 
 import org.json.JSONArray
 
-internal interface IParamsBackendService {
+interface IParamsBackendService {
     /**
      * Retrieve the configuration parameters for the [appId] and optional [subscriptionId].
      *
@@ -20,8 +20,7 @@ internal interface IParamsBackendService {
     ): ParamsObject
 }
 
-@Suppress("LongParameterList")
-internal class ParamsObject(
+class ParamsObject(
     var googleProjectNumber: String? = null,
     var enterprise: Boolean? = null,
     var useIdentityVerification: Boolean? = null,
@@ -37,10 +36,9 @@ internal class ParamsObject(
     var opRepoExecutionInterval: Long? = null,
     var influenceParams: InfluenceParamsObject,
     var fcmParams: FCMParamsObject,
-    val remoteLoggingParams: RemoteLoggingParamsObject,
 )
 
-internal class InfluenceParamsObject(
+class InfluenceParamsObject(
     val indirectNotificationAttributionWindow: Int? = null,
     val notificationLimit: Int? = null,
     val indirectIAMAttributionWindow: Int? = null,
@@ -50,13 +48,8 @@ internal class InfluenceParamsObject(
     val isUnattributedEnabled: Boolean? = null,
 )
 
-internal class FCMParamsObject(
+class FCMParamsObject(
     val projectId: String? = null,
     val appId: String? = null,
     val apiKey: String? = null,
-)
-
-internal class RemoteLoggingParamsObject(
-    val logLevel: com.onesignal.debug.LogLevel? = null,
-    val isEnabled: Boolean = logLevel != null,
 )

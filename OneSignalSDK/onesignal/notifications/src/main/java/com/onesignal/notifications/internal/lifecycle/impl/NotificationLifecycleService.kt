@@ -149,7 +149,7 @@ internal class NotificationLifecycleService(
                         deviceType,
                     )
                 } catch (ex: BackendException) {
-                    Logging.info("Notification opened confirmation failed with statusCode: ${ex.statusCode} response: ${ex.response}")
+                    Logging.error("Notification opened confirmation failed with statusCode: ${ex.statusCode} response: ${ex.response}")
                 }
             }
         }
@@ -266,17 +266,20 @@ internal class NotificationLifecycleService(
 
             val intent = intentGenerator.getIntentVisible()
             if (intent != null) {
-                Logging.debug("SDK running startActivity with Intent: $intent")
+                Logging.info("SDK running startActivity with Intent: $intent")
                 activity.startActivity(intent)
             } else {
-                Logging.debug("SDK not showing an Activity automatically due to it's settings.")
+                Logging.info("SDK not showing an Activity automatically due to it's settings.")
             }
         } catch (e: JSONException) {
-            Logging.error("Could not parse JSON to open notification activity.", e)
+            Logging.error("Could not parse JSON to open notification activity.")
+            e.printStackTrace()
         } catch (e: ActivityNotFoundException) {
-            Logging.warn("No activity found to handle notification open intent.", e)
+            Logging.error("No activity found to handle notification open intent.")
+            e.printStackTrace()
         } catch (e: Exception) {
-            Logging.error("Could not open notification activity.", e)
+            Logging.error("Could not open notification activity.")
+            e.printStackTrace()
         }
     }
 }

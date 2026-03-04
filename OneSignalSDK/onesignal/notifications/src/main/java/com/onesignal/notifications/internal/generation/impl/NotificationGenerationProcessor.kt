@@ -85,9 +85,9 @@ internal class NotificationGenerationProcessor(
                 }.join()
             }
         } catch (to: TimeoutCancellationException) {
-            Logging.info("remoteNotificationReceived timed out, continuing with wantsToDisplay=$wantsToDisplay.", to)
+            Logging.error("remoteNotificationReceived timed out, continuing with wantsToDisplay=$wantsToDisplay.", to)
         } catch (t: Throwable) {
-            Logging.info("remoteNotificationReceived threw an exception. Displaying normal OneSignal notification.", t)
+            Logging.error("remoteNotificationReceived threw an exception. Displaying normal OneSignal notification.", t)
         }
 
         var shouldDisplay =
@@ -120,7 +120,7 @@ internal class NotificationGenerationProcessor(
                 } catch (to: TimeoutCancellationException) {
                     Logging.info("notificationWillShowInForegroundHandler timed out, continuing with wantsToDisplay=$wantsToDisplay.", to)
                 } catch (t: Throwable) {
-                    Logging.info(
+                    Logging.error(
                         "notificationWillShowInForegroundHandler threw an exception. Displaying normal OneSignal notification.",
                         t,
                     )

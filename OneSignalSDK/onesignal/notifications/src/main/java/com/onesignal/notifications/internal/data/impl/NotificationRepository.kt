@@ -429,7 +429,7 @@ internal class NotificationRepository(
                     }
                 }
             } catch (t: Throwable) {
-                Logging.warn("Error clearing oldest notifications over limit! ", t)
+                Logging.error("Error clearing oldest notifications over limit! ", t)
             }
         }
     }
