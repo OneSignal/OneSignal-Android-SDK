@@ -49,5 +49,19 @@ enum class LogLevel {
         fun fromInt(value: Int): LogLevel {
             return values()[value]
         }
+
+        /**
+         * Parses a [LogLevel] from its string name (case-insensitive).
+         * Returns `null` if the string is null or not a valid level name.
+         */
+        @JvmStatic
+        fun fromString(value: String?): LogLevel? {
+            if (value == null) return null
+            return try {
+                valueOf(value.uppercase())
+            } catch (_: IllegalArgumentException) {
+                null
+            }
+        }
     }
 }

@@ -38,13 +38,13 @@ internal class PushRegistratorADM(
 
             result =
                 if (registrationId != null) {
-                    Logging.error("ADM registered with ID:$registrationId")
+                    Logging.debug("ADM registered with ID:$registrationId")
                     IPushRegistrator.RegisterResult(
                         registrationId,
                         SubscriptionStatus.SUBSCRIBED,
                     )
                 } else {
-                    Logging.error("com.onesignal.ADMMessageHandler timed out, please check that your have the receiver, service, and your package name matches(NOTE: Case Sensitive) per the OneSignal instructions.")
+                    Logging.info("com.onesignal.ADMMessageHandler timed out, please check that your have the receiver, service, and your package name matches(NOTE: Case Sensitive) per the OneSignal instructions.")
                     IPushRegistrator.RegisterResult(
                         null,
                         SubscriptionStatus.ERROR,

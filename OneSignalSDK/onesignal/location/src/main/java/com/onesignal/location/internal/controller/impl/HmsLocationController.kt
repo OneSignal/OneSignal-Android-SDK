@@ -50,7 +50,7 @@ internal class HmsLocationController(
                         hmsFusedLocationClient =
                             com.huawei.hms.location.LocationServices.getFusedLocationProviderClient(_applicationService.appContext)
                     } catch (e: Exception) {
-                        Logging.error("Huawei LocationServices getFusedLocationProviderClient failed! $e")
+                        Logging.warn("Huawei LocationServices getFusedLocationProviderClient failed! $e")
                         wasSuccessful = false
                         return@withLock
                     }
@@ -75,7 +75,7 @@ internal class HmsLocationController(
                             },
                         )
                         .addOnFailureListener { e ->
-                            Logging.error("Huawei LocationServices getLastLocation failed!", e)
+                            Logging.warn("Huawei LocationServices getLastLocation failed!", e)
                             waiter.wake(false)
                         }
                     wasSuccessful = waiter.waitForWake()
@@ -133,7 +133,7 @@ internal class HmsLocationController(
                     },
                 )
                 .addOnFailureListener { e ->
-                    Logging.error("Huawei LocationServices getLastLocation failed!", e)
+                    Logging.warn("Huawei LocationServices getLastLocation failed!", e)
                     waiter.wake()
                 }
             waiter.waitForWake()

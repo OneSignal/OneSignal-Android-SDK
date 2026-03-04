@@ -26,7 +26,7 @@ object OSWorkManagerHelper {
             This aims to catch the IllegalStateException "WorkManager is not initialized properly..." -
             https://androidx.tech/artifacts/work/work-runtime/2.8.1-source/androidx/work/impl/WorkManagerImpl.java.html
              */
-            Logging.error("OSWorkManagerHelper.getInstance failed, attempting to initialize: ", e)
+            Logging.warn("OSWorkManagerHelper.getInstance failed, attempting to initialize: ", e)
             initializeWorkManager(context)
             WorkManager.getInstance(context)
         }
@@ -51,7 +51,7 @@ object OSWorkManagerHelper {
             1. We lost the race with another call to  WorkManager.initialize outside of OneSignal.
             2. It is possible for some other unexpected error is thrown from WorkManager.
              */
-            Logging.error("OSWorkManagerHelper initializing WorkManager failed: ", e)
+            Logging.warn("OSWorkManagerHelper initializing WorkManager failed: ", e)
         }
     }
 }

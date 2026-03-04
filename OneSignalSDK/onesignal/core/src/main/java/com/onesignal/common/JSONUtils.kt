@@ -61,7 +61,7 @@ object JSONUtils {
             try {
                 val value = jsonObject.opt(key)
                 if (value is JSONArray || value is JSONObject) {
-                    Logging.error("Omitting key '$key'! sendTags DO NOT supported nested values!")
+                    Logging.warn("Omitting key '$key'! sendTags DO NOT supported nested values!")
                 } else if (jsonObject.isNull(key) || "" == value) {
                     result[key] = ""
                 } else {
