@@ -7,10 +7,10 @@ import java.time.Duration
 
 internal class OtelConfigRemoteOneSignal {
     companion object {
-        const val OTEL_PATH = "sdk/otel"
+        const val OTEL_PATH = "sdk/log"
 
         fun buildEndpoint(apiBaseUrl: String, appId: String): String =
-            "$apiBaseUrl$OTEL_PATH/v1/logs?app_id=$appId"
+            "$apiBaseUrl$OTEL_PATH?app_id=$appId"
     }
 
     object LogRecordExporterConfig {
