@@ -149,7 +149,7 @@ internal class InAppDisplayer(
                 } catch (e: Exception) {
                     // Need to check error message to only catch MissingWebViewPackageException as it isn't public
                     if (e.message != null && e.message!!.contains("No WebView installed")) {
-                        Logging.error("Error setting up WebView: ", e)
+                        Logging.info("Error setting up WebView: ", e)
                     } else {
                         throw e
                     }
