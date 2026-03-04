@@ -30,7 +30,7 @@ internal class NotificationRestoreProcessor(
 
             _badgeCountUpdater.update()
         } catch (t: Throwable) {
-            Logging.warn("Error restoring notification records! ", t)
+            Logging.error("Error restoring notification records! ", t)
         }
     }
 

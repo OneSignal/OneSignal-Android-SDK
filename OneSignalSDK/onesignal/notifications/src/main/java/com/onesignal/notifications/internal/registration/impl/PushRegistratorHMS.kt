@@ -78,13 +78,13 @@ internal class PushRegistratorHMS(
             }
 
             return if (pushToken != null) {
-                Logging.debug("HMS registered with ID:$pushToken")
+                Logging.error("HMS registered with ID:$pushToken")
                 IPushRegistrator.RegisterResult(
                     pushToken,
                     SubscriptionStatus.SUBSCRIBED,
                 )
             } else {
-                Logging.warn("HmsMessageServiceOneSignal.onNewToken timed out.")
+                Logging.error("HmsMessageServiceOneSignal.onNewToken timed out.")
                 IPushRegistrator.RegisterResult(
                     null,
                     SubscriptionStatus.HMS_TOKEN_TIMEOUT,

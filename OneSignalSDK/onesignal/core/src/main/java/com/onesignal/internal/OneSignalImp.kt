@@ -53,8 +53,6 @@ import com.onesignal.user.internal.subscriptions.SubscriptionType
 import org.json.JSONObject
 
 internal class OneSignalImp : IOneSignal, IServiceProvider {
-    private var otelManager: OtelLifecycleManager? = null
-
     override val sdkVersion: String = OneSignalUtils.sdkVersion
     override var isInitialized: Boolean = false
 
@@ -204,8 +202,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
 
             Logging.log(LogLevel.DEBUG, "initWithContext: SDK initializing")
 
-            otelManager = OtelLifecycleManager(context).also { it.initializeFromCachedConfig() }
-
             PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
 
             // start the application service. This is called explicitly first because we want
@@ -221,8 +217,6 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
             configModel = services.getService<ConfigModelStore>().model
             sessionModel = services.getService<SessionModelStore>().model
             operationRepo = services.getService<IOperationRepo>()
-
-            otelManager?.subscribeToConfigStore(services.getService<ConfigModelStore>())
 
             var forceCreateUser = false
 

@@ -50,9 +50,9 @@ class ADMMessageHandlerJob : ADMMessageHandlerJobBase() {
         context: Context?,
         error: String?,
     ) {
-        Logging.info("ADM:onRegistrationError: $error")
+        Logging.error("ADM:onRegistrationError: $error")
         if ("INVALID_SENDER" == error) {
-            Logging.info(
+            Logging.error(
                 "Please double check that you have a matching package name (NOTE: Case Sensitive), api_key.txt, and the apk was signed with the same Keystore and Alias.",
             )
         }

@@ -103,9 +103,6 @@ internal class ConfigModelStoreListener(
                     params.influenceParams.isIndirectEnabled?.let { config.influenceParams.isIndirectEnabled = it }
                     params.influenceParams.isUnattributedEnabled?.let { config.influenceParams.isUnattributedEnabled = it }
 
-                    params.remoteLoggingParams.logLevel?.let { config.remoteLoggingParams.logLevel = it }
-                    config.remoteLoggingParams.isEnabled = params.remoteLoggingParams.isEnabled
-
                     _configModelStore.replace(config, ModelChangeTags.HYDRATE)
                     success = true
                 } catch (ex: BackendException) {
