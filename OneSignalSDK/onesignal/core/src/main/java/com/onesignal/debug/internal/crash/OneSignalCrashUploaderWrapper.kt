@@ -1,6 +1,6 @@
 package com.onesignal.debug.internal.crash
 
-import com.onesignal.common.threading.OneSignalDispatchers
+import com.onesignal.common.threading.suspendifyOnThread
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.otel.android.AndroidOtelLogger
@@ -46,7 +46,7 @@ internal class OneSignalCrashUploaderWrapper(
     @Suppress("TooGenericExceptionCaught")
     override fun start() {
         if (!OtelSdkSupport.isSupported) return
-        OneSignalDispatchers.launchOnIO {
+        suspendifyOnThread {
             try {
                 uploader.start()
             } catch (t: Throwable) {
