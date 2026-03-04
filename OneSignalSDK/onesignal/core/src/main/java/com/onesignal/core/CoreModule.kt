@@ -33,6 +33,7 @@ import com.onesignal.core.internal.purchases.impl.TrackGooglePurchase
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.core.internal.time.impl.Time
+import com.onesignal.debug.internal.crash.OneSignalCrashUploaderWrapper
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.inAppMessages.internal.MisconfiguredIAMManager
 import com.onesignal.location.ILocationManager
@@ -80,6 +81,9 @@ internal class CoreModule : IModule {
 
         // Purchase Tracking
         builder.register<TrackGooglePurchase>().provides<IStartableService>()
+
+        // Crash Uploader (crash handler is initialized directly in OneSignalImp for early initialization)
+        builder.register<OneSignalCrashUploaderWrapper>().provides<IStartableService>()
 
         // Register dummy services in the event they are not configured. These dummy services
         // will throw an error message if the associated functionality is attempted to be used.

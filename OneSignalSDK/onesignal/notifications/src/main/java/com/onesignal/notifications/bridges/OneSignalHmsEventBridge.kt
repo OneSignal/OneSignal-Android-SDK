@@ -89,7 +89,7 @@ object OneSignalHmsEventBridge {
 
                 data = messageDataJSON.toString()
             } catch (e: JSONException) {
-                Logging.error("OneSignalHmsEventBridge error when trying to create RemoteMessage data JSON")
+                Logging.warn("OneSignalHmsEventBridge error when trying to create RemoteMessage data JSON")
             }
 
             // HMS notification with Message Type being Message won't trigger Activity reverse trampolining logic

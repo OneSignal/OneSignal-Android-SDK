@@ -186,7 +186,7 @@ internal class BackgroundManager(
         } catch (e: NullPointerException) {
             // Catch for buggy Oppo devices
             // https://github.com/OneSignal/OneSignal-Android-SDK/issues/487
-            Logging.error(
+            Logging.info(
                 "scheduleSyncServiceAsJob called JobScheduler.jobScheduler which " +
                     "triggered an internal null Android error. Skipping job.",
                 e,

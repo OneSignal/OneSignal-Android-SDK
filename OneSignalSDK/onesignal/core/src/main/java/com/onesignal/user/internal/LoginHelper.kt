@@ -48,7 +48,7 @@ class LoginHelper(
             )
 
         if (!result) {
-            Logging.error("Could not login user")
+            Logging.warn("Could not login user")
         }
     }
 }
