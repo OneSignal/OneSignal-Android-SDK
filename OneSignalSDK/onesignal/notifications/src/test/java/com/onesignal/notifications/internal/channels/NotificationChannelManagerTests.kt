@@ -243,6 +243,73 @@ class NotificationChannelManagerTests : FunSpec({
         getChannel("OS_id1", ApplicationProvider.getApplicationContext()) shouldNotBe null
     }
 
+    fun createChannelWithPri(pri: Int): Int {
+        val mockTime = MockHelper.time(1111)
+        val notificationChannelManager = NotificationChannelManager(AndroidMockHelper.applicationService(), MockHelper.languageContext())
+        val channelId = "test_pri_$pri"
+        val payload =
+            JSONObject()
+                .put("pri", pri)
+                .put(
+                    "chnl",
+                    JSONObject()
+                        .put("id", channelId),
+                )
+        notificationChannelManager.createNotificationChannel(NotificationGenerationJob(payload, mockTime))
+        val notificationManager =
+            ApplicationProvider.getApplicationContext<Context>()
+                .getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        return notificationManager.getNotificationChannel(channelId)!!.importance
+    }
+
+    test("createNotificationChannel with pri 10 should have IMPORTANCE_MAX") {
+        createChannelWithPri(10) shouldBe NotificationManager.IMPORTANCE_MAX
+    }
+
+    test("createNotificationChannel with pri 9 should have IMPORTANCE_MAX") {
+        createChannelWithPri(9) shouldBe NotificationManager.IMPORTANCE_MAX
+    }
+
+    test("createNotificationChannel with pri 8 should have IMPORTANCE_HIGH") {
+        createChannelWithPri(8) shouldBe NotificationManager.IMPORTANCE_HIGH
+    }
+
+    test("createNotificationChannel with pri 7 should have IMPORTANCE_HIGH") {
+        createChannelWithPri(7) shouldBe NotificationManager.IMPORTANCE_HIGH
+    }
+
+    test("createNotificationChannel with pri 6 should have IMPORTANCE_DEFAULT") {
+        createChannelWithPri(6) shouldBe NotificationManager.IMPORTANCE_DEFAULT
+    }
+
+    test("createNotificationChannel with pri 5 should have IMPORTANCE_DEFAULT") {
+        createChannelWithPri(5) shouldBe NotificationManager.IMPORTANCE_DEFAULT
+    }
+
+    test("createNotificationChannel with pri 4 should have IMPORTANCE_LOW") {
+        createChannelWithPri(4) shouldBe NotificationManager.IMPORTANCE_LOW
+    }
+
+    test("createNotificationChannel with pri 3 should have IMPORTANCE_LOW") {
+        createChannelWithPri(3) shouldBe NotificationManager.IMPORTANCE_LOW
+    }
+
+    test("createNotificationChannel with pri 2 should have IMPORTANCE_MIN") {
+        createChannelWithPri(2) shouldBe NotificationManager.IMPORTANCE_MIN
+    }
+
+    test("createNotificationChannel with pri 1 should have IMPORTANCE_MIN") {
+        createChannelWithPri(1) shouldBe NotificationManager.IMPORTANCE_MIN
+    }
+
+    // Regression: pri=9 previously mapped to IMPORTANCE_HIGH due to strict > 9 check.
+    // The backend sends pri=9 for the highest dashboard priority, so the channel must
+    // be created with IMPORTANCE_MAX.
+    test("regression - createNotificationChannel with pri 9 must not have IMPORTANCE_HIGH") {
+        createChannelWithPri(9) shouldBe NotificationManager.IMPORTANCE_MAX
+        createChannelWithPri(9) shouldNotBe NotificationManager.IMPORTANCE_HIGH
+    }
+
     test("processChannelList multilanguage") {
         // Given
         val notificationChannelManager = NotificationChannelManager(AndroidMockHelper.applicationService(), MockHelper.languageContext())
