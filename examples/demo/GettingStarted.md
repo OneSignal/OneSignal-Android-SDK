@@ -51,9 +51,19 @@ The project has two product flavors:
 
 In Android Studio: **Build → Select Build Variant** → pick `gmsDebug` (default).
 
+<p align="center">
+  <img src="assets/build-variants.png" alt="Select build variant in Android Studio" width="500"/>
+</p>
+
 ### 4. Build & run
 
-Click **Run ▶** or:
+Select the `app` module and your target device from the toolbar, then click **Run ▶**.
+
+<p align="center">
+  <img src="assets/run-button.png" alt="Run button in Android Studio toolbar" width="700"/>
+</p>
+
+Alternatively, from the terminal:
 
 ```bash
 ./gradlew :app:installGmsDebug
@@ -130,6 +140,12 @@ Navigate to a second screen with buttons to **simulate a crash** (`RuntimeExcept
 
 ### Log Viewer
 A collapsible log panel at the top of the screen that surfaces real-time SDK log output, lifecycle callbacks, and observer events directly in the app.
+
+You can also monitor SDK logs in Android Studio's **Logcat** panel. Filter by `package:mine` to see OneSignal SDK output alongside app logs:
+
+<p align="center">
+  <img src="assets/logcat-output.png" alt="Logcat output in Android Studio" width="900"/>
+</p>
 
 ## Overriding the SDK Version
 
