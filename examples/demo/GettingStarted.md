@@ -61,6 +61,12 @@ Click **Run ▶** or:
 
 The app ships with a default OneSignal App ID (`77e32082-ea27-42e3-a898-c72e141824ef`). To use your own, change it in the **App** section at the top of the running app.
 
+Once launched, you should see the following screen:
+
+<p align="center">
+  <img src="assets/red-app-screenshot.png" alt="Red App screenshot" width="300"/>
+</p>
+
 ## Features
 
 The Red App is organized into collapsible sections, each exercising a different area of the SDK.
