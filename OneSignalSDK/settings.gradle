@@ -15,6 +15,7 @@ gradle.rootProject {
                 substitute(module('com.onesignal:notifications')).using(project(':OneSignal:notifications'))
                 substitute(module('com.onesignal:location')).using(project(':OneSignal:location'))
                 substitute(module('com.onesignal:in-app-messages')).using(project(':OneSignal:in-app-messages'))
+                substitute(module('com.onesignal:otel')).using(project(':OneSignal:otel'))
             }
         }
     }
