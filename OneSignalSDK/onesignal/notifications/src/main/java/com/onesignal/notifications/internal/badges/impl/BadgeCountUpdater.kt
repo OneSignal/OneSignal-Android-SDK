@@ -3,6 +3,7 @@ package com.onesignal.notifications.internal.badges.impl
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.annotation.VisibleForTesting
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.core.internal.database.impl.OneSignalDbContract
@@ -14,11 +15,28 @@ import com.onesignal.notifications.internal.common.NotificationHelper
 import com.onesignal.notifications.internal.data.INotificationQueryHelper
 import com.onesignal.notifications.internal.limiting.INotificationLimitManager
 
-internal class BadgeCountUpdater(
+internal class BadgeCountUpdater private constructor(
     private val _applicationService: IApplicationService,
     private val _queryHelper: INotificationQueryHelper,
     private val _databaseProvider: IDatabaseProvider,
+    private val _sdkInt: Int,
 ) : IBadgeCountUpdater {
+    constructor(
+        applicationService: IApplicationService,
+        queryHelper: INotificationQueryHelper,
+        databaseProvider: IDatabaseProvider,
+    ) : this(applicationService, queryHelper, databaseProvider, Build.VERSION.SDK_INT)
+
+    companion object {
+        @VisibleForTesting
+        internal fun createForTesting(
+            applicationService: IApplicationService,
+            queryHelper: INotificationQueryHelper,
+            databaseProvider: IDatabaseProvider,
+            sdkInt: Int,
+        ) = BadgeCountUpdater(applicationService, queryHelper, databaseProvider, sdkInt)
+    }
+
     // Cache for manifest setting.
     private var badgesEnabled = -1
 
@@ -50,6 +68,10 @@ internal class BadgeCountUpdater(
 
     override fun update() {
         if (!areBadgesEnabled()) return
+        // On API 26+ the system handles badges via NotificationChannel, and
+        // ShortcutBadger can cause native SIGSEGV crashes on some OEM devices
+        // (e.g. Xiaomi Redmi) where the broadcast receiver has buggy native code.
+        if (_sdkInt >= Build.VERSION_CODES.O) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             updateStandard()
         } else {
@@ -83,6 +105,7 @@ internal class BadgeCountUpdater(
 
     override fun updateCount(count: Int) {
         if (!areBadgeSettingsEnabled()) return
+        if (_sdkInt >= Build.VERSION_CODES.O) return
         try {
             ShortcutBadger.applyCountOrThrow(_applicationService.appContext, count)
         } catch (e: ShortcutBadgeException) {
