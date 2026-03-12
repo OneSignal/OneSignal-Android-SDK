@@ -10,10 +10,10 @@ import java.time.Duration
 
 internal class OtelConfigRemoteOneSignal {
     companion object {
-        const val OTEL_PATH = "sdk/otel"
+        const val OTEL_PATH = "sdk"
 
         fun buildEndpoint(apiBaseUrl: String, appId: String): String =
-            "$apiBaseUrl$OTEL_PATH/v1/logs?app_id=$appId"
+            "$apiBaseUrl$OTEL_PATH/log?app_id=$appId"
     }
 
     object LogRecordExporterConfig {
@@ -85,6 +85,28 @@ internal class OtelConfigRemoteOneSignal {
         private class LoggingLogRecordExporter(
             private val delegate: LogRecordExporter
         ) : LogRecordExporter {
+            @Suppress("TooGenericExceptionCaught")
+            private fun resolveHttpFailureMessage(throwable: Throwable?): String {
+                if (throwable == null) return "unknown"
+
+                return try {
+                    if (!throwable.javaClass.name.endsWith("FailedExportException\$HttpExportException")) {
+                        return throwable.message ?: "unknown"
+                    }
+
+                    val response = throwable.javaClass.getMethod("getResponse").invoke(throwable) ?: return throwable.message ?: "unknown"
+                    val statusCode = response.javaClass.getMethod("statusCode").invoke(response)
+                    val statusMessage = response.javaClass.getMethod("statusMessage").invoke(response)
+                    val responseBodyBytes = response.javaClass.getMethod("responseBody").invoke(response) as? ByteArray
+                    val responseBody = responseBodyBytes?.decodeToString()
+
+                    "status=$statusCode message=$statusMessage" +
+                        (if (responseBody.isNullOrBlank()) "" else " body=$responseBody")
+                } catch (_: Throwable) {
+                    throwable.message ?: "unknown"
+                }
+            }
+
             override fun export(logs: Collection<LogRecordData>): CompletableResultCode {
                 Log.d(TAG, "OTEL export request sent to backend. count=${logs.size}")
                 val result = delegate.export(logs)
@@ -93,9 +115,10 @@ internal class OtelConfigRemoteOneSignal {
                         Log.d(TAG, "OTEL export response received: success")
                     } else {
                         val throwable = result.failureThrowable
+                        val failureMessage = resolveHttpFailureMessage(throwable)
                         Log.e(
                             TAG,
-                            "OTEL export response received: failed${throwable?.let { " - ${it.message}" } ?: ""}",
+                            "OTEL export response received: failed - $failureMessage",
                             throwable
                         )
                     }

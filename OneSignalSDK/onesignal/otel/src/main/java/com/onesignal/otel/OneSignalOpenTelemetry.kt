@@ -17,24 +17,6 @@ internal fun LogRecordBuilder.setAllAttributes(attributes: Map<String, String>):
     return this
 }
 
-/**
- * Extension function to set all attributes from an Attributes object.
- * Made public so it can be used from other modules (e.g., core module for logging).
- */
-fun LogRecordBuilder.setAllAttributes(attributes: io.opentelemetry.api.common.Attributes): LogRecordBuilder {
-    attributes.forEach { key, value ->
-        val keyString = key.key
-        when (value) {
-            is String -> this.setAttribute(keyString, value)
-            is Long -> this.setAttribute(keyString, value)
-            is Double -> this.setAttribute(keyString, value)
-            is Boolean -> this.setAttribute(keyString, value)
-            else -> this.setAttribute(keyString, value.toString())
-        }
-    }
-    return this
-}
-
 internal abstract class OneSignalOpenTelemetryBase(
     private val osTopLevelFields: OtelFieldsTopLevel,
     private val osPerEventFields: OtelFieldsPerEvent,
