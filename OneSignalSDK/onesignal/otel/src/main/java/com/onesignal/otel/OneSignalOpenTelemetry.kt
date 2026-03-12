@@ -103,15 +103,19 @@ internal class OneSignalOpenTelemetryRemote(
 
     val extraHttpHeaders: Map<String, String> by lazy {
         mapOf(
-            "X-OneSignal-App-Id" to appId,
-            "X-OneSignal-SDK-Version" to platformProvider.sdkBaseVersion,
+            "SDK-Version" to "onesignal/${platformProvider.sdkBase}/${platformProvider.sdkBaseVersion}",
         )
     }
 
     private val apiBaseUrl: String get() = platformProvider.apiBaseUrl
 
     override val logExporter by lazy {
-        OtelConfigRemoteOneSignal.HttpRecordBatchExporter.create(extraHttpHeaders, appId, apiBaseUrl)
+        OtelConfigRemoteOneSignal.HttpRecordBatchExporter.create(
+            extraHttpHeaders,
+            appId,
+            apiBaseUrl,
+            platformProvider.isOtelExporterLoggingEnabled,
+        )
     }
 
     override fun getSdkInstance(attributes: Map<String, String>): OpenTelemetrySdk =
@@ -123,6 +127,7 @@ internal class OneSignalOpenTelemetryRemote(
                     extraHttpHeaders,
                     appId,
                     apiBaseUrl,
+                    platformProvider.isOtelExporterLoggingEnabled,
                 )
             ).build()
 }
