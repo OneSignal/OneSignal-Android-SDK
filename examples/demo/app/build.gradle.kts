@@ -4,7 +4,8 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.2.0"
 }
 
-val kotlinVersion: String by rootProject.extra
+// Keep IDE sync stable even if root extra properties are unavailable.
+val kotlinVersion: String = rootProject.findProperty("kotlinVersion") as? String ?: "2.2.0"
 
 // Apply GMS or Huawei plugin based on build variant
 // Check at configuration time, not when task graph is ready
