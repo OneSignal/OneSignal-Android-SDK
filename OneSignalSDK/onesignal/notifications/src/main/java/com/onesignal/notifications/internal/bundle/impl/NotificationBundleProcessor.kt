@@ -7,6 +7,7 @@ import com.onesignal.core.internal.time.ITime
 import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
 import com.onesignal.notifications.internal.common.NotificationConstants
 import com.onesignal.notifications.internal.common.NotificationFormatHelper
+import com.onesignal.notifications.internal.common.NotificationPriorityMapper
 import com.onesignal.notifications.internal.generation.INotificationGenerationWorkManager
 import org.json.JSONArray
 import org.json.JSONException
@@ -84,7 +85,7 @@ internal class NotificationBundleProcessor(
         val jsonPayload = JSONUtils.bundleAsJSONObject(bundle)
         val timestamp = _time.currentTimeMillis / 1000L
         val isRestoring = bundle.getBoolean("is_restoring", false)
-        val isHighPriority = bundle.getString("pri", "0").toInt() > 9
+        val isHighPriority = NotificationPriorityMapper.isHighPriority(bundle.getString("pri", "0").toInt())
 
         val osNotificationId = NotificationFormatHelper.getOSNotificationIdFromJson(jsonPayload)
         var androidNotificationId = 0
