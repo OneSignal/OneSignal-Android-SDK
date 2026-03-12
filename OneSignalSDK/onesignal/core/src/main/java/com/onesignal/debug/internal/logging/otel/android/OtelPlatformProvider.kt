@@ -9,6 +9,9 @@ import com.onesignal.core.internal.http.OneSignalService
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.otel.IOtelPlatformProvider
 
+// Use this to enable/disable the Otel exporter logging in debug builds.
+internal const val OTEL_EXPORTER_LOGGING_ENABLED = false
+
 /**
  * Configuration for AndroidOtelPlatformProvider.
  */
@@ -134,6 +137,8 @@ internal class OtelPlatformProvider(
             null
         }
     }
+
+    override val isOtelExporterLoggingEnabled: Boolean = OTEL_EXPORTER_LOGGING_ENABLED
 
     override val appIdForHeaders: String
         get() = appId ?: ""
