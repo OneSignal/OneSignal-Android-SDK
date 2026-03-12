@@ -7,13 +7,13 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.core.app.NotificationManagerCompat
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.notifications.internal.channels.INotificationChannelManager
 import com.onesignal.notifications.internal.common.NotificationGenerationJob
 import com.onesignal.notifications.internal.common.NotificationHelper
+import com.onesignal.notifications.internal.common.NotificationPriorityMapper
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -226,11 +226,5 @@ internal class NotificationChannelManager(
         }
     }
 
-    private fun priorityToImportance(priority: Int): Int {
-        if (priority > 9) return NotificationManagerCompat.IMPORTANCE_MAX
-        if (priority > 7) return NotificationManagerCompat.IMPORTANCE_HIGH
-        if (priority > 5) return NotificationManagerCompat.IMPORTANCE_DEFAULT
-        if (priority > 3) return NotificationManagerCompat.IMPORTANCE_LOW
-        return if (priority > 1) NotificationManagerCompat.IMPORTANCE_MIN else NotificationManagerCompat.IMPORTANCE_NONE
-    }
+    private fun priorityToImportance(priority: Int): Int = NotificationPriorityMapper.toAndroidImportance(priority)
 }

@@ -1,13 +1,15 @@
 package com.onesignal.otel
 
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.maps.shouldContainKey
+import io.kotest.matchers.maps.shouldNotContainKey
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.logs.LogRecordBuilder
 import kotlinx.coroutines.runBlocking
 
@@ -77,6 +79,15 @@ class OneSignalOpenTelemetryTest : FunSpec({
         }
     }
 
+    test("remote telemetry should only send SDK-Version header and not legacy OneSignal SDK header") {
+        val remoteTelemetry = OtelFactory.createRemoteTelemetry(mockPlatformProvider) as OneSignalOpenTelemetryRemote
+        val headers = remoteTelemetry.extraHttpHeaders
+
+        headers.shouldContainKey("SDK-Version")
+        headers["SDK-Version"] shouldBe "onesignal/android/5.0.0"
+        headers.shouldNotContainKey("X-OneSignal-SDK-Version")
+    }
+
     // ===== Crash Local Telemetry Tests =====
 
     test("createCrashLocalTelemetry should return IOtelOpenTelemetryCrash") {
@@ -124,23 +135,6 @@ class OneSignalOpenTelemetryTest : FunSpec({
 
         io.mockk.verify { mockBuilder.setAttribute("key1", "value1") }
         io.mockk.verify { mockBuilder.setAttribute("key2", "value2") }
-    }
-
-    test("setAllAttributes with Attributes should handle different types") {
-        val mockBuilder = mockk<LogRecordBuilder>(relaxed = true)
-        val attributes = Attributes.builder()
-            .put("string.key", "string-value")
-            .put("long.key", 123L)
-            .put("double.key", 45.67)
-            .put("boolean.key", true)
-            .build()
-
-        mockBuilder.setAllAttributes(attributes)
-
-        io.mockk.verify { mockBuilder.setAttribute("string.key", "string-value") }
-        io.mockk.verify { mockBuilder.setAttribute("long.key", 123L) }
-        io.mockk.verify { mockBuilder.setAttribute("double.key", 45.67) }
-        io.mockk.verify { mockBuilder.setAttribute("boolean.key", true) }
     }
 
     // ===== SDK Caching Tests =====

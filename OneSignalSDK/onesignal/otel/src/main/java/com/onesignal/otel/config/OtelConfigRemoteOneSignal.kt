@@ -1,7 +1,10 @@
 package com.onesignal.otel.config
 
+import android.util.Log
 import io.opentelemetry.exporter.otlp.http.logs.OtlpHttpLogRecordExporter
+import io.opentelemetry.sdk.common.CompletableResultCode
 import io.opentelemetry.sdk.logs.SdkLoggerProvider
+import io.opentelemetry.sdk.logs.data.LogRecordData
 import io.opentelemetry.sdk.logs.export.LogRecordExporter
 import java.time.Duration
 
@@ -35,23 +38,97 @@ internal class OtelConfigRemoteOneSignal {
             extraHttpHeaders: Map<String, String>,
             appId: String,
             apiBaseUrl: String,
+            enableExporterLogging: Boolean
         ): SdkLoggerProvider =
             SdkLoggerProvider
                 .builder()
                 .setResource(resource)
                 .addLogRecordProcessor(
                     OtelConfigShared.LogRecordProcessorConfig.batchLogRecordProcessor(
-                        HttpRecordBatchExporter.create(extraHttpHeaders, appId, apiBaseUrl)
+                        HttpRecordBatchExporter.create(
+                            extraHttpHeaders,
+                            appId,
+                            apiBaseUrl,
+                            enableExporterLogging,
+                        )
                     )
                 ).setLogLimits(OtelConfigShared.LogLimitsConfig::logLimits)
                 .build()
     }
 
     object HttpRecordBatchExporter {
-        fun create(extraHttpHeaders: Map<String, String>, appId: String, apiBaseUrl: String) =
-            LogRecordExporterConfig.otlpHttpLogRecordExporter(
-                extraHttpHeaders,
-                buildEndpoint(apiBaseUrl, appId)
-            )
+        fun create(
+            extraHttpHeaders: Map<String, String>,
+            appId: String,
+            apiBaseUrl: String,
+            enableExporterLogging: Boolean,
+        ): LogRecordExporter {
+            val exporter =
+                LogRecordExporterConfig.otlpHttpLogRecordExporter(
+                    extraHttpHeaders,
+                    buildEndpoint(apiBaseUrl, appId)
+                )
+
+            return if (enableExporterLogging) {
+                ExporterLoggingConfig.loggingExporter(exporter)
+            } else {
+                exporter
+            }
+        }
+    }
+
+    object ExporterLoggingConfig {
+        private const val TAG = "OneSignalOtel"
+
+        fun loggingExporter(delegate: LogRecordExporter): LogRecordExporter = LoggingLogRecordExporter(delegate)
+
+        private class LoggingLogRecordExporter(
+            private val delegate: LogRecordExporter
+        ) : LogRecordExporter {
+            @Suppress("TooGenericExceptionCaught")
+            private fun resolveHttpFailureMessage(throwable: Throwable?): String {
+                if (throwable == null) return "unknown"
+
+                return try {
+                    if (!throwable.javaClass.name.endsWith("FailedExportException\$HttpExportException")) {
+                        return throwable.message ?: "unknown"
+                    }
+
+                    val response = throwable.javaClass.getMethod("getResponse").invoke(throwable) ?: return throwable.message ?: "unknown"
+                    val statusCode = response.javaClass.getMethod("statusCode").invoke(response)
+                    val statusMessage = response.javaClass.getMethod("statusMessage").invoke(response)
+                    val responseBodyBytes = response.javaClass.getMethod("responseBody").invoke(response) as? ByteArray
+                    val responseBody = responseBodyBytes?.decodeToString()
+
+                    "status=$statusCode message=$statusMessage" +
+                        (if (responseBody.isNullOrBlank()) "" else " body=$responseBody")
+                } catch (_: Throwable) {
+                    throwable.message ?: "unknown"
+                }
+            }
+
+            override fun export(logs: Collection<LogRecordData>): CompletableResultCode {
+                Log.d(TAG, "OTEL export request sent to backend. count=${logs.size}")
+                val result = delegate.export(logs)
+                result.whenComplete {
+                    if (result.isSuccess) {
+                        Log.d(TAG, "OTEL export response received: success")
+                    } else {
+                        val throwable = result.failureThrowable
+                        val failureMessage = resolveHttpFailureMessage(throwable)
+                        Log.e(
+                            TAG,
+                            "OTEL export response received: failed - $failureMessage",
+                            throwable
+                        )
+                    }
+                }
+                return result
+            }
+
+            override fun flush(): CompletableResultCode = delegate.flush()
+
+            override fun shutdown(): CompletableResultCode = delegate.shutdown()
+        }
     }
 }

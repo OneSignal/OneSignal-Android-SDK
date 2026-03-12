@@ -53,6 +53,13 @@ interface IOtelPlatformProvider {
      * Valid values: "NONE", "FATAL", "ERROR", "WARN", "INFO", "DEBUG", "VERBOSE"
      */
     val remoteLogLevel: String?
+
+    /**
+     * Debug-only toggle for local exporter diagnostics.
+     * When true, Otel exporter request/response success/failure logs are emitted to logcat.
+     */
+    val isOtelExporterLoggingEnabled: Boolean
+
     val appIdForHeaders: String
 
     /**
