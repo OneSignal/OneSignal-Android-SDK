@@ -19,6 +19,7 @@ import com.onesignal.notifications.internal.channels.INotificationChannelManager
 import com.onesignal.notifications.internal.common.NotificationConstants
 import com.onesignal.notifications.internal.common.NotificationGenerationJob
 import com.onesignal.notifications.internal.common.NotificationHelper
+import com.onesignal.notifications.internal.common.NotificationPriorityMapper
 import com.onesignal.notifications.internal.display.INotificationDisplayBuilder
 import com.onesignal.notifications.receivers.NotificationDismissReceiver
 import org.json.JSONException
@@ -455,12 +456,7 @@ internal class NotificationDisplayBuilder(
         }
     }
 
-    private fun convertOSToAndroidPriority(priority: Int): Int {
-        if (priority > 9) return NotificationCompat.PRIORITY_MAX
-        if (priority > 7) return NotificationCompat.PRIORITY_HIGH
-        if (priority > 4) return NotificationCompat.PRIORITY_DEFAULT
-        return if (priority > 2) NotificationCompat.PRIORITY_LOW else NotificationCompat.PRIORITY_MIN
-    }
+    private fun convertOSToAndroidPriority(priority: Int): Int = NotificationPriorityMapper.toAndroidPriority(priority)
 
     internal class OneSignalNotificationBuilder {
         var compatBuilder: NotificationCompat.Builder? = null
