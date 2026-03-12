@@ -69,7 +69,17 @@ Alternatively, from the terminal:
 ./gradlew :app:installGmsDebug
 ```
 
-The app ships with a default OneSignal App ID (`77e32082-ea27-42e3-a898-c72e141824ef`). To use your own, change it in the **App** section at the top of the running app.
+The app ships with a default OneSignal App ID (`77e32082-ea27-42e3-a898-c72e141824ef`).
+
+**Changing the App ID requires uninstalling and reinstalling the app for it to take effect.**
+
+To use your own App ID, update the `onesignal_app_id` value in `app/src/main/res/values/strings.xml`:
+
+```xml
+<string name="onesignal_app_id">YOUR_APP_ID_HERE</string>
+```
+
+Then uninstall the app from the device/emulator and run it again.
 
 Once launched, you should see the following screen:
 
