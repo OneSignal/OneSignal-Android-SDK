@@ -52,7 +52,16 @@ dependencies {
     implementation platform("io.opentelemetry:opentelemetry-bom:$rootProject.opentelemetryBomVersion")
     implementation('io.opentelemetry:opentelemetry-api')
     implementation('io.opentelemetry:opentelemetry-sdk')
-    implementation('io.opentelemetry:opentelemetry-exporter-otlp')
+    // opentelemetry-exporter-otlp transitively pulls in okhttp-jvm 5.x (via
+    // opentelemetry-exporter-sender-okhttp). OkHttp 5.x is binary-incompatible with consumers
+    // that depend on OkHttp 4.x (e.g. React Native's networking stack references
+    // okhttp3.internal.Util which was removed in 5.x). Exclude it so Gradle doesn't upgrade
+    // the consumer's OkHttp to an incompatible version.
+    // See: https://github.com/OneSignal/OneSignal-Android-SDK/issues/2575
+    implementation('io.opentelemetry:opentelemetry-exporter-otlp') {
+        exclude group: 'com.squareup.okhttp3'
+    }
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation("io.opentelemetry.semconv:opentelemetry-semconv:$rootProject.opentelemetrySemconvVersion")
     implementation("io.opentelemetry.contrib:opentelemetry-disk-buffering:$rootProject.opentelemetryDiskBufferingVersion")
 
