@@ -537,6 +537,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         }
     }
 
+    fun clearAllNotifications() {
+        repository.clearAllNotifications()
+        showToast("All notifications cleared")
+    }
+
     // In-App Messages
     fun setInAppMessagesPaused(paused: Boolean) {
         repository.setInAppMessagesPaused(paused)

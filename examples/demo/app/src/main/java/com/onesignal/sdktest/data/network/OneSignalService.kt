@@ -66,6 +66,11 @@ object OneSignalService {
                     put("big_picture", it)
                     LogManager.d(TAG, "Adding big_picture: $it")
                 }
+                // Add Android channel ID for custom sound notifications
+                type.androidChannelId?.let {
+                    put("android_channel_id", it)
+                    LogManager.d(TAG, "Adding android_channel_id: $it")
+                }
             }
             
             LogManager.d(TAG, "Sending notification: ${notificationJson.toString(2)}")

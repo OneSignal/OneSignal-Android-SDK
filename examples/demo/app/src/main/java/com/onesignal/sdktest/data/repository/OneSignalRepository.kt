@@ -200,6 +200,11 @@ class OneSignalRepository {
         return OneSignal.Notifications.permission
     }
 
+    fun clearAllNotifications() {
+        Log.d(TAG, "Clearing all notifications")
+        OneSignal.Notifications.clearAllNotifications()
+    }
+
     // Send notifications
     suspend fun sendNotification(type: NotificationType): Boolean {
         Log.d(TAG, "Sending notification: ${type.title}")

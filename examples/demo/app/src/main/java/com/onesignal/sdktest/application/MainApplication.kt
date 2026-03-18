@@ -1,5 +1,10 @@
 package com.onesignal.sdktest.application
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.media.AudioAttributes
+import android.net.Uri
+import android.os.Build
 import android.os.StrictMode
 import androidx.multidex.MultiDexApplication
 import com.onesignal.OneSignal
@@ -40,6 +45,23 @@ class MainApplication : MultiDexApplication() {
     override fun onCreate() {
         super.onCreate()
         
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val soundUri = Uri.parse("android.resource://${packageName}/${R.raw.vine_boom}")
+            val audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+            val channel = NotificationChannel(
+                "b3b015d9-c050-4042-8548-dcc34aa44aa4",
+                "Custom Sound",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notifications with custom vine boom sound"
+                setSound(soundUri, audioAttributes)
+            }
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        }
+
         OneSignal.Debug.logLevel = LogLevel.VERBOSE
         
         // Add SDK log listener BEFORE init to capture all SDK logs in UI
@@ -143,4 +165,5 @@ class MainApplication : MultiDexApplication() {
         OneSignal.InAppMessages.paused = SharedPreferenceUtil.getCachedInAppMessagingPausedStatus(this)
         OneSignal.Location.isShared = SharedPreferenceUtil.getCachedLocationSharedStatus(this)
     }
+
 }

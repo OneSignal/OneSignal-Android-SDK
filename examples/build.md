@@ -26,8 +26,11 @@ Replace `{{PLATFORM}}` with `Android` everywhere in that guide. Everything below
 `build.gradle.kts` (app):
 
 ```kotlin
+plugins {
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.0"
+}
+
 buildFeatures { compose = true }
-composeOptions { kotlinCompilerExtensionVersion = "1.5.10" }
 ```
 
 Dependencies (via BOM `2024.02.00`):
@@ -103,7 +106,7 @@ Stored in `SharedPreferences`:
 
 ### Notification Permission
 
-Auto-request via `viewModel.promptPush()` at the end of `MainActivity.onCreate()`.
+Auto-request via `LaunchedEffect(Unit) { viewModel.promptPush() }` in `MainScreen` composable.
 
 ### Loading Indicator
 
@@ -131,6 +134,12 @@ Use `JSONObject` to parse Track Event properties and convert to `Map<String, Any
 - Fetches on `CoroutineScope(Dispatchers.IO)` to avoid blocking startup
 - Uses `HttpURLConnection` for the network request
 - `init(context: Context)` takes Android `Context`
+
+### WITH SOUND Notification
+
+- `vine_boom.wav` placed in `res/raw/`
+- `NotificationChannel` created in `MainApplication.onCreate()` with channel ID `b3b015d9-c050-4042-8548-dcc34aa44aa4` and the vine boom sound URI
+- `NotificationType.WITH_SOUND` sends with `android_channel_id` in the REST API payload
 
 ---
 
@@ -173,10 +182,13 @@ examples/demo/
 │   │   │       ├── SharedPreferenceUtil.kt
 │   │   │       ├── LogManager.kt
 │   │   │       └── TooltipHelper.kt
-│   │   └── res/values/
-│   │       ├── strings.xml
-│   │       ├── colors.xml
-│   │       └── styles.xml
+│   │   └── res/
+│   │       ├── raw/
+│   │       │   └── vine_boom.wav
+│   │       └── values/
+│   │           ├── strings.xml
+│   │           ├── colors.xml
+│   │           └── styles.xml
 │   └── src/huawei/
 │       └── java/com/onesignal/sdktest/notification/
 │           └── HmsMessageServiceAppLevel.kt
