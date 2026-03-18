@@ -1,6 +1,11 @@
 # OneSignal Android Sample App - Build Guide
 
-This document contains Android-specific build instructions. For the full feature spec, UI sections, and shared behavior, see the [generic build guide](https://github.com/OneSignal/sdk-shared/blob/main/demo/build.md).
+This document extends the shared build guide with Android-specific details.
+
+**Read the shared guide first:**
+https://raw.githubusercontent.com/OneSignal/sdk-shared/refs/heads/main/demo/build.md
+
+Replace `{{PLATFORM}}` with `Android` everywhere in that guide. Everything below either overrides or supplements sections from the shared guide.
 
 ---
 
