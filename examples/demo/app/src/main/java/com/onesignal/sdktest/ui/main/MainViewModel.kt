@@ -231,7 +231,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 refreshTriggers()
                 loadExistingTags()
                 refreshPushSubscription()
-                // Loading stays on; onUserStateChange will call fetchUserDataFromApi() to dismiss it
+                fetchUserDataFromApi()
             }
         }
     }
