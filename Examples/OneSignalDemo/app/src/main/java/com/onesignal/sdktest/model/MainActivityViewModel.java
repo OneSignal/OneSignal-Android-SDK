@@ -407,11 +407,17 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
         revokeConsentButton.setOnClickListener(v -> togglePrivacyConsent(false));
 
         loginUserButton.setOnClickListener(v -> {
-            dialog.createUpdateAlertDialog("", Dialog.DialogAction.LOGIN, ProfileUtil.FieldType.EXTERNAL_USER_ID, new UpdateAlertDialogCallback() {
+            dialog.createAddPairAlertDialog("Login User", "External ID", "JWT Token (optional)", ProfileUtil.FieldType.EXTERNAL_USER_ID, new AddPairAlertDialogCallback() {
                 @Override
-                public void onSuccess(String update) {
-                    if (update != null && !update.isEmpty()) {
-                        OneSignal.login(update);
+                public void onSuccess(Pair<String, Object> pair) {
+                    String externalId = pair.first;
+                    String jwt = pair.second != null ? pair.second.toString().trim() : "";
+                    if (externalId != null && !externalId.isEmpty()) {
+                        if (!jwt.isEmpty()) {
+                            OneSignal.login(externalId, jwt);
+                        } else {
+                            OneSignal.login(externalId);
+                        }
                         refreshState();
                     }
                 }
@@ -444,11 +450,13 @@ public class MainActivityViewModel implements ActivityViewModel, IPushSubscripti
             OneSignal.updateUserJwt(OneSignal.getUser().getExternalId(), "");
         });
         updateJwtButton.setOnClickListener(v -> {
-            dialog.createUpdateAlertDialog("", Dialog.DialogAction.UPDATE, ProfileUtil.FieldType.JWT, new UpdateAlertDialogCallback() {
+            dialog.createAddPairAlertDialog("Update JWT", "External ID", "JWT Token", ProfileUtil.FieldType.EXTERNAL_USER_ID, new AddPairAlertDialogCallback() {
                 @Override
-                public void onSuccess(String update) {
-                    if (update != null && !update.isEmpty()) {
-                        OneSignal.updateUserJwt(OneSignal.getUser().getExternalId(), update);
+                public void onSuccess(Pair<String, Object> pair) {
+                    String externalId = pair.first;
+                    String jwt = pair.second != null ? pair.second.toString().trim() : "";
+                    if (externalId != null && !externalId.isEmpty() && !jwt.isEmpty()) {
+                        OneSignal.updateUserJwt(externalId, jwt);
                         refreshState();
                     }
                 }
