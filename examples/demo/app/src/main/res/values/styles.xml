@@ -3,6 +3,6 @@
     <!-- Using Material3 theme for Compose -->
     <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:statusBarColor">@color/colorPrimary</item>
-        <item name="android:windowBackground">@color/colorRed</item>
+        <item name="android:windowBackground">@android:color/white</item>
     </style>
 </resources>
