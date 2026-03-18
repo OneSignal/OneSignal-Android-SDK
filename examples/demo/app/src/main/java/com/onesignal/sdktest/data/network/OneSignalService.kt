@@ -9,13 +9,6 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-/**
- * OneSignal API service for testing purposes.
- * Provides methods to send notifications and fetch user data via the REST API.
- * 
- * Note: This approach is for testing purposes only. In production, notifications
- * should be sent from your backend server.
- */
 object OneSignalService {
     
     private const val TAG = "OneSignalService"
@@ -30,9 +23,6 @@ object OneSignalService {
     
     fun getAppId(): String = appId
     
-    /**
-     * Send a notification to this device.
-     */
     suspend fun sendNotification(type: NotificationType): Boolean = withContext(Dispatchers.IO) {
         val subscription = OneSignal.User.pushSubscription
         
@@ -56,21 +46,9 @@ object OneSignalService {
                 put("android_group", type.title)
                 put("android_led_color", "FF595CF2")
                 put("android_accent_color", "FF595CF2")
-                // Add large icon if available
-                type.largeIcon?.let { 
-                    put("large_icon", it)
-                    LogManager.d(TAG, "Adding large_icon: $it")
-                }
-                // Add big picture if available
-                type.bigPicture?.let { 
-                    put("big_picture", it)
-                    LogManager.d(TAG, "Adding big_picture: $it")
-                }
-                // Add Android channel ID for custom sound notifications
-                type.androidChannelId?.let {
-                    put("android_channel_id", it)
-                    LogManager.d(TAG, "Adding android_channel_id: $it")
-                }
+                type.largeIcon?.let { put("large_icon", it) }
+                type.bigPicture?.let { put("big_picture", it) }
+                type.androidChannelId?.let { put("android_channel_id", it) }
             }
             
             LogManager.d(TAG, "Sending notification: ${notificationJson.toString(2)}")
@@ -109,9 +87,6 @@ object OneSignalService {
         }
     }
     
-    /**
-     * Send a custom notification with title and body.
-     */
     suspend fun sendCustomNotification(title: String, body: String): Boolean = withContext(Dispatchers.IO) {
         val subscription = OneSignal.User.pushSubscription
         
@@ -168,13 +143,6 @@ object OneSignalService {
         }
     }
     
-    /**
-     * Fetch user data from OneSignal API.
-     * Note: This endpoint does not require authentication.
-     * 
-     * @param onesignalId The OneSignal user ID
-     * @return UserData object containing aliases, tags, emails, and SMS numbers, or null on error
-     */
     suspend fun fetchUser(onesignalId: String): UserData? = withContext(Dispatchers.IO) {
         if (onesignalId.isEmpty()) {
             LogManager.w(TAG, "Cannot fetch user - onesignalId is empty")
@@ -225,7 +193,6 @@ object OneSignalService {
     private fun parseUserResponse(json: String): UserData {
         val jsonObject = JSONObject(json)
         
-        // Parse aliases from identity object (filter out external_id and onesignal_id)
         val aliases = mutableMapOf<String, String>()
         if (jsonObject.has("identity")) {
             val identity = jsonObject.getJSONObject("identity")
@@ -236,13 +203,11 @@ object OneSignalService {
             }
         }
         
-        // Parse external_id separately
         val externalId = if (jsonObject.has("identity")) {
             val identity = jsonObject.getJSONObject("identity")
             if (identity.has("external_id")) identity.getString("external_id") else null
         } else null
         
-        // Parse tags from properties object
         val tags = mutableMapOf<String, String>()
         if (jsonObject.has("properties")) {
             val properties = jsonObject.getJSONObject("properties")
@@ -254,7 +219,6 @@ object OneSignalService {
             }
         }
         
-        // Parse subscriptions for emails and SMS
         val emails = mutableListOf<String>()
         val smsNumbers = mutableListOf<String>()
         if (jsonObject.has("subscriptions")) {
@@ -281,9 +245,6 @@ object OneSignalService {
     }
 }
 
-/**
- * Data class representing user data fetched from the OneSignal API.
- */
 data class UserData(
     val aliases: Map<String, String>,
     val tags: Map<String, String>,

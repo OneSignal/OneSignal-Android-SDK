@@ -1,8 +1,5 @@
 package com.onesignal.sdktest.data.model
 
-/**
- * Enum representing different types of push notifications that can be sent.
- */
 enum class NotificationType(
     val title: String,
     val notificationTitle: String,

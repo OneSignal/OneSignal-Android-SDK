@@ -138,8 +138,8 @@ Use `JSONObject` to parse Track Event properties and convert to `Map<String, Any
 ### WITH SOUND Notification
 
 - `vine_boom.wav` placed in `res/raw/`
-- `NotificationChannel` created in `MainApplication.onCreate()` with channel ID `b3b015d9-c050-4042-8548-dcc34aa44aa4` and the vine boom sound URI
 - `NotificationType.WITH_SOUND` sends with `android_channel_id` in the REST API payload
+- The OneSignal SDK handles channel creation when the notification is received
 
 ---
 

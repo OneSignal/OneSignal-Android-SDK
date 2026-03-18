@@ -1,10 +1,5 @@
 package com.onesignal.sdktest.application
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.media.AudioAttributes
-import android.net.Uri
-import android.os.Build
 import android.os.StrictMode
 import androidx.multidex.MultiDexApplication
 import com.onesignal.OneSignal
@@ -18,7 +13,6 @@ import com.onesignal.inAppMessages.IInAppMessageDidDisplayEvent
 import com.onesignal.inAppMessages.IInAppMessageLifecycleListener
 import com.onesignal.inAppMessages.IInAppMessageWillDismissEvent
 import com.onesignal.inAppMessages.IInAppMessageWillDisplayEvent
-import com.onesignal.notifications.IDisplayableNotification
 import com.onesignal.notifications.INotificationClickEvent
 import com.onesignal.notifications.INotificationClickListener
 import com.onesignal.notifications.INotificationLifecycleListener
@@ -45,26 +39,8 @@ class MainApplication : MultiDexApplication() {
     override fun onCreate() {
         super.onCreate()
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val soundUri = Uri.parse("android.resource://${packageName}/${R.raw.vine_boom}")
-            val audioAttributes = AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build()
-            val channel = NotificationChannel(
-                "b3b015d9-c050-4042-8548-dcc34aa44aa4",
-                "Custom Sound",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Notifications with custom vine boom sound"
-                setSound(soundUri, audioAttributes)
-            }
-            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
-        }
-
         OneSignal.Debug.logLevel = LogLevel.VERBOSE
         
-        // Add SDK log listener BEFORE init to capture all SDK logs in UI
         OneSignal.Debug.addLogListener { event ->
             val level = when (event.level) {
                 LogLevel.VERBOSE, LogLevel.DEBUG -> AppLogLevel.DEBUG
@@ -76,33 +52,23 @@ class MainApplication : MultiDexApplication() {
             LogManager.log("SDK", event.entry, level)
         }
 
-        // Get or set the OneSignal App ID
         var appId = SharedPreferenceUtil.getOneSignalAppId(this)
         if (appId == null) {
             appId = getString(R.string.onesignal_app_id)
             SharedPreferenceUtil.cacheOneSignalAppId(this, appId)
         }
 
-        // Initialize OneSignal Service with app ID and REST API key
         OneSignalService.setAppId(appId)
-        
-        // Initialize tooltip helper
         TooltipHelper.init(this)
 
-        // Set consent required before init (must be set before initWithContext)
+        // Consent must be set before initWithContext
         OneSignal.consentRequired = SharedPreferenceUtil.getCachedConsentRequired(this)
         OneSignal.consentGiven = SharedPreferenceUtil.getUserPrivacyConsent(this)
 
-        // Initialize OneSignal on main thread (required)
-        // Crash handler + ANR detector are initialized early inside initWithContext
         OneSignal.initWithContext(this, appId)
-        LogManager.i(TAG, "OneSignal init completed (crash handler, ANR detector, and logging active)")
+        LogManager.i(TAG, "OneSignal init completed")
 
-        // Set up all OneSignal listeners
         setupOneSignalListeners()
-        
-        // Note: Notification permission is automatically requested when MainActivity loads.
-        // This ensures the prompt appears after the user sees the app UI.
     }
 
     private fun setupOneSignalListeners() {
@@ -140,11 +106,9 @@ class MainApplication : MultiDexApplication() {
             override fun onWillDisplay(event: INotificationWillDisplayEvent) {
                 LogManager.d(TAG, "INotificationLifecycleListener.onWillDisplay fired with event: $event")
 
-                val notification: IDisplayableNotification = event.notification
-
-                // Prevent OneSignal from displaying the notification immediately on return.
-                // Spin up a new thread to mimic some asynchronous behavior.
+                // Demonstrate async notification display: prevent default, delay, then show
                 event.preventDefault()
+                val notification = event.notification
                 Thread {
                     try {
                         Thread.sleep(SLEEP_TIME_TO_MIMIC_ASYNC_OPERATION)

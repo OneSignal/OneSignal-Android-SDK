@@ -8,17 +8,12 @@ import com.onesignal.sdktest.data.network.UserData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/**
- * Repository for all OneSignal SDK operations.
- * All methods are suspend functions to be called from coroutines on background threads.
- */
 class OneSignalRepository {
 
     companion object {
         private const val TAG = "OneSignalRepository"
     }
 
-    // User operations
     suspend fun loginUser(externalUserId: String) = withContext(Dispatchers.IO) {
         Log.d(TAG, "Logging in user with externalUserId: $externalUserId")
         OneSignal.login(externalUserId)
@@ -30,7 +25,6 @@ class OneSignalRepository {
         OneSignal.logout()
     }
 
-    // Alias operations
     fun addAlias(label: String, id: String) {
         Log.d(TAG, "Adding alias: $label -> $id")
         OneSignal.User.addAlias(label, id)
@@ -53,7 +47,6 @@ class OneSignalRepository {
         }
     }
 
-    // Email operations
     fun addEmail(email: String) {
         Log.d(TAG, "Adding email: $email")
         OneSignal.User.addEmail(email)
@@ -64,7 +57,6 @@ class OneSignalRepository {
         OneSignal.User.removeEmail(email)
     }
 
-    // SMS operations
     fun addSms(smsNumber: String) {
         Log.d(TAG, "Adding SMS: $smsNumber")
         OneSignal.User.addSms(smsNumber)
@@ -75,7 +67,6 @@ class OneSignalRepository {
         OneSignal.User.removeSms(smsNumber)
     }
 
-    // Tag operations
     fun addTag(key: String, value: String) {
         Log.d(TAG, "Adding tag: $key -> $value")
         OneSignal.User.addTag(key, value)
@@ -102,7 +93,6 @@ class OneSignalRepository {
         return OneSignal.User.getTags()
     }
 
-    // Trigger operations
     fun addTrigger(key: String, value: String) {
         Log.d(TAG, "Adding trigger: $key -> $value")
         OneSignal.InAppMessages.addTrigger(key, value)
@@ -125,7 +115,6 @@ class OneSignalRepository {
         }
     }
 
-    // Outcome operations
     fun sendOutcome(name: String) {
         Log.d(TAG, "Sending outcome: $name")
         OneSignal.Session.addOutcome(name)
@@ -141,13 +130,11 @@ class OneSignalRepository {
         OneSignal.Session.addOutcomeWithValue(name, value)
     }
 
-    // Track Event
     fun trackEvent(name: String, properties: Map<String, Any?>?) {
         Log.d(TAG, "Tracking event: $name with properties: $properties")
         OneSignal.User.trackEvent(name, properties)
     }
 
-    // Push subscription
     fun getPushSubscriptionId(): String? {
         return OneSignal.User.pushSubscription.id
     }
@@ -165,7 +152,6 @@ class OneSignalRepository {
         }
     }
 
-    // In-App Messaging
     fun isInAppMessagesPaused(): Boolean {
         return OneSignal.InAppMessages.paused
     }
@@ -175,7 +161,6 @@ class OneSignalRepository {
         OneSignal.InAppMessages.paused = paused
     }
 
-    // Location
     fun isLocationShared(): Boolean {
         return OneSignal.Location.isShared
     }
@@ -190,7 +175,6 @@ class OneSignalRepository {
         OneSignal.Location.requestPermission()
     }
 
-    // Notifications
     suspend fun promptPushPermission() = withContext(Dispatchers.IO) {
         Log.d(TAG, "Prompting for push permission")
         OneSignal.Notifications.requestPermission(true)
@@ -205,7 +189,6 @@ class OneSignalRepository {
         OneSignal.Notifications.clearAllNotifications()
     }
 
-    // Send notifications
     suspend fun sendNotification(type: NotificationType): Boolean {
         Log.d(TAG, "Sending notification: ${type.title}")
         return OneSignalService.sendNotification(type)
@@ -216,7 +199,6 @@ class OneSignalRepository {
         return OneSignalService.sendCustomNotification(title, body)
     }
 
-    // Privacy consent
     fun setConsentRequired(required: Boolean) {
         Log.d(TAG, "Setting consent required: $required")
         OneSignal.consentRequired = required
@@ -235,12 +217,10 @@ class OneSignalRepository {
         return OneSignal.consentGiven
     }
 
-    // OneSignal ID
     fun getOneSignalId(): String? {
         return OneSignal.User.onesignalId
     }
 
-    // Fetch user data from API
     suspend fun fetchUser(onesignalId: String): UserData? = withContext(Dispatchers.IO) {
         Log.d(TAG, "Fetching user data for: $onesignalId")
         OneSignalService.fetchUser(onesignalId)
