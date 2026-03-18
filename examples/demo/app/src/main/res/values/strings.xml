@@ -98,7 +98,9 @@
     <string name="send_push_notification">Send Push Notification</string>
     <string name="send_simple_notification">SIMPLE NOTIFICATION</string>
     <string name="send_image_notification">NOTIFICATION WITH IMAGE</string>
+    <string name="send_sound_notification">NOTIFICATION WITH SOUND</string>
     <string name="send_custom_notification">CUSTOM NOTIFICATION</string>
+    <string name="clear_all_notifications">CLEAR ALL</string>
     <string name="notification_title">Notification Title</string>
     <string name="notification_body">Notification Body</string>
 

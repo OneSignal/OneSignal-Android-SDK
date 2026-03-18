@@ -9,13 +9,6 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
-/**
- * OneSignal API service for testing purposes.
- * Provides methods to send notifications and fetch user data via the REST API.
- * 
- * Note: This approach is for testing purposes only. In production, notifications
- * should be sent from your backend server.
- */
 object OneSignalService {
     
     private const val TAG = "OneSignalService"
@@ -29,147 +22,91 @@ object OneSignalService {
     }
     
     fun getAppId(): String = appId
-    
-    /**
-     * Send a notification to this device.
-     */
-    suspend fun sendNotification(type: NotificationType): Boolean = withContext(Dispatchers.IO) {
+
+    private fun getSubscriptionIdIfOptedIn(): String? {
         val subscription = OneSignal.User.pushSubscription
-        
         if (!subscription.optedIn) {
             LogManager.w(TAG, "Cannot send notification - user not opted in")
-            return@withContext false
+            return null
         }
-        
-        val subscriptionId = subscription.id
-        if (subscriptionId.isNullOrEmpty()) {
+        val id = subscription.id
+        if (id.isNullOrEmpty()) {
             LogManager.w(TAG, "Cannot send notification - no subscription ID")
-            return@withContext false
+            return null
         }
+        return id
+    }
 
+    private fun postJson(url: String, json: JSONObject): Pair<Int, String> {
+        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+            useCaches = false
+            connectTimeout = 30000
+            readTimeout = 30000
+            setRequestProperty("Accept", "application/vnd.onesignal.v1+json")
+            setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+            requestMethod = "POST"
+            doOutput = true
+            doInput = true
+        }
+        val outputBytes = json.toString().toByteArray(Charsets.UTF_8)
+        connection.setFixedLengthStreamingMode(outputBytes.size)
+        connection.outputStream.write(outputBytes)
+        val code = connection.responseCode
+        val body = if (code in 200..299) {
+            connection.inputStream.bufferedReader().use { it.readText() }
+        } else {
+            connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
+        }
+        return code to body
+    }
+
+    private suspend fun sendNotificationPayload(payload: JSONObject, label: String): Boolean = withContext(Dispatchers.IO) {
         try {
-            val notificationJson = JSONObject().apply {
-                put("app_id", appId)
-                put("include_subscription_ids", org.json.JSONArray().put(subscriptionId))
-                put("headings", JSONObject().put("en", type.notificationTitle))
-                put("contents", JSONObject().put("en", type.notificationBody))
-                put("android_group", type.title)
-                put("android_led_color", "FF595CF2")
-                put("android_accent_color", "FF595CF2")
-                // Add large icon if available
-                type.largeIcon?.let { 
-                    put("large_icon", it)
-                    LogManager.d(TAG, "Adding large_icon: $it")
-                }
-                // Add big picture if available
-                type.bigPicture?.let { 
-                    put("big_picture", it)
-                    LogManager.d(TAG, "Adding big_picture: $it")
-                }
-            }
-            
-            LogManager.d(TAG, "Sending notification: ${notificationJson.toString(2)}")
-            LogManager.d(TAG, "Request URL: $ONESIGNAL_API_URL")
-
-            val connection = (URL(ONESIGNAL_API_URL).openConnection() as HttpURLConnection).apply {
-                useCaches = false
-                connectTimeout = 30000
-                readTimeout = 30000
-                setRequestProperty("Accept", "application/vnd.onesignal.v1+json")
-                setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-                requestMethod = "POST"
-                doOutput = true
-                doInput = true
-            }
-            
-            val outputBytes = notificationJson.toString().toByteArray(Charsets.UTF_8)
-            connection.setFixedLengthStreamingMode(outputBytes.size)
-            connection.outputStream.write(outputBytes)
-            
-            val responseCode = connection.responseCode
-            
-            if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_ACCEPTED || responseCode == HttpURLConnection.HTTP_CREATED) {
-                val response = connection.inputStream.bufferedReader().use { it.readText() }
-                LogManager.d(TAG, "Notification sent successfully: $response")
-                return@withContext true
+            LogManager.d(TAG, "Sending $label: ${payload.toString(2)}")
+            val (code, body) = postJson(ONESIGNAL_API_URL, payload)
+            if (code in 200..299) {
+                LogManager.d(TAG, "$label sent successfully: $body")
+                true
             } else {
-                val errorResponse = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-                LogManager.e(TAG, "Failed to send notification (HTTP $responseCode): $errorResponse")
-                LogManager.e(TAG, "Request body was: ${notificationJson.toString()}")
-                return@withContext false
+                LogManager.e(TAG, "Failed to send $label (HTTP $code): $body")
+                false
             }
         } catch (e: Exception) {
-            LogManager.e(TAG, "Error sending notification", e)
-            return@withContext false
+            LogManager.e(TAG, "Error sending $label", e)
+            false
         }
     }
     
-    /**
-     * Send a custom notification with title and body.
-     */
-    suspend fun sendCustomNotification(title: String, body: String): Boolean = withContext(Dispatchers.IO) {
-        val subscription = OneSignal.User.pushSubscription
-        
-        if (!subscription.optedIn) {
-            LogManager.w(TAG, "Cannot send notification - user not opted in")
-            return@withContext false
+    suspend fun sendNotification(type: NotificationType): Boolean {
+        val subscriptionId = getSubscriptionIdIfOptedIn() ?: return false
+        val payload = JSONObject().apply {
+            put("app_id", appId)
+            put("include_subscription_ids", org.json.JSONArray().put(subscriptionId))
+            put("headings", JSONObject().put("en", type.notificationTitle))
+            put("contents", JSONObject().put("en", type.notificationBody))
+            put("android_group", type.title)
+            put("android_led_color", "FF595CF2")
+            put("android_accent_color", "FF595CF2")
+            type.largeIcon?.let { put("large_icon", it) }
+            type.bigPicture?.let { put("big_picture", it) }
+            type.androidChannelId?.let { put("android_channel_id", it) }
         }
-        
-        val subscriptionId = subscription.id
-        if (subscriptionId.isNullOrEmpty()) {
-            LogManager.w(TAG, "Cannot send notification - no subscription ID")
-            return@withContext false
-        }
-        
-        try {
-            val notificationJson = JSONObject().apply {
-                put("app_id", appId)
-                put("include_subscription_ids", org.json.JSONArray().put(subscriptionId))
-                put("headings", JSONObject().put("en", title))
-                put("contents", JSONObject().put("en", body))
-                put("android_led_color", "FF595CF2")
-                put("android_accent_color", "FF595CF2")
-            }
-            
-            val connection = (URL(ONESIGNAL_API_URL).openConnection() as HttpURLConnection).apply {
-                useCaches = false
-                connectTimeout = 30000
-                readTimeout = 30000
-                setRequestProperty("Accept", "application/vnd.onesignal.v1+json")
-                setRequestProperty("Content-Type", "application/json; charset=UTF-8")
-                requestMethod = "POST"
-                doOutput = true
-                doInput = true
-            }
-            
-            val outputBytes = notificationJson.toString().toByteArray(Charsets.UTF_8)
-            connection.setFixedLengthStreamingMode(outputBytes.size)
-            connection.outputStream.write(outputBytes)
-            
-            val responseCode = connection.responseCode
-            
-            if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_ACCEPTED || responseCode == HttpURLConnection.HTTP_CREATED) {
-                val response = connection.inputStream.bufferedReader().use { it.readText() }
-                LogManager.d(TAG, "Custom notification sent successfully: $response")
-                return@withContext true
-            } else {
-                val errorResponse = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
-                LogManager.e(TAG, "Failed to send custom notification (HTTP $responseCode): $errorResponse")
-                return@withContext false
-            }
-        } catch (e: Exception) {
-            LogManager.e(TAG, "Error sending custom notification", e)
-            return@withContext false
-        }
+        return sendNotificationPayload(payload, "notification")
     }
     
-    /**
-     * Fetch user data from OneSignal API.
-     * Note: This endpoint does not require authentication.
-     * 
-     * @param onesignalId The OneSignal user ID
-     * @return UserData object containing aliases, tags, emails, and SMS numbers, or null on error
-     */
+    suspend fun sendCustomNotification(title: String, body: String): Boolean {
+        val subscriptionId = getSubscriptionIdIfOptedIn() ?: return false
+        val payload = JSONObject().apply {
+            put("app_id", appId)
+            put("include_subscription_ids", org.json.JSONArray().put(subscriptionId))
+            put("headings", JSONObject().put("en", title))
+            put("contents", JSONObject().put("en", body))
+            put("android_led_color", "FF595CF2")
+            put("android_accent_color", "FF595CF2")
+        }
+        return sendNotificationPayload(payload, "custom notification")
+    }
+    
     suspend fun fetchUser(onesignalId: String): UserData? = withContext(Dispatchers.IO) {
         if (onesignalId.isEmpty()) {
             LogManager.w(TAG, "Cannot fetch user - onesignalId is empty")
@@ -197,31 +134,25 @@ object OneSignalService {
             
             if (responseCode == HttpURLConnection.HTTP_OK) {
                 val response = connection.inputStream.bufferedReader().use { it.readText() }
-                LogManager.d(TAG, "User data fetched successfully, parsing response...")
-                try {
-                    val userData = parseUserResponse(response)
-                    LogManager.d(TAG, "Parsed user data: aliases=${userData.aliases.size}, tags=${userData.tags.size}, emails=${userData.emails.size}, sms=${userData.smsNumbers.size}")
-                    return@withContext userData
-                } catch (e: Exception) {
-                    LogManager.e(TAG, "Error parsing user response", e)
-                    return@withContext null
-                }
+                LogManager.d(TAG, "User data fetched successfully")
+                parseUserResponse(response)
             } else {
                 val errorResponse = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
                 LogManager.e(TAG, "Failed to fetch user (HTTP $responseCode): $errorResponse")
-                return@withContext null
+                null
             }
         } catch (e: Exception) {
             LogManager.e(TAG, "Error fetching user", e)
-            return@withContext null
+            null
         }
     }
     
     private fun parseUserResponse(json: String): UserData {
         val jsonObject = JSONObject(json)
         
-        // Parse aliases from identity object (filter out external_id and onesignal_id)
         val aliases = mutableMapOf<String, String>()
+        val externalId: String?
+        
         if (jsonObject.has("identity")) {
             val identity = jsonObject.getJSONObject("identity")
             identity.keys().forEach { key ->
@@ -229,15 +160,11 @@ object OneSignalService {
                     aliases[key] = identity.getString(key)
                 }
             }
+            externalId = if (identity.has("external_id")) identity.getString("external_id") else null
+        } else {
+            externalId = null
         }
         
-        // Parse external_id separately
-        val externalId = if (jsonObject.has("identity")) {
-            val identity = jsonObject.getJSONObject("identity")
-            if (identity.has("external_id")) identity.getString("external_id") else null
-        } else null
-        
-        // Parse tags from properties object
         val tags = mutableMapOf<String, String>()
         if (jsonObject.has("properties")) {
             val properties = jsonObject.getJSONObject("properties")
@@ -249,7 +176,6 @@ object OneSignalService {
             }
         }
         
-        // Parse subscriptions for emails and SMS
         val emails = mutableListOf<String>()
         val smsNumbers = mutableListOf<String>()
         if (jsonObject.has("subscriptions")) {
@@ -276,9 +202,6 @@ object OneSignalService {
     }
 }
 
-/**
- * Data class representing user data fetched from the OneSignal API.
- */
 data class UserData(
     val aliases: Map<String, String>,
     val tags: Map<String, String>,

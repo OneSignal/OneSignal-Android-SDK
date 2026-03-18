@@ -99,7 +99,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         OneSignal.User.pushSubscription.addObserver(this)
         OneSignal.Notifications.addPermissionObserver(this)
         OneSignal.User.addObserver(this)
-        android.util.Log.d("MainViewModel", "init: observers registered, current onesignalId=${OneSignal.User.onesignalId}")
         LogManager.debug("OneSignal ID: ${OneSignal.User.onesignalId ?: "not set"}")
     }
 
@@ -110,7 +109,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
 
     // IUserStateObserver - called when user changes (login/logout)
     override fun onUserStateChange(state: UserChangedState) {
-        android.util.Log.d("MainViewModel", "onUserStateChange fired: ${state.current.onesignalId}")
+        LogManager.debug("onUserStateChange: ${state.current.onesignalId}")
         viewModelScope.launch(Dispatchers.Main) {
             loadExistingAliases()
             loadExistingTags()
@@ -122,7 +121,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private fun loadInitialState() {
         val context = getApplication<Application>()
         
-        _appId.value = SharedPreferenceUtil.getOneSignalAppId(context) ?: ""
+        _appId.value = SharedPreferenceUtil.getOneSignalAppId(context)
         _consentRequired.value = repository.getConsentRequired()
         _privacyConsentGiven.value = repository.getPrivacyConsent()
         _inAppMessagesPaused.value = repository.isInAppMessagesPaused()
@@ -177,13 +176,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                             _externalUserId.value = userData.externalId
                             SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), userData.externalId)
                         }
-                        
-                        kotlinx.coroutines.delay(100)
                     }
                     _isLoading.value = false
                 }
             } catch (e: Exception) {
-                android.util.Log.e("MainViewModel", "Error fetching user data", e)
                 withContext(Dispatchers.Main) {
                     logError("Failed to fetch user data: ${e.message}")
                     _isLoading.value = false
@@ -235,7 +231,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 refreshTriggers()
                 loadExistingTags()
                 refreshPushSubscription()
-                // Loading stays on; onUserStateChange will call fetchUserDataFromApi() to dismiss it
+                fetchUserDataFromApi()
             }
         }
     }
@@ -531,10 +527,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     }
 
     fun promptPush() {
-        viewModelScope.launch(Dispatchers.Main) {
-            OneSignal.Notifications.requestPermission(true)
+        viewModelScope.launch {
+            repository.promptPushPermission()
             refreshPushSubscription()
         }
+    }
+
+    fun clearAllNotifications() {
+        repository.clearAllNotifications()
+        showToast("All notifications cleared")
     }
 
     // In-App Messages
@@ -622,5 +623,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     override fun onCleared() {
         super.onCleared()
         OneSignal.User.pushSubscription.removeObserver(this)
+        OneSignal.Notifications.removePermissionObserver(this)
+        OneSignal.User.removeObserver(this)
     }
 }

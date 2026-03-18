@@ -267,13 +267,17 @@ fun PushSection(
 fun SendPushSection(
     onSimpleClick: () -> Unit,
     onImageClick: () -> Unit,
+    onSoundClick: () -> Unit,
     onCustomClick: () -> Unit,
+    onClearAllClick: () -> Unit,
     onInfoClick: () -> Unit
 ) {
     SectionCard(title = "Send Push Notification", showCard = false, onInfoClick = onInfoClick) {
         PrimaryButton(text = "SIMPLE", onClick = onSimpleClick)
         PrimaryButton(text = "WITH IMAGE", onClick = onImageClick)
+        PrimaryButton(text = "WITH SOUND", onClick = onSoundClick)
         PrimaryButton(text = "CUSTOM", onClick = onCustomClick)
+        DestructiveButton(text = "CLEAR ALL", onClick = onClearAllClick)
     }
 }
 

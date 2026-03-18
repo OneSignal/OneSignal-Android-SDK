@@ -114,7 +114,7 @@ fun MainScreen(viewModel: MainViewModel) {
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                "Sample App",
+                                "Android",
                                 color = Color.White.copy(alpha = 0.7f),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Normal
@@ -177,7 +177,9 @@ fun MainScreen(viewModel: MainViewModel) {
                 SendPushSection(
                     onSimpleClick = { viewModel.sendNotification(NotificationType.SIMPLE) },
                     onImageClick = { viewModel.sendNotification(NotificationType.WITH_IMAGE) },
+                    onSoundClick = { viewModel.sendNotification(NotificationType.WITH_SOUND) },
                     onCustomClick = { showCustomNotificationDialog = true },
+                    onClearAllClick = { viewModel.clearAllNotifications() },
                     onInfoClick = { showTooltipDialog = "sendPushNotification" }
                 )
                 

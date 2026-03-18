@@ -1,243 +1,205 @@
 package com.onesignal.sdktest.data.repository
 
-import android.util.Log
 import com.onesignal.OneSignal
 import com.onesignal.sdktest.data.model.NotificationType
 import com.onesignal.sdktest.data.network.OneSignalService
 import com.onesignal.sdktest.data.network.UserData
+import com.onesignal.sdktest.util.LogManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/**
- * Repository for all OneSignal SDK operations.
- * All methods are suspend functions to be called from coroutines on background threads.
- */
 class OneSignalRepository {
 
     companion object {
         private const val TAG = "OneSignalRepository"
     }
 
-    // User operations
     suspend fun loginUser(externalUserId: String) = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Logging in user with externalUserId: $externalUserId")
+        LogManager.d(TAG, "Logging in user: $externalUserId")
         OneSignal.login(externalUserId)
-        Log.d(TAG, "Logged in user with onesignalId: ${OneSignal.User.onesignalId}")
     }
 
     suspend fun logoutUser() = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Logging out user")
+        LogManager.d(TAG, "Logging out user")
         OneSignal.logout()
     }
 
-    // Alias operations
     fun addAlias(label: String, id: String) {
-        Log.d(TAG, "Adding alias: $label -> $id")
+        LogManager.d(TAG, "Adding alias: $label -> $id")
         OneSignal.User.addAlias(label, id)
     }
 
     fun addAliases(aliases: Map<String, String>) {
-        Log.d(TAG, "Adding aliases: $aliases")
+        LogManager.d(TAG, "Adding aliases: $aliases")
         OneSignal.User.addAliases(aliases)
     }
 
     fun removeAlias(label: String) {
-        Log.d(TAG, "Removing alias: $label")
+        LogManager.d(TAG, "Removing alias: $label")
         OneSignal.User.removeAlias(label)
     }
 
     fun removeAliases(labels: Collection<String>) {
-        Log.d(TAG, "Removing aliases: $labels")
         if (labels.isNotEmpty()) {
+            LogManager.d(TAG, "Removing aliases: $labels")
             OneSignal.User.removeAliases(labels)
         }
     }
 
-    // Email operations
     fun addEmail(email: String) {
-        Log.d(TAG, "Adding email: $email")
+        LogManager.d(TAG, "Adding email: $email")
         OneSignal.User.addEmail(email)
     }
 
     fun removeEmail(email: String) {
-        Log.d(TAG, "Removing email: $email")
+        LogManager.d(TAG, "Removing email: $email")
         OneSignal.User.removeEmail(email)
     }
 
-    // SMS operations
     fun addSms(smsNumber: String) {
-        Log.d(TAG, "Adding SMS: $smsNumber")
+        LogManager.d(TAG, "Adding SMS: $smsNumber")
         OneSignal.User.addSms(smsNumber)
     }
 
     fun removeSms(smsNumber: String) {
-        Log.d(TAG, "Removing SMS: $smsNumber")
+        LogManager.d(TAG, "Removing SMS: $smsNumber")
         OneSignal.User.removeSms(smsNumber)
     }
 
-    // Tag operations
     fun addTag(key: String, value: String) {
-        Log.d(TAG, "Adding tag: $key -> $value")
+        LogManager.d(TAG, "Adding tag: $key -> $value")
         OneSignal.User.addTag(key, value)
     }
 
     fun addTags(tags: Map<String, String>) {
-        Log.d(TAG, "Adding tags: $tags")
+        LogManager.d(TAG, "Adding tags: $tags")
         OneSignal.User.addTags(tags)
     }
 
     fun removeTag(key: String) {
-        Log.d(TAG, "Removing tag: $key")
+        LogManager.d(TAG, "Removing tag: $key")
         OneSignal.User.removeTag(key)
     }
 
     fun removeTags(keys: Collection<String>) {
-        Log.d(TAG, "Removing tags: $keys")
         if (keys.isNotEmpty()) {
+            LogManager.d(TAG, "Removing tags: $keys")
             OneSignal.User.removeTags(keys)
         }
     }
 
-    fun getTags(): Map<String, String> {
-        return OneSignal.User.getTags()
-    }
+    fun getTags(): Map<String, String> = OneSignal.User.getTags()
 
-    // Trigger operations
     fun addTrigger(key: String, value: String) {
-        Log.d(TAG, "Adding trigger: $key -> $value")
+        LogManager.d(TAG, "Adding trigger: $key -> $value")
         OneSignal.InAppMessages.addTrigger(key, value)
     }
 
     fun addTriggers(triggers: Map<String, String>) {
-        Log.d(TAG, "Adding triggers: $triggers")
+        LogManager.d(TAG, "Adding triggers: $triggers")
         OneSignal.InAppMessages.addTriggers(triggers)
     }
 
     fun removeTrigger(key: String) {
-        Log.d(TAG, "Removing trigger: $key")
+        LogManager.d(TAG, "Removing trigger: $key")
         OneSignal.InAppMessages.removeTrigger(key)
     }
 
     fun clearTriggers(keys: Collection<String>) {
-        Log.d(TAG, "Clearing triggers: $keys")
         if (keys.isNotEmpty()) {
+            LogManager.d(TAG, "Clearing triggers: $keys")
             OneSignal.InAppMessages.removeTriggers(keys)
         }
     }
 
-    // Outcome operations
     fun sendOutcome(name: String) {
-        Log.d(TAG, "Sending outcome: $name")
+        LogManager.d(TAG, "Sending outcome: $name")
         OneSignal.Session.addOutcome(name)
     }
 
     fun sendUniqueOutcome(name: String) {
-        Log.d(TAG, "Sending unique outcome: $name")
+        LogManager.d(TAG, "Sending unique outcome: $name")
         OneSignal.Session.addUniqueOutcome(name)
     }
 
     fun sendOutcomeWithValue(name: String, value: Float) {
-        Log.d(TAG, "Sending outcome with value: $name -> $value")
+        LogManager.d(TAG, "Sending outcome with value: $name -> $value")
         OneSignal.Session.addOutcomeWithValue(name, value)
     }
 
-    // Track Event
     fun trackEvent(name: String, properties: Map<String, Any?>?) {
-        Log.d(TAG, "Tracking event: $name with properties: $properties")
+        LogManager.d(TAG, "Tracking event: $name with properties: $properties")
         OneSignal.User.trackEvent(name, properties)
     }
 
-    // Push subscription
-    fun getPushSubscriptionId(): String? {
-        return OneSignal.User.pushSubscription.id
-    }
-
-    fun isPushEnabled(): Boolean {
-        return OneSignal.User.pushSubscription.optedIn
-    }
+    fun getPushSubscriptionId(): String? = OneSignal.User.pushSubscription.id
+    fun isPushEnabled(): Boolean = OneSignal.User.pushSubscription.optedIn
 
     fun setPushEnabled(enabled: Boolean) {
-        Log.d(TAG, "Setting push enabled: $enabled")
-        if (enabled) {
-            OneSignal.User.pushSubscription.optIn()
-        } else {
-            OneSignal.User.pushSubscription.optOut()
-        }
+        LogManager.d(TAG, "Setting push enabled: $enabled")
+        if (enabled) OneSignal.User.pushSubscription.optIn()
+        else OneSignal.User.pushSubscription.optOut()
     }
 
-    // In-App Messaging
-    fun isInAppMessagesPaused(): Boolean {
-        return OneSignal.InAppMessages.paused
+    suspend fun promptPushPermission() {
+        LogManager.d(TAG, "Prompting for push permission")
+        OneSignal.Notifications.requestPermission(true)
     }
+
+    fun hasNotificationPermission(): Boolean = OneSignal.Notifications.permission
+
+    fun clearAllNotifications() {
+        LogManager.d(TAG, "Clearing all notifications")
+        OneSignal.Notifications.clearAllNotifications()
+    }
+
+    fun isInAppMessagesPaused(): Boolean = OneSignal.InAppMessages.paused
 
     fun setInAppMessagesPaused(paused: Boolean) {
-        Log.d(TAG, "Setting in-app messages paused: $paused")
+        LogManager.d(TAG, "Setting in-app messages paused: $paused")
         OneSignal.InAppMessages.paused = paused
     }
 
-    // Location
-    fun isLocationShared(): Boolean {
-        return OneSignal.Location.isShared
-    }
+    fun isLocationShared(): Boolean = OneSignal.Location.isShared
 
     fun setLocationShared(shared: Boolean) {
-        Log.d(TAG, "Setting location shared: $shared")
+        LogManager.d(TAG, "Setting location shared: $shared")
         OneSignal.Location.isShared = shared
     }
 
     suspend fun promptLocation() = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Prompting for location permission")
+        LogManager.d(TAG, "Prompting for location permission")
         OneSignal.Location.requestPermission()
     }
 
-    // Notifications
-    suspend fun promptPushPermission() = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Prompting for push permission")
-        OneSignal.Notifications.requestPermission(true)
+    fun setConsentRequired(required: Boolean) {
+        LogManager.d(TAG, "Setting consent required: $required")
+        OneSignal.consentRequired = required
     }
 
-    fun hasNotificationPermission(): Boolean {
-        return OneSignal.Notifications.permission
+    fun getConsentRequired(): Boolean = OneSignal.consentRequired
+
+    fun setPrivacyConsent(granted: Boolean) {
+        LogManager.d(TAG, "Setting privacy consent: $granted")
+        OneSignal.consentGiven = granted
     }
 
-    // Send notifications
+    fun getPrivacyConsent(): Boolean = OneSignal.consentGiven
+
+    fun getOneSignalId(): String? = OneSignal.User.onesignalId
+
     suspend fun sendNotification(type: NotificationType): Boolean {
-        Log.d(TAG, "Sending notification: ${type.title}")
+        LogManager.d(TAG, "Sending notification: ${type.title}")
         return OneSignalService.sendNotification(type)
     }
 
     suspend fun sendCustomNotification(title: String, body: String): Boolean {
-        Log.d(TAG, "Sending custom notification: $title")
+        LogManager.d(TAG, "Sending custom notification: $title")
         return OneSignalService.sendCustomNotification(title, body)
     }
 
-    // Privacy consent
-    fun setConsentRequired(required: Boolean) {
-        Log.d(TAG, "Setting consent required: $required")
-        OneSignal.consentRequired = required
-    }
-
-    fun getConsentRequired(): Boolean {
-        return OneSignal.consentRequired
-    }
-
-    fun setPrivacyConsent(granted: Boolean) {
-        Log.d(TAG, "Setting privacy consent: $granted")
-        OneSignal.consentGiven = granted
-    }
-
-    fun getPrivacyConsent(): Boolean {
-        return OneSignal.consentGiven
-    }
-
-    // OneSignal ID
-    fun getOneSignalId(): String? {
-        return OneSignal.User.onesignalId
-    }
-
-    // Fetch user data from API
-    suspend fun fetchUser(onesignalId: String): UserData? = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Fetching user data for: $onesignalId")
-        OneSignalService.fetchUser(onesignalId)
+    suspend fun fetchUser(onesignalId: String): UserData? {
+        LogManager.d(TAG, "Fetching user data for: $onesignalId")
+        return OneSignalService.fetchUser(onesignalId)
     }
 }

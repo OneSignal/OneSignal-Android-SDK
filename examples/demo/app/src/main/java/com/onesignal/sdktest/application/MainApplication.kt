@@ -13,12 +13,10 @@ import com.onesignal.inAppMessages.IInAppMessageDidDisplayEvent
 import com.onesignal.inAppMessages.IInAppMessageLifecycleListener
 import com.onesignal.inAppMessages.IInAppMessageWillDismissEvent
 import com.onesignal.inAppMessages.IInAppMessageWillDisplayEvent
-import com.onesignal.notifications.IDisplayableNotification
 import com.onesignal.notifications.INotificationClickEvent
 import com.onesignal.notifications.INotificationClickListener
 import com.onesignal.notifications.INotificationLifecycleListener
 import com.onesignal.notifications.INotificationWillDisplayEvent
-import com.onesignal.sdktest.R
 import com.onesignal.sdktest.data.network.OneSignalService
 import com.onesignal.sdktest.util.SharedPreferenceUtil
 import com.onesignal.sdktest.util.TooltipHelper
@@ -42,7 +40,6 @@ class MainApplication : MultiDexApplication() {
         
         OneSignal.Debug.logLevel = LogLevel.VERBOSE
         
-        // Add SDK log listener BEFORE init to capture all SDK logs in UI
         OneSignal.Debug.addLogListener { event ->
             val level = when (event.level) {
                 LogLevel.VERBOSE, LogLevel.DEBUG -> AppLogLevel.DEBUG
@@ -54,33 +51,19 @@ class MainApplication : MultiDexApplication() {
             LogManager.log("SDK", event.entry, level)
         }
 
-        // Get or set the OneSignal App ID
-        var appId = SharedPreferenceUtil.getOneSignalAppId(this)
-        if (appId == null) {
-            appId = getString(R.string.onesignal_app_id)
-            SharedPreferenceUtil.cacheOneSignalAppId(this, appId)
-        }
+        val appId = SharedPreferenceUtil.getOneSignalAppId(this)
 
-        // Initialize OneSignal Service with app ID and REST API key
         OneSignalService.setAppId(appId)
-        
-        // Initialize tooltip helper
         TooltipHelper.init(this)
 
-        // Set consent required before init (must be set before initWithContext)
+        // Consent must be set before initWithContext
         OneSignal.consentRequired = SharedPreferenceUtil.getCachedConsentRequired(this)
         OneSignal.consentGiven = SharedPreferenceUtil.getUserPrivacyConsent(this)
 
-        // Initialize OneSignal on main thread (required)
-        // Crash handler + ANR detector are initialized early inside initWithContext
         OneSignal.initWithContext(this, appId)
-        LogManager.i(TAG, "OneSignal init completed (crash handler, ANR detector, and logging active)")
+        LogManager.i(TAG, "OneSignal init completed")
 
-        // Set up all OneSignal listeners
         setupOneSignalListeners()
-        
-        // Note: Notification permission is automatically requested when MainActivity loads.
-        // This ensures the prompt appears after the user sees the app UI.
     }
 
     private fun setupOneSignalListeners() {
@@ -118,11 +101,9 @@ class MainApplication : MultiDexApplication() {
             override fun onWillDisplay(event: INotificationWillDisplayEvent) {
                 LogManager.d(TAG, "INotificationLifecycleListener.onWillDisplay fired with event: $event")
 
-                val notification: IDisplayableNotification = event.notification
-
-                // Prevent OneSignal from displaying the notification immediately on return.
-                // Spin up a new thread to mimic some asynchronous behavior.
+                // Demonstrate async notification display: prevent default, delay, then show
                 event.preventDefault()
+                val notification = event.notification
                 Thread {
                     try {
                         Thread.sleep(SLEEP_TIME_TO_MIMIC_ASYNC_OPERATION)
@@ -143,4 +124,5 @@ class MainApplication : MultiDexApplication() {
         OneSignal.InAppMessages.paused = SharedPreferenceUtil.getCachedInAppMessagingPausedStatus(this)
         OneSignal.Location.isShared = SharedPreferenceUtil.getCachedLocationSharedStatus(this)
     }
+
 }

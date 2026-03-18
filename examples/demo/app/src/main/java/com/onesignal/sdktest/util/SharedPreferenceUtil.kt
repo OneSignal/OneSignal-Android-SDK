@@ -17,13 +17,9 @@ object SharedPreferenceUtil {
         return context.getSharedPreferences(APP_SHARED_PREFS, Context.MODE_PRIVATE)
     }
 
-    fun exists(context: Context, key: String): Boolean {
-        return getSharedPreference(context).contains(key)
-    }
-
-    fun getOneSignalAppId(context: Context): String? {
+    fun getOneSignalAppId(context: Context): String {
         val defaultAppId = "77e32082-ea27-42e3-a898-c72e141824ef"
-        return getSharedPreference(context).getString(OS_APP_ID_SHARED_PREF, defaultAppId)
+        return getSharedPreference(context).getString(OS_APP_ID_SHARED_PREF, defaultAppId) ?: defaultAppId
     }
 
     fun getUserPrivacyConsent(context: Context): Boolean {
