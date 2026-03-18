@@ -17,7 +17,6 @@ import com.onesignal.notifications.INotificationClickEvent
 import com.onesignal.notifications.INotificationClickListener
 import com.onesignal.notifications.INotificationLifecycleListener
 import com.onesignal.notifications.INotificationWillDisplayEvent
-import com.onesignal.sdktest.R
 import com.onesignal.sdktest.data.network.OneSignalService
 import com.onesignal.sdktest.util.SharedPreferenceUtil
 import com.onesignal.sdktest.util.TooltipHelper
@@ -52,11 +51,7 @@ class MainApplication : MultiDexApplication() {
             LogManager.log("SDK", event.entry, level)
         }
 
-        var appId = SharedPreferenceUtil.getOneSignalAppId(this)
-        if (appId == null) {
-            appId = getString(R.string.onesignal_app_id)
-            SharedPreferenceUtil.cacheOneSignalAppId(this, appId)
-        }
+        val appId = SharedPreferenceUtil.getOneSignalAppId(this)
 
         OneSignalService.setAppId(appId)
         TooltipHelper.init(this)
