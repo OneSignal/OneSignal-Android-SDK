@@ -97,6 +97,7 @@ class UpdateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.UP
     override val groupComparisonType: GroupComparisonType = GroupComparisonType.ALTER
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId) && !IDManager.isLocalId(subscriptionId)
     override val applyToRecordId: String get() = subscriptionId
+    override val requiresJwt: Boolean get() = false
 
     constructor(appId: String, onesignalId: String, subscriptionId: String, type: SubscriptionType, enabled: Boolean, address: String, status: SubscriptionStatus, jwt: String? = null) : this() {
         this.appId = appId
