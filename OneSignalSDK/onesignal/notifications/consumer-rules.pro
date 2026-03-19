@@ -55,3 +55,10 @@
 -keep class com.onesignal.JobIntentService$* {*;}
 
 -keepclassmembers class com.onesignal.notifications.** { *; }
+
+# Keep OneSignal WorkManager workers and constructors used for runtime instantiation.
+-keep class com.onesignal.notifications.internal.** extends androidx.work.ListenableWorker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}
+
+-keep class androidx.work.WorkerParameters { *; }
