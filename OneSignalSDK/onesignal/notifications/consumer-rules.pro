@@ -60,5 +60,3 @@
 -keep class com.onesignal.notifications.internal.** extends androidx.work.ListenableWorker {
     public <init>(android.content.Context, androidx.work.WorkerParameters);
 }
-
--keep class androidx.work.WorkerParameters { *; }
