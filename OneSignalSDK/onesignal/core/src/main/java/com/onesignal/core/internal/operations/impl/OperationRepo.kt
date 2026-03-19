@@ -1,7 +1,13 @@
 package com.onesignal.core.internal.operations.impl
 
+import com.onesignal.IUserJwtInvalidatedListener
+import com.onesignal.UserJwtInvalidatedEvent
+import com.onesignal.common.events.EventProducer
+import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
+import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.common.threading.OSPrimaryCoroutineScope
 import com.onesignal.common.threading.WaiterWithValue
+import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.GroupComparisonType
@@ -31,15 +37,20 @@ internal class OperationRepo(
     private val _identityModelStore: IdentityModelStore,
     private val _time: ITime,
     private val _newRecordState: NewRecordsState,
-) : IOperationRepo, IStartableService {
+) : IOperationRepo, IStartableService, ISingletonModelStoreChangeHandler<ConfigModel> {
+    companion object {
+        private const val FAIL_UNAUTHORIZED_MAX_RETRIES = 3
+    }
+
     internal class OperationQueueItem(
         val operation: Operation,
         val waiter: WaiterWithValue<Boolean>? = null,
         val bucket: Int,
         var retries: Int = 0,
+        var unauthorizedRetries: Int = 0,
     ) {
         override fun toString(): String {
-            return "bucket:$bucket, retries:$retries, operation:$operation\n"
+            return "bucket:$bucket, retries:$retries, unauthorizedRetries:$unauthorizedRetries, operation:$operation\n"
         }
     }
 
@@ -55,6 +66,7 @@ internal class OperationRepo(
     private var paused = false
     private var coroutineScope = CoroutineScope(newSingleThreadContext(name = "OpRepo"))
     private val initialized = CompletableDeferred<Unit>()
+    val jwtInvalidatedCallback = EventProducer<IUserJwtInvalidatedListener>()
 
     override suspend fun awaitInitialized() {
         initialized.await()
@@ -97,12 +109,27 @@ internal class OperationRepo(
     }
 
     override fun start() {
+        _configModelStore.subscribe(this)
         coroutineScope.launch {
             // load saved operations first then start processing the queue to ensure correct operation order
             loadSavedOperations()
             processQueueForever()
         }
     }
+
+    override fun onModelReplaced(
+        model: ConfigModel,
+        tag: String,
+    ) {
+        if (model.isInitializedWithRemote) {
+            waiter.wake(LoopWaiterMessage(false))
+        }
+    }
+
+    override fun onModelUpdated(
+        args: ModelChangedArgs,
+        tag: String,
+    ) { }
 
     /**
      *  Enqueuing will be performed in a designate coroutine and may not be added instantly.
@@ -147,6 +174,11 @@ internal class OperationRepo(
         addToStore: Boolean,
         index: Int? = null,
     ) {
+        if (addToStore) {
+            queueItem.operation.operationJwt = _identityModelStore.model.jwtToken
+            queueItem.operation.operationExternalId = _identityModelStore.model.externalId
+        }
+
         synchronized(queue) {
             val hasExisting = queue.any { it.operation.id == queueItem.operation.id }
             if (hasExisting) {
@@ -262,12 +294,26 @@ internal class OperationRepo(
                     ops.forEach { it.waiter?.wake(true) }
                 }
                 ExecutionResult.FAIL_UNAUTHORIZED -> {
-                    Logging.error("Operation execution failed with invalid jwt")
-                    _identityModelStore.invalidateJwt()
+                    val externalId = ops.first().operation.operationExternalId
+                    Logging.error("Operation execution failed with invalid jwt for externalId: $externalId")
 
-                    // add back all operations to the front of the queue to be re-executed.
                     synchronized(queue) {
-                        ops.reversed().forEach { queue.add(0, it) }
+                        ops.reversed().forEach {
+                            it.unauthorizedRetries++
+                            if (it.unauthorizedRetries > FAIL_UNAUTHORIZED_MAX_RETRIES) {
+                                Logging.error("Dropping operation after $FAIL_UNAUTHORIZED_MAX_RETRIES unauthorized retries: ${it.operation}")
+                                _operationModelStore.remove(it.operation.id)
+                                it.waiter?.wake(false)
+                            } else {
+                                it.operation.operationJwt = null
+                                _operationModelStore.persist()
+                                queue.add(0, it)
+                            }
+                        }
+                    }
+
+                    if (externalId != null) {
+                        jwtInvalidatedCallback.fire { it.onUserJwtInvalidated(UserJwtInvalidatedEvent(externalId)) }
                     }
                 }
                 ExecutionResult.FAIL_NORETRY,
@@ -313,9 +359,12 @@ internal class OperationRepo(
             // if there are operations provided on the result, we need to enqueue them at the
             // beginning of the queue.
             if (response.operations != null) {
+                val startingOp = ops.first().operation
                 synchronized(queue) {
                     for (op in response.operations.reversed()) {
                         op.id = UUID.randomUUID().toString()
+                        op.operationJwt = startingOp.operationJwt
+                        op.operationExternalId = startingOp.operationExternalId
                         val queueItem = OperationQueueItem(op, bucket = 0)
                         queue.add(0, queueItem)
                         _operationModelStore.add(0, queueItem.operation)
@@ -374,18 +423,32 @@ internal class OperationRepo(
 
     internal fun getNextOps(bucketFilter: Int): List<OperationQueueItem>? {
         return synchronized(queue) {
-            // Ensure the operation does not have empty JWT if identity verification is on
-            if (_configModelStore.model.useIdentityVerification &&
-                _identityModelStore.model.jwtToken == null
-            ) {
+            Logging.debug("getNextOps queue:\n$queue")
+
+            if (!_configModelStore.model.isInitializedWithRemote) {
+                Logging.debug("getNextOps: waiting for remote params")
                 return null
+            }
+
+            val useIV = _configModelStore.model.useIdentityVerification
+            if (useIV) {
+                val toDiscard = queue.filter {
+                    it.operation.operationExternalId == null && it.operation.requiresJwt
+                }
+                for (item in toDiscard) {
+                    Logging.debug("getNextOps: discarding anonymous op: ${item.operation}")
+                    queue.remove(item)
+                    _operationModelStore.remove(item.operation.id)
+                    item.waiter?.wake(false)
+                }
             }
 
             val startingOp =
                 queue.firstOrNull {
                     it.operation.canStartExecute &&
                         _newRecordState.canAccess(it.operation.applyToRecordId) &&
-                        it.bucket <= bucketFilter
+                        it.bucket <= bucketFilter &&
+                        (!useIV || !it.operation.requiresJwt || it.operation.operationJwt != null)
                 }
 
             if (startingOp != null) {
@@ -441,6 +504,30 @@ internal class OperationRepo(
         }
 
         return ops
+    }
+
+    override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
+        jwtInvalidatedCallback.subscribe(listener)
+    }
+
+    override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
+        jwtInvalidatedCallback.unsubscribe(listener)
+    }
+
+    override fun updateJwtForExternalId(
+        externalId: String,
+        jwt: String,
+    ) {
+        synchronized(queue) {
+            for (item in queue) {
+                if (item.operation.operationExternalId == externalId) {
+                    item.operation.operationJwt = jwt
+                    item.unauthorizedRetries = 0
+                }
+            }
+        }
+        _operationModelStore.persist()
+        waiter.wake(LoopWaiterMessage(false))
     }
 
     /**
