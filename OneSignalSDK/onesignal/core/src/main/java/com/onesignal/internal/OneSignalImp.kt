@@ -451,21 +451,20 @@ internal class OneSignalImp : IOneSignal, IServiceProvider {
         for (model in identityModelStore!!.store.list()) {
             if (externalId == model.externalId) {
                 identityModelStore!!.model.jwtToken = token
-                operationRepo!!.forceExecuteOperations()
                 Logging.log(LogLevel.DEBUG, "JWT $token is updated for externalId $externalId")
-                return
+                break
             }
         }
 
-        Logging.log(LogLevel.DEBUG, "No identity found for externalId $externalId")
+        operationRepo!!.updateJwtForExternalId(externalId, token)
     }
 
     override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        user.addUserJwtInvalidatedListener(listener)
+        operationRepo!!.addUserJwtInvalidatedListener(listener)
     }
 
     override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        user.removeUserJwtInvalidatedListener(listener)
+        operationRepo!!.removeUserJwtInvalidatedListener(listener)
     }
 
     private fun createAndSwitchToNewUser(
