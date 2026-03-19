@@ -59,7 +59,7 @@ internal class RefreshUserOperationExecutor(
                     op.appId,
                     identityAlias.first,
                     identityAlias.second,
-                    _identityModelStore.model.jwtToken,
+                    op.operationJwt,
                 )
 
             if (op.onesignalId != _identityModelStore.model.onesignalId) {
@@ -70,7 +70,7 @@ internal class RefreshUserOperationExecutor(
             for (aliasKVP in response.identities) {
                 identityModel[aliasKVP.key] = aliasKVP.value
             }
-            identityModel.jwtToken = _identityModelStore.model.jwtToken
+            identityModel.jwtToken = op.operationJwt
 
             val propertiesModel = PropertiesModel()
             propertiesModel.onesignalId = op.onesignalId

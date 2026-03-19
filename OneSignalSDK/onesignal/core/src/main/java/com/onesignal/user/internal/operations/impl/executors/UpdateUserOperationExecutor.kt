@@ -156,7 +156,7 @@ internal class UpdateUserOperationExecutor(
                         propertiesObject,
                         refreshDeviceMetadata,
                         deltasObject,
-                        _identityModelStore.model.jwtToken,
+                        operations.first().operationJwt,
                     )
 
                 if (rywData != null) {
