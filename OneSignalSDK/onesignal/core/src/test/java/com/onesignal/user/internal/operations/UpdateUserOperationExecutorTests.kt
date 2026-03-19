@@ -53,6 +53,7 @@ class UpdateUserOperationExecutorTests :
                     mockUserBackendService,
                     mockIdentityModelStore,
                     mockPropertiesModelStore,
+                    MockHelper.configModelStore(),
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
@@ -93,6 +94,7 @@ class UpdateUserOperationExecutorTests :
                     mockUserBackendService,
                     mockIdentityModelStore,
                     mockPropertiesModelStore,
+                    MockHelper.configModelStore(),
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
@@ -155,6 +157,7 @@ class UpdateUserOperationExecutorTests :
                     mockUserBackendService,
                     mockIdentityModelStore,
                     mockPropertiesModelStore,
+                    MockHelper.configModelStore(),
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
@@ -200,6 +203,7 @@ class UpdateUserOperationExecutorTests :
                     mockUserBackendService,
                     mockIdentityModelStore,
                     mockPropertiesModelStore,
+                    MockHelper.configModelStore(),
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
@@ -265,6 +269,7 @@ class UpdateUserOperationExecutorTests :
                     mockUserBackendService,
                     mockIdentityModelStore,
                     mockPropertiesModelStore,
+                    MockHelper.configModelStore(),
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
@@ -313,6 +318,7 @@ class UpdateUserOperationExecutorTests :
                     mockUserBackendService,
                     mockIdentityModelStore,
                     mockPropertiesModelStore,
+                    MockHelper.configModelStore(),
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
@@ -346,6 +352,7 @@ class UpdateUserOperationExecutorTests :
                     mockUserBackendService,
                     mockIdentityModelStore,
                     mockPropertiesModelStore,
+                    mockConfigModelStore,
                     mockBuildUserService,
                     newRecordState,
                     mockConsistencyManager,
@@ -376,6 +383,7 @@ class UpdateUserOperationExecutorTests :
                     mockUserBackendService,
                     mockIdentityModelStore,
                     mockPropertiesModelStore,
+                    MockHelper.configModelStore(),
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
@@ -395,7 +403,7 @@ class UpdateUserOperationExecutorTests :
             }
         }
 
-        test("update user uses operation's external_id when JWT is present, not current user") {
+        test("update user uses operation's external_id when IV is enabled, not current user") {
             // Given
             val previousUserExternalId = "previousUserExternalId"
             val previousUserJwt = "previousUserJwt"
@@ -412,6 +420,7 @@ class UpdateUserOperationExecutorTests :
                     mockUserBackendService,
                     mockIdentityModelStore,
                     mockPropertiesModelStore,
+                    MockHelper.configModelStore { it.useIdentityVerification = true },
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
@@ -440,7 +449,7 @@ class UpdateUserOperationExecutorTests :
             }
         }
 
-        test("update user uses onesignal_id when no JWT is present") {
+        test("update user uses onesignal_id when IV is disabled") {
             // Given
             val mockUserBackendService = mockk<IUserBackendService>()
             coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } returns rywData
@@ -454,6 +463,7 @@ class UpdateUserOperationExecutorTests :
                     mockUserBackendService,
                     mockIdentityModelStore,
                     mockPropertiesModelStore,
+                    MockHelper.configModelStore(),
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,

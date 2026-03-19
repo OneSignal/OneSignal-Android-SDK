@@ -3,6 +3,7 @@ package com.onesignal.user.internal.operations.impl.executors
 import com.onesignal.common.NetworkUtils
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
+import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.IOperationExecutor
@@ -19,6 +20,7 @@ import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 internal class IdentityOperationExecutor(
     private val _identityBackend: IIdentityBackendService,
     private val _identityModelStore: IdentityModelStore,
+    private val _configModelStore: ConfigModelStore,
     private val _buildUserService: IRebuildUserService,
     private val _newRecordState: NewRecordsState,
 ) : IOperationExecutor {
@@ -46,7 +48,7 @@ internal class IdentityOperationExecutor(
         if (lastOperation is SetAliasOperation) {
             try {
                 val identityAlias =
-                    if (lastOperation.operationJwt != null && lastOperation.operationExternalId != null) {
+                    if (_configModelStore.model.useIdentityVerification && lastOperation.operationExternalId != null) {
                         Pair(IdentityConstants.EXTERNAL_ID, lastOperation.operationExternalId!!)
                     } else {
                         Pair(IdentityConstants.ONESIGNAL_ID, lastOperation.onesignalId)

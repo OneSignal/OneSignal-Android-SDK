@@ -6,6 +6,7 @@ import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
 import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
+import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.IOperationExecutor
@@ -32,6 +33,7 @@ internal class UpdateUserOperationExecutor(
     private val _userBackend: IUserBackendService,
     private val _identityModelStore: IdentityModelStore,
     private val _propertiesModelStore: PropertiesModelStore,
+    private val _configModelStore: ConfigModelStore,
     private val _buildUserService: IRebuildUserService,
     private val _newRecordState: NewRecordsState,
     private val _consistencyManager: IConsistencyManager,
@@ -149,7 +151,7 @@ internal class UpdateUserOperationExecutor(
         if (appId != null && onesignalId != null) {
             try {
                 val identityAlias =
-                    if (operations.first().operationJwt != null && operations.first().operationExternalId != null) {
+                    if (_configModelStore.model.useIdentityVerification && operations.first().operationExternalId != null) {
                         Pair(IdentityConstants.EXTERNAL_ID, operations.first().operationExternalId!!)
                     } else {
                         Pair(IdentityConstants.ONESIGNAL_ID, onesignalId)

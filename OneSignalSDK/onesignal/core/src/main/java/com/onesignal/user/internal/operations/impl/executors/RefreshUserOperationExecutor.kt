@@ -55,7 +55,7 @@ internal class RefreshUserOperationExecutor(
     private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse {
         try {
             val identityAlias =
-                if (op.operationJwt != null && op.operationExternalId != null) {
+                if (_configModelStore.model.useIdentityVerification && op.operationExternalId != null) {
                     Pair(IdentityConstants.EXTERNAL_ID, op.operationExternalId!!)
                 } else {
                     Pair(IdentityConstants.ONESIGNAL_ID, op.onesignalId)

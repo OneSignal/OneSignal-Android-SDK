@@ -330,7 +330,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
         }
     }
 
-    test("refresh user uses operation's external_id when JWT is present, not current user") {
+    test("refresh user uses operation's external_id when IV is enabled, not current user") {
         // Given
         val previousUserExternalId = "previousUser"
         val previousUserJwt = "previousUserJwt"
@@ -360,7 +360,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 mockIdentityModelStore,
                 mockPropertiesModelStore,
                 mockSubscriptionsModelStore,
-                MockHelper.configModelStore(),
+                MockHelper.configModelStore { it.useIdentityVerification = true },
                 mockBuildUserService,
                 getNewRecordState(),
             )
@@ -380,7 +380,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
         }
     }
 
-    test("refresh user uses onesignal_id when no JWT is present") {
+    test("refresh user uses onesignal_id when IV is disabled") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery {

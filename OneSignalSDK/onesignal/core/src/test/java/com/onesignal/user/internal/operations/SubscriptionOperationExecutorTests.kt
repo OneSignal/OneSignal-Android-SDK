@@ -799,7 +799,7 @@ class SubscriptionOperationExecutorTests :
             }
         }
 
-        test("create subscription uses operation's external_id when JWT is present, not current user") {
+        test("create subscription uses operation's external_id when IV is enabled, not current user") {
             // Given
             val previousUserExternalId = "previousUserExternalId"
             val previousUserJwt = "previousUserJwt"
@@ -823,7 +823,7 @@ class SubscriptionOperationExecutorTests :
                     AndroidMockHelper.applicationService(),
                     mockIdentityModelStore,
                     mockSubscriptionsModelStore,
-                    MockHelper.configModelStore(),
+                    MockHelper.configModelStore { it.useIdentityVerification = true },
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
@@ -858,7 +858,7 @@ class SubscriptionOperationExecutorTests :
             }
         }
 
-        test("create subscription uses onesignal_id when no JWT is present") {
+        test("create subscription uses onesignal_id when IV is disabled") {
             // Given
             val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
             coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any(), any()) } returns

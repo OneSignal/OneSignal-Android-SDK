@@ -108,7 +108,7 @@ internal class SubscriptionOperationExecutor(
                 )
 
             val identityAlias =
-                if (createOperation.operationJwt != null && createOperation.operationExternalId != null) {
+                if (_configModelStore.model.useIdentityVerification && createOperation.operationExternalId != null) {
                     Pair(IdentityConstants.EXTERNAL_ID, createOperation.operationExternalId!!)
                 } else {
                     Pair(IdentityConstants.ONESIGNAL_ID, createOperation.onesignalId)
