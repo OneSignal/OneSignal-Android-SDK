@@ -268,4 +268,79 @@ class IdentityOperationExecutorTests : FunSpec({
         // Then
         response.result shouldBe ExecutionResult.FAIL_RETRY
     }
+
+    test("set alias uses operation's external_id when JWT is present, not current user") {
+        // Given
+        val mockIdentityBackendService = mockk<IIdentityBackendService>()
+        coEvery { mockIdentityBackendService.setAlias(any(), any(), any(), any(), any()) } returns mapOf()
+
+        val mockIdentityModel = mockk<IdentityModel>()
+        every { mockIdentityModel.onesignalId } returns "currentUserOnesignalId"
+        every { mockIdentityModel.jwtToken } returns "currentUserJwt"
+
+        val mockIdentityModelStore = mockk<IdentityModelStore>()
+        every { mockIdentityModelStore.model } returns mockIdentityModel
+
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
+        val identityOperationExecutor =
+            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState())
+
+        val operation = SetAliasOperation("appId", "previousUserOnesignalId", "aliasKey1", "aliasValue1")
+        operation.operationJwt = "previousUserJwt"
+        operation.operationExternalId = "previousUserExternalId"
+        val operations = listOf<Operation>(operation)
+
+        // When
+        val response = identityOperationExecutor.execute(operations)
+
+        // Then
+        response.result shouldBe ExecutionResult.SUCCESS
+        coVerify(exactly = 1) {
+            mockIdentityBackendService.setAlias(
+                "appId",
+                IdentityConstants.EXTERNAL_ID,
+                "previousUserExternalId",
+                mapOf("aliasKey1" to "aliasValue1"),
+                "previousUserJwt",
+            )
+        }
+    }
+
+    test("set alias uses onesignal_id when no JWT is present") {
+        // Given
+        val mockIdentityBackendService = mockk<IIdentityBackendService>()
+        coEvery { mockIdentityBackendService.setAlias(any(), any(), any(), any(), any()) } returns mapOf()
+
+        val mockIdentityModel = mockk<IdentityModel>()
+        every { mockIdentityModel.onesignalId } returns "onesignalId"
+        every { mockIdentityModel.setStringProperty(any(), any(), any()) } just runs
+        every { mockIdentityModel.jwtToken } returns null
+
+        val mockIdentityModelStore = mockk<IdentityModelStore>()
+        every { mockIdentityModelStore.model } returns mockIdentityModel
+
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
+        val identityOperationExecutor =
+            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState())
+
+        val operation = SetAliasOperation("appId", "onesignalId", "aliasKey1", "aliasValue1")
+        val operations = listOf<Operation>(operation)
+
+        // When
+        val response = identityOperationExecutor.execute(operations)
+
+        // Then
+        response.result shouldBe ExecutionResult.SUCCESS
+        coVerify(exactly = 1) {
+            mockIdentityBackendService.setAlias(
+                "appId",
+                IdentityConstants.ONESIGNAL_ID,
+                "onesignalId",
+                mapOf("aliasKey1" to "aliasValue1"),
+                null,
+            )
+        }
+    }
 })

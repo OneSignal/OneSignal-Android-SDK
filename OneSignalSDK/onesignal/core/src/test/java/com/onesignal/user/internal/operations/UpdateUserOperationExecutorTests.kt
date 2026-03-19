@@ -394,4 +394,87 @@ class UpdateUserOperationExecutorTests :
                 mockConsistencyManager.setRywData(remoteOneSignalId, IamFetchRywTokenKey.USER, rywData)
             }
         }
+
+        test("update user uses operation's external_id when JWT is present, not current user") {
+            // Given
+            val previousUserExternalId = "previousUserExternalId"
+            val previousUserJwt = "previousUserJwt"
+
+            val mockUserBackendService = mockk<IUserBackendService>()
+            coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any(), any()) } returns rywData
+
+            val mockIdentityModelStore = MockHelper.identityModelStore()
+            val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+            val mockBuildUserService = mockk<IRebuildUserService>()
+
+            val updateUserOperationExecutor =
+                UpdateUserOperationExecutor(
+                    mockUserBackendService,
+                    mockIdentityModelStore,
+                    mockPropertiesModelStore,
+                    mockBuildUserService,
+                    getNewRecordState(),
+                    mockConsistencyManager,
+                )
+
+            val op = SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1")
+            op.operationJwt = previousUserJwt
+            op.operationExternalId = previousUserExternalId
+            val operations = listOf<Operation>(op)
+
+            // When
+            val response = updateUserOperationExecutor.execute(operations)
+
+            // Then
+            response.result shouldBe ExecutionResult.SUCCESS
+            coVerify(exactly = 1) {
+                mockUserBackendService.updateUser(
+                    appId,
+                    IdentityConstants.EXTERNAL_ID,
+                    previousUserExternalId,
+                    any(),
+                    any(),
+                    any(),
+                    previousUserJwt,
+                )
+            }
+        }
+
+        test("update user uses onesignal_id when no JWT is present") {
+            // Given
+            val mockUserBackendService = mockk<IUserBackendService>()
+            coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } returns rywData
+
+            val mockIdentityModelStore = MockHelper.identityModelStore()
+            val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+            val mockBuildUserService = mockk<IRebuildUserService>()
+
+            val updateUserOperationExecutor =
+                UpdateUserOperationExecutor(
+                    mockUserBackendService,
+                    mockIdentityModelStore,
+                    mockPropertiesModelStore,
+                    mockBuildUserService,
+                    getNewRecordState(),
+                    mockConsistencyManager,
+                )
+
+            val operations = listOf<Operation>(SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1"))
+
+            // When
+            val response = updateUserOperationExecutor.execute(operations)
+
+            // Then
+            response.result shouldBe ExecutionResult.SUCCESS
+            coVerify(exactly = 1) {
+                mockUserBackendService.updateUser(
+                    appId,
+                    IdentityConstants.ONESIGNAL_ID,
+                    remoteOneSignalId,
+                    any(),
+                    any(),
+                    any(),
+                )
+            }
+        }
     })

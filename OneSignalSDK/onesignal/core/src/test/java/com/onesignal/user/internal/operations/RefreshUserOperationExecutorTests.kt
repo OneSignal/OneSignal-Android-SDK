@@ -329,4 +329,101 @@ class RefreshUserOperationExecutorTests : FunSpec({
             mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId)
         }
     }
+
+    test("refresh user uses operation's external_id when JWT is present, not current user") {
+        // Given
+        val previousUserExternalId = "previousUser"
+        val previousUserJwt = "previousUserJwt"
+
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery {
+            mockUserBackendService.getUser(appId, IdentityConstants.EXTERNAL_ID, previousUserExternalId, previousUserJwt)
+        } returns CreateUserResponse(
+            mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId, IdentityConstants.EXTERNAL_ID to previousUserExternalId),
+            PropertiesObject(),
+            listOf(),
+            null,
+        )
+
+        val mockIdentityModelStore = MockHelper.identityModelStore()
+        val mockIdentityModel = IdentityModel()
+        mockIdentityModel.onesignalId = "currentUserOnesignalId"
+        every { mockIdentityModelStore.model } returns mockIdentityModel
+
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
+        val refreshUserOperationExecutor =
+            RefreshUserOperationExecutor(
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+                getNewRecordState(),
+            )
+
+        val op = RefreshUserOperation(appId, remoteOneSignalId)
+        op.operationJwt = previousUserJwt
+        op.operationExternalId = previousUserExternalId
+        val operations = listOf<Operation>(op)
+
+        // When
+        val response = refreshUserOperationExecutor.execute(operations)
+
+        // Then
+        response.result shouldBe ExecutionResult.SUCCESS
+        coVerify(exactly = 1) {
+            mockUserBackendService.getUser(appId, IdentityConstants.EXTERNAL_ID, previousUserExternalId, previousUserJwt)
+        }
+    }
+
+    test("refresh user uses onesignal_id when no JWT is present") {
+        // Given
+        val mockUserBackendService = mockk<IUserBackendService>()
+        coEvery {
+            mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId, null)
+        } returns CreateUserResponse(
+            mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+            PropertiesObject(),
+            listOf(),
+            null,
+        )
+
+        val mockIdentityModelStore = MockHelper.identityModelStore()
+        val mockIdentityModel = IdentityModel()
+        mockIdentityModel.onesignalId = remoteOneSignalId
+        every { mockIdentityModelStore.model } returns mockIdentityModel
+        every { mockIdentityModelStore.replace(any(), any()) } just runs
+
+        val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+        every { mockPropertiesModelStore.replace(any(), any()) } just runs
+        val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+        every { mockSubscriptionsModelStore.replaceAll(any(), any()) } just runs
+        val mockBuildUserService = mockk<IRebuildUserService>()
+
+        val refreshUserOperationExecutor =
+            RefreshUserOperationExecutor(
+                mockUserBackendService,
+                mockIdentityModelStore,
+                mockPropertiesModelStore,
+                mockSubscriptionsModelStore,
+                MockHelper.configModelStore(),
+                mockBuildUserService,
+                getNewRecordState(),
+            )
+
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+
+        // When
+        val response = refreshUserOperationExecutor.execute(operations)
+
+        // Then
+        response.result shouldBe ExecutionResult.SUCCESS
+        coVerify(exactly = 1) {
+            mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId, null)
+        }
+    }
 })

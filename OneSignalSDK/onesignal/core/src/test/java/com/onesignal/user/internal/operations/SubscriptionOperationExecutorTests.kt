@@ -798,4 +798,117 @@ class SubscriptionOperationExecutorTests :
                 mockConsistencyManager.setRywData(remoteOneSignalId, IamFetchRywTokenKey.SUBSCRIPTION, rywData)
             }
         }
+
+        test("create subscription uses operation's external_id when JWT is present, not current user") {
+            // Given
+            val previousUserExternalId = "previousUserExternalId"
+            val previousUserJwt = "previousUserJwt"
+
+            val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
+            coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any(), any()) } returns
+                Pair(remoteSubscriptionId, rywData)
+
+            val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+            val subscriptionModel1 = SubscriptionModel()
+            subscriptionModel1.id = localSubscriptionId
+            every { mockSubscriptionsModelStore.get(localSubscriptionId) } returns subscriptionModel1
+
+            val mockIdentityModelStore = MockHelper.identityModelStore()
+            val mockBuildUserService = mockk<IRebuildUserService>()
+
+            val subscriptionOperationExecutor =
+                SubscriptionOperationExecutor(
+                    mockSubscriptionBackendService,
+                    MockHelper.deviceService(),
+                    AndroidMockHelper.applicationService(),
+                    mockIdentityModelStore,
+                    mockSubscriptionsModelStore,
+                    MockHelper.configModelStore(),
+                    mockBuildUserService,
+                    getNewRecordState(),
+                    mockConsistencyManager,
+                )
+
+            val createOp = CreateSubscriptionOperation(
+                appId,
+                remoteOneSignalId,
+                localSubscriptionId,
+                SubscriptionType.PUSH,
+                true,
+                "pushToken1",
+                SubscriptionStatus.SUBSCRIBED,
+            )
+            createOp.operationJwt = previousUserJwt
+            createOp.operationExternalId = previousUserExternalId
+            val operations = listOf<Operation>(createOp)
+
+            // When
+            val response = subscriptionOperationExecutor.execute(operations)
+
+            // Then
+            response.result shouldBe ExecutionResult.SUCCESS
+            coVerify(exactly = 1) {
+                mockSubscriptionBackendService.createSubscription(
+                    appId,
+                    IdentityConstants.EXTERNAL_ID,
+                    previousUserExternalId,
+                    any(),
+                    previousUserJwt,
+                )
+            }
+        }
+
+        test("create subscription uses onesignal_id when no JWT is present") {
+            // Given
+            val mockSubscriptionBackendService = mockk<ISubscriptionBackendService>()
+            coEvery { mockSubscriptionBackendService.createSubscription(any(), any(), any(), any(), any()) } returns
+                Pair(remoteSubscriptionId, rywData)
+
+            val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
+            val subscriptionModel1 = SubscriptionModel()
+            subscriptionModel1.id = localSubscriptionId
+            every { mockSubscriptionsModelStore.get(localSubscriptionId) } returns subscriptionModel1
+
+            val mockIdentityModelStore = MockHelper.identityModelStore()
+            val mockBuildUserService = mockk<IRebuildUserService>()
+
+            val subscriptionOperationExecutor =
+                SubscriptionOperationExecutor(
+                    mockSubscriptionBackendService,
+                    MockHelper.deviceService(),
+                    AndroidMockHelper.applicationService(),
+                    mockIdentityModelStore,
+                    mockSubscriptionsModelStore,
+                    MockHelper.configModelStore(),
+                    mockBuildUserService,
+                    getNewRecordState(),
+                    mockConsistencyManager,
+                )
+
+            val createOp = CreateSubscriptionOperation(
+                appId,
+                remoteOneSignalId,
+                localSubscriptionId,
+                SubscriptionType.PUSH,
+                true,
+                "pushToken1",
+                SubscriptionStatus.SUBSCRIBED,
+            )
+            val operations = listOf<Operation>(createOp)
+
+            // When
+            val response = subscriptionOperationExecutor.execute(operations)
+
+            // Then
+            response.result shouldBe ExecutionResult.SUCCESS
+            coVerify(exactly = 1) {
+                mockSubscriptionBackendService.createSubscription(
+                    appId,
+                    IdentityConstants.ONESIGNAL_ID,
+                    remoteOneSignalId,
+                    any(),
+                    null,
+                )
+            }
+        }
     })
