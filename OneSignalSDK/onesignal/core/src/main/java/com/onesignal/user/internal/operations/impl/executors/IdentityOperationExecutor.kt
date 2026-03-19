@@ -45,7 +45,12 @@ internal class IdentityOperationExecutor(
 
         if (lastOperation is SetAliasOperation) {
             try {
-                val identityAlias = _identityModelStore.getIdentityAlias()
+                val identityAlias =
+                    if (lastOperation.operationJwt != null && lastOperation.operationExternalId != null) {
+                        Pair(IdentityConstants.EXTERNAL_ID, lastOperation.operationExternalId!!)
+                    } else {
+                        Pair(IdentityConstants.ONESIGNAL_ID, lastOperation.onesignalId)
+                    }
                 _identityBackend.setAlias(
                     lastOperation.appId,
                     identityAlias.first,

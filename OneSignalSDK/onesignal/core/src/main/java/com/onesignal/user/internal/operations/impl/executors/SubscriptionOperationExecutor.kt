@@ -107,7 +107,12 @@ internal class SubscriptionOperationExecutor(
                     AndroidUtils.getAppVersion(_applicationService.appContext),
                 )
 
-            val identityAlias = _identityModelStore.getIdentityAlias()
+            val identityAlias =
+                if (createOperation.operationJwt != null && createOperation.operationExternalId != null) {
+                    Pair(IdentityConstants.EXTERNAL_ID, createOperation.operationExternalId!!)
+                } else {
+                    Pair(IdentityConstants.ONESIGNAL_ID, createOperation.onesignalId)
+                }
             val result =
                 _subscriptionBackend.createSubscription(
                     createOperation.appId,

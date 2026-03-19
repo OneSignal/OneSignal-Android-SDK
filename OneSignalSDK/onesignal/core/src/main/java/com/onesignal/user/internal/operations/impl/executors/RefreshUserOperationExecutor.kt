@@ -13,6 +13,7 @@ import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.IUserBackendService
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.builduser.IRebuildUserService
+import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.RefreshUserOperation
@@ -53,7 +54,12 @@ internal class RefreshUserOperationExecutor(
 
     private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse {
         try {
-            val identityAlias = _identityModelStore.getIdentityAlias()
+            val identityAlias =
+                if (op.operationJwt != null && op.operationExternalId != null) {
+                    Pair(IdentityConstants.EXTERNAL_ID, op.operationExternalId!!)
+                } else {
+                    Pair(IdentityConstants.ONESIGNAL_ID, op.onesignalId)
+                }
             val response =
                 _userBackend.getUser(
                     op.appId,

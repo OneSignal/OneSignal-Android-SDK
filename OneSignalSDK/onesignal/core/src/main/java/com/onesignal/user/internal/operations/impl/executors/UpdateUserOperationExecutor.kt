@@ -13,6 +13,7 @@ import com.onesignal.core.internal.operations.Operation
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.backend.IUserBackendService
+import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.PropertiesDeltasObject
 import com.onesignal.user.internal.backend.PropertiesObject
 import com.onesignal.user.internal.backend.PurchaseObject
@@ -147,7 +148,12 @@ internal class UpdateUserOperationExecutor(
 
         if (appId != null && onesignalId != null) {
             try {
-                val identityAlias = _identityModelStore.getIdentityAlias()
+                val identityAlias =
+                    if (operations.first().operationJwt != null && operations.first().operationExternalId != null) {
+                        Pair(IdentityConstants.EXTERNAL_ID, operations.first().operationExternalId!!)
+                    } else {
+                        Pair(IdentityConstants.ONESIGNAL_ID, onesignalId)
+                    }
                 val rywData =
                     _userBackend.updateUser(
                         appId,
