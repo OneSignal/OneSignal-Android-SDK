@@ -57,7 +57,9 @@ abstract class Operation(name: String) : Model() {
      */
     var operationJwt: String?
         get() = getOptStringProperty("_jwt")
-        set(value) { setOptStringProperty("_jwt", value, ModelChangeTags.NO_PROPOGATE, true) }
+        set(value) {
+            setOptStringProperty("_jwt", value, ModelChangeTags.NO_PROPOGATE, true)
+        }
 
     /**
      * The external ID of the user who created this operation, stamped at enqueue time.
@@ -65,7 +67,9 @@ abstract class Operation(name: String) : Model() {
      */
     var operationExternalId: String?
         get() = getOptStringProperty("_externalId")
-        set(value) { setOptStringProperty("_externalId", value, ModelChangeTags.NO_PROPOGATE, true) }
+        set(value) {
+            setOptStringProperty("_externalId", value, ModelChangeTags.NO_PROPOGATE, true)
+        }
 
     /**
      * Whether this operation requires JWT authentication when identity verification is enabled.

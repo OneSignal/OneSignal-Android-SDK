@@ -432,9 +432,10 @@ internal class OperationRepo(
 
             val useIV = _configModelStore.model.useIdentityVerification
             if (useIV) {
-                val toDiscard = queue.filter {
-                    it.operation.operationExternalId == null && it.operation.requiresJwt
-                }
+                val toDiscard =
+                    queue.filter {
+                        it.operation.operationExternalId == null && it.operation.requiresJwt
+                    }
                 for (item in toDiscard) {
                     Logging.debug("getNextOps: discarding anonymous op: ${item.operation}")
                     queue.remove(item)

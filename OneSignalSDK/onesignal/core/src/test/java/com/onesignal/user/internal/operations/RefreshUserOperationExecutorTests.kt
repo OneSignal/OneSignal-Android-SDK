@@ -338,12 +338,13 @@ class RefreshUserOperationExecutorTests : FunSpec({
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery {
             mockUserBackendService.getUser(appId, IdentityConstants.EXTERNAL_ID, previousUserExternalId, previousUserJwt)
-        } returns CreateUserResponse(
-            mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId, IdentityConstants.EXTERNAL_ID to previousUserExternalId),
-            PropertiesObject(),
-            listOf(),
-            null,
-        )
+        } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId, IdentityConstants.EXTERNAL_ID to previousUserExternalId),
+                PropertiesObject(),
+                listOf(),
+                null,
+            )
 
         val mockIdentityModelStore = MockHelper.identityModelStore()
         val mockIdentityModel = IdentityModel()
@@ -385,12 +386,13 @@ class RefreshUserOperationExecutorTests : FunSpec({
         val mockUserBackendService = mockk<IUserBackendService>()
         coEvery {
             mockUserBackendService.getUser(appId, IdentityConstants.ONESIGNAL_ID, remoteOneSignalId, null)
-        } returns CreateUserResponse(
-            mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
-            PropertiesObject(),
-            listOf(),
-            null,
-        )
+        } returns
+            CreateUserResponse(
+                mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
+                PropertiesObject(),
+                listOf(),
+                null,
+            )
 
         val mockIdentityModelStore = MockHelper.identityModelStore()
         val mockIdentityModel = IdentityModel()

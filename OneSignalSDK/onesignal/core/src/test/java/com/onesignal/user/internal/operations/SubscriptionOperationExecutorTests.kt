@@ -829,15 +829,16 @@ class SubscriptionOperationExecutorTests :
                     mockConsistencyManager,
                 )
 
-            val createOp = CreateSubscriptionOperation(
-                appId,
-                remoteOneSignalId,
-                localSubscriptionId,
-                SubscriptionType.PUSH,
-                true,
-                "pushToken1",
-                SubscriptionStatus.SUBSCRIBED,
-            )
+            val createOp =
+                CreateSubscriptionOperation(
+                    appId,
+                    remoteOneSignalId,
+                    localSubscriptionId,
+                    SubscriptionType.PUSH,
+                    true,
+                    "pushToken1",
+                    SubscriptionStatus.SUBSCRIBED,
+                )
             createOp.operationJwt = previousUserJwt
             createOp.operationExternalId = previousUserExternalId
             val operations = listOf<Operation>(createOp)
@@ -885,15 +886,16 @@ class SubscriptionOperationExecutorTests :
                     mockConsistencyManager,
                 )
 
-            val createOp = CreateSubscriptionOperation(
-                appId,
-                remoteOneSignalId,
-                localSubscriptionId,
-                SubscriptionType.PUSH,
-                true,
-                "pushToken1",
-                SubscriptionStatus.SUBSCRIBED,
-            )
+            val createOp =
+                CreateSubscriptionOperation(
+                    appId,
+                    remoteOneSignalId,
+                    localSubscriptionId,
+                    SubscriptionType.PUSH,
+                    true,
+                    "pushToken1",
+                    SubscriptionStatus.SUBSCRIBED,
+                )
             val operations = listOf<Operation>(createOp)
 
             // When
