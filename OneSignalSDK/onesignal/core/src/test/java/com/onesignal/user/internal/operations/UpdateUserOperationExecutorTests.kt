@@ -53,6 +53,7 @@ class UpdateUserOperationExecutorTests :
                     mockUserBackendService,
                     mockIdentityModelStore,
                     mockPropertiesModelStore,
+                    MockHelper.configModelStore(),
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
@@ -93,6 +94,7 @@ class UpdateUserOperationExecutorTests :
                     mockUserBackendService,
                     mockIdentityModelStore,
                     mockPropertiesModelStore,
+                    MockHelper.configModelStore(),
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
@@ -155,6 +157,7 @@ class UpdateUserOperationExecutorTests :
                     mockUserBackendService,
                     mockIdentityModelStore,
                     mockPropertiesModelStore,
+                    MockHelper.configModelStore(),
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
@@ -200,6 +203,7 @@ class UpdateUserOperationExecutorTests :
                     mockUserBackendService,
                     mockIdentityModelStore,
                     mockPropertiesModelStore,
+                    MockHelper.configModelStore(),
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
@@ -265,6 +269,7 @@ class UpdateUserOperationExecutorTests :
                     mockUserBackendService,
                     mockIdentityModelStore,
                     mockPropertiesModelStore,
+                    MockHelper.configModelStore(),
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
@@ -313,6 +318,7 @@ class UpdateUserOperationExecutorTests :
                     mockUserBackendService,
                     mockIdentityModelStore,
                     mockPropertiesModelStore,
+                    MockHelper.configModelStore(),
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
@@ -346,6 +352,7 @@ class UpdateUserOperationExecutorTests :
                     mockUserBackendService,
                     mockIdentityModelStore,
                     mockPropertiesModelStore,
+                    mockConfigModelStore,
                     mockBuildUserService,
                     newRecordState,
                     mockConsistencyManager,
@@ -376,6 +383,7 @@ class UpdateUserOperationExecutorTests :
                     mockUserBackendService,
                     mockIdentityModelStore,
                     mockPropertiesModelStore,
+                    MockHelper.configModelStore(),
                     mockBuildUserService,
                     getNewRecordState(),
                     mockConsistencyManager,
@@ -392,6 +400,91 @@ class UpdateUserOperationExecutorTests :
             // Then
             coVerify(exactly = 1) {
                 mockConsistencyManager.setRywData(remoteOneSignalId, IamFetchRywTokenKey.USER, rywData)
+            }
+        }
+
+        test("update user uses operation's external_id when IV is enabled, not current user") {
+            // Given
+            val previousUserExternalId = "previousUserExternalId"
+            val previousUserJwt = "previousUserJwt"
+
+            val mockUserBackendService = mockk<IUserBackendService>()
+            coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any(), any()) } returns rywData
+
+            val mockIdentityModelStore = MockHelper.identityModelStore()
+            val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+            val mockBuildUserService = mockk<IRebuildUserService>()
+
+            val updateUserOperationExecutor =
+                UpdateUserOperationExecutor(
+                    mockUserBackendService,
+                    mockIdentityModelStore,
+                    mockPropertiesModelStore,
+                    MockHelper.configModelStore { it.useIdentityVerification = true },
+                    mockBuildUserService,
+                    getNewRecordState(),
+                    mockConsistencyManager,
+                )
+
+            val op = SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1")
+            op.operationJwt = previousUserJwt
+            op.operationExternalId = previousUserExternalId
+            val operations = listOf<Operation>(op)
+
+            // When
+            val response = updateUserOperationExecutor.execute(operations)
+
+            // Then
+            response.result shouldBe ExecutionResult.SUCCESS
+            coVerify(exactly = 1) {
+                mockUserBackendService.updateUser(
+                    appId,
+                    IdentityConstants.EXTERNAL_ID,
+                    previousUserExternalId,
+                    any(),
+                    any(),
+                    any(),
+                    previousUserJwt,
+                )
+            }
+        }
+
+        test("update user uses onesignal_id when IV is disabled") {
+            // Given
+            val mockUserBackendService = mockk<IUserBackendService>()
+            coEvery { mockUserBackendService.updateUser(any(), any(), any(), any(), any(), any()) } returns rywData
+
+            val mockIdentityModelStore = MockHelper.identityModelStore()
+            val mockPropertiesModelStore = MockHelper.propertiesModelStore()
+            val mockBuildUserService = mockk<IRebuildUserService>()
+
+            val updateUserOperationExecutor =
+                UpdateUserOperationExecutor(
+                    mockUserBackendService,
+                    mockIdentityModelStore,
+                    mockPropertiesModelStore,
+                    MockHelper.configModelStore(),
+                    mockBuildUserService,
+                    getNewRecordState(),
+                    mockConsistencyManager,
+                )
+
+            val operations = listOf<Operation>(SetTagOperation(appId, remoteOneSignalId, "tagKey1", "tagValue1"))
+
+            // When
+            val response = updateUserOperationExecutor.execute(operations)
+
+            // Then
+            response.result shouldBe ExecutionResult.SUCCESS
+            coVerify(exactly = 1) {
+                mockUserBackendService.updateUser(
+                    appId,
+                    IdentityConstants.ONESIGNAL_ID,
+                    remoteOneSignalId,
+                    any(),
+                    any(),
+                    any(),
+                )
             }
         }
     })

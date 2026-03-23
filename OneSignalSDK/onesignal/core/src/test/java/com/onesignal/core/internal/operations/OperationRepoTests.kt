@@ -1,5 +1,7 @@
 package com.onesignal.core.internal.operations
 
+import com.onesignal.IUserJwtInvalidatedListener
+import com.onesignal.UserJwtInvalidatedEvent
 import com.onesignal.common.threading.OSPrimaryCoroutineScope
 import com.onesignal.common.threading.Waiter
 import com.onesignal.common.threading.WaiterWithValue
@@ -39,7 +41,10 @@ import java.util.UUID
 
 // Mocks used by every test in this file
 private class Mocks {
-    val configModelStore = MockHelper.configModelStore()
+    val configModelStore =
+        MockHelper.configModelStore {
+            it.isInitializedWithRemote = true
+        }
 
     val identityModelStore =
         MockHelper.identityModelStore {
@@ -54,11 +59,13 @@ private class Mocks {
             every { mockOperationModelStore.loadOperations() } just runs
             every { mockOperationModelStore.list() } answers { operationStoreList.toList() }
             every { mockOperationModelStore.add(any()) } answers { operationStoreList.add(firstArg<Operation>()) }
+            every { mockOperationModelStore.add(any<Int>(), any()) } answers { operationStoreList.add(firstArg<Int>(), secondArg<Operation>()) }
             every { mockOperationModelStore.remove(any()) } answers {
                 val id = firstArg<String>()
                 val op = operationStoreList.firstOrNull { it.id == id }
                 operationStoreList.remove(op)
             }
+            every { mockOperationModelStore.persist() } just runs
             mockOperationModelStore
         }
 
@@ -621,6 +628,7 @@ class OperationRepoTests : FunSpec({
         // When
         mocks.operationRepo.start()
         mocks.operationRepo.enqueue(operation1)
+        OSPrimaryCoroutineScope.waitForIdle()
         val job = launch { mocks.operationRepo.enqueueAndWait(operation2) }.also { yield() }
         mocks.operationRepo.enqueueAndWait(operation3)
         job.join()
@@ -791,52 +799,212 @@ class OperationRepoTests : FunSpec({
         opRepo.forceExecuteOperations()
     }
 
-    test("operations that need to be identity verified cannot execute until JWT is provided") {
+    test("getNextOps skips ops with null JWT when identity verification is on") {
         val mocks = Mocks()
         mocks.configModelStore.model.useIdentityVerification = true
-        val operation = mockOperation()
+
+        val opWithJwt = mockOperation(operationJwt = "valid-jwt", operationExternalId = "userA")
+        val opWithoutJwt = mockOperation(operationJwt = null, operationExternalId = "userB")
+
         val opRepo = mocks.operationRepo
+        opRepo.queue.add(OperationQueueItem(opWithoutJwt, bucket = 0))
+        opRepo.queue.add(OperationQueueItem(opWithJwt, bucket = 0))
 
-        // When JWT is not supplied
-        opRepo.start()
-        opRepo.enqueue(operation)
-        opRepo.forceExecuteOperations()
-        val responseBeforeJWT =
-            withTimeoutOrNull(100) {
-                opRepo.enqueueAndWait(mockOperation())
-            }
+        // When
+        val result = opRepo.getNextOps(0)
 
-        // Then response should be null
-        responseBeforeJWT shouldBe null
-
-        // When JWT is updated
-        mocks.identityModelStore.model.jwtToken = "123"
-        val opToExecute = opRepo.getNextOps(0)
-
-        // Operation is ready to execute
-        opToExecute shouldNotBe null
+        // Then - skips opWithoutJwt, returns opWithJwt
+        result shouldNotBe null
+        result!!.size shouldBe 1
+        result[0].operation shouldBe opWithJwt
     }
 
-    test("JWT will be invalidated when a FAIL_UNAUTHORIZED response is returned") {
+    test("FAIL_UNAUTHORIZED nulls JWT on operations and fires listener with correct externalId") {
         // Given
         val mocks = Mocks()
         val opRepo = mocks.operationRepo
-        val identityModelStore = mocks.identityModelStore
-        coEvery { opRepo.delayBeforeNextExecution(any(), any()) } just runs
+
+        val listenerEvents = mutableListOf<String>()
+        opRepo.addUserJwtInvalidatedListener(
+            object : IUserJwtInvalidatedListener {
+                override fun onUserJwtInvalidated(event: UserJwtInvalidatedEvent) {
+                    listenerEvents.add(event.externalId)
+                }
+            },
+        )
+
         coEvery {
             mocks.executor.execute(any())
-        } returns ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED) andThen ExecutionResponse(ExecutionResult.SUCCESS)
+        } returns ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+
+        val operation = mockOperation(operationJwt = "test-jwt", operationExternalId = "userA")
+        val queueItem = OperationQueueItem(operation, bucket = 0)
+
+        // When - call executeOperations directly to test the handler in isolation
+        opRepo.executeOperations(listOf(queueItem))
+
+        // Then
+        verify { operation.operationJwt = null }
+        listenerEvents.size shouldBe 1
+        listenerEvents[0] shouldBe "userA"
+        opRepo.queue.size shouldBe 1
+    }
+    test("getNextOps allows requiresJwt=false ops through even with null JWT") {
+        val mocks = Mocks()
+        mocks.configModelStore.model.useIdentityVerification = true
+
+        val op = mockOperation(operationJwt = null, operationExternalId = null, requiresJwt = false)
+        mocks.operationRepo.queue.add(OperationQueueItem(op, bucket = 0))
+
+        // When
+        val result = mocks.operationRepo.getNextOps(0)
+
+        // Then
+        result shouldNotBe null
+        result!!.size shouldBe 1
+        result[0].operation shouldBe op
+    }
+
+    test("getNextOps discards anonymous ops when identity verification is on") {
+        val mocks = Mocks()
+        mocks.configModelStore.model.useIdentityVerification = true
+
+        val anonOp = mockOperation(operationExternalId = null, requiresJwt = true)
+        val anonOpId = anonOp.id
+        mocks.operationRepo.queue.add(OperationQueueItem(anonOp, bucket = 0))
+
+        // When
+        val result = mocks.operationRepo.getNextOps(0)
+
+        // Then - anonymous op discarded, queue is empty
+        result shouldBe null
+        mocks.operationRepo.queue.size shouldBe 0
+        verify { mocks.operationModelStore.remove(anonOpId) }
+    }
+
+    test("getNextOps does not discard or skip anything when identity verification is off") {
+        val mocks = Mocks()
+        mocks.configModelStore.model.useIdentityVerification = false
+
+        val op = mockOperation(operationJwt = null, operationExternalId = null, requiresJwt = true)
+        mocks.operationRepo.queue.add(OperationQueueItem(op, bucket = 0))
+
+        // When
+        val result = mocks.operationRepo.getNextOps(0)
+
+        // Then
+        result shouldNotBe null
+        result!!.size shouldBe 1
+    }
+
+    test("getNextOps returns null when isInitializedWithRemote is false") {
+        val mocks = Mocks()
+        mocks.configModelStore.model.isInitializedWithRemote = false
+
+        val op = mockOperation(operationJwt = "jwt", operationExternalId = "user")
+        mocks.operationRepo.queue.add(OperationQueueItem(op, bucket = 0))
+
+        // When
+        val result = mocks.operationRepo.getNextOps(0)
+
+        // Then
+        result shouldBe null
+        mocks.operationRepo.queue.size shouldBe 1
+    }
+
+    test("FAIL_UNAUTHORIZED drops ops after max retries") {
+        // Given
+        val mocks = Mocks()
+        val opRepo = mocks.operationRepo
+
+        coEvery {
+            mocks.executor.execute(any())
+        } returns ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+
+        val op = mockOperation(operationJwt = "jwt", operationExternalId = "user")
+        val opId = op.id
+
+        // Simulate 3 prior unauthorized retries (next one should drop)
+        val queueItem = OperationQueueItem(op, bucket = 0, unauthorizedRetries = 3)
+
+        // When - call executeOperations directly (getNextOps would have removed from queue)
+        opRepo.executeOperations(listOf(queueItem))
+
+        // Then - op should be dropped, not re-added to queue
+        opRepo.queue.size shouldBe 0
+        verify { mocks.operationModelStore.remove(opId) }
+    }
+
+    test("updateJwtForExternalId updates JWT and resets retry count on matching ops") {
+        // Given
+        val mocks = Mocks()
+        val opRepo = mocks.operationRepo
+
+        val op = mockOperation(operationJwt = null, operationExternalId = "userA")
+        val item = OperationQueueItem(op, bucket = 0, unauthorizedRetries = 2)
+        opRepo.queue.add(item)
+
+        // When
+        opRepo.updateJwtForExternalId("userA", "new-jwt")
+
+        // Then
+        verify { op.operationJwt = "new-jwt" }
+        item.unauthorizedRetries shouldBe 0
+        verify { mocks.operationModelStore.persist() }
+    }
+
+    test("updateJwtForExternalId does not affect ops for different users") {
+        // Given
+        val mocks = Mocks()
+        val opRepo = mocks.operationRepo
+
+        val opA = mockOperation(operationJwt = null, operationExternalId = "userA")
+        val opB = mockOperation(operationJwt = null, operationExternalId = "userB")
+        opRepo.queue.add(OperationQueueItem(opA, bucket = 0))
+        opRepo.queue.add(OperationQueueItem(opB, bucket = 0))
+
+        // When
+        opRepo.updateJwtForExternalId("userA", "new-jwt-a")
+
+        // Then
+        verify { opA.operationJwt = "new-jwt-a" }
+        verify(exactly = 0) { opB.operationJwt = any() }
+    }
+
+    test("enqueue stamps JWT and externalId from IdentityModelStore") {
+        // Given
+        val mocks = Mocks()
+        mocks.identityModelStore.model.jwtToken = "current-jwt"
+        mocks.identityModelStore.model.externalId = "currentUser"
+
         val operation = mockOperation()
 
         // When
-        mocks.operationRepo.start()
-        mocks.operationRepo.enqueueAndWait(operation)
+        mocks.operationRepo.enqueue(operation)
+        OSPrimaryCoroutineScope.waitForIdle()
 
         // Then
-        coVerifyOrder {
-            mocks.executor.execute(listOf(operation))
-            identityModelStore.invalidateJwt()
-        }
+        verify { operation.operationJwt = "current-jwt" }
+        verify { operation.operationExternalId = "currentUser" }
+    }
+
+    test("follow-up operations inherit JWT and externalId from starting operation") {
+        // Given
+        val mocks = Mocks()
+        val followUpOp = mockOperation()
+        val startingOp = mockOperation(operationJwt = "start-jwt", operationExternalId = "startUser")
+
+        coEvery {
+            mocks.executor.execute(listOf(startingOp))
+        } returns ExecutionResponse(ExecutionResult.SUCCESS, operations = listOf(followUpOp))
+
+        // When
+        mocks.operationRepo.start()
+        mocks.operationRepo.executeOperations(listOf(OperationQueueItem(startingOp, bucket = 0)))
+
+        // Then
+        verify { followUpOp.operationJwt = "start-jwt" }
+        verify { followUpOp.operationExternalId = "startUser" }
     }
 }) {
     companion object {
@@ -849,6 +1017,9 @@ class OperationRepoTests : FunSpec({
             modifyComparisonKey: String = "modify-key",
             operationIdSlot: CapturingSlot<String>? = null,
             applyToRecordId: String = "",
+            operationJwt: String? = null,
+            operationExternalId: String? = null,
+            requiresJwt: Boolean = true,
         ): Operation {
             val operation = mockk<Operation>()
             val opIdSlot = operationIdSlot ?: slot()
@@ -862,6 +1033,11 @@ class OperationRepoTests : FunSpec({
             every { operation.modifyComparisonKey } returns modifyComparisonKey
             every { operation.translateIds(any()) } just runs
             every { operation.applyToRecordId } returns applyToRecordId
+            every { operation.operationJwt } returns operationJwt
+            every { operation.operationJwt = any() } just runs
+            every { operation.operationExternalId } returns operationExternalId
+            every { operation.operationExternalId = any() } just runs
+            every { operation.requiresJwt } returns requiresJwt
 
             return operation
         }

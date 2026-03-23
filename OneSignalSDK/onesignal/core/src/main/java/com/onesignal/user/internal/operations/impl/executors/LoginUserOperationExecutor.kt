@@ -182,7 +182,7 @@ internal class LoginUserOperationExecutor(
                         it.second
                     },
                     properties,
-                    _identityModelStore.model.jwtToken,
+                    createUserOperation.operationJwt,
                 )
             val idTranslations = mutableMapOf<String, String>()
             // Add the "local-to-backend" ID translation to the IdentifierTranslator for any operations that were

@@ -1,5 +1,6 @@
 package com.onesignal.core.internal.operations
 
+import com.onesignal.IUserJwtInvalidatedListener
 import kotlin.reflect.KClass
 
 /**
@@ -42,6 +43,19 @@ interface IOperationRepo {
     suspend fun awaitInitialized()
 
     fun forceExecuteOperations()
+
+    /**
+     * Update the JWT on all queued operations for the given external ID.
+     * Resets the unauthorized retry counter and wakes the queue processor.
+     */
+    fun updateJwtForExternalId(
+        externalId: String,
+        jwt: String,
+    )
+
+    fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
+
+    fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
 }
 
 // Extension function so the syntax containsInstanceOf<Operation>() can be used over

@@ -133,6 +133,10 @@ public class Dialog {
      * Click OK to verify and update the field being updated
      */
     public void createAddPairAlertDialog(String content, final ProfileUtil.FieldType field, final AddPairAlertDialogCallback callback) {
+        createAddPairAlertDialog(content, "Key", "Value", field, callback);
+    }
+
+    public void createAddPairAlertDialog(String content, String keyHint, String valueHint, final ProfileUtil.FieldType field, final AddPairAlertDialogCallback callback) {
         final View addPairAlertDialogView = layoutInflater.inflate(R.layout.add_pair_alert_dialog_layout, null, false);
 
         final TextView addPairAlertDialogTitleTextView = addPairAlertDialogView.findViewById(R.id.add_pair_alert_dialog_title_text_view);
@@ -142,8 +146,8 @@ public class Dialog {
         final EditText addPairAlertDialogValueEditText = addPairAlertDialogView.findViewById(R.id.add_pair_alert_dialog_value_edit_text);
         final ProgressBar addPairAlertDialogProgressBar = addPairAlertDialogView.findViewById(R.id.add_pair_alert_dialog_progress_bar);
 
-        addPairAlertDialogKeyTextInputLayout.setHint("Key");
-        addPairAlertDialogValueTextInputLayout.setHint("Value");
+        addPairAlertDialogKeyTextInputLayout.setHint(keyHint);
+        addPairAlertDialogValueTextInputLayout.setHint(valueHint);
         addPairAlertDialogTitleTextView.setText(content);
 
         font.applyFont(addPairAlertDialogTitleTextView, font.saralaBold);

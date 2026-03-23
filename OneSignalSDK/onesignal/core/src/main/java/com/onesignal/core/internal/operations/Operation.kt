@@ -1,6 +1,7 @@
 package com.onesignal.core.internal.operations
 
 import com.onesignal.common.modeling.Model
+import com.onesignal.common.modeling.ModelChangeTags
 
 /**
  * An [Operation] can be enqueued and executed on the [IOperationRepo]. Each concrete-class
@@ -48,6 +49,34 @@ abstract class Operation(name: String) : Model() {
      * Whether the operation can currently execute given it's current state.
      */
     abstract val canStartExecute: Boolean
+
+    /**
+     * The JWT token stamped on this operation at enqueue time. Used by executors to authenticate
+     * backend requests for the user who created this operation, even if the current user has
+     * changed since then.
+     */
+    var operationJwt: String?
+        get() = getOptStringProperty("_jwt")
+        set(value) {
+            setOptStringProperty("_jwt", value, ModelChangeTags.NO_PROPOGATE, true)
+        }
+
+    /**
+     * The external ID of the user who created this operation, stamped at enqueue time.
+     * Used to associate operations with specific users for multi-user JWT management.
+     */
+    var operationExternalId: String?
+        get() = getOptStringProperty("_externalId")
+        set(value) {
+            setOptStringProperty("_externalId", value, ModelChangeTags.NO_PROPOGATE, true)
+        }
+
+    /**
+     * Whether this operation requires JWT authentication when identity verification is enabled.
+     * Most operations require JWT; override to return false for operations that don't
+     * (e.g. UpdateSubscriptionOperation).
+     */
+    open val requiresJwt: Boolean get() = true
 
     /**
      * Called when an operation has resolved a local ID to a backend ID (i.e. successfully

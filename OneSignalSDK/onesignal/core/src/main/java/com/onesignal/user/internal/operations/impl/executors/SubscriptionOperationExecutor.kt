@@ -107,14 +107,19 @@ internal class SubscriptionOperationExecutor(
                     AndroidUtils.getAppVersion(_applicationService.appContext),
                 )
 
-            val identityAlias = _identityModelStore.getIdentityAlias()
+            val identityAlias =
+                if (_configModelStore.model.useIdentityVerification && createOperation.operationExternalId != null) {
+                    Pair(IdentityConstants.EXTERNAL_ID, createOperation.operationExternalId!!)
+                } else {
+                    Pair(IdentityConstants.ONESIGNAL_ID, createOperation.onesignalId)
+                }
             val result =
                 _subscriptionBackend.createSubscription(
                     createOperation.appId,
                     identityAlias.first,
                     identityAlias.second,
                     subscription,
-                    _identityModelStore.model.jwtToken,
+                    createOperation.operationJwt,
                 ) ?: return ExecutionResponse(ExecutionResult.SUCCESS)
 
             val backendSubscriptionId = result.first
@@ -252,7 +257,7 @@ internal class SubscriptionOperationExecutor(
                 startingOperation.subscriptionId,
                 IdentityConstants.ONESIGNAL_ID,
                 startingOperation.onesignalId,
-                _identityModelStore.model.jwtToken,
+                startingOperation.operationJwt,
             )
         } catch (ex: BackendException) {
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
@@ -284,7 +289,7 @@ internal class SubscriptionOperationExecutor(
 
     private suspend fun deleteSubscription(op: DeleteSubscriptionOperation): ExecutionResponse {
         try {
-            _subscriptionBackend.deleteSubscription(op.appId, op.subscriptionId, _identityModelStore.model.jwtToken)
+            _subscriptionBackend.deleteSubscription(op.appId, op.subscriptionId, op.operationJwt)
 
             // remove the subscription model as a HYDRATE in case for some reason it still exists.
             _subscriptionModelStore.remove(op.subscriptionId, ModelChangeTags.HYDRATE)

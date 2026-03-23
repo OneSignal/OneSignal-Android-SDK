@@ -3,6 +3,7 @@ package com.onesignal.user.internal.operations.impl.executors
 import com.onesignal.common.NetworkUtils
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
+import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.core.internal.operations.IOperationExecutor
@@ -19,6 +20,7 @@ import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 internal class IdentityOperationExecutor(
     private val _identityBackend: IIdentityBackendService,
     private val _identityModelStore: IdentityModelStore,
+    private val _configModelStore: ConfigModelStore,
     private val _buildUserService: IRebuildUserService,
     private val _newRecordState: NewRecordsState,
 ) : IOperationExecutor {
@@ -45,13 +47,18 @@ internal class IdentityOperationExecutor(
 
         if (lastOperation is SetAliasOperation) {
             try {
-                val identityAlias = _identityModelStore.getIdentityAlias()
+                val identityAlias =
+                    if (_configModelStore.model.useIdentityVerification && lastOperation.operationExternalId != null) {
+                        Pair(IdentityConstants.EXTERNAL_ID, lastOperation.operationExternalId!!)
+                    } else {
+                        Pair(IdentityConstants.ONESIGNAL_ID, lastOperation.onesignalId)
+                    }
                 _identityBackend.setAlias(
                     lastOperation.appId,
                     identityAlias.first,
                     identityAlias.second,
                     mapOf(lastOperation.label to lastOperation.value),
-                    _identityModelStore.model.jwtToken,
+                    lastOperation.operationJwt,
                 )
 
                 // ensure the now created alias is in the model as long as the user is still current.
@@ -96,7 +103,7 @@ internal class IdentityOperationExecutor(
                     IdentityConstants.ONESIGNAL_ID,
                     lastOperation.onesignalId,
                     lastOperation.label,
-                    _identityModelStore.model.jwtToken,
+                    lastOperation.operationJwt,
                 )
 
                 // ensure the now deleted alias is not in the model as long as the user is still current.
