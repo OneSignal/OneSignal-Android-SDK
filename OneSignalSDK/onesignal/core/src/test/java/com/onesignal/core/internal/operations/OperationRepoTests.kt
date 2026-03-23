@@ -628,6 +628,7 @@ class OperationRepoTests : FunSpec({
         // When
         mocks.operationRepo.start()
         mocks.operationRepo.enqueue(operation1)
+        OSPrimaryCoroutineScope.waitForIdle()
         val job = launch { mocks.operationRepo.enqueueAndWait(operation2) }.also { yield() }
         mocks.operationRepo.enqueueAndWait(operation3)
         job.join()
