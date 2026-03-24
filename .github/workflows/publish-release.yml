@@ -89,6 +89,10 @@ jobs:
         run: ./gradlew assembleRelease
         working-directory: OneSignalSDK
 
+      - name: Build minified demo app (validates R8 / consumer ProGuard rules)
+        run: ./gradlew :app:assembleGmsRelease --console=plain
+        working-directory: OneSignalSDK
+
       - name: Dry Run - Publish to Maven Local with signing
         working-directory: OneSignalSDK
         run: |

@@ -60,3 +60,13 @@
 -keep class com.onesignal.notifications.internal.** extends androidx.work.ListenableWorker {
     public <init>(android.content.Context, androidx.work.WorkerParameters);
 }
+
+# WorkManager instantiates InputMerger classes via reflection (InputMerger.fromClassName).
+# R8 full mode (AGP 8+) strips no-arg constructors, causing:
+# java.lang.NoSuchMethodException: androidx.work.OverwritingInputMerger.<init>()
+# WM-WorkerWrapper E Could not create Input Merger androidx.work.OverwritingInputMerger
+# Keep all InputMerger subclasses (OverwritingInputMerger, ArrayCreatingInputMerger, etc.)
+-keep class * extends androidx.work.InputMerger {
+    public <init>();
+}
+

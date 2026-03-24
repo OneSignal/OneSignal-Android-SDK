@@ -7,6 +7,11 @@ concurrency:
 on:
   pull_request:
     branches: ["**"]
+  push:
+    branches:
+      - main
+      - "*-main"
+  workflow_dispatch:
 
 env:
   DIFF_COVERAGE_THRESHOLD: "80"
@@ -36,8 +41,13 @@ jobs:
         working-directory: OneSignalSDK
         run: |
           ./gradlew testDebugUnitTest --console=plain --continue
+      - name: "[Build] Demo app (minified release)"
+        working-directory: OneSignalSDK
+        run: |
+          ./gradlew :app:assembleGmsRelease --console=plain
       - name: "[Diff Coverage] Check for bypass"
         id: coverage_bypass
+        if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
         run: |
           # Check if PR has Skip Coverage Check label
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -54,6 +64,7 @@ jobs:
             echo "bypass=false" >> $GITHUB_OUTPUT
           fi
       - name: "[Diff Coverage] Check coverage"
+        if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
         working-directory: OneSignalSDK
         run: |
           # Use the shared coverage check script for consistency
