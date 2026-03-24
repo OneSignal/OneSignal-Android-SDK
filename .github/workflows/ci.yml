@@ -41,10 +41,10 @@ jobs:
         working-directory: OneSignalSDK
         run: |
           ./gradlew testDebugUnitTest --console=plain --continue
-      - name: "[Build] Demo app (minified release)"
+      - name: "[Build] Demo app (minified GMS + Huawei release)"
         working-directory: OneSignalSDK
         run: |
-          ./gradlew :app:assembleGmsRelease --console=plain
+          ./gradlew :app:assembleGmsRelease :app:assembleHuaweiRelease --console=plain
       - name: "[Diff Coverage] Check for bypass"
         id: coverage_bypass
         if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'

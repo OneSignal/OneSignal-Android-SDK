@@ -20,7 +20,9 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
-# Demo-only suppression for optional OTel transitive classes.
+# Demo-only: optional transitive classes pulled in via OneSignal OTel / R8 (GMS + Huawei minified builds).
 -dontwarn com.fasterxml.jackson.core.JsonFactory
 -dontwarn com.fasterxml.jackson.core.JsonGenerator
+-dontwarn com.google.auto.value.AutoValue
+-dontwarn com.google.auto.value.AutoValue$Builder
 -dontwarn com.google.auto.value.AutoValue$CopyAnnotations
