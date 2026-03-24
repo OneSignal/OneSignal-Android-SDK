@@ -50,6 +50,10 @@ internal class BadgeCountUpdater(
 
     override fun update() {
         if (!areBadgesEnabled()) return
+        // On API 26+ the system handles badges via NotificationChannel, and
+        // ShortcutBadger can cause native SIGSEGV crashes on some OEM devices
+        // (e.g. Xiaomi Redmi) where the broadcast receiver has buggy native code.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             updateStandard()
         } else {
@@ -83,6 +87,7 @@ internal class BadgeCountUpdater(
 
     override fun updateCount(count: Int) {
         if (!areBadgeSettingsEnabled()) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) return
         try {
             ShortcutBadger.applyCountOrThrow(_applicationService.appContext, count)
         } catch (e: ShortcutBadgeException) {
