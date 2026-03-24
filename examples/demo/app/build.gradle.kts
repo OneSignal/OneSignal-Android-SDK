@@ -53,7 +53,11 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Minify MUST be enabled to exercise R8 and validate WorkManager/ProGuard rules.
+            // See: SDK-4185, https://github.com/OneSignal/OneSignal-Android-SDK/issues/2582
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -66,7 +70,8 @@ android {
             initWith(getByName("release"))
             isDebuggable = false
             isProfileable = true
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.getByName("debug")
             matchingFallbacks += listOf("release")
         }

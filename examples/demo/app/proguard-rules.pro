@@ -19,3 +19,8 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Demo-only suppression for optional OTel transitive classes.
+-dontwarn com.fasterxml.jackson.core.JsonFactory
+-dontwarn com.fasterxml.jackson.core.JsonGenerator
+-dontwarn com.google.auto.value.AutoValue$CopyAnnotations
