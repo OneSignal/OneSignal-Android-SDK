@@ -32,6 +32,10 @@ jobs:
         working-directory: OneSignalSDK
         run: |
           ./gradlew testDebugUnitTest --console=plain --continue
+      - name: "[Build] Demo app (minified release)"
+        working-directory: OneSignalSDK
+        run: |
+          ./gradlew :app:assembleGmsRelease --console=plain
       - name: "[Diff Coverage] Check for bypass"
         id: coverage_bypass
         run: |
