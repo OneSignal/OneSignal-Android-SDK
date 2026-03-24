@@ -69,3 +69,4 @@
 -keep class * extends androidx.work.InputMerger {
     public <init>();
 }
+
