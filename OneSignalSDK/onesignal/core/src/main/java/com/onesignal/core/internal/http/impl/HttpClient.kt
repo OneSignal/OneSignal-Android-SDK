@@ -5,7 +5,7 @@ import android.os.Build
 import com.onesignal.common.JSONUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.OneSignalWrapper
-import com.onesignal.common.threading.OneSignalDispatchers
+import com.onesignal.common.threading.launchOnIO
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.device.IInstallIdService
 import com.onesignal.core.internal.http.HttpResponse
@@ -110,7 +110,7 @@ internal class HttpClient(
         var retVal: HttpResponse? = null
 
         val job =
-            OneSignalDispatchers.launchOnIO {
+            launchOnIO {
                 var httpResponse = -1
                 var con: HttpURLConnection? = null
 

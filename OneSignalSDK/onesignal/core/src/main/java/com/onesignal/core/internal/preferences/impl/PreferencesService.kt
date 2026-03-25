@@ -2,8 +2,8 @@ package com.onesignal.core.internal.preferences.impl
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.Waiter
+import com.onesignal.common.threading.launchOnIO
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceStores
@@ -24,8 +24,12 @@ internal class PreferencesService(
         )
     private val waiter = Waiter()
 
+    @Volatile
+    private var hasLoggedMissingAppContext = false
+
     override fun start() {
         // fire up an async job that will run "forever" so we don't hold up the other startable services.
+        Logging.debug("OneSignal: PreferencesService starting async write loop")
         doWorkAsync()
     }
 
@@ -166,11 +170,14 @@ internal class PreferencesService(
             storeMap[key] = value
         }
 
+        Logging.debug("OneSignal: PreferencesService queued write for store=$store key=$key")
         waiter.wake()
     }
 
+    @Suppress("LongMethod", "ComplexMethod")
     private fun doWorkAsync() =
-        OneSignalDispatchers.launchOnIO {
+        launchOnIO {
+            Logging.debug("OneSignal: PreferencesService write loop running")
             var lastSyncTime = _time.currentTimeMillis
 
             while (true) {
@@ -183,8 +190,16 @@ internal class PreferencesService(
                         if (prefsToWrite == null) {
                             // the assumption here is there is no context yet, but will be. So ensure
                             // we wake up to try again and persist the preference.
+                            if (!hasLoggedMissingAppContext) {
+                                Logging.warn("OneSignal: PreferencesService app context unavailable, deferring writes")
+                                hasLoggedMissingAppContext = true
+                            }
                             waiter.wake()
                             continue
+                        }
+                        if (hasLoggedMissingAppContext) {
+                            Logging.info("OneSignal: PreferencesService app context is now available, resuming writes")
+                            hasLoggedMissingAppContext = false
                         }
 
                         val editor = prefsToWrite.edit()

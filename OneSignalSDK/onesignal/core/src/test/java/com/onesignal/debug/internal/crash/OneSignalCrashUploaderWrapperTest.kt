@@ -7,6 +7,8 @@ import androidx.test.core.app.ApplicationProvider
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.config.ConfigModel
+import com.onesignal.core.internal.features.FeatureFlag
+import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.core.internal.startup.IStartableService
@@ -37,11 +39,17 @@ class OneSignalCrashUploaderWrapperTest : FunSpec({
         sharedPreferences.edit().clear().commit()
     }
 
+    fun mockFeatureManager(backgroundThreadingEnabled: Boolean = true): IFeatureManager {
+        val featureManager = mockk<IFeatureManager>()
+        every { featureManager.isEnabled(FeatureFlag.BACKGROUND_THREADING) } returns backgroundThreadingEnabled
+        return featureManager
+    }
+
     test("should implement IStartableService interface") {
         val mockApplicationService = mockk<IApplicationService>(relaxed = true)
         every { mockApplicationService.appContext } returns appContext
 
-        val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService)
+        val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService, mockFeatureManager())
 
         wrapper.shouldBeInstanceOf<IStartableService>()
     }
@@ -57,7 +65,7 @@ class OneSignalCrashUploaderWrapperTest : FunSpec({
         val mockApplicationService = mockk<IApplicationService>(relaxed = true)
         every { mockApplicationService.appContext } returns appContext
 
-        val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService)
+        val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService, mockFeatureManager())
 
         // Should return early without error when remote logging is disabled
         runBlocking { wrapper.start() }
@@ -74,7 +82,7 @@ class OneSignalCrashUploaderWrapperTest : FunSpec({
         val mockApplicationService = mockk<IApplicationService>(relaxed = true)
         every { mockApplicationService.appContext } returns appContext
 
-        val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService)
+        val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService, mockFeatureManager())
 
         // Should complete without error even when no crash reports exist
         runBlocking { wrapper.start() }
@@ -84,7 +92,7 @@ class OneSignalCrashUploaderWrapperTest : FunSpec({
         val mockApplicationService = mockk<IApplicationService>(relaxed = true)
         every { mockApplicationService.appContext } returns appContext
 
-        val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService)
+        val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService, mockFeatureManager(backgroundThreadingEnabled = false))
 
         // Multiple calls should not throw
         runBlocking {
@@ -97,7 +105,7 @@ class OneSignalCrashUploaderWrapperTest : FunSpec({
         val mockApplicationService = mockk<IApplicationService>(relaxed = true)
         every { mockApplicationService.appContext } returns appContext
 
-        val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService)
+        val wrapper = OneSignalCrashUploaderWrapper(mockApplicationService, mockFeatureManager())
 
         wrapper shouldNotBe null
     }
