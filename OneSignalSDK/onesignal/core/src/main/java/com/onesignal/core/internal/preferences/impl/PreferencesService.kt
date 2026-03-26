@@ -24,6 +24,7 @@ internal class PreferencesService(
         )
     private val waiter = Waiter()
 
+    // Throttles missing appContext warnings so we don't spam logs from the background loop.
     @Volatile
     private var hasLoggedMissingAppContext = false
 

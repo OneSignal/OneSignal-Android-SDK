@@ -77,12 +77,12 @@ internal class FeatureManager(
         for (feature in FeatureFlag.entries) {
             val desiredState = enabledFeatureKeys.contains(feature.key)
             when (feature.activationMode) {
-                FeatureActivationMode.RUNTIME -> {
+                FeatureActivationMode.IMMEDIATE -> {
                     nextStates[feature] = desiredState
                     applySideEffects(feature, desiredState)
                 }
 
-                FeatureActivationMode.NEXT_RUN -> {
+                FeatureActivationMode.APP_STARTUP -> {
                     val hasBeenInitialized = nextStates.containsKey(feature)
                     if (applyNextRunOnlyFeatures || !hasBeenInitialized) {
                         nextStates[feature] = desiredState
