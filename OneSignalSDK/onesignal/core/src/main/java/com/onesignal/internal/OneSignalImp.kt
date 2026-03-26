@@ -180,7 +180,7 @@ internal class OneSignalImp(
             }
 
             return try {
-                featureManager.isEnabled(FeatureFlag.BACKGROUND_THREADING)
+                featureManager.isEnabled(FeatureFlag.SDK_050800_BACKGROUND_THREADING)
             } catch (t: Throwable) {
                 Logging.warn("OneSignal: Failed to resolve BACKGROUND_THREADING feature, defaulting to legacy mode.", t)
                 false

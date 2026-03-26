@@ -75,7 +75,7 @@ internal class FeatureManager(
         val nextStates = featureStates.toMutableMap()
 
         for (feature in FeatureFlag.entries) {
-            val desiredState = enabledFeatureKeys.contains(feature.key)
+            val desiredState = feature.isEnabledIn(enabledFeatureKeys)
             when (feature.activationMode) {
                 FeatureActivationMode.IMMEDIATE -> {
                     nextStates[feature] = desiredState
@@ -108,7 +108,7 @@ internal class FeatureManager(
         enabled: Boolean,
     ) {
         when (feature) {
-            FeatureFlag.BACKGROUND_THREADING ->
+            FeatureFlag.SDK_050800_BACKGROUND_THREADING ->
                 ThreadingMode.updateUseBackgroundThreading(
                     enabled = enabled,
                     source = "FeatureManager:${feature.activationMode}"
