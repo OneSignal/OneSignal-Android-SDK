@@ -50,7 +50,7 @@ internal class OneSignalCrashUploaderWrapper(
     @Suppress("TooGenericExceptionCaught")
     override fun start() {
         if (!OtelSdkSupport.isSupported) return
-        if (featureManager.isEnabled(FeatureFlag.BACKGROUND_THREADING)) {
+        if (featureManager.isEnabled(FeatureFlag.SDK_050800_BACKGROUND_THREADING)) {
             OneSignalDispatchers.launchOnIO {
                 try {
                     uploader.start()

@@ -19,7 +19,7 @@ class FeatureManagerTests : FunSpec({
     test("initial state should enable BACKGROUND_THREADING when feature is present") {
         // Given
         val initialModel = mockk<ConfigModel>()
-        every { initialModel.features } returns listOf(FeatureFlag.BACKGROUND_THREADING.key)
+        every { initialModel.features } returns listOf(FeatureFlag.SDK_050800_BACKGROUND_THREADING.key)
         val configModelStore = mockk<ConfigModelStore>()
         every { configModelStore.model } returns initialModel
         every { configModelStore.subscribe(any()) } just runs
@@ -28,7 +28,7 @@ class FeatureManagerTests : FunSpec({
         val manager = FeatureManager(configModelStore)
 
         // Then
-        manager.isEnabled(FeatureFlag.BACKGROUND_THREADING) shouldBe true
+        manager.isEnabled(FeatureFlag.SDK_050800_BACKGROUND_THREADING) shouldBe true
         ThreadingMode.useBackgroundThreading shouldBe true
     }
 
@@ -42,13 +42,13 @@ class FeatureManagerTests : FunSpec({
         val manager = FeatureManager(configModelStore)
 
         val updatedModel = mockk<ConfigModel>()
-        every { updatedModel.features } returns listOf(FeatureFlag.BACKGROUND_THREADING.key)
+        every { updatedModel.features } returns listOf(FeatureFlag.SDK_050800_BACKGROUND_THREADING.key)
 
         // When
         manager.onModelReplaced(updatedModel, ModelChangeTags.HYDRATE)
 
         // Then
-        manager.isEnabled(FeatureFlag.BACKGROUND_THREADING) shouldBe false
+        manager.isEnabled(FeatureFlag.SDK_050800_BACKGROUND_THREADING) shouldBe false
         ThreadingMode.useBackgroundThreading shouldBe false
     }
 
@@ -61,7 +61,7 @@ class FeatureManagerTests : FunSpec({
         every { configModelStore.subscribe(any()) } just runs
         val manager = FeatureManager(configModelStore)
 
-        every { model.features } returns listOf(FeatureFlag.BACKGROUND_THREADING.key)
+        every { model.features } returns listOf(FeatureFlag.SDK_050800_BACKGROUND_THREADING.key)
 
         // When
         manager.onModelUpdated(
@@ -72,14 +72,14 @@ class FeatureManagerTests : FunSpec({
         )
 
         // Then
-        manager.isEnabled(FeatureFlag.BACKGROUND_THREADING) shouldBe false
+        manager.isEnabled(FeatureFlag.SDK_050800_BACKGROUND_THREADING) shouldBe false
         ThreadingMode.useBackgroundThreading shouldBe false
     }
 
     test("onModelUpdated should keep startup mode when initial mode is enabled") {
         // Given
         val model = mockk<ConfigModel>()
-        every { model.features } returns listOf(FeatureFlag.BACKGROUND_THREADING.key)
+        every { model.features } returns listOf(FeatureFlag.SDK_050800_BACKGROUND_THREADING.key)
         val configModelStore = mockk<ConfigModelStore>()
         every { configModelStore.model } returns model
         every { configModelStore.subscribe(any()) } just runs
@@ -96,7 +96,7 @@ class FeatureManagerTests : FunSpec({
         )
 
         // Then
-        manager.isEnabled(FeatureFlag.BACKGROUND_THREADING) shouldBe true
+        manager.isEnabled(FeatureFlag.SDK_050800_BACKGROUND_THREADING) shouldBe true
         ThreadingMode.useBackgroundThreading shouldBe true
     }
 })

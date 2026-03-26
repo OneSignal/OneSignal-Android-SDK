@@ -20,8 +20,23 @@ internal enum class FeatureActivationMode {
  */
 internal enum class FeatureFlag(
     val key: String,
-    val activationMode: FeatureActivationMode,
+    val activationMode: FeatureActivationMode
 ) {
     // Threading mode is selected once per app startup to avoid mixed-mode behavior mid-session.
-    BACKGROUND_THREADING("BACKGROUND_THREADING", FeatureActivationMode.APP_STARTUP),
+    //
+    // Naming convention:
+    //   SDK_<MMmmpp>_<FEATURE_DESCRIPTION>
+    //
+    // Example:
+    //   SDK_050800_BACKGROUND_THREADING
+    //
+    SDK_050800_BACKGROUND_THREADING(
+        "SDK_050800_BACKGROUND_THREADING",
+        FeatureActivationMode.APP_STARTUP
+    ),
+    ;
+
+    fun isEnabledIn(enabledKeys: Set<String>): Boolean {
+        return enabledKeys.contains(key)
+    }
 }
