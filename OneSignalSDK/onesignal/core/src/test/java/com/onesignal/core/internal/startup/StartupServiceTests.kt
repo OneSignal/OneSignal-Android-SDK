@@ -16,6 +16,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class StartupServiceTests : FunSpec({
     fun setupServiceProvider(
@@ -106,8 +108,11 @@ class StartupServiceTests : FunSpec({
 
     test("startup will call all IStartableService dependencies when BACKGROUND_THREADING is off") {
         // Given
+        val latch = CountDownLatch(2)
         val mockStartupService1 = mockk<IStartableService>(relaxed = true)
         val mockStartupService2 = mockk<IStartableService>(relaxed = true)
+        every { mockStartupService1.start() } answers { latch.countDown() }
+        every { mockStartupService2.start() } answers { latch.countDown() }
 
         val startupService =
             StartupService(
@@ -122,7 +127,7 @@ class StartupServiceTests : FunSpec({
         startupService.scheduleStart()
 
         // Then
-        Thread.sleep(50)
+        latch.await(1, TimeUnit.SECONDS) shouldBe true
         verify(exactly = 1) { mockStartupService1.start() }
         verify(exactly = 1) { mockStartupService2.start() }
     }

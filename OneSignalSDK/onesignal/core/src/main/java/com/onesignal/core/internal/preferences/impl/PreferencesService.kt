@@ -242,7 +242,12 @@ internal class PreferencesService(
 
     @Synchronized
     private fun getSharedPrefsByName(store: String): SharedPreferences? {
-        return _applicationService.appContext.getSharedPreferences(store, Context.MODE_PRIVATE)
+        return try {
+            _applicationService.appContext.getSharedPreferences(store, Context.MODE_PRIVATE)
+        } catch (t: Throwable) {
+            // App context may not be ready yet during early startup.
+            null
+        }
     }
 
     companion object {

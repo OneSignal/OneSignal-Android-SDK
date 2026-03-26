@@ -312,6 +312,7 @@ internal class OneSignalImp(
             return true
         }
 
+        // Legacy FF-OFF behavior intentionally blocks caller thread until initialization completes.
         return runBlocking(runtimeIoDispatcher) {
             internalInit(context, appId)
         }
