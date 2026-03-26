@@ -9,6 +9,7 @@ import android.graphics.Rect
 import android.os.Build
 import android.view.View
 import android.view.Window
+import android.view.WindowManager
 import kotlin.math.roundToInt
 
 object ViewUtils {
@@ -19,17 +20,30 @@ object ViewUtils {
     // Due to differences in accounting for keyboard, navigation bar, and status bar between
     //   Android versions have different implementation here
     fun getWindowHeight(activity: Activity): Int {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindowHeightAPI30Plus(activity)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             getWindowHeightAPI23Plus(activity)
         } else {
             getWindowHeightLollipop(activity)
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun getDisplaySizeY(activity: Activity): Int {
         val point = Point()
         activity.windowManager.defaultDisplay.getSize(point)
         return point.y
+    }
+
+    @TargetApi(Build.VERSION_CODES.R)
+    private fun getWindowHeightAPI30Plus(activity: Activity): Int {
+        val windowMetrics = activity.windowManager.currentWindowMetrics
+        val insets =
+            windowMetrics.windowInsets.getInsetsIgnoringVisibility(
+                android.view.WindowInsets.Type.systemBars(),
+            )
+        return windowMetrics.bounds.height() - insets.top - insets.bottom
     }
 
     // Requirement: Ensure DecorView is ready by using OSViewUtils.decorViewReady
@@ -87,7 +101,10 @@ object ViewUtils {
     }
 
     fun getFullbleedWindowWidth(activity: Activity): Int {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val windowMetrics = activity.windowManager.currentWindowMetrics
+            windowMetrics.bounds.width()
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val decorView = activity.window.decorView
             decorView.width
         } else {
@@ -96,6 +113,20 @@ object ViewUtils {
     }
 
     fun getWindowWidth(activity: Activity): Int {
-        return getWindowVisibleDisplayFrame(activity).width()
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindowWidthAPI30Plus(activity)
+        } else {
+            getWindowVisibleDisplayFrame(activity).width()
+        }
+    }
+
+    @TargetApi(Build.VERSION_CODES.R)
+    private fun getWindowWidthAPI30Plus(activity: Activity): Int {
+        val windowMetrics = activity.windowManager.currentWindowMetrics
+        val insets =
+            windowMetrics.windowInsets.getInsetsIgnoringVisibility(
+                android.view.WindowInsets.Type.systemBars(),
+            )
+        return windowMetrics.bounds.width() - insets.left - insets.right
     }
 }

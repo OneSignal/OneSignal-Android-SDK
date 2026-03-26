@@ -83,6 +83,9 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
 
         val configuration =
             object : ComponentCallbacks {
+                private var lastScreenWidthDp: Int = 0
+                private var lastScreenHeightDp: Int = 0
+
                 override fun onConfigurationChanged(newConfig: Configuration) {
                     // If Activity contains the configChanges orientation flag, re-create the view this way
                     if (current != null &&
@@ -93,6 +96,27 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
                     ) {
                         onOrientationChanged(newConfig.orientation, current!!)
                     }
+
+                    // Handle foldable device screen size changes (fold/unfold events)
+                    // Foldable devices trigger CONFIG_SCREEN_SIZE without orientation change
+                    if (current != null && hasScreenSizeChanged(newConfig)) {
+                        Logging.debug(
+                            "ApplicationService.onConfigurationChanged: Screen size changed " +
+                                "(foldable device fold/unfold detected) - " +
+                                "width: ${newConfig.screenWidthDp}dp, height: ${newConfig.screenHeightDp}dp",
+                        )
+                        onScreenSizeChanged(current!!)
+                    }
+                    lastScreenWidthDp = newConfig.screenWidthDp
+                    lastScreenHeightDp = newConfig.screenHeightDp
+                }
+
+                private fun hasScreenSizeChanged(newConfig: Configuration): Boolean {
+                    if (lastScreenWidthDp == 0 && lastScreenHeightDp == 0) {
+                        return false
+                    }
+                    return newConfig.screenWidthDp != lastScreenWidthDp ||
+                        newConfig.screenHeightDp != lastScreenHeightDp
                 }
 
                 override fun onLowMemory() {}
@@ -366,6 +390,23 @@ class ApplicationService() : IApplicationService, ActivityLifecycleCallbacks, On
         activity.window.decorView.viewTreeObserver.addOnGlobalLayoutListener(this)
 
         handleFocus()
+    }
+
+    /**
+     * Handles screen size changes that occur on foldable devices when folding/unfolding.
+     * Unlike orientation changes, foldable devices can change screen dimensions significantly
+     * without changing orientation (e.g., Samsung Galaxy Fold going from cover screen to main screen).
+     * This triggers the same view recreation flow as orientation changes to ensure IAMs are
+     * properly resized and repositioned.
+     */
+    private fun onScreenSizeChanged(activity: Activity) {
+        // Remove view
+        activityLifecycleNotifier.fire { it.onActivityStopped(activity) }
+
+        // Show view with new dimensions
+        activityLifecycleNotifier.fire { it.onActivityAvailable(activity) }
+
+        activity.window.decorView.viewTreeObserver.addOnGlobalLayoutListener(this)
     }
 
     private fun handleLostFocus() {
