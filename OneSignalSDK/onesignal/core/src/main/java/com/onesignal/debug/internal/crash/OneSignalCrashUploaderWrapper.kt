@@ -2,11 +2,14 @@ package com.onesignal.debug.internal.crash
 
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.application.IApplicationService
+import com.onesignal.core.internal.features.FeatureFlag
+import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.otel.android.AndroidOtelLogger
 import com.onesignal.debug.internal.logging.otel.android.createAndroidOtelPlatformProvider
 import com.onesignal.otel.OtelFactory
 import com.onesignal.otel.crash.OtelCrashUploader
+import kotlinx.coroutines.runBlocking
 
 /**
  * Android-specific wrapper for OtelCrashUploader that implements IStartableService.
@@ -31,6 +34,7 @@ import com.onesignal.otel.crash.OtelCrashUploader
  */
 internal class OneSignalCrashUploaderWrapper(
     private val applicationService: IApplicationService,
+    private val featureManager: IFeatureManager,
 ) : IStartableService {
     private val uploader: OtelCrashUploader by lazy {
         // Create Android-specific platform provider (injects Android values)
@@ -46,15 +50,29 @@ internal class OneSignalCrashUploaderWrapper(
     @Suppress("TooGenericExceptionCaught")
     override fun start() {
         if (!OtelSdkSupport.isSupported) return
-        OneSignalDispatchers.launchOnIO {
+        if (featureManager.isEnabled(FeatureFlag.BACKGROUND_THREADING)) {
+            OneSignalDispatchers.launchOnIO {
+                try {
+                    uploader.start()
+                } catch (t: Throwable) {
+                    com.onesignal.debug.internal.logging.Logging.warn(
+                        "OneSignal: Crash uploader failed to start: ${t.message}",
+                        t,
+                    )
+                }
+            }
+            return
+        }
+
+        Thread {
             try {
-                uploader.start()
+                runBlocking { uploader.start() }
             } catch (t: Throwable) {
                 com.onesignal.debug.internal.logging.Logging.warn(
                     "OneSignal: Crash uploader failed to start: ${t.message}",
                     t,
                 )
             }
-        }
+        }.start()
     }
 }

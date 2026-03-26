@@ -95,6 +95,7 @@ internal class ConfigModelStoreListener(
                     params.locationShared?.let { config.locationShared = it }
                     params.requiresUserPrivacyConsent?.let { config.consentRequired = it }
                     params.opRepoExecutionInterval?.let { config.opRepoExecutionInterval = it }
+                    config.features = params.features
                     params.influenceParams.notificationLimit?.let { config.influenceParams.notificationLimit = it }
                     params.influenceParams.indirectNotificationAttributionWindow?.let { config.influenceParams.indirectNotificationAttributionWindow = it }
                     params.influenceParams.iamLimit?.let { config.influenceParams.iamLimit = it }

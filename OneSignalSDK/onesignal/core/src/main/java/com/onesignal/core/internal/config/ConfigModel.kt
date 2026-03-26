@@ -291,6 +291,16 @@ class ConfigModel : Model() {
         }
 
     /**
+     * Remote feature switches controlled by backend.
+     * Presence of a feature name indicates enabled.
+     */
+    var features: List<String>
+        get() = getListProperty(::features.name) { emptyList() }
+        set(value) {
+            setListProperty(::features.name, value)
+        }
+
+    /**
      * The outcomes parameters
      */
     val influenceParams: InfluenceConfigModel
@@ -325,6 +335,24 @@ class ConfigModel : Model() {
             val model = RemoteLoggingConfigModel(this, ::remoteLoggingParams.name)
             model.initializeFromJson(jsonObject)
             return model
+        }
+
+        return null
+    }
+
+    override fun createListForProperty(
+        property: String,
+        jsonArray: JSONArray,
+    ): List<*>? {
+        if (property == ::features.name) {
+            return buildList {
+                for (i in 0 until jsonArray.length()) {
+                    val featureName = jsonArray.optString(i, "")
+                    if (featureName.isNotBlank()) {
+                        add(featureName)
+                    }
+                }
+            }
         }
 
         return null

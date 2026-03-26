@@ -1,9 +1,15 @@
+@file:Suppress("GlobalCoroutineUsage")
+
 package com.onesignal.common.threading
 
 import com.onesignal.debug.internal.logging.Logging
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlin.concurrent.thread
 
 /**
  * Modernized ThreadUtils that leverages OneSignalDispatchers for better thread management.
@@ -24,8 +30,27 @@ import kotlinx.coroutines.withContext
  *
  */
 fun suspendifyOnMain(block: suspend () -> Unit) {
-    OneSignalDispatchers.launchOnIO {
-        withContext(Dispatchers.Main) { block() }
+    if (ThreadingMode.useBackgroundThreading) {
+        OneSignalDispatchers.launchOnIO {
+            try {
+                withContext(Dispatchers.Main) { block() }
+            } catch (e: Exception) {
+                Logging.error("Exception in suspendifyOnMain", e)
+            }
+        }
+        return
+    }
+
+    thread {
+        try {
+            runBlocking {
+                withContext(Dispatchers.Main) {
+                    block()
+                }
+            }
+        } catch (e: Exception) {
+            Logging.error("Exception on thread with switch to main", e)
+        }
     }
 }
 
@@ -86,23 +111,35 @@ fun suspendifyWithCompletion(
     block: suspend () -> Unit,
     onComplete: (() -> Unit)? = null,
 ) {
-    if (useIO) {
-        OneSignalDispatchers.launchOnIO {
-            try {
-                block()
-                onComplete?.invoke()
-            } catch (e: Exception) {
-                Logging.error("Exception in suspendifyWithCompletion", e)
+    if (ThreadingMode.useBackgroundThreading) {
+        if (useIO) {
+            OneSignalDispatchers.launchOnIO {
+                try {
+                    block()
+                    onComplete?.invoke()
+                } catch (e: Exception) {
+                    Logging.error("Exception in suspendifyWithCompletion", e)
+                }
+            }
+        } else {
+            OneSignalDispatchers.launchOnDefault {
+                try {
+                    block()
+                    onComplete?.invoke()
+                } catch (e: Exception) {
+                    Logging.error("Exception in suspendifyWithCompletion", e)
+                }
             }
         }
-    } else {
-        OneSignalDispatchers.launchOnDefault {
-            try {
-                block()
-                onComplete?.invoke()
-            } catch (e: Exception) {
-                Logging.error("Exception in suspendifyWithCompletion", e)
-            }
+        return
+    }
+
+    GlobalScope.launch(if (useIO) Dispatchers.IO else Dispatchers.Default) {
+        try {
+            block()
+            onComplete?.invoke()
+        } catch (e: Exception) {
+            Logging.error("Exception in suspendifyWithCompletion", e)
         }
     }
 }
@@ -122,25 +159,38 @@ fun suspendifyWithErrorHandling(
     onError: ((Exception) -> Unit)? = null,
     onComplete: (() -> Unit)? = null,
 ) {
-    if (useIO) {
-        OneSignalDispatchers.launchOnIO {
-            try {
-                block()
-                onComplete?.invoke()
-            } catch (e: Exception) {
-                Logging.error("Exception in suspendifyWithErrorHandling", e)
-                onError?.invoke(e)
+    if (ThreadingMode.useBackgroundThreading) {
+        if (useIO) {
+            OneSignalDispatchers.launchOnIO {
+                try {
+                    block()
+                    onComplete?.invoke()
+                } catch (e: Exception) {
+                    Logging.error("Exception in suspendifyWithErrorHandling", e)
+                    onError?.invoke(e)
+                }
+            }
+        } else {
+            OneSignalDispatchers.launchOnDefault {
+                try {
+                    block()
+                    onComplete?.invoke()
+                } catch (e: Exception) {
+                    Logging.error("Exception in suspendifyWithErrorHandling", e)
+                    onError?.invoke(e)
+                }
             }
         }
-    } else {
-        OneSignalDispatchers.launchOnDefault {
-            try {
-                block()
-                onComplete?.invoke()
-            } catch (e: Exception) {
-                Logging.error("Exception in suspendifyWithErrorHandling", e)
-                onError?.invoke(e)
-            }
+        return
+    }
+
+    GlobalScope.launch(if (useIO) Dispatchers.IO else Dispatchers.Default) {
+        try {
+            block()
+            onComplete?.invoke()
+        } catch (e: Exception) {
+            Logging.error("Exception in suspendifyWithErrorHandling", e)
+            onError?.invoke(e)
         }
     }
 }
@@ -153,7 +203,23 @@ fun suspendifyWithErrorHandling(
  * @return Job that can be used to wait for completion with .join()
  */
 fun launchOnIO(block: suspend () -> Unit): Job {
-    return OneSignalDispatchers.launchOnIO(block)
+    return if (ThreadingMode.useBackgroundThreading) {
+        OneSignalDispatchers.launchOnIO {
+            try {
+                block()
+            } catch (e: Exception) {
+                Logging.error("Exception in launchOnIO", e)
+            }
+        }
+    } else {
+        GlobalScope.launch(Dispatchers.IO) {
+            try {
+                block()
+            } catch (e: Exception) {
+                Logging.error("Exception in launchOnIO", e)
+            }
+        }
+    }
 }
 
 /**
@@ -164,5 +230,21 @@ fun launchOnIO(block: suspend () -> Unit): Job {
  * @return Job that can be used to wait for completion with .join()
  */
 fun launchOnDefault(block: suspend () -> Unit): kotlinx.coroutines.Job {
-    return OneSignalDispatchers.launchOnDefault(block)
+    return if (ThreadingMode.useBackgroundThreading) {
+        OneSignalDispatchers.launchOnDefault {
+            try {
+                block()
+            } catch (e: Exception) {
+                Logging.error("Exception in launchOnDefault", e)
+            }
+        }
+    } else {
+        GlobalScope.launch(Dispatchers.Default) {
+            try {
+                block()
+            } catch (e: Exception) {
+                Logging.error("Exception in launchOnDefault", e)
+            }
+        }
+    }
 }

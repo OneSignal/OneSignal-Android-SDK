@@ -16,6 +16,8 @@ import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.config.ConfigModelStore
+import com.onesignal.core.internal.features.FeatureFlag
+import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceStoreFix
@@ -40,11 +42,12 @@ import com.onesignal.user.internal.resolveAppId
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 internal class OneSignalImp(
-    private val ioDispatcher: CoroutineDispatcher = OneSignalDispatchers.IO,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : IOneSignal, IServiceProvider {
 
     private val suspendCompletion = CompletableDeferred<Unit>()
@@ -113,23 +116,23 @@ internal class OneSignalImp(
 
     override val session: ISessionManager
         get() =
-            waitAndReturn { services.getService() }
+            getServiceWithFeatureGate { services.getService() }
 
     override val notifications: INotificationsManager
         get() =
-            waitAndReturn { services.getService() }
+            getServiceWithFeatureGate { services.getService() }
 
     override val location: ILocationManager
         get() =
-            waitAndReturn { services.getService() }
+            getServiceWithFeatureGate { services.getService() }
 
     override val inAppMessages: IInAppMessagesManager
         get() =
-            waitAndReturn { services.getService() }
+            getServiceWithFeatureGate { services.getService() }
 
     override val user: IUserManager
         get() =
-            waitAndReturn { services.getService() }
+            getServiceWithFeatureGate { services.getService() }
 
     // Services required by this class
     // WARNING: OperationRepo depends on OperationModelStore which in-turn depends
@@ -165,6 +168,25 @@ internal class OneSignalImp(
             }
         }.build()
 
+    private val featureManager: IFeatureManager by lazy { services.getService<IFeatureManager>() }
+    private val runtimeIoDispatcher: CoroutineDispatcher
+        get() = if (isBackgroundThreadingEnabled) OneSignalDispatchers.IO else ioDispatcher
+
+    @Suppress("TooGenericExceptionCaught")
+    private val isBackgroundThreadingEnabled: Boolean
+        get() {
+            if (!applicationServiceStarted) {
+                return false
+            }
+
+            return try {
+                featureManager.isEnabled(FeatureFlag.BACKGROUND_THREADING)
+            } catch (t: Throwable) {
+                Logging.warn("OneSignal: Failed to resolve BACKGROUND_THREADING feature, defaulting to legacy mode.", t)
+                false
+            }
+        }
+
     // get the current config model, if there is one
     private val configModel: ConfigModel by lazy { services.getService<ConfigModelStore>().model }
     private var _consentRequired: Boolean? = null
@@ -172,6 +194,10 @@ internal class OneSignalImp(
     private var _disableGMSMissingPrompt: Boolean? = null
     private val initLock: Any = Any()
     private val loginLogoutLock: Any = Any()
+    private val applicationServiceLock: Any = Any()
+
+    @Volatile
+    private var applicationServiceStarted: Boolean = false
     private val userSwitcher by lazy {
         val appContext = services.getService<IApplicationService>().appContext
         UserSwitcher(
@@ -213,14 +239,25 @@ internal class OneSignalImp(
 
         PreferenceStoreFix.ensureNoObfuscatedPrefStore(context)
 
-        // start the application service. This is called explicitly first because we want
-        // to make sure it has the context provided on input, for all other startable services
-        // to depend on if needed.
-        val applicationService = services.getService<IApplicationService>()
-        (applicationService as ApplicationService).start(context)
+        ensureApplicationServiceStarted(context)
+    }
 
-        // Give the logging singleton access to the application service to support visual logging.
-        Logging.applicationService = applicationService
+    private fun ensureApplicationServiceStarted(context: Context) {
+        if (applicationServiceStarted) {
+            return
+        }
+
+        synchronized(applicationServiceLock) {
+            if (applicationServiceStarted) {
+                return
+            }
+
+            // Start application service before any model store or prefs-backed service access.
+            val applicationService = services.getService<IApplicationService>()
+            (applicationService as ApplicationService).start(context)
+            Logging.applicationService = applicationService
+            applicationServiceStarted = true
+        }
     }
 
     private fun updateConfig() {
@@ -246,6 +283,7 @@ internal class OneSignalImp(
         return startupService
     }
 
+    @Suppress("ReturnCount")
     override fun initWithContext(
         context: Context,
         appId: String,
@@ -262,11 +300,22 @@ internal class OneSignalImp(
             initState = InitState.IN_PROGRESS
         }
 
-        // init in background and return immediately to ensure non-blocking
-        suspendifyOnIO {
+        // FeatureManager depends on ConfigModelStore/PreferencesService which requires appContext.
+        // Ensure app context is available before evaluating feature gates.
+        ensureApplicationServiceStarted(context)
+
+        if (isBackgroundThreadingEnabled) {
+            // init in background and return immediately to ensure non-blocking
+            suspendifyOnIO {
+                internalInit(context, appId)
+            }
+            return true
+        }
+
+        // Legacy FF-OFF behavior intentionally blocks caller thread until initialization completes.
+        return runBlocking(runtimeIoDispatcher) {
             internalInit(context, appId)
         }
-        return true
     }
 
     /**
@@ -327,17 +376,37 @@ internal class OneSignalImp(
     ) {
         Logging.log(LogLevel.DEBUG, "Calling deprecated login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
-        waitForInit(operationName = "login")
-
-        suspendifyOnIO { loginHelper.login(externalId, jwtBearerToken) }
+        if (isBackgroundThreadingEnabled) {
+            waitForInit(operationName = "login")
+            suspendifyOnIO { loginHelper.login(externalId, jwtBearerToken) }
+        } else {
+            if (!isInitialized) {
+                throw IllegalStateException("Must call 'initWithContext' before 'login'")
+            }
+            Thread {
+                runBlocking(runtimeIoDispatcher) {
+                    loginHelper.login(externalId, jwtBearerToken)
+                }
+            }.start()
+        }
     }
 
     override fun logout() {
         Logging.log(LogLevel.DEBUG, "Calling deprecated logout()")
 
-        waitForInit(operationName = "logout")
-
-        suspendifyOnIO { logoutHelper.logout() }
+        if (isBackgroundThreadingEnabled) {
+            waitForInit(operationName = "logout")
+            suspendifyOnIO { logoutHelper.logout() }
+        } else {
+            if (!isInitialized) {
+                throw IllegalStateException("Must call 'initWithContext' before 'logout'")
+            }
+            Thread {
+                runBlocking(runtimeIoDispatcher) {
+                    logoutHelper.logout()
+                }
+            }.start()
+        }
     }
 
     override fun <T> hasService(c: Class<T>): Boolean = services.hasService(c)
@@ -356,7 +425,7 @@ internal class OneSignalImp(
      * @param operationName Optional operation name to include in error messages (e.g., "login", "logout")
      */
     private fun waitForInit(operationName: String? = null) {
-        runBlocking(ioDispatcher) {
+        runBlocking(runtimeIoDispatcher) {
             waitUntilInitInternal(operationName)
         }
     }
@@ -444,6 +513,18 @@ internal class OneSignalImp(
         return getter()
     }
 
+    private fun <T> getServiceWithFeatureGate(getter: () -> T): T {
+        return if (isBackgroundThreadingEnabled) {
+            waitAndReturn(getter)
+        } else {
+            if (isInitialized) {
+                getter()
+            } else {
+                throw IllegalStateException("Must call 'initWithContext' before use")
+            }
+        }
+    }
+
     private fun <T> blockingGet(getter: () -> T): T {
         try {
             if (AndroidUtils.isRunningOnMainThread()) {
@@ -455,7 +536,7 @@ internal class OneSignalImp(
             Logging.debug("Could not check main thread status (likely in test environment): ${e.message}")
         }
         // Call suspendAndReturn directly to avoid nested runBlocking (waitAndReturn -> waitForInit -> runBlocking)
-        return runBlocking(ioDispatcher) {
+        return runBlocking(runtimeIoDispatcher) {
             suspendAndReturn(getter)
         }
     }
@@ -465,48 +546,48 @@ internal class OneSignalImp(
     // ===============================
 
     override suspend fun getSession(): ISessionManager =
-        withContext(ioDispatcher) {
+        withContext(runtimeIoDispatcher) {
             suspendAndReturn { services.getService() }
         }
 
     override suspend fun getNotifications(): INotificationsManager =
-        withContext(ioDispatcher) {
+        withContext(runtimeIoDispatcher) {
             suspendAndReturn { services.getService() }
         }
 
     override suspend fun getLocation(): ILocationManager =
-        withContext(ioDispatcher) {
+        withContext(runtimeIoDispatcher) {
             suspendAndReturn { services.getService() }
         }
 
     override suspend fun getInAppMessages(): IInAppMessagesManager =
-        withContext(ioDispatcher) {
+        withContext(runtimeIoDispatcher) {
             suspendAndReturn { services.getService() }
         }
 
     override suspend fun getUser(): IUserManager =
-        withContext(ioDispatcher) {
+        withContext(runtimeIoDispatcher) {
             suspendAndReturn { services.getService() }
         }
 
     override suspend fun getConsentRequired(): Boolean =
-        withContext(ioDispatcher) {
+        withContext(runtimeIoDispatcher) {
             configModel.consentRequired ?: (_consentRequired == true)
         }
 
     override suspend fun setConsentRequired(required: Boolean) =
-        withContext(ioDispatcher) {
+        withContext(runtimeIoDispatcher) {
             _consentRequired = required
             configModel.consentRequired = required
         }
 
     override suspend fun getConsentGiven(): Boolean =
-        withContext(ioDispatcher) {
+        withContext(runtimeIoDispatcher) {
             configModel.consentGiven ?: (_consentGiven == true)
         }
 
     override suspend fun setConsentGiven(value: Boolean) =
-        withContext(ioDispatcher) {
+        withContext(runtimeIoDispatcher) {
             val oldValue = _consentGiven
             _consentGiven = value
             configModel.consentGiven = value
@@ -516,12 +597,12 @@ internal class OneSignalImp(
         }
 
     override suspend fun getDisableGMSMissingPrompt(): Boolean =
-        withContext(ioDispatcher) {
+        withContext(runtimeIoDispatcher) {
             configModel.disableGMSMissingPrompt
         }
 
     override suspend fun setDisableGMSMissingPrompt(value: Boolean) =
-        withContext(ioDispatcher) {
+        withContext(runtimeIoDispatcher) {
             _disableGMSMissingPrompt = value
             configModel.disableGMSMissingPrompt = value
         }
@@ -536,7 +617,7 @@ internal class OneSignalImp(
         initFailureException = IllegalStateException("OneSignal initWithContext failed.")
 
         // Use IO dispatcher for initialization to prevent ANRs and optimize for I/O operations
-        return withContext(ioDispatcher) {
+        return withContext(runtimeIoDispatcher) {
             // do not do this again if already initialized or init is in progress
             synchronized(initLock) {
                 if (initState.isSDKAccessible()) {
@@ -556,7 +637,7 @@ internal class OneSignalImp(
     override suspend fun loginSuspend(
         externalId: String,
         jwtBearerToken: String?,
-    ) = withContext(ioDispatcher) {
+    ) = withContext(runtimeIoDispatcher) {
         Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
 
         suspendUntilInit(operationName = "login")
@@ -569,7 +650,7 @@ internal class OneSignalImp(
     }
 
     override suspend fun logoutSuspend() =
-        withContext(ioDispatcher) {
+        withContext(runtimeIoDispatcher) {
             Logging.log(LogLevel.DEBUG, "logoutSuspend()")
 
             suspendUntilInit(operationName = "logout")

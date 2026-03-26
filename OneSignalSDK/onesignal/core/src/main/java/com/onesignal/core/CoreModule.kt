@@ -16,6 +16,8 @@ import com.onesignal.core.internal.device.IDeviceService
 import com.onesignal.core.internal.device.IInstallIdService
 import com.onesignal.core.internal.device.impl.DeviceService
 import com.onesignal.core.internal.device.impl.InstallIdService
+import com.onesignal.core.internal.features.FeatureManager
+import com.onesignal.core.internal.features.IFeatureManager
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.core.internal.http.impl.HttpClient
 import com.onesignal.core.internal.http.impl.HttpConnectionFactory
@@ -57,6 +59,7 @@ internal class CoreModule : IModule {
 
         // Params (Config)
         builder.register<ConfigModelStore>().provides<ConfigModelStore>()
+        builder.register<FeatureManager>().provides<IFeatureManager>()
         builder.register<ParamsBackendService>().provides<IParamsBackendService>()
         builder.register<ConfigModelStoreListener>().provides<IStartableService>()
 
