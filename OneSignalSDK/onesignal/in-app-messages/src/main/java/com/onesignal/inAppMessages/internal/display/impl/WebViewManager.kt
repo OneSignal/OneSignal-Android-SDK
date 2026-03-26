@@ -263,7 +263,7 @@ internal class WebViewManager(
                     showMessageView(lastPageHeight)
                 }
             } else {
-                // Activity rotated
+                // Activity rotated or screen size changed (e.g., foldable device fold/unfold)
                 calculateHeightAndShowWebViewAfterNewActivity()
             }
         }

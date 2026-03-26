@@ -1,5 +1,6 @@
 package com.onesignal.core.internal.features
 
+import com.onesignal.common.FoldableIAMFeature
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
@@ -110,6 +111,11 @@ internal class FeatureManager(
         when (feature) {
             FeatureFlag.SDK_050800_BACKGROUND_THREADING ->
                 ThreadingMode.updateUseBackgroundThreading(
+                    enabled = enabled,
+                    source = "FeatureManager:${feature.activationMode}"
+                )
+            FeatureFlag.SDK_050800_FOLDABLE_IAM_FIX ->
+                FoldableIAMFeature.updateEnabled(
                     enabled = enabled,
                     source = "FeatureManager:${feature.activationMode}"
                 )
