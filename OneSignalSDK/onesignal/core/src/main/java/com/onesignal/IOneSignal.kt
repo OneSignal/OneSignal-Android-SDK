@@ -226,4 +226,25 @@ interface IOneSignal {
      * Logout the current user (suspend version).
      */
     suspend fun logoutSuspend()
+
+    /**
+     * Update the JWT bearer token for a user identified by [externalId]. Call this when
+     * a token is about to expire or after receiving an [IUserJwtInvalidatedListener] callback.
+     *
+     * @param externalId The external ID of the user whose token is being updated.
+     * @param token The new JWT bearer token.
+     */
+    fun updateUserJwt(
+        externalId: String,
+        token: String,
+    )
+
+    fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
+
+    /**
+     * Remove a previously added [IUserJwtInvalidatedListener].
+     *
+     * @param listener The listener to remove.
+     */
+    fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener)
 }
