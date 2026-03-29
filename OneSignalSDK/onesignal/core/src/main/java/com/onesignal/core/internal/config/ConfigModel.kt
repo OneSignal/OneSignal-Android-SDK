@@ -237,12 +237,15 @@ class ConfigModel : Model() {
         }
 
     /**
-     * Whether SMS auth hash should be used.
+     * Whether identity verification (JWT) is required for this application.
+     * - `null` = unknown (remote params haven't arrived yet; all operations are held)
+     * - `false` = explicitly disabled (SDK behaves as today, no JWT gating)
+     * - `true` = enabled (operations require a valid JWT, anonymous users are blocked)
      */
-    var useIdentityVerification: Boolean
-        get() = getBooleanProperty(::useIdentityVerification.name) { false }
+    var useIdentityVerification: Boolean?
+        get() = getOptBooleanProperty(::useIdentityVerification.name)
         set(value) {
-            setBooleanProperty(::useIdentityVerification.name, value)
+            setOptBooleanProperty(::useIdentityVerification.name, value)
         }
 
     /**
