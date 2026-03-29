@@ -20,5 +20,6 @@ interface ICustomEventBackendService {
         eventName: String,
         eventProperties: String?,
         metadata: CustomEventMetadata,
+        jwt: String? = null,
     ): ExecutionResponse
 }

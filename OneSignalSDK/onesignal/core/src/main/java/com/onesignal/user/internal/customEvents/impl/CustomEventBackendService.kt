@@ -3,6 +3,7 @@ package com.onesignal.user.internal.customEvents.impl
 import com.onesignal.common.DateUtils
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.http.IHttpClient
+import com.onesignal.core.internal.http.impl.OptionalHeaders
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
 import com.onesignal.user.internal.customEvents.ICustomEventBackendService
@@ -21,6 +22,7 @@ internal class CustomEventBackendService(
         eventName: String,
         eventProperties: String?,
         metadata: CustomEventMetadata,
+        jwt: String?,
     ): ExecutionResponse {
         val body = JSONObject()
         body.put("name", eventName)
@@ -42,7 +44,7 @@ internal class CustomEventBackendService(
         body.put("payload", payload)
         val jsonObject = JSONObject().put("events", JSONArray().put(body))
 
-        val response = httpClient.post("apps/$appId/custom_events", jsonObject)
+        val response = httpClient.post("apps/$appId/custom_events", jsonObject, jwt?.let { OptionalHeaders(jwt = it) })
 
         if (!response.isSuccess) {
             throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
