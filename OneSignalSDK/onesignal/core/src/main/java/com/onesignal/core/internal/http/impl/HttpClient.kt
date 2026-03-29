@@ -195,6 +195,10 @@ internal class HttpClient(
                         con.setRequestProperty("OneSignal-Session-Duration", headers.sessionDuration.toString())
                     }
 
+                    if (headers?.jwt != null) {
+                        con.setRequestProperty("Authorization", "Bearer ${headers.jwt}")
+                    }
+
                     // Network request is made from getResponseCode()
                     httpResponse = con.responseCode
 
