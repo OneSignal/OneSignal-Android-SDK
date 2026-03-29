@@ -17,4 +17,9 @@ data class OptionalHeaders(
      * Used to track delay between session start and request
      */
     val sessionDuration: Long? = null,
+    /**
+     * JWT bearer token for identity verification. When non-null, sent as
+     * `Authorization: Bearer <jwt>` on the request.
+     */
+    val jwt: String? = null,
 )
