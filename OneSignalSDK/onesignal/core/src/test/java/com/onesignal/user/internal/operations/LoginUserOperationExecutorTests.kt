@@ -14,6 +14,7 @@ import com.onesignal.user.internal.backend.PropertiesObject
 import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.identity.IdentityModel
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.operations.impl.executors.IdentityOperationExecutor
 import com.onesignal.user.internal.operations.impl.executors.LoginUserOperationExecutor
 import com.onesignal.user.internal.properties.PropertiesModel
@@ -53,7 +54,7 @@ class LoginUserOperationExecutorTests : FunSpec({
     test("login anonymous user successfully creates user") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -76,6 +77,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
+                mockk<JwtTokenStore>(relaxed = true),
             )
         val operations =
             listOf<Operation>(
@@ -94,6 +96,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mapOf(),
                 any(),
                 any(),
+                any(),
             )
         }
     }
@@ -101,7 +104,7 @@ class LoginUserOperationExecutorTests : FunSpec({
     test("login anonymous user fails with retry when network condition exists") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(408, "TIMEOUT", retryAfterSeconds = 10)
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } throws BackendException(408, "TIMEOUT", retryAfterSeconds = 10)
 
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
 
@@ -120,6 +123,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
+                mockk<JwtTokenStore>(relaxed = true),
             )
         val operations =
             listOf<Operation>(
@@ -133,13 +137,13 @@ class LoginUserOperationExecutorTests : FunSpec({
         // Then
         response.result shouldBe ExecutionResult.FAIL_RETRY
         response.retryAfterSeconds shouldBe 10
-        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any(), any()) }
     }
 
     test("login anonymous user fails with no retry when backend error condition exists") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(404, "NOT FOUND")
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } throws BackendException(404, "NOT FOUND")
 
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
 
@@ -148,7 +152,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, AndroidMockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, AndroidMockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<JwtTokenStore>(relaxed = true))
         val operations =
             listOf<Operation>(
                 LoginUserOperation(appId, localOneSignalId, null, null),
@@ -160,13 +164,13 @@ class LoginUserOperationExecutorTests : FunSpec({
 
         // Then
         response.result shouldBe ExecutionResult.FAIL_PAUSE_OPREPO
-        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any(), any()) }
     }
 
     test("login identified user without association successfully creates user") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
@@ -176,7 +180,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<JwtTokenStore>(relaxed = true))
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", null))
 
         // When
@@ -186,7 +190,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         response.result shouldBe ExecutionResult.SUCCESS
         coVerify(
             exactly = 1,
-        ) { mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any(), any()) }
+        ) { mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any(), any(), any()) }
     }
 
     // If the User is identified then the backend may have found an existing User, if so
@@ -194,7 +198,7 @@ class LoginUserOperationExecutorTests : FunSpec({
     test("login identified user returns result with RefreshUser") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
@@ -214,6 +218,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
+                mockk<JwtTokenStore>(relaxed = true),
             )
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", null))
 
@@ -242,7 +247,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<JwtTokenStore>(relaxed = true))
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         // When
@@ -267,7 +272,7 @@ class LoginUserOperationExecutorTests : FunSpec({
     test("login identified user with association fails with retry when association fails with retry") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
@@ -278,7 +283,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<JwtTokenStore>(relaxed = true))
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         // When
@@ -303,7 +308,7 @@ class LoginUserOperationExecutorTests : FunSpec({
     test("login identified user with association successfully creates user when association fails with no retry") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
@@ -314,7 +319,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<JwtTokenStore>(relaxed = true))
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         // When
@@ -336,13 +341,13 @@ class LoginUserOperationExecutorTests : FunSpec({
         }
         coVerify(
             exactly = 1,
-        ) { mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any(), any()) }
+        ) { mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any(), any(), any()) }
     }
 
     test("login identified user with association fails with retry when association fails with no retry and network condition exists") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } throws BackendException(408, "TIMEOUT")
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } throws BackendException(408, "TIMEOUT")
 
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
         coEvery { mockIdentityOperationExecutor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_NORETRY)
@@ -352,7 +357,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext())
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<JwtTokenStore>(relaxed = true))
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         // When
@@ -374,13 +379,13 @@ class LoginUserOperationExecutorTests : FunSpec({
         }
         coVerify(
             exactly = 1,
-        ) { mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any(), any()) }
+        ) { mockUserBackendService.createUser(appId, mapOf(IdentityConstants.EXTERNAL_ID to "externalId"), any(), any(), any()) }
     }
 
     test("creating user will merge operations into one backend call") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -403,6 +408,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
+                mockk<JwtTokenStore>(relaxed = true),
             )
         val operations =
             listOf<Operation>(
@@ -459,6 +465,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                     SubscriptionStatus.fromInt(subscription.notificationTypes!!) shouldBe SubscriptionStatus.SUBSCRIBED
                 },
                 any(),
+                any(),
             )
         }
     }
@@ -466,7 +473,7 @@ class LoginUserOperationExecutorTests : FunSpec({
     test("creating user will hydrate when the user hasn't changed") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -504,6 +511,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
+                mockk<JwtTokenStore>(relaxed = true),
             )
         val operations =
             listOf<Operation>(
@@ -545,6 +553,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mapOf(),
                 any(),
                 any(),
+                any(),
             )
         }
     }
@@ -552,7 +561,7 @@ class LoginUserOperationExecutorTests : FunSpec({
     test("creating user will not hydrate when the user has changed") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -590,6 +599,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
+                mockk<JwtTokenStore>(relaxed = true),
             )
         val operations =
             listOf<Operation>(
@@ -631,6 +641,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mapOf(),
                 any(),
                 any(),
+                any(),
             )
         }
     }
@@ -638,7 +649,7 @@ class LoginUserOperationExecutorTests : FunSpec({
     test("creating user will provide local to remote translations") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -662,6 +673,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
+                mockk<JwtTokenStore>(relaxed = true),
             )
         val operations =
             listOf<Operation>(
@@ -698,6 +710,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mapOf(),
                 any(),
                 any(),
+                any(),
             )
         }
     }
@@ -705,7 +718,7 @@ class LoginUserOperationExecutorTests : FunSpec({
     test("ensure anonymous login with no other operations will fail with FAIL_NORETRY") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } returns
             CreateUserResponse(mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId), PropertiesObject(), listOf())
 
         val mockIdentityOperationExecutor = mockk<IdentityOperationExecutor>()
@@ -725,6 +738,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
+                mockk<JwtTokenStore>(relaxed = true),
             )
         // anonymous Login request
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, null, null))
@@ -737,14 +751,14 @@ class LoginUserOperationExecutorTests : FunSpec({
         // ensure user is not created by the bad request
         coVerify(
             exactly = 0,
-        ) { mockUserBackendService.createUser(appId, any(), any(), any()) }
+        ) { mockUserBackendService.createUser(appId, any(), any(), any(), any()) }
     }
 
     test("create user maps subscriptions when backend order is different (match by id/token)") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
         // backend returns EMAIL first (with token), then PUSH — out of order
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -771,6 +785,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
+                mockk<JwtTokenStore>(relaxed = true),
             )
 
         // send PUSH then EMAIL (local IDs 1,2) — order differs from backend response
@@ -795,14 +810,14 @@ class LoginUserOperationExecutorTests : FunSpec({
                 // email
                 localSubscriptionId2 to remoteSubscriptionId2,
             )
-        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any(), any()) }
     }
 
     test("create user maps push subscription by type when id and token don't match (case for deleted push sub)") {
         // Given
         val mockUserBackendService = mockk<IUserBackendService>()
         // simulate server-side push sub recreated with new ID and no token; must match by type
-        coEvery { mockUserBackendService.createUser(any(), any(), any(), any()) } returns
+        coEvery { mockUserBackendService.createUser(any(), any(), any(), any(), any()) } returns
             CreateUserResponse(
                 mapOf(IdentityConstants.ONESIGNAL_ID to remoteOneSignalId),
                 PropertiesObject(),
@@ -835,6 +850,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 mockSubscriptionsModelStore,
                 configModelStore,
                 MockHelper.languageContext(),
+                mockk<JwtTokenStore>(relaxed = true),
             )
 
         val ops =
@@ -857,6 +873,6 @@ class LoginUserOperationExecutorTests : FunSpec({
         localPushModel.id shouldBe remoteSubscriptionId1
         // pushSubscriptionId should be updated from local to remote id
         configModelStore.model.pushSubscriptionId shouldBe remoteSubscriptionId1
-        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any()) }
+        coVerify(exactly = 1) { mockUserBackendService.createUser(appId, mapOf(), any(), any(), any()) }
     }
 })

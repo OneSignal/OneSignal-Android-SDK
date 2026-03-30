@@ -31,6 +31,7 @@ import com.onesignal.session.internal.influence.IInfluenceManager
 import com.onesignal.session.internal.outcomes.IOutcomeEventsController
 import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.IUserManager
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
 import com.onesignal.user.subscriptions.IPushSubscription
@@ -77,7 +78,7 @@ private class Mocks {
     val inAppLifecycleService = mockk<IInAppLifecycleService>(relaxed = true)
     val languageContext = MockHelper.languageContext()
     val time = MockHelper.time(1000)
-    val inAppMessageLifecycleListener = spyk<IInAppMessageLifecycleListener>()
+    val inAppMessageLifecycleListener = mockk<IInAppMessageLifecycleListener>(relaxed = true)
     val inAppMessageClickListener = spyk<IInAppMessageClickListener>()
     val rywData = RywData("token", 100L)
 
@@ -88,6 +89,8 @@ private class Mocks {
     val consistencyManager = mockk<IConsistencyManager>(relaxed = true) {
         coEvery { getRywDataFromAwaitableCondition(any<IamFetchReadyCondition>()) } returns rywDeferred
     }
+
+    val jwtTokenStore = mockk<JwtTokenStore>(relaxed = true)
 
     val subscriptionManager = mockk<ISubscriptionManager>(relaxed = true) {
         every { subscriptions } returns mockk {
@@ -187,6 +190,7 @@ private class Mocks {
         languageContext,
         time,
         consistencyManager,
+        jwtTokenStore,
     )
 }
 
@@ -455,7 +459,7 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.userManager.onesignalId } returns "onesignal-id"
             every { mocks.applicationService.isInForeground } returns true
             every { mocks.pushSubscription.id } returns "subscription-id"
-            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any()) } returns null
+            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) } returns null
             val args = ModelChangedArgs(
                 ConfigModel(),
                 ConfigModel::appId.name,
@@ -470,7 +474,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // Then
             // Should trigger fetchMessagesWhenConditionIsMet
-            coVerify { mocks.backend.listInAppMessages(any(), any(), any(), any()) }
+            coVerify { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) }
         }
 
         test("onModelUpdated does nothing when non-appId property changes") {
@@ -488,7 +492,7 @@ class InAppMessagesManagerTests : FunSpec({
             awaitIO()
 
             // Then
-            coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) }
         }
 
         test("onModelReplaced fetches messages") {
@@ -497,7 +501,7 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.applicationService.isInForeground } returns true
 
             every { mocks.pushSubscription.id } returns "subscription-id"
-            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any()) } returns null
+            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) } returns null
 
             // When
             mocks.inAppMessagesManager.onModelReplaced(ConfigModel(), "tag")
@@ -505,7 +509,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // Then
             coVerify {
-                mocks.backend.listInAppMessages(any(), any(), any(), any())
+                mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any())
             }
         }
     }
@@ -525,7 +529,7 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.userManager.onesignalId } returns "onesignal-id"
             every { mocks.applicationService.isInForeground } returns true
             every { mocks.pushSubscription.id } returns "subscription-id"
-            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any()) } returns null
+            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) } returns null
 
             // When
             mocks.inAppMessagesManager.onSubscriptionChanged(mocks.pushSubscription, args)
@@ -533,7 +537,7 @@ class InAppMessagesManagerTests : FunSpec({
 
             // Then
             coVerify {
-                mocks.backend.listInAppMessages(any(), any(), any(), any())
+                mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any())
             }
         }
 
@@ -555,7 +559,7 @@ class InAppMessagesManagerTests : FunSpec({
             awaitIO()
 
             // Then
-            coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) }
         }
 
         test("onSubscriptionChanged does nothing when id path does not match") {
@@ -575,7 +579,7 @@ class InAppMessagesManagerTests : FunSpec({
             awaitIO()
 
             // Then
-            coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) }
         }
 
         test("onSubscriptionAdded does not fetch") {
@@ -587,7 +591,7 @@ class InAppMessagesManagerTests : FunSpec({
             iamManager.onSubscriptionAdded(mockSubscription)
 
             // Then
-            coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) }
         }
 
         test("onSubscriptionRemoved does not fetch") {
@@ -599,7 +603,7 @@ class InAppMessagesManagerTests : FunSpec({
             iamManager.onSubscriptionRemoved(mockSubscription)
 
             // Then
-            coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) }
         }
     }
 
@@ -622,7 +626,7 @@ class InAppMessagesManagerTests : FunSpec({
             } returns mockDeferred
             every { mocks.applicationService.isInForeground } returns true
             every { mocks.pushSubscription.id } returns "subscription-id"
-            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any()) } returns null
+            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) } returns null
 
             // When
             mocks.inAppMessagesManager.start()
@@ -633,7 +637,7 @@ class InAppMessagesManagerTests : FunSpec({
             // Verify messages were reset and backend was called
             message1.isDisplayedInSession shouldBe false
             message2.isDisplayedInSession shouldBe false
-            coVerify { mocks.backend.listInAppMessages(any(), any(), any(), any()) }
+            coVerify { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) }
         }
 
         test("onSessionActive does nothing") {
@@ -772,7 +776,7 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.userManager.onesignalId } returns "onesignal-id"
             every { mocks.applicationService.isInForeground } returns true
             every { mocks.pushSubscription.id } returns "subscription-id"
-            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any()) } returns listOf(message)
+            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) } returns listOf(message)
 
             // Fetch messages first
             mocks.inAppMessagesManager.onSessionStarted()
@@ -792,7 +796,7 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.userManager.onesignalId } returns "onesignal-id"
             every { mocks.applicationService.isInForeground } returns true
             every { mocks.pushSubscription.id } returns "subscription-id"
-            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any()) } returns listOf(message)
+            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) } returns listOf(message)
 
             // Fetch messages first
             mocks.inAppMessagesManager.onSessionStarted()
@@ -943,7 +947,7 @@ class InAppMessagesManagerTests : FunSpec({
             awaitIO()
 
             // Then
-            coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) }
         }
 
         test("fetchMessagesWhenConditionIsMet returns early when subscriptionId is empty") {
@@ -957,7 +961,7 @@ class InAppMessagesManagerTests : FunSpec({
             awaitIO()
 
             // Then
-            coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) }
         }
 
         test("fetchMessagesWhenConditionIsMet returns early when subscriptionId is local ID") {
@@ -971,7 +975,7 @@ class InAppMessagesManagerTests : FunSpec({
             awaitIO()
 
             // Then
-            coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any()) }
+            coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) }
         }
 
         test("fetchMessagesWhenConditionIsMet evaluates messages when new messages are returned") {
@@ -981,14 +985,14 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.applicationService.isInForeground } returns true
             every { mocks.pushSubscription.id } returns "subscription-id"
             every { mocks.triggerController.evaluateMessageTriggers(any()) } returns false
-            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any()) } returns listOf(message)
+            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) } returns listOf(message)
 
             // When
             mocks.inAppMessagesManager.onSessionStarted()
             awaitIO()
 
             // Then
-            coVerify { mocks.backend.listInAppMessages(any(), any(), any(), any()) }
+            coVerify { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) }
             verify { mocks.triggerController.evaluateMessageTriggers(any()) }
         }
     }
@@ -1028,7 +1032,7 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.inAppStateService.inAppMessageIdShowing } returns null
             every { mocks.inAppStateService.paused } returns true
             coEvery { mocks.applicationService.waitUntilSystemConditionsAvailable() } returns true
-            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any()) } returns listOf(message)
+            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) } returns listOf(message)
             coEvery { mocks.inAppDisplayer.displayMessage(any()) } returns true
 
             // Fetch messages first
@@ -1277,7 +1281,7 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.triggerController.evaluateMessageTriggers(any()) } returns false
 
             // Mock backend to return both messages
-            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any()) } returns listOf(message1, message2)
+            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) } returns listOf(message1, message2)
 
             // Start the manager to load redisplayed messages
             mocks.inAppMessagesManager.start()
@@ -1311,8 +1315,8 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.userManager.onesignalId } returns "onesignal-id"
             every { mocks.applicationService.isInForeground } returns true
             every { mocks.pushSubscription.id } returns "subscription-id"
-            every { mocks.configModelStore.model.appId } returns "test-app-id"
-            every { mocks.configModelStore.model.fetchIAMMinInterval } returns 0L
+            mocks.configModelStore.model.appId = "test-app-id"
+            mocks.configModelStore.model.fetchIAMMinInterval = 0L
             every { mocks.triggerModelStore.get(any()) } returns null
             every { mocks.triggerModelStore.add(any()) } answers {}
 
@@ -1324,7 +1328,7 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.triggerController.evaluateMessageTriggers(any()) } returns false
 
             // Mock first fetch to return the message
-            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any()) } returns listOf(message)
+            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) } returns listOf(message)
 
             mocks.inAppMessagesManager.start()
             awaitIO()
@@ -1344,7 +1348,7 @@ class InAppMessagesManagerTests : FunSpec({
             earlySessionTriggers.contains("lateTrigger") shouldBe false
 
             // Mock second fetch to return the same message
-            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any()) } returns listOf(message)
+            coEvery { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) } returns listOf(message)
 
             // Trigger second fetch
             mocks.inAppMessagesManager.onSessionStarted()
@@ -1367,11 +1371,11 @@ class InAppMessagesManagerTests : FunSpec({
             every { mockTriggerModelStore.add(any()) } answers {}
             coEvery { mockRepository.listInAppMessages() } returns mutableListOf()
             every { mockTriggerController.evaluateMessageTriggers(any()) } returns false
-            coEvery { mockBackend.listInAppMessages(any(), any(), any(), any()) } returns listOf(mocks.createInAppMessage())
+            coEvery { mockBackend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) } returns listOf(mocks.createInAppMessage())
 
             every { mocks.pushSubscription.id } returns "test-sub-id"
-            every { mocks.configModelStore.model.appId } returns "test-app-id"
-            every { mocks.configModelStore.model.fetchIAMMinInterval } returns 0L
+            mocks.configModelStore.model.appId = "test-app-id"
+            mocks.configModelStore.model.fetchIAMMinInterval = 0L
             every { mocks.applicationService.isInForeground } returns true
 
             iamManager.start()
@@ -1399,7 +1403,7 @@ class InAppMessagesManagerTests : FunSpec({
             val messageAfterClear = mocks.createInAppMessage()
 
             // Mock backend for second fetch
-            coEvery { mockBackend.listInAppMessages(any(), any(), any(), any()) } returns listOf(messageAfterClear)
+            coEvery { mockBackend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) } returns listOf(messageAfterClear)
 
             // Mock that message is in redisplayed and matches the cleared triggers
             coEvery { mockRepository.listInAppMessages() } returns mutableListOf(messageAfterClear)

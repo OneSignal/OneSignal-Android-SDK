@@ -6,6 +6,7 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
@@ -41,6 +42,7 @@ class LogoutHelperTests : FunSpec({
         val mockOperationRepo = mockk<IOperationRepo>(relaxed = true)
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns false
         val logoutLock = Any()
 
         val logoutHelper =
@@ -49,6 +51,7 @@ class LogoutHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                subscriptionModelStore = mockk<SubscriptionModelStore>(relaxed = true),
                 lock = logoutLock,
             )
 
@@ -71,6 +74,7 @@ class LogoutHelperTests : FunSpec({
         val mockOperationRepo = mockk<IOperationRepo>(relaxed = true)
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns false
         val logoutLock = Any()
 
         val logoutHelper =
@@ -79,6 +83,7 @@ class LogoutHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                subscriptionModelStore = mockk<SubscriptionModelStore>(relaxed = true),
                 lock = logoutLock,
             )
 
@@ -110,6 +115,7 @@ class LogoutHelperTests : FunSpec({
         val mockOperationRepo = mockk<IOperationRepo>(relaxed = true)
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns false
         val logoutLock = Any()
 
         val logoutHelper =
@@ -118,6 +124,7 @@ class LogoutHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                subscriptionModelStore = mockk<SubscriptionModelStore>(relaxed = true),
                 lock = logoutLock,
             )
 
@@ -142,6 +149,7 @@ class LogoutHelperTests : FunSpec({
         val mockOperationRepo = mockk<IOperationRepo>(relaxed = true)
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns false
         val logoutLock = Any()
 
         val logoutHelper =
@@ -150,6 +158,7 @@ class LogoutHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                subscriptionModelStore = mockk<SubscriptionModelStore>(relaxed = true),
                 lock = logoutLock,
             )
 

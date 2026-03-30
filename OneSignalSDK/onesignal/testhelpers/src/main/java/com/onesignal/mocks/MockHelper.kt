@@ -53,6 +53,7 @@ object MockHelper {
         configModel.foregroundFetchNotificationPermissionInterval = 1
 
         configModel.appId = DEFAULT_APP_ID
+        configModel.useIdentityVerification = false
 
         if (action != null) {
             action(configModel)

@@ -12,6 +12,7 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.LoginUserOperation
 import io.kotest.core.spec.style.FunSpec
@@ -72,6 +73,8 @@ private class Mocks {
                 configModelStore,
                 Time(),
                 getNewRecordState(configModelStore),
+                mockk<JwtTokenStore>(relaxed = true),
+                MockHelper.identityModelStore(),
             ),
             recordPrivateCalls = true,
         )
@@ -97,6 +100,8 @@ class OperationRepoTests : FunSpec({
                     mocks.configModelStore,
                     Time(),
                     getNewRecordState(mocks.configModelStore),
+                    mockk<JwtTokenStore>(relaxed = true),
+                    MockHelper.identityModelStore(),
                 ),
             )
 
@@ -913,6 +918,8 @@ class OperationRepoTests : FunSpec({
             every { operation.modifyComparisonKey } returns modifyComparisonKey
             every { operation.translateIds(any()) } just runs
             every { operation.applyToRecordId } returns applyToRecordId
+            every { operation.externalId } returns null
+            every { operation.externalId = any() } just runs
 
             return operation
         }

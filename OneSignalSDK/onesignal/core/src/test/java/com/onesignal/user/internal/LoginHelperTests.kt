@@ -6,6 +6,7 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
 import com.onesignal.user.internal.identity.IdentityModel
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.properties.PropertiesModel
 import io.kotest.core.spec.style.FunSpec
@@ -48,6 +49,7 @@ class LoginHelperTests : FunSpec({
         val mockOperationRepo = mockk<IOperationRepo>(relaxed = true)
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns false
         val loginLock = Any()
 
         val loginHelper =
@@ -56,6 +58,7 @@ class LoginHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                jwtTokenStore = mockk<JwtTokenStore>(relaxed = true),
                 lock = loginLock,
             )
 
@@ -87,6 +90,7 @@ class LoginHelperTests : FunSpec({
         val mockOperationRepo = mockk<IOperationRepo>()
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns false
         val loginLock = Any()
 
         val userSwitcherSlot = slot<(IdentityModel, PropertiesModel) -> Unit>()
@@ -108,6 +112,7 @@ class LoginHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                jwtTokenStore = mockk<JwtTokenStore>(relaxed = true),
                 lock = loginLock,
             )
 
@@ -152,6 +157,7 @@ class LoginHelperTests : FunSpec({
         val mockOperationRepo = mockk<IOperationRepo>()
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns false
         val loginLock = Any()
 
         val userSwitcherSlot = slot<(IdentityModel, PropertiesModel) -> Unit>()
@@ -173,6 +179,7 @@ class LoginHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                jwtTokenStore = mockk<JwtTokenStore>(relaxed = true),
                 lock = loginLock,
             )
 
@@ -212,6 +219,7 @@ class LoginHelperTests : FunSpec({
         val mockOperationRepo = mockk<IOperationRepo>()
         val mockConfigModel = mockk<ConfigModel>()
         every { mockConfigModel.appId } returns appId
+        every { mockConfigModel.useIdentityVerification } returns false
         val loginLock = Any()
 
         val userSwitcherSlot = slot<(IdentityModel, PropertiesModel) -> Unit>()
@@ -234,6 +242,7 @@ class LoginHelperTests : FunSpec({
                 userSwitcher = mockUserSwitcher,
                 operationRepo = mockOperationRepo,
                 configModel = mockConfigModel,
+                jwtTokenStore = mockk<JwtTokenStore>(relaxed = true),
                 lock = loginLock,
             )
 
