@@ -1,6 +1,5 @@
 package com.onesignal.core.internal.config.impl
 
-import com.onesignal.UserJwtInvalidatedEvent
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
@@ -9,7 +8,6 @@ import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
-import com.onesignal.user.IUserManager
 import com.onesignal.user.internal.UserManager
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.identity.JwtTokenStore
@@ -27,7 +25,7 @@ internal class IdentityVerificationService(
     private val _operationRepo: IOperationRepo,
     private val _identityModelStore: IdentityModelStore,
     private val _jwtTokenStore: JwtTokenStore,
-    private val _userManager: IUserManager,
+    private val _userManager: UserManager,
 ) : IStartableService, ISingletonModelStoreChangeHandler<ConfigModel> {
     override fun start() {
         _configModelStore.subscribe(this)
@@ -48,9 +46,7 @@ internal class IdentityVerificationService(
             val externalId = _identityModelStore.model.externalId
             if (externalId != null && _jwtTokenStore.getJwt(externalId) == null) {
                 Logging.debug("IdentityVerificationService: IV enabled but no JWT for $externalId, firing invalidated event")
-                (_userManager as UserManager).jwtInvalidatedNotifier.fireOnMain {
-                    it.onUserJwtInvalidated(UserJwtInvalidatedEvent(externalId))
-                }
+                _userManager.fireJwtInvalidated(externalId)
             }
         }
 

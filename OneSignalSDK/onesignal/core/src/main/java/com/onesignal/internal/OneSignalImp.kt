@@ -425,11 +425,11 @@ internal class OneSignalImp(
     }
 
     override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        (services.getService<IUserManager>() as UserManager).jwtInvalidatedNotifier.subscribe(listener)
+        services.getService<UserManager>().addJwtInvalidatedListener(listener)
     }
 
     override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
-        (services.getService<IUserManager>() as UserManager).jwtInvalidatedNotifier.unsubscribe(listener)
+        services.getService<UserManager>().removeJwtInvalidatedListener(listener)
     }
 
     override fun <T> hasService(c: Class<T>): Boolean = services.hasService(c)
