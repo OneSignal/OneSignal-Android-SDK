@@ -36,7 +36,6 @@ import com.onesignal.core.internal.purchases.impl.TrackGooglePurchase
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.core.internal.time.impl.Time
-import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.debug.internal.crash.OneSignalCrashUploaderWrapper
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.inAppMessages.internal.MisconfiguredIAMManager
@@ -44,6 +43,7 @@ import com.onesignal.location.ILocationManager
 import com.onesignal.location.internal.MisconfiguredLocationManager
 import com.onesignal.notifications.INotificationsManager
 import com.onesignal.notifications.internal.MisconfiguredNotificationsManager
+import com.onesignal.user.internal.identity.JwtTokenStore
 
 internal class CoreModule : IModule {
     override fun register(builder: ServiceBuilder) {
