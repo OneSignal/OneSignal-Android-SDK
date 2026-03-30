@@ -26,6 +26,8 @@ internal class InAppBackendService(
 
     override suspend fun listInAppMessages(
         appId: String,
+        aliasLabel: String,
+        aliasValue: String,
         subscriptionId: String,
         rywData: RywData,
         sessionDurationProvider: () -> Long,
@@ -34,7 +36,7 @@ internal class InAppBackendService(
         val rywDelay = rywData.rywDelay ?: DEFAULT_RYW_DELAY_MS
         delay(rywDelay) // Delay by the specified amount
 
-        val baseUrl = "apps/$appId/subscriptions/$subscriptionId/iams"
+        val baseUrl = "apps/$appId/users/by/$aliasLabel/$aliasValue/subscriptions/$subscriptionId/iams"
         return attemptFetchWithRetries(baseUrl, rywData, sessionDurationProvider, jwt)
     }
 

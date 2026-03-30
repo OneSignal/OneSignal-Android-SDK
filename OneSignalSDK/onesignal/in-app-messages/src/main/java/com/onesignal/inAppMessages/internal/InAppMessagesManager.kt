@@ -316,11 +316,17 @@ internal class InAppMessagesManager(
             lastTimeFetchedIAMs = now
         }
 
+        val (aliasLabel, aliasValue) =
+            IdentityConstants.resolveAlias(
+                _configModelStore.model.useIdentityVerification,
+                externalId,
+                _identityModelStore.model.onesignalId,
+            )
         val jwt = externalId?.let { _jwtTokenStore.getJwt(it) }
 
         // lambda so that it is updated on each potential retry
         val sessionDurationProvider = { _time.currentTimeMillis - _sessionService.startTime }
-        val newMessages = _backend.listInAppMessages(appId, subscriptionId, rywData, sessionDurationProvider, jwt)
+        val newMessages = _backend.listInAppMessages(appId, aliasLabel, aliasValue, subscriptionId, rywData, sessionDurationProvider, jwt)
 
         if (newMessages != null) {
             this.messages = newMessages as MutableList<InAppMessage>
