@@ -11,6 +11,8 @@ import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
+import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -28,6 +30,8 @@ internal class OperationRepo(
     private val _configModelStore: ConfigModelStore,
     private val _time: ITime,
     private val _newRecordState: NewRecordsState,
+    private val _jwtTokenStore: JwtTokenStore,
+    private val _identityModelStore: IdentityModelStore,
 ) : IOperationRepo, IStartableService {
     internal class OperationQueueItem(
         val operation: Operation,
@@ -154,6 +158,13 @@ internal class OperationRepo(
         addToStore: Boolean,
         index: Int? = null,
     ) {
+        // Stamp externalId on new operations from the current identity model.
+        // Operations loaded from persistence (addToStore=false) already have their externalId.
+        // Operations that set externalId in their constructor (e.g. LoginUserOperation) are skipped.
+        if (addToStore && queueItem.operation.externalId == null) {
+            queueItem.operation.externalId = _identityModelStore.model.externalId
+        }
+
         synchronized(queue) {
             val hasExisting = queue.any { it.operation.id == queueItem.operation.id }
             if (hasExisting) {
@@ -268,7 +279,20 @@ internal class OperationRepo(
                     ops.forEach { _operationModelStore.remove(it.operation.id) }
                     ops.forEach { it.waiter?.wake(true) }
                 }
-                ExecutionResult.FAIL_UNAUTHORIZED, // TODO: Need to provide callback for app to reset JWT. For now, fail with no retry.
+                ExecutionResult.FAIL_UNAUTHORIZED -> {
+                    val externalId = startingOp.operation.externalId
+                    if (externalId != null) {
+                        _jwtTokenStore.invalidateJwt(externalId)
+                        Logging.warn("Operation execution failed with 401 Unauthorized, JWT invalidated for user: $externalId. Operations re-queued.")
+                        synchronized(queue) {
+                            ops.reversed().forEach { queue.add(0, it) }
+                        }
+                    } else {
+                        Logging.warn("Operation execution failed with 401 Unauthorized for anonymous user. Operations dropped.")
+                        ops.forEach { _operationModelStore.remove(it.operation.id) }
+                        ops.forEach { it.waiter?.wake(false) }
+                    }
+                }
                 ExecutionResult.FAIL_NORETRY,
                 ExecutionResult.FAIL_CONFLICT,
                 -> {
@@ -372,12 +396,16 @@ internal class OperationRepo(
     }
 
     internal fun getNextOps(bucketFilter: Int): List<OperationQueueItem>? {
+        val iv = _configModelStore.model.useIdentityVerification
+        if (iv == null) return null
+
         return synchronized(queue) {
             val startingOp =
                 queue.firstOrNull {
                     it.operation.canStartExecute &&
                         _newRecordState.canAccess(it.operation.applyToRecordId) &&
-                        it.bucket <= bucketFilter
+                        it.bucket <= bucketFilter &&
+                        hasValidJwtIfRequired(iv, it.operation)
                 }
 
             if (startingOp != null) {
@@ -387,6 +415,15 @@ internal class OperationRepo(
                 null
             }
         }
+    }
+
+    private fun hasValidJwtIfRequired(
+        iv: Boolean,
+        op: Operation,
+    ): Boolean {
+        if (!iv) return true
+        val externalId = op.externalId ?: return false
+        return _jwtTokenStore.getJwt(externalId) != null
     }
 
     /**
@@ -450,6 +487,28 @@ internal class OperationRepo(
                 index = 0,
             )
         }
+
+        val activeExternalIds =
+            synchronized(queue) {
+                queue.mapNotNull { it.operation.externalId }.toMutableSet()
+            }
+        _identityModelStore.model.externalId?.let { activeExternalIds.add(it) }
+        _jwtTokenStore.pruneToExternalIds(activeExternalIds)
+
         initialized.complete(Unit)
+    }
+
+    override fun removeOperationsWithoutExternalId() {
+        synchronized(queue) {
+            val toRemove = queue.filter { it.operation.externalId == null }
+            toRemove.forEach {
+                queue.remove(it)
+                _operationModelStore.remove(it.operation.id)
+                it.waiter?.wake(false)
+            }
+            if (toRemove.isNotEmpty()) {
+                Logging.debug("OperationRepo: removed ${toRemove.size} anonymous operations (no externalId)")
+            }
+        }
     }
 }
