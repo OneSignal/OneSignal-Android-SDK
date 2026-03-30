@@ -66,6 +66,10 @@ internal class SubscriptionModelStoreListener(
 
     companion object {
         fun getSubscriptionEnabledAndStatus(model: SubscriptionModel): Pair<Boolean, SubscriptionStatus> {
+            if (model.isDisabledInternally) {
+                return Pair(false, SubscriptionStatus.UNSUBSCRIBE)
+            }
+
             val status: SubscriptionStatus
             val enabled: Boolean
 

@@ -23,7 +23,7 @@ class LogoutHelper(
             if (configModel.useIdentityVerification == true) {
                 configModel.pushSubscriptionId?.let { pushSubId ->
                     subscriptionModelStore.get(pushSubId)
-                        ?.setBooleanProperty("optedIn", false)
+                        ?.let { it.isDisabledInternally = true }
                 }
 
                 userSwitcher.createAndSwitchToNewUser(suppressBackendOperation = true)

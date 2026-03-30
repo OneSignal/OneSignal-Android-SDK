@@ -92,6 +92,20 @@ class SubscriptionModel : Model() {
             setBooleanProperty(::optedIn.name, value)
         }
 
+    /**
+     * Set to true by the SDK when logout is called with Identity Verification enabled.
+     * The real [optedIn] and [status] remain unchanged to preserve the user's preference.
+     * When a subscription update is built, this flag causes enabled=false and
+     * status=UNSUBSCRIBE to be sent to the backend instead of the real values.
+     * On the next login, [UserSwitcher.createAndSwitchToNewUser] creates a fresh model
+     * that does not carry this flag (defaults to false), restoring the real state.
+     */
+    var isDisabledInternally: Boolean
+        get() = getBooleanProperty(::isDisabledInternally.name) { false }
+        set(value) {
+            setBooleanProperty(::isDisabledInternally.name, value)
+        }
+
     var type: SubscriptionType
         get() = getEnumProperty(::type.name)
         set(value) {
