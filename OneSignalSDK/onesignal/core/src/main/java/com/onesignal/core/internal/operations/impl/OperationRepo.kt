@@ -199,7 +199,8 @@ internal class OperationRepo(
             }
 
             val ops = getNextOps(executeBucket)
-            Logging.debug("processQueueForever:ops:\n$ops")
+            val queueSnapshot = synchronized(queue) { queue.toList() }
+            Logging.debug("processQueueForever:ops:\n$ops\nqueue(${queueSnapshot.size}):\n$queueSnapshot")
 
             if (ops != null) {
                 executeOperations(ops)
