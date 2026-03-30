@@ -10,6 +10,7 @@ import com.onesignal.core.internal.background.IBackgroundManager
 import com.onesignal.core.internal.background.impl.BackgroundManager
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.config.impl.ConfigModelStoreListener
+import com.onesignal.core.internal.config.impl.IdentityVerificationService
 import com.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.core.internal.database.impl.DatabaseProvider
 import com.onesignal.core.internal.device.IDeviceService
@@ -35,6 +36,7 @@ import com.onesignal.core.internal.purchases.impl.TrackGooglePurchase
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.core.internal.time.ITime
 import com.onesignal.core.internal.time.impl.Time
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.debug.internal.crash.OneSignalCrashUploaderWrapper
 import com.onesignal.inAppMessages.IInAppMessagesManager
 import com.onesignal.inAppMessages.internal.MisconfiguredIAMManager
@@ -62,6 +64,10 @@ internal class CoreModule : IModule {
         builder.register<FeatureManager>().provides<IFeatureManager>()
         builder.register<ParamsBackendService>().provides<IParamsBackendService>()
         builder.register<ConfigModelStoreListener>().provides<IStartableService>()
+
+        // Identity Verification
+        builder.register<JwtTokenStore>().provides<JwtTokenStore>()
+        builder.register<IdentityVerificationService>().provides<IStartableService>()
 
         // Operations
         builder.register<OperationModelStore>().provides<OperationModelStore>()
