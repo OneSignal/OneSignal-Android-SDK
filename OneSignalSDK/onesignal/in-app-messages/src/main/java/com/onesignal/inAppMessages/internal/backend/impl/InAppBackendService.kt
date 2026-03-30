@@ -29,12 +29,13 @@ internal class InAppBackendService(
         subscriptionId: String,
         rywData: RywData,
         sessionDurationProvider: () -> Long,
+        jwt: String?,
     ): List<InAppMessage>? {
         val rywDelay = rywData.rywDelay ?: DEFAULT_RYW_DELAY_MS
         delay(rywDelay) // Delay by the specified amount
 
         val baseUrl = "apps/$appId/subscriptions/$subscriptionId/iams"
-        return attemptFetchWithRetries(baseUrl, rywData, sessionDurationProvider)
+        return attemptFetchWithRetries(baseUrl, rywData, sessionDurationProvider, jwt)
     }
 
     override suspend fun getIAMData(
@@ -209,6 +210,7 @@ internal class InAppBackendService(
         baseUrl: String,
         rywData: RywData,
         sessionDurationProvider: () -> Long,
+        jwt: String? = null,
     ): List<InAppMessage>? {
         var attempts = 0
         var retryLimit: Int = 0 // retry limit is remote defined & set dynamically below
@@ -220,6 +222,7 @@ internal class InAppBackendService(
                     rywToken = rywData.rywToken,
                     sessionDuration = sessionDurationProvider(),
                     retryCount = retryCount,
+                    jwt = jwt,
                 )
             val response = _httpClient.get(baseUrl, values)
 
@@ -244,18 +247,20 @@ internal class InAppBackendService(
         } while (attempts <= retryLimit)
 
         // Final attempt without the RYW token if retries fail
-        return fetchInAppMessagesWithoutRywToken(baseUrl, sessionDurationProvider)
+        return fetchInAppMessagesWithoutRywToken(baseUrl, sessionDurationProvider, jwt)
     }
 
     private suspend fun fetchInAppMessagesWithoutRywToken(
         url: String,
         sessionDurationProvider: () -> Long,
+        jwt: String? = null,
     ): List<InAppMessage>? {
         val response =
             _httpClient.get(
                 url,
                 OptionalHeaders(
                     sessionDuration = sessionDurationProvider(),
+                    jwt = jwt,
                 ),
             )
 
