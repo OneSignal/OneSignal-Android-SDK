@@ -241,8 +241,8 @@ class OneSignalRepository {
     }
 
     // Fetch user data from API
-    suspend fun fetchUser(onesignalId: String): UserData? = withContext(Dispatchers.IO) {
-        Log.d(TAG, "Fetching user data for: $onesignalId")
-        OneSignalService.fetchUser(onesignalId)
+    suspend fun fetchUser(aliasLabel: String, aliasValue: String, jwt: String? = null): UserData? = withContext(Dispatchers.IO) {
+        Log.d(TAG, "Fetching user data by $aliasLabel: $aliasValue")
+        OneSignalService.fetchUser(aliasLabel, aliasValue, jwt)
     }
 }

@@ -137,6 +137,8 @@ fun AppSection(
 @Composable
 fun UserSection(
     externalUserId: String?,
+    useIdentityVerification: Boolean,
+    onUseIdentityVerificationChange: (Boolean) -> Unit,
     onLoginClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onUpdateJwtClick: () -> Unit
@@ -144,6 +146,13 @@ fun UserSection(
     val isLoggedIn = !externalUserId.isNullOrEmpty()
 
     SectionCard(title = "User") {
+        ToggleRow(
+            label = "Identity Verification",
+            description = "Use external_id for API calls",
+            checked = useIdentityVerification,
+            onCheckedChange = onUseIdentityVerificationChange
+        )
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         // Status
         Row(
             modifier = Modifier

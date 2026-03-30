@@ -69,6 +69,7 @@ fun MainScreen(viewModel: MainViewModel) {
     val consentRequired by viewModel.consentRequired.observeAsState(false)
     val privacyConsentGiven by viewModel.privacyConsentGiven.observeAsState(false)
     val externalUserId by viewModel.externalUserId.observeAsState()
+    val useIdentityVerification by viewModel.useIdentityVerification.observeAsState(false)
     val aliases by viewModel.aliases.observeAsState(emptyList())
     val emails by viewModel.emails.observeAsState(emptyList())
     val smsNumbers by viewModel.smsNumbers.observeAsState(emptyList())
@@ -160,6 +161,8 @@ fun MainScreen(viewModel: MainViewModel) {
                 // === USER SECTION ===
                 UserSection(
                     externalUserId = externalUserId,
+                    useIdentityVerification = useIdentityVerification,
+                    onUseIdentityVerificationChange = { viewModel.setUseIdentityVerification(it) },
                     onLoginClick = { showLoginDialog = true },
                     onLogoutClick = { viewModel.logoutUser() },
                     onUpdateJwtClick = { showUpdateJwtDialog = true }
