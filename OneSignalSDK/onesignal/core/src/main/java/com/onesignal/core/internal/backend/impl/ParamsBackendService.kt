@@ -84,7 +84,7 @@ internal class ParamsBackendService(
         return ParamsObject(
             googleProjectNumber = responseJson.safeString("android_sender_id"),
             enterprise = responseJson.safeBool("enterp"),
-            useIdentityVerification = responseJson.safeBool("require_ident_auth"),
+            useIdentityVerification = responseJson.safeBool("jwt_required"),
             notificationChannels = responseJson.optJSONArray("chnl_lst"),
             firebaseAnalytics = responseJson.safeBool("fba"),
             restoreTTLFilter = responseJson.safeBool("restore_ttl_filter"),
