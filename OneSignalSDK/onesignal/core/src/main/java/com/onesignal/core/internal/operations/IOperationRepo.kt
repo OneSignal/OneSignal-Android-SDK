@@ -42,6 +42,13 @@ interface IOperationRepo {
     suspend fun awaitInitialized()
 
     fun forceExecuteOperations()
+
+    /**
+     * Remove all queued operations that have no externalId (anonymous operations).
+     * Used by IdentityVerificationService when identity verification is enabled to
+     * purge operations that cannot be executed without an authenticated user.
+     */
+    fun removeOperationsWithoutExternalId()
 }
 
 // Extension function so the syntax containsInstanceOf<Operation>() can be used over
