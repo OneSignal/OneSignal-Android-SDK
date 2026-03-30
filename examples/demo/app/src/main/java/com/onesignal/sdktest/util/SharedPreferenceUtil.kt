@@ -12,6 +12,8 @@ object SharedPreferenceUtil {
     private const val LOCATION_SHARED_PREF = "LOCATION_SHARED_PREF"
     private const val IN_APP_MESSAGING_PAUSED_PREF = "IN_APP_MESSAGING_PAUSED_PREF"
     private const val CONSENT_REQUIRED_PREF = "CONSENT_REQUIRED_PREF"
+    private const val IDENTITY_VERIFICATION_PREF = "IDENTITY_VERIFICATION_PREF"
+    private const val JWT_TOKEN_PREF = "JWT_TOKEN_PREF"
 
     private fun getSharedPreference(context: Context): SharedPreferences {
         return context.getSharedPreferences(APP_SHARED_PREFS, Context.MODE_PRIVATE)
@@ -68,5 +70,21 @@ object SharedPreferenceUtil {
 
     fun cacheConsentRequired(context: Context, required: Boolean) {
         getSharedPreference(context).edit().putBoolean(CONSENT_REQUIRED_PREF, required).apply()
+    }
+
+    fun getCachedIdentityVerification(context: Context): Boolean {
+        return getSharedPreference(context).getBoolean(IDENTITY_VERIFICATION_PREF, false)
+    }
+
+    fun cacheIdentityVerification(context: Context, enabled: Boolean) {
+        getSharedPreference(context).edit().putBoolean(IDENTITY_VERIFICATION_PREF, enabled).apply()
+    }
+
+    fun getCachedJwtToken(context: Context): String? {
+        return getSharedPreference(context).getString(JWT_TOKEN_PREF, null)
+    }
+
+    fun cacheJwtToken(context: Context, token: String?) {
+        getSharedPreference(context).edit().putString(JWT_TOKEN_PREF, token).apply()
     }
 }

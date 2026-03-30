@@ -76,6 +76,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private val _locationShared = MutableLiveData<Boolean>()
     val locationShared: LiveData<Boolean> = _locationShared
 
+    // Identity Verification toggle (demo app only, controls alias used for API calls)
+    private val _useIdentityVerification = MutableLiveData<Boolean>()
+    val useIdentityVerification: LiveData<Boolean> = _useIdentityVerification
+
     // Toast messages
     private val _toastMessage = MutableLiveData<String?>()
     val toastMessage: LiveData<String?> = _toastMessage
@@ -130,6 +134,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         _privacyConsentGiven.value = repository.getPrivacyConsent()
         _inAppMessagesPaused.value = repository.isInAppMessagesPaused()
         _locationShared.value = repository.isLocationShared()
+        _useIdentityVerification.value = SharedPreferenceUtil.getCachedIdentityVerification(context)
         
         val externalId = OneSignal.User.externalId
         _externalUserId.value = if (externalId.isEmpty()) null else externalId
@@ -148,16 +153,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     }
     
     fun fetchUserDataFromApi() {
-        val onesignalId = OneSignal.User.onesignalId
-        if (onesignalId.isNullOrEmpty()) {
-            _isLoading.value = false
-            return
+        val useIV = _useIdentityVerification.value == true
+        val aliasLabel: String
+        val aliasValue: String
+
+        if (useIV) {
+            val externalId = _externalUserId.value
+            if (externalId.isNullOrEmpty()) {
+                _isLoading.value = false
+                return
+            }
+            aliasLabel = "external_id"
+            aliasValue = externalId
+        } else {
+            val onesignalId = OneSignal.User.onesignalId
+            if (onesignalId.isNullOrEmpty()) {
+                _isLoading.value = false
+                return
+            }
+            aliasLabel = "onesignal_id"
+            aliasValue = onesignalId
         }
         
+        val jwt = if (useIV) SharedPreferenceUtil.getCachedJwtToken(getApplication()) else null
+
         _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val userData = repository.fetchUser(onesignalId)
+                val userData = repository.fetchUser(aliasLabel, aliasValue, jwt)
                 withContext(Dispatchers.Main) {
                     if (userData != null) {
                         aliasesList.clear()
@@ -226,6 +249,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
             repository.loginUser(externalUserId, jwtToken)
             withContext(Dispatchers.Main) {
                 SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalUserId)
+                SharedPreferenceUtil.cacheJwtToken(getApplication(), jwtToken)
                 _externalUserId.value = externalUserId
                 showToast("Logged in as: $externalUserId")
                 aliasesList.clear()
@@ -247,6 +271,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         viewModelScope.launch(Dispatchers.IO) {
             repository.updateUserJwt(externalUserId, jwtToken)
             withContext(Dispatchers.Main) {
+                SharedPreferenceUtil.cacheJwtToken(getApplication(), jwtToken)
                 showToast("Updated JWT for: $externalUserId")
             }
         }
@@ -272,6 +297,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 refreshTriggers()
             }
         }
+    }
+
+    fun setUseIdentityVerification(enabled: Boolean) {
+        SharedPreferenceUtil.cacheIdentityVerification(getApplication(), enabled)
+        _useIdentityVerification.value = enabled
+        showToast(if (enabled) "Identity verification enabled" else "Identity verification disabled")
     }
 
     // Consent required
