@@ -80,6 +80,7 @@ fun MainScreen(viewModel: MainViewModel) {
     
     // Dialog states
     var showLoginDialog by remember { mutableStateOf(false) }
+    var showUpdateJwtDialog by remember { mutableStateOf(false) }
     var showAddAliasDialog by remember { mutableStateOf(false) }
     var showAddMultipleAliasDialog by remember { mutableStateOf(false) }
     var showAddEmailDialog by remember { mutableStateOf(false) }
@@ -160,7 +161,8 @@ fun MainScreen(viewModel: MainViewModel) {
                 UserSection(
                     externalUserId = externalUserId,
                     onLoginClick = { showLoginDialog = true },
-                    onLogoutClick = { viewModel.logoutUser() }
+                    onLogoutClick = { viewModel.logoutUser() },
+                    onUpdateJwtClick = { showUpdateJwtDialog = true }
                 )
                 
                 // === PUSH SECTION ===
@@ -284,9 +286,22 @@ fun MainScreen(viewModel: MainViewModel) {
     if (showLoginDialog) {
         LoginDialog(
             onDismiss = { showLoginDialog = false },
-            onConfirm = { userId ->
-                viewModel.loginUser(userId)
+            onConfirm = { userId, jwt ->
+                viewModel.loginUser(userId, jwt)
                 showLoginDialog = false
+            }
+        )
+    }
+
+    if (showUpdateJwtDialog) {
+        PairInputDialog(
+            title = "Update User JWT",
+            keyLabel = "External User Id",
+            valueLabel = "JWT Token",
+            onDismiss = { showUpdateJwtDialog = false },
+            onConfirm = { externalId, token ->
+                viewModel.updateUserJwt(externalId, token)
+                showUpdateJwtDialog = false
             }
         )
     }

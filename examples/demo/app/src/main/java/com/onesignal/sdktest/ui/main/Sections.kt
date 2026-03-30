@@ -138,7 +138,8 @@ fun AppSection(
 fun UserSection(
     externalUserId: String?,
     onLoginClick: () -> Unit,
-    onLogoutClick: () -> Unit
+    onLogoutClick: () -> Unit,
+    onUpdateJwtClick: () -> Unit
 ) {
     val isLoggedIn = !externalUserId.isNullOrEmpty()
 
@@ -200,6 +201,11 @@ fun UserSection(
             onClick = onLogoutClick
         )
     }
+
+    OutlineButton(
+        text = "UPDATE USER JWT",
+        onClick = onUpdateJwtClick
+    )
 }
 
 // === PUSH SECTION ===

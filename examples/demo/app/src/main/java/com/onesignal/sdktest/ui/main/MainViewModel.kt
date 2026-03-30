@@ -5,7 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.OneSignal
+import com.onesignal.UserJwtInvalidatedEvent
 import com.onesignal.notifications.IPermissionObserver
 import com.onesignal.sdktest.data.model.NotificationType
 import com.onesignal.sdktest.data.repository.OneSignalRepository
@@ -19,7 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class MainViewModel(application: Application) : AndroidViewModel(application), IPushSubscriptionObserver, IPermissionObserver, IUserStateObserver {
+class MainViewModel(application: Application) : AndroidViewModel(application), IPushSubscriptionObserver, IPermissionObserver, IUserStateObserver, IUserJwtInvalidatedListener {
 
     private val repository = OneSignalRepository()
 
@@ -99,6 +101,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         OneSignal.User.pushSubscription.addObserver(this)
         OneSignal.Notifications.addPermissionObserver(this)
         OneSignal.User.addObserver(this)
+        OneSignal.addUserJwtInvalidatedListener(this)
         android.util.Log.d("MainViewModel", "init: observers registered, current onesignalId=${OneSignal.User.onesignalId}")
         LogManager.debug("OneSignal ID: ${OneSignal.User.onesignalId ?: "not set"}")
     }
@@ -217,10 +220,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
     private fun refreshTriggers() { _triggers.value = triggersList.toList() }
 
     // User operations
-    fun loginUser(externalUserId: String) {
+    fun loginUser(externalUserId: String, jwtToken: String? = null) {
         _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
-            repository.loginUser(externalUserId)
+            repository.loginUser(externalUserId, jwtToken)
             withContext(Dispatchers.Main) {
                 SharedPreferenceUtil.cacheUserExternalUserId(getApplication(), externalUserId)
                 _externalUserId.value = externalUserId
@@ -236,6 +239,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
                 loadExistingTags()
                 refreshPushSubscription()
                 // Loading stays on; onUserStateChange will call fetchUserDataFromApi() to dismiss it
+            }
+        }
+    }
+
+    fun updateUserJwt(externalUserId: String, jwtToken: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateUserJwt(externalUserId, jwtToken)
+            withContext(Dispatchers.Main) {
+                showToast("Updated JWT for: $externalUserId")
             }
         }
     }
@@ -619,8 +631,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application), I
         _pushEnabled.postValue(state.current.optedIn)
     }
 
+    override fun onUserJwtInvalidated(event: UserJwtInvalidatedEvent) {
+        LogManager.warn("JWT invalidated for externalId: ${event.externalId}")
+        showToast("JWT invalidated for: ${event.externalId}")
+    }
+
     override fun onCleared() {
         super.onCleared()
         OneSignal.User.pushSubscription.removeObserver(this)
+        OneSignal.removeUserJwtInvalidatedListener(this)
     }
 }
