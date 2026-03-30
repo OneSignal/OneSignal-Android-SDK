@@ -24,6 +24,7 @@ internal interface IInAppBackendService {
         subscriptionId: String,
         rywData: RywData,
         sessionDurationProvider: () -> Long,
+        jwt: String? = null,
     ): List<InAppMessage>?
 
     /**
