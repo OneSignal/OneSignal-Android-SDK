@@ -3,6 +3,7 @@ package com.onesignal.user.internal
 import com.onesignal.common.IDManager
 import com.onesignal.common.JSONUtils
 import com.onesignal.common.OneSignalUtils
+import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
@@ -43,6 +44,7 @@ internal open class UserManager(
         get() = _subscriptionManager.subscriptions
 
     val changeHandlersNotifier = EventProducer<IUserStateObserver>()
+    val jwtInvalidatedNotifier = EventProducer<IUserJwtInvalidatedListener>()
 
     override val pushSubscription: IPushSubscription
         get() = _subscriptionManager.subscriptions.push

@@ -4,6 +4,7 @@ import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.core.internal.operations.Operation
 import com.onesignal.core.internal.operations.listeners.SingletonModelStoreListener
+import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.DeleteTagOperation
 import com.onesignal.user.internal.operations.SetPropertyOperation
 import com.onesignal.user.internal.operations.SetTagOperation
@@ -14,7 +15,12 @@ internal class PropertiesModelStoreListener(
     store: PropertiesModelStore,
     opRepo: IOperationRepo,
     private val _configModelStore: ConfigModelStore,
+    private val _identityModelStore: IdentityModelStore,
 ) : SingletonModelStoreListener<PropertiesModel>(store, opRepo) {
+    private fun shouldSuppressForAnonymousUser(): Boolean =
+        _configModelStore.model.useIdentityVerification == true &&
+            _identityModelStore.model.externalId == null
+
     override fun getReplaceOperation(model: PropertiesModel): Operation? {
         // when the property model is replaced, nothing to do on the backend. Already handled via login process.
         return null
@@ -27,6 +33,8 @@ internal class PropertiesModelStoreListener(
         oldValue: Any?,
         newValue: Any?,
     ): Operation? {
+        if (shouldSuppressForAnonymousUser()) return null
+
         // for any of the property changes, we do not need to fire an operation.
         if (path.startsWith(PropertiesModel::locationTimestamp.name) ||
             path.startsWith(PropertiesModel::locationBackground.name) ||

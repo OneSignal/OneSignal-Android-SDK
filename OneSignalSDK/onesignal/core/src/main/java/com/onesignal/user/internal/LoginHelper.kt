@@ -4,6 +4,7 @@ import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.operations.LoginUserOperation
 
 class LoginHelper(
@@ -11,6 +12,7 @@ class LoginHelper(
     private val userSwitcher: UserSwitcher,
     private val operationRepo: IOperationRepo,
     private val configModel: ConfigModel,
+    private val jwtTokenStore: JwtTokenStore,
     private val lock: Any,
 ) {
     suspend fun login(
@@ -26,10 +28,13 @@ class LoginHelper(
             currentIdentityOneSignalId = identityModelStore.model.onesignalId
 
             if (currentIdentityExternalId == externalId) {
+                jwtTokenStore.putJwt(externalId, jwtBearerToken)
+                operationRepo.forceExecuteOperations()
                 return
             }
 
-            // TODO: Set JWT Token for all future requests.
+            jwtTokenStore.putJwt(externalId, jwtBearerToken)
+
             userSwitcher.createAndSwitchToNewUser { identityModel, _ ->
                 identityModel.externalId = externalId
             }
@@ -37,13 +42,20 @@ class LoginHelper(
             newIdentityOneSignalId = identityModelStore.model.onesignalId
         }
 
+        val existingOneSignalId =
+            if (configModel.useIdentityVerification == true) {
+                null
+            } else {
+                if (currentIdentityExternalId == null) currentIdentityOneSignalId else null
+            }
+
         val result =
             operationRepo.enqueueAndWait(
                 LoginUserOperation(
                     configModel.appId,
                     newIdentityOneSignalId,
                     externalId,
-                    if (currentIdentityExternalId == null) currentIdentityOneSignalId else null,
+                    existingOneSignalId,
                 ),
             )
 
