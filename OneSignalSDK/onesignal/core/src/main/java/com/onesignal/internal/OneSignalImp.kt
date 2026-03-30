@@ -2,6 +2,7 @@ package com.onesignal.internal
 
 import android.content.Context
 import com.onesignal.IOneSignal
+import com.onesignal.IUserJwtInvalidatedListener
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.DeviceUtils
 import com.onesignal.common.OneSignalUtils
@@ -35,8 +36,10 @@ import com.onesignal.user.IUserManager
 import com.onesignal.user.UserModule
 import com.onesignal.user.internal.LoginHelper
 import com.onesignal.user.internal.LogoutHelper
+import com.onesignal.user.internal.UserManager
 import com.onesignal.user.internal.UserSwitcher
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.properties.PropertiesModelStore
 import com.onesignal.user.internal.resolveAppId
 import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
@@ -142,6 +145,7 @@ internal class OneSignalImp(
     private val propertiesModelStore: PropertiesModelStore by lazy { services.getService<PropertiesModelStore>() }
     private val subscriptionModelStore: SubscriptionModelStore by lazy { services.getService<SubscriptionModelStore>() }
     private val preferencesService: IPreferencesService by lazy { services.getService<IPreferencesService>() }
+    private val jwtTokenStore: JwtTokenStore by lazy { services.getService<JwtTokenStore>() }
     private val listOfModules =
         listOf(
             "com.onesignal.notifications.NotificationsModule",
@@ -220,6 +224,7 @@ internal class OneSignalImp(
             userSwitcher = userSwitcher,
             operationRepo = operationRepo,
             configModel = configModel,
+            jwtTokenStore = jwtTokenStore,
             lock = loginLogoutLock,
         )
     }
@@ -230,6 +235,7 @@ internal class OneSignalImp(
             userSwitcher = userSwitcher,
             operationRepo = operationRepo,
             configModel = configModel,
+            subscriptionModelStore = subscriptionModelStore,
             lock = loginLogoutLock,
         )
     }
@@ -407,6 +413,23 @@ internal class OneSignalImp(
                 }
             }.start()
         }
+    }
+
+    override fun updateUserJwt(
+        externalId: String,
+        token: String,
+    ) {
+        Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId)")
+        jwtTokenStore.putJwt(externalId, token)
+        operationRepo.forceExecuteOperations()
+    }
+
+    override fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
+        (services.getService<IUserManager>() as UserManager).jwtInvalidatedNotifier.subscribe(listener)
+    }
+
+    override fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
+        (services.getService<IUserManager>() as UserManager).jwtInvalidatedNotifier.unsubscribe(listener)
     }
 
     override fun <T> hasService(c: Class<T>): Boolean = services.hasService(c)

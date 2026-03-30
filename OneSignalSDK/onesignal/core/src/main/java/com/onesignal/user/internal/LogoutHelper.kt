@@ -4,12 +4,14 @@ import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.core.internal.operations.IOperationRepo
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.operations.LoginUserOperation
+import com.onesignal.user.internal.subscriptions.SubscriptionModelStore
 
 class LogoutHelper(
     private val identityModelStore: IdentityModelStore,
     private val userSwitcher: UserSwitcher,
     private val operationRepo: IOperationRepo,
     private val configModel: ConfigModel,
+    private val subscriptionModelStore: SubscriptionModelStore,
     private val lock: Any,
 ) {
     fun logout() {
@@ -18,20 +20,24 @@ class LogoutHelper(
                 return
             }
 
-            // Create new device-scoped user (clears external ID)
-            userSwitcher.createAndSwitchToNewUser()
+            if (configModel.useIdentityVerification == true) {
+                configModel.pushSubscriptionId?.let { pushSubId ->
+                    subscriptionModelStore.get(pushSubId)
+                        ?.setBooleanProperty("optedIn", false)
+                }
 
-            // Enqueue login operation for the new device-scoped user (no external ID)
-            operationRepo.enqueue(
-                LoginUserOperation(
-                    configModel.appId,
-                    identityModelStore.model.onesignalId,
-                    null,
-                    // No external ID for device-scoped user
-                ),
-            )
+                userSwitcher.createAndSwitchToNewUser(suppressBackendOperation = true)
+            } else {
+                userSwitcher.createAndSwitchToNewUser()
 
-            // TODO: remove JWT Token for all future requests.
+                operationRepo.enqueue(
+                    LoginUserOperation(
+                        configModel.appId,
+                        identityModelStore.model.onesignalId,
+                        null,
+                    ),
+                )
+            }
         }
     }
 }
