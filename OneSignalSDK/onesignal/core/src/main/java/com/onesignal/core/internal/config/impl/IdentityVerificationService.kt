@@ -29,6 +29,9 @@ internal class IdentityVerificationService(
 ) : IStartableService, ISingletonModelStoreChangeHandler<ConfigModel> {
     override fun start() {
         _configModelStore.subscribe(this)
+        _operationRepo.setJwtInvalidatedHandler { externalId ->
+            _userManager.fireJwtInvalidated(externalId)
+        }
     }
 
     override fun onModelReplaced(

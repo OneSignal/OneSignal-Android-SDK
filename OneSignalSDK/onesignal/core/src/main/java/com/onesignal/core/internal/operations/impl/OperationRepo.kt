@@ -44,6 +44,8 @@ internal class OperationRepo(
         }
     }
 
+    private var _jwtInvalidatedHandler: ((String) -> Unit)? = null
+
     internal class LoopWaiterMessage(
         val force: Boolean,
         val previousWaitedTime: Long = 0,
@@ -284,6 +286,7 @@ internal class OperationRepo(
                     val externalId = startingOp.operation.externalId
                     if (externalId != null) {
                         _jwtTokenStore.invalidateJwt(externalId)
+                        _jwtInvalidatedHandler?.invoke(externalId)
                         Logging.warn("Operation execution failed with 401 Unauthorized, JWT invalidated for user: $externalId. Operations re-queued.")
                         synchronized(queue) {
                             ops.reversed().forEach { queue.add(0, it) }
@@ -511,5 +514,9 @@ internal class OperationRepo(
                 Logging.debug("OperationRepo: removed ${toRemove.size} anonymous operations (no externalId)")
             }
         }
+    }
+
+    override fun setJwtInvalidatedHandler(handler: ((String) -> Unit)?) {
+        _jwtInvalidatedHandler = handler
     }
 }
