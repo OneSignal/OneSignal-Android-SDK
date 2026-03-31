@@ -44,6 +44,7 @@ internal class OperationRepo(
         }
     }
 
+    @Volatile
     private var _jwtInvalidatedHandler: ((String) -> Unit)? = null
 
     internal class LoopWaiterMessage(
