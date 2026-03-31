@@ -340,9 +340,13 @@ internal class OperationRepo(
             // if there are operations provided on the result, we need to enqueue them at the
             // beginning of the queue.
             if (response.operations != null) {
+                val parentExternalId = startingOp.operation.externalId
                 synchronized(queue) {
                     for (op in response.operations.reversed()) {
                         op.id = UUID.randomUUID().toString()
+                        if (op.externalId == null && parentExternalId != null) {
+                            op.externalId = parentExternalId
+                        }
                         val queueItem = OperationQueueItem(op, bucket = 0)
                         queue.add(0, queueItem)
                         _operationModelStore.add(0, queueItem.operation)
