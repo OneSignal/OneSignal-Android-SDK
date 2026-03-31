@@ -3,6 +3,7 @@ package com.onesignal.user.internal.identity
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
+import com.onesignal.debug.internal.logging.Logging
 import org.json.JSONObject
 
 /**
@@ -28,9 +29,13 @@ class JwtTokenStore(
                 PreferenceOneSignalKeys.PREFS_OS_JWT_TOKENS,
             )
         if (json != null) {
-            val obj = JSONObject(json)
-            for (key in obj.keys()) {
-                tokens[key] = obj.getString(key)
+            try {
+                val obj = JSONObject(json)
+                for (key in obj.keys()) {
+                    tokens[key] = obj.getString(key)
+                }
+            } catch (e: Exception) {
+                Logging.warn("JwtTokenStore: failed to parse persisted tokens, starting fresh", e)
             }
         }
         isLoaded = true
