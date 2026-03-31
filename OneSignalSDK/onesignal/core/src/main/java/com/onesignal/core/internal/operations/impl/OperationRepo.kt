@@ -129,6 +129,7 @@ internal class OperationRepo(
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueue(operation: $operation, flush: $flush)")
 
         operation.id = UUID.randomUUID().toString()
+        stampExternalId(operation)
         scope.launch {
             internalEnqueue(OperationQueueItem(operation, bucket = enqueueIntoBucket), flush, true)
         }
@@ -141,6 +142,7 @@ internal class OperationRepo(
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueueAndWait(operation: $operation, force: $flush)")
 
         operation.id = UUID.randomUUID().toString()
+        stampExternalId(operation)
         val waiter = WaiterWithValue<Boolean>()
         scope.launch {
             internalEnqueue(OperationQueueItem(operation, waiter, bucket = enqueueIntoBucket), flush, true)
@@ -154,19 +156,24 @@ internal class OperationRepo(
      *
      * @returns true if the OperationQueueItem was added, false if not
      */
+    /**
+     * Capture the externalId from the current identity model onto the operation
+     * synchronously on the caller's thread, before the async enqueue coroutine runs.
+     * Operations that already set externalId in their constructor (e.g. LoginUserOperation)
+     * are left unchanged.
+     */
+    private fun stampExternalId(operation: Operation) {
+        if (operation.externalId == null) {
+            operation.externalId = _identityModelStore.model.externalId
+        }
+    }
+
     private fun internalEnqueue(
         queueItem: OperationQueueItem,
         flush: Boolean,
         addToStore: Boolean,
         index: Int? = null,
     ) {
-        // Stamp externalId on new operations from the current identity model.
-        // Operations loaded from persistence (addToStore=false) already have their externalId.
-        // Operations that set externalId in their constructor (e.g. LoginUserOperation) are skipped.
-        if (addToStore && queueItem.operation.externalId == null) {
-            queueItem.operation.externalId = _identityModelStore.model.externalId
-        }
-
         synchronized(queue) {
             val hasExisting = queue.any { it.operation.id == queueItem.operation.id }
             if (hasExisting) {
