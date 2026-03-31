@@ -438,6 +438,7 @@ internal class OperationRepo(
         op: Operation,
     ): Boolean {
         if (!iv) return true
+        if (!op.requiresJwt) return true
         val externalId = op.externalId ?: return false
         return _jwtTokenStore.getJwt(externalId) != null
     }

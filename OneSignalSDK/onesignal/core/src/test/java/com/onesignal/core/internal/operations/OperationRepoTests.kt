@@ -1064,6 +1064,7 @@ class OperationRepoTests : FunSpec({
             every { operation.modifyComparisonKey } returns modifyComparisonKey
             every { operation.translateIds(any()) } just runs
             every { operation.applyToRecordId } returns applyToRecordId
+            every { operation.requiresJwt } returns true
             every { operation.externalId } returns null
             every { operation.externalId = any() } just runs
 

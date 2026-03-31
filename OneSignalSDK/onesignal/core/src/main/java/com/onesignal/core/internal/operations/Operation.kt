@@ -62,6 +62,13 @@ abstract class Operation(name: String) : Model() {
     abstract val canStartExecute: Boolean
 
     /**
+     * Whether this operation requires a valid JWT when identity verification is enabled.
+     * Override to return `false` for operations whose backend endpoint does not require
+     * a JWT (e.g. subscription updates).
+     */
+    open val requiresJwt: Boolean get() = true
+
+    /**
      * Called when an operation has resolved a local ID to a backend ID (i.e. successfully
      * created a backend resource).  Any IDs within the operation that could be local IDs should
      * be translated at this time.  Within the map the key is the local Id, the value is the remote
