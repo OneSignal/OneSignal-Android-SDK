@@ -881,68 +881,355 @@ These test the core design change: per-user JWT in `JwtTokenStore` instead of si
 
 ## Section 11: IV OFF Regression
 
-Ensure all existing v5 behavior remains unchanged when IV is OFF. These are NOT new tests -- they are the standard v5 test suite that must still pass.
+This branch modifies the core operation pipeline for ALL apps, even when Identity Verification is OFF. The most significant change is that `OperationRepo.getNextOps` now returns `null` (holding all ops) whenever `useIdentityVerification == null` -- which happens on every fresh launch before remote params arrive. Additionally, `externalId` is now stamped on all operations unconditionally, and the 401/FAIL_UNAUTHORIZED handler runs regardless of IV status. These tests ensure no regressions.
 
-### Test 11.1: Anonymous user creation on startup
+### Test 11.1: Anonymous user creation on startup (HYDRATE timing)
+
+**Precondition**: Fresh install. IV is OFF in dashboard. Good network.
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | IV OFF. Fresh install. Open app | Anonymous user created on backend |
-| 2 | Verify in dashboard | User exists with push subscription |
+| 1 | Uninstall app. Build and install from `feat/identity_verification_5.8` | Clean install |
+| 2 | Open app. Start a timer | `initWithContext` called. Anonymous `LoginUserOperation` enqueued |
+| 3 | Watch logcat for `useIdentityVerification` changing from null to false | HYDRATE arrives. Note the elapsed time |
+| 4 | Verify the anonymous user creation request is sent immediately after HYDRATE | Request visible in logcat (POST /users) within seconds of app launch |
+| 5 | Verify in dashboard | Anonymous user exists with push subscription |
+| 6 | Note total time from app open to user creation | Should be comparable to pre-IV-branch behavior (remote params fetch is the only new gate) |
 
 **Result**: [ ] PASS / [ ] FAIL
 
-### Test 11.2: Login with externalId (no JWT)
+---
+
+### Test 11.2: HYDRATE stall -- cold start with persisted config
+
+**Precondition**: App was previously launched with IV OFF. Config is persisted.
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | IV OFF. Login as "alice" (no JWT) | User created/identified on backend via standard flow |
-| 2 | Verify | No Authorization headers. onesignal_id-based URLs |
+| 1 | Open app, wait for HYDRATE (IV=false), confirm anonymous user created | First launch done. Config persisted with `useIdentityVerification = false` |
+| 2 | Force-kill the app | App terminated |
+| 3 | Reopen the app. Watch logcat carefully | On cold start, persisted `ConfigModel` should already have `useIdentityVerification = false` |
+| 4 | Check if ops are held or execute immediately | Ops should NOT be held waiting for HYDRATE -- persisted config has a known `false` value. Verify there is no unnecessary stall |
+| 5 | Add a tag immediately after opening | Tag should be sent promptly without waiting for fresh remote params |
 
 **Result**: [ ] PASS / [ ] FAIL
 
-### Test 11.3: Logout creates new anonymous user on backend
+---
+
+### Test 11.3: HYDRATE stall -- prolonged offline (no remote params)
+
+**Precondition**: Fresh install. IV OFF in dashboard. Device in airplane mode.
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | IV OFF. Logged in as "alice". Tap Logout | Standard logout |
-| 2 | Verify | New anonymous user created on backend. Push subscription transferred |
+| 1 | Enable airplane mode | No internet |
+| 2 | Uninstall and reinstall app | Fresh install, no persisted config |
+| 3 | Open app | `initWithContext` called. Anonymous op enqueued. Remote params fetch fails |
+| 4 | Check logcat: what is the value of `useIdentityVerification`? | Should be `null` (unknown -- no remote params, no persisted config) |
+| 5 | Wait 30 seconds. Check if any ops have executed | Ops should be HELD (queue stalled because IV is null). No network requests attempted for user creation |
+| 6 | Add a tag, add an alias | Ops enqueued but also held |
+| 7 | Disable airplane mode | Internet restored |
+| 8 | Wait for remote params to arrive (HYDRATE) | `useIdentityVerification` set to `false` |
+| 9 | Check logcat | All held ops (anonymous user creation, tag, alias) should now flush and execute |
+| 10 | Verify in dashboard | Anonymous user exists with tag and alias |
 
 **Result**: [ ] PASS / [ ] FAIL
 
-### Test 11.4: Tags, aliases, email/SMS
+**NOTE**: This test reveals the new queue-stall behavior. On the previous v5 main branch, ops would execute immediately even without remote params. Document any timing difference.
+
+---
+
+### Test 11.4: HYDRATE stall -- remote params never arrive
+
+**Precondition**: Fresh install. Airplane mode stays ON the entire test.
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | IV OFF. Logged in. Add tags, aliases, email, SMS | Standard operations |
-| 2 | Verify in dashboard | All data on user's profile. No auth headers. onesignal_id URLs |
+| 1 | Enable airplane mode | No internet for entire test |
+| 2 | Uninstall and reinstall app | Fresh install |
+| 3 | Open app | Anonymous op enqueued. Remote params unreachable |
+| 4 | Wait 2 minutes. Check logcat | Ops should remain held. `useIdentityVerification` stays `null`. The SDK should not crash or log errors beyond network failure |
+| 5 | Add tags, aliases, login as "alice" (no JWT) | All ops enqueued but held |
+| 6 | Force-kill and reopen app (still offline) | Persisted ops reload. Config still has `useIdentityVerification = null`. Ops still held |
+| 7 | Disable airplane mode | Internet restored |
+| 8 | Wait for HYDRATE | `useIdentityVerification` set to `false`. All held ops flush |
+| 9 | Verify in dashboard | User exists (anonymous or alice depending on order). Tags and aliases present |
 
 **Result**: [ ] PASS / [ ] FAIL
 
-### Test 11.5: IAM fetching
+---
+
+### Test 11.5: Login with externalId (no JWT)
+
+**Precondition**: Fresh install. IV OFF.
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | IV OFF. IAM configured. Trigger new session | IAM fetched |
-| 2 | Verify | IAM displays. No auth headers. onesignal_id-based URL |
+| 1 | Open app. Wait for HYDRATE (IV=false) | Anonymous user created |
+| 2 | Tap Login -> externalId="alice", leave JWT empty | Login called without JWT |
+| 3 | Check logcat | `LoginUserOperation` enqueued with `existingOneSignalId` set (alias-first flow: attach externalId to existing anonymous user). No Authorization header |
+| 4 | Check URL in request | Uses `onesignal_id`-based URL (NOT `external_id`) |
+| 5 | Verify in dashboard | User "alice" exists. Previous anonymous user's onesignal_id is alice's onesignal_id (merged) |
+| 6 | Verify no JWT-related log messages | No "JWT invalidated", no "Authorization: Bearer" in any request |
 
 **Result**: [ ] PASS / [ ] FAIL
 
-### Test 11.6: Cached requests (offline/online)
+---
+
+### Test 11.6: Login with externalId that already exists on backend (IV OFF)
+
+**Precondition**: IV OFF. User "alice" already exists on backend (from a previous device or test).
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | IV OFF. Airplane mode. Add tags, aliases | Ops queued |
-| 2 | Disable airplane mode | Ops flush and succeed |
+| 1 | Fresh install. Open app. Wait for HYDRATE | Anonymous user created |
+| 2 | Tap Login -> externalId="alice" (no JWT) | Login called |
+| 3 | Check logcat | SDK identifies the existing backend user "alice" and associates this device |
+| 4 | Verify in dashboard | Push subscription transferred to existing "alice" user |
 
 **Result**: [ ] PASS / [ ] FAIL
 
-### Test 11.7: v4 -> v5 migration (IV OFF)
+---
+
+### Test 11.7: Logout creates new anonymous user on backend (IV OFF)
+
+**Precondition**: IV OFF. Logged in as "alice".
 
 | Step | Action | Expected Result |
 |------|--------|-----------------|
-| 1 | Install v4, register player. Upgrade to this branch. IV OFF | Standard migration |
-| 2 | Verify | `LoginUserFromSubscriptionOperation` succeeds. Legacy player linked to new user |
+| 1 | Logged in as "alice". Verify in dashboard | Setup |
+| 2 | Tap Logout | Logout called |
+| 3 | Check logcat | `createAndSwitchToNewUser()` called (NOT `suppressBackendOperation`). `LoginUserOperation` enqueued for new anonymous user |
+| 4 | Check logcat for push | Push subscription transferred to new anonymous user (NOT disabled internally) |
+| 5 | Verify in dashboard | New anonymous user created. Push subscription belongs to this new user. Alice's profile no longer has this device's push sub |
+
+**Result**: [ ] PASS / [ ] FAIL
+
+---
+
+### Test 11.8: Tags, aliases, email/SMS (IV OFF)
+
+**Precondition**: IV OFF. Logged in as "alice".
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Add tag key="color", value="red" | Tag sent |
+| 2 | Check logcat | PATCH to `/users/by/onesignal_id/<id>`. NO Authorization header |
+| 3 | Add alias label="my_alias", id="123" | Alias sent |
+| 4 | Check logcat | POST to `/users/by/onesignal_id/<id>/identity`. NO Authorization header |
+| 5 | Add email "alice@test.com" | Email subscription created |
+| 6 | Check logcat | POST to create subscription. NO Authorization header |
+| 7 | Add SMS "+15551234567" | SMS subscription created |
+| 8 | Verify all in dashboard | All data on alice's profile |
+| 9 | Remove the alias | Delete request uses `onesignal_id` URL |
+| 10 | Remove the tag | PATCH request uses `onesignal_id` URL |
+
+**Result**: [ ] PASS / [ ] FAIL
+
+---
+
+### Test 11.9: IAM fetching (IV OFF)
+
+**Precondition**: IV OFF. Logged in. IAM configured in dashboard.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Background app for 60+ seconds, reopen | New session triggered |
+| 2 | Check logcat for IAM fetch | URL uses `onesignal_id` (NOT `external_id`). NO Authorization header |
+| 3 | Verify IAM displays | Message appears correctly |
+
+**Result**: [ ] PASS / [ ] FAIL
+
+---
+
+### Test 11.10: IAM fetching for anonymous user (IV OFF)
+
+**Precondition**: IV OFF. Anonymous user (no login). IAM configured for "All Users" segment.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Fresh install. Wait for HYDRATE. Anonymous user created | Setup |
+| 2 | Background for 60+ seconds, reopen | New session |
+| 3 | Check logcat | IAM fetch IS sent for anonymous user (unlike IV ON, where it's skipped). URL uses `onesignal_id` |
+| 4 | Verify IAM displays | Message appears |
+
+**Result**: [ ] PASS / [ ] FAIL
+
+---
+
+### Test 11.11: Cached requests offline/online (IV OFF)
+
+**Precondition**: IV OFF. Logged in as "alice".
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Enable airplane mode | No internet |
+| 2 | Add tag key="offline", value="1" | Op enqueued, network fails |
+| 3 | Add alias label="offline_alias", id="789" | Op enqueued |
+| 4 | Force-kill the app | Ops persisted |
+| 5 | Disable airplane mode | Internet restored |
+| 6 | Reopen app | Persisted ops loaded |
+| 7 | Wait for ops to flush | Ops execute with `onesignal_id` URLs, no auth headers |
+| 8 | Verify in dashboard | Tag and alias on alice's profile |
+
+**Result**: [ ] PASS / [ ] FAIL
+
+---
+
+### Test 11.12: Multi-user login/logout sequence (IV OFF)
+
+**Precondition**: IV OFF. Fresh install.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Open app. Wait for HYDRATE. Anonymous user created | Setup |
+| 2 | Login as "alice" (no JWT) | Alice's user created/merged from anonymous |
+| 3 | Add tag key="alice_tag", value="1" | Tag sent for alice |
+| 4 | Login as "bob" (no JWT) | Bob's user created. New session for bob |
+| 5 | Add tag key="bob_tag", value="2" | Tag sent for bob |
+| 6 | Logout | New anonymous user created on backend |
+| 7 | Login as "alice" (no JWT) | Alice re-identified |
+| 8 | Verify in dashboard | alice has "alice_tag". bob has "bob_tag". Push subscription is on alice (last login) |
+| 9 | Check logcat throughout | No Authorization headers anywhere. All URLs use `onesignal_id`. No JWT-related log messages |
+
+**Result**: [ ] PASS / [ ] FAIL
+
+---
+
+### Test 11.13: Login with JWT when IV is OFF (JWT stored but unused)
+
+**Precondition**: IV OFF. Fresh install.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Open app. Wait for HYDRATE (IV=false) | Anonymous user created |
+| 2 | Login as "alice" with a valid JWT token | Login proceeds |
+| 3 | Check logcat | JWT stored in JwtTokenStore (unconditional). BUT login request uses `onesignal_id` URL with NO Authorization header |
+| 4 | Add a tag | Tag request: `onesignal_id` URL, no auth header |
+| 5 | Verify in dashboard | Alice exists, tag present. Standard v5 flow despite JWT being provided |
+
+**Result**: [ ] PASS / [ ] FAIL
+
+---
+
+### Test 11.14: 401 response handling when IV is OFF
+
+**Precondition**: IV OFF. Logged in as "alice" with a JWT stored (from Test 11.13 or similar). This tests the unconditional FAIL_UNAUTHORIZED code path.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Force a 401 scenario (e.g., delete user on backend, then try to add a tag) | Operation sent, backend returns 401 |
+| 2 | Check logcat for FAIL_UNAUTHORIZED handling | SDK calls `jwtTokenStore.invalidateJwt("alice")` and fires `onUserJwtInvalidated("alice")` -- even though IV is OFF |
+| 3 | Check demo app log | "JWT invalidated for externalId: alice" appears |
+| 4 | Verify the app does not crash or enter a bad state | App continues functioning. The callback is informational but does not block anything (IV is OFF, so ops are not JWT-gated) |
+| 5 | Check if the failed op is retried or dropped | Verify the retry/drop behavior matches standard v5 error handling |
+
+**Result**: [ ] PASS / [ ] FAIL
+
+**NOTE**: This is a new behavior introduced by this branch. Document whether the `onUserJwtInvalidated` callback firing with IV OFF is acceptable or needs to be gated.
+
+---
+
+### Test 11.15: Cold start with IV OFF (returning user)
+
+**Precondition**: IV OFF. Previously logged in as "alice". App was killed.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Login as "alice". Add a tag. Verify on backend | Setup complete |
+| 2 | Force-kill app | App terminated |
+| 3 | Reopen app | Cold start. Persisted config has `useIdentityVerification = false` |
+| 4 | Check logcat timing | Ops should NOT be stalled waiting for HYDRATE (persisted config already has `false`) |
+| 5 | Check that "alice" is still the current user | ExternalId shown in demo app |
+| 6 | Add a new tag immediately | Tag should be sent promptly to backend |
+| 7 | Verify in dashboard | New tag on alice's profile |
+
+**Result**: [ ] PASS / [ ] FAIL
+
+---
+
+### Test 11.16: v4 -> this branch migration (IV OFF)
+
+**Precondition**: App was on v4 SDK with a registered player. IV OFF in dashboard.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Install v4 demo app. Open, let player register | Legacy player ID in SharedPreferences |
+| 2 | Upgrade to `feat/identity_verification_5.8` (install over top) | Migration path triggered |
+| 3 | Open app | `LoginUserFromSubscriptionOperation` enqueued. Held until HYDRATE (IV=null) |
+| 4 | Wait for HYDRATE (IV=false) | Migration op executes: legacy player linked to new v5 user |
+| 5 | Note timing: how long from app open to migration completion? | Should be only the remote-params fetch time (same as standard upgrade) |
+| 6 | Verify in dashboard | User has push subscription linked from legacy player |
+| 7 | Add tags, aliases | Standard operations work |
+
+**Result**: [ ] PASS / [ ] FAIL
+
+---
+
+### Test 11.17: v5 (no IV) -> this branch (anonymous user, IV OFF)
+
+**Precondition**: App was on v5 main (no JWT feature). Anonymous user exists on backend.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Install main branch demo app. Open, let anonymous user sync | Anonymous user on backend |
+| 2 | Upgrade to `feat/identity_verification_5.8` | SDK upgrade |
+| 3 | Open app | Config persisted from prior session may not have `useIdentityVerification` field |
+| 4 | Check logcat: is the queue stalled until HYDRATE? | If prior config lacked `useIdentityVerification`, it will be `null` until HYDRATE. Verify ops are held briefly |
+| 5 | Wait for HYDRATE (IV=false) | Ops resume. Existing anonymous user continues |
+| 6 | Add tags, login, logout | All standard v5 operations work identically |
+
+**Result**: [ ] PASS / [ ] FAIL
+
+---
+
+### Test 11.18: v5 (no IV) -> this branch (identified user, IV OFF)
+
+**Precondition**: App was on v5 main. Logged in as "alice" (no JWT).
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Install main branch demo app. Login as "alice". Verify on backend | Identified user exists |
+| 2 | Upgrade to `feat/identity_verification_5.8`. IV stays OFF | SDK upgrade |
+| 3 | Open app | Config loaded |
+| 4 | Check logcat | No `onUserJwtInvalidated` callback (IV is OFF, so IVS does not fire invalidation) |
+| 5 | Check demo app | "alice" is still the current user |
+| 6 | Add tags, aliases | Standard operations. `onesignal_id` URLs. No auth headers |
+| 7 | Logout and re-login | Standard v5 flow |
+
+**Result**: [ ] PASS / [ ] FAIL
+
+---
+
+### Test 11.19: externalId stamped on operations (IV OFF -- verify no side effects)
+
+**Precondition**: IV OFF. Logged in as "alice".
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Add a tag | Tag op enqueued |
+| 2 | Check logcat/debug: does the operation carry `externalId = "alice"`? | Yes -- OperationRepo stamps externalId unconditionally on new ops |
+| 3 | Verify the presence of `externalId` on the op does NOT cause it to use `external_id` in the URL | URL still uses `onesignal_id` (resolveAlias checks `useIdentityVerification == true` before using external_id) |
+| 4 | Verify no Authorization header | No auth header (JWT lookup returns null or is not used for auth when IV is false) |
+| 5 | Force-kill, reopen | Persisted op has externalId field |
+| 6 | Verify ops reload and execute correctly | No issues from the extra field on persisted ops |
+
+**Result**: [ ] PASS / [ ] FAIL
+
+---
+
+### Test 11.20: JwtTokenStore pruning does not interfere (IV OFF)
+
+**Precondition**: IV OFF. Login as "alice" with JWT, then login as "bob" with JWT.
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Login as "alice" with JWT. Login as "bob" with JWT | JWTs stored for both |
+| 2 | Wait for all ops to complete | Both users on backend |
+| 3 | Force-kill and reopen | `loadSavedOperations` runs, `pruneToExternalIds` called |
+| 4 | Check logcat | JwtTokenStore pruned. Should not cause errors or affect op execution |
+| 5 | Add a tag for bob | Tag sent normally. No auth header. `onesignal_id` URL |
+| 6 | Verify no interference from JWT store | Operations proceed identically to pre-IV-branch behavior |
 
 **Result**: [ ] PASS / [ ] FAIL
 
@@ -954,13 +1241,28 @@ For each migration path (New Install, v4, v5 no-IV, Beta), verify:
 
 | Check | New Install | v4 | v5 (no IV) | Beta |
 |-------|:-----------:|:--:|:----------:|:----:|
-| IV ON: No anonymous user created on backend | [ ] | [ ] | [ ] | [ ] |
-| IV ON: Login with valid JWT creates user | [ ] | [ ] | [ ] | [ ] |
-| IV ON: Login with invalid JWT fires callback | [ ] | [ ] | [ ] | [ ] |
-| IV ON: updateUserJwt unblocks pending ops | [ ] | [ ] | [ ] | [ ] |
-| IV ON: Logout creates local-only sink user, push disabled | [ ] | [ ] | [ ] | [ ] |
-| IV ON: Multi-user JWT isolation (A's bad JWT doesn't block B) | [ ] | [ ] | [ ] | [ ] |
-| IV ON: Cold start restores ops and JWTs correctly | [ ] | [ ] | [ ] | [ ] |
-| IV ON: IAM fetch uses external_id + JWT | [ ] | [ ] | [ ] | [ ] |
-| IV OFF: Identical to current v5 behavior (no regressions) | [ ] | [ ] | [ ] | [ ] |
-| Migration-specific: Correct handling of legacy data | N/A | [ ] | [ ] | [ ] |
+| **IV ON** | | | | |
+| No anonymous user created on backend | [ ] | [ ] | [ ] | [ ] |
+| Login with valid JWT creates user | [ ] | [ ] | [ ] | [ ] |
+| Login with invalid JWT fires callback | [ ] | [ ] | [ ] | [ ] |
+| updateUserJwt unblocks pending ops | [ ] | [ ] | [ ] | [ ] |
+| Logout creates local-only sink user, push disabled | [ ] | [ ] | [ ] | [ ] |
+| Multi-user JWT isolation (A's bad JWT doesn't block B) | [ ] | [ ] | [ ] | [ ] |
+| Cold start restores ops and JWTs correctly | [ ] | [ ] | [ ] | [ ] |
+| IAM fetch uses external_id + JWT | [ ] | [ ] | [ ] | [ ] |
+| **IV OFF** | | | | |
+| HYDRATE stall: ops held until IV resolved, then execute | [ ] | [ ] | [ ] | [ ] |
+| Cold start with persisted config: no unnecessary stall | [ ] | [ ] | [ ] | [ ] |
+| Prolonged offline: ops held but resume after HYDRATE | [ ] | [ ] | [ ] | [ ] |
+| Anonymous user creation timing comparable to pre-IV | [ ] | [ ] | [ ] | [ ] |
+| Login/logout standard v5 flow (no auth headers) | [ ] | [ ] | [ ] | [ ] |
+| Multi-user login/logout (no JWT interference) | [ ] | [ ] | [ ] | [ ] |
+| Tags, aliases, email/SMS via onesignal_id URLs | [ ] | [ ] | [ ] | [ ] |
+| IAM fetch for anonymous and identified users | [ ] | [ ] | [ ] | [ ] |
+| Offline caching and retry works | [ ] | [ ] | [ ] | [ ] |
+| 401 handling does not break app (callback may fire) | [ ] | [ ] | [ ] | [ ] |
+| externalId on ops does not affect URL or auth | [ ] | [ ] | [ ] | [ ] |
+| **Migration-specific** | | | | |
+| Correct handling of legacy player ID / beta JWT / existing identified user | N/A | [ ] | [ ] | [ ] |
+| v4 migration completes after HYDRATE stall | N/A | [ ] | N/A | N/A |
+| v5 upgrade with no prior IV config field | N/A | N/A | [ ] | [ ] |
