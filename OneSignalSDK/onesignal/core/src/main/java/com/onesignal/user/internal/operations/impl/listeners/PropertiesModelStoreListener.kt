@@ -46,12 +46,12 @@ internal class PropertiesModelStoreListener(
 
         if (path.startsWith(PropertiesModel::tags.name)) {
             return if (newValue != null && newValue is String) {
-                SetTagOperation(_configModelStore.model.appId, model.onesignalId, property, newValue)
+                SetTagOperation(_configModelStore.model.appId, model.onesignalId, _identityModelStore.model.externalId, property, newValue)
             } else {
-                DeleteTagOperation(_configModelStore.model.appId, model.onesignalId, property)
+                DeleteTagOperation(_configModelStore.model.appId, model.onesignalId, _identityModelStore.model.externalId, property)
             }
         }
 
-        return SetPropertyOperation(_configModelStore.model.appId, model.onesignalId, property, newValue)
+        return SetPropertyOperation(_configModelStore.model.appId, model.onesignalId, _identityModelStore.model.externalId, property, newValue)
     }
 }

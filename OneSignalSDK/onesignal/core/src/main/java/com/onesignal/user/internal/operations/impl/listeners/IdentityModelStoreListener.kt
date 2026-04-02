@@ -33,9 +33,9 @@ internal class IdentityModelStoreListener(
         if (shouldSuppressForAnonymousUser()) return null
 
         return if (newValue != null && newValue is String) {
-            SetAliasOperation(_configModelStore.model.appId, model.onesignalId, property, newValue)
+            SetAliasOperation(_configModelStore.model.appId, model.onesignalId, model.externalId, property, newValue)
         } else {
-            DeleteAliasOperation(_configModelStore.model.appId, model.onesignalId, property)
+            DeleteAliasOperation(_configModelStore.model.appId, model.onesignalId, model.externalId, property)
         }
     }
 }

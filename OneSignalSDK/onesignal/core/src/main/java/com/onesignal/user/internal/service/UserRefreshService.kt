@@ -32,6 +32,7 @@ class UserRefreshService(
             RefreshUserOperation(
                 _configModelStore.model.appId,
                 _identityModelStore.model.onesignalId,
+                _identityModelStore.model.externalId,
             ),
         )
     }

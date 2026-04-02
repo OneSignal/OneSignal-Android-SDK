@@ -111,7 +111,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 mockk<JwtTokenStore>(relaxed = true),
             )
 
-        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId, null))
 
         try {
             // When
@@ -196,7 +196,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 mockk<JwtTokenStore>(relaxed = true),
             )
 
-        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId, null))
 
         // When
         val response = refreshUserOperationExecutor.execute(operations)
@@ -236,7 +236,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 mockk<JwtTokenStore>(relaxed = true),
             )
 
-        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId, null))
 
         // When
         val response = refreshUserOperationExecutor.execute(operations)
@@ -272,7 +272,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 mockk<JwtTokenStore>(relaxed = true),
             )
 
-        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId, null))
 
         // When
         val response = refreshUserOperationExecutor.execute(operations)
@@ -308,7 +308,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 mockk<JwtTokenStore>(relaxed = true),
             )
 
-        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId, null))
 
         // When
         val response = refreshUserOperationExecutor.execute(operations)
@@ -346,7 +346,7 @@ class RefreshUserOperationExecutorTests : FunSpec({
                 mockk<JwtTokenStore>(relaxed = true),
             )
 
-        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId))
+        val operations = listOf<Operation>(RefreshUserOperation(appId, remoteOneSignalId, null))
 
         // When
         val response = refreshUserOperationExecutor.execute(operations)

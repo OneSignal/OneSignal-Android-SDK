@@ -81,7 +81,7 @@ internal class LoginUserFromSubscriptionOperationExecutor(
             return ExecutionResponse(
                 ExecutionResult.SUCCESS,
                 idTranslations,
-                listOf(RefreshUserOperation(loginUserOp.appId, backendOneSignalId)),
+                listOf(RefreshUserOperation(loginUserOp.appId, backendOneSignalId, loginUserOp.externalId)),
             )
         } catch (ex: BackendException) {
             val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
