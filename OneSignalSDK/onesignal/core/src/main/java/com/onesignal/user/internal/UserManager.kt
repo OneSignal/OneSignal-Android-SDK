@@ -56,7 +56,7 @@ internal open class UserManager(
     }
 
     fun fireJwtInvalidated(externalId: String) {
-        jwtInvalidatedNotifier.fireOnMain {
+        jwtInvalidatedNotifier.fire {
             it.onUserJwtInvalidated(UserJwtInvalidatedEvent(externalId))
         }
     }
