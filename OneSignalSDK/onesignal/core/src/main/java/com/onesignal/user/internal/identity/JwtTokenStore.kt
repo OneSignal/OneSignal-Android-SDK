@@ -4,6 +4,7 @@ import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.internal.logging.Logging
+import org.json.JSONException
 import org.json.JSONObject
 
 /**
@@ -34,7 +35,7 @@ class JwtTokenStore(
                 for (key in obj.keys()) {
                     tokens[key] = obj.getString(key)
                 }
-            } catch (e: Exception) {
+            } catch (e: JSONException) {
                 Logging.warn("JwtTokenStore: failed to parse persisted tokens, starting fresh", e)
             }
         }
