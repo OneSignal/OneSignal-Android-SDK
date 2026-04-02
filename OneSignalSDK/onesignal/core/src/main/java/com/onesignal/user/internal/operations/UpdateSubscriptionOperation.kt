@@ -88,9 +88,10 @@ class UpdateSubscriptionOperation() : Operation(SubscriptionOperationExecutor.UP
     override val applyToRecordId: String get() = subscriptionId
     override val requiresJwt: Boolean get() = false
 
-    constructor(appId: String, onesignalId: String, subscriptionId: String, type: SubscriptionType, enabled: Boolean, address: String, status: SubscriptionStatus) : this() {
+    constructor(appId: String, onesignalId: String, externalId: String?, subscriptionId: String, type: SubscriptionType, enabled: Boolean, address: String, status: SubscriptionStatus) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
+        this.externalId = externalId
         this.subscriptionId = subscriptionId
         this.type = type
         this.enabled = enabled

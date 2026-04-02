@@ -34,9 +34,10 @@ class TrackSessionStartOperation() : Operation(UpdateUserOperationExecutor.TRACK
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId)
     override val applyToRecordId: String get() = onesignalId
 
-    constructor(appId: String, onesignalId: String) : this() {
+    constructor(appId: String, onesignalId: String, externalId: String?) : this() {
         this.appId = appId
         this.onesignalId = onesignalId
+        this.externalId = externalId
     }
 
     override fun translateIds(map: Map<String, String>) {

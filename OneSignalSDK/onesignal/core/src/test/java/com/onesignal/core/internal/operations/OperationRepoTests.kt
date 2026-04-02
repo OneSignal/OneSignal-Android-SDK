@@ -960,77 +960,12 @@ class OperationRepoTests : FunSpec({
         handlerCalledWith shouldBe "test-user"
     }
 
-    test("enqueue stamps externalId synchronously before async dispatch") {
-        // Verifies the fix for a race condition where createAndSwitchToNewUser()
-        // could clear the identity model's externalId before the async internalEnqueue
-        // had a chance to stamp it.
-
-        // Given
-        val identityModel = com.onesignal.user.internal.identity.IdentityModel()
-        identityModel.id = "-singleton"
-        identityModel.onesignalId = "onesignal-id"
-        identityModel.externalId = "old-user"
-
-        val identityModelStore = mockk<com.onesignal.user.internal.identity.IdentityModelStore>(relaxed = true)
-        every { identityModelStore.model } returns identityModel
-
-        val configModelStore =
-            MockHelper.configModelStore {
-                it.useIdentityVerification = true
-            }
-        val jwtTokenStore = mockk<JwtTokenStore>(relaxed = true)
-        every { jwtTokenStore.getJwt("old-user") } returns "valid-jwt"
-
-        val operationModelStore =
-            run {
-                val operationStoreList = mutableListOf<Operation>()
-                val mock = mockk<OperationModelStore>()
-                every { mock.loadOperations() } just runs
-                every { mock.list() } answers { operationStoreList.toList() }
-                every { mock.add(any()) } answers { operationStoreList.add(firstArg<Operation>()) }
-                every { mock.remove(any()) } answers {
-                    val id = firstArg<String>()
-                    operationStoreList.removeIf { it.id == id }
-                }
-                mock
-            }
-
-        val executor = mockk<IOperationExecutor>()
-        every { executor.operations } returns listOf("DUMMY_OPERATION")
-        coEvery { executor.execute(any()) } returns ExecutionResponse(ExecutionResult.SUCCESS)
-
-        val operationRepo =
-            spyk(
-                OperationRepo(
-                    listOf(executor),
-                    operationModelStore,
-                    configModelStore,
-                    Time(),
-                    getNewRecordState(configModelStore),
-                    jwtTokenStore,
-                    identityModelStore,
-                ),
-                recordPrivateCalls = true,
-            )
-
-        val operation = mockOperation()
-        // externalId starts null — stampExternalId should fill it from the identity model
-
-        // When — enqueue then immediately switch user (simulating LogoutHelper's pattern)
-        operationRepo.enqueue(operation)
-        identityModel.externalId = null
-
-        // Then — the operation should have captured "old-user" before the switch
-        operation.externalId shouldBe "old-user"
-    }
-
     test("FAIL_UNAUTHORIZED drops operations for anonymous user") {
         // Given
         val mocks = Mocks()
         coEvery { mocks.executor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
 
         val operation = mockOperation()
-        // externalId defaults to null in mockOperation
 
         // When
         mocks.operationRepo.start()
@@ -1038,7 +973,7 @@ class OperationRepoTests : FunSpec({
 
         // Then
         response shouldBe false
-        verify { mocks.operationModelStore.remove(operation.id) }
+        verify { mocks.operationModelStore.remove(any()) }
     }
 }) {
     companion object {

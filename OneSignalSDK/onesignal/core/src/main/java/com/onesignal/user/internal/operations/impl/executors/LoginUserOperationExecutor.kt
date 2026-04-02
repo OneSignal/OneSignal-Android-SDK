@@ -91,6 +91,7 @@ internal class LoginUserOperationExecutor(
                         SetAliasOperation(
                             loginUserOp.appId,
                             loginUserOp.existingOnesignalId!!,
+                            loginUserOp.externalId,
                             IdentityConstants.EXTERNAL_ID,
                             loginUserOp.externalId!!,
                         ),
@@ -226,7 +227,7 @@ internal class LoginUserOperationExecutor(
             val wasPossiblyAnUpsert = identities.isNotEmpty()
             val followUpOperations =
                 if (wasPossiblyAnUpsert) {
-                    listOf(RefreshUserOperation(createUserOperation.appId, backendOneSignalId))
+                    listOf(RefreshUserOperation(createUserOperation.appId, backendOneSignalId, createUserOperation.externalId))
                 } else {
                     null
                 }

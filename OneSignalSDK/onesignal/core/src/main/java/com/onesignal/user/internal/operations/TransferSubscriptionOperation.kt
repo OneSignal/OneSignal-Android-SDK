@@ -50,10 +50,11 @@ class TransferSubscriptionOperation() : Operation(SubscriptionOperationExecutor.
     override val canStartExecute: Boolean get() = !IDManager.isLocalId(onesignalId) && !IDManager.isLocalId(subscriptionId)
     override val applyToRecordId: String get() = subscriptionId
 
-    constructor(appId: String, subscriptionId: String, onesignalId: String) : this() {
+    constructor(appId: String, subscriptionId: String, onesignalId: String, externalId: String?) : this() {
         this.appId = appId
         this.subscriptionId = subscriptionId
         this.onesignalId = onesignalId
+        this.externalId = externalId
     }
 
     override fun translateIds(map: Map<String, String>) {
