@@ -279,6 +279,7 @@
     <ID>PrintStackTrace:TrackGooglePurchase.kt$TrackGooglePurchase$e</ID>
     <ID>PrintStackTrace:TrackGooglePurchase.kt$TrackGooglePurchase.&lt;no name provided>$t</ID>
     <ID>RethrowCaughtException:OSDatabase.kt$OSDatabase$throw e</ID>
+    <ID>ReturnCount:OperationRepo.kt$OperationRepo$private fun hasValidJwtIfRequired( identityVerificationEnabled: Boolean, op: Operation, ): Boolean</ID>
     <ID>ReturnCount:AppIdResolution.kt$fun resolveAppId( inputAppId: String?, configModel: ConfigModel, preferencesService: IPreferencesService, ): AppIdResolution</ID>
     <ID>ReturnCount:BackgroundManager.kt$BackgroundManager$override fun cancelRunBackgroundServices(): Boolean</ID>
     <ID>ReturnCount:OneSignalImp.kt$OneSignalImp$private fun internalInit( context: Context, appId: String?, ): Boolean</ID>
@@ -609,6 +610,8 @@
     <ID>UnusedPrivateMember:OperationRepo.kt$OperationRepo$private val _time: ITime</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'login'")</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'logout'")</ID>
+    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'updateUserJwt'")</ID>
+    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before 'updateUserJwt'")</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")</ID>
   </CurrentIssues>
 </SmellBaseline>

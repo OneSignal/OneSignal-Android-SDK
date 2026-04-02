@@ -431,11 +431,10 @@ internal class OperationRepo(
      * also held because they cannot be authenticated.
      */
     private fun hasValidJwtIfRequired(
-        iv: Boolean,
+        identityVerificationEnabled: Boolean,
         op: Operation,
     ): Boolean {
-        if (!iv) return true
-        if (!op.requiresJwt) return true
+        if (!identityVerificationEnabled || !op.requiresJwt) return true
         val externalId = op.externalId ?: return false
         return _jwtTokenStore.getJwt(externalId) != null
     }
