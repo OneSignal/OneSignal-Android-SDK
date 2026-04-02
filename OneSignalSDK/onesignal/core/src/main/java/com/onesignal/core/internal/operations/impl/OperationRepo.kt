@@ -433,6 +433,21 @@ internal class OperationRepo(
         }
     }
 
+    /**
+     * Determines whether [op] is allowed to execute given the current identity
+     * verification (IV) state. Used by [getNextOps] to skip operations that
+     * cannot yet be authenticated.
+     *
+     * Returns true (allow) when any of:
+     *  - IV is disabled for this app
+     *  - The operation opts out of JWT gating ([Operation.requiresJwt] = false)
+     *  - A valid JWT is stored for the operation's [Operation.externalId]
+     *
+     * Returns false (hold) when IV is enabled and no valid JWT is available,
+     * which keeps the operation in the queue until the developer supplies one
+     * via [OneSignal.updateUserJwt]. Anonymous operations (null externalId) are
+     * also held because they cannot be authenticated.
+     */
     private fun hasValidJwtIfRequired(
         iv: Boolean,
         op: Operation,
