@@ -354,9 +354,7 @@ object OneSignal {
     fun updateUserJwt(
         externalId: String,
         token: String,
-    ) {
-        oneSignal.updateUserJwt(externalId, token)
-    }
+    ) = oneSignal.updateUserJwt(externalId, token)
 
     /**
      * Add a listener that will be called when a user's JWT is invalidated (e.g. expired
@@ -439,6 +437,22 @@ object OneSignal {
     @JvmStatic
     suspend fun logoutSuspend() {
         oneSignal.logoutSuspend()
+    }
+
+    /**
+     * Update the JWT bearer token for a user identified by [externalId] (suspend version).
+     * Call this when a token is about to expire or after receiving an [IUserJwtInvalidatedListener]
+     * callback.
+     *
+     * @param externalId The external ID of the user whose token is being updated.
+     * @param token The new JWT bearer token.
+     */
+    @JvmStatic
+    suspend fun updateUserJwtSuspend(
+        externalId: String,
+        token: String,
+    ) {
+        oneSignal.updateUserJwtSuspend(externalId, token)
     }
 
     /**

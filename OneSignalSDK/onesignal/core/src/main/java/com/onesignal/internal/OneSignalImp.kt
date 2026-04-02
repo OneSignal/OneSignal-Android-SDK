@@ -419,7 +419,33 @@ internal class OneSignalImp(
         externalId: String,
         token: String,
     ) {
-        Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId)")
+        Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: $token)")
+
+        if (isBackgroundThreadingEnabled) {
+            waitForInit(operationName = "updateUserJwt")
+            jwtTokenStore.putJwt(externalId, token)
+            operationRepo.forceExecuteOperations()
+        } else {
+            if (!isInitialized) {
+                throw IllegalStateException("Must call 'initWithContext' before 'updateUserJwt'")
+            }
+            jwtTokenStore.putJwt(externalId, token)
+            operationRepo.forceExecuteOperations()
+        }
+    }
+
+    override suspend fun updateUserJwtSuspend(
+        externalId: String,
+        token: String,
+    ) = withContext(runtimeIoDispatcher) {
+        Logging.log(LogLevel.DEBUG, "updateUserJwtSuspend(externalId: $externalId, token: $token)")
+
+        suspendUntilInit(operationName = "updateUserJwt")
+
+        if (!isInitialized) {
+            throw IllegalStateException("'initWithContext failed' before 'updateUserJwt'")
+        }
+
         jwtTokenStore.putJwt(externalId, token)
         operationRepo.forceExecuteOperations()
     }
