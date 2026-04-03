@@ -360,6 +360,8 @@ object OneSignal {
      * Add a listener that will be called when a user's JWT is invalidated (e.g. expired
      * or rejected by the server). Use this to provide a fresh token via [updateUserJwt].
      *
+     * The listener is invoked on a background thread; see [IUserJwtInvalidatedListener].
+     *
      * @param listener The listener to add.
      */
     @JvmStatic

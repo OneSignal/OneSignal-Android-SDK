@@ -2,14 +2,16 @@ package com.onesignal
 
 /**
  * Implement this interface and provide an instance to [OneSignal.addUserJwtInvalidatedListener]
- * in order to receive control when the JWT for the current user is invalidated.
+ * to be notified when the JWT for a user is invalidated.
  *
+ * Callbacks are delivered on a background thread.
  */
 interface IUserJwtInvalidatedListener {
     /**
-     * Called when the JWT is invalidated
+     * Called when the JWT is invalidated for [UserJwtInvalidatedEvent.externalId].
+     * Invoked on a background thread; see [IUserJwtInvalidatedListener] class documentation.
      *
-     * @param event The user JWT that expired.
+     * @param event Describes which user's JWT was invalidated.
      */
     fun onUserJwtInvalidated(event: UserJwtInvalidatedEvent)
 }

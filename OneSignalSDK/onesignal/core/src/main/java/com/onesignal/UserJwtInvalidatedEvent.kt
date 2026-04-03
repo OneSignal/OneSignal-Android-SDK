@@ -1,9 +1,8 @@
 package com.onesignal
 
 /**
- * The event passed into [IUserJwtInvalidatedListener.onUserJwtInvalidated], it provides access
- * to the external ID whose JWT has just been invalidated.
- *
+ * The event passed into [IUserJwtInvalidatedListener.onUserJwtInvalidated]. Delivery occurs on
+ * a background thread; see [IUserJwtInvalidatedListener].
  */
 class UserJwtInvalidatedEvent(
     val externalId: String,
