@@ -42,18 +42,21 @@ internal class IdentityVerificationService(
 
         val useIV = model.useIdentityVerification
 
+        var jwtInvalidatedExternalId: String? = null
         if (useIV == true) {
             Logging.debug("IdentityVerificationService: IV enabled, purging anonymous operations")
             _operationRepo.removeOperationsWithoutExternalId()
 
             val externalId = _identityModelStore.model.externalId
             if (externalId != null && _jwtTokenStore.getJwt(externalId) == null) {
-                Logging.debug("IdentityVerificationService: IV enabled but no JWT for $externalId, firing invalidated event")
-                _userManager.fireJwtInvalidated(externalId)
+                Logging.debug("IdentityVerificationService: IV enabled but no JWT for $externalId, will fire invalidated event after queue wake")
+                jwtInvalidatedExternalId = externalId
             }
         }
 
         _operationRepo.forceExecuteOperations()
+
+        jwtInvalidatedExternalId?.let { _userManager.fireJwtInvalidated(it) }
     }
 
     override fun onModelUpdated(

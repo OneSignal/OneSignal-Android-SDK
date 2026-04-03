@@ -960,6 +960,62 @@ class OperationRepoTests : FunSpec({
         handlerCalledWith shouldBe "test-user"
     }
 
+    test("FAIL_UNAUTHORIZED still re-queues when JWT invalidated handler throws") {
+        val configModelStore =
+            MockHelper.configModelStore {
+                it.useIdentityVerification = true
+            }
+        val identityModelStore =
+            MockHelper.identityModelStore {
+                it.externalId = "test-user"
+            }
+        val jwtTokenStore = mockk<JwtTokenStore>(relaxed = true)
+        every { jwtTokenStore.getJwt("test-user") } returns "valid-jwt"
+
+        val operationModelStore =
+            run {
+                val operationStoreList = mutableListOf<Operation>()
+                val mock = mockk<OperationModelStore>()
+                every { mock.loadOperations() } just runs
+                every { mock.list() } answers { operationStoreList.toList() }
+                every { mock.add(any()) } answers { operationStoreList.add(firstArg<Operation>()) }
+                every { mock.remove(any()) } answers {
+                    val id = firstArg<String>()
+                    operationStoreList.removeIf { it.id == id }
+                }
+                mock
+            }
+
+        val executor = mockk<IOperationExecutor>()
+        every { executor.operations } returns listOf("DUMMY_OPERATION")
+        coEvery { executor.execute(any()) } returns
+            ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED) andThen
+            ExecutionResponse(ExecutionResult.SUCCESS)
+
+        val operationRepo =
+            OperationRepo(
+                listOf(executor),
+                operationModelStore,
+                configModelStore,
+                Time(),
+                getNewRecordState(configModelStore),
+                jwtTokenStore,
+                identityModelStore,
+            )
+
+        operationRepo.setJwtInvalidatedHandler { throw IllegalStateException("app callback failed") }
+
+        val operation = mockOperation()
+        every { operation.externalId } returns "test-user"
+
+        operationRepo.start()
+        val response = operationRepo.enqueueAndWait(operation)
+
+        response shouldBe true
+        verify { jwtTokenStore.invalidateJwt("test-user") }
+        coVerify(exactly = 2) { executor.execute(any()) }
+    }
+
     test("FAIL_UNAUTHORIZED drops operations for anonymous user") {
         // Given
         val mocks = Mocks()
