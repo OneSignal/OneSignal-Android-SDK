@@ -154,7 +154,7 @@ In MainViewModel.kt, implement observers:
 11. **Triggers Section** (Add/Add Multiple/Remove Selected/Clear All - IN MEMORY ONLY)
 12. **Track Event Section** (Track Event with JSON validation)
 13. **Location Section** (Location Shared toggle, Prompt Location button)
-14. **Next Activity Button**
+14. **Next Screen Button**
 
 ### Prompt 2.1 - App Section
 
@@ -374,12 +374,12 @@ Location Section:
 - PROMPT LOCATION button
 ```
 
-### Prompt 2.14 - Secondary Activity
+### Prompt 2.14 - Secondary Screen
 
 ```
-Secondary Activity (launched by "Next Activity" button at bottom of main screen):
-- Activity title: "Secondary Activity"
-- Page content: centered text "Secondary Activity" using headlineMedium style
+Secondary Screen (launched by "Next Screen" button at bottom of main screen):
+- Screen title: "Secondary Screen"
+- Page content: centered text "Secondary Screen" using headlineMedium style
 - Simple screen, no additional functionality needed
 ```
 
@@ -650,7 +650,7 @@ Enable Jetpack Compose in the project:
 
 build.gradle.kts (app):
 - buildFeatures { compose = true }
-- composeOptions { kotlinCompilerExtensionVersion = "1.5.10" }
+- composeOptions { kotlinCompilerExtensionVersion = "1.5.15" }
 
 Dependencies (via BOM):
 - composeBom = "2024.02.00"
