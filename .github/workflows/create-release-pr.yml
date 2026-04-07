@@ -32,41 +32,25 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      - name: 📋 Display Configuration
-        run: |
-          echo "============================================"
-          echo "📦 Release Version: $VERSION"
-          echo "🎯 Base Branch (PR Target): $BASE_BRANCH"
-          echo "🌿 Release Branch (to create): $BRANCH"
-          echo "============================================"
-
-      - name: ✅ Validate Base Branch
+      - name: Validate Base Branch
         run: |
           if [[ "$BASE_BRANCH" == "main" ]]; then
-            echo "✅ Valid base branch: main"
+            echo "Valid base branch: main"
           elif [[ "$BASE_BRANCH" =~ ^[0-9]+\.[0-9]+-main$ ]]; then
-            echo "✅ Valid base branch: $BASE_BRANCH"
+            echo "Valid base branch: $BASE_BRANCH"
           else
-            echo "❌ ERROR: Invalid base branch '$BASE_BRANCH'"
+            echo "ERROR: Invalid base branch '$BASE_BRANCH'"
             echo ""
             echo "Base branch must be either:"
             echo "  - 'main' (for regular releases)"
             echo "  - 'X.Y-main' (for version-specific releases, e.g., 5.4-main, 5.5-main)"
-            echo ""
-            echo "Examples:"
-            echo "  ✅ main"
-            echo "  ✅ 5.4-main"
-            echo "  ✅ 5.10-main"
-            echo "  ❌ master"
-            echo "  ❌ 5.4"
-            echo "  ❌ 5.4-develop"
             exit 1
           fi
 
       - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0 # Ensure full history for git log
+          fetch-depth: 0
           fetch-tags: true
 
       - name: Setup Git User
@@ -74,7 +58,6 @@ jobs:
 
       - name: Create release branch from base
         run: |
-
           if git ls-remote --exit-code --heads origin "$BRANCH"; then
             echo "Deleting remote branch $BRANCH"
             git push origin --delete "$BRANCH"
@@ -93,91 +76,9 @@ jobs:
           git commit -am "chore: bump SDK_VERSION to $VERSION"
           git push origin "$BRANCH"
 
-      - name: Fetch Last GitHub Release Tag
-        id: fetch_last_release
-        run: |
-          echo "Fetching latest GitHub release tag..."
-          LAST_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
-
-          if [[ -z "$LAST_TAG" ]]; then
-            echo "❌ No previous release tag found. Cannot generate release notes."
-            exit 0
-          fi
-
-          echo "✅ Found last release tag: $LAST_TAG"
-          echo "range=$LAST_TAG..HEAD" >> $GITHUB_OUTPUT
-
-      - name: Generate Release Notes from PR Titles
-        id: generate_notes
-        run: |
-          if [[ "$VERSION" == *"alpha"* ]]; then
-            CHANNEL="alpha"
-          elif [[ "$VERSION" == *"beta"* ]]; then
-            CHANNEL="beta"
-          else
-            CHANNEL="current"
-          fi
-
-          echo "**Channels:** $CHANNEL" >> pr_body.md
-          echo "" >> pr_body.md
-
-          RANGE="${{ steps.fetch_last_release.outputs.range }}"
-          echo "📦 Commit range: $RANGE"
-
-          COMMITS=$(git log "$RANGE" --pretty=format:"%H" | sort -u)
-
-          if [[ -z "$COMMITS" ]]; then
-            echo "❌ No commits found. Exiting."
-            exit 0
-          fi
-
-          > raw_titles.txt
-          for SHA in $COMMITS; do
-            PR_INFO=$(gh api "repos/${{ github.repository }}/commits/$SHA/pulls" \
-              -H "Accept: application/vnd.github.groot-preview+json" 2>/dev/null)
-
-            TITLE=$(echo "$PR_INFO" | jq -r '.[0].title // empty')
-            NUMBER=$(echo "$PR_INFO" | jq -r '.[0].number // empty')
-
-            if [[ -n "$TITLE" && -n "$NUMBER" ]]; then
-              echo "$TITLE ([#$NUMBER](https://github.com/${{ github.repository }}/pull/$NUMBER))" >> raw_titles.txt
-              echo "✅ $SHA → $TITLE (#$NUMBER)"
-            else
-              echo "⚠️ $SHA → No PR found"
-            fi
-          done
-
-          sort -fu raw_titles.txt > pr_titles.txt
-
-          if [[ ! -s pr_titles.txt ]]; then
-            echo "❌ No PR titles found from commits. Exiting."
-            exit 0
-          fi
-
-          echo "" >> pr_body.md
-          echo "### 🚀 New Features" >> pr_body.md
-          grep -i '^feat' pr_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
-
-          echo "" >> pr_body.md
-          echo "### 🐛 Bug Fixes" >> pr_body.md
-          grep -i '^bug' pr_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
-
-          echo "" >> pr_body.md
-          echo "### 🔧 Improvements" >> pr_body.md
-          grep -i -E '^(perf|refactor)' pr_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
-
-          echo "" >> pr_body.md
-          echo "### 📝 Uncategorized PRs" >> pr_body.md
-          grep -v -i -E '^(feat|bug|perf|refactor)' pr_titles.txt | sed 's/^/- /' >> pr_body.md || echo "- _None_" >> pr_body.md
-
-          echo "" >> pr_body.md
-          echo "### 📦 Version" >> pr_body.md
-          echo "$VERSION" >> pr_body.md
-
-      - name: Create Pull Request
-        run: |
-          gh pr create \
-            --title "Release SDK v$VERSION" \
-            --body-file pr_body.md \
-            --head "$BRANCH" \
-            --base "$BASE_BRANCH"
+  create-release:
+    needs: bump-version
+    uses: OneSignal/sdk-shared/.github/workflows/create-release.yml@main
+    with:
+      release_branch: rel/${{ github.event.inputs.version }}
+      target_branch: ${{ github.event.inputs.base_branch || 'main' }}
