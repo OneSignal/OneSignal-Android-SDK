@@ -76,7 +76,7 @@ class OtelIntegrationTest : FunSpec({
             put(identityModel)
         }
 
-        sharedPreferences.edit()
+        sharedPreferences!!.edit()
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + configNameSpace, configArray.toString())
             .putString(PreferenceOneSignalKeys.MODEL_STORE_PREFIX + identityNameSpace, identityArray.toString())
             .putString(PreferenceOneSignalKeys.PREFS_OS_INSTALL_ID, "test-install-id")

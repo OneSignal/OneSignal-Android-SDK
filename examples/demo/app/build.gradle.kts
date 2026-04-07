@@ -1,11 +1,9 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    id("org.jetbrains.kotlin.plugin.compose") version "2.2.0"
 }
 
-// Keep IDE sync stable even if root extra properties are unavailable.
-val kotlinVersion: String = rootProject.findProperty("kotlinVersion") as? String ?: "2.2.0"
+val kotlinVersion: String = rootProject.findProperty("kotlinVersion") as? String ?: "1.9.25"
 
 // Apply GMS or Huawei plugin based on build variant
 // Check at configuration time, not when task graph is ready
@@ -35,6 +33,10 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.15"
     }
 
     flavorDimensions += "default"
