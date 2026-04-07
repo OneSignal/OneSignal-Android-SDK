@@ -650,7 +650,7 @@ Enable Jetpack Compose in the project:
 
 build.gradle.kts (app):
 - buildFeatures { compose = true }
-- composeOptions { kotlinCompilerExtensionVersion = "1.5.10" }
+- composeOptions { kotlinCompilerExtensionVersion = "1.5.15" }
 
 Dependencies (via BOM):
 - composeBom = "2024.02.00"
