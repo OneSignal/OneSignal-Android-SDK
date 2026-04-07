@@ -62,7 +62,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Secondary Activity -->
+        <!-- Secondary Screen -->
         <activity
             android:name=".ui.secondary.SecondaryActivity"
             android:exported="false" />

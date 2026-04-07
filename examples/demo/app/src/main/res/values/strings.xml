@@ -107,9 +107,9 @@
     <!-- Send In-App Message -->
     <string name="send_in_app_message">Send In-App Message</string>
 
-    <!-- Next Activity -->
-    <string name="next_activity">NEXT ACTIVITY</string>
-    <string name="secondary_activity">Secondary Activity</string>
+    <!-- Next Screen -->
+    <string name="next_activity">NEXT SCREEN</string>
+    <string name="secondary_activity">Secondary Screen</string>
 
     <!-- Dialog -->
     <string name="external_user_id">External User Id</string>

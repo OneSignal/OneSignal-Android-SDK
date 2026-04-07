@@ -42,7 +42,7 @@ class SecondaryActivity : ComponentActivity() {
                 Scaffold(
                     topBar = {
                         CenterAlignedTopAppBar(
-                            title = { Text("Secondary Activity", color = Color.White) },
+                            title = { Text("Secondary Screen", color = Color.White) },
                             navigationIcon = {
                                 IconButton(onClick = { finish() }) {
                                     Icon(
@@ -67,7 +67,7 @@ class SecondaryActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = "Secondary Activity",
+                            text = "Secondary Screen",
                             style = MaterialTheme.typography.headlineMedium
                         )
 

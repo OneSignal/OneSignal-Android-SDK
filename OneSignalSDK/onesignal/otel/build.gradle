@@ -36,7 +36,7 @@ android {
 
     kotlinOptions {
         jvmTarget = '1.8'
-        freeCompilerArgs += ['-module-name', namespace]
+        freeCompilerArgs += ['-module-name', namespace, '-Xskip-metadata-version-check']
     }
 }
 

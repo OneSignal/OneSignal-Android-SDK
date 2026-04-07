@@ -26,11 +26,8 @@ Replace `{{PLATFORM}}` with `Android` everywhere in that guide. Everything below
 `build.gradle.kts` (app):
 
 ```kotlin
-plugins {
-    id("org.jetbrains.kotlin.plugin.compose") version "2.2.0"
-}
-
 buildFeatures { compose = true }
+composeOptions { kotlinCompilerExtensionVersion = "1.5.15" }
 ```
 
 Dependencies (via BOM `2024.02.00`):
