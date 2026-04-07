@@ -2,6 +2,7 @@ package com.onesignal.mocks
 
 import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.common.threading.suspendifyOnIO
+import com.onesignal.common.threading.suspendifyOnMain
 import io.kotest.core.listeners.AfterSpecListener
 import io.kotest.core.listeners.BeforeSpecListener
 import io.kotest.core.listeners.BeforeTestListener
@@ -110,6 +111,11 @@ object IOMockHelper : BeforeSpecListener, AfterSpecListener, BeforeTestListener,
         }
 
         every { suspendifyOnIO(any<suspend () -> Unit>()) } answers {
+            val block = firstArg<suspend () -> Unit>()
+            trackAsyncWork(block)
+        }
+
+        every { suspendifyOnMain(any<suspend () -> Unit>()) } answers {
             val block = firstArg<suspend () -> Unit>()
             trackAsyncWork(block)
         }

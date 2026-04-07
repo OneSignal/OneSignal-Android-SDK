@@ -50,7 +50,8 @@ internal class OneSignalImp(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : IOneSignal, IServiceProvider {
 
-    private val suspendCompletion = CompletableDeferred<Unit>()
+    @Volatile
+    private var suspendCompletion = CompletableDeferred<Unit>()
 
     @Volatile
     private var initState: InitState = InitState.NOT_STARTED
@@ -288,9 +289,8 @@ internal class OneSignalImp(
         context: Context,
         appId: String,
     ): Boolean {
-        Logging.log(LogLevel.DEBUG, "Calling deprecated initWithContextSuspend(context: $context, appId: $appId)")
+        Logging.log(LogLevel.DEBUG, "initWithContext(context: $context, appId: $appId)")
 
-        // do not do this again if already initialized or init is in progress
         synchronized(initLock) {
             if (initState.isSDKAccessible()) {
                 Logging.log(LogLevel.DEBUG, "initWithContext: SDK already initialized or in progress")
@@ -298,24 +298,21 @@ internal class OneSignalImp(
             }
 
             initState = InitState.IN_PROGRESS
+            suspendCompletion = CompletableDeferred()
         }
+
+        initFailureException = IllegalStateException("OneSignal initWithContext failed.")
 
         // FeatureManager depends on ConfigModelStore/PreferencesService which requires appContext.
         // Ensure app context is available before evaluating feature gates.
         ensureApplicationServiceStarted(context)
 
-        if (isBackgroundThreadingEnabled) {
-            // init in background and return immediately to ensure non-blocking
-            suspendifyOnIO {
-                internalInit(context, appId)
-            }
-            return true
-        }
-
-        // Legacy FF-OFF behavior intentionally blocks caller thread until initialization completes.
-        return runBlocking(runtimeIoDispatcher) {
+        // Always dispatch init asynchronously so this method never blocks the caller.
+        // Callers that need to wait (accessors, login, logout) will block via suspendCompletion.
+        suspendifyOnIO {
             internalInit(context, appId)
         }
+        return true
     }
 
     /**
@@ -380,9 +377,7 @@ internal class OneSignalImp(
             waitForInit(operationName = "login")
             suspendifyOnIO { loginHelper.login(externalId, jwtBearerToken) }
         } else {
-            if (!isInitialized) {
-                throw IllegalStateException("Must call 'initWithContext' before 'login'")
-            }
+            requireInitForOperation("login")
             Thread {
                 runBlocking(runtimeIoDispatcher) {
                     loginHelper.login(externalId, jwtBearerToken)
@@ -398,9 +393,7 @@ internal class OneSignalImp(
             waitForInit(operationName = "logout")
             suspendifyOnIO { logoutHelper.logout() }
         } else {
-            if (!isInitialized) {
-                throw IllegalStateException("Must call 'initWithContext' before 'logout'")
-            }
+            requireInitForOperation("logout")
             Thread {
                 runBlocking(runtimeIoDispatcher) {
                     logoutHelper.logout()
@@ -416,6 +409,22 @@ internal class OneSignalImp(
     override fun <T> getServiceOrNull(c: Class<T>): T? = services.getServiceOrNull(c)
 
     override fun <T> getAllServices(c: Class<T>): List<T> = services.getAllServices(c)
+
+    /**
+     * Ensures initialization is complete before proceeding with an operation.
+     * Blocks if init is in progress; throws immediately if not started or failed.
+     */
+    private fun requireInitForOperation(operationName: String) {
+        when (initState) {
+            InitState.NOT_STARTED ->
+                throw IllegalStateException("Must call 'initWithContext' before '$operationName'")
+            InitState.IN_PROGRESS -> waitForInit(operationName = operationName)
+            InitState.FAILED ->
+                throw initFailureException
+                    ?: IllegalStateException("Initialization failed before '$operationName'")
+            InitState.SUCCESS -> {}
+        }
+    }
 
     /**
      * Blocking version that waits for initialization to complete.
@@ -514,14 +523,15 @@ internal class OneSignalImp(
     }
 
     private fun <T> getServiceWithFeatureGate(getter: () -> T): T {
-        return if (isBackgroundThreadingEnabled) {
-            waitAndReturn(getter)
-        } else {
-            if (isInitialized) {
-                getter()
-            } else {
-                throw IllegalStateException("Must call 'initWithContext' before use")
-            }
+        if (isBackgroundThreadingEnabled) {
+            return waitAndReturn(getter)
+        }
+        return when (initState) {
+            InitState.SUCCESS -> getter()
+            InitState.IN_PROGRESS -> waitAndReturn(getter)
+            InitState.FAILED -> throw initFailureException
+                ?: IllegalStateException("Initialization failed. Cannot proceed.")
+            InitState.NOT_STARTED -> throw IllegalStateException("Must call 'initWithContext' before use")
         }
     }
 
@@ -626,10 +636,10 @@ internal class OneSignalImp(
                 }
 
                 initState = InitState.IN_PROGRESS
+                suspendCompletion = CompletableDeferred()
             }
 
             val result = internalInit(context, appId)
-            // initState is already set correctly in internalInit, no need to overwrite it
             result
         }
     }

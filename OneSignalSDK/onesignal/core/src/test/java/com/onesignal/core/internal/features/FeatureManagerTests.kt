@@ -16,6 +16,10 @@ class FeatureManagerTests : FunSpec({
         ThreadingMode.useBackgroundThreading = false
     }
 
+    afterEach {
+        ThreadingMode.useBackgroundThreading = false
+    }
+
     test("initial state should enable BACKGROUND_THREADING when feature is present") {
         // Given
         val initialModel = mockk<ConfigModel>()
