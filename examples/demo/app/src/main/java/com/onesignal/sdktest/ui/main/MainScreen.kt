@@ -263,9 +263,9 @@ fun MainScreen(viewModel: MainViewModel) {
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                // === NEXT ACTIVITY BUTTON ===
+                // === NEXT SCREEN BUTTON ===
                 PrimaryButton(
-                    text = "NEXT ACTIVITY",
+                    text = "NEXT SCREEN",
                     onClick = {
                         context.startActivity(Intent(context, SecondaryActivity::class.java))
                     }

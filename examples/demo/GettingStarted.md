@@ -145,7 +145,7 @@ Send a named **event** with optional JSON properties for advanced analytics.
 ### Location
 Toggle **location sharing** on or off and **prompt** for location permission.
 
-### Secondary Activity
+### Secondary Screen
 Navigate to a second screen with buttons to **simulate a crash** (`RuntimeException`) and **simulate an ANR** (10-second main-thread block) — useful for testing crash and ANR reporting.
 
 ### Log Viewer
