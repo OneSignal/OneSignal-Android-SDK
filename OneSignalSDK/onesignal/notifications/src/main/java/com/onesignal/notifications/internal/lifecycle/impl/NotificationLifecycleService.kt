@@ -5,6 +5,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.JSONUtils
+import com.onesignal.common.NetworkUtils
 import com.onesignal.common.events.CallbackProducer
 import com.onesignal.common.events.EventProducer
 import com.onesignal.common.exceptions.BackendException
@@ -35,6 +36,7 @@ import com.onesignal.notifications.internal.receivereceipt.IReceiveReceiptWorkMa
 import com.onesignal.session.internal.influence.IInfluenceManager
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONException
@@ -146,12 +148,7 @@ internal class NotificationLifecycleService(
                 useIO = true,
                 // or false for CPU operations
                 block = {
-                    _backend.updateNotificationAsOpened(
-                        appId,
-                        notificationId,
-                        subscriptionId,
-                        deviceType,
-                    )
+                    confirmNotificationOpened(appId, notificationId, subscriptionId, deviceType)
                 },
                 onError = { ex ->
                     if (ex is BackendException) {
@@ -198,6 +195,35 @@ internal class NotificationLifecycleService(
 
     override fun externalNotificationWillShowInForeground(willDisplayEvent: INotificationWillDisplayEvent) {
         extWillShowInForegroundCallback.fire { it.onWillDisplay(willDisplayEvent) }
+    }
+
+    private suspend fun confirmNotificationOpened(
+        appId: String,
+        notificationId: String,
+        subscriptionId: String,
+        deviceType: IDeviceService.DeviceType,
+    ) {
+        for (attempt in 1..NetworkUtils.maxNetworkRequestAttemptCount) {
+            try {
+                _backend.updateNotificationAsOpened(appId, notificationId, subscriptionId, deviceType)
+                return
+            } catch (ex: BackendException) {
+                val responseType = NetworkUtils.getResponseStatusType(ex.statusCode)
+                if (responseType != NetworkUtils.ResponseStatusType.RETRYABLE || attempt >= NetworkUtils.maxNetworkRequestAttemptCount) {
+                    throw ex
+                }
+                val retryAfterMs = ex.retryAfterSeconds?.let { it * MILLIS_PER_SECOND } ?: 0L
+                val backoffMs = (attempt * RETRY_BACKOFF_MS).toLong()
+                val delayMs = maxOf(retryAfterMs, backoffMs)
+                Logging.info("Notification opened confirmation attempt $attempt failed (statusCode: ${ex.statusCode}), retrying in ${delayMs}ms")
+                delay(delayMs)
+            }
+        }
+    }
+
+    companion object {
+        private const val MILLIS_PER_SECOND = 1_000L
+        private const val RETRY_BACKOFF_MS = 15_000
     }
 
     /**
