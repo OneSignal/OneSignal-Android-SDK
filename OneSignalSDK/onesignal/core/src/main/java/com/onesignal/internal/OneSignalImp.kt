@@ -384,14 +384,20 @@ internal class OneSignalImp(
 
         if (isBackgroundThreadingEnabled) {
             waitForInit(operationName = "login")
-            suspendifyOnIO { loginHelper.login(externalId, jwtBearerToken) }
         } else {
             if (!isInitialized) {
                 throw IllegalStateException("Must call 'initWithContext' before 'login'")
             }
+        }
+
+        val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return
+
+        if (isBackgroundThreadingEnabled) {
+            suspendifyOnIO { loginHelper.enqueueLogin(context) }
+        } else {
             Thread {
                 runBlocking(runtimeIoDispatcher) {
-                    loginHelper.login(externalId, jwtBearerToken)
+                    loginHelper.enqueueLogin(context)
                 }
             }.start()
         }
@@ -695,7 +701,8 @@ internal class OneSignalImp(
             throw IllegalStateException("'initWithContext failed' before 'login'")
         }
 
-        loginHelper.login(externalId, jwtBearerToken)
+        val context = loginHelper.switchUser(externalId, jwtBearerToken) ?: return@withContext
+        loginHelper.enqueueLogin(context)
     }
 
     override suspend fun logoutSuspend() =

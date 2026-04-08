@@ -15,22 +15,30 @@ class LoginHelper(
     private val jwtTokenStore: JwtTokenStore,
     private val lock: Any,
 ) {
-    suspend fun login(
+    internal data class LoginEnqueueContext(
+        val appId: String,
+        val newIdentityOneSignalId: String,
+        val externalId: String,
+        val existingOneSignalId: String?,
+    )
+
+    /**
+     * Synchronously switches local user models under the login/logout lock.
+     * Returns context needed for [enqueueLogin], or null if the user was
+     * already logged in with [externalId] (no switch needed).
+     */
+    internal fun switchUser(
         externalId: String,
         jwtBearerToken: String? = null,
-    ) {
-        var currentIdentityExternalId: String? = null
-        var currentIdentityOneSignalId: String? = null
-        var newIdentityOneSignalId: String = ""
-
+    ): LoginEnqueueContext? {
         synchronized(lock) {
-            currentIdentityExternalId = identityModelStore.model.externalId
-            currentIdentityOneSignalId = identityModelStore.model.onesignalId
+            val currentExternalId = identityModelStore.model.externalId
+            val currentOneSignalId = identityModelStore.model.onesignalId
 
-            if (currentIdentityExternalId == externalId) {
+            if (currentExternalId == externalId) {
                 jwtTokenStore.putJwt(externalId, jwtBearerToken)
                 operationRepo.forceExecuteOperations()
-                return
+                return null
             }
 
             jwtTokenStore.putJwt(externalId, jwtBearerToken)
@@ -39,23 +47,30 @@ class LoginHelper(
                 identityModel.externalId = externalId
             }
 
-            newIdentityOneSignalId = identityModelStore.model.onesignalId
+            val newOneSignalId = identityModelStore.model.onesignalId
+
+            val existingOneSignalId =
+                if (configModel.useIdentityVerification == true) {
+                    null
+                } else {
+                    if (currentExternalId == null) currentOneSignalId else null
+                }
+
+            return LoginEnqueueContext(configModel.appId, newOneSignalId, externalId, existingOneSignalId)
         }
+    }
 
-        val existingOneSignalId =
-            if (configModel.useIdentityVerification == true) {
-                null
-            } else {
-                if (currentIdentityExternalId == null) currentIdentityOneSignalId else null
-            }
-
+    /**
+     * Enqueues the [LoginUserOperation] and suspends until it completes.
+     */
+    internal suspend fun enqueueLogin(context: LoginEnqueueContext) {
         val result =
             operationRepo.enqueueAndWait(
                 LoginUserOperation(
-                    configModel.appId,
-                    newIdentityOneSignalId,
-                    externalId,
-                    existingOneSignalId,
+                    context.appId,
+                    context.newIdentityOneSignalId,
+                    context.externalId,
+                    context.existingOneSignalId,
                 ),
             )
 
