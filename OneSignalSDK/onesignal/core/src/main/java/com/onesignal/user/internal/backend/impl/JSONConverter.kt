@@ -1,5 +1,6 @@
 package com.onesignal.user.internal.backend.impl
 
+import com.onesignal.common.consistency.RywData
 import com.onesignal.common.expandJSONArray
 import com.onesignal.common.putJSONArray
 import com.onesignal.common.putMap
@@ -7,6 +8,7 @@ import com.onesignal.common.putSafe
 import com.onesignal.common.safeBool
 import com.onesignal.common.safeDouble
 import com.onesignal.common.safeInt
+import com.onesignal.common.safeLong
 import com.onesignal.common.safeJSONObject
 import com.onesignal.common.safeString
 import com.onesignal.common.toMap
@@ -55,7 +57,11 @@ object JSONConverter {
                 return@expandJSONArray null
             }
 
-        return CreateUserResponse(respIdentities, respProperties, respSubscriptions)
+        val rywToken = jsonObject.safeString("ryw_token")
+        val rywDelay = jsonObject.safeLong("ryw_delay")
+        val rywData = if (rywToken != null) RywData(rywToken, rywDelay) else null
+
+        return CreateUserResponse(respIdentities, respProperties, respSubscriptions, rywData)
     }
 
     fun convertToJSON(properties: PropertiesObject): JSONObject {

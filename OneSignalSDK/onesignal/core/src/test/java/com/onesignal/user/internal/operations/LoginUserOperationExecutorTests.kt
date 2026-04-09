@@ -1,6 +1,7 @@
 package com.onesignal.user.internal.operations
 
 import br.com.colman.kotest.android.extensions.robolectric.RobolectricTest
+import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.core.internal.operations.ExecutionResponse
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -79,6 +80,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
                 mockk<JwtTokenStore>(relaxed = true),
+                mockk<IConsistencyManager>(relaxed = true),
             )
         val operations =
             listOf<Operation>(
@@ -125,6 +127,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
                 mockk<JwtTokenStore>(relaxed = true),
+                mockk<IConsistencyManager>(relaxed = true),
             )
         val operations =
             listOf<Operation>(
@@ -153,7 +156,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, AndroidMockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<JwtTokenStore>(relaxed = true))
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, AndroidMockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<JwtTokenStore>(relaxed = true), mockk<IConsistencyManager>(relaxed = true))
         val operations =
             listOf<Operation>(
                 LoginUserOperation(appId, localOneSignalId, null, null),
@@ -181,7 +184,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<JwtTokenStore>(relaxed = true))
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<JwtTokenStore>(relaxed = true), mockk<IConsistencyManager>(relaxed = true))
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", null))
 
         // When
@@ -220,6 +223,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
                 mockk<JwtTokenStore>(relaxed = true),
+                mockk<IConsistencyManager>(relaxed = true),
             )
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", null))
 
@@ -248,7 +252,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<JwtTokenStore>(relaxed = true))
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<JwtTokenStore>(relaxed = true), mockk<IConsistencyManager>(relaxed = true))
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         // When
@@ -284,7 +288,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<JwtTokenStore>(relaxed = true))
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<JwtTokenStore>(relaxed = true), mockk<IConsistencyManager>(relaxed = true))
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         // When
@@ -320,7 +324,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<JwtTokenStore>(relaxed = true))
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<JwtTokenStore>(relaxed = true), mockk<IConsistencyManager>(relaxed = true))
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         // When
@@ -358,7 +362,7 @@ class LoginUserOperationExecutorTests : FunSpec({
         val mockSubscriptionsModelStore = mockk<SubscriptionModelStore>()
 
         val loginUserOperationExecutor =
-            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<JwtTokenStore>(relaxed = true))
+            LoginUserOperationExecutor(mockIdentityOperationExecutor, MockHelper.applicationService(), MockHelper.deviceService(), mockUserBackendService, mockIdentityModelStore, mockPropertiesModelStore, mockSubscriptionsModelStore, MockHelper.configModelStore(), MockHelper.languageContext(), mockk<JwtTokenStore>(relaxed = true), mockk<IConsistencyManager>(relaxed = true))
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, "externalId", "existingOneSignalId"))
 
         // When
@@ -410,6 +414,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
                 mockk<JwtTokenStore>(relaxed = true),
+                mockk<IConsistencyManager>(relaxed = true),
             )
         val operations =
             listOf<Operation>(
@@ -516,6 +521,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
                 mockk<JwtTokenStore>(relaxed = true),
+                mockk<IConsistencyManager>(relaxed = true),
             )
         val operations =
             listOf<Operation>(
@@ -606,6 +612,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
                 mockk<JwtTokenStore>(relaxed = true),
+                mockk<IConsistencyManager>(relaxed = true),
             )
         val operations =
             listOf<Operation>(
@@ -682,6 +689,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
                 mockk<JwtTokenStore>(relaxed = true),
+                mockk<IConsistencyManager>(relaxed = true),
             )
         val operations =
             listOf<Operation>(
@@ -749,6 +757,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
                 mockk<JwtTokenStore>(relaxed = true),
+                mockk<IConsistencyManager>(relaxed = true),
             )
         // anonymous Login request
         val operations = listOf<Operation>(LoginUserOperation(appId, localOneSignalId, null, null))
@@ -796,6 +805,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 MockHelper.configModelStore(),
                 MockHelper.languageContext(),
                 mockk<JwtTokenStore>(relaxed = true),
+                mockk<IConsistencyManager>(relaxed = true),
             )
 
         // send PUSH then EMAIL (local IDs 1,2) — order differs from backend response
@@ -861,6 +871,7 @@ class LoginUserOperationExecutorTests : FunSpec({
                 configModelStore,
                 MockHelper.languageContext(),
                 mockk<JwtTokenStore>(relaxed = true),
+                mockk<IConsistencyManager>(relaxed = true),
             )
 
         val ops =
