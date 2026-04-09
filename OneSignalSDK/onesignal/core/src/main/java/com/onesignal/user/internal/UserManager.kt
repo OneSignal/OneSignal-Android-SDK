@@ -55,8 +55,15 @@ internal open class UserManager(
     private val jwtInvalidatedAppCallbackScope =
         CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    @Volatile
+    private var pendingJwtInvalidatedExternalId: String? = null
+
     fun addJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
         jwtInvalidatedNotifier.subscribe(listener)
+        pendingJwtInvalidatedExternalId?.let { externalId ->
+            pendingJwtInvalidatedExternalId = null
+            listener.onUserJwtInvalidated(UserJwtInvalidatedEvent(externalId))
+        }
     }
 
     fun removeJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
@@ -64,18 +71,24 @@ internal open class UserManager(
     }
 
     /**
-     * Schedules [IUserJwtInvalidatedListener] delivery on a background dispatcher so HYDRATE and
-     * operation-repo paths can finish internal work before app code runs.
+     * Fires [IUserJwtInvalidatedListener] to all subscribers asynchronously so the caller
+     * (e.g. OperationRepo) is not blocked by developer code. If no listeners are registered yet
+     * (e.g. during SDK init), stores the externalId so it can be replayed when the first
+     * listener is added via [addJwtInvalidatedListener].
      */
     fun fireJwtInvalidated(externalId: String) {
-        jwtInvalidatedAppCallbackScope.launch {
-            runCatching {
-                jwtInvalidatedNotifier.fire { listener ->
-                    listener.onUserJwtInvalidated(UserJwtInvalidatedEvent(externalId))
+        if (jwtInvalidatedNotifier.hasSubscribers) {
+            jwtInvalidatedAppCallbackScope.launch {
+                runCatching {
+                    jwtInvalidatedNotifier.fire { listener ->
+                        listener.onUserJwtInvalidated(UserJwtInvalidatedEvent(externalId))
+                    }
+                }.onFailure {
+                    Logging.warn("Failed to deliver JWT invalidated event for externalId=$externalId", it)
                 }
-            }.onFailure {
-                Logging.warn("Failed to deliver JWT invalidated event for externalId=$externalId", it)
             }
+        } else {
+            pendingJwtInvalidatedExternalId = externalId
         }
     }
 
