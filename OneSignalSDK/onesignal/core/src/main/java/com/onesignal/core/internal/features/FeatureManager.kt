@@ -126,10 +126,9 @@ internal class FeatureManager(
         /**
          * Local-only test hook for forcing features ON without backend config.
          * Add feature keys here while testing locally, e.g.:
-         * setOf(FeatureFlag.BACKGROUND_THREADING.key)
+         * setOf(FeatureFlag.SDK_050800_FOLDABLE_IAM_FIX.key)
          */
-        private val localFeatureOverrides: Set<String> = emptySet()
-//        private val localFeatureOverrides: Set<String> =
-//            setOf(FeatureFlag.BACKGROUND_THREADING.key)
+        private val localFeatureOverrides: Set<String> =
+            setOf(FeatureFlag.SDK_050800_FOLDABLE_IAM_FIX.key)
     }
 }
