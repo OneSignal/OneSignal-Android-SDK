@@ -20,9 +20,6 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
-# Demo-only: optional transitive classes pulled in via OneSignal OTel / R8 (GMS + Huawei minified builds).
--dontwarn com.fasterxml.jackson.core.JsonFactory
--dontwarn com.fasterxml.jackson.core.JsonGenerator
--dontwarn com.google.auto.value.AutoValue
--dontwarn com.google.auto.value.AutoValue$Builder
--dontwarn com.google.auto.value.AutoValue$CopyAnnotations
+# No app-level -dontwarn for OneSignal OTel here: when com.onesignal:core pulls in com.onesignal:otel
+# (implementation dependency), AGP merges otel's consumer-rules.pro for R8 (SDK-4207 / #2596).
+# Older SDK lines without otel never put those optional classes on the classpath, so duplicates are unnecessary.
