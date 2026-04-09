@@ -954,8 +954,9 @@ class OperationRepoTests : FunSpec({
         operationRepo.start()
         val response = operationRepo.enqueueAndWait(operation)
 
-        // Then
-        response shouldBe true
+        // Then – waiter is woken with false immediately on FAIL_UNAUTHORIZED
+        // (operation is re-queued with waiter=null for retry when a new JWT is provided)
+        response shouldBe false
         verify { jwtTokenStore.invalidateJwt("test-user") }
         handlerCalledWith shouldBe "test-user"
     }
@@ -1011,8 +1012,11 @@ class OperationRepoTests : FunSpec({
         operationRepo.start()
         val response = operationRepo.enqueueAndWait(operation)
 
-        response shouldBe true
+        // Waiter is woken with false immediately; operation re-queued with waiter=null
+        response shouldBe false
         verify { jwtTokenStore.invalidateJwt("test-user") }
+        // The re-queued op (waiter=null) retries asynchronously; wait for it to complete
+        delay(3000)
         coVerify(exactly = 2) { executor.execute(any()) }
     }
 
