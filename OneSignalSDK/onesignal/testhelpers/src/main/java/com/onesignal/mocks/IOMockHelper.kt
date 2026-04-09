@@ -31,7 +31,8 @@ import java.util.concurrent.atomic.AtomicInteger
  * (e.g., delay(50)) to wait for async work to finish.
  *
  * This helper avoids that by:
- *  - Mocking `suspendifyOnIO`, `launchOnIO`, and `launchOnDefault` so their blocks run immediately
+ *  - Mocking `suspendifyOnIO`, `suspendifyOnMain`, and `OneSignalDispatchers.launchOnIO` /
+ *    `launchOnDefault` so their blocks run immediately
  *  - Completing a `CompletableDeferred` when the async block finishes
  *  - Providing `awaitIO()` so tests can explicitly wait for all async work without sleeps
  *

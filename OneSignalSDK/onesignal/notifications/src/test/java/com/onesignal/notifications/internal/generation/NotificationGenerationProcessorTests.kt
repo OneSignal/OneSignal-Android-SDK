@@ -288,8 +288,9 @@ class NotificationGenerationProcessorTests : FunSpec({
             val willDisplayEvent = firstArg<INotificationWillDisplayEvent>()
             willDisplayEvent.preventDefault(false)
             suspendifyOnIO {
+                // Second preventDefault(true) wakes the waiter with false; avoid notification.display()
+                // which would wake(true) and overwrite the conflated channel (CI flake on fast runners).
                 willDisplayEvent.preventDefault(true)
-                willDisplayEvent.notification.display()
             }
         }
 
@@ -311,7 +312,6 @@ class NotificationGenerationProcessorTests : FunSpec({
             receivedEvent.preventDefault(false)
             suspendifyOnIO {
                 receivedEvent.preventDefault(true)
-                receivedEvent.notification.display()
             }
         }
 
