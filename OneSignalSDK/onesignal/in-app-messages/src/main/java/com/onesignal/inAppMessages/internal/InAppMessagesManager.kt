@@ -1040,10 +1040,9 @@ internal class InAppMessagesManager(
     }
 
     override fun onJwtUpdated(externalId: String) {
-        val retryExternalId = pendingJwtRetryExternalId ?: return
-        val retryRywData = pendingJwtRetryRywData ?: return
-
-        if (externalId != retryExternalId) return
+        val retryExternalId = pendingJwtRetryExternalId
+        val retryRywData = pendingJwtRetryRywData
+        if (retryExternalId == null || retryRywData == null || externalId != retryExternalId) return
 
         Logging.debug("InAppMessagesManager.onJwtUpdated: JWT refreshed for $externalId, retrying IAM fetch")
         pendingJwtRetryExternalId = null

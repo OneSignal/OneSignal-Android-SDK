@@ -8,7 +8,11 @@ import com.onesignal.debug.internal.logging.Logging
 import org.json.JSONException
 import org.json.JSONObject
 
+/**
+ * Listener notified when a JWT is stored or replaced for an external ID.
+ */
 fun interface IJwtUpdateListener {
+    /** Called after [JwtTokenStore.putJwt] persists a new token for [externalId]. */
     fun onJwtUpdated(externalId: String)
 }
 
@@ -67,10 +71,12 @@ class JwtTokenStore(
         }
     }
 
+    /** Register a [listener] to be notified when any JWT is updated via [putJwt]. */
     fun subscribe(listener: IJwtUpdateListener) {
         jwtUpdateNotifier.subscribe(listener)
     }
 
+    /** Remove a previously registered [listener]. */
     fun unsubscribe(listener: IJwtUpdateListener) {
         jwtUpdateNotifier.unsubscribe(listener)
     }
