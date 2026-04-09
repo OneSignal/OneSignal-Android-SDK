@@ -6,7 +6,6 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.AndroidMockHelper
 import com.onesignal.mocks.IOMockHelper
-import com.onesignal.mocks.IOMockHelper.awaitIO
 import com.onesignal.mocks.MockHelper
 import com.onesignal.notifications.INotificationReceivedEvent
 import com.onesignal.notifications.INotificationWillDisplayEvent
