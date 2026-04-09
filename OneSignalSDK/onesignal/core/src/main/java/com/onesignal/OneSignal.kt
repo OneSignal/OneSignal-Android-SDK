@@ -343,6 +343,42 @@ object OneSignal {
     @JvmStatic
     fun logout() = oneSignal.logout()
 
+    /**
+     * Update the JWT bearer token for a user identified by [externalId]. Call this when
+     * a token is about to expire or after receiving an [IUserJwtInvalidatedListener] callback.
+     *
+     * @param externalId The external ID of the user whose token is being updated.
+     * @param token The new JWT bearer token.
+     */
+    @JvmStatic
+    fun updateUserJwt(
+        externalId: String,
+        token: String,
+    ) = oneSignal.updateUserJwt(externalId, token)
+
+    /**
+     * Add a listener that will be called when a user's JWT is invalidated (e.g. expired
+     * or rejected by the server). Use this to provide a fresh token via [updateUserJwt].
+     *
+     * The listener is invoked on a background thread; see [IUserJwtInvalidatedListener].
+     *
+     * @param listener The listener to add.
+     */
+    @JvmStatic
+    fun addUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
+        oneSignal.addUserJwtInvalidatedListener(listener)
+    }
+
+    /**
+     * Remove a previously added [IUserJwtInvalidatedListener].
+     *
+     * @param listener The listener to remove.
+     */
+    @JvmStatic
+    fun removeUserJwtInvalidatedListener(listener: IUserJwtInvalidatedListener) {
+        oneSignal.removeUserJwtInvalidatedListener(listener)
+    }
+
     private val oneSignal: IOneSignal by lazy {
         OneSignalImp()
     }
@@ -403,6 +439,22 @@ object OneSignal {
     @JvmStatic
     suspend fun logoutSuspend() {
         oneSignal.logoutSuspend()
+    }
+
+    /**
+     * Update the JWT bearer token for a user identified by [externalId] (suspend version).
+     * Call this when a token is about to expire or after receiving an [IUserJwtInvalidatedListener]
+     * callback.
+     *
+     * @param externalId The external ID of the user whose token is being updated.
+     * @param token The new JWT bearer token.
+     */
+    @JvmStatic
+    suspend fun updateUserJwtSuspend(
+        externalId: String,
+        token: String,
+    ) {
+        oneSignal.updateUserJwtSuspend(externalId, token)
     }
 
     /**

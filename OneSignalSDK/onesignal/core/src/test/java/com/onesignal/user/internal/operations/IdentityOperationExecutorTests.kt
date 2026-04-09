@@ -10,6 +10,7 @@ import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.builduser.IRebuildUserService
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.impl.executors.IdentityOperationExecutor
 import io.kotest.core.spec.style.FunSpec
@@ -39,8 +40,8 @@ class IdentityOperationExecutorTests : FunSpec({
         val mockBuildUserService = mockk<IRebuildUserService>()
 
         val identityOperationExecutor =
-            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState())
-        val operations = listOf<Operation>(SetAliasOperation("appId", "onesignalId", "aliasKey1", "aliasValue1"))
+            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState(), MockHelper.configModelStore(), mockk<JwtTokenStore>(relaxed = true))
+        val operations = listOf<Operation>(SetAliasOperation("appId", "onesignalId", null, "aliasKey1", "aliasValue1"))
 
         // When
         val response = identityOperationExecutor.execute(operations)
@@ -69,8 +70,8 @@ class IdentityOperationExecutorTests : FunSpec({
         val mockBuildUserService = mockk<IRebuildUserService>()
 
         val identityOperationExecutor =
-            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState())
-        val operations = listOf<Operation>(SetAliasOperation("appId", "onesignalId", "aliasKey1", "aliasValue1"))
+            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState(), MockHelper.configModelStore(), mockk<JwtTokenStore>(relaxed = true))
+        val operations = listOf<Operation>(SetAliasOperation("appId", "onesignalId", null, "aliasKey1", "aliasValue1"))
 
         // When
 
@@ -90,8 +91,8 @@ class IdentityOperationExecutorTests : FunSpec({
         val mockBuildUserService = mockk<IRebuildUserService>()
 
         val identityOperationExecutor =
-            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState())
-        val operations = listOf<Operation>(SetAliasOperation("appId", "onesignalId", "aliasKey1", "aliasValue1"))
+            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState(), MockHelper.configModelStore(), mockk<JwtTokenStore>(relaxed = true))
+        val operations = listOf<Operation>(SetAliasOperation("appId", "onesignalId", null, "aliasKey1", "aliasValue1"))
 
         // When
 
@@ -111,8 +112,8 @@ class IdentityOperationExecutorTests : FunSpec({
         every { mockBuildUserService.getRebuildOperationsIfCurrentUser(any(), any()) } returns null
 
         val identityOperationExecutor =
-            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState())
-        val operations = listOf<Operation>(SetAliasOperation("appId", "onesignalId", "aliasKey1", "aliasValue1"))
+            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState(), MockHelper.configModelStore(), mockk<JwtTokenStore>(relaxed = true))
+        val operations = listOf<Operation>(SetAliasOperation("appId", "onesignalId", null, "aliasKey1", "aliasValue1"))
 
         // When
 
@@ -134,8 +135,8 @@ class IdentityOperationExecutorTests : FunSpec({
         val mockConfigModelStore = MockHelper.configModelStore().also { it.model.opRepoPostCreateRetryUpTo = 1_000 }
         val newRecordState = getNewRecordState(mockConfigModelStore).also { it.add("onesignalId") }
         val identityOperationExecutor =
-            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, newRecordState)
-        val operations = listOf<Operation>(SetAliasOperation("appId", "onesignalId", "aliasKey1", "aliasValue1"))
+            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, newRecordState, mockConfigModelStore, mockk<JwtTokenStore>(relaxed = true))
+        val operations = listOf<Operation>(SetAliasOperation("appId", "onesignalId", null, "aliasKey1", "aliasValue1"))
 
         // When
 
@@ -160,8 +161,8 @@ class IdentityOperationExecutorTests : FunSpec({
         val mockBuildUserService = mockk<IRebuildUserService>()
 
         val identityOperationExecutor =
-            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState())
-        val operations = listOf<Operation>(DeleteAliasOperation("appId", "onesignalId", "aliasKey1"))
+            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState(), MockHelper.configModelStore(), mockk<JwtTokenStore>(relaxed = true))
+        val operations = listOf<Operation>(DeleteAliasOperation("appId", "onesignalId", null, "aliasKey1"))
 
         // When
         val response = identityOperationExecutor.execute(operations)
@@ -183,8 +184,8 @@ class IdentityOperationExecutorTests : FunSpec({
         val mockBuildUserService = mockk<IRebuildUserService>()
 
         val identityOperationExecutor =
-            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState())
-        val operations = listOf<Operation>(DeleteAliasOperation("appId", "onesignalId", "aliasKey1"))
+            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState(), MockHelper.configModelStore(), mockk<JwtTokenStore>(relaxed = true))
+        val operations = listOf<Operation>(DeleteAliasOperation("appId", "onesignalId", null, "aliasKey1"))
 
         // When
 
@@ -203,8 +204,8 @@ class IdentityOperationExecutorTests : FunSpec({
         val mockBuildUserService = mockk<IRebuildUserService>()
 
         val identityOperationExecutor =
-            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState())
-        val operations = listOf<Operation>(DeleteAliasOperation("appId", "onesignalId", "aliasKey1"))
+            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState(), MockHelper.configModelStore(), mockk<JwtTokenStore>(relaxed = true))
+        val operations = listOf<Operation>(DeleteAliasOperation("appId", "onesignalId", null, "aliasKey1"))
 
         // When
 
@@ -225,8 +226,8 @@ class IdentityOperationExecutorTests : FunSpec({
         val mockBuildUserService = mockk<IRebuildUserService>()
 
         val identityOperationExecutor =
-            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState())
-        val operations = listOf<Operation>(DeleteAliasOperation("appId", "onesignalId", "aliasKey1"))
+            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, getNewRecordState(), MockHelper.configModelStore(), mockk<JwtTokenStore>(relaxed = true))
+        val operations = listOf<Operation>(DeleteAliasOperation("appId", "onesignalId", null, "aliasKey1"))
 
         // When
 
@@ -250,8 +251,8 @@ class IdentityOperationExecutorTests : FunSpec({
         val mockConfigModelStore = MockHelper.configModelStore().also { it.model.opRepoPostCreateRetryUpTo = 1_000 }
         val newRecordState = getNewRecordState(mockConfigModelStore).also { it.add("onesignalId") }
         val identityOperationExecutor =
-            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, newRecordState)
-        val operations = listOf<Operation>(DeleteAliasOperation("appId", "onesignalId", "aliasKey1"))
+            IdentityOperationExecutor(mockIdentityBackendService, mockIdentityModelStore, mockBuildUserService, newRecordState, mockConfigModelStore, mockk<JwtTokenStore>(relaxed = true))
+        val operations = listOf<Operation>(DeleteAliasOperation("appId", "onesignalId", null, "aliasKey1"))
 
         // When
         val response = identityOperationExecutor.execute(operations)

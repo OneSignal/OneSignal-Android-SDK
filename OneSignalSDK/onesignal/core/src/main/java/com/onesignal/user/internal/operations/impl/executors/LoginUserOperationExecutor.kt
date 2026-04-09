@@ -24,6 +24,7 @@ import com.onesignal.user.internal.backend.IdentityConstants
 import com.onesignal.user.internal.backend.SubscriptionObject
 import com.onesignal.user.internal.backend.SubscriptionObjectType
 import com.onesignal.user.internal.identity.IdentityModelStore
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.operations.CreateSubscriptionOperation
 import com.onesignal.user.internal.operations.DeleteSubscriptionOperation
 import com.onesignal.user.internal.operations.LoginUserOperation
@@ -47,6 +48,7 @@ internal class LoginUserOperationExecutor(
     private val _subscriptionsModelStore: SubscriptionModelStore,
     private val _configModelStore: ConfigModelStore,
     private val _languageContext: ILanguageContext,
+    private val _jwtTokenStore: JwtTokenStore,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(LOGIN_USER)
@@ -89,6 +91,7 @@ internal class LoginUserOperationExecutor(
                         SetAliasOperation(
                             loginUserOp.appId,
                             loginUserOp.existingOnesignalId!!,
+                            loginUserOp.externalId,
                             IdentityConstants.EXTERNAL_ID,
                             loginUserOp.externalId!!,
                         ),
@@ -168,7 +171,8 @@ internal class LoginUserOperationExecutor(
 
         try {
             val subscriptionList = subscriptions.toList()
-            val response = _userBackend.createUser(createUserOperation.appId, identities, subscriptionList.map { it.second }, properties)
+            val jwt = createUserOperation.externalId?.let { _jwtTokenStore.getJwt(it) }
+            val response = _userBackend.createUser(createUserOperation.appId, identities, subscriptionList.map { it.second }, properties, jwt)
             val idTranslations = mutableMapOf<String, String>()
             // Add the "local-to-backend" ID translation to the IdentifierTranslator for any operations that were
             // *not* executed but still reference the locally-generated IDs.
@@ -223,7 +227,7 @@ internal class LoginUserOperationExecutor(
             val wasPossiblyAnUpsert = identities.isNotEmpty()
             val followUpOperations =
                 if (wasPossiblyAnUpsert) {
-                    listOf(RefreshUserOperation(createUserOperation.appId, backendOneSignalId))
+                    listOf(RefreshUserOperation(createUserOperation.appId, backendOneSignalId, createUserOperation.externalId))
                 } else {
                     null
                 }

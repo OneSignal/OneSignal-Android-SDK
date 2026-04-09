@@ -22,6 +22,7 @@
     <ID>ConstructorParameterNaming:ConfigModelStoreListener.kt$ConfigModelStoreListener$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:ConfigModelStoreListener.kt$ConfigModelStoreListener$private val _paramsBackendService: IParamsBackendService</ID>
     <ID>ConstructorParameterNaming:ConfigModelStoreListener.kt$ConfigModelStoreListener$private val _subscriptionManager: ISubscriptionManager</ID>
+    <ID>ConstructorParameterNaming:CustomEventOperationExecutor.kt$CustomEventOperationExecutor$private val _jwtTokenStore: JwtTokenStore</ID>
     <ID>ConstructorParameterNaming:DatabaseCursor.kt$DatabaseCursor$private val _cursor: Cursor</ID>
     <ID>ConstructorParameterNaming:DatabaseProvider.kt$DatabaseProvider$private val _application: IApplicationService</ID>
     <ID>ConstructorParameterNaming:DeviceService.kt$DeviceService$private val _applicationService: IApplicationService</ID>
@@ -33,16 +34,26 @@
     <ID>ConstructorParameterNaming:HttpConnectionFactory.kt$HttpConnectionFactory$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:IdentityBackendService.kt$IdentityBackendService$private val _httpClient: IHttpClient</ID>
     <ID>ConstructorParameterNaming:IdentityModelStoreListener.kt$IdentityModelStoreListener$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:IdentityModelStoreListener.kt$IdentityModelStoreListener$private val _identityModelStore: IdentityModelStore</ID>
     <ID>ConstructorParameterNaming:IdentityOperationExecutor.kt$IdentityOperationExecutor$private val _buildUserService: IRebuildUserService</ID>
     <ID>ConstructorParameterNaming:IdentityOperationExecutor.kt$IdentityOperationExecutor$private val _identityBackend: IIdentityBackendService</ID>
+    <ID>ConstructorParameterNaming:IdentityOperationExecutor.kt$IdentityOperationExecutor$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:IdentityOperationExecutor.kt$IdentityOperationExecutor$private val _identityModelStore: IdentityModelStore</ID>
+    <ID>ConstructorParameterNaming:IdentityOperationExecutor.kt$IdentityOperationExecutor$private val _jwtTokenStore: JwtTokenStore</ID>
     <ID>ConstructorParameterNaming:IdentityOperationExecutor.kt$IdentityOperationExecutor$private val _newRecordState: NewRecordsState</ID>
+    <ID>ConstructorParameterNaming:IdentityVerificationService.kt$IdentityVerificationService$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:IdentityVerificationService.kt$IdentityVerificationService$private val _identityModelStore: IdentityModelStore</ID>
+    <ID>ConstructorParameterNaming:IdentityVerificationService.kt$IdentityVerificationService$private val _jwtTokenStore: JwtTokenStore</ID>
+    <ID>ConstructorParameterNaming:IdentityVerificationService.kt$IdentityVerificationService$private val _operationRepo: IOperationRepo</ID>
+    <ID>ConstructorParameterNaming:IdentityVerificationService.kt$IdentityVerificationService$private val _userManager: UserManager</ID>
     <ID>ConstructorParameterNaming:InfluenceDataRepository.kt$InfluenceDataRepository$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:InfluenceManager.kt$InfluenceManager$private val _applicationService: IApplicationService</ID>
     <ID>ConstructorParameterNaming:InfluenceManager.kt$InfluenceManager$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:InfluenceManager.kt$InfluenceManager$private val _sessionService: ISessionService</ID>
     <ID>ConstructorParameterNaming:InstallIdService.kt$InstallIdService$private val _prefs: IPreferencesService</ID>
+    <ID>ConstructorParameterNaming:JwtTokenStore.kt$JwtTokenStore$private val _prefs: IPreferencesService</ID>
     <ID>ConstructorParameterNaming:LanguageContext.kt$LanguageContext$private val _propertiesModelStore: PropertiesModelStore</ID>
+    <ID>ConstructorParameterNaming:LoginUserFromSubscriptionOperationExecutor.kt$LoginUserFromSubscriptionOperationExecutor$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:LoginUserFromSubscriptionOperationExecutor.kt$LoginUserFromSubscriptionOperationExecutor$private val _identityModelStore: IdentityModelStore</ID>
     <ID>ConstructorParameterNaming:LoginUserFromSubscriptionOperationExecutor.kt$LoginUserFromSubscriptionOperationExecutor$private val _propertiesModelStore: PropertiesModelStore</ID>
     <ID>ConstructorParameterNaming:LoginUserFromSubscriptionOperationExecutor.kt$LoginUserFromSubscriptionOperationExecutor$private val _subscriptionBackend: ISubscriptionBackendService</ID>
@@ -51,6 +62,7 @@
     <ID>ConstructorParameterNaming:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private val _deviceService: IDeviceService</ID>
     <ID>ConstructorParameterNaming:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private val _identityModelStore: IdentityModelStore</ID>
     <ID>ConstructorParameterNaming:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private val _identityOperationExecutor: IdentityOperationExecutor</ID>
+    <ID>ConstructorParameterNaming:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private val _jwtTokenStore: JwtTokenStore</ID>
     <ID>ConstructorParameterNaming:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private val _languageContext: ILanguageContext</ID>
     <ID>ConstructorParameterNaming:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private val _propertiesModelStore: PropertiesModelStore</ID>
     <ID>ConstructorParameterNaming:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private val _subscriptionsModelStore: SubscriptionModelStore</ID>
@@ -62,6 +74,8 @@
     <ID>ConstructorParameterNaming:NewRecordsState.kt$NewRecordsState$private val _time: ITime</ID>
     <ID>ConstructorParameterNaming:OSDatabase.kt$OSDatabase$private val _outcomeTableProvider: OutcomeTableProvider</ID>
     <ID>ConstructorParameterNaming:OperationRepo.kt$OperationRepo$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:OperationRepo.kt$OperationRepo$private val _identityModelStore: IdentityModelStore</ID>
+    <ID>ConstructorParameterNaming:OperationRepo.kt$OperationRepo$private val _jwtTokenStore: JwtTokenStore</ID>
     <ID>ConstructorParameterNaming:OperationRepo.kt$OperationRepo$private val _newRecordState: NewRecordsState</ID>
     <ID>ConstructorParameterNaming:OperationRepo.kt$OperationRepo$private val _operationModelStore: OperationModelStore</ID>
     <ID>ConstructorParameterNaming:OperationRepo.kt$OperationRepo$private val _time: ITime</ID>
@@ -81,6 +95,7 @@
     <ID>ConstructorParameterNaming:PreferencesService.kt$PreferencesService$private val _applicationService: IApplicationService</ID>
     <ID>ConstructorParameterNaming:PreferencesService.kt$PreferencesService$private val _time: ITime</ID>
     <ID>ConstructorParameterNaming:PropertiesModelStoreListener.kt$PropertiesModelStoreListener$private val _configModelStore: ConfigModelStore</ID>
+    <ID>ConstructorParameterNaming:PropertiesModelStoreListener.kt$PropertiesModelStoreListener$private val _identityModelStore: IdentityModelStore</ID>
     <ID>ConstructorParameterNaming:RebuildUserService.kt$RebuildUserService$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:RebuildUserService.kt$RebuildUserService$private val _identityModelStore: IdentityModelStore</ID>
     <ID>ConstructorParameterNaming:RebuildUserService.kt$RebuildUserService$private val _propertiesModelStore: PropertiesModelStore</ID>
@@ -93,6 +108,7 @@
     <ID>ConstructorParameterNaming:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private val _buildUserService: IRebuildUserService</ID>
     <ID>ConstructorParameterNaming:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private val _identityModelStore: IdentityModelStore</ID>
+    <ID>ConstructorParameterNaming:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private val _jwtTokenStore: JwtTokenStore</ID>
     <ID>ConstructorParameterNaming:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private val _newRecordState: NewRecordsState</ID>
     <ID>ConstructorParameterNaming:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private val _propertiesModelStore: PropertiesModelStore</ID>
     <ID>ConstructorParameterNaming:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private val _subscriptionsModelStore: SubscriptionModelStore</ID>
@@ -123,6 +139,7 @@
     <ID>ConstructorParameterNaming:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private val _consistencyManager: IConsistencyManager</ID>
     <ID>ConstructorParameterNaming:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private val _deviceService: IDeviceService</ID>
+    <ID>ConstructorParameterNaming:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private val _jwtTokenStore: JwtTokenStore</ID>
     <ID>ConstructorParameterNaming:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private val _newRecordState: NewRecordsState</ID>
     <ID>ConstructorParameterNaming:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private val _subscriptionBackend: ISubscriptionBackendService</ID>
     <ID>ConstructorParameterNaming:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private val _subscriptionModelStore: SubscriptionModelStore</ID>
@@ -132,8 +149,10 @@
     <ID>ConstructorParameterNaming:TrackGooglePurchase.kt$TrackGooglePurchase$private val _operationRepo: IOperationRepo</ID>
     <ID>ConstructorParameterNaming:TrackGooglePurchase.kt$TrackGooglePurchase$private val _prefs: IPreferencesService</ID>
     <ID>ConstructorParameterNaming:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$private val _buildUserService: IRebuildUserService</ID>
+    <ID>ConstructorParameterNaming:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$private val _configModelStore: ConfigModelStore</ID>
     <ID>ConstructorParameterNaming:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$private val _consistencyManager: IConsistencyManager</ID>
     <ID>ConstructorParameterNaming:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$private val _identityModelStore: IdentityModelStore</ID>
+    <ID>ConstructorParameterNaming:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$private val _jwtTokenStore: JwtTokenStore</ID>
     <ID>ConstructorParameterNaming:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$private val _newRecordState: NewRecordsState</ID>
     <ID>ConstructorParameterNaming:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$private val _propertiesModelStore: PropertiesModelStore</ID>
     <ID>ConstructorParameterNaming:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$private val _userBackend: IUserBackendService</ID>
@@ -192,15 +211,19 @@
     <ID>LongMethod:TrackGooglePurchase.kt$TrackGooglePurchase$private fun queryBoughtItems()</ID>
     <ID>LongMethod:TrackGooglePurchase.kt$TrackGooglePurchase$private fun sendPurchases( skusToAdd: ArrayList&lt;String>, newPurchaseTokens: ArrayList&lt;String>, )</ID>
     <ID>LongMethod:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
-    <ID>LongParameterList:ICustomEventBackendService.kt$ICustomEventBackendService$( appId: String, onesignalId: String, externalId: String?, timestamp: Long, eventName: String, eventProperties: String?, metadata: CustomEventMetadata, )</ID>
+    <ID>LongParameterList:CreateSubscriptionOperation.kt$CreateSubscriptionOperation$( appId: String, onesignalId: String, externalId: String?, subscriptionId: String, type: SubscriptionType, enabled: Boolean, address: String, status: SubscriptionStatus, )</ID>
+    <ID>LongParameterList:ICustomEventBackendService.kt$ICustomEventBackendService$( appId: String, onesignalId: String, externalId: String?, timestamp: Long, eventName: String, eventProperties: String?, metadata: CustomEventMetadata, jwt: String? = null, )</ID>
     <ID>LongParameterList:IDatabase.kt$IDatabase$( table: String, columns: Array&lt;String>? = null, whereClause: String? = null, whereArgs: Array&lt;String>? = null, groupBy: String? = null, having: String? = null, orderBy: String? = null, limit: String? = null, action: (ICursor) -> Unit, )</ID>
     <ID>LongParameterList:IOutcomeEventsBackendService.kt$IOutcomeEventsBackendService$( appId: String, userId: String, subscriptionId: String, deviceType: String, direct: Boolean?, event: OutcomeEvent, )</ID>
     <ID>LongParameterList:IParamsBackendService.kt$ParamsObject$( var googleProjectNumber: String? = null, var enterprise: Boolean? = null, var useIdentityVerification: Boolean? = null, var notificationChannels: JSONArray? = null, var firebaseAnalytics: Boolean? = null, var restoreTTLFilter: Boolean? = null, var clearGroupOnSummaryClick: Boolean? = null, var receiveReceiptEnabled: Boolean? = null, var disableGMSMissingPrompt: Boolean? = null, var unsubscribeWhenNotificationsDisabled: Boolean? = null, var locationShared: Boolean? = null, var requiresUserPrivacyConsent: Boolean? = null, var opRepoExecutionInterval: Long? = null, var influenceParams: InfluenceParamsObject, var fcmParams: FCMParamsObject, )</ID>
-    <ID>LongParameterList:IUserBackendService.kt$IUserBackendService$( appId: String, aliasLabel: String, aliasValue: String, properties: PropertiesObject, refreshDeviceMetadata: Boolean, propertyiesDelta: PropertiesDeltasObject, )</ID>
-    <ID>LongParameterList:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$( private val _identityOperationExecutor: IdentityOperationExecutor, private val _application: IApplicationService, private val _deviceService: IDeviceService, private val _userBackend: IUserBackendService, private val _identityModelStore: IdentityModelStore, private val _propertiesModelStore: PropertiesModelStore, private val _subscriptionsModelStore: SubscriptionModelStore, private val _configModelStore: ConfigModelStore, private val _languageContext: ILanguageContext, )</ID>
+    <ID>LongParameterList:IUserBackendService.kt$IUserBackendService$( appId: String, aliasLabel: String, aliasValue: String, properties: PropertiesObject, refreshDeviceMetadata: Boolean, propertyiesDelta: PropertiesDeltasObject, jwt: String? = null, )</ID>
+    <ID>LongParameterList:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$( private val _identityOperationExecutor: IdentityOperationExecutor, private val _application: IApplicationService, private val _deviceService: IDeviceService, private val _userBackend: IUserBackendService, private val _identityModelStore: IdentityModelStore, private val _propertiesModelStore: PropertiesModelStore, private val _subscriptionsModelStore: SubscriptionModelStore, private val _configModelStore: ConfigModelStore, private val _languageContext: ILanguageContext, private val _jwtTokenStore: JwtTokenStore, )</ID>
     <ID>LongParameterList:OutcomeEventsController.kt$OutcomeEventsController$( private val _session: ISessionService, private val _influenceManager: IInfluenceManager, private val _outcomeEventsCache: IOutcomeEventsRepository, private val _outcomeEventsPreferences: IOutcomeEventsPreferences, private val _outcomeEventsBackend: IOutcomeEventsBackendService, private val _configModelStore: ConfigModelStore, private val _identityModelStore: IdentityModelStore, private val _subscriptionManager: ISubscriptionManager, private val _deviceService: IDeviceService, private val _time: ITime, )</ID>
+    <ID>LongParameterList:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$( private val _userBackend: IUserBackendService, private val _identityModelStore: IdentityModelStore, private val _propertiesModelStore: PropertiesModelStore, private val _subscriptionsModelStore: SubscriptionModelStore, private val _configModelStore: ConfigModelStore, private val _buildUserService: IRebuildUserService, private val _newRecordState: NewRecordsState, private val _jwtTokenStore: JwtTokenStore, )</ID>
     <ID>LongParameterList:SubscriptionObject.kt$SubscriptionObject$( val id: String? = null, val type: SubscriptionObjectType? = null, val token: String? = null, val enabled: Boolean? = null, val notificationTypes: Int? = null, val sdk: String? = null, val deviceModel: String? = null, val deviceOS: String? = null, val rooted: Boolean? = null, val netType: Int? = null, val carrier: String? = null, val appVersion: String? = null, )</ID>
-    <ID>LongParameterList:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$( private val _subscriptionBackend: ISubscriptionBackendService, private val _deviceService: IDeviceService, private val _applicationService: IApplicationService, private val _subscriptionModelStore: SubscriptionModelStore, private val _configModelStore: ConfigModelStore, private val _buildUserService: IRebuildUserService, private val _newRecordState: NewRecordsState, private val _consistencyManager: IConsistencyManager, )</ID>
+    <ID>LongParameterList:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$( private val _subscriptionBackend: ISubscriptionBackendService, private val _deviceService: IDeviceService, private val _applicationService: IApplicationService, private val _subscriptionModelStore: SubscriptionModelStore, private val _configModelStore: ConfigModelStore, private val _buildUserService: IRebuildUserService, private val _newRecordState: NewRecordsState, private val _consistencyManager: IConsistencyManager, private val _jwtTokenStore: JwtTokenStore, )</ID>
+    <ID>LongParameterList:UpdateSubscriptionOperation.kt$UpdateSubscriptionOperation$( appId: String, onesignalId: String, externalId: String?, subscriptionId: String, type: SubscriptionType, enabled: Boolean, address: String, status: SubscriptionStatus, )</ID>
+    <ID>LongParameterList:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$( private val _userBackend: IUserBackendService, private val _identityModelStore: IdentityModelStore, private val _propertiesModelStore: PropertiesModelStore, private val _buildUserService: IRebuildUserService, private val _newRecordState: NewRecordsState, private val _consistencyManager: IConsistencyManager, private val _configModelStore: ConfigModelStore, private val _jwtTokenStore: JwtTokenStore, )</ID>
     <ID>LongParameterList:UserSwitcher.kt$UserSwitcher$( private val preferencesService: IPreferencesService, private val operationRepo: IOperationRepo, private val services: ServiceProvider, private val idManager: IDManager = IDManager, private val identityModelStore: IdentityModelStore, private val propertiesModelStore: PropertiesModelStore, private val subscriptionModelStore: SubscriptionModelStore, private val configModel: ConfigModel, private val oneSignalUtils: OneSignalUtils = OneSignalUtils, private val carrierName: String? = null, private val deviceOS: String? = null, private val androidUtils: AndroidUtils = AndroidUtils, private val appContextProvider: () -> Context, )</ID>
     <ID>LoopWithTooManyJumpStatements:ModelStore.kt$ModelStore$for (index in jsonArray.length() - 1 downTo 0) { val newModel = create(jsonArray.getJSONObject(index)) ?: continue /* * NOTE: Migration fix for bug introduced in 5.1.12 * The following check is intended for the operation model store. * When the call to this method moved out of the operation model store's initializer, * duplicate operations could be cached. * See https://github.com/OneSignal/OneSignal-Android-SDK/pull/2099 */ val hasExisting = models.any { it.id == newModel.id } if (hasExisting) { Logging.debug("ModelStore&lt;$name>: load - operation.id: ${newModel.id} already exists in the store.") continue } models.add(0, newModel) // listen for changes to this model newModel.subscribe(this) }</ID>
     <ID>MagicNumber:ApplicationService.kt$ApplicationService$50</ID>
@@ -279,6 +302,7 @@
     <ID>PrintStackTrace:TrackGooglePurchase.kt$TrackGooglePurchase$e</ID>
     <ID>PrintStackTrace:TrackGooglePurchase.kt$TrackGooglePurchase.&lt;no name provided>$t</ID>
     <ID>RethrowCaughtException:OSDatabase.kt$OSDatabase$throw e</ID>
+    <ID>ReturnCount:OperationRepo.kt$OperationRepo$private fun hasValidJwtIfRequired( identityVerificationEnabled: Boolean, op: Operation, ): Boolean</ID>
     <ID>ReturnCount:AppIdResolution.kt$fun resolveAppId( inputAppId: String?, configModel: ConfigModel, preferencesService: IPreferencesService, ): AppIdResolution</ID>
     <ID>ReturnCount:BackgroundManager.kt$BackgroundManager$override fun cancelRunBackgroundServices(): Boolean</ID>
     <ID>ReturnCount:OneSignalImp.kt$OneSignalImp$private fun internalInit( context: Context, appId: String?, ): Boolean</ID>
@@ -609,6 +633,8 @@
     <ID>UnusedPrivateMember:OperationRepo.kt$OperationRepo$private val _time: ITime</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'login'")</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'logout'")</ID>
+    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'updateUserJwt'")</ID>
+    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before 'updateUserJwt'")</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")</ID>
   </CurrentIssues>
 </SmellBaseline>

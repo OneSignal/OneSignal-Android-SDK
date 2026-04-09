@@ -42,6 +42,24 @@ interface IOperationRepo {
     suspend fun awaitInitialized()
 
     fun forceExecuteOperations()
+
+    /**
+     * Remove all queued operations that have no externalId (anonymous operations).
+     * Used by IdentityVerificationService when identity verification is enabled to
+     * purge operations that cannot be executed without an authenticated user.
+     */
+    fun removeOperationsWithoutExternalId()
+
+    /**
+     * Register a handler to be called when a runtime 401 Unauthorized response
+     * invalidates a JWT. This allows the caller to notify the developer so they
+     * can supply a fresh token via [OneSignal.updateUserJwt].
+     *
+     * The handler is invoked synchronously on the operation repo thread immediately
+     * after JWT invalidation and re-queue. It must return quickly; defer heavy work
+     * to another thread. The SDK default handler only schedules listener delivery.
+     */
+    fun setJwtInvalidatedHandler(handler: ((String) -> Unit)?)
 }
 
 // Extension function so the syntax containsInstanceOf<Operation>() can be used over

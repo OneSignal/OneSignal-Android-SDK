@@ -16,6 +16,18 @@ abstract class Operation(name: String) : Model() {
             setStringProperty(::name.name, value)
         }
 
+    /**
+     * The external ID of the user this operation belongs to. Used by [IOperationRepo] to look up
+     * the correct JWT when identity verification is enabled, and to gate anonymous operations.
+     * Stamped automatically by [IOperationRepo] at enqueue time from the current identity model
+     * when not already set by the concrete operation's constructor.
+     */
+    var externalId: String?
+        get() = getOptStringProperty(::externalId.name)
+        set(value) {
+            setOptStringProperty(::externalId.name, value)
+        }
+
     init {
         this.name = name
     }
@@ -48,6 +60,13 @@ abstract class Operation(name: String) : Model() {
      * Whether the operation can currently execute given it's current state.
      */
     abstract val canStartExecute: Boolean
+
+    /**
+     * Whether this operation requires a valid JWT when identity verification is enabled.
+     * Override to return `false` for operations whose backend endpoint does not require
+     * a JWT (e.g. subscription updates).
+     */
+    open val requiresJwt: Boolean get() = true
 
     /**
      * Called when an operation has resolved a local ID to a backend ID (i.e. successfully

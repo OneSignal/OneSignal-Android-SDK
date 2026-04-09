@@ -10,10 +10,14 @@ import com.onesignal.user.internal.operations.DeleteAliasOperation
 import com.onesignal.user.internal.operations.SetAliasOperation
 
 internal class IdentityModelStoreListener(
-    store: IdentityModelStore,
+    private val _identityModelStore: IdentityModelStore,
     opRepo: IOperationRepo,
     private val _configModelStore: ConfigModelStore,
-) : SingletonModelStoreListener<IdentityModel>(store, opRepo) {
+) : SingletonModelStoreListener<IdentityModel>(_identityModelStore, opRepo) {
+    private fun shouldSuppressForAnonymousUser(): Boolean =
+        _configModelStore.model.useIdentityVerification == true &&
+            _identityModelStore.model.externalId == null
+
     override fun getReplaceOperation(model: IdentityModel): Operation? {
         // when the identity model is replaced, nothing to do on the backend. Already handled via login process.
         return null
@@ -25,11 +29,13 @@ internal class IdentityModelStoreListener(
         property: String,
         oldValue: Any?,
         newValue: Any?,
-    ): Operation {
+    ): Operation? {
+        if (shouldSuppressForAnonymousUser()) return null
+
         return if (newValue != null && newValue is String) {
-            SetAliasOperation(_configModelStore.model.appId, model.onesignalId, property, newValue)
+            SetAliasOperation(_configModelStore.model.appId, model.onesignalId, model.externalId, property, newValue)
         } else {
-            DeleteAliasOperation(_configModelStore.model.appId, model.onesignalId, property)
+            DeleteAliasOperation(_configModelStore.model.appId, model.onesignalId, model.externalId, property)
         }
     }
 }

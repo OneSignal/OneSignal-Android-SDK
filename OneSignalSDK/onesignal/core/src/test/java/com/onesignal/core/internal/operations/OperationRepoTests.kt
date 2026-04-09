@@ -12,6 +12,7 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.mocks.MockHelper
 import com.onesignal.mocks.MockPreferencesService
+import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.operations.ExecutorMocks.Companion.getNewRecordState
 import com.onesignal.user.internal.operations.LoginUserOperation
 import io.kotest.core.spec.style.FunSpec
@@ -72,6 +73,8 @@ private class Mocks {
                 configModelStore,
                 Time(),
                 getNewRecordState(configModelStore),
+                mockk<JwtTokenStore>(relaxed = true),
+                MockHelper.identityModelStore(),
             ),
             recordPrivateCalls = true,
         )
@@ -97,6 +100,8 @@ class OperationRepoTests : FunSpec({
                     mocks.configModelStore,
                     Time(),
                     getNewRecordState(mocks.configModelStore),
+                    mockk<JwtTokenStore>(relaxed = true),
+                    MockHelper.identityModelStore(),
                 ),
             )
 
@@ -889,6 +894,147 @@ class OperationRepoTests : FunSpec({
         // Verify that the grouped execution happened with both operations
         // We can't easily verify the exact list content with MockK, but we verified it in the execution order tracking
     }
+
+    test("FAIL_UNAUTHORIZED invalidates JWT and fires handler for identified user") {
+        // Given
+        val configModelStore =
+            MockHelper.configModelStore {
+                it.useIdentityVerification = true
+            }
+        val identityModelStore =
+            MockHelper.identityModelStore {
+                it.externalId = "test-user"
+            }
+        val jwtTokenStore = mockk<JwtTokenStore>(relaxed = true)
+        every { jwtTokenStore.getJwt("test-user") } returns "valid-jwt"
+
+        val operationModelStore =
+            run {
+                val operationStoreList = mutableListOf<Operation>()
+                val mock = mockk<OperationModelStore>()
+                every { mock.loadOperations() } just runs
+                every { mock.list() } answers { operationStoreList.toList() }
+                every { mock.add(any()) } answers { operationStoreList.add(firstArg<Operation>()) }
+                every { mock.remove(any()) } answers {
+                    val id = firstArg<String>()
+                    operationStoreList.removeIf { it.id == id }
+                }
+                mock
+            }
+
+        val executor = mockk<IOperationExecutor>()
+        every { executor.operations } returns listOf("DUMMY_OPERATION")
+        coEvery { executor.execute(any()) } returns
+            ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED) andThen
+            ExecutionResponse(ExecutionResult.SUCCESS)
+
+        val operationRepo =
+            spyk(
+                OperationRepo(
+                    listOf(executor),
+                    operationModelStore,
+                    configModelStore,
+                    Time(),
+                    getNewRecordState(configModelStore),
+                    jwtTokenStore,
+                    identityModelStore,
+                ),
+                recordPrivateCalls = true,
+            )
+
+        var handlerCalledWith: String? = null
+        operationRepo.setJwtInvalidatedHandler { externalId ->
+            handlerCalledWith = externalId
+        }
+
+        val operation = mockOperation()
+        every { operation.externalId } returns "test-user"
+
+        // When
+        operationRepo.start()
+        val response = operationRepo.enqueueAndWait(operation)
+
+        // Then – waiter is woken with false immediately on FAIL_UNAUTHORIZED
+        // (operation is re-queued with waiter=null for retry when a new JWT is provided)
+        response shouldBe false
+        verify { jwtTokenStore.invalidateJwt("test-user") }
+        handlerCalledWith shouldBe "test-user"
+    }
+
+    test("FAIL_UNAUTHORIZED still re-queues when JWT invalidated handler throws") {
+        val configModelStore =
+            MockHelper.configModelStore {
+                it.useIdentityVerification = true
+            }
+        val identityModelStore =
+            MockHelper.identityModelStore {
+                it.externalId = "test-user"
+            }
+        val jwtTokenStore = mockk<JwtTokenStore>(relaxed = true)
+        every { jwtTokenStore.getJwt("test-user") } returns "valid-jwt"
+
+        val operationModelStore =
+            run {
+                val operationStoreList = mutableListOf<Operation>()
+                val mock = mockk<OperationModelStore>()
+                every { mock.loadOperations() } just runs
+                every { mock.list() } answers { operationStoreList.toList() }
+                every { mock.add(any()) } answers { operationStoreList.add(firstArg<Operation>()) }
+                every { mock.remove(any()) } answers {
+                    val id = firstArg<String>()
+                    operationStoreList.removeIf { it.id == id }
+                }
+                mock
+            }
+
+        val executor = mockk<IOperationExecutor>()
+        every { executor.operations } returns listOf("DUMMY_OPERATION")
+        coEvery { executor.execute(any()) } returns
+            ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED) andThen
+            ExecutionResponse(ExecutionResult.SUCCESS)
+
+        val operationRepo =
+            OperationRepo(
+                listOf(executor),
+                operationModelStore,
+                configModelStore,
+                Time(),
+                getNewRecordState(configModelStore),
+                jwtTokenStore,
+                identityModelStore,
+            )
+
+        operationRepo.setJwtInvalidatedHandler { throw IllegalStateException("app callback failed") }
+
+        val operation = mockOperation()
+        every { operation.externalId } returns "test-user"
+
+        operationRepo.start()
+        val response = operationRepo.enqueueAndWait(operation)
+
+        // Waiter is woken with false immediately; operation re-queued with waiter=null
+        response shouldBe false
+        verify { jwtTokenStore.invalidateJwt("test-user") }
+        // The re-queued op (waiter=null) retries asynchronously; wait for it to complete
+        delay(3000)
+        coVerify(exactly = 2) { executor.execute(any()) }
+    }
+
+    test("FAIL_UNAUTHORIZED drops operations for anonymous user") {
+        // Given
+        val mocks = Mocks()
+        coEvery { mocks.executor.execute(any()) } returns ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED)
+
+        val operation = mockOperation()
+
+        // When
+        mocks.operationRepo.start()
+        val response = mocks.operationRepo.enqueueAndWait(operation)
+
+        // Then
+        response shouldBe false
+        verify { mocks.operationModelStore.remove(any()) }
+    }
 }) {
     companion object {
         private fun mockOperation(
@@ -913,6 +1059,9 @@ class OperationRepoTests : FunSpec({
             every { operation.modifyComparisonKey } returns modifyComparisonKey
             every { operation.translateIds(any()) } just runs
             every { operation.applyToRecordId } returns applyToRecordId
+            every { operation.requiresJwt } returns true
+            every { operation.externalId } returns null
+            every { operation.externalId = any() } just runs
 
             return operation
         }

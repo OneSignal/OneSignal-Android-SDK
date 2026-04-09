@@ -159,18 +159,6 @@ internal class HttpClient(
                         con.doOutput = true
                     }
 
-                    logHTTPSent(con.requestMethod, con.url, jsonBody, con.requestProperties)
-
-                    if (jsonBody != null) {
-                        val strJsonBody = JSONUtils.toUnescapedEUIDString(jsonBody)
-                        val sendBytes = strJsonBody.toByteArray(charset("UTF-8"))
-                        con.setFixedLengthStreamingMode(sendBytes.size)
-                        val outputStream = con.outputStream
-                        outputStream.write(sendBytes)
-                    }
-
-                    // H E A D E R S
-
                     if (headers?.cacheKey != null) {
                         val eTag =
                             _prefs.getString(
@@ -193,6 +181,20 @@ internal class HttpClient(
 
                     if (headers?.sessionDuration != null) {
                         con.setRequestProperty("OneSignal-Session-Duration", headers.sessionDuration.toString())
+                    }
+
+                    if (headers?.jwt != null) {
+                        con.setRequestProperty("Authorization", "Bearer ${headers.jwt}")
+                    }
+
+                    logHTTPSent(con.requestMethod, con.url, jsonBody, con.requestProperties)
+
+                    if (jsonBody != null) {
+                        val strJsonBody = JSONUtils.toUnescapedEUIDString(jsonBody)
+                        val sendBytes = strJsonBody.toByteArray(charset("UTF-8"))
+                        con.setFixedLengthStreamingMode(sendBytes.size)
+                        val outputStream = con.outputStream
+                        outputStream.write(sendBytes)
                     }
 
                     // Network request is made from getResponseCode()
