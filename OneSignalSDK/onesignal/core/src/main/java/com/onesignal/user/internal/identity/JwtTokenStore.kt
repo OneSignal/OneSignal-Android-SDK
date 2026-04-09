@@ -1,11 +1,16 @@
 package com.onesignal.user.internal.identity
 
+import com.onesignal.common.events.EventProducer
 import com.onesignal.core.internal.preferences.IPreferencesService
 import com.onesignal.core.internal.preferences.PreferenceOneSignalKeys
 import com.onesignal.core.internal.preferences.PreferenceStores
 import com.onesignal.debug.internal.logging.Logging
 import org.json.JSONException
 import org.json.JSONObject
+
+fun interface IJwtUpdateListener {
+    fun onJwtUpdated(externalId: String)
+}
 
 /**
  * Persistent store mapping externalId -> JWT token. Supports multiple users simultaneously
@@ -20,6 +25,7 @@ class JwtTokenStore(
 ) {
     private val tokens: MutableMap<String, String> = mutableMapOf()
     private var isLoaded = false
+    private val jwtUpdateNotifier = EventProducer<IJwtUpdateListener>()
 
     /** Not thread-safe; callers must hold `synchronized(tokens)`. */
     private fun ensureLoaded() {
@@ -61,6 +67,14 @@ class JwtTokenStore(
         }
     }
 
+    fun subscribe(listener: IJwtUpdateListener) {
+        jwtUpdateNotifier.subscribe(listener)
+    }
+
+    fun unsubscribe(listener: IJwtUpdateListener) {
+        jwtUpdateNotifier.unsubscribe(listener)
+    }
+
     /**
      * Stores (or replaces) the JWT for [externalId]. Passing a null [jwt] is a no-op;
      * use [invalidateJwt] to remove a token.
@@ -75,6 +89,7 @@ class JwtTokenStore(
             tokens[externalId] = jwt
             persist()
         }
+        jwtUpdateNotifier.fire { it.onJwtUpdated(externalId) }
     }
 
     /**

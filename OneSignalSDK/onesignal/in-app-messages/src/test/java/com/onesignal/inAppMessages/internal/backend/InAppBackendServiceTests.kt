@@ -87,6 +87,24 @@ class InAppBackendServiceTests :
             coVerify(exactly = 1) { mockHttpClient.get("apps/appId/users/by/onesignal_id/user123/subscriptions/subscriptionId/iams", any()) }
         }
 
+        test("listInAppMessages throws BackendException on 401 response") {
+            // Given
+            val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
+            val mockHttpClient = mockk<IHttpClient>()
+            coEvery { mockHttpClient.get(any(), any()) } returns HttpResponse(401, "{\"errors\":[\"Invalid token\"]}")
+
+            val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
+
+            // When / Then
+            val exception =
+                shouldThrowUnit<BackendException> {
+                    inAppBackendService.listInAppMessages("appId", "onesignal_id", "user123", "subscriptionId", RywData("123", 500L), mockSessionDurationProvider, "expired-jwt")
+                }
+
+            exception.statusCode shouldBe 401
+            coVerify(exactly = 1) { mockHttpClient.get("apps/appId/users/by/onesignal_id/user123/subscriptions/subscriptionId/iams", any()) }
+        }
+
         test("listInAppMessages returns null when non-success response") {
             // Given
             val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())

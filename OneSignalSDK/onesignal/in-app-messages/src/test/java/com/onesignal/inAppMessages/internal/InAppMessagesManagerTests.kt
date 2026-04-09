@@ -6,6 +6,7 @@ import com.onesignal.common.consistency.IamFetchReadyCondition
 import com.onesignal.common.consistency.RywData
 import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
+import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.core.internal.config.ConfigModel
 import com.onesignal.debug.LogLevel
@@ -31,6 +32,7 @@ import com.onesignal.session.internal.influence.IInfluenceManager
 import com.onesignal.session.internal.outcomes.IOutcomeEventsController
 import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.IUserManager
+import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.JwtTokenStore
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionModel
@@ -45,6 +47,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkObject
 import io.mockk.runs
+import io.mockk.slot
 import io.mockk.spyk
 import io.mockk.unmockkObject
 import io.mockk.verify
@@ -167,6 +170,20 @@ private class Mocks {
             .first { it.name == "hasCompletedFirstFetch" }
         property.isAccessible = true
         return property.get(manager) as Boolean
+    }
+
+    fun getPendingJwtRetryExternalId(manager: InAppMessagesManager): String? {
+        val property = InAppMessagesManager::class.memberProperties
+            .first { it.name == "pendingJwtRetryExternalId" }
+        property.isAccessible = true
+        return property.get(manager) as String?
+    }
+
+    fun getPendingJwtRetryRywData(manager: InAppMessagesManager): RywData? {
+        val property = InAppMessagesManager::class.memberProperties
+            .first { it.name == "pendingJwtRetryRywData" }
+        property.isAccessible = true
+        return property.get(manager) as RywData?
     }
 
     // Helper function to create InAppMessagesManager with all dependencies
@@ -1416,6 +1433,125 @@ class InAppMessagesManagerTests : FunSpec({
             // Then
             // Message should NOT have isTriggerChanged because earlySessionTriggers was cleared after first fetch
             messageAfterClear.isTriggerChanged shouldBe false
+        }
+    }
+
+    context("JWT 401 Retry") {
+        test("fetchMessages stores pending retry state on 401 BackendException") {
+            // Given
+            every { mocks.userManager.onesignalId } returns "onesignal-id"
+            every { mocks.applicationService.isInForeground } returns true
+            every { mocks.pushSubscription.id } returns "subscription-id"
+            mocks.identityModelStore.model.externalId = "test-external-id"
+            coEvery {
+                mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any())
+            } throws BackendException(401, "Unauthorized")
+
+            // When
+            mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
+
+            // Then
+            mocks.getPendingJwtRetryExternalId(mocks.inAppMessagesManager) shouldBe "test-external-id"
+            mocks.getPendingJwtRetryRywData(mocks.inAppMessagesManager) shouldBe mocks.rywData
+        }
+
+        test("onJwtUpdated retries fetch when externalId matches pending retry") {
+            // Given
+            every { mocks.userManager.onesignalId } returns "onesignal-id"
+            every { mocks.applicationService.isInForeground } returns true
+            every { mocks.pushSubscription.id } returns "subscription-id"
+            mocks.identityModelStore.model.externalId = "test-external-id"
+            mocks.configModelStore.model.fetchIAMMinInterval = 0L
+
+            // First call throws 401, second call succeeds
+            coEvery {
+                mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any())
+            } throws BackendException(401, "Unauthorized") andThen listOf(mocks.createInAppMessage())
+
+            // Trigger the initial fetch that will 401
+            mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
+
+            // Verify pending state was set
+            mocks.getPendingJwtRetryExternalId(mocks.inAppMessagesManager) shouldBe "test-external-id"
+
+            // When - JWT is updated for the same external ID
+            mocks.inAppMessagesManager.onJwtUpdated("test-external-id")
+            awaitIO()
+
+            // Then - should have retried and cleared the pending state
+            coVerify(exactly = 2) { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) }
+            mocks.getPendingJwtRetryExternalId(mocks.inAppMessagesManager) shouldBe null
+            mocks.getPendingJwtRetryRywData(mocks.inAppMessagesManager) shouldBe null
+        }
+
+        test("onJwtUpdated does not retry when externalId does not match pending retry") {
+            // Given
+            every { mocks.userManager.onesignalId } returns "onesignal-id"
+            every { mocks.applicationService.isInForeground } returns true
+            every { mocks.pushSubscription.id } returns "subscription-id"
+            mocks.identityModelStore.model.externalId = "test-external-id"
+            coEvery {
+                mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any())
+            } throws BackendException(401, "Unauthorized")
+
+            // Trigger the initial fetch that will 401
+            mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
+
+            // When - JWT is updated for a DIFFERENT external ID
+            mocks.inAppMessagesManager.onJwtUpdated("different-external-id")
+            awaitIO()
+
+            // Then - should NOT have retried, pending state remains
+            coVerify(exactly = 1) { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) }
+            mocks.getPendingJwtRetryExternalId(mocks.inAppMessagesManager) shouldBe "test-external-id"
+        }
+
+        test("onJwtUpdated does nothing when no pending retry") {
+            // Given - no 401 has happened, so no pending retry
+
+            // When
+            mocks.inAppMessagesManager.onJwtUpdated("any-external-id")
+            awaitIO()
+
+            // Then
+            coVerify(exactly = 0) { mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any()) }
+        }
+
+        test("pending retry state is cleared on user switch (identity model replaced)") {
+            // Given
+            every { mocks.userManager.onesignalId } returns "onesignal-id"
+            every { mocks.applicationService.isInForeground } returns true
+            every { mocks.pushSubscription.id } returns "subscription-id"
+            mocks.identityModelStore.model.externalId = "test-external-id"
+            coEvery {
+                mocks.backend.listInAppMessages(any(), any(), any(), any(), any(), any(), any())
+            } throws BackendException(401, "Unauthorized")
+
+            // Capture the handler passed to identityModelStore.subscribe
+            val handlerSlot = slot<ISingletonModelStoreChangeHandler<IdentityModel>>()
+            every { mocks.identityModelStore.subscribe(capture(handlerSlot)) } just runs
+
+            // Start the manager to subscribe
+            val mockRepository = mocks.repository
+            coEvery { mockRepository.cleanCachedInAppMessages() } just runs
+            coEvery { mockRepository.listInAppMessages() } returns emptyList()
+            mocks.inAppMessagesManager.start()
+            awaitIO()
+
+            // Trigger 401
+            mocks.inAppMessagesManager.onSessionStarted()
+            awaitIO()
+            mocks.getPendingJwtRetryExternalId(mocks.inAppMessagesManager) shouldBe "test-external-id"
+
+            // When - simulate user switch via the captured handler
+            handlerSlot.captured.onModelReplaced(IdentityModel(), "test")
+
+            // Then - pending retry state should be cleared
+            mocks.getPendingJwtRetryExternalId(mocks.inAppMessagesManager) shouldBe null
+            mocks.getPendingJwtRetryRywData(mocks.inAppMessagesManager) shouldBe null
         }
     }
 })

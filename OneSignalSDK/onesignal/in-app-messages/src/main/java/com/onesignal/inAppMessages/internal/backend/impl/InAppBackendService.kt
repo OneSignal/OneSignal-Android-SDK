@@ -239,6 +239,8 @@ internal class InAppBackendService(
                 response.retryAfterSeconds?.let {
                     delay(it * 1_000L)
                 }
+            } else if (NetworkUtils.getResponseStatusType(response.statusCode) == NetworkUtils.ResponseStatusType.UNAUTHORIZED) {
+                throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
             } else if (response.statusCode in 500..599) {
                 return null
             } else {
