@@ -20,9 +20,5 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
-# Demo-only: optional transitive classes pulled in via OneSignal OTel / R8 (GMS + Huawei minified builds).
--dontwarn com.fasterxml.jackson.core.JsonFactory
--dontwarn com.fasterxml.jackson.core.JsonGenerator
--dontwarn com.google.auto.value.AutoValue
--dontwarn com.google.auto.value.AutoValue$Builder
--dontwarn com.google.auto.value.AutoValue$CopyAnnotations
+# Optional Jackson / Auto Value suppressions for OneSignal OTel are shipped in
+# com.onesignal:otel consumer-rules.pro; the minified demo relies on those (see SDK-4207 / #2596).

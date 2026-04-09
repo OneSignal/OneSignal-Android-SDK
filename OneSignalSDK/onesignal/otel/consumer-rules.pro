@@ -2,7 +2,6 @@
 # Suppress R8 missing-class errors when apps don't include jackson-core.
 -dontwarn com.fasterxml.jackson.core.**
 
-# OTel / disk buffering reference Google Auto Value types that are not on the app classpath.
--dontwarn com.google.auto.value.AutoValue
--dontwarn com.google.auto.value.AutoValue$Builder
--dontwarn com.google.auto.value.AutoValue$CopyAnnotations
+# OTel (e.g. sdk-logs AutoValue-generated types) references Google Auto Value annotations that are
+# not on the app classpath. Wildcard covers inner types and extensions (e.g. Memoized).
+-dontwarn com.google.auto.value.**
