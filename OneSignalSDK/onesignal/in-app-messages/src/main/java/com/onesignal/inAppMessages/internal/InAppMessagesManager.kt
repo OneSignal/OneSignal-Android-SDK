@@ -119,6 +119,8 @@ internal class InAppMessagesManager(
     private val redisplayedInAppMessages: MutableList<InAppMessage> = mutableListOf()
 
     private val fetchIAMMutex = Mutex()
+
+    @Volatile
     private var lastTimeFetchedIAMs: Long? = null
 
     // Tracks whether the first IAM fetch has completed since this cold start
