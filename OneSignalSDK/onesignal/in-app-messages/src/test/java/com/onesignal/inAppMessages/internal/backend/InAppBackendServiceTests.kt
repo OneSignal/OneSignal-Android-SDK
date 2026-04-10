@@ -105,6 +105,33 @@ class InAppBackendServiceTests :
             coVerify(exactly = 1) { mockHttpClient.get("apps/appId/users/by/onesignal_id/user123/subscriptions/subscriptionId/iams", any()) }
         }
 
+        test("listInAppMessages throws BackendException on 401 from fallback (no RYW token) path") {
+            // Given
+            val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())
+            val mockHttpClient = mockk<IHttpClient>()
+
+            // Exhaust retries with 425 then return 401 on the fallback request (without RYW token)
+            coEvery {
+                mockHttpClient.get(any(), any())
+            } returnsMany
+                listOf(
+                    HttpResponse(425, null, retryAfterSeconds = 0, retryLimit = 0),
+                    HttpResponse(401, "{\"errors\":[\"Invalid token\"]}"),
+                )
+
+            val inAppBackendService = InAppBackendService(mockHttpClient, MockHelper.deviceService(), mockHydrator)
+
+            // When / Then
+            val exception =
+                shouldThrowUnit<BackendException> {
+                    inAppBackendService.listInAppMessages("appId", "onesignal_id", "user123", "subscriptionId", RywData("123", 500L), mockSessionDurationProvider, "expired-jwt")
+                }
+
+            exception.statusCode shouldBe 401
+            // First call is the retry attempt (with RYW), second is the fallback (without RYW)
+            coVerify(exactly = 2) { mockHttpClient.get(any(), any()) }
+        }
+
         test("listInAppMessages returns null when non-success response") {
             // Given
             val mockHydrator = InAppHydrator(MockHelper.time(1000), MockHelper.propertiesModelStore())

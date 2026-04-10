@@ -271,6 +271,8 @@ internal class InAppBackendService(
         if (response.isSuccess) {
             val jsonResponse = response.payload?.let { JSONObject(it) }
             return jsonResponse?.let { hydrateInAppMessages(it) }
+        } else if (NetworkUtils.getResponseStatusType(response.statusCode) == NetworkUtils.ResponseStatusType.UNAUTHORIZED) {
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         } else {
             return null
         }

@@ -129,7 +129,10 @@ internal class InAppMessagesManager(
 
     // Pending IAM retry state for 401 (expired JWT) responses.
     // Stores the externalId and rywData from the failed fetch so we can retry after JWT refresh.
+    @Volatile
     private var pendingJwtRetryExternalId: String? = null
+
+    @Volatile
     private var pendingJwtRetryRywData: RywData? = null
 
     private val identityModelChangeHandler =
@@ -346,6 +349,7 @@ internal class InAppMessagesManager(
                     Logging.debug("InAppMessagesManager.fetchMessages: ${ex.statusCode} response. Will retry after JWT refresh for externalId=$externalId")
                     pendingJwtRetryExternalId = externalId
                     pendingJwtRetryRywData = rywData
+                    lastTimeFetchedIAMs = null
                 }
                 null
             }

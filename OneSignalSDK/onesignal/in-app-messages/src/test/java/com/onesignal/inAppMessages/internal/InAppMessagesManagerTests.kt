@@ -1462,7 +1462,6 @@ class InAppMessagesManagerTests : FunSpec({
             every { mocks.applicationService.isInForeground } returns true
             every { mocks.pushSubscription.id } returns "subscription-id"
             mocks.identityModelStore.model.externalId = "test-external-id"
-            mocks.configModelStore.model.fetchIAMMinInterval = 0L
 
             // First call throws 401, second call succeeds
             coEvery {
