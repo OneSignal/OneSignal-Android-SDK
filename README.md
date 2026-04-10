@@ -5,6 +5,9 @@
 ### OneSignal Android Push Notification Plugin
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.onesignal/OneSignal/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.onesignal/OneSignal) [![Build Status](https://app.travis-ci.com/OneSignal/OneSignal-Android-SDK.svg?branch=main)](https://app.travis-ci.com/OneSignal/OneSignal-Android-SDK)
 
+#### Author
+OneSignal
+
 ---
 
 #### ⚠️ Migration Advisory for current OneSignal customers
