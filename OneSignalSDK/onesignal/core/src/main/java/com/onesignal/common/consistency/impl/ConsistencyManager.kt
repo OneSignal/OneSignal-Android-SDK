@@ -56,19 +56,21 @@ class ConsistencyManager : IConsistencyManager {
     }
 
     override suspend fun resolveConditionsWithID(id: String) {
-        val completedConditions = mutableListOf<Pair<ICondition, CompletableDeferred<RywData?>>>()
+        mutex.withLock {
+            val completedConditions = mutableListOf<Pair<ICondition, CompletableDeferred<RywData?>>>()
 
-        for ((condition, deferred) in conditions) {
-            if (condition.id == id) {
-                if (!deferred.isCompleted) {
-                    deferred.complete(null)
+            for ((condition, deferred) in conditions) {
+                if (condition.id == id) {
+                    if (!deferred.isCompleted) {
+                        deferred.complete(null)
+                    }
                 }
+                completedConditions.add(Pair(condition, deferred))
             }
-            completedConditions.add(Pair(condition, deferred))
-        }
 
         // Remove completed conditions from the list
-        conditions.removeAll(completedConditions)
+            conditions.removeAll(completedConditions)
+        }
     }
 
     /**
