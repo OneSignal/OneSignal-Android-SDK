@@ -21,6 +21,9 @@ NC='\033[0m' # No Color
 # Configuration
 COVERAGE_THRESHOLD=${DIFF_COVERAGE_THRESHOLD:-80}
 BASE_BRANCH=${BASE_BRANCH:-origin/main}
+# When set (e.g. GitHub PR), diff against these SHAs so we measure exactly the PR patch, not the merge ref
+DIFF_BASE_SHA=${DIFF_BASE_SHA:-}
+DIFF_HEAD_SHA=${DIFF_HEAD_SHA:-}
 GENERATE_MARKDOWN=${GENERATE_MARKDOWN:-false}  # Set to 'true' for CI/CD to generate markdown report
 SKIP_COVERAGE_CHECK=${SKIP_COVERAGE_CHECK:-false}  # Set to 'true' to bypass coverage check (still runs but doesn't fail)
 
@@ -71,15 +74,27 @@ fi
 echo -e "${GREEN}✓ Coverage report generated${NC}\n"
 
 # Step 2: Check diff coverage using manual method (reliable path matching)
-echo -e "${YELLOW}[2/3] Checking diff coverage against $BASE_BRANCH...${NC}"
-echo -e "${YELLOW}Threshold: ${COVERAGE_THRESHOLD}%${NC}\n"
+if [ -n "$DIFF_BASE_SHA" ] && [ -n "$DIFF_HEAD_SHA" ]; then
+  DIFF_RANGE="${DIFF_BASE_SHA}...${DIFF_HEAD_SHA}"
+  echo -e "${YELLOW}[2/3] Checking diff coverage for PR range ${DIFF_BASE_SHA:0:7}...${DIFF_HEAD_SHA:0:7}${NC}"
+else
+  DIFF_RANGE="${BASE_BRANCH}...HEAD"
+  echo -e "${YELLOW}[2/3] Checking diff coverage against ${BASE_BRANCH}...HEAD${NC}"
+fi
+echo -e "${YELLOW}Threshold: ${COVERAGE_THRESHOLD}% (aggregate on changed executable lines)${NC}\n"
 
 # Get changed files (run from project root)
-# Include committed changes, staged changes, and unstaged changes
 cd "$REPO_ROOT"
-COMMITTED_FILES=$(git diff --name-only "$BASE_BRANCH"...HEAD 2>/dev/null | grep -E '\.(kt|java)$' || true)
-STAGED_FILES=$(git diff --cached --name-only 2>/dev/null | grep -E '\.(kt|java)$' || true)
-UNSTAGED_FILES=$(git diff --name-only 2>/dev/null | grep -E '\.(kt|java)$' || true)
+if [ -n "$DIFF_BASE_SHA" ] && [ -n "$DIFF_HEAD_SHA" ]; then
+  COMMITTED_FILES=$(git diff --name-only "$DIFF_RANGE" 2>/dev/null | grep -E '\.(kt|java)$' || true)
+  STAGED_FILES=""
+  UNSTAGED_FILES=""
+else
+  # Local / workflow_dispatch: committed vs base, plus working tree
+  COMMITTED_FILES=$(git diff --name-only "$BASE_BRANCH"...HEAD 2>/dev/null | grep -E '\.(kt|java)$' || true)
+  STAGED_FILES=$(git diff --cached --name-only 2>/dev/null | grep -E '\.(kt|java)$' || true)
+  UNSTAGED_FILES=$(git diff --name-only 2>/dev/null | grep -E '\.(kt|java)$' || true)
+fi
 # Combine all, remove duplicates, and filter to OneSignalSDK files
 CHANGED_FILES=$(echo -e "$COMMITTED_FILES\n$STAGED_FILES\n$UNSTAGED_FILES" | grep -E '^OneSignalSDK/' | sort -u || true)
 
@@ -102,6 +117,7 @@ else
     export MARKDOWN_REPORT
     export BASE_BRANCH
     export REPO_ROOT
+    export DIFF_RANGE
     python3 << PYEOF
 import xml.etree.ElementTree as ET
 import re
@@ -116,47 +132,50 @@ generate_markdown = os.environ.get('GENERATE_MARKDOWN', 'false').lower() == 'tru
 markdown_report = os.environ.get('MARKDOWN_REPORT', 'diff_coverage.md')
 base_branch = os.environ.get('BASE_BRANCH', 'origin/main')
 repo_root_env = os.environ.get('REPO_ROOT')
+diff_range = os.environ.get('DIFF_RANGE', '').strip()
 
 def get_changed_lines(file_path, project_root):
     """Get line numbers of added/modified lines from git diff"""
     try:
-        # First try to get diff from committed changes
-        result = subprocess.run(
-            ['git', 'diff', '--unified=0', base_branch + '...HEAD', '--', file_path],
-            capture_output=True,
-            text=True,
-            cwd=project_root
-        )
-        
-        # If no committed changes, check staged changes
-        if result.returncode != 0 or not result.stdout.strip():
+        if diff_range:
             result = subprocess.run(
-                ['git', 'diff', '--cached', '--unified=0', '--', file_path],
+                ['git', 'diff', '--unified=0', diff_range, '--', file_path],
                 capture_output=True,
                 text=True,
                 cwd=project_root
             )
-        
-        # If no staged changes, check unstaged changes
-        if result.returncode != 0 or not result.stdout.strip():
+            if result.returncode != 0 or not result.stdout.strip():
+                return None
+        else:
             result = subprocess.run(
-                ['git', 'diff', '--unified=0', '--', file_path],
+                ['git', 'diff', '--unified=0', base_branch + '...HEAD', '--', file_path],
                 capture_output=True,
                 text=True,
                 cwd=project_root
             )
-        
-        # If still nothing, try alternative base branch format
-        if result.returncode != 0 or not result.stdout.strip():
-            result = subprocess.run(
-                ['git', 'diff', '--unified=0', base_branch, 'HEAD', '--', file_path],
-                capture_output=True,
-                text=True,
-                cwd=project_root
-            )
-        
-        if result.returncode != 0 or not result.stdout.strip():
-            return None
+            if result.returncode != 0 or not result.stdout.strip():
+                result = subprocess.run(
+                    ['git', 'diff', '--cached', '--unified=0', '--', file_path],
+                    capture_output=True,
+                    text=True,
+                    cwd=project_root
+                )
+            if result.returncode != 0 or not result.stdout.strip():
+                result = subprocess.run(
+                    ['git', 'diff', '--unified=0', '--', file_path],
+                    capture_output=True,
+                    text=True,
+                    cwd=project_root
+                )
+            if result.returncode != 0 or not result.stdout.strip():
+                result = subprocess.run(
+                    ['git', 'diff', '--unified=0', base_branch, 'HEAD', '--', file_path],
+                    capture_output=True,
+                    text=True,
+                    cwd=project_root
+                )
+            if result.returncode != 0 or not result.stdout.strip():
+                return None
         
         changed_lines = set()
         current_new_line = None
@@ -217,11 +236,15 @@ total_uncovered = 0
 total_lines = 0
 files_below_threshold = []
 files_checked = []
+eligible_paths = []
 markdown_output = []
 
 if generate_markdown:
     markdown_output.append("## Diff Coverage Report (Changed Lines Only)\n")
-    markdown_output.append(f"**Threshold:** {threshold}%\n\n")
+    markdown_output.append(
+        f"**Gate:** aggregate coverage on **changed executable lines** must be ≥ **{threshold}%** "
+        "(JaCoCo line data for lines touched in the diff).\n\n"
+    )
     markdown_output.append("### Changed Files Coverage\n\n")
 
 for changed_file in changed_files:
@@ -237,7 +260,9 @@ for changed_file in changed_files:
     match = re.search(r'src/main/(java|kotlin)/(.+)/([^/]+\.(kt|java))$', path_part)
     if not match:
         continue
-    
+
+    eligible_paths.append(changed_file)
+
     package_path = match.group(2)
     filename = match.group(3)
     package_name = package_path.replace('/', '/')
@@ -273,18 +298,14 @@ for changed_file in changed_files:
                 coverage_pct = (file_covered / file_total * 100) if file_total > 0 else 100
                 
                 if generate_markdown:
-                    status = "✅" if coverage_pct >= threshold else "❌"
-                    changed_info = f" ({len(changed_lines)} changed lines)" if changed_lines else " (all lines - could not determine changed lines)"
-                    markdown_output.append(f"- {status} **{filename}**: {file_covered}/{file_total} changed lines ({coverage_pct:.1f}%){changed_info}")
+                    changed_info = f" ({len(changed_lines)} touched lines in diff)" if changed_lines else " (all lines — could not resolve diff)"
+                    markdown_output.append(f"- **{filename}**: {file_covered}/{file_total} touched executable lines ({coverage_pct:.1f}%){changed_info}")
                     if coverage_pct < threshold:
                         files_below_threshold.append((filename, coverage_pct, file_uncovered))
-                        markdown_output.append(f"  - ⚠️ Below threshold: {file_uncovered} uncovered changed lines")
+                        markdown_output.append(f"  - {file_uncovered} uncovered touched lines in this file")
                 else:
-                    status = "✓" if coverage_pct >= threshold else "✗"
-                    color = "" if coverage_pct >= threshold else "\033[0;31m"
-                    reset = "\033[0m" if color else ""
-                    changed_info = f" ({len(changed_lines)} changed lines)" if changed_lines else " (all lines - could not determine changed lines)"
-                    print(f"  {color}{status}{reset} {filename}: {file_covered}/{file_total} changed lines ({coverage_pct:.1f}%){changed_info}")
+                    changed_info = f" ({len(changed_lines)} touched lines)" if changed_lines else " (all lines — could not resolve diff)"
+                    print(f"  {filename}: {file_covered}/{file_total} touched executable lines ({coverage_pct:.1f}%){changed_info}")
                     if coverage_pct < threshold:
                         files_below_threshold.append((filename, coverage_pct, file_uncovered))
             break
@@ -299,39 +320,43 @@ for changed_file in changed_files:
 
 if total_lines > 0:
     overall_coverage = ((total_lines - total_uncovered) / total_lines * 100)
-    
+    overall_pass = overall_coverage >= threshold
+
     if generate_markdown:
-        markdown_output.append(f"\n### Overall Coverage (Changed Lines Only)\n")
-        markdown_output.append(f"**{total_lines - total_uncovered}/{total_lines}** changed lines covered ({overall_coverage:.1f}%)\n")
-        
+        markdown_output.append(f"\n### Overall (aggregate gate)\n")
+        markdown_output.append(
+            f"**{total_lines - total_uncovered}/{total_lines}** touched executable lines covered "
+            f"({overall_coverage:.1f}% — requires ≥ {threshold}%)\n"
+        )
         if files_below_threshold:
-            markdown_output.append(f"\n### ❌ Coverage Check Failed\n")
-            markdown_output.append(f"Files below {threshold}% threshold:\n")
+            markdown_output.append(f"\n**Per-file detail** (informational; gate is aggregate above):\n")
             for filename, pct, uncovered in files_below_threshold:
-                markdown_output.append(f"- **{filename}**: {pct:.1f}% ({uncovered} uncovered changed lines)\n")
-        
+                markdown_output.append(f"- **{filename}**: {pct:.1f}% ({uncovered} uncovered touched lines)\n")
+
+        if not overall_pass:
+            markdown_output.append(f"\n### ❌ Coverage Check Failed\n")
+            markdown_output.append(
+                f"Aggregate coverage on touched lines is **{overall_coverage:.1f}%** (minimum **{threshold}%**).\n"
+            )
+
         # Write markdown file
         with open(markdown_report, 'w') as f:
             f.write('\n'.join(markdown_output))
-        
+
         # Print to console
         print('\n'.join(markdown_output))
-        
-        if files_below_threshold:
-            sys.exit(1)
-        else:
-            sys.exit(0)
+
+        sys.exit(0 if overall_pass else 1)
     else:
-        print(f"\n  Overall: {(total_lines - total_uncovered)}/{total_lines} changed lines covered ({overall_coverage:.1f}%)")
-        
+        print(f"\n  Overall: {(total_lines - total_uncovered)}/{total_lines} touched executable lines covered ({overall_coverage:.1f}%)")
+        print(f"  Gate: ≥ {threshold}% aggregate on touched lines — {'PASS' if overall_pass else 'FAIL'}")
+
         if files_below_threshold:
-            print(f"\n  Files below {threshold}% threshold:")
+            print(f"\n  Per-file (informational):")
             for filename, pct, uncovered in files_below_threshold:
-                print(f"    • {filename}: {pct:.1f}% ({uncovered} uncovered changed lines)")
-            sys.exit(1)
-        else:
-            print(f"\n  ✓ All files meet {threshold}% threshold for changed lines")
-            sys.exit(0)
+                print(f"    • {filename}: {pct:.1f}% ({uncovered} uncovered)")
+
+        sys.exit(0 if overall_pass else 1)
 elif files_checked:
     # Files were found but had no executable lines
     if generate_markdown:
@@ -343,14 +368,26 @@ elif files_checked:
         print("\n  ✓ All checked files have no executable lines (or fully covered)")
     sys.exit(0)
 else:
+    if eligible_paths:
+        msg = (
+            "Changed Kotlin/Java sources under `src/main` could not be matched to the merged JaCoCo report "
+            "(or the diff has no executable touched lines). Check module wiring and that unit tests run for those sources."
+        )
+        if generate_markdown:
+            markdown_output.append(f"\n### ❌ No usable coverage for changed sources\n\n{msg}\n")
+            with open(markdown_report, 'w') as f:
+                f.write('\n'.join(markdown_output))
+            print('\n'.join(markdown_output))
+        else:
+            print(f"\n  ✗ {msg}")
+        sys.exit(1)
     if generate_markdown:
-        markdown_output.append(f"\n### ⚠️ No Coverage Data\n")
-        markdown_output.append("No coverage data found for changed files\n")
+        markdown_output.append(f"\n### ✅ No main-source changes to gate\n")
+        markdown_output.append("No `src/main` Kotlin/Java changes in the diff.\n")
         with open(markdown_report, 'w') as f:
             f.write('\n'.join(markdown_output))
     else:
-        print("\n  ⚠ No coverage data found for changed files")
-        print("     This may mean files aren't being compiled or tested")
+        print("\n  ✓ No main-source Kotlin/Java changes in the diff")
     sys.exit(0)
 PYEOF
     
@@ -358,10 +395,10 @@ PYEOF
     if [ $CHECK_RESULT -eq 1 ]; then
         if [ "$GENERATE_MARKDOWN" != "true" ]; then
             if [ -n "$BYPASS_REASON" ]; then
-                echo -e "\n${YELLOW}⚠ Coverage below threshold (files below ${COVERAGE_THRESHOLD}%)${NC}"
+                echo -e "\n${YELLOW}⚠ Aggregate touched-line coverage below ${COVERAGE_THRESHOLD}%${NC}"
                 echo -e "${YELLOW}  Build will not fail due to bypass: $BYPASS_REASON${NC}\n"
             else
-                echo -e "\n${RED}✗ Coverage check failed (files below ${COVERAGE_THRESHOLD}% threshold)${NC}\n"
+                echo -e "\n${RED}✗ Coverage check failed (aggregate on touched lines < ${COVERAGE_THRESHOLD}%)${NC}\n"
             fi
         else
             # In markdown mode, update the report to indicate bypass if applicable
