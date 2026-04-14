@@ -1,5 +1,6 @@
 package com.onesignal.core.internal.features
 
+import com.onesignal.common.FoldableIAMFeature
 import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
@@ -113,6 +114,11 @@ internal class FeatureManager(
                     enabled = enabled,
                     source = "FeatureManager:${feature.activationMode}"
                 )
+            FeatureFlag.SDK_050800_FOLDABLE_IAM_FIX ->
+                FoldableIAMFeature.updateEnabled(
+                    enabled = enabled,
+                    source = "FeatureManager:${feature.activationMode}"
+                )
         }
     }
 
@@ -120,10 +126,9 @@ internal class FeatureManager(
         /**
          * Local-only test hook for forcing features ON without backend config.
          * Add feature keys here while testing locally, e.g.:
-         * setOf(FeatureFlag.BACKGROUND_THREADING.key)
+         * setOf(FeatureFlag.SDK_050800_FOLDABLE_IAM_FIX.key)
          */
-        private val localFeatureOverrides: Set<String> = emptySet()
-//        private val localFeatureOverrides: Set<String> =
-//            setOf(FeatureFlag.BACKGROUND_THREADING.key)
+        private val localFeatureOverrides: Set<String> =
+            setOf(FeatureFlag.SDK_050800_FOLDABLE_IAM_FIX.key)
     }
 }

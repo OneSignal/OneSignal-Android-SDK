@@ -19,6 +19,11 @@ object ViewUtils {
     // Due to differences in accounting for keyboard, navigation bar, and status bar between
     //   Android versions have different implementation here
     fun getWindowHeight(activity: Activity): Int {
+        // When foldable IAM fix is enabled and API 30+, use WindowMetrics for accurate dimensions
+        if (FoldableIAMFeature.isEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return getWindowHeightAPI30Plus(activity)
+        }
+        // Legacy behavior
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             getWindowHeightAPI23Plus(activity)
         } else {
@@ -26,10 +31,21 @@ object ViewUtils {
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun getDisplaySizeY(activity: Activity): Int {
         val point = Point()
         activity.windowManager.defaultDisplay.getSize(point)
         return point.y
+    }
+
+    @TargetApi(Build.VERSION_CODES.R)
+    private fun getWindowHeightAPI30Plus(activity: Activity): Int {
+        val windowMetrics = activity.windowManager.currentWindowMetrics
+        val insets =
+            windowMetrics.windowInsets.getInsetsIgnoringVisibility(
+                android.view.WindowInsets.Type.systemBars(),
+            )
+        return windowMetrics.bounds.height() - insets.top - insets.bottom
     }
 
     // Requirement: Ensure DecorView is ready by using OSViewUtils.decorViewReady
@@ -61,6 +77,7 @@ object ViewUtils {
         return rect
     }
 
+    @Suppress("DEPRECATION")
     fun getCutoutAndStatusBarInsets(activity: Activity): IntArray {
         val frame = getWindowVisibleDisplayFrame(activity)
         val contentView = activity.window.findViewById<View>(Window.ID_ANDROID_CONTENT)
@@ -87,6 +104,12 @@ object ViewUtils {
     }
 
     fun getFullbleedWindowWidth(activity: Activity): Int {
+        // When foldable IAM fix is enabled and API 30+, use WindowMetrics for accurate dimensions
+        if (FoldableIAMFeature.isEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val windowMetrics = activity.windowManager.currentWindowMetrics
+            return windowMetrics.bounds.width()
+        }
+        // Legacy behavior
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val decorView = activity.window.decorView
             decorView.width
@@ -96,6 +119,21 @@ object ViewUtils {
     }
 
     fun getWindowWidth(activity: Activity): Int {
+        // When foldable IAM fix is enabled and API 30+, use WindowMetrics for accurate dimensions
+        if (FoldableIAMFeature.isEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return getWindowWidthAPI30Plus(activity)
+        }
+        // Legacy behavior
         return getWindowVisibleDisplayFrame(activity).width()
+    }
+
+    @TargetApi(Build.VERSION_CODES.R)
+    private fun getWindowWidthAPI30Plus(activity: Activity): Int {
+        val windowMetrics = activity.windowManager.currentWindowMetrics
+        val insets =
+            windowMetrics.windowInsets.getInsetsIgnoringVisibility(
+                android.view.WindowInsets.Type.systemBars(),
+            )
+        return windowMetrics.bounds.width() - insets.left - insets.right
     }
 }
