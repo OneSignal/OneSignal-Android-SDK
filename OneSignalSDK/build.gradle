@@ -17,6 +17,7 @@ buildscript {
         kotlinVersion = '1.9.25'
         dokkaVersion = '1.9.10'
         coroutinesVersion = '1.7.3'
+        kotlinxSerializationJsonVersion = '1.6.3'
         kotestVersion = '5.8.0'
         ioMockVersion = '1.13.2'
         // AndroidX Lifecycle and Activity versions
@@ -38,14 +39,15 @@ buildscript {
             maven { url 'https://developer.huawei.com/repo/' }
         }
         sharedDeps = [
-            "com.android.tools.build:gradle:$androidGradlePluginVersion",
-            "com.google.gms:google-services:$googleServicesGradlePluginVersion",
-            "com.huawei.agconnect:agcp:$huaweiAgconnectVersion",
-            "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion",
-            "org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion",
-            "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:$detektVersion",
-            "com.diffplug.spotless:spotless-plugin-gradle:$spotlessVersion",
-            "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin:0.32.0"
+                "com.android.tools.build:gradle:$androidGradlePluginVersion",
+                "com.google.gms:google-services:$googleServicesGradlePluginVersion",
+                "com.huawei.agconnect:agcp:$huaweiAgconnectVersion",
+                "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion",
+                "org.jetbrains.kotlin:kotlin-serialization:$kotlinVersion",
+                "org.jetbrains.dokka:dokka-gradle-plugin:$dokkaVersion",
+                "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:$detektVersion",
+                "com.diffplug.spotless:spotless-plugin-gradle:$spotlessVersion",
+                "com.vanniktech.maven.publish:com.vanniktech.maven.publish.gradle.plugin:0.32.0"
         ]
     }
 

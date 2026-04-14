@@ -301,6 +301,25 @@ class ConfigModel : Model() {
         }
 
     /**
+     * Feature keys from the dedicated SDK feature-flags HTTP endpoint (see [com.onesignal.core.internal.backend.IFeatureFlagsBackendService]).
+     * Unioned with [features] for [com.onesignal.core.internal.features.FeatureManager].
+     */
+    var sdkRemoteFeatureFlags: List<String>
+        get() = getListProperty(::sdkRemoteFeatureFlags.name) { emptyList() }
+        set(value) {
+            setListProperty(::sdkRemoteFeatureFlags.name, value)
+        }
+
+    /**
+     * JSON object string: flag id → metadata (e.g. `note` or structured values) from the feature-flags endpoint.
+     */
+    var sdkRemoteFeatureFlagMetadata: String?
+        get() = getOptStringProperty(::sdkRemoteFeatureFlagMetadata.name)
+        set(value) {
+            setOptStringProperty(::sdkRemoteFeatureFlagMetadata.name, value)
+        }
+
+    /**
      * The outcomes parameters
      */
     val influenceParams: InfluenceConfigModel
@@ -344,7 +363,7 @@ class ConfigModel : Model() {
         property: String,
         jsonArray: JSONArray,
     ): List<*>? {
-        if (property == ::features.name) {
+        if (property == ::features.name || property == ::sdkRemoteFeatureFlags.name) {
             return buildList {
                 for (i in 0 until jsonArray.length()) {
                     val featureName = jsonArray.optString(i, "")

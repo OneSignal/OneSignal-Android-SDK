@@ -19,7 +19,7 @@ internal class StartupService(
         val useBackgroundThreading =
             try {
                 val featureManager = services.getService<IFeatureManager>()
-                featureManager.isEnabled(FeatureFlag.SDK_050800_BACKGROUND_THREADING)
+                featureManager.isEnabled(FeatureFlag.SDK_BACKGROUND_THREADING)
             } catch (t: Throwable) {
                 Logging.warn("OneSignal: Failed to resolve BACKGROUND_THREADING in StartupService. Falling back to legacy thread.", t)
                 false
