@@ -39,7 +39,7 @@ class LoginUserOperation() : Operation(LoginUserOperationExecutor.LOGIN_USER) {
      */
     var existingOnesignalId: String?
         get() = getOptStringProperty(::existingOnesignalId.name)
-        private set(value) {
+        internal set(value) {
             setOptStringProperty(::existingOnesignalId.name, value)
         }
 

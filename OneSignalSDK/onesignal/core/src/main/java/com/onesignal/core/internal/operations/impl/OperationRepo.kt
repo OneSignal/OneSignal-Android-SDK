@@ -1,5 +1,6 @@
 package com.onesignal.core.internal.operations.impl
 
+import com.onesignal.common.IDManager
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -13,6 +14,7 @@ import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.identity.JwtTokenStore
+import com.onesignal.user.internal.operations.LoginUserOperation
 import com.onesignal.user.internal.operations.impl.states.NewRecordsState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -284,8 +286,9 @@ internal class OperationRepo(
                     ops.forEach { it.waiter?.wake(true) }
                 }
                 ExecutionResult.FAIL_UNAUTHORIZED -> {
+                    val identityVerificationEnabled = _configModelStore.model.useIdentityVerification == true
                     val externalId = startingOp.operation.externalId
-                    if (externalId != null) {
+                    if (identityVerificationEnabled && externalId != null) {
                         _jwtTokenStore.invalidateJwt(externalId)
                         Logging.warn("Operation execution failed with 401 Unauthorized, JWT invalidated for user: $externalId. Operations re-queued.")
                         // Unblock any enqueueAndWait callers so loginSuspend doesn't hang.
@@ -541,6 +544,21 @@ internal class OperationRepo(
             }
             if (toRemove.isNotEmpty()) {
                 Logging.debug("OperationRepo: removed ${toRemove.size} anonymous operations (no externalId)")
+            }
+
+            // Any LoginUserOperation whose existingOnesignalId is a local ID was
+            // waiting on a now-purged anonymous CreateUserOperation to translate it.
+            // Clear it so canStartExecute unblocks and the executor takes the
+            // createUser() path instead.
+            queue.forEach {
+                val op = it.operation
+                if (op is LoginUserOperation) {
+                    val existing = op.existingOnesignalId
+                    if (existing != null && IDManager.isLocalId(existing)) {
+                        op.existingOnesignalId = null
+                        Logging.debug("OperationRepo: cleared local existingOnesignalId on LoginUserOperation (was $existing)")
+                    }
+                }
             }
         }
     }

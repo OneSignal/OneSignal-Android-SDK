@@ -19,8 +19,8 @@ abstract class Operation(name: String) : Model() {
     /**
      * The external ID of the user this operation belongs to. Used by [IOperationRepo] to look up
      * the correct JWT when identity verification is enabled, and to gate anonymous operations.
-     * Stamped automatically by [IOperationRepo] at enqueue time from the current identity model
-     * when not already set by the concrete operation's constructor.
+     * Must be set by each concrete [Operation] subclass constructor — typically from the current
+     * identity model's externalId at the time the operation is created.
      */
     var externalId: String?
         get() = getOptStringProperty(::externalId.name)
