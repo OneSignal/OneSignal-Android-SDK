@@ -4,7 +4,7 @@ import com.onesignal.common.modeling.ISingletonModelStoreChangeHandler
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.ModelChangedArgs
 import com.onesignal.core.internal.config.ConfigModelChangeTags
-import com.onesignal.common.threading.launchOnIO
+import com.onesignal.common.threading.OneSignalDispatchers
 import com.onesignal.core.internal.application.IApplicationLifecycleHandler
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.backend.IFeatureFlagsBackendService
@@ -14,6 +14,7 @@ import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.startup.IStartableService
 import com.onesignal.debug.internal.logging.Logging
 import kotlin.coroutines.coroutineContext
+import kotlin.jvm.Volatile
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -23,6 +24,9 @@ import kotlinx.coroutines.isActive
  * every [REFRESH_INTERVAL_MS] while the session stays in the foreground. Updates
  * [ConfigModel.sdkRemoteFeatureFlags] / [ConfigModel.sdkRemoteFeatureFlagMetadata] so
  * [com.onesignal.core.internal.features.FeatureManager] stays in sync.
+ *
+ * Remote fields are updated in place on the live [ConfigModel] (with [ConfigModelChangeTags.REMOTE_FEATURE_FLAGS])
+ * so concurrent hydration cannot be overwritten by a stale full-model snapshot.
  */
 internal class FeatureFlagsRefreshService(
     private val applicationService: IApplicationService,
@@ -31,14 +35,13 @@ internal class FeatureFlagsRefreshService(
 ) : IStartableService,
     IApplicationLifecycleHandler,
     ISingletonModelStoreChangeHandler<ConfigModel> {
+    @Volatile
     private var pollJob: Job? = null
 
     override fun start() {
         applicationService.addApplicationLifecycleHandler(this)
         configModelStore.subscribe(this)
-        if (applicationService.isInForeground) {
-            onFocus(firedOnSubscribe = true)
-        }
+        // Foreground-at-subscribe is handled by [IApplicationService.addApplicationLifecycleHandler] (fires onFocus).
     }
 
     override fun onFocus(firedOnSubscribe: Boolean) {
@@ -80,7 +83,7 @@ internal class FeatureFlagsRefreshService(
     private fun restartForegroundPolling() {
         pollJob?.cancel()
         pollJob =
-            launchOnIO {
+            OneSignalDispatchers.launchOnIO {
                 while (coroutineContext.isActive) {
                     if (!applicationService.isInForeground) {
                         break
@@ -102,15 +105,15 @@ internal class FeatureFlagsRefreshService(
         val result = featureFlagsBackend.fetchRemoteFeatureFlags(appId)
         val current = configModelStore.model
         val newMetaString = FeatureFlagsJsonParser.encodeMetadata(result.metadata)
-        if (result.enabledKeys == current.sdkRemoteFeatureFlags && newMetaString == current.sdkRemoteFeatureFlagMetadata) {
+        if (result.enabledKeys.toSet() == current.sdkRemoteFeatureFlags.toSet() &&
+            newMetaString == current.sdkRemoteFeatureFlagMetadata
+        ) {
             return
         }
 
-        val updated = ConfigModel()
-        updated.initializeFromModel(null, current)
-        updated.sdkRemoteFeatureFlags = result.enabledKeys
-        updated.sdkRemoteFeatureFlagMetadata = newMetaString
-        configModelStore.replace(updated, ConfigModelChangeTags.REMOTE_FEATURE_FLAGS)
+        val tag = ConfigModelChangeTags.REMOTE_FEATURE_FLAGS
+        current.setListProperty(ConfigModel::sdkRemoteFeatureFlags.name, result.enabledKeys, tag)
+        current.setOptStringProperty(ConfigModel::sdkRemoteFeatureFlagMetadata.name, newMetaString, tag)
     }
 
     companion object {
