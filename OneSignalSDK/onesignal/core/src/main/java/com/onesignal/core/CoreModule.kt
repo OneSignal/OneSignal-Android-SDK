@@ -4,12 +4,15 @@ import com.onesignal.common.modules.IModule
 import com.onesignal.common.services.ServiceBuilder
 import com.onesignal.core.internal.application.IApplicationService
 import com.onesignal.core.internal.application.impl.ApplicationService
+import com.onesignal.core.internal.backend.IFeatureFlagsBackendService
 import com.onesignal.core.internal.backend.IParamsBackendService
+import com.onesignal.core.internal.backend.impl.FeatureFlagsBackendService
 import com.onesignal.core.internal.backend.impl.ParamsBackendService
 import com.onesignal.core.internal.background.IBackgroundManager
 import com.onesignal.core.internal.background.impl.BackgroundManager
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.config.impl.ConfigModelStoreListener
+import com.onesignal.core.internal.config.impl.FeatureFlagsRefreshService
 import com.onesignal.core.internal.database.IDatabaseProvider
 import com.onesignal.core.internal.database.impl.DatabaseProvider
 import com.onesignal.core.internal.device.IDeviceService
@@ -61,7 +64,9 @@ internal class CoreModule : IModule {
         builder.register<ConfigModelStore>().provides<ConfigModelStore>()
         builder.register<FeatureManager>().provides<IFeatureManager>()
         builder.register<ParamsBackendService>().provides<IParamsBackendService>()
+        builder.register<FeatureFlagsBackendService>().provides<IFeatureFlagsBackendService>()
         builder.register<ConfigModelStoreListener>().provides<IStartableService>()
+        builder.register<FeatureFlagsRefreshService>().provides<IStartableService>()
 
         // Operations
         builder.register<OperationModelStore>().provides<OperationModelStore>()
