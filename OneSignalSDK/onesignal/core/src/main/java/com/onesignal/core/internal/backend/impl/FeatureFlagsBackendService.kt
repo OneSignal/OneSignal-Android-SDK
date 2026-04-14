@@ -6,11 +6,12 @@ import com.onesignal.core.internal.backend.RemoteFeatureFlagsResult
 import com.onesignal.core.internal.http.IHttpClient
 import com.onesignal.debug.LogLevel
 import com.onesignal.debug.internal.logging.Logging
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
 /**
  * Turbine SDK feature flags endpoint ([OneSignal/turbine#1681](https://github.com/OneSignal/turbine/pull/1681)).
+ *
+ * HTTP, logging, and [OneSignalUtils] are platform-specific; path shape and validation live in
+ * [TurbineSdkFeatureFlagsPath], and JSON parsing in [FeatureFlagsJsonParser] (both KMP-friendly).
  *
  * **GET** `apps/{app_id}/sdk/features/{platform}/{sdk_version}` relative to
  * [com.onesignal.core.internal.config.ConfigModel.apiUrl] (app-provided base URL).
@@ -37,21 +38,22 @@ internal class FeatureFlagsBackendService(
         }
 
         val path =
-            buildFeatureFlagsGetPath(
+            TurbineSdkFeatureFlagsPath.buildGetPath(
                 appId = appId,
                 platform = TURBINE_FEATURES_PLATFORM_ANDROID,
                 sdkVersion = sdkVersion,
             )
 
         val response = http.get(path, null)
-        if (!response.isSuccess || response.payload.isNullOrBlank()) {
+        val body = response.payload
+        if (!response.isSuccess || body.isNullOrBlank()) {
             Logging.debug(
                 "FeatureFlagsBackendService: non-success or empty body, status=${response.statusCode}",
             )
             return RemoteFeatureFlagsResult.EMPTY
         }
 
-        return FeatureFlagsJsonParser.parse(response.payload!!)
+        return FeatureFlagsJsonParser.parse(body)
     }
 
     companion object {
@@ -61,30 +63,19 @@ internal class FeatureFlagsBackendService(
         const val TURBINE_FEATURES_PLATFORM_ANDROID = "android"
 
         /**
-         * Labels produced by [OneSignalUtils.formatVersion] / [OneSignalUtils.sdkVersion]: six digits,
-         * optionally `-` and a non-empty prerelease/build suffix (no slashes or whitespace).
-         */
-        private val FEATURES_SDK_VERSION_LABEL_REGEX = Regex("""^\d{6}(-[^/\s]+)?$""")
-
-        /**
          * Returns true when [label] is safe to send as the Turbine `:sdk_version` path segment.
+         * @see TurbineSdkFeatureFlagsPath.isValidFeaturesSdkVersionLabel
          */
-        fun isValidFeaturesSdkVersionLabel(label: String): Boolean = FEATURES_SDK_VERSION_LABEL_REGEX.matches(label)
+        fun isValidFeaturesSdkVersionLabel(label: String): Boolean = TurbineSdkFeatureFlagsPath.isValidFeaturesSdkVersionLabel(label)
 
         /**
          * Path only (relative to API base), matching `/apps/:app_id/sdk/features/:platform/:sdk_version`.
+         * @see TurbineSdkFeatureFlagsPath.buildGetPath
          */
         internal fun buildFeatureFlagsGetPath(
             appId: String,
             platform: String,
             sdkVersion: String,
-        ): String {
-            val p = encodePathSegment(platform)
-            val v = encodePathSegment(sdkVersion)
-            return "apps/$appId/sdk/features/$p/$v"
-        }
-
-        private fun encodePathSegment(value: String): String =
-            URLEncoder.encode(value, StandardCharsets.UTF_8.name()).replace("+", "%20")
+        ): String = TurbineSdkFeatureFlagsPath.buildGetPath(appId, platform, sdkVersion)
     }
 }

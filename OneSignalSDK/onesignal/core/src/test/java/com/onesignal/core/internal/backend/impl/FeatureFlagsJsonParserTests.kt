@@ -20,10 +20,10 @@ class FeatureFlagsJsonParserTests : FunSpec({
         val r = FeatureFlagsJsonParser.parse(payload)
 
         r.enabledKeys shouldBe listOf("feature_a", "feature_b")
-        val meta = r.metadata!!
-        meta["feature_a"]!!.toString().contains("weight") shouldBe true
-        meta["feature_a"]!!.toString().contains("0.1") shouldBe true
-        meta["feature_b"]!!.toString().contains("enabled") shouldBe true
+        val meta = requireNotNull(r.metadata)
+        meta.getValue("feature_a").toString().contains("weight") shouldBe true
+        meta.getValue("feature_a").toString().contains("0.1") shouldBe true
+        meta.getValue("feature_b").toString().contains("enabled") shouldBe true
     }
 
     test("omits metadata entry when flag has no sibling object") {
@@ -47,10 +47,27 @@ class FeatureFlagsJsonParserTests : FunSpec({
         val r = FeatureFlagsJsonParser.parse(payload)
 
         r.enabledKeys shouldBe listOf("feature_a", "feature_b")
-        val meta = r.metadata!!
+        val meta = requireNotNull(r.metadata)
         meta.containsKey("feature_a") shouldBe true
         meta.containsKey("feature_b") shouldBe false
-        meta["feature_a"]!!.jsonObject["weight"]!!.jsonPrimitive.content shouldBe "0.1"
+        val weight = requireNotNull(meta.getValue("feature_a").jsonObject["weight"]).jsonPrimitive.content
+        weight shouldBe "0.1"
+    }
+
+    test("normalizes feature ids to lowercase and resolves sibling with mismatched casing") {
+        val payload =
+            """
+            {
+              "features": ["SDK_Background_Threading"],
+              "sdk_background_threading": { "weight": 0.5 }
+            }
+            """.trimIndent()
+
+        val r = FeatureFlagsJsonParser.parse(payload)
+
+        r.enabledKeys shouldBe listOf("sdk_background_threading")
+        val meta = requireNotNull(r.metadata)
+        meta.getValue("sdk_background_threading").jsonObject.getValue("weight").jsonPrimitive.content shouldBe "0.5"
     }
 
     test("invalid json returns empty") {
@@ -63,7 +80,7 @@ class FeatureFlagsJsonParserTests : FunSpec({
             {"features":["x"],"x":{"weight":2.5}}
             """.trimIndent()
         val r = FeatureFlagsJsonParser.parse(payload)
-        val encoded = FeatureFlagsJsonParser.encodeMetadata(r.metadata)!!
+        val encoded = requireNotNull(FeatureFlagsJsonParser.encodeMetadata(r.metadata))
         encoded.contains("weight") shouldBe true
         encoded.contains("2.5") shouldBe true
     }
@@ -79,7 +96,7 @@ class FeatureFlagsJsonParserTests : FunSpec({
     test("parseStoredMetadataMap splits root object into flag id to JsonObject") {
         val map = FeatureFlagsJsonParser.parseStoredMetadataMap("""{"a":{"weight":1},"b":2}""")
         map.keys shouldBe setOf("a")
-        map.getValue("a")["weight"]!!.toString() shouldBe "1"
+        requireNotNull(map.getValue("a")["weight"]).toString() shouldBe "1"
     }
 
     test("parseStoredMetadataMap blank or invalid returns empty") {

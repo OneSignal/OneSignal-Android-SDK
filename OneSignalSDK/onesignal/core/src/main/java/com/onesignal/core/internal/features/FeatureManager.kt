@@ -17,8 +17,10 @@ internal interface IFeatureManager {
     /**
      * Per-flag payloads from [com.onesignal.core.internal.backend.IFeatureFlagsBackendService].
      * Each value is a [JsonObject] so callers can decode nested fields or map to `@Serializable` types.
+     *
+     * `null` when no metadata has been stored yet ([ConfigModel.sdkRemoteFeatureFlagMetadata] null/blank).
      */
-    fun remoteFeatureFlagMetadata(): Map<String, JsonObject>
+    fun remoteFeatureFlagMetadata(): Map<String, JsonObject>?
 }
 
 @Suppress("TooGenericExceptionCaught")
@@ -40,8 +42,13 @@ internal class FeatureManager(
 
     override fun isEnabled(feature: FeatureFlag): Boolean = featureStates[feature] ?: false
 
-    override fun remoteFeatureFlagMetadata(): Map<String, JsonObject> =
-        FeatureFlagsJsonParser.parseStoredMetadataMap(configModelStore.model.sdkRemoteFeatureFlagMetadata)
+    override fun remoteFeatureFlagMetadata(): Map<String, JsonObject>? {
+        val raw = configModelStore.model.sdkRemoteFeatureFlagMetadata
+        if (raw.isNullOrBlank()) {
+            return null
+        }
+        return FeatureFlagsJsonParser.parseStoredMetadataMap(raw)
+    }
 
     @Suppress("TooGenericExceptionCaught")
     override fun onModelReplaced(

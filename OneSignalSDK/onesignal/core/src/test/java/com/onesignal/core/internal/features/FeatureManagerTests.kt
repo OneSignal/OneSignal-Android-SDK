@@ -137,7 +137,19 @@ class FeatureManagerTests : FunSpec({
 
         val manager = FeatureManager(configModelStore)
 
-        val meta = manager.remoteFeatureFlagMetadata()
-        meta.getValue("X")["note"]!!.jsonPrimitive.content shouldBe "y"
+        val meta = requireNotNull(manager.remoteFeatureFlagMetadata())
+        requireNotNull(meta.getValue("X")["note"]).jsonPrimitive.content shouldBe "y"
+    }
+
+    test("remoteFeatureFlagMetadata is null when config has no stored metadata") {
+        val initialModel = mockk<ConfigModel>()
+        stubConfigModel(initialModel)
+        every { initialModel.features } returns emptyList()
+        every { initialModel.sdkRemoteFeatureFlagMetadata } returns null
+        val configModelStore = mockk<ConfigModelStore>()
+        every { configModelStore.model } returns initialModel
+        every { configModelStore.subscribe(any()) } just runs
+
+        FeatureManager(configModelStore).remoteFeatureFlagMetadata() shouldBe null
     }
 })

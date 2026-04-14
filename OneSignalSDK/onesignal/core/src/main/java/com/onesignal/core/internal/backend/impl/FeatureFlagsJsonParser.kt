@@ -26,6 +26,13 @@ import kotlinx.serialization.json.buildJsonObject
  * object stay enabled via [RemoteFeatureFlagsResult.enabledKeys] only).
  *
  * Payload must be valid JSON (e.g. a comma between `"features": [...]` and the next property).
+ *
+ * Flag ids from the `features` array are normalized with [Char.lowercaseChar] (Unicode case mapping, no
+ * `java.util.Locale`) so they align with [com.onesignal.core.internal.features.FeatureFlag.key]. Sibling
+ * objects are resolved with exact key, then canonical key, then a case-insensitive match against other root
+ * properties (excluding `features`).
+ *
+ * Uses only Kotlin stdlib + kotlinx.serialization (Kotlin Multiplatform-friendly).
  */
 internal object FeatureFlagsJsonParser {
     /**
@@ -41,6 +48,8 @@ internal object FeatureFlagsJsonParser {
             prettyPrint = false
         }
 
+    private const val FEATURES_PROPERTY = "features"
+
     fun parse(payload: String): RemoteFeatureFlagsResult {
         return try {
             val root = format.parseToJsonElement(payload) as? JsonObject ?: return RemoteFeatureFlagsResult.EMPTY
@@ -51,31 +60,65 @@ internal object FeatureFlagsJsonParser {
     }
 
     private fun parseRoot(root: JsonObject): RemoteFeatureFlagsResult {
-        val featuresEl = root["features"] ?: return RemoteFeatureFlagsResult.EMPTY
+        val featuresEl = root[FEATURES_PROPERTY] ?: return RemoteFeatureFlagsResult.EMPTY
         val featuresArray = featuresEl as? JsonArray ?: return RemoteFeatureFlagsResult.EMPTY
-        val keys =
+        val flagEntries =
             featuresArray.mapNotNull { el ->
                 (el as? JsonPrimitive)
                     ?.takeIf { it.isString }
                     ?.content
-                    ?.takeIf { it.isNotBlank() }
-            }
-        if (keys.isEmpty()) {
+                    ?.trim()
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { raw -> raw to canonicalFeatureFlagId(raw) }
+            }.distinctBy { it.second }
+
+        if (flagEntries.isEmpty()) {
             return RemoteFeatureFlagsResult(emptyList(), null)
         }
 
+        val keys = flagEntries.map { it.second }
+
         val metadata =
             buildJsonObject {
-                for (key in keys) {
-                    when (val v = root[key]) {
-                        is JsonObject -> put(key, v)
-                        else -> Unit
-                    }
+                for ((rawKey, canonicalKey) in flagEntries) {
+                    findSiblingJsonObject(root, rawKey, canonicalKey)?.let { put(canonicalKey, it) }
                 }
             }
         val metaOut = if (metadata.isEmpty()) null else metadata
         return RemoteFeatureFlagsResult(keys, metaOut)
     }
+
+    private fun findSiblingJsonObject(
+        root: JsonObject,
+        rawKeyFromFeaturesArray: String,
+        canonicalKey: String,
+    ): JsonObject? {
+        for (candidate in listOf(rawKeyFromFeaturesArray, canonicalKey)) {
+            if (candidate == FEATURES_PROPERTY) {
+                continue
+            }
+            when (val v = root[candidate]) {
+                is JsonObject -> return v
+                else -> Unit
+            }
+        }
+        for ((k, v) in root) {
+            if (k == FEATURES_PROPERTY) {
+                continue
+            }
+            if (k.equals(rawKeyFromFeaturesArray, ignoreCase = true) && v is JsonObject) {
+                return v
+            }
+        }
+        return null
+    }
+
+    private fun canonicalFeatureFlagId(raw: String): String =
+        buildString(raw.length) {
+            for (c in raw) {
+                append(c.lowercaseChar())
+            }
+        }
 
     fun encodeMetadata(metadata: JsonObject?): String? =
         metadata?.let { format.encodeToString(JsonElement.serializer(), it) }
