@@ -1,8 +1,10 @@
 package com.onesignal.user.internal.subscriptions
 
+import com.onesignal.common.PIIHasher
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.common.modeling.SimpleModelStore
 import com.onesignal.core.internal.preferences.IPreferencesService
+import org.json.JSONObject
 
 open class SubscriptionModelStore(prefs: IPreferencesService) : SimpleModelStore<SubscriptionModel>({
     SubscriptionModel()
@@ -31,5 +33,18 @@ open class SubscriptionModelStore(prefs: IPreferencesService) : SimpleModelStore
             }
             super.replaceAll(models, tag)
         }
+    }
+
+    override fun transformJsonForPersistence(
+        model: SubscriptionModel,
+        json: JSONObject,
+    ): JSONObject {
+        if (model.type == SubscriptionType.PUSH) return json
+
+        val address = json.optString("address", "")
+        if (address.isNotEmpty() && !PIIHasher.isHashed(address)) {
+            json.put("address", PIIHasher.hash(address))
+        }
+        return json
     }
 }
