@@ -425,7 +425,7 @@ internal class OneSignalImp(
         externalId: String,
         token: String,
     ) {
-        Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: $token)")
+        Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: <redacted>)")
 
         if (isBackgroundThreadingEnabled) {
             waitForInit(operationName = "updateUserJwt")
@@ -444,7 +444,7 @@ internal class OneSignalImp(
         externalId: String,
         token: String,
     ) = withContext(runtimeIoDispatcher) {
-        Logging.log(LogLevel.DEBUG, "updateUserJwtSuspend(externalId: $externalId, token: $token)")
+        Logging.log(LogLevel.DEBUG, "updateUserJwtSuspend(externalId: $externalId, token: <redacted>)")
 
         suspendUntilInit(operationName = "updateUserJwt")
 

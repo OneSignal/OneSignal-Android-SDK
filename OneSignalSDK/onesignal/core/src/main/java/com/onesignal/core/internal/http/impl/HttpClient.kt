@@ -187,7 +187,7 @@ internal class HttpClient(
                         con.setRequestProperty("Authorization", "Bearer ${headers.jwt}")
                     }
 
-                    logHTTPSent(con.requestMethod, con.url, jsonBody, con.requestProperties)
+                    logHTTPSent(con.requestMethod, con.url, jsonBody, con.requestProperties.filterKeys { it != "Authorization" })
 
                     if (jsonBody != null) {
                         val strJsonBody = JSONUtils.toUnescapedEUIDString(jsonBody)
