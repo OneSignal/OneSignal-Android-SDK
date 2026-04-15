@@ -2,6 +2,7 @@ package com.onesignal.user.internal
 
 import com.onesignal.core.internal.language.ILanguageContext
 import com.onesignal.mocks.MockHelper
+import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.subscriptions.ISubscriptionManager
 import com.onesignal.user.internal.subscriptions.SubscriptionList
 import io.kotest.assertions.throwables.shouldNotThrow
@@ -15,6 +16,8 @@ import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
 import io.mockk.verify
+import kotlin.reflect.full.memberFunctions
+import kotlin.reflect.jvm.isAccessible
 
 class UserManagerTests : FunSpec({
 
@@ -234,5 +237,28 @@ class UserManagerTests : FunSpec({
                 },
             )
         }
+    }
+
+    test("onModelReplaced clears pendingJwtInvalidatedExternalId") {
+        // Given
+        val mockSubscriptionManager = mockk<ISubscriptionManager>()
+        val userManager =
+            UserManager(mockSubscriptionManager, MockHelper.identityModelStore(), MockHelper.propertiesModelStore(), MockHelper.customEventController(), MockHelper.languageContext())
+
+        // Fire a JWT invalidated event with no subscribers, so it pends
+        val fireMethod = UserManager::class.memberFunctions.first { it.name == "fireJwtInvalidated" }
+        fireMethod.isAccessible = true
+        fireMethod.call(userManager, "user-alice")
+
+        // Verify pending state is set
+        val pendingField = UserManager::class.java.getDeclaredField("pendingJwtInvalidatedExternalId")
+        pendingField.isAccessible = true
+        pendingField.get(userManager) shouldBe "user-alice"
+
+        // When — user switches (model replaced)
+        userManager.onModelReplaced(IdentityModel(), "test")
+
+        // Then — pending state should be cleared
+        pendingField.get(userManager) shouldBe null
     }
 })
