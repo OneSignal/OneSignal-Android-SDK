@@ -4,6 +4,7 @@ import android.app.AlertDialog
 import com.onesignal.common.AndroidUtils
 import com.onesignal.common.IDManager
 import com.onesignal.common.JSONUtils
+import com.onesignal.common.NetworkUtils
 import com.onesignal.common.consistency.IamFetchReadyCondition
 import com.onesignal.common.consistency.RywData
 import com.onesignal.common.consistency.models.IConsistencyManager
@@ -46,6 +47,7 @@ import com.onesignal.session.internal.session.ISessionLifecycleHandler
 import com.onesignal.session.internal.session.ISessionService
 import com.onesignal.user.IUserManager
 import com.onesignal.user.internal.backend.IdentityConstants
+import com.onesignal.user.internal.identity.IJwtUpdateListener
 import com.onesignal.user.internal.identity.IdentityModel
 import com.onesignal.user.internal.identity.IdentityModelStore
 import com.onesignal.user.internal.identity.JwtTokenStore
@@ -85,7 +87,8 @@ internal class InAppMessagesManager(
     IInAppLifecycleEventHandler,
     ITriggerHandler,
     ISessionLifecycleHandler,
-    IApplicationLifecycleHandler {
+    IApplicationLifecycleHandler,
+    IJwtUpdateListener {
     private val lifecycleCallback = EventProducer<IInAppMessageLifecycleListener>()
     private val messageClickCallback = EventProducer<IInAppMessageClickListener>()
 
@@ -116,6 +119,8 @@ internal class InAppMessagesManager(
     private val redisplayedInAppMessages: MutableList<InAppMessage> = mutableListOf()
 
     private val fetchIAMMutex = Mutex()
+
+    @Volatile
     private var lastTimeFetchedIAMs: Long? = null
 
     // Tracks whether the first IAM fetch has completed since this cold start
@@ -124,12 +129,23 @@ internal class InAppMessagesManager(
     // Tracks trigger keys added early on cold start (before first fetch completes), for redisplay logic
     private val earlySessionTriggers: MutableSet<String> = java.util.Collections.synchronizedSet(mutableSetOf())
 
+    // Pending IAM retry state for 401 (expired JWT) responses.
+    // Stores the externalId and rywData from the failed fetch so we can retry after JWT refresh.
+    @Volatile
+    private var pendingJwtRetryExternalId: String? = null
+
+    @Volatile
+    private var pendingJwtRetryRywData: RywData? = null
+
     private val identityModelChangeHandler =
         object : ISingletonModelStoreChangeHandler<IdentityModel> {
             override fun onModelReplaced(
                 model: IdentityModel,
                 tag: String,
-            ) { }
+            ) {
+                pendingJwtRetryExternalId = null
+                pendingJwtRetryRywData = null
+            }
 
             override fun onModelUpdated(
                 args: ModelChangedArgs,
@@ -144,10 +160,8 @@ internal class InAppMessagesManager(
                         suspendifyOnIO {
                             val updateConditionDeferred =
                                 _consistencyManager.getRywDataFromAwaitableCondition(IamFetchReadyCondition(newOneSignalId))
-                            val rywToken = updateConditionDeferred.await()
-                            if (rywToken != null) {
-                                fetchMessages(rywToken)
-                            }
+                            val rywData = updateConditionDeferred.await()
+                            fetchMessages(rywData)
                         }
                     }
                 }
@@ -192,6 +206,7 @@ internal class InAppMessagesManager(
         _sessionService.subscribe(this)
         _applicationService.addApplicationLifecycleHandler(this)
         _identityModelStore.subscribe(identityModelChangeHandler)
+        _jwtTokenStore.subscribe(this)
 
         suspendifyOnIO {
             _repository.cleanCachedInAppMessages()
@@ -277,15 +292,11 @@ internal class InAppMessagesManager(
             val iamFetchCondition =
                 _consistencyManager.getRywDataFromAwaitableCondition(IamFetchReadyCondition(onesignalId))
             val rywData = iamFetchCondition.await()
-
-            if (rywData != null) {
-                fetchMessages(rywData)
-            }
+            fetchMessages(rywData)
         }
     }
 
-    // called when a new push subscription is added, or the app id is updated, or a new session starts
-    private suspend fun fetchMessages(rywData: RywData) {
+    private suspend fun fetchMessages(rywData: RywData?) {
         // We only want to fetch IAMs if we know the app is in the
         // foreground, as we don't want to do this for background
         // events (such as push received), wasting resources for
@@ -315,7 +326,7 @@ internal class InAppMessagesManager(
 
         fetchIAMMutex.withLock {
             val now = _time.currentTimeMillis
-            if (lastTimeFetchedIAMs != null && (now - lastTimeFetchedIAMs!!) < _configModelStore.model.fetchIAMMinInterval) {
+            if (rywData == null && lastTimeFetchedIAMs != null && (now - lastTimeFetchedIAMs!!) < _configModelStore.model.fetchIAMMinInterval) {
                 return
             }
 
@@ -332,7 +343,18 @@ internal class InAppMessagesManager(
 
         // lambda so that it is updated on each potential retry
         val sessionDurationProvider = { _time.currentTimeMillis - _sessionService.startTime }
-        val newMessages = _backend.listInAppMessages(appId, aliasLabel, aliasValue, subscriptionId, rywData, sessionDurationProvider, jwt)
+        val newMessages =
+            try {
+                _backend.listInAppMessages(appId, aliasLabel, aliasValue, subscriptionId, rywData, sessionDurationProvider, jwt)
+            } catch (ex: BackendException) {
+                if (NetworkUtils.getResponseStatusType(ex.statusCode) == NetworkUtils.ResponseStatusType.UNAUTHORIZED) {
+                    Logging.debug("InAppMessagesManager.fetchMessages: ${ex.statusCode} response. Will retry after JWT refresh for externalId=$externalId")
+                    lastTimeFetchedIAMs = null
+                    pendingJwtRetryRywData = rywData
+                    pendingJwtRetryExternalId = externalId
+                }
+                null
+            }
 
         if (newMessages != null) {
             this.messages = newMessages as MutableList<InAppMessage>
@@ -1021,6 +1043,21 @@ internal class InAppMessagesManager(
             .setMessage(message)
             .setPositiveButton(android.R.string.ok) { _, _ -> suspendifyOnIO { showMultiplePrompts(inAppMessage, prompts) } }
             .show()
+    }
+
+    override fun onJwtUpdated(externalId: String) {
+        val retryExternalId = pendingJwtRetryExternalId ?: return
+        if (externalId != retryExternalId) return
+
+        val retryRywData = pendingJwtRetryRywData
+
+        Logging.debug("InAppMessagesManager.onJwtUpdated: JWT refreshed for $externalId, retrying IAM fetch")
+        pendingJwtRetryExternalId = null
+        pendingJwtRetryRywData = null
+
+        suspendifyOnIO {
+            fetchMessages(retryRywData)
+        }
     }
 
     override fun onFocus(firedOnSubscribe: Boolean) { }

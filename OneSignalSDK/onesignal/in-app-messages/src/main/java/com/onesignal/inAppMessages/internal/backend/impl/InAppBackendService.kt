@@ -29,14 +29,19 @@ internal class InAppBackendService(
         aliasLabel: String,
         aliasValue: String,
         subscriptionId: String,
-        rywData: RywData,
+        rywData: RywData?,
         sessionDurationProvider: () -> Long,
         jwt: String?,
     ): List<InAppMessage>? {
-        val rywDelay = rywData.rywDelay ?: DEFAULT_RYW_DELAY_MS
-        delay(rywDelay) // Delay by the specified amount
-
         val baseUrl = "apps/$appId/users/by/$aliasLabel/$aliasValue/subscriptions/$subscriptionId/iams"
+
+        if (rywData == null) {
+            return fetchInAppMessagesWithoutRywToken(baseUrl, sessionDurationProvider, jwt)
+        }
+
+        val rywDelay = rywData.rywDelay ?: DEFAULT_RYW_DELAY_MS
+        delay(rywDelay)
+
         return attemptFetchWithRetries(baseUrl, rywData, sessionDurationProvider, jwt)
     }
 
@@ -239,6 +244,8 @@ internal class InAppBackendService(
                 response.retryAfterSeconds?.let {
                     delay(it * 1_000L)
                 }
+            } else if (NetworkUtils.getResponseStatusType(response.statusCode) == NetworkUtils.ResponseStatusType.UNAUTHORIZED) {
+                throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
             } else if (response.statusCode in 500..599) {
                 return null
             } else {
@@ -269,6 +276,8 @@ internal class InAppBackendService(
         if (response.isSuccess) {
             val jsonResponse = response.payload?.let { JSONObject(it) }
             return jsonResponse?.let { hydrateInAppMessages(it) }
+        } else if (NetworkUtils.getResponseStatusType(response.statusCode) == NetworkUtils.ResponseStatusType.UNAUTHORIZED) {
+            throw BackendException(response.statusCode, response.payload, response.retryAfterSeconds)
         } else {
             return null
         }

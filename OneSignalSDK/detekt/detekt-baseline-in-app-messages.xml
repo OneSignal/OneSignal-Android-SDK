@@ -68,7 +68,7 @@
     <ID>LongMethod:InAppRepository.kt$InAppRepository$override suspend fun cleanCachedInAppMessages()</ID>
     <ID>LongParameterList:IInAppBackendService.kt$IInAppBackendService$( appId: String, subscriptionId: String, variantId: String?, messageId: String, clickId: String?, isFirstClick: Boolean, )</ID>
     <ID>LongParameterList:InAppDisplayer.kt$InAppDisplayer$( private val _applicationService: IApplicationService, private val _lifecycle: IInAppLifecycleService, private val _promptFactory: IInAppMessagePromptFactory, private val _backend: IInAppBackendService, private val _influenceManager: IInfluenceManager, private val _configModelStore: ConfigModelStore, private val _languageContext: ILanguageContext, private val _time: ITime, )</ID>
-    <ID>LongParameterList:InAppMessagesManager.kt$InAppMessagesManager$( private val _applicationService: IApplicationService, private val _sessionService: ISessionService, private val _influenceManager: IInfluenceManager, private val _configModelStore: ConfigModelStore, private val _userManager: IUserManager, private val _identityModelStore: IdentityModelStore, private val _subscriptionManager: ISubscriptionManager, private val _outcomeEventsController: IOutcomeEventsController, private val _state: InAppStateService, private val _prefs: IInAppPreferencesController, private val _repository: IInAppRepository, private val _backend: IInAppBackendService, private val _triggerController: ITriggerController, private val _triggerModelStore: TriggerModelStore, private val _displayer: IInAppDisplayer, private val _lifecycle: IInAppLifecycleService, private val _languageContext: ILanguageContext, private val _time: ITime, private val _consistencyManager: IConsistencyManager, )</ID>
+    <ID>LongParameterList:InAppMessagesManager.kt$InAppMessagesManager$( private val _applicationService: IApplicationService, private val _sessionService: ISessionService, private val _influenceManager: IInfluenceManager, private val _configModelStore: ConfigModelStore, private val _userManager: IUserManager, private val _identityModelStore: IdentityModelStore, private val _subscriptionManager: ISubscriptionManager, private val _outcomeEventsController: IOutcomeEventsController, private val _state: InAppStateService, private val _prefs: IInAppPreferencesController, private val _repository: IInAppRepository, private val _backend: IInAppBackendService, private val _triggerController: ITriggerController, private val _triggerModelStore: TriggerModelStore, private val _displayer: IInAppDisplayer, private val _lifecycle: IInAppLifecycleService, private val _languageContext: ILanguageContext, private val _time: ITime, private val _consistencyManager: IConsistencyManager, private val _jwtTokenStore: JwtTokenStore, )</ID>
     <ID>LongParameterList:OneSignalAnimate.kt$OneSignalAnimate$( view: View, deltaFromY: Float, deltaToY: Float, duration: Int, interpolator: Interpolator?, animCallback: Animation.AnimationListener?, )</ID>
     <ID>MagicNumber:DraggableRelativeLayout.kt$DraggableRelativeLayout$3</ID>
     <ID>MagicNumber:DraggableRelativeLayout.kt$DraggableRelativeLayout$3000</ID>
@@ -103,12 +103,12 @@
     <ID>ReturnCount:DraggableRelativeLayout.kt$DraggableRelativeLayout.&lt;no name provided&gt;$override fun clampViewPositionVertical( child: View, top: Int, dy: Int, ): Int</ID>
     <ID>ReturnCount:DynamicTriggerController.kt$DynamicTriggerController$fun dynamicTriggerShouldFire(trigger: Trigger): Boolean</ID>
     <ID>ReturnCount:InAppBackendService.kt$InAppBackendService$override suspend fun getIAMData( appId: String, messageId: String, variantId: String?, ): GetIAMDataResponse</ID>
-    <ID>ReturnCount:InAppBackendService.kt$InAppBackendService$private suspend fun attemptFetchWithRetries( baseUrl: String, rywData: RywData, sessionDurationProvider: () -&gt; Long, ): List&lt;InAppMessage&gt;?</ID>
+    <ID>ReturnCount:InAppBackendService.kt$InAppBackendService$private suspend fun attemptFetchWithRetries( baseUrl: String, rywData: RywData, sessionDurationProvider: () -&gt; Long, jwt: String? = null, ): List&lt;InAppMessage&gt;?</ID>
     <ID>ReturnCount:InAppHydrator.kt$InAppHydrator$fun hydrateIAMMessageContent(jsonObject: JSONObject): InAppMessageContent?</ID>
     <ID>ReturnCount:InAppMessage.kt$InAppMessage$private fun parseEndTimeJson(json: JSONObject): Date?</ID>
     <ID>ReturnCount:InAppMessagePreviewHandler.kt$InAppMessagePreviewHandler$private fun inAppPreviewPushUUID(payload: JSONObject): String?</ID>
     <ID>ReturnCount:InAppMessagesManager.kt$InAppMessagesManager$override fun onMessageWasDisplayed(message: InAppMessage)</ID>
-    <ID>ReturnCount:InAppMessagesManager.kt$InAppMessagesManager$private suspend fun fetchMessages(rywData: RywData)</ID>
+    <ID>ReturnCount:InAppMessagesManager.kt$InAppMessagesManager$private suspend fun fetchMessages(rywData: RywData?)</ID>
     <ID>ReturnCount:TriggerController.kt$TriggerController$override fun evaluateMessageTriggers(message: InAppMessage): Boolean</ID>
     <ID>ReturnCount:TriggerController.kt$TriggerController$override fun isTriggerOnMessage( message: InAppMessage, triggersKeys: Collection&lt;String&gt;, ): Boolean</ID>
     <ID>ReturnCount:TriggerController.kt$TriggerController$override fun messageHasOnlyDynamicTriggers(message: InAppMessage): Boolean</ID>
@@ -124,7 +124,7 @@
     <ID>TooManyFunctions:InAppBackendService.kt$InAppBackendService : IInAppBackendService</ID>
     <ID>TooManyFunctions:InAppMessage.kt$InAppMessage : IInAppMessage</ID>
     <ID>TooManyFunctions:InAppMessageView.kt$InAppMessageView</ID>
-    <ID>TooManyFunctions:InAppMessagesManager.kt$InAppMessagesManager : IInAppMessagesManagerIStartableServiceISubscriptionChangedHandlerISingletonModelStoreChangeHandlerIInAppLifecycleEventHandlerITriggerHandlerISessionLifecycleHandlerIApplicationLifecycleHandler</ID>
+    <ID>TooManyFunctions:InAppMessagesManager.kt$InAppMessagesManager : IInAppMessagesManagerIStartableServiceISubscriptionChangedHandlerISingletonModelStoreChangeHandlerIInAppLifecycleEventHandlerITriggerHandlerISessionLifecycleHandlerIApplicationLifecycleHandlerIJwtUpdateListener</ID>
     <ID>TooManyFunctions:TriggerController.kt$TriggerController : ITriggerControllerIModelStoreChangeHandler</ID>
     <ID>TooManyFunctions:WebViewManager.kt$WebViewManager : IActivityLifecycleHandler</ID>
     <ID>UndocumentedPublicClass:TriggerModel.kt$TriggerModel : Model</ID>
