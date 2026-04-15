@@ -128,6 +128,8 @@ internal class OperationRepo(
         operation: Operation,
         flush: Boolean,
     ) {
+        if (shouldSuppressAnonymousOp(operation)) return
+
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueue(operation: $operation, flush: $flush)")
 
         operation.id = UUID.randomUUID().toString()
@@ -140,6 +142,8 @@ internal class OperationRepo(
         operation: Operation,
         flush: Boolean,
     ): Boolean {
+        if (shouldSuppressAnonymousOp(operation)) return false
+
         Logging.log(LogLevel.DEBUG, "OperationRepo.enqueueAndWait(operation: $operation, force: $flush)")
 
         operation.id = UUID.randomUUID().toString()
@@ -435,6 +439,16 @@ internal class OperationRepo(
                 null
             }
         }
+    }
+
+    /**
+     * Drop anonymous operations at enqueue time when IV is enabled.
+     * LoginUserOperation is exempt — it's enqueued intentionally during logout
+     * and purged later by [removeOperationsWithoutExternalId] if needed.
+     */
+    private fun shouldSuppressAnonymousOp(op: Operation): Boolean {
+        if (op is LoginUserOperation) return false
+        return _configModelStore.model.useIdentityVerification == true && op.externalId == null
     }
 
     /**

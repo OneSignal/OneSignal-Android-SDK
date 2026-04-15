@@ -18,13 +18,7 @@ internal class SubscriptionModelStoreListener(
     private val _identityModelStore: IdentityModelStore,
     private val _configModelStore: ConfigModelStore,
 ) : ModelStoreListener<SubscriptionModel>(store, opRepo) {
-    private fun shouldSuppressForAnonymousUser(): Boolean =
-        _configModelStore.model.useIdentityVerification == true &&
-            _identityModelStore.model.externalId == null
-
     override fun getAddOperation(model: SubscriptionModel): Operation? {
-        if (shouldSuppressForAnonymousUser()) return null
-
         val enabledAndStatus = getSubscriptionEnabledAndStatus(model)
         return CreateSubscriptionOperation(
             _configModelStore.model.appId,
@@ -39,8 +33,6 @@ internal class SubscriptionModelStoreListener(
     }
 
     override fun getRemoveOperation(model: SubscriptionModel): Operation? {
-        if (shouldSuppressForAnonymousUser()) return null
-
         return DeleteSubscriptionOperation(_configModelStore.model.appId, _identityModelStore.model.onesignalId, _identityModelStore.model.externalId, model.id)
     }
 
@@ -51,8 +43,6 @@ internal class SubscriptionModelStoreListener(
         oldValue: Any?,
         newValue: Any?,
     ): Operation? {
-        if (shouldSuppressForAnonymousUser()) return null
-
         val enabledAndStatus = getSubscriptionEnabledAndStatus(model)
         return UpdateSubscriptionOperation(
             _configModelStore.model.appId,

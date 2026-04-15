@@ -14,10 +14,6 @@ internal class IdentityModelStoreListener(
     opRepo: IOperationRepo,
     private val _configModelStore: ConfigModelStore,
 ) : SingletonModelStoreListener<IdentityModel>(_identityModelStore, opRepo) {
-    private fun shouldSuppressForAnonymousUser(): Boolean =
-        _configModelStore.model.useIdentityVerification == true &&
-            _identityModelStore.model.externalId == null
-
     override fun getReplaceOperation(model: IdentityModel): Operation? {
         // when the identity model is replaced, nothing to do on the backend. Already handled via login process.
         return null
@@ -30,8 +26,6 @@ internal class IdentityModelStoreListener(
         oldValue: Any?,
         newValue: Any?,
     ): Operation? {
-        if (shouldSuppressForAnonymousUser()) return null
-
         return if (newValue != null && newValue is String) {
             SetAliasOperation(_configModelStore.model.appId, model.onesignalId, model.externalId, property, newValue)
         } else {
