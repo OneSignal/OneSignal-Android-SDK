@@ -252,6 +252,7 @@
     <ID>MagicNumber:OSDatabase.kt$OSDatabase$8</ID>
     <ID>MagicNumber:OSDatabase.kt$OSDatabase$9</ID>
     <ID>MagicNumber:OneSignalDispatchers.kt$OneSignalDispatchers$1024</ID>
+    <ID>MagicNumber:OneSignalImp.kt$OneSignalImp$8</ID>
     <ID>MagicNumber:OperationRepo.kt$OperationRepo$1_000</ID>
     <ID>MagicNumber:OutcomeEventsController.kt$OutcomeEventsController$1000</ID>
     <ID>MagicNumber:PermissionsActivity.kt$PermissionsActivity$23</ID>
@@ -288,6 +289,7 @@
     <ID>NestedBlockDepth:InfluenceManager.kt$InfluenceManager$private fun attemptSessionUpgrade( entryAction: AppEntryAction, directId: String? = null, )</ID>
     <ID>NestedBlockDepth:JSONUtils.kt$JSONUtils$fun compareJSONArrays( jsonArray1: JSONArray?, jsonArray2: JSONArray?, ): Boolean</ID>
     <ID>NestedBlockDepth:LoginUserOperationExecutor.kt$LoginUserOperationExecutor$private suspend fun createUser( createUserOperation: LoginUserOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
+    <ID>NestedBlockDepth:OperationRepo.kt$OperationRepo$internal suspend fun executeOperations(ops: List&lt;OperationQueueItem>)</ID>
     <ID>NestedBlockDepth:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse</ID>
     <ID>NestedBlockDepth:ServiceRegistration.kt$ServiceRegistrationReflection$override fun resolve(provider: IServiceProvider): Any?</ID>
     <ID>NestedBlockDepth:ServiceRegistration.kt$ServiceRegistrationReflection$private fun doesHaveAllParameters( constructor: Constructor&lt;*>, provider: IServiceProvider, ): Boolean</ID>
@@ -330,6 +332,7 @@
     <ID>ReturnCount:RefreshUserOperationExecutor.kt$RefreshUserOperationExecutor$private suspend fun getUser(op: RefreshUserOperation): ExecutionResponse</ID>
     <ID>ReturnCount:ServiceRegistration.kt$ServiceRegistrationReflection$private fun doesHaveAllParameters( constructor: Constructor&lt;*>, provider: IServiceProvider, ): Boolean</ID>
     <ID>ReturnCount:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private suspend fun createSubscription( createOperation: CreateSubscriptionOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
+    <ID>ReturnCount:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private suspend fun transferSubscription(startingOperation: TransferSubscriptionOperation): ExecutionResponse</ID>
     <ID>ReturnCount:SubscriptionOperationExecutor.kt$SubscriptionOperationExecutor$private suspend fun updateSubscription( startingOperation: UpdateSubscriptionOperation, operations: List&lt;Operation>, ): ExecutionResponse</ID>
     <ID>ReturnCount:UpdateUserOperationExecutor.kt$UpdateUserOperationExecutor$override suspend fun execute(operations: List&lt;Operation>): ExecutionResponse</ID>
     <ID>SpreadOperator:AndroidUtils.kt$AndroidUtils$(*packageInfo.requestedPermissions)</ID>
@@ -633,8 +636,10 @@
     <ID>UnusedPrivateMember:OperationRepo.kt$OperationRepo$private val _time: ITime</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'login'")</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'logout'")</ID>
-    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("'initWithContext failed' before 'updateUserJwt'")</ID>
+    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before 'login'")</ID>
+    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before 'logout'")</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before 'updateUserJwt'")</ID>
+    <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw IllegalStateException("Must call 'initWithContext' before use")</ID>
     <ID>UseCheckOrError:OneSignalImp.kt$OneSignalImp$throw initFailureException ?: IllegalStateException("Initialization failed. Cannot proceed.")</ID>
   </CurrentIssues>
 </SmellBaseline>
