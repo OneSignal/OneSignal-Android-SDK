@@ -39,7 +39,8 @@ open class SubscriptionModelStore(prefs: IPreferencesService) : SimpleModelStore
         model: SubscriptionModel,
         json: JSONObject,
     ): JSONObject {
-        if (model.type == SubscriptionType.PUSH) return json
+        val type = json.optString("type", "")
+        if (type.isEmpty() || type == SubscriptionType.PUSH.toString()) return json
 
         val address = json.optString("address", "")
         if (address.isNotEmpty() && !PIIHasher.isHashed(address)) {
