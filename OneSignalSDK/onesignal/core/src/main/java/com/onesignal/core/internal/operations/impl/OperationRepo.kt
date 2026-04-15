@@ -1,6 +1,5 @@
 package com.onesignal.core.internal.operations.impl
 
-import com.onesignal.common.IDManager
 import com.onesignal.common.threading.WaiterWithValue
 import com.onesignal.core.internal.config.ConfigModelStore
 import com.onesignal.core.internal.operations.ExecutionResult
@@ -546,18 +545,13 @@ internal class OperationRepo(
                 Logging.debug("OperationRepo: removed ${toRemove.size} anonymous operations (no externalId)")
             }
 
-            // Any LoginUserOperation whose existingOnesignalId is a local ID was
-            // waiting on a now-purged anonymous CreateUserOperation to translate it.
-            // Clear it so canStartExecute unblocks and the executor takes the
-            // createUser() path instead.
+            // IV=ON never transfers anonymous state; clear existingOnesignalId so
+            // the executor takes the createUser (upsert) path.
             queue.forEach {
                 val op = it.operation
-                if (op is LoginUserOperation) {
-                    val existing = op.existingOnesignalId
-                    if (existing != null && IDManager.isLocalId(existing)) {
-                        op.existingOnesignalId = null
-                        Logging.debug("OperationRepo: cleared local existingOnesignalId on LoginUserOperation (was $existing)")
-                    }
+                if (op is LoginUserOperation && op.existingOnesignalId != null) {
+                    Logging.debug("OperationRepo: cleared existingOnesignalId on LoginUserOperation (was ${op.existingOnesignalId})")
+                    op.existingOnesignalId = null
                 }
             }
         }

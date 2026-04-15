@@ -302,9 +302,15 @@ internal class InAppMessagesManager(
         }
 
         val externalId = _identityModelStore.model.externalId
-        if (_configModelStore.model.useIdentityVerification == true && externalId == null) {
-            Logging.debug("InAppMessagesManager.fetchMessages: Skipping IAM fetch for anonymous user while identity verification is enabled.")
-            return
+        if (_configModelStore.model.useIdentityVerification == true) {
+            if (externalId == null) {
+                Logging.debug("InAppMessagesManager.fetchMessages: Skipping IAM fetch for anonymous user while identity verification is enabled.")
+                return
+            }
+            if (_jwtTokenStore.getJwt(externalId) == null) {
+                Logging.debug("InAppMessagesManager.fetchMessages: Skipping IAM fetch while JWT is invalidated for user: $externalId")
+                return
+            }
         }
 
         fetchIAMMutex.withLock {

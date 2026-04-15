@@ -252,6 +252,11 @@ internal class SubscriptionOperationExecutor(
 
     // TODO: whenever the end-user changes users, we need to add the read-your-write token here, currently no code to handle the re-fetch IAMs
     private suspend fun transferSubscription(startingOperation: TransferSubscriptionOperation): ExecutionResponse {
+        if (_configModelStore.model.useIdentityVerification == true) {
+            Logging.warn("TransferSubscriptionOperation is not supported when identity verification is enabled. Dropping.")
+            return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
+        }
+
         val (aliasLabel, aliasValue) =
             IdentityConstants.resolveAlias(
                 _configModelStore.model.useIdentityVerification,
@@ -323,6 +328,8 @@ internal class SubscriptionOperationExecutor(
                 }
                 NetworkUtils.ResponseStatusType.RETRYABLE ->
                     ExecutionResponse(ExecutionResult.FAIL_RETRY, retryAfterSeconds = ex.retryAfterSeconds)
+                NetworkUtils.ResponseStatusType.UNAUTHORIZED ->
+                    ExecutionResponse(ExecutionResult.FAIL_UNAUTHORIZED, retryAfterSeconds = ex.retryAfterSeconds)
                 else ->
                     ExecutionResponse(ExecutionResult.FAIL_NORETRY)
             }

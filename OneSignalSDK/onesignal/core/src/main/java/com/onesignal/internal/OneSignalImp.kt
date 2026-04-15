@@ -380,7 +380,7 @@ internal class OneSignalImp(
         externalId: String,
         jwtBearerToken: String?,
     ) {
-        Logging.log(LogLevel.DEBUG, "Calling deprecated login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
+        Logging.log(LogLevel.DEBUG, "Calling deprecated login(externalId: $externalId, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
 
         if (isBackgroundThreadingEnabled) {
             waitForInit(operationName = "login")
@@ -425,7 +425,7 @@ internal class OneSignalImp(
         externalId: String,
         token: String,
     ) {
-        Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: <redacted>)")
+        Logging.log(LogLevel.DEBUG, "updateUserJwt(externalId: $externalId, token: ...${token.takeLast(8)})")
 
         if (isBackgroundThreadingEnabled) {
             waitForInit(operationName = "updateUserJwt")
@@ -444,12 +444,12 @@ internal class OneSignalImp(
         externalId: String,
         token: String,
     ) = withContext(runtimeIoDispatcher) {
-        Logging.log(LogLevel.DEBUG, "updateUserJwtSuspend(externalId: $externalId, token: <redacted>)")
+        Logging.log(LogLevel.DEBUG, "updateUserJwtSuspend(externalId: $externalId, token: ...${token.takeLast(8)})")
 
         suspendUntilInit(operationName = "updateUserJwt")
 
         if (!isInitialized) {
-            throw IllegalStateException("'initWithContext failed' before 'updateUserJwt'")
+            throw IllegalStateException("Must call 'initWithContext' before 'updateUserJwt'")
         }
 
         jwtTokenStore.putJwt(externalId, token)
@@ -693,7 +693,7 @@ internal class OneSignalImp(
         externalId: String,
         jwtBearerToken: String?,
     ) = withContext(runtimeIoDispatcher) {
-        Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: $jwtBearerToken)")
+        Logging.log(LogLevel.DEBUG, "login(externalId: $externalId, jwtBearerToken: ...${jwtBearerToken?.takeLast(8)})")
 
         suspendUntilInit(operationName = "login")
 
