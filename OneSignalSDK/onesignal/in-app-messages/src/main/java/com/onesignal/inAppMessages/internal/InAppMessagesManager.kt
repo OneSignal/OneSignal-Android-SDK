@@ -302,12 +302,15 @@ internal class InAppMessagesManager(
         }
 
         val externalId = _identityModelStore.model.externalId
+        // Capture JWT once to avoid TOCTOU: the same snapshot is used for the guard
+        // check and the backend call, so a concurrent invalidation can't slip between them.
+        val jwt = externalId?.let { _jwtTokenStore.getJwt(it) }
         if (_configModelStore.model.useIdentityVerification == true) {
             if (externalId == null) {
                 Logging.debug("InAppMessagesManager.fetchMessages: Skipping IAM fetch for anonymous user while identity verification is enabled.")
                 return
             }
-            if (_jwtTokenStore.getJwt(externalId) == null) {
+            if (jwt == null) {
                 Logging.debug("InAppMessagesManager.fetchMessages: Skipping IAM fetch while JWT is invalidated for user: $externalId")
                 return
             }
@@ -328,8 +331,6 @@ internal class InAppMessagesManager(
                 externalId,
                 _identityModelStore.model.onesignalId,
             )
-        val jwt = externalId?.let { _jwtTokenStore.getJwt(it) }
-
         // lambda so that it is updated on each potential retry
         val sessionDurationProvider = { _time.currentTimeMillis - _sessionService.startTime }
         val newMessages = _backend.listInAppMessages(appId, aliasLabel, aliasValue, subscriptionId, rywData, sessionDurationProvider, jwt)

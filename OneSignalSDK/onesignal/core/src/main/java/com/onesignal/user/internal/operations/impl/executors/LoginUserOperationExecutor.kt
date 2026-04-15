@@ -74,6 +74,7 @@ internal class LoginUserOperationExecutor(
         // Anonymous Login being processed alone will surely be rejected, so we need to drop the request
         val containsSubscriptionOperation = operations.any { it is CreateSubscriptionOperation || it is TransferSubscriptionOperation }
         if (!containsSubscriptionOperation && loginUserOp.externalId == null) {
+            Logging.error("LoginUserOperationExecutor: dropping anonymous LoginUserOperation with no subscription op: $loginUserOp")
             return ExecutionResponse(ExecutionResult.FAIL_NORETRY)
         }
         if (loginUserOp.existingOnesignalId == null || loginUserOp.externalId == null) {

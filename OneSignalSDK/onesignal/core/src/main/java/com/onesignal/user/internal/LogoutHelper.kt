@@ -38,16 +38,14 @@ class LogoutHelper(
                     ),
                 )
             } else {
-                // IV state unknown (pre-HYDRATE). Take the safe path: disable push
-                // and suppress backend op (like IV=ON), but also enqueue a LoginUserOperation
-                // so the anonymous user is created on the backend if IV turns out to be OFF.
-                // If IV=ON, removeOperationsWithoutExternalId() will purge the anonymous op.
+                // IV unknown (pre-HYDRATE): disable push, enqueue anonymous user.
+                // If IV=ON at HYDRATE, removeOperationsWithoutExternalId() purges these.
                 configModel.pushSubscriptionId?.let { pushSubId ->
                     subscriptionModelStore.get(pushSubId)
                         ?.let { it.isDisabledInternally = true }
                 }
 
-                userSwitcher.createAndSwitchToNewUser(suppressBackendOperation = true)
+                userSwitcher.createAndSwitchToNewUser()
 
                 operationRepo.enqueue(
                     LoginUserOperation(
