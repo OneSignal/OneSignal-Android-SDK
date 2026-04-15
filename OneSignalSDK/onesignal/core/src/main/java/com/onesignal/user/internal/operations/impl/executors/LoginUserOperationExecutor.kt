@@ -8,6 +8,9 @@ import com.onesignal.common.NetworkUtils
 import com.onesignal.common.OneSignalUtils
 import com.onesignal.common.RootToolsInternalMethods
 import com.onesignal.common.TimeUtils
+import com.onesignal.common.consistency.IamFetchReadyCondition
+import com.onesignal.common.consistency.enums.IamFetchRywTokenKey
+import com.onesignal.common.consistency.models.IConsistencyManager
 import com.onesignal.common.exceptions.BackendException
 import com.onesignal.common.modeling.ModelChangeTags
 import com.onesignal.core.internal.application.IApplicationService
@@ -49,6 +52,7 @@ internal class LoginUserOperationExecutor(
     private val _configModelStore: ConfigModelStore,
     private val _languageContext: ILanguageContext,
     private val _jwtTokenStore: JwtTokenStore,
+    private val _consistencyManager: IConsistencyManager,
 ) : IOperationExecutor {
     override val operations: List<String>
         get() = listOf(LOGIN_USER)
@@ -223,6 +227,11 @@ internal class LoginUserOperationExecutor(
                 // Remove the processed backend subscription
                 backendSubscriptions.remove(backendSubscription)
             }
+
+            if (response.rywData != null) {
+                _consistencyManager.setRywData(backendOneSignalId, IamFetchRywTokenKey.USER, response.rywData)
+            }
+            _consistencyManager.resolveConditionsWithID(IamFetchReadyCondition.ID)
 
             val wasPossiblyAnUpsert = identities.isNotEmpty()
             val followUpOperations =
