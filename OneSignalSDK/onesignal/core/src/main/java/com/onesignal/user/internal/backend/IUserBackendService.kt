@@ -84,4 +84,8 @@ class CreateUserResponse(
      * The subscriptions for the user.
      */
     val subscriptions: List<SubscriptionObject>,
+    /**
+     * Read-your-write consistency data returned by the backend, if any.
+     */
+    val rywData: RywData? = null,
 )
