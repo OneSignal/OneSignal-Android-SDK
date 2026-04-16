@@ -53,8 +53,13 @@ jobs:
           else
             echo "bypass=false" >> $GITHUB_OUTPUT
           fi
-      - name: "[Diff Coverage] Check coverage"
+      - name: "[PR] Coverage on changed lines (min ${{ env.DIFF_COVERAGE_THRESHOLD }}%)"
+        if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
         working-directory: OneSignalSDK
+        env:
+          # Exact PR diff (vs merge ref / wrong base branch)
+          DIFF_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+          DIFF_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || '' }}
         run: |
           # Use the shared coverage check script for consistency
           # Generate markdown report for PR comments
