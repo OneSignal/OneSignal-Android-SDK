@@ -12,6 +12,7 @@ import com.onesignal.notifications.internal.bundle.INotificationBundleProcessor
 //   to be setup in an app. See the following issue for context on why this this important:
 //    - https://github.com/OneSignal/OneSignal-Android-SDK/issues/1355
 class FCMBroadcastReceiver : BroadcastReceiver() {
+    @Suppress("ReturnCount")
     override fun onReceive(
         context: Context,
         intent: Intent,
@@ -36,13 +37,11 @@ class FCMBroadcastReceiver : BroadcastReceiver() {
 
         val processedResult = bundleProcessor.processBundleFromReceiver(context, bundle)
 
-        // Prevent other FCM receivers from firing if work manager is processing the notification
         if (processedResult!!.isWorkManagerProcessing) {
             setAbort()
-            return
+        } else {
+            setSuccessfulResultCode()
         }
-
-        setSuccessfulResultCode()
     }
 
     private fun setSuccessfulResultCode() {

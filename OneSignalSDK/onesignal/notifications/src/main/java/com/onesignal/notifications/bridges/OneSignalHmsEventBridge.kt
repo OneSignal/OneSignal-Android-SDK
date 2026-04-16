@@ -59,6 +59,8 @@ object OneSignalHmsEventBridge {
         onNewToken(context, token, null)
     }
 
+    /** Forwards an HMS [RemoteMessage] to the OneSignal notification pipeline. */
+    @Suppress("ReturnCount")
     fun onMessageReceived(
         context: Context,
         message: RemoteMessage,

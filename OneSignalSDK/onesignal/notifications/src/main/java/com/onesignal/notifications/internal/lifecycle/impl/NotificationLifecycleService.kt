@@ -131,6 +131,7 @@ internal class NotificationLifecycleService(
         val subscriptionId: String = _subscriptionManager.subscriptions.push.id
         val deviceType = _deviceService.deviceType
 
+        @Suppress("LoopWithTooManyJumpStatements")
         for (i in 0 until data.length()) {
             val notificationId = NotificationFormatHelper.getOSNotificationIdFromJson(data[i] as JSONObject?) ?: continue
 
@@ -275,7 +276,7 @@ internal class NotificationLifecycleService(
             Logging.error("Could not parse JSON to open notification activity.", e)
         } catch (e: ActivityNotFoundException) {
             Logging.warn("No activity found to handle notification open intent.", e)
-        } catch (e: Exception) {
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             Logging.error("Could not open notification activity.", e)
         }
     }
