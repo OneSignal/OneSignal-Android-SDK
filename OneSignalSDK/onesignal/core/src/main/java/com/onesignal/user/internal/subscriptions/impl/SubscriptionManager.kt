@@ -122,7 +122,8 @@ internal class SubscriptionManager(
         address: String,
         status: SubscriptionStatus? = null,
     ) {
-        Logging.log(LogLevel.DEBUG, "SubscriptionManager.addSubscription(type: $type, address: ${PIIHasher.hash(address)})")
+        val logAddress = if (type != SubscriptionType.PUSH) PIIHasher.hash(address) else address
+        Logging.log(LogLevel.DEBUG, "SubscriptionManager.addSubscription(type: $type, address: $logAddress)")
 
         val subscriptionModel = SubscriptionModel()
         subscriptionModel.id = IDManager.createLocalId()
