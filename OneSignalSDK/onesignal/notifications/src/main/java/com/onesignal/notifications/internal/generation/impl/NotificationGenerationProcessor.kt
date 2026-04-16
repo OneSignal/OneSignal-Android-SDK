@@ -18,8 +18,8 @@ import com.onesignal.notifications.internal.generation.INotificationGenerationPr
 import com.onesignal.notifications.internal.lifecycle.INotificationLifecycleService
 import com.onesignal.notifications.internal.summary.INotificationSummaryManager
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
@@ -39,6 +39,10 @@ internal class NotificationGenerationProcessor(
     private val _lifecycleService: INotificationLifecycleService,
     private val _time: ITime,
 ) : INotificationGenerationProcessor {
+    companion object {
+        private const val EXTERNAL_CALLBACKS_TIMEOUT = 30_000L
+    }
+
     override suspend fun processNotificationData(
         context: Context,
         androidNotificationId: Int,
@@ -69,8 +73,8 @@ internal class NotificationGenerationProcessor(
 
         try {
             val notificationReceivedEvent = NotificationReceivedEvent(context, notification)
-            withTimeout(30000L) {
-                GlobalScope.launch(Dispatchers.IO) {
+            withTimeout(EXTERNAL_CALLBACKS_TIMEOUT) {
+                coroutineScope { launch(Dispatchers.IO) {
                     _lifecycleService.externalRemoteNotificationReceived(notificationReceivedEvent)
 
                     if (notificationReceivedEvent.discard) {
@@ -82,7 +86,7 @@ internal class NotificationGenerationProcessor(
                         // never calls `display` or `preventDefault(true)`, we will timeout and never update `wantsToDisplay`.
                         wantsToDisplay = notification.displayWaiter.waitForWake()
                     }
-                }.join()
+                }.join() }
             }
         } catch (to: TimeoutCancellationException) {
             Logging.info("remoteNotificationReceived timed out, continuing with wantsToDisplay=$wantsToDisplay.", to)
@@ -102,8 +106,8 @@ internal class NotificationGenerationProcessor(
 
                 try {
                     val notificationWillDisplayEvent = NotificationWillDisplayEvent(notificationJob.notification)
-                    withTimeout(30000L) {
-                        GlobalScope.launch(Dispatchers.IO) {
+                    withTimeout(EXTERNAL_CALLBACKS_TIMEOUT) {
+                        coroutineScope { launch(Dispatchers.IO) {
                             _lifecycleService.externalNotificationWillShowInForeground(notificationWillDisplayEvent)
 
                             if (notificationWillDisplayEvent.discard) {
@@ -115,7 +119,7 @@ internal class NotificationGenerationProcessor(
                                 // never calls `display` or `preventDefault(true)`, we will timeout and never update `wantsToDisplay`.
                                 wantsToDisplay = notification.displayWaiter.waitForWake()
                             }
-                        }.join()
+                        }.join() }
                     }
                 } catch (to: TimeoutCancellationException) {
                     Logging.info("notificationWillShowInForegroundHandler timed out, continuing with wantsToDisplay=$wantsToDisplay.", to)

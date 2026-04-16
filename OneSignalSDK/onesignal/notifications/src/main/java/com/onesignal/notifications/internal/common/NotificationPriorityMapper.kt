@@ -16,22 +16,30 @@ import androidx.core.app.NotificationManagerCompat
  *   0    → NONE (importance only)
  */
 internal object NotificationPriorityMapper {
-    private const val HIGH_PRIORITY_THRESHOLD = 9
+    private const val THRESHOLD_MAX = 9
+    private const val THRESHOLD_HIGH = 7
+    private const val THRESHOLD_DEFAULT = 5
+    private const val THRESHOLD_LOW = 3
+    private const val THRESHOLD_MIN = 1
 
-    fun isHighPriority(osPriority: Int): Boolean = osPriority >= HIGH_PRIORITY_THRESHOLD
+    fun isHighPriority(osPriority: Int): Boolean = osPriority >= THRESHOLD_MAX
 
-    fun toAndroidPriority(osPriority: Int): Int {
-        if (osPriority >= HIGH_PRIORITY_THRESHOLD) return NotificationCompat.PRIORITY_MAX
-        if (osPriority >= 7) return NotificationCompat.PRIORITY_HIGH
-        if (osPriority >= 5) return NotificationCompat.PRIORITY_DEFAULT
-        return if (osPriority >= 3) NotificationCompat.PRIORITY_LOW else NotificationCompat.PRIORITY_MIN
-    }
+    fun toAndroidPriority(osPriority: Int): Int =
+        when {
+            osPriority >= THRESHOLD_MAX -> NotificationCompat.PRIORITY_MAX
+            osPriority >= THRESHOLD_HIGH -> NotificationCompat.PRIORITY_HIGH
+            osPriority >= THRESHOLD_DEFAULT -> NotificationCompat.PRIORITY_DEFAULT
+            osPriority >= THRESHOLD_LOW -> NotificationCompat.PRIORITY_LOW
+            else -> NotificationCompat.PRIORITY_MIN
+        }
 
-    fun toAndroidImportance(osPriority: Int): Int {
-        if (osPriority >= HIGH_PRIORITY_THRESHOLD) return NotificationManagerCompat.IMPORTANCE_MAX
-        if (osPriority >= 7) return NotificationManagerCompat.IMPORTANCE_HIGH
-        if (osPriority >= 5) return NotificationManagerCompat.IMPORTANCE_DEFAULT
-        if (osPriority >= 3) return NotificationManagerCompat.IMPORTANCE_LOW
-        return if (osPriority >= 1) NotificationManagerCompat.IMPORTANCE_MIN else NotificationManagerCompat.IMPORTANCE_NONE
-    }
+    fun toAndroidImportance(osPriority: Int): Int =
+        when {
+            osPriority >= THRESHOLD_MAX -> NotificationManagerCompat.IMPORTANCE_MAX
+            osPriority >= THRESHOLD_HIGH -> NotificationManagerCompat.IMPORTANCE_HIGH
+            osPriority >= THRESHOLD_DEFAULT -> NotificationManagerCompat.IMPORTANCE_DEFAULT
+            osPriority >= THRESHOLD_LOW -> NotificationManagerCompat.IMPORTANCE_LOW
+            osPriority >= THRESHOLD_MIN -> NotificationManagerCompat.IMPORTANCE_MIN
+            else -> NotificationManagerCompat.IMPORTANCE_NONE
+        }
 }
