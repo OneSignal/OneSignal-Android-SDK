@@ -80,14 +80,12 @@ object AndroidUtils {
     }
 
     fun getAppVersion(context: Context): String? {
-        val appVersion: Int? =
-            try {
-                context.packageManager.getPackageInfo(context.packageName, 0).versionCode
-            } catch (e: PackageManager.NameNotFoundException) {
-                null
-            }
-
-        return appVersion?.toString()
+        return try {
+            val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            packageInfo.versionName ?: packageInfo.versionCode.toString()
+        } catch (e: PackageManager.NameNotFoundException) {
+            null
+        }
     }
 
     fun getManifestMeta(
